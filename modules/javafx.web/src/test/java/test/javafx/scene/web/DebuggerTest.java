@@ -31,10 +31,10 @@ import java.util.Arrays;
 import java.util.List;
 import javafx.scene.web.WebEngineShim;
 import javafx.util.Callback;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import org.junit.Test;
-import org.junit.After;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 
 public class DebuggerTest extends TestBase {
 
@@ -158,7 +158,7 @@ public class DebuggerTest extends TestBase {
         return s.replace('\'', '\"');
     }
 
-    @After
+    @AfterEach
     public void disableDebug() {
         submit(() -> {
             WebEngineShim.getDebugger(getEngine()).setEnabled(false);

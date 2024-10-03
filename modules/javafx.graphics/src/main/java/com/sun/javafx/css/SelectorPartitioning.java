@@ -25,9 +25,7 @@
 
 package com.sun.javafx.css;
 
-import javafx.css.CompoundSelector;
 import javafx.css.Selector;
-import javafx.css.SimpleSelector;
 
 import java.util.ArrayList;
 import java.util.Collections;

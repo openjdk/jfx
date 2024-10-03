@@ -823,6 +823,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
         button.getStyleClass().add(styleClass);
         toolbar.getItems().add(button);
 
+        @SuppressWarnings("removal")
         Image icon = AccessController.doPrivileged(new PrivilegedAction<Image>() {
             @Override public Image run() {
                 return new Image(HTMLEditorSkin.class.getResource(iconName).toString());
@@ -854,6 +855,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
             toggleButton.setToggleGroup(toggleGroup);
         }
 
+        @SuppressWarnings("removal")
         Image icon = AccessController.doPrivileged(new PrivilegedAction<Image>() {
             @Override public Image run() {
                 return new Image(HTMLEditorSkin.class.getResource(iconName).toString());
@@ -901,6 +903,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
         if (orientation == RIGHT_TO_LEFT) {
             try {
                 final String iconName = resources.getString("numbersIcon-rtl");
+                @SuppressWarnings("removal")
                 Image icon = AccessController.doPrivileged(new PrivilegedAction<Image>() {
                     @Override public Image run() {
                         return new Image(HTMLEditorSkin.class.getResource(iconName).toString());

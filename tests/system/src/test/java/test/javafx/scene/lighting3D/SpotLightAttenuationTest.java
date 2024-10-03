@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,16 @@
 
 package test.javafx.scene.lighting3D;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.SpotLight;
 import javafx.scene.paint.Color;
-
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class SpotLightAttenuationTest extends LightingTest {
@@ -58,7 +54,7 @@ public class SpotLightAttenuationTest extends LightingTest {
         initFX();
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
         LightingTest.light = LIGHT;
@@ -66,7 +62,7 @@ public class SpotLightAttenuationTest extends LightingTest {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @Before
+    @BeforeEach
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
@@ -83,17 +79,17 @@ public class SpotLightAttenuationTest extends LightingTest {
                 int innerX = angleToDist(INSIDE_ANGLE_SAMPLE);
                 double spotFactor = 1;
                 double sampledBlue = snapshot.getPixelReader().getColor(innerX, 0).getBlue();
-                assertEquals(FAIL_MESSAGE, calculateLambertTerm(innerX) * spotFactor, sampledBlue, DELTA);
+                assertEquals(calculateLambertTerm(innerX) * spotFactor, sampledBlue, DELTA, FAIL_MESSAGE);
 
                 int middleX = angleToDist(MIDDLE_ANGLE_SAMPLE);
                 spotFactor = calculateSpotlightFactor(MIDDLE_ANGLE_SAMPLE);
                 sampledBlue = snapshot.getPixelReader().getColor(middleX, 0).getBlue();
-                assertEquals(FAIL_MESSAGE, calculateLambertTerm(middleX) * spotFactor, sampledBlue, DELTA);
+                assertEquals(calculateLambertTerm(middleX) * spotFactor, sampledBlue, DELTA, FAIL_MESSAGE);
 
                 int outerX = angleToDist(OUTSIDE_ANGLE_SAMPLE);
                 spotFactor = 0;
                 sampledBlue = snapshot.getPixelReader().getColor(outerX, 0).getBlue();
-                assertEquals(FAIL_MESSAGE, calculateLambertTerm(outerX) * spotFactor, sampledBlue, DELTA);
+                assertEquals(calculateLambertTerm(outerX) * spotFactor, sampledBlue, DELTA, FAIL_MESSAGE);
             }
         });
     }

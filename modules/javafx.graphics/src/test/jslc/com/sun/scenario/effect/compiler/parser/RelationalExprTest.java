@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,42 +31,45 @@ import com.sun.scenario.effect.compiler.model.Type;
 import com.sun.scenario.effect.compiler.tree.BinaryExpr;
 import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class RelationalExprTest extends ParserBase {
 
     @Test
-    public void oneLtEq() throws Exception {
+    public void oneLtEq() {
         BinaryExpr tree = parseTreeFor("foo <= 3");
         assertEquals(tree.getOp(), BinaryOpType.LTEQ);
     }
 
     @Test
-    public void oneGtEq() throws Exception {
+    public void oneGtEq() {
         BinaryExpr tree = parseTreeFor("foo >= 3");
         assertEquals(tree.getOp(), BinaryOpType.GTEQ);
     }
 
     @Test
-    public void oneLt() throws Exception {
+    public void oneLt() {
         BinaryExpr tree = parseTreeFor("foo < 3");
         assertEquals(tree.getOp(), BinaryOpType.LT);
     }
 
     @Test
-    public void oneGt() throws Exception {
+    public void oneGt() {
         BinaryExpr tree = parseTreeFor("foo > 3");
         assertEquals(tree.getOp(), BinaryOpType.GT);
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notARelationalExpression() throws Exception {
-        parseTreeFor("foo @ 3");
+    @Test
+    public void notARelationalExpression() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("foo @ 3");
+        });
     }
 
-    private BinaryExpr parseTreeFor(String text) throws Exception {
+    private BinaryExpr parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         visitor.getSymbolTable().declareVariable("foo", Type.INT, null);

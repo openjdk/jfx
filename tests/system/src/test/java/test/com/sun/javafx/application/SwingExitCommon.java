@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,25 @@
 
 package test.com.sun.javafx.application;
 
-import com.sun.javafx.application.PlatformImplShim;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.TIMEOUT;
 import java.awt.BorderLayout;
-import javax.swing.SwingUtilities;
 import java.awt.Dimension;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
-import javax.swing.JFrame;
-import junit.framework.AssertionFailedError;
+import com.sun.javafx.application.PlatformImplShim;
 import test.util.Util;
-
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
 
 /**
  * Test program for Platform implicit exit behavior using an embedded JFXPanel.
@@ -118,7 +119,7 @@ public class SwingExitCommon {
 
         try {
             if (!initialized.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for JFXPanel to launch and initialize");
+                fail("Timeout waiting for JFXPanel to launch and initialize");
             }
 
             Thread.sleep(SLEEP_TIME);
@@ -129,9 +130,7 @@ public class SwingExitCommon {
                 });
             }
             catch (InvocationTargetException ex) {
-                AssertionFailedError err = new AssertionFailedError("Exception while disposing JFrame");
-                err.initCause(ex.getCause());
-                throw err;
+                fail(ex);
             }
 
             final CountDownLatch exitLatch = PlatformImplShim.test_getPlatformExitLatch();
@@ -151,7 +150,7 @@ public class SwingExitCommon {
             }
 
             if (!exitLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Platform to exit");
+                fail("Timeout waiting for Platform to exit");
             }
         } catch (InterruptedException ex) {
             Util.throwError(testError[0]);

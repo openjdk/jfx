@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,12 @@
 
 package test.javafx.scene;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.stream.Stream;
 import javafx.animation.Interpolator;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -42,77 +45,56 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Transform;
 import javafx.util.Callback;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import test.util.Util;
-
-import static org.junit.Assert.*;
 
 /**
  * Test program for showAndWait functionality.
  */
-@RunWith(Parameterized.class)
-public class Snapshot2Test extends SnapshotCommon {
+public final class Snapshot2Test extends SnapshotCommon {
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         doSetupOnce();
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         doTeardownOnce();
     }
-
-    // Flag indicating snapshot should be taken on a live scene, that is a
-    // scene attached to the primary stage
-    private final boolean live;
-
-    // Flag indicating to use an existing image
-    private final boolean useImage;
 
     // Temporary stage, scene, and node used for testing
     private TestStage tmpStage = null;
     private Scene tmpScene = null;
     private Node tmpNode = null;
 
-    private static Collection params = null;
-
-    private static final Object[] pLive = { Boolean.FALSE, Boolean.TRUE };
-    private static final Object[] pUseImage = { Boolean.FALSE, Boolean.TRUE };
-
-    @Parameters
-    public static Collection getParams() {
-        if (params == null) {
-            params = new ArrayList();
-            for (Object o0 : pLive) {
-                for (Object o1 : pUseImage) {
-                    params.add(new Object[] { o0, o1 });
-                }
-            }
-        }
-        return params;
+    private static Stream<Arguments> parameters() {
+        return Stream.of(
+            Arguments.of(false, false),
+            Arguments.of(false, true),
+            Arguments.of(true, false),
+            Arguments.of(true, true)
+        );
     }
 
-    public Snapshot2Test(Boolean live, Boolean useImage) {
-        this.live = live;
-        this.useImage = useImage;
-    }
-
-    @Before
-    public void setupEach() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    /**
+     * @param live Flag indicating snapshot should be taken on a live scene, that is a scene attached to the primary stage
+     * @param useImage Flag indicating to use an existing image
+     */
+    public void setupEach(boolean live, boolean useImage) {
         assertNotNull(myApp);
         assertNotNull(myApp.primaryStage);
         assertTrue(myApp.primaryStage.isShowing());
     }
 
-    @After
+    @AfterEach
     public void teardownEach() {
         Util.runAndWait(() -> {
             if (tmpStage != null && tmpStage.isShowing()) {
@@ -123,7 +105,7 @@ public class Snapshot2Test extends SnapshotCommon {
 
     // ========================== TEST CASES ==========================
 
-    private void setupEmptyScene() {
+    private void setupEmptyScene(boolean live) {
         Util.runAndWait(() -> {
             Group root = new Group();
             tmpScene = new Scene(root);
@@ -138,9 +120,11 @@ public class Snapshot2Test extends SnapshotCommon {
     }
 
     // Verify a snapshot of an empty scene / root node
-    @Test
-    public void testSnapshotEmptySceneImm() {
-        setupEmptyScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotEmptySceneImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupEmptyScene(live);
 
         final WritableImage img = useImage ? new WritableImage(1, 1) : null;
         Util.runAndWait(() -> {
@@ -155,9 +139,11 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
-    @Test
-    public void testSnapshotEmptySceneDefer() {
-        setupEmptyScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotEmptySceneDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupEmptyScene(live);
         final WritableImage img = useImage ? new WritableImage(1, 1) : null;
         runDeferredSnapshotWait(tmpScene, result -> {
             assertSame(tmpScene, result.getSource());
@@ -174,8 +160,8 @@ public class Snapshot2Test extends SnapshotCommon {
         }, img);
     }
 
-    private void doTestSnapshotEmptyNodeImm(final SnapshotParameters snapshotParams) {
-        setupEmptyScene();
+    private void doTestSnapshotEmptyNodeImm(boolean live, boolean useImage, final SnapshotParameters snapshotParams) {
+        setupEmptyScene(live);
         final WritableImage img = useImage ? new WritableImage(1, 1) : null;
         Util.runAndWait(() -> {
             WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
@@ -189,18 +175,22 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
-    @Test
-    public void testSnapshotEmptyNodeImmNoParams() {
-        doTestSnapshotEmptyNodeDefer(null);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotEmptyNodeImmNoParams(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotEmptyNodeDefer(live, useImage, null);
     }
 
-    @Test
-    public void testSnapshotEmptyNodeImm() {
-        doTestSnapshotEmptyNodeDefer(new SnapshotParameters());
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotEmptyNodeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotEmptyNodeDefer(live, useImage, new SnapshotParameters());
     }
 
-    private void doTestSnapshotEmptyNodeDefer(final SnapshotParameters snapshotParams) {
-        setupEmptyScene();
+    private void doTestSnapshotEmptyNodeDefer(boolean live, boolean useImage, final SnapshotParameters snapshotParams) {
+        setupEmptyScene(live);
         final WritableImage img = useImage ? new WritableImage(1, 1) : null;
         runDeferredSnapshotWait(tmpScene.getRoot(), result -> {
             assertSame(tmpScene.getRoot(), result.getSource());
@@ -217,14 +207,18 @@ public class Snapshot2Test extends SnapshotCommon {
         }, snapshotParams, img);
     }
 
-    @Test
-    public void testSnapshotEmptyNodeDeferNoParams() {
-        doTestSnapshotEmptyNodeImm(null);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotEmptyNodeDeferNoParams(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotEmptyNodeImm(live, useImage, null);
     }
 
-    @Test
-    public void testSnapshotEmptyNodeDefer() {
-        doTestSnapshotEmptyNodeImm(new SnapshotParameters());
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotEmptyNodeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotEmptyNodeImm(live, useImage, new SnapshotParameters());
     }
 
     private static final int SCENE_W = 200;
@@ -232,7 +226,7 @@ public class Snapshot2Test extends SnapshotCommon {
     private static final int NODE_W = SCENE_W - 2*10;
     private static final int NODE_H = SCENE_H - 2*5;
 
-    private void setupSimpleScene() {
+    private void setupSimpleScene(boolean live) {
         Util.runAndWait(() -> {
             tmpNode = new Rectangle(10, 5, NODE_W, NODE_H);
             Group root = new Group();
@@ -248,7 +242,7 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
-    private void setupImageScene(int width, int height) {
+    private void setupImageScene(boolean live, int width, int height) {
         Util.runAndWait(() -> {
             WritableImage image = new WritableImage(width, height);
             // Initialize image with a bilinear gradient
@@ -288,9 +282,11 @@ public class Snapshot2Test extends SnapshotCommon {
 
     // Test snapshot of a simple scene
 
-    @Test
-    public void testSnapshotSimpleSceneImm() {
-        setupSimpleScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotSimpleSceneImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupSimpleScene(live);
 
         final WritableImage img = useImage ? new WritableImage(SCENE_W, SCENE_H) : null;
         Util.runAndWait(() -> {
@@ -305,9 +301,11 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
-    @Test
-    public void testSnapshotSimpleSceneDefer() {
-        setupSimpleScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotSimpleSceneDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupSimpleScene(live);
 
         final WritableImage img = useImage ? new WritableImage(SCENE_W, SCENE_H) : null;
         runDeferredSnapshotWait(tmpScene, result -> {
@@ -325,9 +323,11 @@ public class Snapshot2Test extends SnapshotCommon {
         }, img);
     }
 
-    @Test
-    public void testSnapshotSimpleNodeImm() {
-        setupSimpleScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotSimpleNodeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupSimpleScene(live);
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
         Util.runAndWait(() -> {
@@ -342,9 +342,11 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
-    @Test
-    public void testSnapshotSimpleNodeDefer() {
-        setupSimpleScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotSimpleNodeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupSimpleScene(live);
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
         runDeferredSnapshotWait(tmpScene.getRoot(), result -> {
@@ -364,8 +366,8 @@ public class Snapshot2Test extends SnapshotCommon {
 
     // Test tiled snapshots
 
-    private void doTestTiledSnapshotImm(int w, int h) {
-        setupImageScene(w, h);
+    private void doTestTiledSnapshotImm(boolean live, boolean useImage, int w, int h) {
+        setupImageScene(live, w, h);
         Image original = ((ImageView) tmpNode).getImage();
         assertNotNull(original);
         WritableImage buffer = useImage ? new WritableImage(w, h) : null;
@@ -379,8 +381,8 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
-    private void doTestTiledSnapshotDefer(int w, int h) {
-        setupImageScene(w, h);
+    private void doTestTiledSnapshotDefer(boolean live, boolean useImage, int w, int h) {
+        setupImageScene(live, w, h);
         Image original = ((ImageView) tmpNode).getImage();
         assertNotNull(original);
         WritableImage buffer = useImage ? new WritableImage(w, h) : null;
@@ -423,90 +425,122 @@ public class Snapshot2Test extends SnapshotCommon {
         return true;
     }
 
-    @Test
-    public void testSnapshot2x1TilesSameSizeImm() {
-        doTestTiledSnapshotImm(4100, 10);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x1TilesSameSizeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotImm(live, useImage, 4100, 10);
     }
 
-    @Test
-    public void testSnapshot2x1TilesDifferentSizeImm() {
-        doTestTiledSnapshotImm(4099, 10);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x1TilesDifferentSizeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotImm(live, useImage, 4099, 10);
     }
 
-    @Test
-    public void testSnapshot1x2TilesSameSizeImm() {
-        doTestTiledSnapshotImm(10, 4100);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot1x2TilesSameSizeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotImm(live, useImage, 10, 4100);
     }
 
-    @Test
-    public void testSnapshot1x2TilesDifferentSizeImm() {
-        doTestTiledSnapshotImm(10, 4099);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot1x2TilesDifferentSizeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotImm(live, useImage, 10, 4099);
     }
 
-    @Test
-    public void testSnapshot2x2TilesSameSizeImm() {
-        doTestTiledSnapshotImm(4100, 4100);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x2TilesSameSizeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotImm(live, useImage, 4100, 4100);
     }
 
-    @Test
-    public void testSnapshot2x2TilesDifferentSizeImm() {
-        doTestTiledSnapshotImm(4099, 4099);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x2TilesDifferentSizeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotImm(live, useImage, 4099, 4099);
     }
 
-    @Test
-    public void testSnapshot2x2TilesSameHeightImm() {
-        doTestTiledSnapshotImm(4099, 4100);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x2TilesSameHeightImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotImm(live, useImage, 4099, 4100);
     }
 
-    @Test
-    public void testSnapshot2x2TilesSameWidthImm() {
-        doTestTiledSnapshotImm(4100, 4099);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x2TilesSameWidthImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotImm(live, useImage, 4100, 4099);
     }
 
-    @Test
-    public void testSnapshot2x1TilesSameSizeDefer() {
-        doTestTiledSnapshotDefer(4100, 10);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x1TilesSameSizeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotDefer(live, useImage, 4100, 10);
     }
 
-    @Test
-    public void testSnapshot2x1TilesDifferentSizeDefer() {
-        doTestTiledSnapshotDefer(4099, 10);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x1TilesDifferentSizeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotDefer(live, useImage, 4099, 10);
     }
 
-    @Test
-    public void testSnapshot1x2TilesSameSizeDefer() {
-        doTestTiledSnapshotDefer(10, 4100);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot1x2TilesSameSizeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotDefer(live, useImage, 10, 4100);
     }
 
-    @Test
-    public void testSnapshot1x2TilesDifferentSizeDefer() {
-        doTestTiledSnapshotDefer(10, 4099);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot1x2TilesDifferentSizeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotDefer(live, useImage, 10, 4099);
     }
 
-    @Test
-    public void testSnapshot2x2TilesSameSizeDefer() {
-        doTestTiledSnapshotDefer(4100, 4100);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x2TilesSameSizeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotDefer(live, useImage, 4100, 4100);
     }
 
-    @Test
-    public void testSnapshot2x2TilesDifferentSizeDefer() {
-        doTestTiledSnapshotDefer(4099, 4099);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x2TilesDifferentSizeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotDefer(live, useImage, 4099, 4099);
     }
 
-    @Test
-    public void testSnapshot2x2TilesSameHeightDefer() {
-        doTestTiledSnapshotDefer(4099, 4100);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x2TilesSameHeightDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotDefer(live, useImage, 4099, 4100);
     }
 
-    @Test
-    public void testSnapshot2x2TilesSameWidthDefer() {
-        doTestTiledSnapshotDefer(4100, 4099);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot2x2TilesSameWidthDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestTiledSnapshotDefer(live, useImage, 4100, 4099);
     }
 
     // Test node snapshot with a scale transform
 
-    private void doTestSnapshotScaleNodeImm(int xScale, int yScale) {
-        setupSimpleScene();
+    private void doTestSnapshotScaleNodeImm(boolean live, boolean useImage, int xScale, int yScale) {
+        setupSimpleScene(live);
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         snapshotParams.setTransform(Transform.scale(xScale, yScale));
         final int WIDTH = NODE_W * xScale;
@@ -524,8 +558,8 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
-    private void doTestSnapshotScaleNodeDefer(int xScale, int yScale) {
-        setupSimpleScene();
+    private void doTestSnapshotScaleNodeDefer(boolean live, boolean useImage, int xScale, int yScale) {
+        setupSimpleScene(live);
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         snapshotParams.setTransform(Transform.scale(xScale, yScale));
         final int WIDTH = NODE_W * xScale;
@@ -546,41 +580,55 @@ public class Snapshot2Test extends SnapshotCommon {
         }, snapshotParams, img);
     }
 
-    @Test
-    public void testSnapshotScaleNodeImm() {
-        doTestSnapshotScaleNodeImm(3, 3);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotScaleNodeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotScaleNodeImm(live, useImage, 3, 3);
     }
 
-    @Test
-    public void testSnapshotScaleNodeDefer() {
-        doTestSnapshotScaleNodeDefer(3, 3);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotScaleNodeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotScaleNodeDefer(live, useImage, 3, 3);
     }
 
-    @Test
-    public void testSnapshotBigXScaleNodeImm() {
-        doTestSnapshotScaleNodeImm(100, 1);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotBigXScaleNodeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotScaleNodeImm(live, useImage, 100, 1);
     }
 
-    @Test
-    public void testSnapshotBigXScaleNodeDefer() {
-        doTestSnapshotScaleNodeDefer(100, 1);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotBigXScaleNodeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotScaleNodeDefer(live, useImage, 100, 1);
     }
 
-    @Test
-    public void testSnapshotBigYScaleNodeImm() {
-        doTestSnapshotScaleNodeImm(1, 200);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotBigYScaleNodeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotScaleNodeImm(live, useImage, 1, 200);
     }
 
-    @Test
-    public void testSnapshotBigYScaleNodeDefer() {
-        doTestSnapshotScaleNodeDefer(1, 200);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotBigYScaleNodeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        doTestSnapshotScaleNodeDefer(live, useImage, 1, 200);
     }
 
     // Test node snapshot with a 90 degree rotate transform
 
-    @Test
-    public void testSnapshotRotateNodeImm() {
-        setupSimpleScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotRotateNodeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupSimpleScene(live);
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         // Rotate by 90 degrees, which will swap width and height
         snapshotParams.setTransform(Transform.rotate(90, 0, 0));
@@ -599,9 +647,11 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
-    @Test
-    public void testSnapshotRotateNodeDefer() {
-        setupSimpleScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotRotateNodeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupSimpleScene(live);
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         // Rotate by 90 degrees, which will swap width and height
         snapshotParams.setTransform(Transform.rotate(90, 0, 0));
@@ -629,9 +679,11 @@ public class Snapshot2Test extends SnapshotCommon {
     private static final int VP_WIDTH = 160;
     private static final int VP_HEIGHT = 100;
 
-    @Test
-    public void testSnapshotViewportNodeImm() {
-        setupSimpleScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotViewportNodeImm(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupSimpleScene(live);
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         snapshotParams.setViewport(new Rectangle2D(VP_X, VP_Y, VP_WIDTH, VP_HEIGHT));
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
@@ -649,9 +701,11 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
-    @Test
-    public void testSnapshotViewportNodeDefer() {
-        setupSimpleScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotViewportNodeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupSimpleScene(live);
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         snapshotParams.setViewport(new Rectangle2D(VP_X, VP_Y, VP_WIDTH, VP_HEIGHT));
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
@@ -679,9 +733,11 @@ public class Snapshot2Test extends SnapshotCommon {
     private static final int NEW_WIDTH = 70;
     private static final int NEW_HEIGHT = 35;
 
-    @Test
-    public void testSnapshotUpdateNodeDefer() {
-        setupSimpleScene();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshotUpdateNodeDefer(boolean live, boolean useImage) {
+        setupEach(live, useImage);
+        setupSimpleScene(live);
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
         final int WIDTH = useImage ? NODE_W : NEW_WIDTH;
@@ -708,5 +764,4 @@ public class Snapshot2Test extends SnapshotCommon {
 
         runDeferredSnapshotWait(tmpScene.getRoot(), cb, snapshotParams, img, runAfter);
     }
-
 }

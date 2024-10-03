@@ -30,9 +30,11 @@ import java.util.Random;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.skin.ChoiceBoxSkin;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
@@ -49,7 +51,14 @@ public class ChoiceBoxPage extends TestPaneBase implements HasSkinnable {
     public ChoiceBoxPage() {
         super("ChoiceBoxPage");
 
-        control = new ChoiceBox();
+        control = new ChoiceBox() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         OptionPane op = new OptionPane();
         op.section("ChoiceBox");

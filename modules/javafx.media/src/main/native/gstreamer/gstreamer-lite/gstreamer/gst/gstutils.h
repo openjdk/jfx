@@ -1034,6 +1034,17 @@ gboolean                gst_element_seek_simple         (GstElement   *element,
                                                          GstSeekFlags  seek_flags,
                                                          gint64        seek_pos);
 
+GST_API
+gchar *                 gst_element_decorate_stream_id  (GstElement   *element,
+                                                         const gchar  *stream_id);
+GST_API
+gchar *   gst_element_decorate_stream_id_printf_valist  (GstElement * element,
+                                                         const gchar * format,
+                                                         va_list var_args) G_GNUC_PRINTF (2, 0) G_GNUC_MALLOC;
+GST_API
+gchar *          gst_element_decorate_stream_id_printf  (GstElement * element,
+                                                         const gchar * format,
+                                                         ...) G_GNUC_PRINTF (2, 3) G_GNUC_MALLOC;
 /* util elementfactory functions */
 
 GST_API
@@ -1198,6 +1209,10 @@ GST_API
 gint64        gst_util_greatest_common_divisor_int64 (gint64 a, gint64 b);
 
 GST_API
+void          gst_util_simplify_fraction        (gint *numerator, gint *denominator,
+                                                 guint n_terms, guint threshold);
+
+GST_API
 void          gst_util_fraction_to_double       (gint src_n, gint src_d, gdouble *dest);
 
 GST_API
@@ -1224,6 +1239,14 @@ void          gst_type_mark_as_plugin_api       (GType type, GstPluginAPIFlags f
 
 GST_API
 gboolean      gst_type_is_plugin_api            (GType type, GstPluginAPIFlags *flags);
+
+#ifndef GSTREAMER_LITE
+GST_API
+guint         gst_util_ceil_log2                (guint32 v);
+
+GST_API
+gint          gst_util_filename_compare        (const gchar *a, const gchar *b);
+#endif // GSTREAMER_LITE
 
 G_END_DECLS
 

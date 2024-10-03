@@ -33,10 +33,10 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class BooleanPropertyTest {
 
@@ -47,7 +47,7 @@ public class BooleanPropertyTest {
     private static final boolean VALUE_2 = false;
     private static final boolean DEFAULT = false;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         ErrorLoggingUtiltity.reset();
     }

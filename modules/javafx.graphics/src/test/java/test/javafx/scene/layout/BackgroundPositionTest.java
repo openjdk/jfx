@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,12 @@ package test.javafx.scene.layout;
 
 import javafx.geometry.Side;
 import javafx.scene.layout.BackgroundPosition;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  */
@@ -61,14 +64,18 @@ public class BackgroundPositionTest {
         assertEquals(Side.LEFT, pos.getHorizontalSide());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void TOPHorizontalSideFails() {
-        new BackgroundPosition(Side.TOP, 10, true, Side.BOTTOM, 20, true);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BackgroundPosition(Side.TOP, 10, true, Side.BOTTOM, 20, true);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void BOTTOMHorizontalSideFails() {
-        new BackgroundPosition(Side.BOTTOM, 10, true, Side.BOTTOM, 20, true);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BackgroundPosition(Side.BOTTOM, 10, true, Side.BOTTOM, 20, true);
+        });
     }
 
     @Test public void negativeHorizontalPositionOK() {
@@ -81,14 +88,18 @@ public class BackgroundPositionTest {
         assertEquals(Side.TOP, pos.getVerticalSide());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void LEFTVerticalSideFails() {
-        new BackgroundPosition(Side.LEFT, 10, true, Side.LEFT, 20, true);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BackgroundPosition(Side.LEFT, 10, true, Side.LEFT, 20, true);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void RIGHTVerticalSideFails() {
-        new BackgroundPosition(Side.LEFT, 10, true, Side.RIGHT, 20, true);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BackgroundPosition(Side.LEFT, 10, true, Side.RIGHT, 20, true);
+        });
     }
 
     @Test public void negativeVerticalPositionOK() {

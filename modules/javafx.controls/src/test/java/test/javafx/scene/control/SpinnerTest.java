@@ -24,18 +24,32 @@
  */
 package test.javafx.scene.control;
 
-import static junit.framework.Assert.*;
-
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.layout.HBox;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.provider.Arguments;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -94,16 +108,19 @@ public class SpinnerTest {
 
     private static Locale defaultLocale;
 
-    @BeforeClass public static void setupOnce() {
+    @BeforeAll
+    public static void setupOnce() {
         defaultLocale = Locale.getDefault();
         Locale.setDefault(Locale.US);
     }
 
-    @AfterClass public static void tearDownOnce() {
+    @AfterAll
+    public static void tearDownOnce() {
         Locale.setDefault(defaultLocale);
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         eventCount = 0;
         spinner = new Spinner();
 
@@ -137,7 +154,7 @@ public class SpinnerTest {
         });
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
@@ -242,24 +259,32 @@ public class SpinnerTest {
      *                                                                         *
      **************************************************************************/
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void expectExceptionWhenNoArgsIncrementCalled_noValueFactory() {
-        spinner.increment();
+        assertThrows(IllegalStateException.class, () -> {
+            spinner.increment();
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void expectExceptionWhenOneArgsIncrementCalled_noValueFactory() {
-        spinner.increment(2);
+        assertThrows(IllegalStateException.class, () -> {
+            spinner.increment(2);
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void expectExceptionWhenNoArgsDecrementCalled_noValueFactory() {
-        spinner.decrement();
+        assertThrows(IllegalStateException.class, () -> {
+            spinner.decrement();
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void expectExceptionWhenOneArgsDecrementCalled_noValueFactory() {
-        spinner.decrement(2);
+        assertThrows(IllegalStateException.class, () -> {
+            spinner.decrement(2);
+        });
     }
 
 
@@ -338,8 +363,9 @@ public class SpinnerTest {
      *                                                                         *
      **************************************************************************/
 
-    @Ignore("JDK-8328701")
-    @Test public void editing_commitValidInput() {
+    @Disabled("JDK-8328701")
+    @Test
+    public void editing_commitValidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("3");
         // TODO press enter
@@ -349,8 +375,9 @@ public class SpinnerTest {
         assertEquals("3", intSpinner.getEditor().getText());
     }
 
-    @Ignore("JDK-8328701")
-    @Test public void editing_commitInvalidInput() {
+    @Disabled("JDK-8328701")
+    @Test
+    public void editing_commitInvalidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("300");
         // TODO press enter
@@ -1292,60 +1319,69 @@ public class SpinnerTest {
         assertEquals(expected.truncatedTo(ChronoUnit.MINUTES), actual.truncatedTo(ChronoUnit.MINUTES));
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testIncrement_oneStep() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testIncrement_oneStep() {
         localTimeValueFactory.increment(1);
         assertTimeEquals(nowPlusHours(1), localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testIncrement_twoSteps() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testIncrement_twoSteps() {
         localTimeValueFactory.increment(2);
         assertTimeEquals(nowPlusHours(2), localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testIncrement_manyCalls() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testIncrement_manyCalls() {
         for (int i = 0; i < 100; i++) {
             localTimeValueFactory.increment(1);
         }
         assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testIncrement_bigStepPastMaximum() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testIncrement_bigStepPastMaximum() {
         localTimeValueFactory.increment(100000);
         assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testDecrement_oneStep() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testDecrement_oneStep() {
         localTimeValueFactory.decrement(1);
         assertTimeEquals(nowPlusHours(-1), localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testDecrement_twoSteps() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testDecrement_twoSteps() {
         localTimeValueFactory.decrement(2);
         assertTimeEquals(nowPlusHours(-2), localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testDecrement_manyCalls() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testDecrement_manyCalls() {
         for (int i = 0; i < 100; i++) {
             localTimeValueFactory.decrement(1);
         }
         assertTimeEquals(LocalTime.MIN, localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testDecrement_bigStepPastMinimum() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testDecrement_bigStepPastMinimum() {
         localTimeValueFactory.decrement(100000);
         assertTimeEquals(LocalTime.MIN, localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testWrapAround_increment_oneStep() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testWrapAround_increment_oneStep() {
         localTimeValueFactory.setWrapAround(true);
 
         LocalTime six_pm = LocalTime.of(18,32);
@@ -1360,8 +1396,9 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.of(01,32), localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testWrapAround_increment_twoSteps() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testWrapAround_increment_twoSteps() {
         localTimeValueFactory.setWrapAround(true);
 
         LocalTime six_pm = LocalTime.of(18,32);
@@ -1388,8 +1425,9 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.of(23,32), localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testWrapAround_decrement_twoSteps() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testWrapAround_decrement_twoSteps() {
         localTimeValueFactory.setWrapAround(true);
 
         LocalTime six_am = LocalTime.of(06,32);
@@ -1401,13 +1439,15 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.of(22,32), localTimeValueFactory.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_assertDefaultConverterIsNonNull() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_assertDefaultConverterIsNonNull() {
         assertNotNull(localTimeValueFactory.getConverter());
     }
 
-    @Ignore("Not safe when run early in the morning - needs refining when time permits")
-    @Test public void localTimeSpinner_testSetMin_doesNotChangeSpinnerValueWhenMinIsLessThanCurrentValue() {
+    @Disabled("Not safe when run early in the morning - needs refining when time permits")
+    @Test
+    public void localTimeSpinner_testSetMin_doesNotChangeSpinnerValueWhenMinIsLessThanCurrentValue() {
         LocalTime newValue = LocalTime.now();
         localTimeValueFactory.setValue(newValue);
         assertTimeEquals(newValue, localTimeSpinner.getValue());
@@ -1415,8 +1455,9 @@ public class SpinnerTest {
         assertTimeEquals(newValue, localTimeSpinner.getValue());
     }
 
-    @Ignore("Not safe when late at night - needs refining when time permits")
-    @Test public void localTimeSpinner_testSetMin_changesSpinnerValueWhenMinIsGreaterThanCurrentValue() {
+    @Disabled("Not safe when late at night - needs refining when time permits")
+    @Test
+    public void localTimeSpinner_testSetMin_changesSpinnerValueWhenMinIsGreaterThanCurrentValue() {
         LocalTime newValue = LocalTime.now();
         localTimeValueFactory.setValue(newValue);
         assertTimeEquals(newValue, localTimeSpinner.getValue());
@@ -1433,8 +1474,9 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.MAX, SpinnerValueFactoryShim.LocalTime_getMax(localTimeValueFactory));
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testSetMax_doesNotChangeSpinnerValueWhenMaxIsGreaterThanCurrentValue() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testSetMax_doesNotChangeSpinnerValueWhenMaxIsGreaterThanCurrentValue() {
         LocalTime newValue = LocalTime.now();
         localTimeValueFactory.setValue(newValue);
         assertTimeEquals(newValue, localTimeSpinner.getValue());
@@ -1442,8 +1484,9 @@ public class SpinnerTest {
         assertTimeEquals(newValue, localTimeSpinner.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testSetMax_changesSpinnerValueWhenMaxIsLessThanCurrentValue() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testSetMax_changesSpinnerValueWhenMaxIsLessThanCurrentValue() {
         LocalTime newValue = nowPlusHours(4);
         localTimeValueFactory.setValue(newValue);
         assertTimeEquals(newValue, localTimeSpinner.getValue());
@@ -1453,8 +1496,9 @@ public class SpinnerTest {
         assertTimeEquals(twoDays, localTimeSpinner.getValue());
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testSetMax_ensureThatMaxCanNotGoLessThanMin() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testSetMax_ensureThatMaxCanNotGoLessThanMin() {
         SpinnerValueFactoryShim.LocalTime_setMin(localTimeValueFactory, nowPlusHours(5));
         assertTimeEquals(nowPlusHours(5), SpinnerValueFactoryShim.LocalTime_getMax(localTimeValueFactory));
         assertTimeEquals(LocalTime.MAX, SpinnerValueFactoryShim.LocalTime_getMax(localTimeValueFactory));
@@ -1462,8 +1506,9 @@ public class SpinnerTest {
         assertTimeEquals(nowPlusHours(5), SpinnerValueFactoryShim.LocalTime_getMax(localTimeValueFactory));
     }
 
-    @Ignore
-    @Test public void localTimeSpinner_testSetMax_ensureThatMaxCanEqualMin() {
+    @Disabled
+    @Test
+    public void localTimeSpinner_testSetMax_ensureThatMaxCanEqualMin() {
         LocalTime twoDays = nowPlusHours(2);
         SpinnerValueFactoryShim.LocalTime_setMin(localTimeValueFactory, twoDays);
         assertTimeEquals(twoDays, SpinnerValueFactoryShim.LocalTime_getMax(localTimeValueFactory));
@@ -1519,14 +1564,16 @@ public class SpinnerTest {
         assertEquals(100.0, spinner.getValue());
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void test_jdk_8150946_testCommit_invalid_wrongType() {
-        Spinner<Double> spinner = new Spinner<>(-100, 100, 0, 0.5);
-        spinner.setEditable(true);
-        assertEquals(0.0, spinner.getValue());
-        spinner.getEditor().setText("Hello, World!");
-        spinner.commitValue();
-        assertEquals(0.0, spinner.getValue());
+        assertThrows(RuntimeException.class, () -> {
+            Spinner<Double> spinner = new Spinner<>(-100, 100, 0, 0.5);
+            spinner.setEditable(true);
+            assertEquals(0.0, spinner.getValue());
+            spinner.getEditor().setText("Hello, World!");
+            spinner.commitValue();
+            assertEquals(0.0, spinner.getValue());
+        });
     }
 
     @Test public void test_jdk_8150946_testCancel() {
@@ -1585,8 +1632,8 @@ public class SpinnerTest {
         String canMsg = "OnAction EventHandler of the cancel 'Cancel' " +
             "button should get invoked on ESCAPE key press.";
 
-        assertTrue(defMsg, enterDefaultPass);
-        assertTrue(canMsg, escapeCancelPass);
+        assertTrue(enterDefaultPass, defMsg);
+        assertTrue(escapeCancelPass, canMsg);
 
         // Same test with non editable spinner.
         intSpinner.setEditable(false);
@@ -1597,8 +1644,8 @@ public class SpinnerTest {
         tk.firePulse();
         stage.hide();
 
-        assertTrue(defMsg, enterDefaultPass);
-        assertTrue(canMsg, escapeCancelPass);
+        assertTrue(enterDefaultPass, defMsg);
+        assertTrue(escapeCancelPass, canMsg);
     }
 
     @Test public void spinnerDelayTest() {

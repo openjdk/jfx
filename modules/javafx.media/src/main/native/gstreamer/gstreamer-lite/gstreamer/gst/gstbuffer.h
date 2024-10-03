@@ -767,6 +767,9 @@ typedef struct _GstReferenceTimestampMeta GstReferenceTimestampMeta;
  *  * `timestamp/x-unix`: for timestamps based on the UNIX epoch according to
  *    the local clock.
  *
+ * Since 1.24 it can be serialized using gst_meta_serialize() and
+ * gst_meta_deserialize().
+ *
  * Since: 1.14
  */
 struct _GstReferenceTimestampMeta

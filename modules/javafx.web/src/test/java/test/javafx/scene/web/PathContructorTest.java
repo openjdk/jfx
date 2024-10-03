@@ -25,8 +25,8 @@
 
 package test.javafx.scene.web;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 
 public class PathContructorTest extends TestBase {
@@ -54,8 +54,9 @@ public class PathContructorTest extends TestBase {
 
         submit(() -> {
             int greenColor = 128;
-            assertEquals("First rect center", greenColor, (int) getEngine().executeScript(
-                    "document.getElementById('myCanvas').getContext('2d').getImageData(21, 21, 1, 1).data[1]"));
+            assertEquals(greenColor, (int) getEngine().executeScript(
+                            "document.getElementById('myCanvas').getContext('2d').getImageData(21, 21, 1, 1).data[1]"),
+                    "First rect center");
         });
     }
 }
