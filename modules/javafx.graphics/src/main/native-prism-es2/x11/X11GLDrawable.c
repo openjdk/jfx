@@ -48,8 +48,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nCreateDrawable
         return 0;
     }
 
-    fprintf(stderr, "Java_com_sun_prism_es2_X11GLDrawable_nCreateDrawable\n");
-
     /* allocate the structure */
     dInfo = (DrawableInfo *) malloc(sizeof (DrawableInfo));
     if (dInfo == NULL) {
@@ -128,6 +126,5 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLDrawable_nDestroyDrawable
         return;
     }
 
-    fprintf(stderr, "Java_com_sun_prism_es2_X11GLDrawable_nDestroyDrawable\n");
     free(dInfo);
 }
