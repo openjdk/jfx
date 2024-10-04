@@ -81,7 +81,7 @@ public class NotebookModelStacked extends StyledTextModel {
                 public RichParagraph getParagraph(int index) {
                     String text = getPlainText(index);
                     RichParagraph.Builder b = RichParagraph.builder();
-                    b.withInlineStyle(text, "-fx-text-fill:darkgreen; -fx-font-family:Monospace;");
+                    b.addWithInlineStyle(text, "-fx-text-fill:darkgreen; -fx-font-family:Monospace;");
                     return b.build();
                 }
             };
@@ -92,7 +92,7 @@ public class NotebookModelStacked extends StyledTextModel {
                 public RichParagraph getParagraph(int index) {
                     String text = getPlainText(index);
                     RichParagraph.Builder b = RichParagraph.builder();
-                    b.withInlineStyle(text, "-fx-text-fill:gray;");
+                    b.addWithInlineStyle(text, "-fx-text-fill:gray;");
                     return b.build();
                 }
             };

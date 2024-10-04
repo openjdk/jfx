@@ -112,9 +112,9 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * <pre>{@code
  *     SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
  *     // add text segment using CSS style name (requires a stylesheet)
- *     m.withStyles("RichTextArea ", "HEADER");
- *     // add text segment using inline style
- *     m.withInlineStyle("Demo", "-fx-font-size:200%;");
+ *     m.addWithStyles("RichTextArea ", "HEADER");
+ *     // add text segment using inline styles
+ *     m.addWithInlineStyle("Demo", "-fx-font-size:200%; -fx-font-weight:bold;");
  *     // add newline
  *     m.nl();
  *
@@ -1094,8 +1094,9 @@ public class RichTextArea extends Control {
     /**
      * When selection exists, deletes selected text.  Otherwise, deletes the character preceding the caret,
      * possibly breaking up the grapheme clusters.
-     * This method does nothing if the control is not editable, the model is either {@code null} or not writable,
-     * or the caret position is {@code null}.
+     * <p>
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      *
@@ -1164,9 +1165,8 @@ public class RichTextArea extends Control {
      * Transfers the currently selected text to the clipboard,
      * removing the current selection.
      * <p>
-     * This method does nothing if the model or the caret position is {@code null}.
-     * The default implementation will attempt to copy the information first, then delete the selected text.
-     * Any failures, such as the control being not editable, or out of memory condition, will be silently ignored.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#CUT
@@ -1179,7 +1179,8 @@ public class RichTextArea extends Control {
      * When selection exists, deletes selected text.  Otherwise, deletes the symbol at the caret.
      * When the symbol at the caret is a grapheme cluster, deletes the whole cluster.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE
@@ -1191,7 +1192,8 @@ public class RichTextArea extends Control {
     /**
      * When selection exists, deletes selected paragraphs.  Otherwise, deletes the paragraph at the caret.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_PARAGRAPH
@@ -1203,7 +1205,8 @@ public class RichTextArea extends Control {
     /**
      * Deletes text from the caret position to the start of the paragraph, ignoring existing selection.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_PARAGRAPH_START
@@ -1216,7 +1219,8 @@ public class RichTextArea extends Control {
      * Deletes from the caret positon to the end of next word, ignoring existing selection.
      * When the caret is in an empty paragraph, deletes the paragraph.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_WORD_NEXT_END
@@ -1229,7 +1233,8 @@ public class RichTextArea extends Control {
      * Deletes from the caret positon to the start of next word, ignoring existing selection.
      * When the caret is in an empty paragraph, deletes the paragraph.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_WORD_NEXT_START
@@ -1242,7 +1247,8 @@ public class RichTextArea extends Control {
      * Deletes (multiple) empty paragraphs or text from the caret position to the start of the previous word,
      * ignoring existing selection.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_WORD_PREVIOUS
@@ -1424,7 +1430,8 @@ public class RichTextArea extends Control {
     /**
      * Inserts a line break at the caret.  If selection exists, first deletes the selected text.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#INSERT_LINE_BREAK
@@ -1436,7 +1443,8 @@ public class RichTextArea extends Control {
     /**
      * Inserts a tab symbol at the caret.  If selection exists, first deletes the selected text.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#INSERT_TAB
@@ -1705,7 +1713,8 @@ public class RichTextArea extends Control {
      * This method clears the selection afterward.
      * It is up to the model to pick the best data format to paste.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#PASTE
@@ -1717,8 +1726,9 @@ public class RichTextArea extends Control {
     /**
      * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
      * <p>
-     * This method does nothing if either control or the model is not editable, of if the specified format is
-     * not supported by the model.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model is {@code null},
+     * or if the specified format is not supported by the model.
      *
      * @param format the data format to use
      */
@@ -1732,7 +1742,8 @@ public class RichTextArea extends Control {
     /**
      * Pastes the plain text clipboard content at the caret, or, if selection exists, replacing the selected text.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#PASTE_PLAIN_TEXT
@@ -2142,7 +2153,8 @@ public class RichTextArea extends Control {
      * If possible, undoes the last modification. If {@link #isUndoable()} returns
      * false, then calling this method has no effect.
      * <p>
-     * This method does nothing if either control or the model is not editable.
+     * This method does nothing if either the control or the model is not editable,
+     * or the model or the caret position is {@code null}.
      *
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#UNDO

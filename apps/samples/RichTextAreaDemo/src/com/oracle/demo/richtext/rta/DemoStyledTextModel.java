@@ -91,16 +91,16 @@ public class DemoStyledTextModel extends StyledTextModelViewOnlyBase {
         String sz = format.format(size);
         String[] css = monospaced ? new String[] { "monospaced" } : new String[0];
 
-        b.withInlineAndExternalStyles(s, "-fx-fill:darkgreen;", css);
-        b.withStyles(" / ", css);
-        b.withInlineAndExternalStyles(sz, "-fx-fill:black;", css);
+        b.addWithInlineAndStyleNames(s, "-fx-fill:darkgreen;", css);
+        b.addWithStyleNames(" / ", css);
+        b.addWithInlineAndStyleNames(sz, "-fx-fill:black;", css);
         if (monospaced) {
-            b.withStyles(" (monospaced)", css);
+            b.addWithStyleNames(" (monospaced)", css);
         }
 
         if ((ix % 10) == 9) {
             String words = generateWords(ix);
-            b.withStyles(words, css);
+            b.addWithStyleNames(words, css);
         }
         return b.build();
     }

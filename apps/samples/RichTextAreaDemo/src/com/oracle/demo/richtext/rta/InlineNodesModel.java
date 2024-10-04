@@ -54,7 +54,7 @@ public class InlineNodesModel extends SimpleViewOnlyStyledModel {
         String LARGE = "large";
         String ITALIC = "italic";
 
-        withStyles("Inline Nodes", UNDER, LARGE);
+        addWithStyleNames("Inline Nodes", UNDER, LARGE);
         nl();
         // trailing text
         addNodeSegment(() -> {
@@ -63,34 +63,34 @@ public class InlineNodesModel extends SimpleViewOnlyStyledModel {
             f.textProperty().bindBidirectional(textField);
             return f;
         });
-        withStyles(" ", LARGE);
+        addWithStyleNames(" ", LARGE);
         addNodeSegment(() -> new Button("OK"));
-        withStyles(" trailing segment.", LARGE); // FIX cannot navigate over this segment
+        addWithStyleNames(" trailing segment.", LARGE); // FIX cannot navigate over this segment
         nl();
 
         // leading text
-        withStyles("Leading text", LARGE);
+        addWithStyleNames("Leading text", LARGE);
         addNodeSegment(() -> {
             TextField f = new TextField();
             f.setPrefColumnCount(20);
             f.textProperty().bindBidirectional(textField);
             return f;
         });
-        withStyles("- in between text-", LARGE);
+        addWithStyleNames("- in between text-", LARGE);
         addNodeSegment(() -> new Button("Find"));
         nl();
 
         // leading and trailing text
-        withStyles("Leading text", LARGE);
+        addWithStyleNames("Leading text", LARGE);
         addNodeSegment(() -> {
             TextField f = new TextField();
             f.setPrefColumnCount(20);
             f.textProperty().bindBidirectional(textField);
             return f;
         });
-        withStyles("- in between text-", LARGE);
+        addWithStyleNames("- in between text-", LARGE);
         addNodeSegment(() -> new Button("Find"));
-        withStyles(" trailing segment.", LARGE);
+        addWithStyleNames(" trailing segment.", LARGE);
         nl();
 
         // adjacent nodes
@@ -100,12 +100,12 @@ public class InlineNodesModel extends SimpleViewOnlyStyledModel {
         addNodeSegment(() -> new Button("Four"));
         addNodeSegment(() -> new Button("Five"));
         nl();
-        withStyles("", LARGE);
+        addWithStyleNames("", LARGE);
         nl();
 
-        withStyles("A regular text segment for reference.", LARGE);
+        addWithStyleNames("A regular text segment for reference.", LARGE);
         nl();
-        withStyles("The End █", LARGE);
+        addWithStyleNames("The End █", LARGE);
         nl();
     }
 }

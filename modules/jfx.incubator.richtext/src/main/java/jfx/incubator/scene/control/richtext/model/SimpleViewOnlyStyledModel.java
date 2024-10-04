@@ -103,15 +103,15 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
-     * Appends a text segment styled with either inline style or external style names (or both).
+     * Appends a text segment styled with both the inline style and the stylesheet style names.
      * The {@code text} cannot contain newline ({@code \n}) symbols.
      *
      * @param text the text to append, must not contain {@code \n}, cannot be null
-     * @param style the inline style (example {@code "-fx-fill:red;"}), or null
-     * @param css the external style names
+     * @param style the inline style (example {@code "-fx-fill:red;"})
+     * @param css the stylesheet style names
      * @return this model instance
      */
-    public SimpleViewOnlyStyledModel withInlineAndExternalStyles(String text, String style, String... css) {
+    public SimpleViewOnlyStyledModel addWithInlineAndStyleNames(String text, String style, String... css) {
         Objects.requireNonNull(text);
         StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
         Paragraph p = lastParagraph();
@@ -120,14 +120,14 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
-     * Appends a text segment styled with external (stylesheet) style names.
+     * Appends a text segment styled with the stylesheet style names.
      * The {@code text} cannot contain newline ({@code \n}) symbols.
      *
      * @param text the text to append, must not contain {@code \n}, cannot be null
-     * @param css the external style names
+     * @param css the stylesheet style names
      * @return this model instance
      */
-    public SimpleViewOnlyStyledModel withStyles(String text, String... css) {
+    public SimpleViewOnlyStyledModel addWithStyleNames(String text, String... css) {
         Objects.requireNonNull(text);
         StyleAttributeMap a = StyleAttributeMap.fromStyles(null, css);
         Paragraph p = lastParagraph();
@@ -136,14 +136,14 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
-     * Appends a text segment styled with external (stylesheet) style names.
+     * Appends a text segment styled with the inline style.
      * The {@code text} cannot contain newline ({@code \n}) symbols.
      *
      * @param text the text to append, must not contain {@code \n}, cannot be null
      * @param style the inline style (example {@code "-fx-fill:red;"}), or null
      * @return this model instance
      */
-    public SimpleViewOnlyStyledModel withInlineStyle(String text, String style) {
+    public SimpleViewOnlyStyledModel addWithInlineStyle(String text, String style) {
         Objects.requireNonNull(text);
         StyleAttributeMap a = StyleAttributeMap.fromInlineStyle(style);
         Paragraph p = lastParagraph();

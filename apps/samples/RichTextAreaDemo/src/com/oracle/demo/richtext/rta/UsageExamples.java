@@ -51,12 +51,27 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
  * @author Andy Goryachev
  */
 public class UsageExamples {
+    // This example is used in the JEP and RichTextArea class javadoc. 
     void createViewOnly() {
         SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
         // add text segment using CSS style name (requires a stylesheet)
-        m.withStyles("RichTextArea ", "HEADER");
-        // add text segment using inline style
-        m.withInlineStyle("Demo", "-fx-font-size:200%;");
+        m.addWithStyleNames("RichTextArea ", "HEADER");
+        // add text segment using inline styles
+        m.addWithInlineStyle("Demo", "-fx-font-size:200%; -fx-font-weight:bold;");
+        // add newline
+        m.nl();
+
+        RichTextArea textArea = new RichTextArea(m);
+    }
+
+    void createViewOnlyAll() {
+        SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
+        // add text segment using CSS style name (requires a stylesheet)
+        m.addWithStyleNames("RichTextArea ", "HEADER");
+        // add text segment using inline styles
+        m.addWithInlineStyle("Demo ", "-fx-font-size:200%; -fx-font-weight:bold;");
+        // with inline and style names
+        m.addWithInlineAndStyleNames("... more text", "-fx-text-fill:red;", "STYLE1", "STYLE2");
         // add newline
         m.nl();
 

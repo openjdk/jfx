@@ -65,7 +65,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         String STRIKETHROUGH = "strikethrough";
         String UNDERLINE = "underline";
 
-        withInlineAndExternalStyles("RichTextArea Control", "-fx-font-size:200%;", UNDERLINE);
+        addWithInlineAndStyleNames("RichTextArea Control", "-fx-font-size:200%;", UNDERLINE);
         nl(2);
 
 //        addParagraph(() -> {
@@ -76,34 +76,34 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
 //            return r;
 //        });
 
-        withStyles("/**", RED, CODE);
+        addWithStyleNames("/**", RED, CODE);
         nl();
-        withStyles(" * Syntax Highlight Demo.", RED, CODE);
+        addWithStyleNames(" * Syntax Highlight Demo.", RED, CODE);
         nl();
-        withStyles(" */", RED, CODE);
+        addWithStyleNames(" */", RED, CODE);
         nl();
-        withStyles("public class ", GREEN, CODE);
-        withStyles("SyntaxHighlightDemo ", CODE);
-        withStyles("extends ", GREEN, CODE);
-        withStyles("Application {", CODE);
+        addWithStyleNames("public class ", GREEN, CODE);
+        addWithStyleNames("SyntaxHighlightDemo ", CODE);
+        addWithStyleNames("extends ", GREEN, CODE);
+        addWithStyleNames("Application {", CODE);
         nl();
-        withStyles("\tpublic static void", GREEN, CODE);
-        withStyles(" main(String[] args) {", CODE);
+        addWithStyleNames("\tpublic static void", GREEN, CODE);
+        addWithStyleNames(" main(String[] args) {", CODE);
         nl();
-        withStyles("\t\tApplication.launch(SyntaxHighlightDemo.", CODE);
-        withStyles("class", CODE, GREEN);
-        withStyles(", args);", CODE);
+        addWithStyleNames("\t\tApplication.launch(SyntaxHighlightDemo.", CODE);
+        addWithStyleNames("class", CODE, GREEN);
+        addWithStyleNames(", args);", CODE);
         nl();
-        withStyles("\t}", CODE);
+        addWithStyleNames("\t}", CODE);
         nl();
-        withStyles("}", CODE);
+        addWithStyleNames("}", CODE);
         nl(2);
         // font attributes
-        withStyles("BOLD ", BOLD);
-        withStyles("ITALIC ", ITALIC);
-        withStyles("STRIKETHROUGH ", STRIKETHROUGH);
-        withStyles("UNDERLINE ", UNDERLINE);
-        withStyles("ALL OF THEM ", BOLD, ITALIC, STRIKETHROUGH, UNDERLINE);
+        addWithStyleNames("BOLD ", BOLD);
+        addWithStyleNames("ITALIC ", ITALIC);
+        addWithStyleNames("STRIKETHROUGH ", STRIKETHROUGH);
+        addWithStyleNames("UNDERLINE ", UNDERLINE);
+        addWithStyleNames("ALL OF THEM ", BOLD, ITALIC, STRIKETHROUGH, UNDERLINE);
         nl(2);
         // inline nodes
         addSegment("Inline Nodes: ");
@@ -117,15 +117,15 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         addNodeSegment(() -> new Button("OK"));
         addSegment(" "); // FIX cannot navigate over this segment
         nl(2);
-        withStyles("A regular Arabic verb, كَتَبَ‎ kataba (to write).", ARABIC).nl();
-        withStyles("Emojis: [🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]", LARGE).nl();
+        addWithStyleNames("A regular Arabic verb, كَتَبَ‎ kataba (to write).", ARABIC).nl();
+        addWithStyleNames("Emojis: [🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]", LARGE).nl();
         nl();
-        withStyles("Halfwidth and FullWidth Forms", UNDERLINE).nl();
-        withInlineStyle("ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯ", "-fx-font-family:monospaced;").nl();
-        withInlineStyle("ABCDEFGHIJKLMNO", "-fx-font-family:monospaced;").nl();
-        withStyles("        leading and trailing whitespace         ", CODE).nl();
+        addWithStyleNames("Halfwidth and FullWidth Forms", UNDERLINE).nl();
+        addWithInlineStyle("ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯ", "-fx-font-family:monospaced;").nl();
+        addWithInlineStyle("ABCDEFGHIJKLMNO", "-fx-font-family:monospaced;").nl();
+        addWithStyleNames("        leading and trailing whitespace         ", CODE).nl();
         nl(3);
-        withStyles("Behold various types of highlights, including overlapping highlights.", LARGE);
+        addWithStyleNames("Behold various types of highlights, including overlapping highlights.", LARGE);
         highlight(7, 7, Color.rgb(255, 255, 128, 0.7));
         squiggly(36, 100, Color.RED);
         highlight(46, 11, Color.rgb(255, 255, 128, 0.7));
@@ -152,7 +152,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         ParagraphAttributesDemoModel.insert(this);
 
         addImage(DemoModel.class.getResourceAsStream("animated.gif"));
-        withStyles("  Fig. 1 Embedded animated GIF image.", GRAY, ITALIC);
+        addWithStyleNames("  Fig. 1 Embedded animated GIF image.", GRAY, ITALIC);
         nl(2);
 
         /*
@@ -180,7 +180,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         */
 
         nl();
-        withInlineStyle("\t\t終 The End.", "-fx-font-size:200%;");
+        addWithInlineStyle("\t\t終 The End.", "-fx-font-size:200%;");
         nl();
 
         registerDataFormatHandler(RichTextFormatHandler.INSTANCE, true, false, 2000);

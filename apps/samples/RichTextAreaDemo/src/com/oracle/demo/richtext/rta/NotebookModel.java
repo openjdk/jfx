@@ -52,33 +52,33 @@ public class NotebookModel extends SimpleViewOnlyStyledModel {
         String SUB = "sub";
         String UNDER = "underline";
 
-        withInlineAndExternalStyles("Bifurcation Diagram", "-fx-font-size:200%;", UNDER);
+        addWithInlineAndStyleNames("Bifurcation Diagram", "-fx-font-size:200%;", UNDER);
         nl(2);
-        withStyles("In mathematics, particularly in dynamical systems, a ", GRAY);
-        withStyles("bifurcation diagram ", "-fx-font-weight:bold;"); // FIX does not work on mac
-        withStyles("shows the values visited or approached asymptotically (fixed points, periodic orbits, or chaotic attractors) of a system as a function of a bifurcation parameter in the system. It is usual to represent stable values with a solid line and unstable values with a dotted line, although often the unstable points are omitted. Bifurcation diagrams enable the visualization of bifurcation theory.", GRAY);
+        addWithStyleNames("In mathematics, particularly in dynamical systems, a ", GRAY);
+        addWithStyleNames("bifurcation diagram ", "-fx-font-weight:bold;"); // FIX does not work on mac
+        addWithStyleNames("shows the values visited or approached asymptotically (fixed points, periodic orbits, or chaotic attractors) of a system as a function of a bifurcation parameter in the system. It is usual to represent stable values with a solid line and unstable values with a dotted line, although often the unstable points are omitted. Bifurcation diagrams enable the visualization of bifurcation theory.", GRAY);
         nl(2);
-        withStyles("An example is the bifurcation diagram of the logistic map:", GRAY);
+        addWithStyleNames("An example is the bifurcation diagram of the logistic map:", GRAY);
         nl(2);
-        withStyles("   x", EQ);
-        withStyles("n+1", EQ, SUB);
-        withStyles(" = λx", EQ);
-        withStyles("n", EQ, SUB);
-        withStyles("(1 - x", EQ);
-        withStyles("n", EQ, SUB);
-        withStyles(")", EQ);
+        addWithStyleNames("   x", EQ);
+        addWithStyleNames("n+1", EQ, SUB);
+        addWithStyleNames(" = λx", EQ);
+        addWithStyleNames("n", EQ, SUB);
+        addWithStyleNames("(1 - x", EQ);
+        addWithStyleNames("n", EQ, SUB);
+        addWithStyleNames(")", EQ);
         setParagraphAttributes(StyleAttributeMap.of(OUTLINE, Boolean.TRUE));
         nl(2);
-        withStyles("The bifurcation parameter λ is shown on the horizontal axis of the plot and the vertical axis shows the set of values of the logistic function visited asymptotically from almost all initial conditions.", GRAY);
+        addWithStyleNames("The bifurcation parameter λ is shown on the horizontal axis of the plot and the vertical axis shows the set of values of the logistic function visited asymptotically from almost all initial conditions.", GRAY);
         nl(2);
-        withStyles("The bifurcation diagram shows the forking of the periods of stable orbits from 1 to 2 to 4 to 8 etc. Each of these bifurcation points is a period-doubling bifurcation. The ratio of the lengths of successive intervals between values of r for which bifurcation occurs converges to the first Feigenbaum constant.", GRAY);
+        addWithStyleNames("The bifurcation diagram shows the forking of the periods of stable orbits from 1 to 2 to 4 to 8 etc. Each of these bifurcation points is a period-doubling bifurcation. The ratio of the lengths of successive intervals between values of r for which bifurcation occurs converges to the first Feigenbaum constant.", GRAY);
         nl(2);
-        withStyles("The diagram also shows period doublings from 3 to 6 to 12 etc., from 5 to 10 to 20 etc., and so forth.", GRAY);
+        addWithStyleNames("The diagram also shows period doublings from 3 to 6 to 12 etc., from 5 to 10 to 20 etc., and so forth.", GRAY);
         nl();
         addParagraph(BifurcationDiagram::generate);
         nl(2);
         addSegment("Source: Wikipedia");
         nl();
-        withStyles("https://en.wikipedia.org/wiki/Bifurcation_diagram", GREEN, UNDER);
+        addWithStyleNames("https://en.wikipedia.org/wiki/Bifurcation_diagram", GREEN, UNDER);
     }
 }

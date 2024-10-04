@@ -67,7 +67,7 @@ public class LargeTextModel extends SimpleViewOnlyStyledModel {
                 sb.append('*');
             }
         }
-        withStyles(sb.toString(), STYLE);
+        addWithStyleNames(sb.toString(), STYLE);
         nl();
     }
 }

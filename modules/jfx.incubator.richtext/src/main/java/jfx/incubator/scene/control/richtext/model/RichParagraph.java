@@ -240,13 +240,13 @@ public abstract class RichParagraph {
         }
 
         /**
-         * Adds a styled text segment.
+         * Appends a text segment styled with the stylesheet style names.
          *
          * @param text non-null text string
          * @param css array of style names, cannot be null
          * @return this {@code Builder} instance
          */
-        public Builder withStyles(String text, String ... css) {
+        public Builder addWithStyleNames(String text, String ... css) {
             Objects.nonNull(text);
             Objects.nonNull(css);
             StyleAttributeMap a = StyleAttributeMap.fromStyles(null, css);
@@ -255,14 +255,14 @@ public abstract class RichParagraph {
         }
 
         /**
-         * Adds a styled text segment.
+         * Appends a text segment styled with both the inline style and the stylesheet style names.
          *
          * @param text non-null text string
          * @param style direct style (such as {@code -fx-fill:red;}), or null
-         * @param css array of style names, or null
+         * @param css array of style names
          * @return this {@code Builder} instance
          */
-        public Builder withInlineAndExternalStyles(String text, String style, String ... css) {
+        public Builder addWithInlineAndStyleNames(String text, String style, String ... css) {
             Objects.nonNull(text);
             StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
             addSegment(text, a);
@@ -270,13 +270,13 @@ public abstract class RichParagraph {
         }
 
         /**
-         * Adds a styled text segment, styled with the inline style.
+         * Appends a text segment styled with the stylesheet style names.
          *
          * @param text non-null text string
          * @param style the inline style (example {@code "-fx-fill:red;"}), or null
          * @return this {@code Builder} instance
          */
-        public Builder withInlineStyle(String text, String style) {
+        public Builder addWithInlineStyle(String text, String style) {
             Objects.nonNull(text);
             StyleAttributeMap a = StyleAttributeMap.fromStyles(style);
             addSegment(text, a);
