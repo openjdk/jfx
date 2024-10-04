@@ -4636,6 +4636,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.tags("apiNote:a:API Note:")
     options.tags("implSpec:a:Implementation Requirements:")
     options.tags("implNote:a:Implementation Note:")
+    options.tags("interpolationType:a:Interpolation Type:")
     options.tags("param")
     options.tags("return")
     options.tags("throws")
@@ -4651,9 +4652,22 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.addStringOption("Xmaxwarns").setValue("1000")
     options.addStringOption("Xmaxerrs").setValue("1000")
 
-    options.windowTitle("${javadocTitle}")
-    options.header("${javadocHeader}")
-    options.bottom("${javadocBottom}")
+    String draftMsg = IS_MILESTONE_FCS ? "" : "<br><b>DRAFT ${RELEASE_VERSION_LONG}</b>"
+    String javadocTitleImpl = javadocTitle
+            .replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
+    String javadocHeaderImpl = javadocHeader
+            .replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
+            .replaceAll("@DRAFT_UNLESS_FCS@", draftMsg)
+    String javadocBottomImpl = javadocBottom
+            .replaceAll("@DRAFT_UNLESS_FCS@", draftMsg)
+            .replaceAll("@FULL_VERSION@", RELEASE_VERSION_LONG)
+    options.windowTitle(javadocTitleImpl)
+    options.header(javadocHeaderImpl)
+    options.bottom(javadocBottomImpl)
+    if (!IS_MILESTONE_FCS) {
+        options.addStringOption("top").setValue(javadocTop)
+    }
+
     options.locale("en");
     if (JDK_DOCS_LINK != "") {
         options.linksOffline(JDK_DOCS, JDK_DOCS_LINK);

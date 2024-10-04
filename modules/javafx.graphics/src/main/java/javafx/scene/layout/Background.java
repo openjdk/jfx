@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -36,6 +37,7 @@ import javafx.scene.paint.Paint;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import com.sun.javafx.UnmodifiableArrayList;
 import com.sun.javafx.css.SubCssMetaData;
 import javafx.css.converter.InsetsConverter;
@@ -47,6 +49,7 @@ import com.sun.javafx.scene.layout.region.CornerRadiiConverter;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.InterpolationUtils;
 
 /**
  * The Background of a {@link Region}. A Background is an immutable object which
@@ -70,7 +73,7 @@ import com.sun.javafx.tk.Toolkit;
  * @since JavaFX 8.0
  */
 @SuppressWarnings("unchecked")
-public final class Background {
+public final class Background implements Interpolatable<Background> {
     static final CssMetaData<Node,Paint[]> BACKGROUND_COLOR =
             new SubCssMetaData<>("-fx-background-color",
                     PaintConverter.SequenceConverter.getInstance(),
@@ -136,7 +139,9 @@ public final class Background {
      * The list of BackgroundFills which together define the filled portion
      * of this Background. This List is unmodifiable and immutable. It
      * will never be null. The elements of this list will also never be null.
+     *
      * @return the list of BackgroundFills
+     * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BackgroundFill> getFills() { return fills; }
     final List<BackgroundFill> fills;
@@ -145,7 +150,9 @@ public final class Background {
      * The list of BackgroundImages which together define the image portion
      * of this Background. This List is unmodifiable and immutable. It
      * will never be null. The elements of this list will also never be null.
+     *
      * @return the list of BackgroundImages
+     * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BackgroundImage> getImages() { return images; }
     final List<BackgroundImage> images;
@@ -157,7 +164,9 @@ public final class Background {
      * the distance from the edge of the Region outward. Any BackgroundImages
      * which would extend beyond the outsets will be clipped. Only the
      * BackgroundFills contribute to the outsets.
+     *
      * @return the outsets
+     * @interpolationType the intermediate value is derived from {@link #getFills() fills}
      */
     public final Insets getOutsets() { return outsets; }
     final Insets outsets;
@@ -244,9 +253,9 @@ public final class Background {
         // to be auto-generated, because otherwise the types of the fills and images
         // properties didn't match the types of the array based constructor parameters.
         // So a Builder will use this constructor, while the CSS engine uses the
-        // array based constructor (for speed).
-        this(fills == null ? null : fills.toArray(new BackgroundFill[fills.size()]),
-             images == null ? null : images.toArray(new BackgroundImage[images.size()]));
+        // array based constructor.
+        this(fills != null ? UnmodifiableArrayList.copyOfNullFiltered(fills) : List.of(),
+             images != null ? UnmodifiableArrayList.copyOfNullFiltered(images) : List.of(), 0);
     }
 
     /**
@@ -264,49 +273,56 @@ public final class Background {
      *                  final List of images. A null array becomes an empty List.
      */
     public Background(final @NamedArg("fills") BackgroundFill[] fills, final @NamedArg("images") BackgroundImage[] images) {
+        this(fills != null ? UnmodifiableArrayList.copyOfNullFiltered(fills) : List.of(),
+             images != null ? UnmodifiableArrayList.copyOfNullFiltered(images) : List.of(), 0);
+    }
+
+    /**
+     * Creates a new Background with the specified fills and images.
+     * This constructor requires that both lists do not contain null values, and that the lists
+     * are immutable. The purpose of this constructor is to prevent an unnecessary array creation
+     * when the caller already knows that the specified lists satisfy the non-null precondition
+     * and preserve the immutability invariant.
+     *
+     * @param fills the fills, not {@code null}
+     * @param images the images, not {@code null}
+     */
+    private Background(List<BackgroundFill> fills, List<BackgroundImage> images, int ignored) {
+        Objects.requireNonNull(fills, "fills cannot be null");
+        Objects.requireNonNull(images, "images cannot be null");
+
         // The cumulative insets
         double outerTop = 0, outerRight = 0, outerBottom = 0, outerLeft = 0;
         boolean hasPercentOpaqueInsets = false;
         boolean hasPercentFillRadii = false;
         boolean opaqueFill = false;
 
-        // If the fills is empty or null then we know we can just use the shared
-        // immutable empty list from Collections.
-        if (fills == null || fills.length == 0) {
-            this.fills = Collections.emptyList();
-        } else {
-            // We need to iterate over all of the supplied elements in the fills array.
-            // Each null element is ignored. Each non-null element is inspected to
-            // see if it contributes to the outsets.
-            final BackgroundFill[] noNulls = new BackgroundFill[fills.length];
-            int size = 0;
-            for (int i=0; i<fills.length; i++) {
-                final BackgroundFill fill = fills[i];
-                if (fill != null) {
-                    noNulls[size++] = fill;
-                    final Insets fillInsets = fill.getInsets();
-                    final double fillTop = fillInsets.getTop();
-                    final double fillRight = fillInsets.getRight();
-                    final double fillBottom = fillInsets.getBottom();
-                    final double fillLeft = fillInsets.getLeft();
-                    outerTop = outerTop <= fillTop ? outerTop : fillTop; // min
-                    outerRight = outerRight <= fillRight ? outerRight : fillRight; // min
-                    outerBottom = outerBottom <= fillBottom ? outerBottom : fillBottom; // min
-                    outerLeft = outerLeft <= fillLeft ? outerLeft : fillLeft; // min
+        // We need to iterate over all of the supplied elements in the fills list.
+        // Each element is inspected to see if it contributes to the outsets.
+        for (int i = 0, max = fills.size(); i < max; i++) {
+            final BackgroundFill fill = fills.get(i);
+            final Insets fillInsets = fill.getInsets();
+            final double fillTop = fillInsets.getTop();
+            final double fillRight = fillInsets.getRight();
+            final double fillBottom = fillInsets.getBottom();
+            final double fillLeft = fillInsets.getLeft();
+            outerTop = outerTop <= fillTop ? outerTop : fillTop; // min
+            outerRight = outerRight <= fillRight ? outerRight : fillRight; // min
+            outerBottom = outerBottom <= fillBottom ? outerBottom : fillBottom; // min
+            outerLeft = outerLeft <= fillLeft ? outerLeft : fillLeft; // min
 
-                    // The common case is to NOT have percent based radii
-                    final boolean b = fill.getRadii().hasPercentBasedRadii;
-                    hasPercentFillRadii |= b;
-                    if (fill.fill.isOpaque()) {
-                        opaqueFill = true;
-                        if (b) {
-                            hasPercentOpaqueInsets = true;
-                        }
-                    }
+            // The common case is to NOT have percent based radii
+            final boolean b = fill.getRadii().hasPercentBasedRadii;
+            hasPercentFillRadii |= b;
+            if (fill.fill.isOpaque()) {
+                opaqueFill = true;
+                if (b) {
+                    hasPercentOpaqueInsets = true;
                 }
             }
-            this.fills = new UnmodifiableArrayList<>(noNulls, size);
         }
+
+        this.fills = fills;
         hasPercentageBasedFills = hasPercentFillRadii;
 
         // This ensures that we either have outsets of 0, if all the insets were positive,
@@ -317,19 +333,7 @@ public final class Background {
                 Math.max(0, -outerBottom),
                 Math.max(0, -outerLeft));
 
-        // An null or empty images array results in an empty list
-        if (images == null || images.length == 0) {
-            this.images = Collections.emptyList();
-        } else {
-            // Filter out any  null values and create an immutable array list
-            final BackgroundImage[] noNulls = new BackgroundImage[images.length];
-            int size = 0;
-            for (int i=0; i<images.length; i++) {
-                final BackgroundImage image = images[i];
-                if (image != null) noNulls[size++] = image;
-            }
-            this.images = new UnmodifiableArrayList<>(noNulls, size);
-        }
+        this.images = images;
 
         hasOpaqueFill = opaqueFill;
         if (hasPercentOpaqueInsets) {
@@ -633,6 +637,45 @@ public final class Background {
         trbl[1] = opaqueRegionRight;
         trbl[2] = opaqueRegionBottom;
         trbl[3] = opaqueRegionLeft;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Background interpolate(Background endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        if (t <= 0) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        // interpolateListsPairwise() is implemented such that it returns existing list instances
+        // (i.e. the 'this.fills' or 'endValue.fills' arguments) as an indication that the result
+        // is shallow-equal to either of the input arguments. This allows us to very quickly detect
+        // if we can return 'this' or 'endValue' without allocating a new Background instance.
+        List<BackgroundFill> newFills = fills == endValue.fills ?
+            fills : InterpolationUtils.interpolateListsPairwise(fills, endValue.fills, t);
+
+        List<BackgroundImage> newImages = images == endValue.images ?
+            images : InterpolationUtils.interpolateListsPairwise(images, endValue.images, t);
+
+        if (newFills == fills && newImages == images) {
+            return this;
+        }
+
+        if (newFills == endValue.fills && newImages == endValue.images) {
+            return endValue;
+        }
+
+        return new Background(newFills, newImages, 0);
     }
 
     /**
