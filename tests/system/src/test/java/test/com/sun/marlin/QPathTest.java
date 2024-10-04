@@ -28,6 +28,8 @@ package test.com.sun.marlin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import com.sun.javafx.PlatformUtil;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -150,6 +152,10 @@ public class QPathTest {
     @Test
     @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void TestBug() {
+        if (PlatformUtil.isLinux()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8328222
+        }
+
         Platform.runLater(() -> {
             SVGPath path = new SVGPath();
             String svgpath = readPath();
