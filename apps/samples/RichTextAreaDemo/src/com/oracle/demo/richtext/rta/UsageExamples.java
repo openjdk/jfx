@@ -57,7 +57,7 @@ public class UsageExamples {
         m.withStyles("RichTextArea ", "HEADER");
         // add text segment using inline style
         m.withInlineStyle("Demo", "-fx-font-size:200%;");
-        // newline
+        // add newline
         m.nl();
 
         RichTextArea textArea = new RichTextArea(m);

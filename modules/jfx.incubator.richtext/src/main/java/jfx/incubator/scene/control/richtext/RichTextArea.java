@@ -111,11 +111,11 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * create a model that uses a style sheet for styling:
  * <pre>{@code
  *     SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
- *     // add text segment using CSS style name (requires a style sheet)
- *     m.addSegment("RichTextArea ", null, "HEADER");
- *     // add text segment using direct style
- *     m.addSegment("Demo", "-fx-font-size:200%;", null);
- *     // newline
+ *     // add text segment using CSS style name (requires a stylesheet)
+ *     m.withStyles("RichTextArea ", "HEADER");
+ *     // add text segment using inline style
+ *     m.withInlineStyle("Demo", "-fx-font-size:200%;");
+ *     // add newline
  *     m.nl();
  *
  *     RichTextArea textArea = new RichTextArea(m);

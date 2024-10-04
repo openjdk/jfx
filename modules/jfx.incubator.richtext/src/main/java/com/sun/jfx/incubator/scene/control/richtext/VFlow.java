@@ -500,12 +500,16 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
         // generate shapes
         double left = -contentPaddingLeft;
-        double right = contentWidth();
+        double right;
+        if (control.isWrapText()) {
+            right = getWidth();
+        } else {
+            right = Math.max(getWidth(), contentWidth());
+        }
         boolean topLTR = true;
         boolean bottomLTR = true;
 
-        // FIX
-        double lineSpacing = 0.0; // this is a problem!
+        double lineSpacing = 0.0; // FIX JDK-8317120
         new SelectionHelper(b, left, right).generate(top, bottom, topLTR, bottomLTR, contentPaddingLeft, lineSpacing);
     }
 
@@ -1627,8 +1631,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
         boolean addLeft = control.getLeftDecorator() != null;
         boolean addRight = control.getRightDecorator() != null;
-
-        // FIX weird, it should be contentPaddingLeft always...
         double x = wrap ? 0.0 : contentPaddingLeft;
 
         int sz = arrangement.getVisibleCellCount();

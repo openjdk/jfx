@@ -1127,7 +1127,9 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void cut() {
-        copy(true);
+        if (canEdit()) {
+            copy(true);
+        }
     }
 
     public void paste() {

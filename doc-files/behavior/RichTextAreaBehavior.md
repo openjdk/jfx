@@ -18,7 +18,7 @@
 |FOCUS_NEXT                |Transfer focus to the next focusable node
 |FOCUS_PREVIOUS            |Transfer focus to the previous focusable node
 |INSERT_LINE_BREAK         |Inserts a line break at the caret
-|INSERT_TAB                |Inserts a tab symbol at the caret (editable), or transfer focus to the next focusable node
+|INSERT_TAB                |Inserts a tab symbol at the caret (if editable), or transfer focus to the next focusable node
 |MOVE_DOWN                 |Moves the caret one visual line down
 |MOVE_LEFT                 |Moves the caret one symbol to the left
 |MOVE_PARAGRAPH_DOWN       |Moves the caret to the end of the current paragraph, or, if already there, to the end of the next paragraph
@@ -150,7 +150,7 @@
 ### Other Mappings
 
 The following functions currently have no mapping:
-MOVE_WORD_NEXT_END, MOVE_WORD_NEXT_START, MOVE_WORD_PREVIOUS, SELECT_WORD_NEXT, SELECT_WORD_NEXT_END, SELECT_WORD_PREVIOUS
+ERROR_FEEDBACK, MOVE_WORD_NEXT_END, MOVE_WORD_NEXT_START, MOVE_WORD_PREVIOUS, SELECT_WORD_NEXT, SELECT_WORD_NEXT_END, SELECT_WORD_PREVIOUS
 
 The following functions are mapped to the mouse events:
 SELECT_PARAGRAPH, SELECT_WORD
