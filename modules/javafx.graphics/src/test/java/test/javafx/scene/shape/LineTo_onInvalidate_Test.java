@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,30 +25,20 @@
 
 package test.javafx.scene.shape;
 
-import java.util.Arrays;
-import java.util.Collection;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import java.util.stream.Stream;
 
 import com.sun.javafx.scene.DirtyBits;
 import javafx.scene.shape.LineTo;
+
+import org.junit.jupiter.params.provider.Arguments;
 import test.com.sun.javafx.test.OnInvalidateMethodsTestBase;
 
-@RunWith(Parameterized.class)
 public class LineTo_onInvalidate_Test extends OnInvalidateMethodsTestBase {
 
-    public LineTo_onInvalidate_Test(Configuration config) {
-        super(config);
-    }
-
-    @Parameters
-    public static Collection<Object[]> data() {
-        Object[][] data = new Object[][] {
-            {new Configuration(LineTo.class, "x", 123.0, new DirtyBits[] {DirtyBits.NODE_BOUNDS, DirtyBits.NODE_CONTENTS})},
-            {new Configuration(LineTo.class, "y", 321.0, new DirtyBits[] {DirtyBits.NODE_BOUNDS, DirtyBits.NODE_CONTENTS})}
-        };
-        return Arrays.asList(data);
+    public static Stream<Arguments> data() {
+        return Stream.of(
+            Arguments.of( new Configuration(LineTo.class, "x", 123.0, new DirtyBits[] {DirtyBits.NODE_BOUNDS, DirtyBits.NODE_CONTENTS})),
+            Arguments.of( new Configuration(LineTo.class, "y", 321.0, new DirtyBits[] {DirtyBits.NODE_BOUNDS, DirtyBits.NODE_CONTENTS}))
+        );
     }
 }

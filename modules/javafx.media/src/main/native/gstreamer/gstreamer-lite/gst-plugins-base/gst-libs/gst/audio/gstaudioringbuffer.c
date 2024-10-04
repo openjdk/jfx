@@ -40,6 +40,9 @@
 #include <string.h>
 
 #include <gst/audio/audio.h>
+#ifndef GSTREAMER_LITE
+#include <gst/audio/gstdsd.h>
+#endif // GSTREAMER_LITE
 #include "gstaudioringbuffer.h"
 
 GST_DEBUG_CATEGORY_STATIC (gst_audio_ring_buffer_debug);
@@ -313,6 +316,62 @@ gst_audio_ring_buffer_parse_caps (GstAudioRingBufferSpec * spec, GstCaps * caps)
     gst_structure_get_int (structure, "channels", &info.channels);
     spec->type = GST_AUDIO_RING_BUFFER_FORMAT_TYPE_FLAC;
     info.bpf = 1;
+#ifndef GSTREAMER_LITE
+  } else if (g_str_equal (mimetype, GST_DSD_MEDIA_TYPE)) {
+
+    /* Notes about what the "rate" means in DSD:
+     *
+     * In DSD, "sample formats" don't actually exist. There is only the DSD bit;
+     * this is what could be considered the closest equivalent to a "sample format".
+     * But since it is impractical to deal with individual bits in software, the
+     * bits are typically grouped into words (8/16/32 bit words). These are the
+     * DSDU8, DSDU16LE etc. "grouping formats".
+     *
+     * The "rate" in DSD information refers to the number of DSD _bytes_ per second
+     * (not bits per second, because, as said, per-bit handling in software does
+     * not usually make sense). The way the GstAudioRingBuffer works however requires
+     * the rate to be interpreted as the number of DSD _words_ per minute. This is
+     * in part because that's how ALSA uses the rate.
+     *
+     * If the word format is DSDU8, then there's no difference to just using the
+     * original byte rate. But if for example it is DSDU16LE, then the ringbuffer's
+     * rate needs to be half of the rate from GstDsdInfo. For this reason, it is
+     * essential to divide the rate from the DSD info by the word length (in bytes).
+     *
+     * Furthermore, the BPF is set to the stride (= format width * num channels).
+     * The GstAudioRingBuffer can only handle interleaved DSD. This means that
+     * there is a "stride", that is, the DSD word of channel #1 is stored first,
+     * followed by the DSD word of channel #2 etc. and then again we get a DSD
+     * word from channel #1, and so forth. This is similar to how interleaved
+     * PCM works. The stride is then the size (in bytes) of the DSD words for
+     * each channel that are played at the same time. Using this as the BPF is
+     * very important. Otherweise, timestamp and duration figures can be off,
+     * the segment sizes may not be an integer multiple of the DSD stride, etc.
+     */
+
+    GstDsdInfo dsd_info;
+    guint format_width;
+
+    if (!gst_dsd_info_from_caps (&dsd_info, caps))
+      goto parse_error;
+
+    format_width = gst_dsd_format_get_width (dsd_info.format);
+
+    info.rate = dsd_info.rate / format_width;
+    info.channels = dsd_info.channels;
+    info.bpf = format_width * dsd_info.channels;
+
+    GST_INFO ("using DSD word rate %d instead of DSD byte rate %d "
+        "for ringbuffer", info.rate, dsd_info.rate);
+
+    memcpy (info.position, dsd_info.positions,
+        sizeof (GstAudioChannelPosition) * dsd_info.channels);
+
+    GST_AUDIO_RING_BUFFER_SPEC_DSD_FORMAT (spec) =
+        GST_DSD_INFO_FORMAT (&dsd_info);
+
+    spec->type = GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DSD;
+#endif // GSTREAMER_LITE
   } else {
     goto parse_error;
   }
@@ -633,7 +692,7 @@ gst_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
 
   GST_INFO_OBJECT (buf, "Allocating an array for %d timestamps",
       spec->segtotal);
-  buf->timestamps = g_slice_alloc0 (sizeof (GstClockTime) * spec->segtotal);
+  buf->timestamps = g_new0 (GstClockTime, spec->segtotal);
   /* initialize array with invalid timestamps */
   for (i = 0; i < spec->segtotal; i++) {
     buf->timestamps[i] = GST_CLOCK_TIME_NONE;
@@ -655,13 +714,21 @@ gst_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
   g_free (buf->empty_seg);
   buf->empty_seg = g_malloc (segsize);
 
-  if (buf->spec.type == GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW) {
-    gst_audio_format_info_fill_silence (buf->spec.info.finfo, buf->empty_seg,
-        segsize);
-  } else {
-    /* FIXME, non-raw formats get 0 as the empty sample */
-    memset (buf->empty_seg, 0, segsize);
+  switch (buf->spec.type) {
+    case GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW:
+      gst_audio_format_info_fill_silence (buf->spec.info.finfo, buf->empty_seg,
+          segsize);
+      break;
+#ifndef GSTREAMER_LITE
+    case GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DSD:
+      memset (buf->empty_seg, GST_DSD_SILENCE_PATTERN_BYTE, segsize);
+      break;
+#endif // GSTREAMER_LITE
+    default:
+      /* FIXME, non-raw formats get 0 as the empty sample */
+      memset (buf->empty_seg, 0, segsize);
   }
+
   GST_DEBUG_OBJECT (buf, "acquired device");
 
 done:
@@ -727,7 +794,7 @@ gst_audio_ring_buffer_release (GstAudioRingBuffer * buf)
   if (G_LIKELY (buf->timestamps)) {
     GST_INFO_OBJECT (buf, "Freeing timestamp buffer, %d entries",
         buf->spec.segtotal);
-    g_slice_free1 (sizeof (GstClockTime) * buf->spec.segtotal, buf->timestamps);
+    g_free (buf->timestamps);
     buf->timestamps = NULL;
   }
 
@@ -1036,20 +1103,18 @@ may_not_start:
   }
 }
 
-G_GNUC_INTERNAL
-    void __gst_audio_ring_buffer_set_errored (GstAudioRingBuffer * buf);
-
-/* __gst_audio_ring_buffer_set_errored:
+/**
+ * gst_audio_ring_buffer_set_errored:
  * @buf: the #GstAudioRingBuffer that has encountered an error
  *
  * Mark the ringbuffer as errored after it has started.
  *
  * MT safe.
 
- * Since: 1.24 (internal in 1.22)
+ * Since: 1.24
  */
 void
-__gst_audio_ring_buffer_set_errored (GstAudioRingBuffer * buf)
+gst_audio_ring_buffer_set_errored (GstAudioRingBuffer * buf)
 {
   gboolean res;
 
@@ -2086,6 +2151,11 @@ gst_audio_ring_buffer_set_channel_positions (GstAudioRingBuffer * buf,
   if (memcmp (position, to, channels * sizeof (to[0])) == 0)
     return;
 
+  if (channels == 1) {
+    GST_LOG_OBJECT (buf, "single channel, no need to reorder");
+    return;
+  }
+
   if (position_less_channels (position, channels)) {
     GST_LOG_OBJECT (buf, "position-less channels, no need to reorder");
     return;
@@ -2122,7 +2192,13 @@ gst_audio_ring_buffer_set_channel_positions (GstAudioRingBuffer * buf,
  * @readseg: the current data segment
  * @timestamp: The new timestamp of the buffer.
  *
- * Set a new timestamp on the buffer.
+ * Set a new timestamp on the buffer representing the time of the first sample
+ * in the ringbuffer segment. The timestamp is used by the #GstAudioSrc base
+ * class to set the timestamps on output buffers. Timestamps are
+ * expected to be taken directly from the pipeline clock and are
+ * actual clock timestamps. #GstAudioSrc will convert to running time
+ * by subtracting the base time, but otherwise does not adjust the
+ * outgoing timestamps if provided.
  *
  * MT safe.
  */

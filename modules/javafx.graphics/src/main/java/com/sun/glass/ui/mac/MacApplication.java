@@ -63,6 +63,40 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
+    private static final CountDownLatch keepAliveLatch = new CountDownLatch(1);
+
+    /**
+     * Starts a non-daemon KeepAlive thread to ensure that the
+     * JavaFX toolkit keeps running until the toolkit exits. On
+     * other platforms, the JavaFX Application Thread is created
+     * as a non-daemon Java thread when the toolkit starts. On
+     * macOS, we use the existing AppKit thread as the JavaFX
+     * Application thread, and attach it to the JVM as a daemon
+     * thread. In the case of Swing / JavaFX interop, AWT attaches
+     * the AppKit thread as a daemon thread. Since there is no other
+     * non-daemon thread, we create one so that the JavaFX toolkit
+     * will not exit prematurely.
+     */
+    private static void startKeepAliveThread() {
+        Thread thr = new Thread(() -> {
+            try {
+                keepAliveLatch.await();
+            } catch (InterruptedException ex) {
+                throw new RuntimeException("Unexpected exception: ", ex);
+            }
+        });
+        thr.setName("JavaFX-KeepAlive");
+        thr.setDaemon(false);
+        thr.start();
+    }
+
+    /**
+     * Terminates the KeepAlive thread.
+     */
+    private static void finishKeepAliveThread() {
+        keepAliveLatch.countDown();
+    }
+
     MacApplication() {
         // Embedded in SWT, with shared event thread
         @SuppressWarnings("removal")
@@ -104,6 +138,10 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             });
         isTaskbarApplication = tmp;
 
+        // Create a non-daemon KeepAlive thread so the FX toolkit
+        // doesn't exit prematurely.
+        startKeepAliveThread();
+
         ClassLoader classLoader = MacApplication.class.getClassLoader();
         _runLoop(classLoader, wrappedRunnable, isTaskbarApplication);
     }
@@ -135,6 +173,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected void finishTerminating() {
         _finishTerminating();
+        finishKeepAliveThread();
 
         super.finishTerminating();
     }

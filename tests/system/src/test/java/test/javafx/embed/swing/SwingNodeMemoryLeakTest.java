@@ -25,7 +25,7 @@
 
 package test.javafx.embed.swing;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -37,9 +37,9 @@ import javafx.embed.swing.SwingNode;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
@@ -53,12 +53,12 @@ public class SwingNodeMemoryLeakTest {
     ArrayList<WeakReference<JLabel>> weakRefArrJL =
                                       new ArrayList(TOTAL_SWINGNODE);
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         Util.launch(launchLatch, 50, MyApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }

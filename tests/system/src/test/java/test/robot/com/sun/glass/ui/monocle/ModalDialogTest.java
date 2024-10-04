@@ -32,23 +32,19 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.robot.Robot;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import com.sun.glass.ui.monocle.TestLogShim;
-import junit.framework.AssertionFailedError;
-
 
 public class ModalDialogTest {
 
-    @Rule
-    public TestName name = new TestName();
-
-    @Before
-    public void setUpScreen() throws Exception {
+    @BeforeEach
+    public void setUpScreen(TestInfo t) throws Exception {
         TestLogShim.reset();
-        TestLogShim.log(name.getMethodName());
+        // get test name from the junit5
+        TestLogShim.log(t.getDisplayName());
         TestApplication.showFullScreenScene();
     }
 
@@ -84,7 +80,7 @@ public class ModalDialogTest {
         });
         TestLogShim.waitForLog("Clicked at 100, 100");
         if (TestLogShim.countLog("Clicked at 300, 400") != 0) {
-            throw new AssertionFailedError("Disabled window should not receive mouse events!");
+            Assertions.fail("Disabled window should not receive mouse events!");
         }
     }
 }

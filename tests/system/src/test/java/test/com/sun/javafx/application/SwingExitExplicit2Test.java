@@ -25,7 +25,7 @@
 
 package test.com.sun.javafx.application;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for (default) implicit Platform exit behavior

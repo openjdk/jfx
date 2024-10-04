@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,11 @@
 
 package test.com.sun.javafx.application;
 
-import javafx.application.Application;
-import javafx.stage.Stage;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import static org.junit.Assert.assertTrue;
+import javafx.application.Application;
+import javafx.stage.Stage;
 
 public class InitializeJavaFXLaunchBase extends InitializeJavaFXBase {
     public static final CountDownLatch appLatch = new CountDownLatch(1);

@@ -151,6 +151,8 @@ gst_osx_audio_sink_do_init (GType type)
 #define gst_osx_audio_sink_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstOsxAudioSink, gst_osx_audio_sink,
     GST_TYPE_AUDIO_BASE_SINK, gst_osx_audio_sink_do_init (g_define_type_id));
+GST_ELEMENT_REGISTER_DEFINE (osxaudiosink, "osxaudiosink", GST_RANK_PRIMARY,
+    GST_TYPE_OSX_AUDIO_SINK);
 
 static void
 gst_osx_audio_sink_class_init (GstOsxAudioSinkClass * klass)
@@ -562,7 +564,13 @@ gst_osx_audio_sink_io_proc (GstOsxAudioRingBuffer * buf,
       gst_audio_ring_buffer_clear (GST_AUDIO_RING_BUFFER (buf), readseg);
 
       /* we wrote one segment */
+      CORE_AUDIO_TIMING_LOCK (buf->core_audio);
       gst_audio_ring_buffer_advance (GST_AUDIO_RING_BUFFER (buf), 1);
+      /* FIXME: Update the timestamp and reported frames in smaller increments
+       * when the segment size is larger than the total inNumberFrames */
+      gst_core_audio_update_timing (buf->core_audio, inTimeStamp,
+          inNumberFrames);
+      CORE_AUDIO_TIMING_UNLOCK (buf->core_audio);
 
       buf->segoffset = 0;
     }

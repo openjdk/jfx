@@ -25,8 +25,8 @@
 
 package test.com.sun.javafx.css;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.security.Permission;
 import java.util.List;
 import javafx.collections.FXCollections;
@@ -40,7 +40,7 @@ import javafx.css.Selector;
 import javafx.css.Styleable;
 import javafx.css.Stylesheet;
 import javafx.scene.paint.Color;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.css.StyleManager;
 
 public class StylesheetWithSecurityManagerTest {

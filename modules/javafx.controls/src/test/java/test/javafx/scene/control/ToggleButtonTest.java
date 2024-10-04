@@ -25,11 +25,15 @@
 
 package test.javafx.scene.control;
 
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import javafx.event.ActionEvent;
 import javafx.event.EventType;
 import javafx.geometry.Pos;
@@ -37,10 +41,11 @@ import javafx.scene.Node;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.shape.Rectangle;
-import static org.junit.Assert.*;
-
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import test.util.memory.JMemoryBuddy;
 
 /**
@@ -54,7 +59,8 @@ public class ToggleButtonTest {
     private ToggleButton toggleWithGraphic;//With Graphic
     private Node node;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
 
         node = new Rectangle();
@@ -241,7 +247,8 @@ public class ToggleButtonTest {
             Thread.sleep(2000);
         } catch (InterruptedException ex) {
             PlatformLogger.getLogger(ToggleButtonTest.class.getName()).severe(null, ex);
+            fail(ex);
         }
-        assertTrue("fire() doesnt emit ActionEvent!", flag[0]);
+        assertTrue(flag[0], "fire() doesnt emit ActionEvent!");
     }
 }

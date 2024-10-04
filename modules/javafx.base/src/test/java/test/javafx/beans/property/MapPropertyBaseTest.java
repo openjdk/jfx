@@ -31,8 +31,8 @@ import javafx.beans.value.ObservableObjectValueStub;
 import javafx.collections.FXCollections;
 import test.javafx.collections.MockMapObserver;
 import javafx.collections.ObservableMap;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,7 +41,7 @@ import javafx.beans.property.MapPropertyBase;
 import javafx.beans.property.SimpleMapProperty;
 
 import static test.javafx.collections.MockMapObserver.Call;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class MapPropertyBaseTest {
 
@@ -81,7 +81,7 @@ public class MapPropertyBaseTest {
     private ChangeListenerMock<ObservableMap<Object, Object>> changeListener;
     private MockMapObserver<Object, Object> mapChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new MapPropertyMock();
         invalidationListener = new InvalidationListenerMock();
@@ -499,12 +499,15 @@ public class MapPropertyBaseTest {
         mapChangeListener.assertAdded(MockMapObserver.Tuple.tup(KEY_1b, DATA_1b));
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testMapBoundValue() {
-        final MapProperty<Object, Object> v = new SimpleMapProperty<>(VALUE_1a);
-        property.bind(v);
-        property.set(VALUE_1a);
+        assertThrows(RuntimeException.class, () -> {
+            final MapProperty<Object, Object> v = new SimpleMapProperty<>(VALUE_1a);
+            property.bind(v);
+            property.set(VALUE_1a);
+        });
     }
+
 
     @Test
     public void testBind_Invalidation() {
@@ -605,10 +608,13 @@ public class MapPropertyBaseTest {
         assertEquals(0, mapChangeListener.getCallsNumber());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> {
+            property.bind(null);
+        });
     }
+
 
     @Test
     public void testRebind() {

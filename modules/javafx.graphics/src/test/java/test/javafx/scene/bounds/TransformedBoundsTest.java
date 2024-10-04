@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package test.javafx.scene.bounds;
 import static test.com.sun.javafx.test.TestHelper.assertBoundsEqual;
 import static test.com.sun.javafx.test.TestHelper.assertSimilar;
 import static test.com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.assertEquals;
 import javafx.geometry.BoundingBox;
 import javafx.scene.Group;
 import javafx.scene.shape.Rectangle;
@@ -36,7 +35,8 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TransformedBoundsTest {
 
@@ -46,8 +46,8 @@ public class TransformedBoundsTest {
      * getBoundsInLocal() values * for these nodes are correct. * * /
      **************************************************************************/
 
-    public @Test
-    void testBoundsForTranslatedRectangle() {
+    @Test
+    public void testBoundsForTranslatedRectangle() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setTranslateX(10);
         rect.setTranslateY(10);
@@ -59,8 +59,8 @@ public class TransformedBoundsTest {
 
     // this test specifically checks to make sure the minX,, width, height
     // invariants are correct in this case
-    public @Test
-    void testBoundsForNegativeScaledRectangle() {
+    @Test
+    public void testBoundsForNegativeScaledRectangle() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setScaleX(-1);
         rect.setScaleY(-1);
@@ -70,8 +70,8 @@ public class TransformedBoundsTest {
         assertEquals(rect.getBoundsInLocal(), rect.getLayoutBounds());
     }
 
-    public @Test
-    void testBoundsForRotatedRectangle() {
+    @Test
+    public void testBoundsForRotatedRectangle() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setRotate(45);
 
@@ -81,8 +81,8 @@ public class TransformedBoundsTest {
         assertEquals(rect.getBoundsInLocal(), rect.getLayoutBounds());
     }
 
-    public @Test
-    void testBoundsForRotatedGroupOfRectangles() {
+    @Test
+    public void testBoundsForRotatedGroupOfRectangles() {
         Group group = new Group(new Rectangle(100, 100), new Rectangle(2, 2,
                 96, 96));
         group.setRotate(45);
@@ -93,8 +93,8 @@ public class TransformedBoundsTest {
         assertEquals(group.getBoundsInLocal(), group.getLayoutBounds());
     }
 
-    public @Test
-    void testBoundsForRotatedRectangleUsingTransforms() {
+    @Test
+    public void testBoundsForRotatedRectangleUsingTransforms() {
         Rectangle rect = new Rectangle(100, 100);
         rect.getTransforms().add(new Rotate(45)); // rotates about 0, 0 rather
                                                   // than the center!
@@ -104,8 +104,8 @@ public class TransformedBoundsTest {
         assertEquals(rect.getBoundsInLocal(), rect.getLayoutBounds());
     }
 
-    public @Test
-    void testBoundsForTransformedRectangleInTransformedGroup() {
+    @Test
+    public void testBoundsForTransformedRectangleInTransformedGroup() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setTranslateX(100);
         Group group = new Group(rect);
@@ -119,8 +119,8 @@ public class TransformedBoundsTest {
         assertEquals(rect.getBoundsInParent(), group.getLayoutBounds());
     }
 
-    public @Test
-    void testUnTransformedBounds() {
+    @Test
+    public void testUnTransformedBounds() {
         Rectangle rect = new Rectangle(3, 7, 17, 19);
         BoundingBox bb = box(3, 7, 17, 19);
 
@@ -131,8 +131,8 @@ public class TransformedBoundsTest {
         assertSimilar(bb, rect.sceneToLocal(rect.getBoundsInLocal()));
     }
 
-    public @Test
-    void testTranslateTxBounds() {
+    @Test
+    public void testTranslateTxBounds() {
         Rectangle rect = new Rectangle(3, 7, 17, 19);
         rect.getTransforms().add(new Translate(20, 30));
         BoundingBox tbb = box(23, 37, 17, 19);
@@ -143,8 +143,8 @@ public class TransformedBoundsTest {
         assertSimilar(tbb, rect.localToScene(rect.getBoundsInLocal()));
     }
 
-    public @Test
-    void testTranslatedBounds() {
+    @Test
+    public void testTranslatedBounds() {
         Rectangle rect = new Rectangle(3, 7, 17, 19);
         rect.setTranslateX(20);
         rect.setTranslateY(30);
@@ -161,8 +161,8 @@ public class TransformedBoundsTest {
                 rect.sceneToLocal(rect.localToScene(rect.getBoundsInLocal())));
     }
 
-    public @Test
-    void testScaleTxBounds() {
+    @Test
+    public void testScaleTxBounds() {
         Rectangle rect = new Rectangle(3, 7, 17, 19);
         rect.getTransforms().add(new Scale(2, 3));
 
@@ -179,8 +179,8 @@ public class TransformedBoundsTest {
                 rect.sceneToLocal(rect.localToScene(rect.getBoundsInLocal())));
     }
 
-    public @Test
-    void testScaledBounds() {
+    @Test
+    public void testScaledBounds() {
         Rectangle rect = new Rectangle(3, 7, 17, 19);
         rect.setScaleX(2);
         rect.setScaleY(3);
@@ -198,8 +198,8 @@ public class TransformedBoundsTest {
                 rect.sceneToLocal(rect.localToScene(rect.getBoundsInLocal())));
     }
 
-    public @Test
-    void testRotateTx11Bounds() {
+    @Test
+    public void testRotateTx11Bounds() {
         Rectangle rect = new Rectangle(3, 7, 17, 19);
         BoundingBox bb = box(3, 7, 17, 19);
         rect.getTransforms().add(new Rotate(11));
@@ -212,8 +212,8 @@ public class TransformedBoundsTest {
         assertSimilar(tbb, rect.localToScene(rect.getBoundsInLocal()));
     }
 
-    public @Test
-    void testRotateTx90Bounds() {
+    @Test
+    public void testRotateTx90Bounds() {
         Rectangle rect = new Rectangle(3, 7, 17, 19);
         BoundingBox bb = box(3, 7, 17, 19);
         rect.getTransforms().add(new Rotate(90));
@@ -226,8 +226,8 @@ public class TransformedBoundsTest {
         assertSimilar(tbb, rect.localToScene(rect.getBoundsInLocal()));
     }
 
-    public @Test
-    void testRotated90Bounds() {
+    @Test
+    public void testRotated90Bounds() {
         Rectangle rect = new Rectangle(3, 7, 17, 19);
         BoundingBox bb = box(3, 7, 17, 19);
         rect.setRotate(90);
@@ -241,8 +241,8 @@ public class TransformedBoundsTest {
         assertSimilar(tbb, rect.localToScene(rect.getBoundsInLocal()));
     }
 
-    public @Test
-    void testRotated120Bounds() {
+    @Test
+    public void testRotated120Bounds() {
         Rectangle rect = new Rectangle(3, 7, 17, 19);
         BoundingBox bb = box(3, 7, 17, 19);
         rect.setRotate(120);
@@ -255,8 +255,8 @@ public class TransformedBoundsTest {
         assertSimilar(tbb, rect.localToScene(rect.getBoundsInLocal()));
     }
 
-    public @Test
-    void testNotificationOnBoundsChangeForLeafNode() {
+    @Test
+    public void testNotificationOnBoundsChangeForLeafNode() {
         Rectangle rect = new Rectangle();
 
         rect.setX(50);
@@ -268,7 +268,7 @@ public class TransformedBoundsTest {
         assertBoundsEqual(box(50, 50, 100, 30), rect.getBoundsInLocal());
     }
 
-    @Test
+@Test
     public void testNotificationOnBoundsChangeForTransformedLeafNode() {
         final Rectangle rect = new Rectangle(-50, -50, 100, 100);
         rect.getTransforms().add(new Rotate(-45));
@@ -293,8 +293,8 @@ public class TransformedBoundsTest {
                 rect.getBoundsInParent());
     }
 
-    public @Test
-    void testBoundsWithTransform() {
+    @Test
+    public void testBoundsWithTransform() {
         Rectangle rect = new Rectangle();
         rect.setScaleX(0.5f);
         rect.setScaleY(0.5f);
@@ -311,8 +311,8 @@ public class TransformedBoundsTest {
         assertBoundsEqual(box(75, 57.5, 50, 15), rect.getBoundsInParent());
     }
 
-    public @Test
-    void testNotificationOnBoundsChangeForTransforms() {
+    @Test
+    public void testNotificationOnBoundsChangeForTransforms() {
         Rectangle rect = new Rectangle();
         rect.setScaleX(0.5f);
         rect.setScaleY(0.5f);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,27 @@
 
 package test.sandbox;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static test.sandbox.Constants.ERROR_NONE;
+import static test.sandbox.Constants.ERROR_NO_SECURITY_EXCEPTION;
+import static test.sandbox.Constants.ERROR_SECURITY_EXCEPTION;
+import static test.sandbox.Constants.ERROR_TIMEOUT;
+import static test.sandbox.Constants.ERROR_UNEXPECTED_EXCEPTION;
 import java.util.ArrayList;
-import junit.framework.AssertionFailedError;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Ignore;
-
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
-import static test.sandbox.Constants.*;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import com.sun.javafx.PlatformUtil;
 
 /**
  * Unit test for running JavaFX apps in a sandbox with a restrictive
  * security manager.
  */
+@Timeout(value=25000, unit=TimeUnit.MILLISECONDS)
 public class SandboxAppTest {
 
     private static final String className = SandboxAppTest.class.getName();
@@ -76,34 +82,33 @@ public class SandboxAppTest {
         switch (retVal) {
             case 0:
             case ERROR_NONE:
-                assertEquals(testAppName + ": Unexpected 'success' exit code;",
-                        exitCode, retVal);
+                assertEquals(exitCode, retVal, testAppName + ": Unexpected 'success' exit code;");
                 break;
 
             case 1:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": unable to launch java application");
 
             case ERROR_TIMEOUT:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": Application timeout");
             case ERROR_SECURITY_EXCEPTION:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": Application failed with a security exception");
             case ERROR_NO_SECURITY_EXCEPTION:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": Application did not get expected security exception");
             case ERROR_UNEXPECTED_EXCEPTION:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": Application failed with unexpected exception");
 
            default:
-                throw new AssertionFailedError(testAppName
+               fail(testAppName
                         + ": Unexpected error exit: " + retVal);
         }
     }
 
-    @Before
+    @BeforeEach
     public void setupEach() {
         if (PlatformUtil.isWindows()) {
             assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8255486
@@ -112,29 +117,29 @@ public class SandboxAppTest {
 
     // TEST CASES
 
-    @Test (timeout = 25000)
+    @Test
     public void testFXApp() throws Exception {
         runSandboxedApp("FXApp");
     }
 
-    @Test (timeout = 25000)
+    @Test
     public void testFXNonApp() throws Exception {
         runSandboxedApp("FXNonApp");
     }
 
-    @Ignore("JDK-8202451")
-    @Test (timeout = 25000)
+    @Disabled("JDK-8202451")
+    @Test
     public void testJFXPanelApp() throws Exception {
         runSandboxedApp("JFXPanelApp");
     }
 
-    @Ignore("JDK-8202451")
-    @Test (timeout = 25000)
+    @Disabled("JDK-8202451")
+    @Test
     public void testJFXPanelImplicitExitApp() throws Exception {
         runSandboxedApp("JFXPanelImplicitExitApp", 0);
     }
 
-    @Test (timeout = 25000)
+    @Test
     public void testFXWebApp() throws Exception {
         runSandboxedApp("FXWebApp", ERROR_NONE, "empty.policy");
     }

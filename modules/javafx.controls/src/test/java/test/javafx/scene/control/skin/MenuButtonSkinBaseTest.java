@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,8 @@
 
 package test.javafx.scene.control.skin;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Scene;
@@ -37,13 +35,15 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.skin.MenuButtonSkinBase;
 import javafx.scene.input.Mnemonic;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class MenuButtonSkinBaseTest {
 
     private MenuButton menubutton;
     private MenuItem menuItem;
 
-    @Before
+    @BeforeEach
     public void setup() {
         menubutton = new MenuButton();
         menuItem = new MenuItem("Menu Item");
@@ -56,7 +56,7 @@ public class MenuButtonSkinBaseTest {
         Thread.UncaughtExceptionHandler originalExceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
 
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
-            Assert.fail("No exception expected, but was a " + e);
+            fail("No exception expected, but was a " + e);
             e.printStackTrace();
         });
 
@@ -87,7 +87,7 @@ public class MenuButtonSkinBaseTest {
             public void addMnemonic(Mnemonic m) {
                 if (menuItemMnemonic.get() != null) {
                     // The test is designed for only one mnemonic.
-                    Assert.fail("Test failure: More than one Mnemonic registered.");
+                    fail("Test failure: More than one Mnemonic registered.");
                 }
                 menuItemMnemonic.set(m);
                 super.addMnemonic(m);
@@ -109,6 +109,6 @@ public class MenuButtonSkinBaseTest {
         menuItem.setOnAction(e -> scene.setRoot(new MenuButton()));
         menuItem.fire();
 
-        Assert.assertNull("Mnemonic was not removed from the scene,", menuItemMnemonic.get());
+        assertNull(menuItemMnemonic.get(), "Mnemonic was not removed from the scene,");
     }
 }

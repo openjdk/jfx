@@ -24,6 +24,7 @@
  */
 package test.com.sun.marlin;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.util.Util.TIMEOUT;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -31,6 +32,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
@@ -46,10 +48,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 /**
@@ -74,7 +76,7 @@ public class ScaleX0Test {
         System.setProperty("prism.marlin.log", "true");
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         defaultErrorStream = System.err;
         // Capture stderr:
@@ -86,13 +88,14 @@ public class ScaleX0Test {
         });
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         System.setErr(defaultErrorStream);
         Util.shutdown();
     }
 
-    @Test(timeout = 15000)
+    @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void testMarlinAIOOBEwhenScaleXIs0() {
         Scene scene = createScene();
 
@@ -110,6 +113,7 @@ public class ScaleX0Test {
             Thread.sleep(500L);
         } catch (InterruptedException ie) {
             Logger.getLogger(ScaleX0Test.class.getName()).log(Level.SEVERE, "interrupted", ie);
+            fail(ie);
         }
 
         // Restore stderr:
@@ -126,7 +130,7 @@ public class ScaleX0Test {
         }
 
         if (stdErr.contains("ArrayIndexOutOfBoundsException")) {
-            Assert.fail("ArrayIndexOutOfBoundsException thrown !");
+            fail("ArrayIndexOutOfBoundsException thrown !");
         }
     }
 

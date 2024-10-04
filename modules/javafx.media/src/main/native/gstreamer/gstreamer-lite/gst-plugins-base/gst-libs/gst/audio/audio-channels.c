@@ -222,13 +222,14 @@ gst_audio_reorder_channels (gpointer data, gsize size, GstAudioFormat format,
   g_return_val_if_fail (info->width <= 8 * 64, FALSE);
   g_return_val_if_fail (size % ((info->width * channels) / 8) == 0, FALSE);
   g_return_val_if_fail (channels > 0, FALSE);
-  g_return_val_if_fail (channels <= 64, FALSE);
 
   if (size == 0)
     return TRUE;
 
   if (gst_audio_channel_positions_equal (from, to, channels))
     return TRUE;
+
+  g_return_val_if_fail (channels <= 64, FALSE);
 
   if (!gst_audio_get_channel_reorder_map (channels, from, to, reorder_map))
     return FALSE;
@@ -454,6 +455,7 @@ gst_audio_get_channel_reorder_map (gint channels,
 
   g_return_val_if_fail (reorder_map != NULL, FALSE);
   g_return_val_if_fail (channels > 0, FALSE);
+  g_return_val_if_fail (channels <= 64, FALSE);
   g_return_val_if_fail (from != NULL, FALSE);
   g_return_val_if_fail (to != NULL, FALSE);
   g_return_val_if_fail (check_valid_channel_positions (from, channels, FALSE,

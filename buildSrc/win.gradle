@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,17 @@ def IS_CROSS = HOST_ARCH != TARGET_ARCH
 
 setupTools("windows_tools",
     { propFile ->
+        if (System.getenv("VS150COMNTOOLS") != null) {
+            println "***********************************************************************"
+            if (System.getenv("VSCOMNTOOLS") != null) {
+                println "*** Using VSCOMNTOOLS and ignoring obsolete VS150COMNTOOLS.         ***"
+            } else {
+                println "*** VS150COMNTOOLS is deprecated and will be ignored in the future. ***"
+                println "*** Set VSCOMNTOOLS to your Visual Studio installation instead.     ***"
+            }
+            println "***********************************************************************"
+        }
+
         if (project.hasProperty('setupWinTools')) {
             setupWinTools(propFile)
         } else {
@@ -74,46 +85,33 @@ setupTools("windows_tools",
         }
     },
     { properties ->
-        defineProperty("WINDOWS_VS_VSINSTALLDIR", properties, "c:/Program Files (x86)/Microsoft Visual Studio/2017/Professional");
-        defineProperty("WINDOWS_VS_WINSDKDLLINSTALLDIR", properties, "c:/Program Files (x86)/Windows Kits/10/Redist/ucrt/DLLs");
-        defineProperty("WINDOWS_SDK_DIR", properties, System.getenv().get("WINSDK_DIR"))
+        defineProperty("WINDOWS_VS_VSINSTALLDIR", properties, "")
+        defineProperty("WINDOWS_VS_WINSDKDLLINSTALLDIR", properties, "")
+        defineProperty("WINDOWS_SDK_DIR", properties, "")
         defineProperty("WINDOWS_SDK_VERSION", properties, "")
         defineProperty("WINDOWS_VS_VCINSTALLDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/VC")
         defineProperty("WINDOWS_VS_DEVENVDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
-        defineProperty("WINDOWS_VS_DEVENVCMD", properties, "$WINDOWS_VS_DEVENVDIR/VCExpress.exe")
         defineProperty("WINDOWS_VS_MSVCDIR", properties, WINDOWS_VS_VCINSTALLDIR)
         defineProperty("WINDOWS_VS_VC_TOOLS_INSTALL_DIR", properties, "")
         defineProperty("WINDOWS_VS_VC_TOOLS_REDIST_DIR", properties, "")
-        defineProperty("WINDOWS_DXSDK_DIR", properties, System.getenv().get("DXSDK_DIR"))
-        defineProperty("WINDOWS_VS_INCLUDE", properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
-        defineProperty("WINDOWS_VS_VER", properties, "150")
-        defineProperty("WINDOWS_CRT_VER", properties, "150")
-        defineProperty("WINDOWS_VS_LIB", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;")
-        defineProperty("WINDOWS_VS_LIBPATH", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;")
-        def parfaitPath = IS_COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
-        defineProperty("WINDOWS_VS_PATH", properties, parfaitPath + "$WINDOWS_VS_DEVENVDIR;" +
-                "$WINDOWS_VS_VSINSTALLDIR/VC/BIN;" +
-                "$WINDOWS_VS_VSINSTALLDIR/Common7/Tools;" +
-                "$WINDOWS_VS_VCINSTALLDIR/VCPackages;" +
-                "$WINDOWS_SDK_DIR/bin/NETFX 4.0 Tools;" +
-                "$WINDOWS_SDK_DIR/bin;" +
-                System.getenv().get("PATH"))
+        defineProperty("WINDOWS_VS_INCLUDE", properties, "")
+        defineProperty("WINDOWS_CRT_VER", properties, "143")
+        defineProperty("WINDOWS_VS_LIB", properties, "")
+        defineProperty("WINDOWS_VS_LIBPATH", properties, "")
+        defineProperty("WINDOWS_VS_PATH", properties, "")
     }
 )
 
 if (WINDOWS_SDK_DIR == null || WINDOWS_SDK_DIR == "") {
-    throw new GradleException("FAIL: WINSDK_DIR not defined");
+    throw new GradleException("Cannot locate Visual Studio compilers; set the 'VSCOMNTOOLS' env var\nto the 'VC/Auxiliary/Build' dir in your Visual Studio installation");
 }
 
 // Define set of flags shared for all targets that support debug compilation
 def ccDebugFlags =
     IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]
 
-def winVsVer = Integer.parseInt(WINDOWS_VS_VER)
-if (winVsVer >= 120) {
-    // Serialize access to PDB file for debug builds if on VS2013 or later
-    if (IS_DEBUG_NATIVE) ccDebugFlags += "/FS"
-}
+// Serialize access to PDB file for debug builds
+if (IS_DEBUG_NATIVE) ccDebugFlags += "/FS"
 
 // Enables reproducible builds when defined
 def sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
@@ -139,28 +137,24 @@ if (sourceDateEpoch != null) {
     linkFlags.add("/experimental:deterministic")
 }
 
-// Remove C++ static linking if not on VS2010
-if (WINDOWS_VS_VER != "100") {
-    ccFlags -= ["/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB"]
-}
+// Remove C++ static linking
+ccFlags -= ["/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB"]
 
 ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
         "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
         "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
         "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
-        "VS_VER"               : WINDOWS_VS_VER,
         "PATH"                 : WINDOWS_VS_PATH,
         "INCLUDE"              : WINDOWS_VS_INCLUDE,
         "LIB"                  : WINDOWS_VS_LIB,
         "LIBPATH"              : WINDOWS_VS_LIBPATH,
-        "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
 ];
 def msvcVer = System.getenv("MSVC_VER")
 def msvcBinDir = ""
 if (hasProperty('toolchainDir')) {
     msvcBinDir = "$WINDOWS_VS_VSINSTALLDIR/VC/bin/$TARGET_ARCH"
-} else if (winVsVer == 150) {
+} else {
     def msvcInstallDir = ""
     if (msvcVer) {
         msvcInstallDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/$msvcVer"
@@ -168,23 +162,15 @@ if (hasProperty('toolchainDir')) {
         msvcInstallDir = "$WINDOWS_VS_VC_TOOLS_INSTALL_DIR"
     }
     msvcBinDir = "$msvcInstallDir/bin/Host${CPU_BITS}/$TARGET_ARCH"
-} else if (winVsVer <= 120) {
-    msvcBinDir = (IS_64
-                      ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
-                      : "$WINDOWS_VS_VSINSTALLDIR/VC/BIN")
 }
 def compiler = IS_COMPILE_PARFAIT ? "cl.exe" : cygpath("$msvcBinDir/cl.exe")
 def linker = IS_STATIC_BUILD ? (IS_COMPILE_PARFAIT ? "lib.exe" : cygpath("$msvcBinDir/lib.exe")) : (IS_COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe"))
 def winSdkBinDir = "$WINDOWS_SDK_DIR/Bin"
-if (WINDOWS_VS_VER != "100") {
-    winSdkBinDir += "/$TARGET_ARCH"
-}
+winSdkBinDir += "/$TARGET_ARCH"
 
 if (!file(cygpath("$winSdkBinDir/RC.Exe")).exists()) {
     winSdkBinDir = "$WINDOWS_SDK_DIR/Bin/$WINDOWS_SDK_VERSION"
-    if (WINDOWS_VS_VER != "100") {
-        winSdkBinDir += "/$TARGET_ARCH"
-    }
+    winSdkBinDir += "/$TARGET_ARCH"
 }
 
 ext.RC = cygpath("$winSdkBinDir/rc.exe")
@@ -192,15 +178,8 @@ ext.RC = cygpath("$winSdkBinDir/rc.exe")
 def hostWinSdkBinDir = "$WINDOWS_SDK_DIR/Bin/$WINDOWS_SDK_VERSION/$HOST_ARCH"
 ext.RC = !isExecutable(RC) ? cygpath("$hostWinSdkBinDir/rc.exe") : RC
 def rcCompiler = RC
+
 ext.FXC = cygpath("$winSdkBinDir/fxc.exe")
-
-if (!file(FXC).exists()) {
-    if (WINDOWS_DXSDK_DIR == null || WINDOWS_DXSDK_DIR == "") {
-        throw new GradleException("FAIL: DXSDK_DIR not defined");
-    }
-    ext.FXC = cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe")
-}
-
 // Use fxc from host system if it is not possible to run it from target system
 ext.FXC = !isExecutable(FXC) ? cygpath("$hostWinSdkBinDir/fxc.exe") : FXC
 
@@ -219,33 +198,30 @@ if (hasProperty('toolchainDir')) {
     }
 }
 
-def winSdkDllDir = "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$TARGET_ARCH"
-
-def WINDOWS_DLL_VER = WINDOWS_VS_VER
+def winSdkDllDir = WINDOWS_VS_WINSDKDLLINSTALLDIR != "" ?
+    "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$TARGET_ARCH" :
+    "${WINDOWS_SDK_DIR}/Redist/${WINDOWS_SDK_VERSION}/ucrt/DLLs/$TARGET_ARCH"
 
 def windowsCRTVer = System.getenv("WINDOWS_CRT_VER") ?: WINDOWS_CRT_VER
-if (WINDOWS_VS_VER == "150") {
-    WINDOWS_DLL_VER = "140"
-}
 
-def vs2017DllPath = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT")
-if (file(vs2017DllPath).exists()) {
-    ext.WIN.VS2017DLLNames = [
+def vsDllPath = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT")
+if (file(vsDllPath).exists()) {
+    ext.WIN.VSDLLNames = [
         "msvcp140.dll",
         "msvcp140_1.dll",
         "msvcp140_2.dll",
         "vcruntime140.dll",
         "vcruntime140_1.dll"
     ];
-    ext.WIN.VS2017DLLs = []
-    ext.WIN.VS2017DLLNames.each { vsdll->
-        ext.WIN.VS2017DLLs += "$vs2017DllPath/$vsdll"
+    ext.WIN.VSDLLs = []
+    ext.WIN.VSDLLNames.each { vsdll->
+        ext.WIN.VSDLLs += "$vsDllPath/$vsdll"
     }
 }
 else {
-    ext.WIN.VS2017DLLNames = [
+    ext.WIN.VSDLLNames = [
     ];
-    ext.WIN.VS2017DLLs = [
+    ext.WIN.VSDLLs = [
     ];
 }
 
@@ -345,8 +321,7 @@ WIN.glass.rcFlags = [
     "/d", "JFX_FNAME=glass.dll",
     "/d", "JFX_INTERNAL_NAME=glass",
     rcFlags].flatten();
-WIN.glass.ccFlags = [ccFlags, "/WX"].flatten()
-if (WINDOWS_VS_VER != "100") WIN.glass.ccFlags -= ["/WX"]
+WIN.glass.ccFlags = [ccFlags].flatten()
 WIN.glass.linker = linker
 WIN.glass.linkFlags = (IS_STATIC_BUILD ? [linkFlags] : [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
         "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib",

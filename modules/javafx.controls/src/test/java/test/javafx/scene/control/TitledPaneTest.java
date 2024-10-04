@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,14 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.SceneHelper;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -43,22 +42,21 @@ import javafx.css.StyleableProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.skin.TitledPaneSkin;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
-import javafx.scene.control.skin.TitledPaneSkin;
-import com.sun.javafx.tk.Toolkit;
-import javafx.scene.control.Button;
-import javafx.scene.control.TitledPane;
 
 /**
  *
@@ -73,7 +71,8 @@ public class TitledPaneTest {
     private Stage stage;
     private StackPane root;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         node = new Rectangle();
         tk = Toolkit.getToolkit();
 
@@ -138,34 +137,34 @@ public class TitledPaneTest {
     @Test public void checkContentPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Node>(null);
         titledPane.contentProperty().bind(objPr);
-        assertEquals("ContentProperty cannot be bound", titledPane.contentProperty().getValue(), null);
+        assertEquals(titledPane.contentProperty().getValue(), null, "ContentProperty cannot be bound");
         Node nde = new Rectangle();
         objPr.setValue(nde);
-        assertEquals("ContentProperty cannot be bound", titledPane.contentProperty().getValue(), nde);
+        assertEquals(titledPane.contentProperty().getValue(), nde, "ContentProperty cannot be bound");
     }
 
     @Test public void checkExpandedPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         titledPane.expandedProperty().bind(objPr);
-        assertEquals("Expanded cannot be bound", titledPane.expandedProperty().getValue(), true);
+        assertEquals(titledPane.expandedProperty().getValue(), true, "Expanded cannot be bound");
         objPr.setValue(false);
-        assertEquals("Expanded cannot be bound", titledPane.expandedProperty().getValue(), false);
+        assertEquals(titledPane.expandedProperty().getValue(), false, "Expanded cannot be bound");
     }
 
     @Test public void checkAnimatedPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         titledPane.animatedProperty().bind(objPr);
-        assertEquals("Animated cannot be bound", titledPane.animatedProperty().getValue(), true);
+        assertEquals(titledPane.animatedProperty().getValue(), true, "Animated cannot be bound");
         objPr.setValue(false);
-        assertEquals("Animated cannot be bound", titledPane.animatedProperty().getValue(), false);
+        assertEquals(titledPane.animatedProperty().getValue(), false, "Animated cannot be bound");
     }
 
     @Test public void checkCollapsiblePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         titledPane.collapsibleProperty().bind(objPr);
-        assertEquals("Collapsible cannot be bound", titledPane.collapsibleProperty().getValue(), true);
+        assertEquals(titledPane.collapsibleProperty().getValue(), true, "Collapsible cannot be bound");
         objPr.setValue(false);
-        assertEquals("Collapsible cannot be bound", titledPane.collapsibleProperty().getValue(), false);
+        assertEquals(titledPane.collapsibleProperty().getValue(), false, "Collapsible cannot be bound");
     }
 
 

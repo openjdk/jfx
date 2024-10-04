@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,9 @@
 
 package test.com.sun.javafx.application;
 
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test calling Platform.exit() on FX Application Thread after starting the FX
@@ -33,7 +35,8 @@ import org.junit.Test;
  */
 public class PlatformExit3Test extends PlatformExitCommon {
 
-    @Test (timeout = 15000)
+    @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void testPlatformExitOnAppThread() {
         doTestPlatformExitOnAppThread(false);
     }

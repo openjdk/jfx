@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,14 @@
 package test.javafx.scene.effect;
 
 import static test.com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.sun.scenario.effect.Blend.Mode;
 import javafx.scene.effect.Blend;
@@ -47,7 +47,7 @@ import javafx.scene.effect.EffectShim;
 public class BlendTest extends EffectsTestBase {
     private Blend effect;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         effect = new Blend();
         setupTest(effect);
@@ -411,7 +411,7 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(f, effect.getBottomInput());
         assertEquals(f, effect.getTopInput());
 
-        assertEquals("Cycle in effect chain detected, exception should occur 5 times.", 5, countIllegalArgumentException);
+        assertEquals(5, countIllegalArgumentException, "Cycle in effect chain detected, exception should occur 5 times.");
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 

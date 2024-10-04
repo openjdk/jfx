@@ -23,21 +23,17 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css;
 
-import com.sun.javafx.css.Combinator;
-import com.sun.javafx.css.PseudoClassState;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javafx.css.PseudoClass;
+import javafx.css.Selector;
+import javafx.css.Styleable;
 
 /**
  * A compound selector which behaves according to the CSS standard. The selector is
@@ -60,12 +56,7 @@ import java.util.stream.Collectors;
  * between selector1 and selector2 specifies a direct CHILD, whereas the
  * whitespace between selector2 and selector3 corresponds to
  * <code>Combinator.DESCENDANT</code>.
- *
- * @since 9
- * @deprecated This class was exposed erroneously and will be removed in a future version
  */
-@Deprecated(since = "23", forRemoval = true)
-@SuppressWarnings("removal")
 final public class CompoundSelector extends Selector {
 
     private final List<SimpleSelector> selectors;
@@ -78,20 +69,21 @@ final public class CompoundSelector extends Selector {
     }
 
     private final List<Combinator> relationships;
-    // /**
-    //  * The relationships between the selectors
-    //  * @return Immutable List&lt;Combinator&gt;
-    //  */
-    // public List<Combinator> getRelationships() {
-    //     return relationships;
-    // }
+
+    /**
+     * The relationships between the selectors
+     * @return Immutable {@code List<Combinator>}
+     */
+    List<Combinator> getRelationships() {
+        return relationships;
+    }
 
     /**
      * Creates a <code>CompoundSelector</code> from a list of selectors and a
      * list of <code>Combinator</code> relationships.  There must be exactly one
      * less <code>Combinator</code> than there are selectors.
      */
-    CompoundSelector(List<SimpleSelector> selectors, List<Combinator> relationships) {
+    public CompoundSelector(List<SimpleSelector> selectors, List<Combinator> relationships) {
         this.selectors =
             (selectors != null)
                 ? Collections.unmodifiableList(selectors)
@@ -108,22 +100,6 @@ final public class CompoundSelector extends Selector {
             .map(Selector::getStyleClassNames)
             .flatMap(Collection::stream)
             .collect(Collectors.toUnmodifiableSet());
-    }
-
-    @Override public Match createMatch() {
-        final PseudoClassState allPseudoClasses = new PseudoClassState();
-        int idCount = 0;
-        int styleClassCount = 0;
-
-        for(int n=0, nMax=selectors.size(); n<nMax; n++) {
-            Selector sel = selectors.get(n);
-            Match match = sel.createMatch();
-            allPseudoClasses.addAll(match.getPseudoClasses());
-            idCount += match.idCount;
-            styleClassCount += match.styleClassCount;
-        }
-
-        return new Match(this, allPseudoClasses, idCount, styleClassCount);
     }
 
     @Override public boolean applies(final Styleable styleable) {
@@ -304,42 +280,5 @@ final public class CompoundSelector extends Selector {
             sbuf.append(selectors.get(n));
         }
         return sbuf.toString();
-    }
-
-    @Override protected final void writeBinary(final DataOutputStream os, final StyleConverter.StringStore stringStore)
-            throws IOException
-    {
-        super.writeBinary(os, stringStore);
-        os.writeShort(selectors.size());
-        for (int n=0; n< selectors.size(); n++) selectors.get(n).writeBinary(os,stringStore);
-        os.writeShort(relationships.size());
-        for (int n=0; n< relationships.size(); n++) os.writeByte(relationships.get(n).ordinal());
-    }
-
-    static CompoundSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
-            throws IOException
-    {
-
-        final int nSelectors = is.readShort();
-        final List<SimpleSelector> selectors = new ArrayList<>();
-        for (int n=0; n<nSelectors; n++) {
-            selectors.add((SimpleSelector)Selector.readBinary(bssVersion, is,strings));
-        }
-
-        final int nRelationships = is.readShort();
-
-        final List<Combinator> relationships = new ArrayList<>();
-        for (int n=0; n<nRelationships; n++) {
-            final int ordinal = is.readByte();
-            if (ordinal == Combinator.CHILD.ordinal())
-                relationships.add(Combinator.CHILD);
-            else if (ordinal == Combinator.DESCENDANT.ordinal())
-                relationships.add(Combinator.DESCENDANT);
-            else {
-                assert false : "error deserializing CompoundSelector: Combinator = " + ordinal;
-                relationships.add(Combinator.DESCENDANT);
-            }
-        }
-        return new CompoundSelector(selectors, relationships);
     }
 }

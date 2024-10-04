@@ -96,6 +96,8 @@ struct _GstOsxAudioSinkClass
 
 GType gst_osx_audio_sink_get_type (void);
 
+GST_ELEMENT_REGISTER_DECLARE (osxaudiosink);
+
 G_END_DECLS
 
 #endif /* __GST_OSXAUDIOSINK_H__ */
