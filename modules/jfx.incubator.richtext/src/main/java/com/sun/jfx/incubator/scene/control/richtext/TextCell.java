@@ -129,11 +129,23 @@ public final class TextCell extends BorderPane {
     }
 
     /** sets cell position along the y axis of this cell in VFlow coordinates */
-    public void setPosition(double y, double height) {
+    void setPosition(double y, double height) {
         this.y = y;
         this.height = height;
     }
 
+    /**
+     * Valid only when cell is obtained from the arrangement.
+     * @return y coordinate relative to origin
+     */
+    public double getY() {
+        return y;
+    }
+
+    /**
+     * Valid only when cell is obtained from the arrangement.
+     * @return y the cell height
+     */
     public double getCellHeight() {
         return height;
     }
@@ -144,10 +156,6 @@ public final class TextCell extends BorderPane {
 
     public double getCellWidth() {
         return width;
-    }
-
-    public double getY() {
-        return y;
     }
 
     public void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
@@ -395,25 +403,16 @@ public final class TextCell extends BorderPane {
                     return ri.midPointY(i) + dy;
                 }
             }
-            if (insideY(py)) {
-                return ri.midPointY(0) + dy;
-            }
+            return ri.midPointY(0) + dy;
         } else {
             for (int i = sz - 1; i >= 0; i--) {
                 if (ri.getMinY(i) <= y) {
                     return ri.midPointY(i) + dy;
                 }
             }
-            if (insideY(py)) {
-                int ix = ri.getSegmentCount() - 1;
-                return ri.midPointY(ix) + dy;
-            }
+            int ix = ri.getSegmentCount() - 1;
+            return ri.midPointY(ix) + dy;
         }
-        return Double.NaN;
-    }
-
-    private boolean insideY(double y) {
-        return (y < height) && (y >= 0.0);
     }
 
     public Integer lineEdge(boolean start, int caretIndex, int caretOffset) {

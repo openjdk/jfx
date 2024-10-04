@@ -766,13 +766,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     public TextCell getCell(int modelIndex) {
-        TextCell cell = cellCache.get(modelIndex);
-        if (cell == null) {
-            RichParagraph rp = control.getModel().getParagraph(modelIndex);
-            cell = createTextCell(modelIndex, rp);
-            cellCache.add(cell.getIndex(), cell);
-        }
-        return cell;
+        return arrangement().getCell(modelIndex);
     }
 
     private TextCell createTextCell(int index, RichParagraph par) {
@@ -1183,14 +1177,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
         cell = getCell(ix);
         double py = cell.findHitCandidate(y - cell.getY(), down);
-        if (Double.isNaN(py)) {
-            if (down) {
-                return skin.getSkinnable().getDocumentEnd();
-            } else {
-                return TextPos.ZERO;
-            }
-        }
-
         p = getTextPosLocal(x, py + cell.getY());
         return p;
     }
@@ -1304,6 +1290,29 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         }
     }
 
+    // must be called only from layoutCells
+    // adds the cell region to vflow content
+    // performs the cell layout
+    // adds cell to arrangement
+    private TextCell prepareCell(int modelIndex, double maxWidth) {
+        TextCell cell = cellCache.get(modelIndex);
+        if (cell == null) {
+            RichParagraph rp = control.getModel().getParagraph(modelIndex);
+            cell = createTextCell(modelIndex, rp);
+            cellCache.add(cell.getIndex(), cell);
+        }
+
+        // TODO skip computation if layout width is the same
+        Region r = cell.getContent();
+        content.getChildren().add(cell);
+        cell.setMaxWidth(maxWidth);
+        cell.setMaxHeight(USE_COMPUTED_SIZE);
+        cell.applyCss();
+        cell.layout();
+        arrangement.addCell(cell);
+        return cell;
+    }
+
     /**
      * Recomputes sliding window and lays out scrollbars, left/right sides, and viewport.
      * This process might be repeated if one of the scroll bars changes its visibility as a result.
@@ -1363,18 +1372,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         // populating visible part of the sliding window + bottom margin
         int i = topCellIndex();
         for ( ; i < paragraphCount; i++) {
-            TextCell cell = getCell(i);
-            // TODO skip computation if layout width is the same
-            Region r = cell.getContent();
-            content.getChildren().add(cell);
-            cell.setMaxWidth(maxWidth);
-            cell.setMaxHeight(USE_COMPUTED_SIZE);
-            cell.applyCss();
-            cell.layout();
+            TextCell cell = prepareCell(i, maxWidth);
 
-            arrangement.addCell(cell);
-
-            double h = cell.prefHeight(forWidth) + getLineSpacing(r);
+            double h = cell.prefHeight(forWidth) + getLineSpacing(cell.getContent());
             h = snapSizeY(h);
             cell.setPosition(y, h);
 
@@ -1488,18 +1488,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
         // populate top margin, going backwards from topCellIndex
         for (i = topCellIndex() - 1; i >= 0; i--) {
-            TextCell cell = getCell(i);
-            // TODO maybe skip computation if layout width is the same
-            Region r = cell.getContent();
-            content.getChildren().add(cell);
-            cell.setMaxWidth(maxWidth);
-            cell.setMaxHeight(USE_COMPUTED_SIZE);
+            TextCell cell = prepareCell(i, maxWidth);
 
-            cell.applyCss();
-
-            arrangement.addCell(cell);
-
-            double h = cell.prefHeight(forWidth) + getLineSpacing(r);
+            double h = cell.prefHeight(forWidth) + getLineSpacing(cell.getContent());
             h = snapSizeY(h);
             y = snapPositionY(y - h);
             cell.setPosition(y, h);
