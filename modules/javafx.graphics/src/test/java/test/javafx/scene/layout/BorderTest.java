@@ -26,6 +26,7 @@
 package test.javafx.scene.layout;
 
 import java.lang.reflect.Field;
+import java.util.List;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Border;
@@ -36,14 +37,11 @@ import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeType;
-import static javafx.scene.layout.BorderRepeat.*;
-
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import static javafx.scene.layout.BorderRepeat.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for Border.
@@ -637,5 +635,75 @@ public class BorderTest {
         var border1 = Border.stroke(null);
         var border2 = new Border(new BorderStroke(null, BorderStrokeStyle.SOLID, null, null));
         assertEquals(border2, border1, "The factory method should give the same result as the constructor");
+    }
+
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var startValue = new Border(
+                List.of(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)),
+                        new BorderStroke(Color.BLUE, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20))),
+                List.of(new BorderImage(IMAGE_1, new BorderWidths(10), new Insets(5), new BorderWidths(10), false, REPEAT, REPEAT)));
+
+            var endValue = new Border(
+                List.of(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)),
+                        new BorderStroke(Color.YELLOW, BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
+                List.of(new BorderImage(IMAGE_2, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT)));
+
+            var expect = new Border(
+                List.of(new BorderStroke(Color.RED.interpolate(Color.GREEN, 0.5), BorderStrokeStyle.SOLID, new CornerRadii(15), new BorderWidths(15)),
+                        new BorderStroke(Color.BLUE.interpolate(Color.YELLOW, 0.5), BorderStrokeStyle.SOLID, new CornerRadii(30), new BorderWidths(30))),
+                List.of(new BorderImage(IMAGE_2, new BorderWidths(20), new Insets(10), new BorderWidths(20), false, REPEAT, REPEAT)));
+
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenDifferentNumberOfStrokesAndImages() {
+            var startValue = new Border(
+                List.of(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10))),
+                List.of(new BorderImage(IMAGE_1, new BorderWidths(10), new Insets(5), new BorderWidths(10), false, REPEAT, REPEAT)));
+
+            var endValue = new Border(
+                List.of(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)),
+                        new BorderStroke(Color.YELLOW, BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
+                List.of(new BorderImage(IMAGE_1, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT),
+                        new BorderImage(IMAGE_2, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT)));
+
+            var expect = new Border(
+                List.of(new BorderStroke(Color.RED.interpolate(Color.GREEN, 0.5), BorderStrokeStyle.SOLID, new CornerRadii(15), new BorderWidths(15)),
+                        new BorderStroke(Color.YELLOW, BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
+                List.of(new BorderImage(IMAGE_1, new BorderWidths(20), new Insets(10), new BorderWidths(20), false, REPEAT, REPEAT),
+                        new BorderImage(IMAGE_2, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT)));
+
+            var actual = startValue.interpolate(endValue, 0.5);
+
+            assertEquals(expect, actual);
+            assertNotSame(expect, actual);
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
     }
 }

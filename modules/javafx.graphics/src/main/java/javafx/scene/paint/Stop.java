@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import com.sun.javafx.UnmodifiableArrayList;
+import com.sun.javafx.util.InterpolationUtils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 
 /**
@@ -46,7 +50,7 @@ import javafx.beans.NamedArg;
  * }</pre>
  * @since JavaFX 2.0
  */
-public final class Stop {
+public final class Stop implements Interpolatable<Stop> {
 
     static final List<Stop> NO_STOPS = List.of(
         new Stop(0.0, Color.TRANSPARENT),
@@ -65,7 +69,7 @@ public final class Stop {
         Stop onestop = null;
         List<Stop> newlist = new ArrayList<>(stops.size());
         for (Stop s : stops) {
-            if (s == null || s.getColor() == null) continue;
+            if (s == null) continue;
             double off = s.getOffset();
             if (off <= 0.0) {
                 if (zerostop == null || off >= zerostop.getOffset()) {
@@ -132,6 +136,84 @@ public final class Stop {
     }
 
     /**
+     * Interpolates between two normalized lists of stops.
+     *
+     * @param firstList the first list, not {@code null}
+     * @param secondList the second list, not {@code null}
+     * @return the interpolated list, which may also be {@code firstList} or {@code secondList};
+     *         if a new list is returned, it is unmodifiable
+     */
+    static List<Stop> interpolateLists(List<Stop> firstList, List<Stop> secondList, double t) {
+        Objects.requireNonNull(firstList, "firstList cannot be null");
+        Objects.requireNonNull(secondList, "secondList cannot be null");
+
+        if (!firstList.isEmpty() && firstList.get(0).getOffset() > 0) {
+            throw new IllegalArgumentException("firstList is not normalized");
+        }
+
+        if (!secondList.isEmpty() && secondList.get(0).getOffset() > 0) {
+            throw new IllegalArgumentException("secondList is not normalized");
+        }
+
+        if (t <= 0) {
+            return firstList;
+        }
+
+        if (t >= 1) {
+            return secondList;
+        }
+
+        // We need a new list that is at most the combined size of firstList and secondList.
+        // In many cases we don't need all of that capacity, but allocating once is better than
+        // re-allocating when we run out of space. In general, we expect the size of stop lists
+        // to be quite small (a single-digit number of stops at most).
+        Stop[] stops = new Stop[firstList.size() + secondList.size()];
+        int size = 0;
+
+        for (int i = 0, j = 0, imax = firstList.size(), jmax = secondList.size(); i < imax && j < jmax; ++size) {
+            Stop first = firstList.get(i);
+            Stop second = secondList.get(j);
+
+            if (first.offset == second.offset) {
+                stops[size] = first.color.equals(second.color) ?
+                    first : new Stop(first.offset, first.color.interpolate(second.color, t));
+                ++i;
+                ++j;
+            } else if (first.offset < second.offset) {
+                stops[size] = interpolateVirtualStop(first, second, secondList.get(j - 1), 1 - t);
+                ++i;
+            } else {
+                stops[size] = interpolateVirtualStop(second, first, firstList.get(i - 1), t);
+                ++j;
+            }
+        }
+
+        return new UnmodifiableArrayList<>(stops, size);
+    }
+
+    /**
+     * Consider two lists A and B, where A contains three stops, and B contains two stops:
+     * <pre>{@code
+     *               A2
+     *             /   \
+     *           /      \
+     *    B1---/----[X]--\--B2
+     *       /            \
+     *     /               \
+     *   A1                 A3
+     * }</pre>
+     *
+     * Given the stops A{1,2,3} and B{1,2} in the diagram above, this method computes a new virtual
+     * stop X that matches the offset of A2, and then interpolates between X and A2.
+     */
+    private static Stop interpolateVirtualStop(Stop A2, Stop B2, Stop B1, double t) {
+        double u = (A2.offset - B1.offset) / (B2.offset - B1.offset);
+        Color colorX = B1.color.interpolate(B2.color, u);
+        Color colorR = colorX.interpolate(A2.color, t);
+        return colorR.equals(A2.color) ? A2 : new Stop(A2.offset, colorR);
+    }
+
+    /**
      * The {@code offset} variable is a number ranging from {@code 0} to {@code 1}
      * that indicates where this gradient stop is placed. For linear gradients,
      * the {@code offset} variable represents a location along the gradient vector.
@@ -149,8 +231,8 @@ public final class Stop {
      * For radial gradients, it represents a percentage distance from
      * the focus point to the edge of the outermost/largest circle.
      *
-     * @return position of the Stop within the gradient
-     *         (ranging from {@code 0} to {@code 1})
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     * @return position of the Stop within the gradient (ranging from {@code 0} to {@code 1})
      */
     public final double getOffset() {
         return offset;
@@ -165,6 +247,8 @@ public final class Stop {
 
     /**
      * Gets the color of the gradient at this offset.
+     *
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      * @return the color of the gradient at this offset
      */
     public final Color getColor() {
@@ -184,7 +268,44 @@ public final class Stop {
      */
     public Stop(@NamedArg("offset") double offset, @NamedArg(value="color", defaultValue="BLACK") Color color) {
         this.offset = offset;
-        this.color = color;
+        this.color = Objects.requireNonNullElse(color, Color.TRANSPARENT);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Stop interpolate(Stop endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0.0) {
+            return this;
+        }
+
+        if (t >= 1.0) {
+            return endValue;
+        }
+
+        // Color is implemented such that interpolate() always returns the existing instance if the
+        // intermediate value is equal to the start value or the end value, which allows us to use an
+        // identity comparison in place of a value comparison to determine equality.
+        Color color = this.color.interpolate(endValue.color, t);
+        double offset = InterpolationUtils.interpolate(this.offset, endValue.offset, t);
+
+        if (offset == this.offset && color == this.color) {
+            return this;
+        }
+
+        if (offset == endValue.offset && color == endValue.color) {
+            return endValue;
+        }
+
+        return new Stop(offset, color);
     }
 
     /**
@@ -195,10 +316,8 @@ public final class Stop {
     @Override public boolean equals(Object obj) {
         if (obj == null) return false;
         if (obj == this) return true;
-        if (obj instanceof Stop) {
-            Stop other = (Stop) obj;
-            return offset == other.offset &&
-              (color == null ? other.color == null : color.equals(other.color));
+        if (obj instanceof Stop other) {
+            return offset == other.offset && color.equals(other.color);
         } else return false;
     }
 

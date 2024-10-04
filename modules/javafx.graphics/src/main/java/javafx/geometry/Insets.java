@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,42 +25,53 @@
 
  package javafx.geometry;
 
+ import com.sun.javafx.util.InterpolationUtils;
+ import javafx.animation.Interpolatable;
  import javafx.beans.NamedArg;
+ import java.util.Objects;
 
 /**
  * A set of inside offsets for the 4 side of a rectangular area
  * @since JavaFX 2.0
  */
-public class Insets {
+public class Insets implements Interpolatable<Insets> {
     /**
      * Empty insets. An {@code Insets} instance with all offsets equal to zero.
      */
     public static final Insets EMPTY = new Insets(0, 0, 0, 0);
 
     /**
-     * The inset on the top side
+     * The inset on the top side.
+     *
      * @return the inset on the top side
+     * @interpolationType <a href="../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getTop() { return top; }
     private double top;
 
     /**
-     * The inset on the right side
+     * The inset on the right side.
+     *
      * @return the inset on the right side
+     * @interpolationType <a href="../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getRight() { return right; }
     private double right;
 
     /**
-     * The inset on the bottom side
+     * The inset on the bottom side.
+     *
      * @return the inset on the bottom side
+     * @interpolationType <a href="../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getBottom() { return bottom; }
     private double bottom;
 
     /**
-     * The inset on the left side
+     * The inset on the left side.
+     *
      * @return the inset on the left side
+     * @interpolationType <a href="../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getLeft() { return left; }
     private double left;
@@ -97,6 +108,31 @@ public class Insets {
         this.right = topRightBottomLeft;
         this.bottom = topRightBottomLeft;
         this.left = topRightBottomLeft;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Insets interpolate(Insets endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        if (t <= 0 || equals(endValue)) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        return new Insets(
+            InterpolationUtils.interpolate(top, endValue.top, t),
+            InterpolationUtils.interpolate(right, endValue.right, t),
+            InterpolationUtils.interpolate(bottom, endValue.bottom, t),
+            InterpolationUtils.interpolate(left, endValue.left, t));
     }
 
     /**

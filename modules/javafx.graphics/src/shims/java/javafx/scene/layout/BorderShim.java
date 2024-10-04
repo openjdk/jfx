@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,17 +22,19 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#ifndef GLASS_KEY_H
-#define        GLASS_KEY_H
 
-#include <jni.h>
+package javafx.scene.layout;
 
-#include <gtk/gtk.h>
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.Node;
 
-jint gdk_keyval_to_glass(guint keyval);
-jint get_glass_key(GdkEventKey* e);
-jint glass_key_to_modifier(jint glassKey);
-jint gdk_modifier_mask_to_glass(guint mask);
-gint find_gdk_keyval_for_glass_keycode(jint code);
-gint find_gdk_keycode_for_keyval(gint keyval);
-#endif        /* GLASS_KEY_H */
+public class BorderShim {
+
+    public static final CssMetaData<Node, String[]> BORDER_IMAGE_SOURCE = Border.BORDER_IMAGE_SOURCE;
+
+    public static StyleConverter<ParsedValue[], Border> getConverter() {
+        return BorderConverter.getInstance();
+    }
+}
