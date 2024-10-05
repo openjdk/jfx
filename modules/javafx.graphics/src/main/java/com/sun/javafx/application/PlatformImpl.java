@@ -62,6 +62,15 @@ import javafx.util.FXPermission;
 
 public class PlatformImpl {
 
+    static {
+        @SuppressWarnings("removal")
+        var sm = System.getSecurityManager();
+        if (sm != null) {
+            throw new UnsupportedOperationException("JavaFX does not support running with the Security Manager");
+        }
+
+    }
+
     private static AtomicBoolean initialized = new AtomicBoolean(false);
     private static AtomicBoolean platformExit = new AtomicBoolean(false);
     private static AtomicBoolean toolkitExit = new AtomicBoolean(false);
