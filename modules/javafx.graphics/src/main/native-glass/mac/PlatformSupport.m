@@ -106,6 +106,16 @@ static jobject currentPreferences = nil;
     [PlatformSupport queryNSColors:preferences];
     [NSAppearance setCurrentAppearance:lastAppearance];
 
+    bool reduceMotion = [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion];
+    [PlatformSupport putBoolean:preferences
+                     key:"macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion"
+                     value:reduceMotion];
+
+    bool reduceTransparency = [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceTransparency];
+    [PlatformSupport putBoolean:preferences
+                     key:"macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency"
+                     value:reduceTransparency];
+
     return preferences;
 }
 
@@ -220,6 +230,19 @@ static jobject currentPreferences = nil;
     }
 
     (*env)->DeleteLocalRef(env, newPreferences);
+}
+
++ (void)putBoolean:(jobject)preferences key:(const char*)key value:(bool)value {
+    GET_MAIN_JENV;
+
+    jobject prefKey = (*env)->NewStringUTF(env, key);
+    GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefKey);
+
+    jobject prefValue = (*env)->GetStaticObjectField(env, jBooleanClass, value ? jBooleanTRUE : jBooleanFALSE);
+    GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefValue);
+
+    (*env)->CallObjectMethod(env, preferences, jMapPutMethod, prefKey, prefValue);
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 + (void)putString:(jobject)preferences key:(const char*)key value:(const char*)value {
