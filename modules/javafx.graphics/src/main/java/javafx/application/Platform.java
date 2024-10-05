@@ -592,7 +592,7 @@ public final class Platform {
          * If the platform does not report this preference, this property defaults to {@code false}.
          *
          * @return the {@code reducedMotion} property
-         * @defaultValue {@link false}
+         * @defaultValue {@code false}
          * @since 24
          */
         ReadOnlyBooleanProperty reducedMotionProperty();
@@ -606,7 +606,7 @@ public final class Platform {
          * If the platform does not report this preference, this property defaults to {@code false}.
          *
          * @return the {@code reducedTransparency} property
-         * @defaultValue {@link false}
+         * @defaultValue {@code false}
          * @since 24
          */
         ReadOnlyBooleanProperty reducedTransparencyProperty();
