@@ -31,8 +31,6 @@ import com.sun.javafx.iio.bmp.BMPImageLoaderFactory;
 import com.sun.javafx.iio.common.ImageTools;
 import com.sun.javafx.iio.gif.GIFImageLoaderFactory;
 import com.sun.javafx.iio.ios.IosImageLoaderFactory;
-import com.sun.javafx.iio.javax.XImageLoader;
-import com.sun.javafx.iio.javax.XImageLoaderFactory;
 import com.sun.javafx.iio.jpeg.JPEGImageLoaderFactory;
 import com.sun.javafx.iio.png.PNGImageLoaderFactory;
 import com.sun.javafx.logging.PlatformLogger;
@@ -180,6 +178,7 @@ public class ImageStorage {
      */
     private final HashMap<String, ImageLoaderFactory> loaderFactoriesByMimeSubtype;
     private final ImageLoaderFactory[] loaderFactories;
+    private final ImageLoaderFactory xImageLoaderFactory = tryGetXImageLoaderFactory();
     private int maxSignatureLength;
 
     private static final boolean isIOS = PlatformUtil.isIOS();
@@ -190,6 +189,15 @@ public class ImageStorage {
 
     public static ImageStorage getInstance() {
         return InstanceHolder.INSTANCE;
+    }
+
+    private static ImageLoaderFactory tryGetXImageLoaderFactory() {
+        try {
+            Class<?> factoryClass = Class.forName("com.sun.javafx.iio.javax.XImageLoaderFactory");
+            return (ImageLoaderFactory)factoryClass.getMethod("getInstance").invoke(null);
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
     }
 
     public ImageStorage() {
@@ -415,8 +423,9 @@ public class ImageStorage {
                     } else {
                         // If we don't have a built-in loader factory we try to find an ImageIO loader
                         // that can load the content of the data URI.
-                        XImageLoader imageLoader = (XImageLoader)XImageLoaderFactory.getInstance()
-                            .createImageLoader(new ByteArrayInputStream(dataUri.getData()));
+                        ImageLoader imageLoader = xImageLoaderFactory != null
+                            ? xImageLoaderFactory.createImageLoader(new ByteArrayInputStream(dataUri.getData()))
+                            : null;
 
                         if (imageLoader == null) {
                             throw new IllegalArgumentException(
@@ -544,9 +553,9 @@ public class ImageStorage {
         stream.mark(Integer.MAX_VALUE);
         ImageLoader loader = getLoaderBySignature(stream, listener);
 
-        if (loader == null) {
+        if (loader == null && xImageLoaderFactory != null) {
             stream.reset();
-            loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
+            loader = xImageLoaderFactory.createImageLoader(stream);
         }
 
         return loader;
