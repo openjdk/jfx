@@ -64,9 +64,12 @@ public class XImageLoader implements ImageLoader {
         this.stream = stream;
         this.description = new ImageDescriptor(
             reader.getFormatName(), new String[0], new ImageFormatDescription.Signature[0],
-            Arrays.stream(reader.getOriginatingProvider().getMIMETypes())
-                .map(type -> type.substring(type.indexOf('/')))
-                .toArray(String[]::new));
+            reader.getOriginatingProvider() == null ? new String[0] :
+                Arrays.stream(reader.getOriginatingProvider().getMIMETypes())
+                    .map(type -> type.substring(type.indexOf('/')))
+                    .toArray(String[]::new));
+
+        reader.setInput(stream);
     }
 
     @Override
@@ -79,7 +82,9 @@ public class XImageLoader implements ImageLoader {
         reader.dispose();
 
         try {
-            stream.close();
+            if (stream != null) {
+                stream.close();
+            }
         } catch (IOException ignored) {
         }
     }

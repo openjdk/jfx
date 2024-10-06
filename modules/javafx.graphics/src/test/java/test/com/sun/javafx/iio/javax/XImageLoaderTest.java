@@ -29,20 +29,28 @@ import com.sun.javafx.iio.ImageFrame;
 import com.sun.javafx.iio.ImageLoadListener;
 import com.sun.javafx.iio.ImageLoader;
 import com.sun.javafx.iio.ImageMetadata;
-import com.sun.javafx.iio.ImageStorage;
+import com.sun.javafx.iio.ImageStorage.ImageType;
 import com.sun.javafx.iio.javax.XImageLoader;
 import com.sun.javafx.iio.javax.XImageLoaderFactory;
 import com.sun.prism.Image;
-import com.sun.prism.PixelFormat;
-import org.junit.jupiter.api.Test;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
+import javax.imageio.ImageTypeSpecifier;
+import javax.imageio.metadata.IIOMetadata;
 import javax.imageio.stream.ImageInputStream;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import com.sun.prism.PixelFormat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -67,7 +75,7 @@ public class XImageLoaderTest {
     }
 
     @Test
-    void testLoadImageBGR() throws Exception {
+    void loadImageBGR() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.bmp")) {
             ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
             ImageFrame frame = loader.load(0, -1, -1, true, false, 1, 1);
@@ -76,7 +84,7 @@ public class XImageLoaderTest {
             assertEquals(12, frame.getWidth());
             assertEquals(12, frame.getHeight());
             assertEquals(1, frame.getPixelScale());
-            assertEquals(ImageStorage.ImageType.BGR, frame.getImageType());
+            assertEquals(ImageType.BGR, frame.getImageType());
 
             assertEquals(12, image.getWidth());
             assertEquals(12, image.getHeight());
@@ -86,7 +94,7 @@ public class XImageLoaderTest {
     }
 
     @Test
-    void testLoadImageABGR() throws Exception {
+    void loadImageABGR() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.png")) {
             ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
             ImageFrame frame = loader.load(0, -1, -1, true, false, 1, 1);
@@ -95,7 +103,7 @@ public class XImageLoaderTest {
             assertEquals(12, frame.getWidth());
             assertEquals(12, frame.getHeight());
             assertEquals(1, frame.getPixelScale());
-            assertEquals(ImageStorage.ImageType.ABGR, frame.getImageType());
+            assertEquals(ImageType.ABGR, frame.getImageType());
 
             assertEquals(12, image.getWidth());
             assertEquals(12, image.getHeight());
@@ -105,7 +113,7 @@ public class XImageLoaderTest {
     }
 
     @Test
-    void testLoadImageABGR2x() throws Exception {
+    void loadImageABGR2x() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker@2x.png")) {
             ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
             ImageFrame frame = loader.load(0, -1, -1, true, false, 1, 2);
@@ -114,7 +122,7 @@ public class XImageLoaderTest {
             assertEquals(24, frame.getWidth());
             assertEquals(24, frame.getHeight());
             assertEquals(2, frame.getPixelScale());
-            assertEquals(ImageStorage.ImageType.ABGR, frame.getImageType());
+            assertEquals(ImageType.ABGR, frame.getImageType());
 
             assertEquals(24, image.getWidth());
             assertEquals(24, image.getHeight());
@@ -123,8 +131,83 @@ public class XImageLoaderTest {
         }
     }
 
+    enum AwtImageTypes {
+        TYPE_BYTE_GRAY(BufferedImage.TYPE_BYTE_GRAY, ImageType.GRAY),
+        TYPE_3BYTE_BGR(BufferedImage.TYPE_3BYTE_BGR, ImageType.BGR),
+        TYPE_4BYTE_ABGR(BufferedImage.TYPE_4BYTE_ABGR, ImageType.ABGR),
+        TYPE_4BYTE_ABGR_PRE(BufferedImage.TYPE_4BYTE_ABGR_PRE, ImageType.ABGR_PRE),
+        TYPE_INT_RGB(BufferedImage.TYPE_INT_RGB, ImageType.INT_RGB),
+        TYPE_INT_BGR(BufferedImage.TYPE_INT_BGR, ImageType.INT_BGR),
+        TYPE_INT_ARGB(BufferedImage.TYPE_INT_ARGB, ImageType.INT_ARGB),
+        TYPE_INT_ARGB_PRE(BufferedImage.TYPE_INT_ARGB_PRE, ImageType.INT_ARGB_PRE);
+
+        AwtImageTypes(int awtImageType, ImageType fxImageType) {
+            this.awtIimageType = awtImageType;
+            this.fxImageType = fxImageType;
+        }
+
+        final int awtIimageType;
+        final ImageType fxImageType;
+    }
+
+    @ParameterizedTest
+    @EnumSource(AwtImageTypes.class)
+    void loadVariableDensityImage(AwtImageTypes types) throws IOException {
+        class CustomImageReader extends ImageReader {
+            final int imageType;
+
+            protected CustomImageReader(int imageType) {
+                super(null);
+                this.imageType = imageType;
+            }
+
+            @Override public String getFormatName() { return "test"; }
+            @Override public int getNumImages(boolean allowSearch) { return 1; }
+            @Override public int getWidth(int imageIndex) { return 2; }
+            @Override public int getHeight(int imageIndex) { return 2; }
+            @Override public Iterator<ImageTypeSpecifier> getImageTypes(int imageIndex) { return null; }
+            @Override public IIOMetadata getStreamMetadata() { return null; }
+            @Override public IIOMetadata getImageMetadata(int imageIndex) { return null; }
+
+            @Override
+            public ImageReadParam getDefaultReadParam() {
+                return new ImageReadParam() {{ canSetSourceRenderSize = true; }};
+            }
+
+            @Override
+            public BufferedImage read(int imageIndex, ImageReadParam param) {
+                int w = (int)param.getSourceRenderSize().getWidth();
+                int h = (int)param.getSourceRenderSize().getHeight();
+                return new BufferedImage(w, h, imageType);
+            }
+        }
+
+        var imageLoader = new XImageLoader(new CustomImageReader(types.awtIimageType), null);
+
+        // Load an image with screenPixelScale == 1
+        var imageFrame = imageLoader.load(0, -1, -1, false, false, 1, 1);
+        assertEquals(2, imageFrame.getWidth());
+        assertEquals(2, imageFrame.getHeight());
+        assertEquals(1, imageFrame.getPixelScale());
+        assertEquals(types.fxImageType, imageFrame.getImageType());
+
+        // Load an image with screenPixelScale == 1.5
+        imageFrame = imageLoader.load(0, -1, -1, false, false, 1.5f, 1);
+        assertEquals(3, imageFrame.getWidth());
+        assertEquals(3, imageFrame.getHeight());
+        assertEquals(1.5, imageFrame.getPixelScale());
+        assertEquals(types.fxImageType, imageFrame.getImageType());
+
+        // Load an image with screenPixelScale == 2
+        imageFrame = imageLoader.load(0, -1, -1, false, false, 2, 1);
+        assertEquals(4, imageFrame.getWidth());
+        assertEquals(4, imageFrame.getHeight());
+        assertEquals(2, imageFrame.getPixelScale());
+        assertEquals(types.fxImageType, imageFrame.getImageType());
+    }
+
     @Test
-    void testAddAndRemoveListener() throws Exception {
+    void addAndRemoveListener() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.png")) {
             ImageReader pngReader = ImageIO.getImageReadersByFormatName("PNG").next();
             ImageInputStream input = ImageIO.createImageInputStream(stream);
@@ -179,5 +262,4 @@ public class XImageLoaderTest {
             assertEquals(orderedProgress, progress);
         }
     }
-
 }

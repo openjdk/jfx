@@ -69,8 +69,6 @@ public class XImageLoaderFactory implements ImageLoaderFactory {
                     return null;
                 }
 
-                reader.setInput(stream);
-
                 // XImageLoader is responsible for closing the ImageInputStream after
                 // it has finished reading from it.
                 return new XImageLoader(reader, stream);
