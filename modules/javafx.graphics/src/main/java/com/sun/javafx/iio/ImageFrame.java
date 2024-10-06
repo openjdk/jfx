@@ -50,7 +50,7 @@ public final class ImageFrame {
      * @param width The image width.
      * @param height The image height.
      * @param stride The stride from a pixel position in one row to the same
-     * horizontal position in the next row.
+     * horizontal position in the next row, in bytes
      * @param palette The image palette. This is ignored unless the type is
      * one of the palette types.
      * @param metadata The image metadata.
@@ -73,7 +73,7 @@ public final class ImageFrame {
      * @param width The image width.
      * @param height The image height.
      * @param stride The stride from a pixel position in one row to the same
-     * horizontal position in the next row.
+     * horizontal position in the next row, in bytes
      * @param palette The image palette. This is ignored unless the type is
      * one of the palette types.
      * @param pixelScale The scale of a 72DPI virtual pixel in the resolution

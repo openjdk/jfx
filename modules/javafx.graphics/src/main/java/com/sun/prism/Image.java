@@ -284,19 +284,19 @@ public class Image implements PlatformImage {
 
             case INT_RGB -> {
                 IntBuffer imageData = (IntBuffer)frame.getImageData();
-                IntRgb.ToIntArgbPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                IntRgb.ToIntArgbPreConverter().convert(imageData, 0, stride / 4, imageData, 0, stride / 4, w, h);
                 yield fromIntArgbPreData(imageData, w, h, stride, ps);
             }
 
             case INT_BGR -> {
                 IntBuffer imageData = (IntBuffer)frame.getImageData();
-                IntBgr.ToIntArgbPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                IntBgr.ToIntArgbPreConverter().convert(imageData, 0, stride / 4, imageData, 0, stride / 4, w, h);
                 yield fromIntArgbPreData(imageData, w, h, stride, ps);
             }
 
             case INT_ARGB -> {
                 IntBuffer imageData = (IntBuffer)frame.getImageData();
-                IntArgb.ToIntArgbPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                IntArgb.ToIntArgbPreConverter().convert(imageData, 0, stride / 4, imageData, 0, stride / 4, w, h);
                 yield fromIntArgbPreData(imageData, w, h, stride, ps);
             }
 
