@@ -60,15 +60,6 @@ struct WindowFrameExtents {
     int right;
 };
 
-struct ImFilteredKey {
-    ImFilteredKey(jchar key, jint glass_key, jint glass_modifier) :
-        key(key), glass_key(glass_key), glass_modifier(glass_modifier) { }
-
-    jchar key;
-    jint glass_key;
-    jint glass_modifier;
-};
-
 static const guint MOUSE_BUTTONS_MASK = (guint) (GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK);
 
 enum BoundsType {
@@ -156,8 +147,6 @@ public:
     virtual void process_mouse_scroll(GdkEventScroll*) = 0;
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
     virtual void process_key(GdkEventKey*) = 0;
-    virtual void send_key_event(jchar, jint, jint, bool) = 0;
-
     virtual void process_state(GdkEventWindowState*) = 0;
 
     virtual void notify_state(jint) = 0;
@@ -187,8 +176,7 @@ class WindowContextBase: public WindowContext {
         GtkIMContext *ctx;
         bool enabled;
         bool on_preedit;
-        ImFilteredKey* filtered_key_press;
-        ImFilteredKey* filtered_key_release;
+        bool send_key_event;
     } im_ctx;
 
     size_t events_processing_cnt;
@@ -260,7 +248,6 @@ public:
     void process_mouse_scroll(GdkEventScroll*);
     void process_mouse_cross(GdkEventCrossing*);
     void process_key(GdkEventKey*);
-    void send_key_event(jchar, jint, jint, bool);
     void process_state(GdkEventWindowState*);
 
     void notify_state(jint);
