@@ -56,7 +56,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nCreateDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     // Use the dummyWin that was already created in the pfInfo
     // since this is an non-onscreen drawable.
@@ -88,7 +88,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nGetDummyDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     // Use the dummyWin that was already created in the pfInfo
     // since this is an non-onscreen drawable.

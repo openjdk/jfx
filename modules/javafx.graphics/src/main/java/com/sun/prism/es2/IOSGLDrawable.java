@@ -33,7 +33,6 @@ class IOSGLDrawable extends GLDrawable {
     private static native long nGetDummyDrawable(long nativeCtxInfo);
     private static native boolean nSwapBuffers(long nativeCtxInfo, long nativeDInfo);
 
-
     IOSGLDrawable(GLPixelFormat pixelFormat) {
 
         super(0L, pixelFormat);
@@ -53,7 +52,8 @@ class IOSGLDrawable extends GLDrawable {
     }
 
     @Override
-    void dispose() {
-        nDestroyDrawable(getNativeDrawableInfo());
+    public void dispose() {
+        nDestroyDrawable(nativeDrawableInfo);
+        nativeDrawableInfo = 0;
     }
 }

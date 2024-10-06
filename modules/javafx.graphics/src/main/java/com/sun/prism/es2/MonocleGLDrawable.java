@@ -69,7 +69,7 @@ class MonocleGLDrawable extends GLDrawable {
     }
 
     @Override
-    void dispose() {
+    public void dispose() {
         //empty
     }
 }

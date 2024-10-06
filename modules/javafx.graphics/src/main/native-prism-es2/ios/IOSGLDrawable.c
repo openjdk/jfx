@@ -52,7 +52,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_IOSGLDrawable_nCreateDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     dInfo->win = nativeWindow;
     dInfo->onScreen = JNI_TRUE;
@@ -84,7 +84,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_IOSGLDrawable_nGetDummyDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     dInfo->win = win;
     dInfo->onScreen = JNI_FALSE;

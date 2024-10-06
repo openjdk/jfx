@@ -25,7 +25,9 @@
 
 package com.sun.prism.es2;
 
-abstract class GLDrawable {
+import com.sun.prism.GraphicsResource;
+
+abstract class GLDrawable implements GraphicsResource {
 
     final private long nativeWindow;
     final private GLPixelFormat pixelFormat;
@@ -52,6 +54,4 @@ abstract class GLDrawable {
         return nativeDrawableInfo;
     }
     abstract boolean swapBuffers(GLContext glCtx);
-
-    abstract void dispose();
 }

@@ -53,7 +53,8 @@ class WinGLDrawable extends GLDrawable {
     }
 
     @Override
-    void dispose() {
-        nDestroyDrawable(getNativeDrawableInfo());
+    public void dispose() {
+        nDestroyDrawable(nativeDrawableInfo);
+        nativeDrawableInfo = 0;
     }
 }

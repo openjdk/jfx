@@ -73,7 +73,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLDrawable_nCreateDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     dInfo->hdc = hdc;
     dInfo->hwnd = hwnd;
@@ -102,7 +102,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLDrawable_nGetDummyDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     // Use the dummyHdc that was already created in the pfInfo
     // since this is an non-onscreen drawable.
