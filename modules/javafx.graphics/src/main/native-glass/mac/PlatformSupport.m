@@ -106,15 +106,13 @@ static jobject currentPreferences = nil;
     [PlatformSupport queryNSColors:preferences];
     [NSAppearance setCurrentAppearance:lastAppearance];
 
-    bool reduceMotion = [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion];
     [PlatformSupport putBoolean:preferences
                      key:"macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion"
-                     value:reduceMotion];
+                     value:[[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion]];
 
-    bool reduceTransparency = [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceTransparency];
     [PlatformSupport putBoolean:preferences
                      key:"macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency"
-                     value:reduceTransparency];
+                     value:[[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceTransparency]];
 
     return preferences;
 }

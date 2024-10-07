@@ -124,7 +124,7 @@ bool PlatformSupport::updatePreferences(jobject application) const
     return false;
 }
 
-bool PlatformSupport::settingChanged(jobject application, WPARAM wParam, LPARAM lParam) const
+bool PlatformSupport::onSettingChanged(jobject application, WPARAM wParam, LPARAM lParam) const
 {
     switch ((UINT)wParam) {
         case SPI_SETHIGHCONTRAST:

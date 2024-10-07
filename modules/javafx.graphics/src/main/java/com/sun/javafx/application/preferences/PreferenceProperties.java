@@ -189,7 +189,7 @@ final class PreferenceProperties {
 
     /**
      * DeferredProperty implements a deferred notification mechanism, where change notifications
-     * are only fired after changes to all properties have been applied.
+     * are only fired after changes of all properties have been applied.
      * This ensures that observers will never see a transient state where two properties
      * are inconsistent (for example, both foreground and background could be the same color
      * when going from light to dark mode).

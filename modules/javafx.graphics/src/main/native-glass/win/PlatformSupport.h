@@ -51,7 +51,7 @@ public:
     /**
      * Handles the WM_SETTINGCHANGE message.
     */
-    bool settingChanged(jobject application, WPARAM, LPARAM) const;
+    bool onSettingChanged(jobject application, WPARAM, LPARAM) const;
 
 private:
     JNIEnv* env;

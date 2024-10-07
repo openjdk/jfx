@@ -168,7 +168,7 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_SETTINGCHANGE:
-            if (m_platformSupport.settingChanged(m_grefThis, wParam, lParam)) {
+            if (m_platformSupport.onSettingChanged(m_grefThis, wParam, lParam)) {
                 return 0;
             }
 
