@@ -583,7 +583,8 @@ public final class Platform {
      *
      * @since 22
      */
-    public interface Preferences extends ObservableMap<String, Object> {
+    public sealed interface Preferences extends ObservableMap<String, Object>
+            permits com.sun.javafx.application.preferences.PlatformPreferences {
 
         /**
          * Specifies whether applications should minimize the amount of non-essential animations,

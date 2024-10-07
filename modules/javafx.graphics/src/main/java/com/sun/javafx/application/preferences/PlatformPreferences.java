@@ -51,7 +51,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * When the operating system signals that a preference has changed, the mappings are updated
  * by calling the {@link #update(Map)} method.
  */
-public class PlatformPreferences extends AbstractMap<String, Object> implements Platform.Preferences {
+public final class PlatformPreferences extends AbstractMap<String, Object> implements Platform.Preferences {
 
     /**
      * Contains mappings from platform-specific keys to their types. This information is
