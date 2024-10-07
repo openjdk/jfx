@@ -65,16 +65,15 @@ import javafx.beans.property.SimpleIntegerProperty;
  * images from a specified URL.
  *
  * <p>
- * JavaFX supports all image formats that can be loaded using the
- * <a href="https://docs.oracle.com/en/java/javase/20/docs/api/java.desktop/javax/imageio/package-summary.html">Image I/O API</a>,
- * which includes
- * <a href="https://msdn.microsoft.com/en-us/library/dd183391.aspx">BMP</a>,
- * <a href="http://www.w3.org/Graphics/GIF/spec-gif89a.txt">GIF</a>,
- * <a href="http://www.jpeg.org/">JPEG</a>,
- * <a href="http://www.libpng.org/pub/png/spec/">PNG</a>,
- * <a href="https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf">TIFF</a>, and
- * <a href="http://www.wapforum.org/what/technical/SPEC-WAESpec-19990524.pdf">WBMP</a>.
- * Image I/O is also extensible so that developers can "plug-in" support for additional formats.
+ * JavaFX has built-in support for the following image formats:
+ * <ul>
+ * <li><a href="http://msdn.microsoft.com/en-us/library/dd183376(v=vs.85).aspx">BMP</a></li>
+ * <li><a href="http://www.w3.org/Graphics/GIF/spec-gif89a.txt">GIF</a></li>
+ * <li><a href="http://www.ijg.org">JPEG</a></li>
+ * <li><a href="http://www.libpng.org/pub/png/spec/">PNG</a></li>
+ * </ul>
+ * For all other formats, JavaFX uses the {@link javax.imageio Java Image I/O API} on supported platforms.
+ * Image I/O is extensible so that developers can "plug-in" support for additional formats.
  *
  * <p>
  * Images can be resized as they are loaded (for example to reduce the amount of
