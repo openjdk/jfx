@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,19 @@
 
 package javafx.scene.layout;
 
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.Node;
+import javafx.scene.image.Image;
+
 public class BackgroundShim {
+
+    public static final CssMetaData<Node, Image[]> BACKGROUND_IMAGE = Background.BACKGROUND_IMAGE;
+
+    public static StyleConverter<ParsedValue[], Background> getConverter() {
+        return BackgroundConverter.INSTANCE;
+    }
 
     public static void computeOpaqueInsets(Background bg,
             double width, double height, double[] trbl) {

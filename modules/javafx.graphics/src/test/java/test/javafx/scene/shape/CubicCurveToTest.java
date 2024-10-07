@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,65 +34,79 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
 import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
-import org.junit.Test;
 
 import java.lang.reflect.Method;
 import javafx.scene.shape.CubicCurveTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 
 public class CubicCurveToTest {
 
-    @Test public void testSetGetX() throws Exception {
+    @Test
+    public void testSetGetX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new CubicCurveTo(), "x", 123.2f, 0.0f);
     }
 
-    @Test public void testSetGetControlX1() throws Exception {
+    @Test
+    public void testSetGetControlX1() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new CubicCurveTo(), "controlX1", 123.2f, 0.0f);
     }
 
-    @Test public void testSetGetControlX2() throws Exception {
+    @Test
+    public void testSetGetControlX2() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new CubicCurveTo(), "controlX2", 123.2f, 0.0f);
     }
 
-    @Test public void testSetGetControlY1() throws Exception {
+    @Test
+    public void testSetGetControlY1() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new CubicCurveTo(), "controlY1", 123.2f, 0.0f);
     }
 
-    @Test public void testSetGetControlY2() throws Exception {
+    @Test
+    public void testSetGetControlY2() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new CubicCurveTo(), "controlY2", 123.2f, 0.0f);
     }
 
     //TODO testAddTo
 
-    @Test public void testDoublePropertySynced_X() throws Exception {
+    @Test
+    public void testDoublePropertySynced_X() throws Exception {
         checkSyncedProperty("x", Coords.X, 123.4);
     }
 
-   @Test public void testDoublePropertySynced_Y() throws Exception {
+   @Test
+   public void testDoublePropertySynced_Y() throws Exception {
         checkSyncedProperty("y", Coords.Y, 432.1);
     }
 
-   @Test public void testDoublePropertySynced_ControlX1() throws Exception {
+   @Test
+   public void testDoublePropertySynced_ControlX1() throws Exception {
         checkSyncedProperty("controlX1", Coords.CONTROL_X1, 11.1);
     }
 
-   @Test public void testDoublePropertySynced_ControlY1() throws Exception {
+   @Test
+   public void testDoublePropertySynced_ControlY1() throws Exception {
         checkSyncedProperty("controlY1", Coords.CONTROL_Y1, 22.2);
     }
 
-   @Test public void testDoublePropertySynced_ControlX2() throws Exception {
+   @Test
+   public void testDoublePropertySynced_ControlX2() throws Exception {
         checkSyncedProperty("controlX2", Coords.CONTROL_X2, 1.1);
     }
 
-   @Test public void testDoublePropertySynced_ControlY2() throws Exception {
+   @Test
+   public void testDoublePropertySynced_ControlY2() throws Exception {
         checkSyncedProperty("controlY2", Coords.CONTROL_Y2, 2.2);
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new CubicCurveTo().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

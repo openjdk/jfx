@@ -28,30 +28,27 @@ package test.robot.com.sun.glass.ui.monocle;
 import java.util.Collection;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.glass.ui.monocle.TestLogShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
-public class TouchEventLookaheadTest extends ParameterizedTestBase {
+public final class TouchEventLookaheadTest extends ParameterizedTestBase {
 
-    public TouchEventLookaheadTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
     /** Merge together similar moves */
-    @Test
-    public void mergeMoves() throws Exception {
-        Assume.assumeTrue(TestApplication.isMonocle());
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void mergeMoves(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestApplication.addTouchListeners();
@@ -92,7 +89,7 @@ public class TouchEventLookaheadTest extends ParameterizedTestBase {
         // Check that moves in between were filtered
         TestLogShim.waitForLog("Mouse dragged: " + x3 + ", " + y3, 3000);
         TestLogShim.waitForLog("Touch moved: " + x3 + ", " + y3, 3000);
-        Assert.assertTrue(TestLogShim.countLogContaining("Mouse dragged") <= 3);
-        Assert.assertTrue(TestLogShim.countLogContaining("Touch moved") <= 3);
+        Assertions.assertTrue(TestLogShim.countLogContaining("Mouse dragged") <= 3);
+        Assertions.assertTrue(TestLogShim.countLogContaining("Touch moved") <= 3);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,6 @@ import javafx.collections.ObservableMap;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
-import org.junit.Before;
-import org.junit.Test;
 
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -40,16 +38,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AcceleratorsTest {
 
     private Scene scene;
     private ObservableMap<KeyCombination, Runnable> accelerators;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         scene = new Scene(new Group());
         accelerators = scene.getAccelerators();
@@ -79,22 +80,24 @@ public class AcceleratorsTest {
         assertTrue(executed.get());
     }
 
-    @Test(expected = ConcurrentModificationException.class)
+    @Test
     public void testAcceleratorComodification() {
-        final KeyCombination altA = KeyCombination.keyCombination("Alt + A");
-        final KeyCombination altB = KeyCombination.keyCombination("Alt + B");
-        accelerators.put(altA, () -> {
+        assertThrows(ConcurrentModificationException.class, () -> {
+            final KeyCombination altA = KeyCombination.keyCombination("Alt + A");
+            final KeyCombination altB = KeyCombination.keyCombination("Alt + B");
+            accelerators.put(altA, () -> {
+            });
+            accelerators.put(altB, () -> {
+            });
+
+            final Iterator<Map.Entry<KeyCombination, Runnable>> iterator = accelerators.entrySet().iterator();
+            iterator.next();
+
+            final Iterator<Map.Entry<KeyCombination, Runnable>> iterator1 = accelerators.entrySet().iterator();
+            iterator1.next();
+            iterator1.remove();
+
+            iterator.next();
         });
-        accelerators.put(altB, () -> {
-        });
-
-        final Iterator<Map.Entry<KeyCombination, Runnable>> iterator = accelerators.entrySet().iterator();
-        iterator.next();
-
-        final Iterator<Map.Entry<KeyCombination, Runnable>> iterator1 = accelerators.entrySet().iterator();
-        iterator1.next();
-        iterator1.remove();
-
-        iterator.next();
     }
 }

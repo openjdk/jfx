@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,11 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
-import java.util.Arrays;
 import java.util.Collection;
-
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
-
+import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
@@ -67,6 +61,9 @@ import javafx.scene.control.TreeViewShim;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Testing for potential memory leaks in xxSelectionModel and xxFocusModel (
@@ -80,151 +77,159 @@ import javafx.stage.Stage;
  * the skin - added here for convenience (and because it is simple).
  *
  */
-@RunWith(Parameterized.class)
 public class SelectionFocusModelMemoryTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
 
-    private boolean showBeforeReplaceSM;
-
 //---------- focusModel
 
-    @Test
-    public void testTreeViewFocusModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTreeViewFocusModel(boolean showBeforeReplaceSM) {
         TreeItem<String> root = new TreeItem<>("root");
         ObservableList<String> data = FXCollections.observableArrayList("Apple", "Orange", "Banana");
         data.forEach(text -> root.getChildren().add(new TreeItem<>(text)));
         TreeView<String> control = new TreeView<>(root);
         WeakReference<FocusModel<?>> weakRef = new WeakReference<>(control.getFocusModel());
         FocusModel<TreeItem<String>> replacingSm = TreeViewShim.get_TreeViewFocusModel(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setFocusModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("focusModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "focusModel must be gc'ed");
     }
 
-    @Test
-    public void testTreeTableViewFocusModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTreeTableViewFocusModel(boolean showBeforeReplaceSM) {
         TreeItem<String> root = new TreeItem<>("root");
         ObservableList<String> data = FXCollections.observableArrayList("Apple", "Orange", "Banana");
         data.forEach(text -> root.getChildren().add(new TreeItem<>(text)));
         TreeTableView<String> control = new TreeTableView<>(root);
         WeakReference<FocusModel<?>> weakRef = new WeakReference<>(control.getFocusModel());
         TreeTableViewFocusModel<String> replacingSm = new TreeTableViewFocusModel<>(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setFocusModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("focusModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "focusModel must be gc'ed");
     }
 
-    @Test
-    public void testTableViewFocusModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTableViewFocusModel(boolean showBeforeReplaceSM) {
         TableView<String> control = new TableView<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         WeakReference<FocusModel<?>> weakRef = new WeakReference<>(control.getFocusModel());
         TableViewFocusModel<String> replacingSm = new TableViewFocusModel<>(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setFocusModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("focusModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "focusModel must be gc'ed");
     }
 
-    @Test
-    public void testListViewFocusModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testListViewFocusModel(boolean showBeforeReplaceSM) {
         ListView<String> control = new ListView<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         WeakReference<FocusModel<?>> weakRef = new WeakReference<>(control.getFocusModel());
         FocusModel<String> replacingSm = ListViewShim.getListViewFocusModel(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setFocusModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("focusModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "focusModel must be gc'ed");
     }
 
 //------------------------ selectionModel
 
-    @Test
-    public void testTreeViewSelectionModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTreeViewSelectionModel(boolean showBeforeReplaceSM) {
         TreeItem<String> root = new TreeItem<>("root");
         ObservableList<String> data = FXCollections.observableArrayList("Apple", "Orange", "Banana");
         data.forEach(text -> root.getChildren().add(new TreeItem<>(text)));
         TreeView<String> control = new TreeView<>(root);
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         MultipleSelectionModel<TreeItem<String>> replacingSm = TreeViewShim.get_TreeViewBitSetSelectionModel(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setSelectionModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("selectionModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "selectionModel must be gc'ed");
     }
 
-    @Test
-    public void testTreeTableViewSelectionModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTreeTableViewSelectionModel(boolean showBeforeReplaceSM) {
         TreeItem<String> root = new TreeItem<>("root");
         ObservableList<String> data = FXCollections.observableArrayList("Apple", "Orange", "Banana");
         data.forEach(text -> root.getChildren().add(new TreeItem<>(text)));
         TreeTableView<String> control = new TreeTableView<>(root);
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         TreeTableViewSelectionModel<String> replacingSm = (TreeTableViewSelectionModel<String>) TreeTableViewShim.get_TreeTableViewArrayListSelectionModel(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setSelectionModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("selectionModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "selectionModel must be gc'ed");
     }
 
-    @Test
-    public void testTableViewSelectionModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTableViewSelectionModel(boolean showBeforeReplaceSM) {
         TableView<String> control = new TableView<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         TableViewSelectionModel<String> replacingSm = TableViewShim.get_TableViewArrayListSelectionModel(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setSelectionModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("selectionModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "selectionModel must be gc'ed");
     }
 
-    @Test
-    public void testListViewSelectionModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testListViewSelectionModel(boolean showBeforeReplaceSM) {
         ListView<String> control = new ListView<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         MultipleSelectionModel<String> replacingSm = ListViewShim.getListViewBitSetSelectionModel(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setSelectionModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("selectionModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "selectionModel must be gc'ed");
     }
 
-    @Test
-    public void testTabPaneSelectionModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTabPaneSelectionModel(boolean showBeforeReplaceSM) {
         TabPane control = new TabPane();
         ObservableList<String> data = FXCollections.observableArrayList("Apple", "Orange", "Banana");
         data.forEach(text -> control.getTabs().add(new Tab(text)));
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         SingleSelectionModel<Tab> replacingSm = TabPaneShim.getTabPaneSelectionModel(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setSelectionModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("selectionModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "selectionModel must be gc'ed");
     }
 
-    @Test
-    public void testComboBoxSelectionModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testComboBoxSelectionModel(boolean showBeforeReplaceSM) {
         ComboBox<String> control = new ComboBox<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         SingleSelectionModel<String> replacingSm = ComboBoxShim.get_ComboBoxSelectionModel(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setSelectionModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("selectionModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "selectionModel must be gc'ed");
     }
 
-    @Test
-    public void testChoiceBoxSelectionModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChoiceBoxSelectionModel(boolean showBeforeReplaceSM) {
         ChoiceBox<String> control = new ChoiceBox<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         SingleSelectionModel<String> replacingSm = ChoiceBoxShim.get_ChoiceBoxSelectionModel(control);
-        maybeShowControl(control);
+        maybeShowControl(control, showBeforeReplaceSM);
         control.setSelectionModel(replacingSm);
         attemptGC(weakRef, 10);
-        assertNull("selectionModel must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "selectionModel must be gc'ed");
     }
 
     private void attemptGC(WeakReference<?> weakRef, int n) {
@@ -238,30 +243,24 @@ public class SelectionFocusModelMemoryTest {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-               System.err.println("InterruptedException occurred during Thread.sleep()");
+                fail(e);
             }
         }
     }
 
-    protected void maybeShowControl(Control control) {
+    protected void maybeShowControl(Control control, boolean showBeforeReplaceSM) {
         if (!showBeforeReplaceSM) return;
         show(control);
     }
 
 // ------------- parameterized
 
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<Boolean> parameters() {
         // show the control before replacing the selectionModel
-        Object[][] data = new Object[][] {
-            {false},
-            {true },
-        };
-        return Arrays.asList(data);
-    }
-
-    public SelectionFocusModelMemoryTest(boolean showBeforeReplaceSM) {
-        this.showBeforeReplaceSM = showBeforeReplaceSM;
+        return List.of(
+            false,
+            true
+        );
     }
 
 //------------------ setup
@@ -279,11 +278,10 @@ public class SelectionFocusModelMemoryTest {
         }
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stage != null) {
             stage.hide();
         }
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,15 @@
 
 package test.com.sun.javafx.scene.layout.region;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the BackgroundFill class
  */
 public class BackgroundFillTest {
 
-    @Test public void valuesAreSetCorrectly() {
+    @Test
+    public void valuesAreSetCorrectly() {
 //        BackgroundFill obj = new BackgroundFill(Color.ORANGE, 1, 2, 3, 4, new Insets(20));
 //        assertEquals(Color.ORANGE, obj.getFill());
 //        assertEquals(1, obj.getTopLeftCornerRadius(), 0);
@@ -42,7 +43,8 @@ public class BackgroundFillTest {
 //        assertEquals(new Insets(20), obj.getOffsets());
     }
 
-    @Test public void hashingReturnsSameObject() {
+    @Test
+    public void hashingReturnsSameObject() {
 //        HashMap<BackgroundFill, String> map = new HashMap<BackgroundFill, String>();
 //        BackgroundFill obj = new BackgroundFill(Color.ORANGE, 1, 2, 3, 4, new Insets(20));
 //        map.put(obj, "YES");
@@ -55,7 +57,8 @@ public class BackgroundFillTest {
 //        assertFalse(map.containsKey(different));
     }
 
-    @Test public void equality() {
+    @Test
+    public void equality() {
 //        BackgroundFill obj = new BackgroundFill(Color.ORANGE, 1, 2, 3, 4, new Insets(20));
 //        BackgroundFill equivalent = new BackgroundFill(Color.ORANGE, 1, 2, 3, 4, new Insets(20));
 //        assertTrue(obj.equals(equivalent));

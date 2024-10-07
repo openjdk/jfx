@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,12 +29,12 @@ package test.javafx.animation;
 import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 import test.com.sun.scenario.animation.shared.ClipEnvelopeMock;
-import org.junit.Before;
-import org.junit.Test;
 
 import com.sun.scenario.animation.shared.SingleLoopClipEnvelopeShim;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AnimationSetRateTest {
 
@@ -44,7 +44,7 @@ public class AnimationSetRateTest {
     private AnimationImpl animation;
     private ClipEnvelopeMock clipEnvelope;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         timer = new AbstractPrimaryTimerMock();
         clipEnvelope = new ClipEnvelopeMock();
@@ -388,7 +388,7 @@ public class AnimationSetRateTest {
         clip.timePulse(5);
         animation.pause();
         long timeAfter = clip.getTicks();
-        assertEquals("A pulse to 10 at rate 0.2 with deltaTicks = 0 should reach 10 * 0.2 = 2", 2, timeBefore);
-        assertEquals("A pulse to 5 at rate -0.2 with deltaTicks = 4 should reach 4 + 5 * (-0.2) = 3", 3, timeAfter);
+        assertEquals(2, timeBefore, "A pulse to 10 at rate 0.2 with deltaTicks = 0 should reach 10 * 0.2 = 2");
+        assertEquals(3, timeAfter, "A pulse to 5 at rate -0.2 with deltaTicks = 4 should reach 4 + 5 * (-0.2) = 3");
     }
 }

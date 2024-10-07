@@ -27,22 +27,24 @@ package test.robot.com.sun.glass.ui.monocle;
 
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.glass.ui.monocle.TestLogShim;
 
 public class CreateDeviceTest {
 
     private UInput ui;
 
-    @Before public void initDevice() {
+    @BeforeEach
+    public void initDevice() {
         TestLogShim.reset();
         ui = new UInput();
     }
 
-    @After public void destroyDevice() throws InterruptedException {
+    @AfterEach
+    public void destroyDevice() throws InterruptedException {
         ui.waitForQuiet();
         try {
             ui.processLine("DESTROY");
@@ -84,8 +86,7 @@ public class CreateDeviceTest {
         ui.processLine("EV_SYN");
         TestLogShim.waitForLog("Key typed: A", 3000);
         // make sure only two key typed events were received
-        Assert.assertEquals("Expected two typed events", 2,
-                             TestLogShim.getLog().stream().filter(s -> s.startsWith("Key typed")).count());
+        Assertions.assertEquals(2, TestLogShim.getLog().stream().filter(s -> s.startsWith("Key typed")).count(), "Expected two typed events");
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,14 @@
 package test.javafx.scene.effect;
 
 import static test.com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.paint.Color;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
@@ -57,7 +57,7 @@ public class InnerShadowTest extends EffectsTestBase {
                 (float) Color.BLACK.getOpacity()
                 );
 
-    @Before
+    @BeforeEach
     public void setUp() {
         effect = new InnerShadow();
         setupTest(effect);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,12 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-
 import javafx.beans.Observable;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -43,12 +40,15 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBaseShim;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class SkinBaseTest {
     private ControlStub c;
     private SkinBaseStub<ControlStub> s;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         c = new ControlStub();
         s = new SkinBaseStub<>(c);
     }
@@ -79,10 +79,10 @@ public class SkinBaseTest {
         Consumer<ObservableValue<?>> consumer = c -> count[0]++;
         s.addChangeListener(p, consumer);
         p.set(200);
-        assertEquals("change listener must be notified", 1, count[0]);
+        assertEquals(1, count[0], "change listener must be notified");
         Consumer<ObservableValue<?>> removed = s.removeChangeListeners(p);
         p.set(100);
-        assertEquals("changeListener must not be notified", 1, count[0]);
+        assertEquals(1, count[0], "changeListener must not be notified");
         assertSame(consumer, removed);
     }
 
@@ -93,10 +93,10 @@ public class SkinBaseTest {
         Consumer<Observable> consumer = c -> count[0]++;
         s.addInvalidationListener(p, consumer);
         p.set(200);
-        assertEquals("invalidation listener must be notified", 1, count[0]);
+        assertEquals(1, count[0], "invalidation listener must be notified");
         Consumer<Observable> removed = s.removeInvalidationListeners(p);
         p.set(100);
-        assertEquals("invalidation listener must not be notified", 1, count[0]);
+        assertEquals(1, count[0], "invalidation listener must not be notified");
         assertSame(consumer, removed);
     }
 
@@ -158,7 +158,5 @@ public class SkinBaseTest {
         Consumer<Change<?>> removeListChangeListeners(ObservableList<?> list) {
             return unregisterListChangeListeners(list);
         }
-
     }
-
 }

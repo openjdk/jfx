@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,15 @@
 
 package test.javafx.scene.control.skin;
 
+import static javafx.scene.control.ControlShim.installDefaultSkin;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.createControl;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.replaceSkin;
 import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.List;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static javafx.scene.control.ControlShim.*;
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Hyperlink;
@@ -48,6 +43,9 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.shape.Rectangle;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test skin cleanup for Labeled JDK-8247576
@@ -55,70 +53,69 @@ import javafx.scene.shape.Rectangle;
  * This test is parameterized on class of Labeled.
  *
  */
-@RunWith(Parameterized.class)
 public class SkinLabeledCleanupTest {
 
-    private Class<Labeled> labeledClass;
     private Labeled labeled;
 
     /**
      * First step was cleanup of graphicListener: removed guard against null skinnable.
      */
-    @Test
-    public void testLabeledGraphicDispose() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testLabeledGraphicDispose(Class<Labeled> labeledClass) {
+        setup(labeledClass);
         Rectangle graphic = (Rectangle) labeled.getGraphic();
         installDefaultSkin(labeled);
         labeled.getSkin().dispose();
         graphic.setWidth(500);
     }
 
-    @Test
-    public void testMemoryLeakAlternativeSkin() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMemoryLeakAlternativeSkin(Class<Labeled> labeledClass) {
+        setup(labeledClass);
         installDefaultSkin(labeled);
         WeakReference<?> weakRef = new WeakReference<>(replaceSkin(labeled));
         assertNotNull(weakRef.get());
         attemptGC(weakRef);
-        assertEquals("Skin must be gc'ed", null, weakRef.get());
+        assertEquals(null, weakRef.get(), "Skin must be gc'ed");
     }
 
 //----------- parameterized
 
-    @Parameterized.Parameters //(name = "{index}: {0} ")
-    public static Collection<Object[]> data() {
-        List<Class> labeledClasses = List.of(
-               Button.class,
-               CheckBox.class,
-               Hyperlink.class,
-               Label.class,
-               // MenuButton is-a Labeled but its skin is-not-a LabeledSkinBase
-               // leaking has different reason/s
-               // MenuButton.class,
-               ToggleButton.class,
-               RadioButton.class,
-               TitledPane.class
-                );
-        return asArrays(labeledClasses);
-    }
-
-    public SkinLabeledCleanupTest(Class<Labeled> labeledClass) {
-        this.labeledClass = labeledClass;
+    private static Collection<Class<?>> parameters() {
+        return List.of(
+            Button.class,
+            CheckBox.class,
+            Hyperlink.class,
+            Label.class,
+            // MenuButton is-a Labeled but its skin is-not-a LabeledSkinBase
+            // leaking has different reason/s
+            // MenuButton.class,
+            ToggleButton.class,
+            RadioButton.class,
+            TitledPane.class
+        );
     }
 
 //---------------- setup/cleanup
 
-    @Test
-    public void testSetupState() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSetupState(Class<Labeled> labeledClass) {
+        setup(labeledClass);
         assertNotNull(labeled);
         assertNotNull(labeled.getGraphic());
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
-    @Before
-    public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Class<Labeled> labeledClass) {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException)throwable;
@@ -130,5 +127,4 @@ public class SkinLabeledCleanupTest {
         labeled = createControl(labeledClass);
         labeled.setGraphic(new Rectangle());
     }
-
 }

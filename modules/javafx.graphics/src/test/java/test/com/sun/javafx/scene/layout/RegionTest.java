@@ -25,14 +25,15 @@
 
 package test.com.sun.javafx.scene.layout;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class RegionTest {
 
     public RegionTest() {
     }
 
-    @Test public void dummy() { }
+    @Test
+    public void dummy() { }
 //    CSSProperty getCssMetaDataByName(String name, List<CSSProperty> keys) {
 //        CSSProperty keyForName = null;
 //        for (CSSProperty k : keys) {

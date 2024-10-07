@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,16 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.tk.Toolkit;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.stream.Stream;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.stage.Stage;
-
-import java.util.Arrays;
-import java.util.Collection;
 import javafx.scene.control.Button;
 import javafx.scene.control.Cell;
 import javafx.scene.control.CellShim;
@@ -46,44 +46,39 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableCellShim;
 import javafx.scene.control.TreeTableRow;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
+import javafx.stage.Stage;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
-
-import static org.junit.Assert.*;
 
 /**
  */
-@RunWith(Parameterized.class)
 public class CellTest {
-    @SuppressWarnings("rawtypes")
-    @Parameterized.Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][]{
-                {Cell.class},
-                {ListCell.class},
-                {TableRow.class},
+    private static Stream<Class> parameters() {
+        return Stream.of(
+                Cell.class,
+                ListCell.class,
+                TableRow.class,
                 // Note: We use the shim here, so we can lock the item. The behaviour is the same otherwise.
-                {TableCellShim.class},
-                {TreeCell.class},
-                {TreeTableRow.class},
+                TableCellShim.class,
+                TreeCell.class,
+                TreeTableRow.class,
                 // Note: We use the shim here, so we can lock the item.  The behaviour is the same otherwise.
-                {TreeTableCellShim.class}
-        });
+                TreeTableCellShim.class
+        );
     }
 
     private Cell<String> cell;
-    private Class type;
 
-    public CellTest(Class type) {
-        this.type = type;
-    }
-
-    @Before public void setup() throws Exception {
-        cell = (Cell<String>) type.getDeclaredConstructor().newInstance();
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    private void setup(Class<?> type) {
+        try {
+            cell = (Cell<String>)type.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         // Empty TableCells can be selected, as long as the row they exist in
         // is not empty, so here we set a TableRow to ensure testing works
@@ -105,7 +100,10 @@ public class CellTest {
      * Tests for the constructors                                        *
      ********************************************************************/
 
-    @Test public void cellsShouldBeNonFocusableByDefault() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void cellsShouldBeNonFocusableByDefault(Class<?> c) {
+        setup(c);
         // Cells are non-focusable because we manually position the focus from
         // the ListView / TableView / TreeView skin, rather than making them
         // focus traversable and having directional focus work etc. We must
@@ -115,11 +113,17 @@ public class CellTest {
         assertFalse(cell.isFocused());
     }
 
-    @Test public void styleClassShouldDefaultTo_cell() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void styleClassShouldDefaultTo_cell(Class<?> c) {
+        setup(c);
         ControlTestUtils.assertStyleClassContains(cell, "cell");
     }
 
-    @Test public void pseudoClassStateShouldBe_empty_ByDefault() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void pseudoClassStateShouldBe_empty_ByDefault(Class<?> c) {
+        setup(c);
         ControlTestUtils.assertPseudoClassExists(cell, "empty");
         ControlTestUtils.assertPseudoClassDoesNotExist(cell, "filled");
         ControlTestUtils.assertPseudoClassDoesNotExist(cell, "selected");
@@ -130,97 +134,142 @@ public class CellTest {
      * Tests for updating the item, selection, editable                  *
      ********************************************************************/
 
-    @Test public void updatingItemAffectsBothItemAndEmpty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingItemAffectsBothItemAndEmpty(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Apples", false);
         assertEquals("Apples", cell.getItem());
         assertFalse(cell.isEmpty());
     }
 
-    @Test public void updatingItemWithEmptyTrueAndItemNotNullIsWeirdButOK() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingItemWithEmptyTrueAndItemNotNullIsWeirdButOK(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Weird!", true);
         assertEquals("Weird!", cell.getItem());
         assertTrue(cell.isEmpty());
     }
 
-    @Test public void updatingItemWithEmptyFalseAndNullItemIsOK() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingItemWithEmptyFalseAndNullItemIsOK(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, null, false);
         assertNull(cell.getItem());
         assertFalse(cell.isEmpty());
     }
 
-    @Test public void selectingANonEmptyCellIsOK() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectingANonEmptyCellIsOK(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Oranges", false);
         cell.updateSelected(true);
         assertTrue(cell.isSelected());
     }
 
-    @Test public void unSelectingANonEmptyCellIsOK() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unSelectingANonEmptyCellIsOK(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Oranges", false);
         cell.updateSelected(true);
         cell.updateSelected(false);
         assertFalse(cell.isSelected());
     }
 
-    public void selectingAnEmptyCellResultsInNoChange() {
+    public void selectingAnEmptyCellResultsInNoChange(Class<?> c) {
         CellShim.updateItem(cell, null, true);
         cell.updateSelected(true);
         assertFalse(cell.isSelected());
     }
 
-    @Test public void updatingASelectedCellToBeEmptyClearsSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingASelectedCellToBeEmptyClearsSelection(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Oranges", false);
         cell.updateSelected(true);
         CellShim.updateItem(cell, null, true);
         assertFalse(cell.isSelected());
     }
 
-    @Test public void updatingItemWithEmptyTrueResultsIn_empty_pseudoClassAndNot_filled() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingItemWithEmptyTrueResultsIn_empty_pseudoClassAndNot_filled(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, null, true);
         ControlTestUtils.assertPseudoClassExists(cell, "empty");
         ControlTestUtils.assertPseudoClassDoesNotExist(cell, "filled");
     }
 
-    @Test public void updatingItemWithEmptyFalseResultsIn_filled_pseudoClassAndNot_empty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingItemWithEmptyFalseResultsIn_filled_pseudoClassAndNot_empty(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, null, false);
         ControlTestUtils.assertPseudoClassExists(cell, "filled");
         ControlTestUtils.assertPseudoClassDoesNotExist(cell, "empty");
     }
 
-    @Test public void updatingSelectedToTrueResultsIn_selected_pseudoClass() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingSelectedToTrueResultsIn_selected_pseudoClass(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Pears", false);
         cell.updateSelected(true);
         ControlTestUtils.assertPseudoClassExists(cell, "selected");
     }
 
-    @Test public void updatingSelectedToFalseResultsInNo_selected_pseudoClass() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingSelectedToFalseResultsInNo_selected_pseudoClass(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Pears", false);
         cell.updateSelected(true);
         cell.updateSelected(false);
         ControlTestUtils.assertPseudoClassDoesNotExist(cell, "selected");
     }
 
-    @Test public void editableIsTrueByDefault() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void editableIsTrueByDefault(Class<?> c) {
+        setup(c);
         assertTrue(cell.isEditable());
         assertTrue(cell.editableProperty().get());
     }
 
-    @Test public void editableCanBeSet() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void editableCanBeSet(Class<?> c) {
+        setup(c);
         cell.setEditable(false);
         assertFalse(cell.isEditable());
     }
 
-    @Test public void editableSetToNonDefaultValueIsReflectedInModel() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void editableSetToNonDefaultValueIsReflectedInModel(Class<?> c) {
+        setup(c);
         cell.setEditable(false);
         assertFalse(cell.editableProperty().get());
     }
 
-    @Test public void editableCanBeCleared() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void editableCanBeCleared(Class<?> c) {
+        setup(c);
         cell.setEditable(false);
         cell.setEditable(true);
         assertTrue(cell.isEditable());
     }
 
-    @Test public void editableCanBeBound() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void editableCanBeBound(Class<?> c) {
+        setup(c);
         BooleanProperty other = new SimpleBooleanProperty(false);
         cell.editableProperty().bind(other);
         assertFalse(cell.isEditable());
@@ -228,7 +277,10 @@ public class CellTest {
         assertTrue(cell.isEditable());
     }
 
-    @Test public void cannotSpecifyEditableViaCSS() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void cannotSpecifyEditableViaCSS(Class<?> c) {
+        setup(c);
         cell.setStyle("-fx-editable: false;");
         cell.applyCss();
         assertTrue(cell.isEditable());
@@ -245,19 +297,28 @@ public class CellTest {
      * Tests for editing                                                 *
      ********************************************************************/
 
-    @Test public void editingAnEmptyCellResultsInNoChange() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void editingAnEmptyCellResultsInNoChange(Class<?> c) {
+        setup(c);
         cell.startEdit();
         assertFalse(cell.isEditing());
     }
 
-    @Test public void editingAnEmptyCellResultsInNoChange2() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void editingAnEmptyCellResultsInNoChange2(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, null, false);
         CellShim.updateItem(cell, null, true);
         cell.startEdit();
         assertFalse(cell.isEditing());
     }
 
-    @Test public void updatingACellBeingEditedDoesNotResultInACancelOfEdit() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingACellBeingEditedDoesNotResultInACancelOfEdit(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Apples", false);
         cell.startEdit();
         assertFalse(cell.isEmpty());
@@ -266,7 +327,10 @@ public class CellTest {
         assertTrue(cell.isEditing());
     }
 
-    @Test public void updatingACellBeingEditedDoesNotResultInACancelOfEdit2() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void updatingACellBeingEditedDoesNotResultInACancelOfEdit2(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Apples", false);
         cell.startEdit();
         assertFalse(cell.isEmpty());
@@ -275,49 +339,70 @@ public class CellTest {
         assertTrue(cell.isEditing());
     }
 
-    @Test public void startEditWhenEditableIsTrue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void startEditWhenEditableIsTrue(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Apples", false);
         cell.startEdit();
         assertTrue(cell.isEditing());
     }
 
-    @Test public void startEditWhenEditableIsFalse() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void startEditWhenEditableIsFalse(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Apples", false);
         cell.setEditable(false);
         cell.startEdit();
         assertFalse(cell.isEditing());
     }
 
-    @Test public void startEditWhileAlreadyEditingIsIgnored() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void startEditWhileAlreadyEditingIsIgnored(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Apples", false);
         cell.startEdit();
         cell.startEdit();
         assertTrue(cell.isEditing());
     }
 
-    @Test public void cancelEditWhenEditableIsTrue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void cancelEditWhenEditableIsTrue(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Apples", false);
         cell.startEdit();
         cell.cancelEdit();
         assertFalse(cell.isEditing());
     }
 
-    @Test public void cancelEditWhenEditableIsFalse() {
-        CellShim.updateItem(cell, "Apples", false);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void cancelEditWhenEditableIsFalse(Class<?> c) {
+        setup(c);
+       CellShim.updateItem(cell, "Apples", false);
         cell.setEditable(false);
         cell.startEdit();
         cell.cancelEdit();
         assertFalse(cell.isEditing());
     }
 
-    @Test public void commitEditWhenEditableIsTrue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void commitEditWhenEditableIsTrue(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Apples", false);
         cell.startEdit();
         cell.commitEdit("Oranges");
         assertFalse(cell.isEditing());
     }
 
-    @Test public void commitEditWhenEditableIsFalse() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void commitEditWhenEditableIsFalse(Class<?> c) {
+        setup(c);
         CellShim.updateItem(cell, "Apples", false);
         cell.setEditable(false);
         cell.startEdit();
@@ -325,47 +410,80 @@ public class CellTest {
         assertFalse(cell.isEditing());
     }
 
-    @Test public void getBeanIsCorrectForItemProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getBeanIsCorrectForItemProperty(Class<?> c) {
+        setup(c);
         assertSame(cell, cell.itemProperty().getBean());
     }
 
-    @Test public void getNameIsCorrectForItemProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getNameIsCorrectForItemProperty(Class<?> c) {
+        setup(c);
         assertEquals("item", cell.itemProperty().getName());
     }
 
-    @Test public void getBeanIsCorrectForEmptyProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getBeanIsCorrectForEmptyProperty(Class<?> c) {
+        setup(c);
         assertSame(cell, cell.emptyProperty().getBean());
     }
 
-    @Test public void getNameIsCorrectForEmptyProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getNameIsCorrectForEmptyProperty(Class<?> c) {
+        setup(c);
         assertEquals("empty", cell.emptyProperty().getName());
     }
 
-    @Test public void getBeanIsCorrectForSelectedProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getBeanIsCorrectForSelectedProperty(Class<?> c) {
+        setup(c);
         assertSame(cell, cell.selectedProperty().getBean());
     }
 
-    @Test public void getNameIsCorrectForSelectedProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getNameIsCorrectForSelectedProperty(Class<?> c) {
+        setup(c);
         assertEquals("selected", cell.selectedProperty().getName());
     }
 
-    @Test public void getBeanIsCorrectForEditingProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getBeanIsCorrectForEditingProperty(Class<?> c) {
+        setup(c);
         assertSame(cell, cell.editingProperty().getBean());
     }
 
-    @Test public void getNameIsCorrectForEditingProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getNameIsCorrectForEditingProperty(Class<?> c) {
+        setup(c);
         assertEquals("editing", cell.editingProperty().getName());
     }
 
-    @Test public void getBeanIsCorrectForEditableProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getBeanIsCorrectForEditableProperty(Class<?> c) {
+        setup(c);
         assertSame(cell, cell.editableProperty().getBean());
     }
 
-    @Test public void getNameIsCorrectForEditableProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getNameIsCorrectForEditableProperty(Class<?> c) {
+        setup(c);
         assertEquals("editable", cell.editableProperty().getName());
     }
 
-    @Test public void loseFocusWhileEditing() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void loseFocusWhileEditing(Class<?> c) {
+        setup(c);
         Button other = new Button();
         Group root = new Group(other, cell);
         Scene scene = new Scene(root);

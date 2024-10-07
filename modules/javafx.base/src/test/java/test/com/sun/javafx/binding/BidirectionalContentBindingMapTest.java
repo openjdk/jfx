@@ -29,13 +29,13 @@ import com.sun.javafx.binding.BidirectionalContentBinding;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class BidirectionalContentBindingMapTest {
 
@@ -50,7 +50,7 @@ public class BidirectionalContentBindingMapTest {
     private Map<String, Integer> map1;
     private Map<String, Integer> map2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         map0 = new HashMap<>();
         map1 = new HashMap<>();
@@ -102,19 +102,25 @@ public class BidirectionalContentBindingMapTest {
         assertEquals(map2, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_Null_X() {
-        Bindings.bindContentBidirectional(null, op2);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.bindContentBidirectional(null, op2);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_X_Null() {
-        Bindings.bindContentBidirectional(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.bindContentBidirectional(op1, null);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testBind_X_Self() {
-        Bindings.bindContentBidirectional(op1, op1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Bindings.bindContentBidirectional(op1, op1);
+        });
     }
 
     @Test
@@ -164,19 +170,25 @@ public class BidirectionalContentBindingMapTest {
         assertEquals(map2, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_Null_X() {
-        Bindings.unbindContentBidirectional(null, op2);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.unbindContentBidirectional(null, op2);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_X_Null() {
-        Bindings.unbindContentBidirectional(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.unbindContentBidirectional(op1, null);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testUnbind_X_Self() {
-        Bindings.unbindContentBidirectional(op1, op1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Bindings.unbindContentBidirectional(op1, op1);
+        });
     }
 
     @Test
