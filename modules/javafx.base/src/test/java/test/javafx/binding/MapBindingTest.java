@@ -36,15 +36,15 @@ import javafx.collections.FXCollections;
 import test.javafx.collections.MockMapObserver;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import static test.javafx.collections.MockMapObserver.Call;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
@@ -70,7 +70,7 @@ public class MapBindingTest {
 
     private MockMapObserver<Object, Object> listener;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         dependency1 = new ObservableStub();
         dependency2 = new ObservableStub();

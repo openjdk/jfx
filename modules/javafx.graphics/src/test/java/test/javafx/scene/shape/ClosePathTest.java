@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,16 @@ package test.javafx.scene.shape;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.scene.shape.ClosePath;
 import javafx.scene.shape.ClosePathShim;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ClosePathTest {
 
-    @Test public void testAddTo() throws Exception {
+    @Test
+    public void testAddTo() throws Exception {
         final StubPathImpl pgPath = new StubPathImpl();
         ClosePath closePath = new ClosePath();
         ClosePathShim.addTo(closePath, pgPath);
@@ -42,7 +45,8 @@ public class ClosePathTest {
 
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new ClosePath().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

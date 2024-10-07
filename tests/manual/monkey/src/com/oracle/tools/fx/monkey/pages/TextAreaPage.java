@@ -24,11 +24,11 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.skin.TextAreaSkin;
-import com.oracle.tools.fx.monkey.options.BooleanOption;
-import com.oracle.tools.fx.monkey.options.IntOption;
-import com.oracle.tools.fx.monkey.sheets.TextInputControlPropertySheet;
+import com.oracle.tools.fx.monkey.Loggers;
+import com.oracle.tools.fx.monkey.sheets.TextAreaPropertySheet;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
@@ -42,16 +42,17 @@ public class TextAreaPage extends TestPaneBase implements HasSkinnable {
     public TextAreaPage() {
         super("TextAreaPage");
 
-        control = new TextArea();
+        control = new TextArea() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         OptionPane op = new OptionPane();
-        op.section("TextArea");
-        op.option("Preferred Column Count:", new IntOption("prefColumnCount", -1, Integer.MAX_VALUE, control.prefColumnCountProperty()));
-        op.option("Preferred Row Count:", new IntOption("prefRowCount", -1, Integer.MAX_VALUE, control.prefRowCountProperty()));
-        op.option("Scroll Left: TODO", null); // TODO
-        op.option("Scroll Top: TODO", null); // TODO
-        op.option(new BooleanOption("wrapText", "wrap text", control.wrapTextProperty()));
-        TextInputControlPropertySheet.appendTo(op, true, control);
+        TextAreaPropertySheet.appendTo(op, control);
 
         setContent(control);
         setOptions(op);

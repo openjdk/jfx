@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,19 +30,12 @@ import static javafx.scene.input.KeyCombination.CONTROL_ANY;
 import static javafx.scene.input.KeyCombination.CONTROL_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_ANY;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import javafx.event.Event;
 import javafx.scene.input.KeyCombination.ModifierValue;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.input.KeyCodeMap;
@@ -52,6 +45,14 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class KeyCombinationTest {
@@ -85,7 +86,7 @@ public class KeyCombinationTest {
     final KeyEvent altShiftQuoteEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED,
             "~", null, KeyCodeMap.valueOf(0xDE), true, false, true, false);
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpCharToKeyCodeMap() {
         final Map<String, KeyCode> charToKeyCodeMap =
                 new HashMap<>();
@@ -118,7 +119,7 @@ public class KeyCombinationTest {
                 charToKeyCodeMap);
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownCharToKeyCodeMap() {
         ((StubToolkit) Toolkit.getToolkit()).setCharToKeyCodeMap(null);
     }
@@ -364,140 +365,184 @@ public class KeyCombinationTest {
         assertTrue(altIgnoreShortcutC.match(metaAltC));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void constructor1ShouldThrowNPEForNullKeyCode() {
-        new KeyCodeCombination(null, ModifierValue.UP,
-                                     ModifierValue.UP,
-                                     ModifierValue.UP,
-                                     ModifierValue.UP,
-                                     ModifierValue.UP);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyCodeCombination(null, ModifierValue.UP,
+                                         ModifierValue.UP,
+                                         ModifierValue.UP,
+                                         ModifierValue.UP,
+                                         ModifierValue.UP);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void constructor1ShouldThrowNPEForNullKeyCharacter() {
-        new KeyCharacterCombination(null, ModifierValue.UP,
-                                          ModifierValue.UP,
-                                          ModifierValue.UP,
-                                          ModifierValue.UP,
-                                          ModifierValue.UP);
-    }
-
-    @Test(expected=NullPointerException.class)
-    public void constructor1ShouldThrowNPEForNullModifier() {
-        new KeyCodeCombination(KeyCode.Q, ModifierValue.UP,
-                                          null,
-                                          ModifierValue.UP,
-                                          ModifierValue.UP,
-                                          ModifierValue.UP);
-    }
-
-    @Test(expected=IllegalArgumentException.class)
-    public void constructor1ShouldThrowIAEForModifierKeyCode() {
-        new KeyCodeCombination(KeyCode.SHIFT, ModifierValue.UP,
+        assertThrows(NullPointerException.class, () -> {
+            new KeyCharacterCombination(null, ModifierValue.UP,
                                               ModifierValue.UP,
                                               ModifierValue.UP,
                                               ModifierValue.UP,
                                               ModifierValue.UP);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void constructor1ShouldThrowIAEForUndefinedKeyCode() {
-        new KeyCodeCombination(KeyCode.UNDEFINED, ModifierValue.UP,
+    @Test
+    public void constructor1ShouldThrowNPEForNullModifier() {
+        assertThrows(NullPointerException.class, () -> {
+            new KeyCodeCombination(KeyCode.Q, ModifierValue.UP,
+                                              null,
+                                              ModifierValue.UP,
+                                              ModifierValue.UP,
+                                              ModifierValue.UP);
+        });
+    }
+
+    @Test
+    public void constructor1ShouldThrowIAEForModifierKeyCode() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            new KeyCodeCombination(KeyCode.SHIFT, ModifierValue.UP,
                                                   ModifierValue.UP,
                                                   ModifierValue.UP,
                                                   ModifierValue.UP,
                                                   ModifierValue.UP);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
+    public void constructor1ShouldThrowIAEForUndefinedKeyCode() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            new KeyCodeCombination(KeyCode.UNDEFINED, ModifierValue.UP,
+                                                      ModifierValue.UP,
+                                                      ModifierValue.UP,
+                                                      ModifierValue.UP,
+                                                      ModifierValue.UP);
+        });
+    }
+
+    @Test
     public void constructor2ShouldThrowNPEForNullKeyCode() {
-        new KeyCodeCombination(null);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyCodeCombination(null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void constructor2ShouldThrowNPEForNullKeyCharacter() {
-        new KeyCharacterCombination(null);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyCharacterCombination(null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void constructor2ShouldThrowNPEForNullModifier() {
-        new KeyCharacterCombination("q", ALT_DOWN, null, SHIFT_ANY);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyCharacterCombination("q", ALT_DOWN, null, SHIFT_ANY);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void constructor2ShouldThrowIAEForModifierKeyCode() {
-        new KeyCodeCombination(KeyCode.CONTROL);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new KeyCodeCombination(KeyCode.CONTROL);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void constructor2ShouldThrowIAEForUndefinedKeyCode() {
-        new KeyCodeCombination(KeyCode.UNDEFINED);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new KeyCodeCombination(KeyCode.UNDEFINED);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void constructor2ShouldThrowIAEForDuplicateModifiers() {
-        new KeyCodeCombination(KeyCode.Q,
-                               ALT_DOWN,
-                               CONTROL_DOWN,
-                               ALT_DOWN);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new KeyCodeCombination(KeyCode.Q,
+                                   ALT_DOWN,
+                                   CONTROL_DOWN,
+                                   ALT_DOWN);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void constructor2ShouldThrowIAEForConflictingModifiers() {
-        new KeyCodeCombination(KeyCode.Q,
-                               SHIFT_DOWN,
-                               CONTROL_ANY,
-                               SHIFT_ANY);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new KeyCodeCombination(KeyCode.Q,
+                                   SHIFT_DOWN,
+                                   CONTROL_ANY,
+                                   SHIFT_ANY);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForDuplicateModifiers() {
-        KeyCombination.keyCombination("Ctrl + Shift + Ctrl + Q");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("Ctrl + Shift + Ctrl + Q");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForConflictingModifiers() {
-        KeyCombination.keyCombination("Ctrl + Ignore Shift + Alt + Shift + Q");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("Ctrl + Ignore Shift + Alt + Shift + Q");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForMissingMainKey() {
-        KeyCombination.keyCombination("Ctrl + Shift");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("Ctrl + Shift");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForUndefinedMainKey() {
-        KeyCombination.keyCombination("Ctrl + Shift + Undefined");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("Ctrl + Shift + Undefined");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForExtraMainKey1() {
-        KeyCombination.keyCombination("Ctrl + Shift + Q + 'W'");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("Ctrl + Shift + Q + 'W'");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForExtraMainKey2() {
-        KeyCombination.keyCombination("Ctrl + Shift + 'W' + Q");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("Ctrl + Shift + 'W' + Q");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForInvalidSyntax1() {
-        KeyCombination.keyCombination("  +  Ctrl + Q");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("  +  Ctrl + Q");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForInvalidSyntax2() {
-        KeyCombination.keyCombination("Ctrl ++ Q");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("Ctrl ++ Q");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForInvalidSyntax3() {
-        KeyCombination.keyCombination("Ctrl + Q +");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("Ctrl + Q +");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void keyCombinationShouldThrowIAEForUnclosedQuote() {
-        KeyCombination.keyCombination("Quote '");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KeyCombination.keyCombination("Quote '");
+        });
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,40 +34,42 @@ import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.ReturnStmt;
 import com.sun.scenario.effect.compiler.tree.Stmt;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JumpStatementTest extends ParserBase {
 
     @Test
-    public void cont() throws Exception {
+    public void cont() {
         Stmt tree = parseTreeFor("continue;");
         assertTrue(tree instanceof ContinueStmt);
     }
 
     @Test
-    public void brk() throws Exception {
+    public void brk() {
         Stmt tree = parseTreeFor(" break ; ");
         assertTrue(tree instanceof BreakStmt);
     }
 
     @Test
-    public void discard() throws Exception {
+    public void discard() {
         Stmt tree = parseTreeFor("discard;");
         assertTrue(tree instanceof DiscardStmt);
     }
 
     @Test
-    public void returnEmpty() throws Exception {
+    public void returnEmpty() {
         Stmt tree = parseTreeFor("return;");
         assertTrue(tree instanceof ReturnStmt);
         assertNull(((ReturnStmt)tree).getExpr());
     }
 
     @Test
-    public void returnExpr() throws Exception {
+    public void returnExpr() {
         Stmt tree = parseTreeFor("return 3;");
         assertTrue(tree instanceof ReturnStmt);
         ReturnStmt ret = (ReturnStmt)tree;
@@ -76,12 +78,14 @@ public class JumpStatementTest extends ParserBase {
         assertEquals(lit.getValue(), Integer.valueOf(3));
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAJump() throws Exception {
-        parseTreeFor("float;");
+    @Test
+    public void notAJump() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("float;");
+        });
     }
 
-    private Stmt parseTreeFor(String text) throws Exception {
+    private Stmt parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         return visitor.visitJump_statement(parser.jump_statement());

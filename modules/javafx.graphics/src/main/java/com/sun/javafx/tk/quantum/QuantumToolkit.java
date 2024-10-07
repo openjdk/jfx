@@ -259,7 +259,25 @@ public final class QuantumToolkit extends Toolkit {
          */
         shutdownHook = new Thread("Glass/Prism Shutdown Hook") {
             @Override public void run() {
-                dispose();
+                // Run dispose in a background thread and wait for up to
+                // 5 seconds for it to finish. If it doesn't, then throw an
+                // error, so that if dispose hangs or deadlocks, it won't
+                // prevent the JVM from exiting.
+                var disposeLatch = new CountDownLatch(1);
+                var thr = new Thread(() -> {
+                    dispose();
+                    disposeLatch.countDown();
+                });
+                thr.setDaemon(true);
+                thr.start();
+
+                try {
+                    if (!disposeLatch.await(5, TimeUnit.SECONDS)) {
+                        throw new InternalError("dispose timed out");
+                    }
+                } catch (InterruptedException ex) {
+                    throw new InternalError(ex);
+                }
             }
         };
         @SuppressWarnings("removal")

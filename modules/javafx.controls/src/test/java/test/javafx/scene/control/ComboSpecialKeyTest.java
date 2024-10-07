@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,69 +25,64 @@
 
 package test.javafx.scene.control;
 
+import static javafx.scene.input.KeyCode.F4;
+import static javafx.scene.input.KeyEvent.KEY_RELEASED;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import com.sun.javafx.tk.Toolkit;
-
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
-import static org.junit.Assert.*;
-
+import java.util.stream.Stream;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.DatePicker;
-import javafx.scene.control.skin.ComboBoxPopupControl;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 
 /**
  * Test for https://bugs.openjdk.org/browse/JDK-8233040 - F4
  * must not be consumed by EventFilter in ComboBoxPopupControl.
- * <p>
- * Parameterized in concrete sub of ComboBoxBase and editable.
  */
-@RunWith(Parameterized.class)
 public class ComboSpecialKeyTest {
 
     private Scene scene;
     private Stage stage;
     private Pane root;
-
     private ComboBoxBase comboBox;
-    private Supplier<ComboBoxBase> comboFactory;
-    private boolean editable;
 
-    @Test
-    public void testF4TogglePopup() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testF4TogglePopup(Supplier<ComboBoxBase> factory, boolean editable) {
+        setup(factory);
         showAndFocus();
         comboBox.setEditable(editable);
         assertFalse(comboBox.isShowing());
         KeyEventFirer firer = new KeyEventFirer(comboBox);
         firer.doKeyPress(F4);
-        assertTrue(failPrefix(), comboBox.isShowing());
+        assertTrue(comboBox.isShowing(), failPrefix(editable));
         firer.doKeyPress(F4);
-        assertFalse(failPrefix(), comboBox.isShowing());
+        assertFalse(comboBox.isShowing(), failPrefix(editable));
     }
 
-    @Test
-    public void testF4ConsumeFilterNotTogglePopup() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testF4ConsumeFilterNotTogglePopup(Supplier<ComboBoxBase> factory, boolean editable) {
+        setup(factory);
         showAndFocus();
         comboBox.setEditable(editable);
         List<KeyEvent> events = new ArrayList<>();
@@ -99,39 +94,33 @@ public class ComboSpecialKeyTest {
         });
         KeyEventFirer firer = new KeyEventFirer(comboBox);
         firer.doKeyPress(F4);
-        assertFalse(failPrefix() + ": popup must not be showing", comboBox.isShowing());
+        assertFalse(comboBox.isShowing(), failPrefix(editable) + ": popup must not be showing");
     }
 
-    protected String failPrefix() {
+    protected String failPrefix(boolean editable) {
         String failPrefix = comboBox.getClass().getSimpleName() + " editable " + editable;
         return failPrefix;
     }
 
 //---------------- parameterized
 
-    // Note: name property not supported before junit 4.11
-    @Parameterized.Parameters//(name = "{index}: editable {1} ")
-    public static Collection<Object[]> data() {
+    private static Stream<Arguments> parameters() {
         // Supplier for type of ComboBoxBase to test, editable
-        Object[][] data = new Object[][] {
-            {(Supplier)ComboBox::new, false},
-            {(Supplier)ComboBox::new, true },
-            {(Supplier)DatePicker::new, false },
-            {(Supplier)DatePicker::new, true},
-            {(Supplier)ColorPicker::new, false },
-        };
-        return Arrays.asList(data);
-    }
-
-    public ComboSpecialKeyTest(Supplier<ComboBoxBase> factory, boolean editable) {
-        this.comboFactory = factory;
-        this.editable = editable;
+        return Stream.of(
+            Arguments.of((Supplier)ComboBox::new, false),
+            Arguments.of((Supplier)ComboBox::new, true),
+            Arguments.of((Supplier)DatePicker::new, false),
+            Arguments.of((Supplier)DatePicker::new, true),
+            Arguments.of((Supplier)ColorPicker::new, false)
+        );
     }
 
 // --- initial and setup
 
-    @Test
-    public void testInitialState() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testInitialState(Supplier<ComboBoxBase> factory, boolean editable) {
+        setup(factory);
         assertNotNull(comboBox);
         showAndFocus();
         List<Node> expected = List.of(comboBox);
@@ -150,24 +139,20 @@ public class ComboSpecialKeyTest {
         assertSame(control, scene.getFocusOwner());
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         stage.hide();
     }
 
-    @Before
-    public void setup() {
-        ComboBoxPopupControl c;
-
+    // @Before
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Supplier<ComboBoxBase> factory) {
         assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
-
         root = new VBox();
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
-        comboBox = comboFactory.get();
+        comboBox = factory.get();
         root.getChildren().addAll(comboBox);
     }
-
-
 }

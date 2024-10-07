@@ -320,18 +320,6 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
     }
 
     /**
-     * Convenience alias for Thread.sleep() that does not throw an exception.
-     * @param ms the timout in milliseconds
-     */
-    protected void sleep(int ms) {
-        try {
-            Thread.sleep(1);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
      * Adds a logging event filter to the control under test which prints all KeyEvent's to stdout,
      * for the duration of a single test case.
      * @return the Runnable

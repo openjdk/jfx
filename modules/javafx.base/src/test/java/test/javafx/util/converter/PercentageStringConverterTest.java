@@ -29,17 +29,17 @@ import java.text.NumberFormat;
 import java.util.Locale;
 import javafx.util.converter.NumberStringConverterShim;
 import javafx.util.converter.PercentageStringConverter;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  */
 public class PercentageStringConverterTest {
     private PercentageStringConverter converter;
 
-    @Before public void setup() {
+    @BeforeEach public void setup() {
         converter = new PercentageStringConverter(Locale.US);
     }
 
