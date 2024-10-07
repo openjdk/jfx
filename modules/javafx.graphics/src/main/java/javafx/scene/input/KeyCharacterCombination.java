@@ -37,14 +37,12 @@ import javafx.beans.NamedArg;
  * <p>
  *
  * The {@link KeyCode} of the key associated with a symbol can vary across
- * layouts. For example, the '+' symbol is shifted on an English QWERTY
- * layout ({@link KeyCode#EQUALS}), unshifted on a German layout
- * ({@link KeyCode#PLUS}), and on the same key as '1' on a Swiss German
- * layout ({@link KeyCode#DIGIT1}). A key character combination
- * specifying '+' will match all of these keys. Note that on layouts
- * where '+' is a shifted character a {@code KeyCharacterCombination} that
- * specifies '+' will match even if the user doesn't hold down Shift when
- * typing the key.
+ * layouts. For example, on an English QWERTY layout the '+' symbol is the
+ * shifted character on the key with code ({@link KeyCode#EQUALS}). The same
+ * symbol is unshifted on a German layout ({@link KeyCode#PLUS}), and on the
+ * same key as '1' on a Swiss German layout ({@link KeyCode#DIGIT1}). A key
+ * character combination specifying '+' will match anyf of these keys even if
+ * the Shift key is not held down during the key press.
  *
  * <p>
  *
