@@ -47,53 +47,6 @@
 #include "grefcount.h"
 #include "gutilsprivate.h"
 
-/**
- * SECTION:arrays
- * @title: Arrays
- * @short_description: arrays of arbitrary elements which grow
- *     automatically as elements are added
- *
- * Arrays are similar to standard C arrays, except that they grow
- * automatically as elements are added.
- *
- * Array elements can be of any size (though all elements of one array
- * are the same size), and the array can be automatically cleared to
- * '0's and zero-terminated.
- *
- * To create a new array use g_array_new().
- *
- * To add elements to an array with a cost of O(n) at worst, use
- * g_array_append_val(), g_array_append_vals(), g_array_prepend_val(),
- * g_array_prepend_vals(), g_array_insert_val() and g_array_insert_vals().
- *
- * To access an element of an array in O(1) (to read it or to write it),
- * use g_array_index().
- *
- * To set the size of an array, use g_array_set_size().
- *
- * To free an array, use g_array_unref() or g_array_free().
- *
- * All the sort functions are internally calling a quick-sort (or similar)
- * function with an average cost of O(n log(n)) and a worst case
- * cost of O(n^2).
- *
- * Here is an example that stores integers in a #GArray:
- * |[<!-- language="C" -->
- *   GArray *garray;
- *   gint i;
- *   // We create a new array to store gint values.
- *   // We don't want it zero-terminated or cleared to 0's.
- *   garray = g_array_new (FALSE, FALSE, sizeof (gint));
- *   for (i = 0; i < 10000; i++)
- *     g_array_append_val (garray, i);
- *   for (i = 0; i < 10000; i++)
- *     if (g_array_index (garray, gint, i) != i)
- *       g_print ("ERROR: got %d instead of %d\n",
- *                g_array_index (garray, gint, i), i);
- *   g_array_free (garray, TRUE);
- * ]|
- */
-
 #define MIN_ARRAY_SIZE  16
 
 typedef struct _GRealArray  GRealArray;
@@ -930,6 +883,7 @@ g_array_remove_range (GArray *farray,
 
   g_return_val_if_fail (array, NULL);
   g_return_val_if_fail (index_ <= array->len, NULL);
+  g_return_val_if_fail (index_ <= G_MAXUINT - length, NULL);
   g_return_val_if_fail (index_ + length <= array->len, NULL);
 
   if (array->clear_func != NULL)
@@ -1119,6 +1073,7 @@ g_array_maybe_expand (GRealArray *array,
   if (want_len > array->elt_capacity)
     {
       gsize want_alloc = g_nearest_pow (g_array_elt_len (array, want_len));
+      g_assert (want_alloc >= g_array_elt_len (array, want_len));
       want_alloc = MAX (want_alloc, MIN_ARRAY_SIZE);
 
       array->data = g_realloc (array->data, want_alloc);
@@ -1130,54 +1085,6 @@ g_array_maybe_expand (GRealArray *array,
       array->elt_capacity = MIN (want_alloc / array->elt_size, G_MAXUINT);
     }
 }
-
-/**
- * SECTION:arrays_pointer
- * @title: Pointer Arrays
- * @short_description: arrays of pointers to any type of data, which
- *     grow automatically as new elements are added
- *
- * Pointer Arrays are similar to Arrays but are used only for storing
- * pointers.
- *
- * If you remove elements from the array, elements at the end of the
- * array are moved into the space previously occupied by the removed
- * element. This means that you should not rely on the index of particular
- * elements remaining the same. You should also be careful when deleting
- * elements while iterating over the array.
- *
- * To create a pointer array, use g_ptr_array_new().
- *
- * To add elements to a pointer array, use g_ptr_array_add().
- *
- * To remove elements from a pointer array, use g_ptr_array_remove(),
- * g_ptr_array_remove_index() or g_ptr_array_remove_index_fast().
- *
- * To access an element of a pointer array, use g_ptr_array_index().
- *
- * To set the size of a pointer array, use g_ptr_array_set_size().
- *
- * To free a pointer array, use g_ptr_array_free().
- *
- * An example using a #GPtrArray:
- * |[<!-- language="C" -->
- *   GPtrArray *array;
- *   gchar *string1 = "one";
- *   gchar *string2 = "two";
- *   gchar *string3 = "three";
- *
- *   array = g_ptr_array_new ();
- *   g_ptr_array_add (array, (gpointer) string1);
- *   g_ptr_array_add (array, (gpointer) string2);
- *   g_ptr_array_add (array, (gpointer) string3);
- *
- *   if (g_ptr_array_index (array, 0) != (gpointer) string1)
- *     g_print ("ERROR: got %p instead of %p\n",
- *              g_ptr_array_index (array, 0), string1);
- *
- *   g_ptr_array_free (array, TRUE);
- * ]|
- */
 
 typedef struct _GRealPtrArray  GRealPtrArray;
 
@@ -2202,6 +2109,7 @@ g_ptr_array_remove_range (GPtrArray *array,
   g_return_val_if_fail (rarray != NULL, NULL);
   g_return_val_if_fail (rarray->len == 0 || (rarray->len != 0 && rarray->pdata != NULL), NULL);
   g_return_val_if_fail (index_ <= rarray->len, NULL);
+  g_return_val_if_fail (index_ <= G_MAXUINT - length, NULL);
   g_return_val_if_fail (length == 0 || index_ + length <= rarray->len, NULL);
 
   if (length == 0)
@@ -2780,45 +2688,6 @@ g_ptr_array_find_with_equal_func (GPtrArray     *haystack,
 }
 
 /**
- * SECTION:arrays_byte
- * @title: Byte Arrays
- * @short_description: arrays of bytes
- *
- * #GByteArray is a mutable array of bytes based on #GArray, to provide arrays
- * of bytes which grow automatically as elements are added.
- *
- * To create a new #GByteArray use g_byte_array_new(). To add elements to a
- * #GByteArray, use g_byte_array_append(), and g_byte_array_prepend().
- *
- * To set the size of a #GByteArray, use g_byte_array_set_size().
- *
- * To free a #GByteArray, use g_byte_array_free().
- *
- * An example for using a #GByteArray:
- * |[<!-- language="C" -->
- *   GByteArray *gbarray;
- *   gint i;
- *
- *   gbarray = g_byte_array_new ();
- *   for (i = 0; i < 10000; i++)
- *     g_byte_array_append (gbarray, (guint8*) "abcd", 4);
- *
- *   for (i = 0; i < 10000; i++)
- *     {
- *       g_assert (gbarray->data[4*i] == 'a');
- *       g_assert (gbarray->data[4*i+1] == 'b');
- *       g_assert (gbarray->data[4*i+2] == 'c');
- *       g_assert (gbarray->data[4*i+3] == 'd');
- *     }
- *
- *   g_byte_array_free (gbarray, TRUE);
- * ]|
- *
- * See #GBytes if you are interested in an immutable object representing a
- * sequence of bytes.
- */
-
-/**
  * GByteArray:
  * @data: a pointer to the element data. The data may be moved as
  *     elements are added to the #GByteArray
@@ -2913,7 +2782,7 @@ g_byte_array_new_take (guint8 *data,
  * bytes to the array. Note however that the size of the array is still
  * 0.
  *
- * Returns: the new #GByteArray
+ * Returns: (transfer full): the new #GByteArray
  */
 GByteArray*
 g_byte_array_sized_new (guint reserved_size)
@@ -2977,7 +2846,7 @@ g_byte_array_free_to_bytes (GByteArray *array)
  * Atomically increments the reference count of @array by one.
  * This function is thread-safe and may be called from any thread.
  *
- * Returns: The passed in #GByteArray
+ * Returns: (transfer full): The passed in #GByteArray
  *
  * Since: 2.22
  */
@@ -3013,7 +2882,7 @@ g_byte_array_unref (GByteArray *array)
  * Adds the given bytes to the end of the #GByteArray.
  * The array will grow in size automatically if necessary.
  *
- * Returns: the #GByteArray
+ * Returns: (transfer none): the #GByteArray
  */
 GByteArray*
 g_byte_array_append (GByteArray   *array,
@@ -3034,7 +2903,7 @@ g_byte_array_append (GByteArray   *array,
  * Adds the given data to the start of the #GByteArray.
  * The array will grow in size automatically if necessary.
  *
- * Returns: the #GByteArray
+ * Returns: (transfer none): the #GByteArray
  */
 GByteArray*
 g_byte_array_prepend (GByteArray   *array,
@@ -3053,7 +2922,7 @@ g_byte_array_prepend (GByteArray   *array,
  *
  * Sets the size of the #GByteArray, expanding it if necessary.
  *
- * Returns: the #GByteArray
+ * Returns: (transfer none): the #GByteArray
  */
 GByteArray*
 g_byte_array_set_size (GByteArray *array,
@@ -3072,7 +2941,7 @@ g_byte_array_set_size (GByteArray *array,
  * Removes the byte at the given index from a #GByteArray.
  * The following bytes are moved down one place.
  *
- * Returns: the #GByteArray
+ * Returns: (transfer none): the #GByteArray
  **/
 GByteArray*
 g_byte_array_remove_index (GByteArray *array,
@@ -3093,7 +2962,7 @@ g_byte_array_remove_index (GByteArray *array,
  * does not preserve the order of the #GByteArray. But it is faster
  * than g_byte_array_remove_index().
  *
- * Returns: the #GByteArray
+ * Returns: (transfer none): the #GByteArray
  */
 GByteArray*
 g_byte_array_remove_index_fast (GByteArray *array,
@@ -3113,7 +2982,7 @@ g_byte_array_remove_index_fast (GByteArray *array,
  * Removes the given number of bytes starting at the given index from a
  * #GByteArray.  The following elements are moved to close the gap.
  *
- * Returns: the #GByteArray
+ * Returns: (transfer none): the #GByteArray
  *
  * Since: 2.4
  */
@@ -3124,6 +2993,7 @@ g_byte_array_remove_range (GByteArray *array,
 {
   g_return_val_if_fail (array, NULL);
   g_return_val_if_fail (index_ <= array->len, NULL);
+  g_return_val_if_fail (index_ <= G_MAXUINT - length, NULL);
   g_return_val_if_fail (index_ + length <= array->len, NULL);
 
   return (GByteArray *)g_array_remove_range ((GArray *)array, index_, length);
@@ -3132,7 +3002,7 @@ g_byte_array_remove_range (GByteArray *array,
 /**
  * g_byte_array_sort:
  * @array: a #GByteArray
- * @compare_func: comparison function
+ * @compare_func: (scope call): comparison function
  *
  * Sorts a byte array, using @compare_func which should be a
  * qsort()-style comparison function (returns less than zero for first
@@ -3155,7 +3025,7 @@ g_byte_array_sort (GByteArray   *array,
 /**
  * g_byte_array_sort_with_data:
  * @array: a #GByteArray
- * @compare_func: comparison function
+ * @compare_func: (scope call): comparison function
  * @user_data: data to pass to @compare_func
  *
  * Like g_byte_array_sort(), but the comparison function takes an extra

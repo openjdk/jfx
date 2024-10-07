@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,14 +34,15 @@ import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EqualityExprTest extends ParserBase {
 
     @Test
-    public void oneEq() throws Exception {
+    public void oneEq() {
         BinaryExpr tree = parseTreeFor("foo == 3");
         assertEquals(tree.getOp(), BinaryOpType.EQEQ);
         assertEquals(Type.INT, tree.getLeft().getResultType());
@@ -55,7 +56,7 @@ public class EqualityExprTest extends ParserBase {
     }
 
     @Test
-    public void oneNotEq() throws Exception {
+    public void oneNotEq() {
         BinaryExpr tree = parseTreeFor("foo != 3");
         assertEquals(tree.getOp(), BinaryOpType.NEQ);
         assertEquals(Type.INT, tree.getLeft().getResultType());
@@ -68,12 +69,14 @@ public class EqualityExprTest extends ParserBase {
         assertEquals(3, val);
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAnEqualityExpression() throws Exception {
-        parseTreeFor("foo @ 3");
+    @Test
+    public void notAnEqualityExpression() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("foo @ 3");
+        });
     }
 
-    private BinaryExpr parseTreeFor(String text) throws Exception {
+    private BinaryExpr parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         visitor.getSymbolTable().declareVariable("foo", Type.INT, null);

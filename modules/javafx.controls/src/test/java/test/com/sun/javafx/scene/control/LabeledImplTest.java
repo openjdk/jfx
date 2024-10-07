@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,13 @@
 
 package test.com.sun.javafx.scene.control;
 
-import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
-import test.com.sun.javafx.pgstub.StubPlatformImageInfo;
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.scene.control.LabeledImpl;
-import com.sun.javafx.scene.control.LabeledImplShim;
-import com.sun.javafx.tk.Toolkit;
-import javafx.css.CssMetaData;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.ArrayList;
-
 import java.util.Collection;
 import java.util.List;
 import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -50,19 +45,20 @@ import javafx.scene.effect.ColorAdjust;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.scene.control.LabeledImpl;
+import com.sun.javafx.scene.control.LabeledImplShim;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
+import test.com.sun.javafx.pgstub.StubPlatformImageInfo;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import org.junit.Test;
-import static org.junit.Assert.*;
-
-@RunWith(Parameterized.class)
 public class LabeledImplTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void configureImageLoaderFactory() {
         final StubImageLoaderFactory imageLoaderFactory =
                 ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
@@ -155,9 +151,6 @@ public class LabeledImplTest {
         return null;
     }
 
-    private final Configuration configuration;
-
-    @Parameters
     public static Collection<Configuration[]> data() {
 
         Collection<Configuration[]> data = new ArrayList<>();
@@ -180,20 +173,14 @@ public class LabeledImplTest {
         return data;
     }
 
-    @Test
-    public void testMirrorReflectsSource() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testMirrorReflectsSource(Configuration configuration) {
         final WritableValue source = configuration.source;
         final WritableValue mirror = configuration.mirror;
         final Object expected = configuration.value;
 
         source.setValue(expected);
-        assertEquals(mirror.toString(), expected, mirror.getValue());
-    }
-
-    public LabeledImplTest(Configuration configuration) {
-        this.configuration = configuration;
-    }
-
-    static {
+        assertEquals(expected, mirror.getValue(), mirror.toString());
     }
 }

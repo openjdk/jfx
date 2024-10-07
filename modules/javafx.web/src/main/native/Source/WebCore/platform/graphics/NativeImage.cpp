@@ -77,6 +77,8 @@ void NativeImage::draw(GraphicsContext& context, const FloatRect& destRect, cons
     context.drawNativeImageInternal(*this, destRect, srcRect, options);
 }
 #endif
+NativeImage::~NativeImage() = default;
+
 const PlatformImagePtr& NativeImage::platformImage() const
 {
     return m_backend->platformImage();

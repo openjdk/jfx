@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,9 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGNodeShim;
-import org.junit.Assert;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CullingTest extends NGTestBase {
 
@@ -47,7 +48,7 @@ public class CullingTest extends NGTestBase {
                     new RectBounds(70, 70, 170, 170)
                     });
         NGNodeShim.markCullRegions(bn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        Assert.assertEquals(1 |(1 << 2), NGNodeShim.cullingBits(bn));
+        assertEquals(1 |(1 << 2), NGNodeShim.cullingBits(bn));
     }
 
     @Test
@@ -60,7 +61,7 @@ public class CullingTest extends NGTestBase {
                     new RectBounds(0, 101, 170, 170)
                     });
         NGNodeShim.markCullRegions(bn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        Assert.assertEquals(0, NGNodeShim.cullingBits(bn));
+        assertEquals(0, NGNodeShim.cullingBits(bn));
     }
 
     @Test
@@ -73,7 +74,7 @@ public class CullingTest extends NGTestBase {
                     new RectBounds(0, 0, 200, 200)
                     });
         NGNodeShim.markCullRegions(bn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        Assert.assertEquals(2 | (2 << 2), NGNodeShim.cullingBits(bn));
+        assertEquals(2 | (2 << 2), NGNodeShim.cullingBits(bn));
     }
 
     @Test
@@ -86,7 +87,7 @@ public class CullingTest extends NGTestBase {
                     new RectBounds(10, 10, 20, 20)
                     });
         NGNodeShim.markCullRegions(bn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        Assert.assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(bn));
+        assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(bn));
     }
 
     @Test
@@ -99,7 +100,7 @@ public class CullingTest extends NGTestBase {
                     new RectBounds().makeEmpty()
                     });
         NGNodeShim.markCullRegions(bn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        Assert.assertEquals(2, NGNodeShim.cullingBits(bn));
+        assertEquals(2, NGNodeShim.cullingBits(bn));
     }
 
     @Test
@@ -112,7 +113,7 @@ public class CullingTest extends NGTestBase {
                     null
                     });
         NGNodeShim.markCullRegions(bn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        Assert.assertEquals(2, NGNodeShim.cullingBits(bn));
+        assertEquals(2, NGNodeShim.cullingBits(bn));
     }
 
     @Test
@@ -121,7 +122,7 @@ public class CullingTest extends NGTestBase {
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{});
         NGNodeShim.markCullRegions(bn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        Assert.assertEquals(0, NGNodeShim.cullingBits(bn));
+        assertEquals(0, NGNodeShim.cullingBits(bn));
     }
 
     @Test
@@ -133,9 +134,9 @@ public class CullingTest extends NGTestBase {
         DirtyRegionContainer drc = new DirtyRegionContainer(2);
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 100, 100), new RectBounds(0, 110, 100, 210)});
         NGNodeShim.markCullRegions(gbn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        Assert.assertEquals(0, NGNodeShim.cullingBits(gbn));
+        assertEquals(0, NGNodeShim.cullingBits(gbn));
         for(NGNode n : gbn.getChildren()) {
-            Assert.assertEquals(0, NGNodeShim.cullingBits(n));
+            assertEquals(0, NGNodeShim.cullingBits(n));
         }
     }
 
@@ -150,11 +151,11 @@ public class CullingTest extends NGTestBase {
         NGNodeShim.markCullRegions(gbn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
         //check group
-        Assert.assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(gbn));
+        assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(gbn));
 
         //check children
-        Assert.assertEquals(2, NGNodeShim.cullingBits(bn1));
-        Assert.assertEquals(2 << 2, NGNodeShim.cullingBits(bn2));
+        assertEquals(2, NGNodeShim.cullingBits(bn1));
+        assertEquals(2 << 2, NGNodeShim.cullingBits(bn2));
     }
 
     @Test
@@ -168,11 +169,11 @@ public class CullingTest extends NGTestBase {
         NGNodeShim.markCullRegions(gbn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
         //check group
-        Assert.assertEquals(2, NGNodeShim.cullingBits(gbn));
+        assertEquals(2, NGNodeShim.cullingBits(gbn));
 
         //check children (as the group is "completely covered", the children should not have been processed)
-        Assert.assertEquals(0, NGNodeShim.cullingBits(bn1));
-        Assert.assertEquals(0, NGNodeShim.cullingBits(bn2));
+        assertEquals(0, NGNodeShim.cullingBits(bn1));
+        assertEquals(0, NGNodeShim.cullingBits(bn2));
     }
 
     @Test
@@ -186,11 +187,11 @@ public class CullingTest extends NGTestBase {
         NGNodeShim.markCullRegions(gbn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
         //check group
-        Assert.assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(gbn));
+        assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(gbn));
 
         //check children
-        Assert.assertEquals(1, NGNodeShim.cullingBits(bn1));
-        Assert.assertEquals(1 << 2, NGNodeShim.cullingBits(bn2));
+        assertEquals(1, NGNodeShim.cullingBits(bn1));
+        assertEquals(1 << 2, NGNodeShim.cullingBits(bn2));
     }
 
     @Test
@@ -209,15 +210,15 @@ public class CullingTest extends NGTestBase {
         NGNodeShim.markCullRegions(gbn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
         //check group
-        Assert.assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(gbn));
+        assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(gbn));
 
         //check group1
-        Assert.assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(g1bn));
+        assertEquals(1 | (1 << 2), NGNodeShim.cullingBits(g1bn));
 
         //check children
-        Assert.assertEquals(1, NGNodeShim.cullingBits(bn1));
-        Assert.assertEquals(1 << 2, NGNodeShim.cullingBits(bn2));
-        Assert.assertEquals(0, NGNodeShim.cullingBits(bn3));
+        assertEquals(1, NGNodeShim.cullingBits(bn1));
+        assertEquals(1 << 2, NGNodeShim.cullingBits(bn2));
+        assertEquals(0, NGNodeShim.cullingBits(bn3));
     }
 
     @Test
@@ -229,7 +230,7 @@ public class CullingTest extends NGTestBase {
         drc.deriveWithNewRegions(new RectBounds[]{new RectBounds(0, 0, 160, 160), new RectBounds(80, 80, 100, 100)});
         NGNodeShim.markCullRegions(gbn,drc, -1, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
-        Assert.assertEquals(2 | (1 << 2), NGNodeShim.cullingBits(gbn));
-        Assert.assertEquals(1 << 2, NGNodeShim.cullingBits(bn1));
+        assertEquals(2 | (1 << 2), NGNodeShim.cullingBits(gbn));
+        assertEquals(1 << 2, NGNodeShim.cullingBits(bn1));
     }
 }

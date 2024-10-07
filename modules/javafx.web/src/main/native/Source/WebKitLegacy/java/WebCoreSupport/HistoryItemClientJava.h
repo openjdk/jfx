@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,20 +23,18 @@
  * questions.
  */
 
-package com.sun.scenario.animation;
+#pragma once
 
-public class AbstractPrimaryTimerShim {
+#include <WebCore/HistoryItem.h>
+#include <WebCore/PlatformJavaClasses.h>
 
-    public static boolean isPaused(AbstractPrimaryTimer amt) {
-        return amt.isPaused();
-    }
+namespace WebCore {
+class HistoryItemClientJava final : public HistoryItemClient {
+public:
+    static HistoryItemClientJava& singleton();
+private:
+    HistoryItemClientJava() = default;
+    void historyItemChanged(const WebCore::HistoryItem&) final;
+};
+} // namespace WebCore
 
-    public static long getTotalPausedTime(AbstractPrimaryTimer amt) {
-        return amt.getTotalPausedTime();
-    }
-
-    public static long getStartPauseTime(AbstractPrimaryTimer amt) {
-        return amt.getStartPauseTime();
-    }
-
-}

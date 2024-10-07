@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package test.javafx.scene.chart;
 
-import com.sun.javafx.charts.Legend;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
@@ -38,8 +37,8 @@ import javafx.scene.chart.Chart;
 import javafx.scene.chart.ChartShim;
 import javafx.scene.chart.PieChart;
 import javafx.scene.text.Text;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.charts.Legend;
 
 /**
  *
@@ -51,9 +50,14 @@ public class PieChartTest extends ChartTestBase {
     PieChart pc;
 
     @Override
-    protected Chart createChart() {
+    protected void createChart() {
         data = FXCollections.observableArrayList();
         pc = new PieChart(data);
+        pc.setAnimated(false);
+    }
+
+    @Override
+    protected Chart getChart() {
         return pc;
     }
 
@@ -67,6 +71,7 @@ public class PieChartTest extends ChartTestBase {
 
     @Test
     public void testLabelsVisibleFalse_RT24106() {
+        createChart();
         addTestData();
         pc.setLabelsVisible(false);
         assertEquals(false, pc.getLabelsVisible());
@@ -74,6 +79,7 @@ public class PieChartTest extends ChartTestBase {
 
     @Test
     public void testLegendUpdateAfterPieNameChange_RT26854() {
+        createChart();
         data.add(new PieChart.Data("Sun", 20));
         Legend.LegendItem legendItem = ((Legend)ChartShim.getLegend(pc)).getItems().get(0);
         assertEquals("Sun", legendItem.getText());
@@ -85,6 +91,7 @@ public class PieChartTest extends ChartTestBase {
 
     @Test
     public void testDataItemRemovedWithAnimation() {
+        createChart();
         pc.setAnimated(true);
         addTestData();
         pc.getData().remove(0);
@@ -93,6 +100,7 @@ public class PieChartTest extends ChartTestBase {
 
     @Test
     public void testDataNodeChangeReported() {
+        createChart();
         AtomicBoolean called = new AtomicBoolean();
 
         PieChart.Data data = new PieChart.Data("ABC", 40);
@@ -104,15 +112,14 @@ public class PieChartTest extends ChartTestBase {
 
     private void checkStyleClass(int i, String styleClass) {
         Node item = pc.getData().get(i).getNode();
-        assertTrue(item.getStyleClass().toString(),
-                item.getStyleClass().contains(styleClass));
+        assertTrue(item.getStyleClass().contains(styleClass), item.getStyleClass().toString());
         Node legendItem = ((Legend)ChartShim.getLegend(pc)).getItems().get(i).getSymbol();
-        assertTrue(legendItem.getStyleClass().toString(),
-                legendItem.getStyleClass().contains(styleClass));
+        assertTrue(legendItem.getStyleClass().contains(styleClass), legendItem.getStyleClass().toString());
     }
 
     @Test
     public void testCSSStyleClass_DataClear() {
+        createChart();
         for (int i = 0; i < 10; i++) {
             data.add(new PieChart.Data(String.valueOf(i), i));
         }
@@ -132,6 +139,7 @@ public class PieChartTest extends ChartTestBase {
 
     @Test
     public void testCSSStyleClass_DataModify() {
+        createChart();
         for (int i = 0; i < 10; i++) {
             data.add(new PieChart.Data(String.valueOf(i), i));
         }
@@ -158,6 +166,7 @@ public class PieChartTest extends ChartTestBase {
 
     @Test
     public void testLegendUpdateWhileNotVisible_8163454() {
+        createChart();
         addTestData();
         assertEquals(5, ((Legend)ChartShim.getLegend(pc)).getItems().size());
         pc.setLegendVisible(false);
@@ -168,6 +177,7 @@ public class PieChartTest extends ChartTestBase {
 
     @Test
     public void testLabelsCollision_8166055() {
+        createChart();
         data.addAll(
                 new PieChart.Data("AAAAA", 2),
                 new PieChart.Data("BBBBB", 1),

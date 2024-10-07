@@ -24,10 +24,12 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.skin.AccordionSkin;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
@@ -45,7 +47,14 @@ public class AccordionPage extends TestPaneBase implements HasSkinnable {
     public AccordionPage() {
         super("AccordionPage");
 
-        control = new Accordion();
+        control = new Accordion() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
         addPane();
 
         // TODO MenuButtons with more options

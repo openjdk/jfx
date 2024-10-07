@@ -102,7 +102,7 @@ L(UW1):
         mov         ecx, [12+ebp]               /* load return type code */
         mov     [ebp+8], ebx            /* preserve %ebx */
 L(UW2):
-        // cfi_rel_offset(%ebx, 8)
+        /* cfi_rel_offset(%ebx, 8) */
 
         and     ecx, X86_RET_TYPE_MASK
         lea     ebx, [L(store_table) + ecx * 8]
@@ -254,7 +254,7 @@ L(UW7):
         mov     [esp+closure_CF+36], eax        /* closure is user_data */
         jmp     L(do_closure_i386)
 L(UW8):
-        // cfi_endproc
+	/* cfi_endproc */
 ENDF(ffi_go_closure_EAX)
 
 ALIGN 16

@@ -52,84 +52,6 @@
 #include "gmoduleconf.h"
 #include "gstdio.h"
 
-/**
- * SECTION:modules
- * @title: Dynamic Loading of Modules
- * @short_description: portable method for dynamically loading 'plug-ins'
- *
- * These functions provide a portable way to dynamically load object files
- * (commonly known as 'plug-ins'). The current implementation supports all
- * systems that provide an implementation of dlopen() (e.g. Linux/Sun), as
- * well as Windows platforms via DLLs.
- *
- * A program which wants to use these functions must be linked to the
- * libraries output by the command `pkg-config --libs gmodule-2.0`.
- *
- * To use them you must first determine whether dynamic loading
- * is supported on the platform by calling g_module_supported().
- * If it is, you can open a module with g_module_open(),
- * find the module's symbols (e.g. function names) with g_module_symbol(),
- * and later close the module with g_module_close().
- * g_module_name() will return the file name of a currently opened module.
- *
- * If any of the above functions fail, the error status can be found with
- * g_module_error().
- *
- * The #GModule implementation features reference counting for opened modules,
- * and supports hook functions within a module which are called when the
- * module is loaded and unloaded (see #GModuleCheckInit and #GModuleUnload).
- *
- * If your module introduces static data to common subsystems in the running
- * program, e.g. through calling
- * `g_quark_from_static_string ("my-module-stuff")`,
- * it must ensure that it is never unloaded, by calling g_module_make_resident().
- *
- * Example: Calling a function defined in a GModule
- * |[<!-- language="C" -->
- * // the function signature for 'say_hello'
- * typedef void (* SayHelloFunc) (const char *message);
- *
- * gboolean
- * just_say_hello (const char *filename, GError **error)
- * {
- *   SayHelloFunc  say_hello;
- *   GModule      *module;
- *
- *   module = g_module_open (filename, G_MODULE_BIND_LAZY);
- *   if (!module)
- *     {
- *       g_set_error (error, FOO_ERROR, FOO_ERROR_BLAH,
- *                    "%s", g_module_error ());
- *       return FALSE;
- *     }
- *
- *   if (!g_module_symbol (module, "say_hello", (gpointer *)&say_hello))
- *     {
- *       g_set_error (error, SAY_ERROR, SAY_ERROR_OPEN,
- *                    "%s: %s", filename, g_module_error ());
- *       if (!g_module_close (module))
- *         g_warning ("%s: %s", filename, g_module_error ());
- *       return FALSE;
- *     }
- *
- *   if (say_hello == NULL)
- *     {
- *       g_set_error (error, SAY_ERROR, SAY_ERROR_OPEN,
- *                    "symbol say_hello is NULL");
- *       if (!g_module_close (module))
- *         g_warning ("%s: %s", filename, g_module_error ());
- *       return FALSE;
- *     }
- *
- *   // call our function in the module
- *   say_hello ("Hello world!");
- *
- *   if (!g_module_close (module))
- *     g_warning ("%s: %s", filename, g_module_error ());
- *   return TRUE;
- *  }
- * ]|
- */
 
 /**
  * GModule:
@@ -516,7 +438,9 @@ static GRecMutex g_module_global_lock;
  * @error: #GError.
  *
  * Opens a module. If the module has already been opened, its reference count
- * is incremented. If not, the module is searched in the following order:
+ * is incremented. If not, the module is searched using @file_name.
+ *
+ * Since 2.76, the search order/behavior is as follows:
  *
  * 1. If @file_name exists as a regular file, it is used as-is; else
  * 2. If @file_name doesn't have the correct suffix and/or prefix for the
@@ -527,10 +451,15 @@ static GRecMutex g_module_global_lock;
  *    libtool archive is parsed to find the actual file name, and that is
  *    used.
  *
- * At the end of all this, we would have a file path that we can access on
- * disk, and it is opened as a module. If not, @file_name is opened as
- * a module verbatim in the hopes that the system implementation will somehow
- * be able to access it.
+ * If, at the end of all this, we have a file path that we can access on disk,
+ * it is opened as a module. If not, @file_name is attempted to be opened as a
+ * module verbatim in the hopes that the system implementation will somehow be
+ * able to access it. If that is not possible, %NULL is returned.
+ *
+ * Note that this behaviour was different prior to 2.76, but there is some
+ * overlap in functionality. If backwards compatibility is an issue, kindly
+ * consult earlier #GModule documentation for the prior search order/behavior
+ * of @file_name.
  *
  * Returns: a #GModule on success, or %NULL on failure
  *

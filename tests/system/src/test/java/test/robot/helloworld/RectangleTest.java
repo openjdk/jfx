@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,20 @@
 
 package test.robot.helloworld;
 
+import java.util.concurrent.TimeUnit;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
 
 /**
  * Basic visual tests using glass Robot to sample pixels.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class RectangleTest extends VisualTestBase {
 
     private Stage testStage;
@@ -43,7 +46,7 @@ public class RectangleTest extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
 
-    @Test(timeout = 15000)
+    @Test
     public void testSceneDefaultFill() {
         final int WIDTH = 400;
         final int HEIGHT = 300;
@@ -61,7 +64,7 @@ public class RectangleTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testSceneFillColor() {
         final int WIDTH = 400;
         final int HEIGHT = 300;
@@ -80,7 +83,7 @@ public class RectangleTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testFillRect() {
         final int WIDTH = 400;
         final int HEIGHT = 300;
@@ -112,7 +115,7 @@ public class RectangleTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testAddFillRect() {
         final int WIDTH = 400;
         final int HEIGHT = 300;

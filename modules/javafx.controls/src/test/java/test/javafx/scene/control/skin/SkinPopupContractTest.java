@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package test.javafx.scene.control.skin;
 
-import org.junit.Test;
-
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.skin.ContextMenuSkin;
 import javafx.scene.control.skin.TooltipSkin;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for Skinnables that are not Controls.
@@ -52,5 +51,4 @@ public class SkinPopupContractTest {
         contextMenu.getSkin().dispose();
         contextMenu.getSkin().dispose();
     }
-
 }

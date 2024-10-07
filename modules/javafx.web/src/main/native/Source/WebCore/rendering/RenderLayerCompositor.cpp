@@ -1582,7 +1582,7 @@ void RenderLayerCompositor::updateBackingSharingBeforeDescendantTraversal(Backin
 void RenderLayerCompositor::updateBackingSharingAfterDescendantTraversal(BackingSharingState& sharingState, unsigned depth, const LayerOverlapMap& overlapMap, RenderLayer& layer, OverlapExtent& layerExtent, const RenderLayer* preDescendantProviderStartLayer, RenderLayer*  stackingContextAncestor)
 {
     UNUSED_PARAM(depth);
-    LOG_WITH_STREAM(Compositing, stream << TextStream::Repeat(depth * 2, ' ') << &layer << " updateBackingSharingAfterDescendantTraversal for layer - is composited " << layer.isComposited());
+    LOG_WITH_STREAM(Compositing, stream << TextStream::Repeat(depth * 2, ' ') << &layer << " updateBackingSharingAfterDescendantTraversal for layer - is composited " << layer.isComposited() << " has composited descendant " << layer.hasCompositingDescendant());
 
     if (layer.isComposited()) {
         // If this layer is being composited, clean up sharing-related state.
@@ -1609,6 +1609,8 @@ void RenderLayerCompositor::updateBackingSharingAfterDescendantTraversal(Backing
     if (!stackingContextAncestor)
         return;
 
+    bool canBeBackingProvider = !layer.hasCompositingDescendant();
+    if (canBeBackingProvider) {
     if (!sharingState.backingSharingStackingContext()) {
         computeExtent(overlapMap, layer, layerExtent);
         sharingState.startBackingSharingSequence(layer, layerExtent.bounds, *stackingContextAncestor);
@@ -1621,6 +1623,7 @@ void RenderLayerCompositor::updateBackingSharingAfterDescendantTraversal(Backing
         sharingState.addBackingSharingCandidate(layer, layerExtent.bounds, *stackingContextAncestor);
         LOG_WITH_STREAM(Compositing, stream << TextStream::Repeat(depth * 2, ' ') << " - added additional provider candidate " << &layer);
         return;
+    }
     }
 
     layer.backing()->clearBackingSharingLayers();
@@ -3854,11 +3857,13 @@ static void collectStationaryLayerRelatedOverflowNodes(const RenderLayer& layer,
 
     auto appendOverflowLayerNodeID = [&scrollingNodes] (const RenderLayer& overflowLayer) {
         ASSERT(overflowLayer.isComposited());
-        auto scrollingNodeID = overflowLayer.backing()->scrollingNodeIDForRole(ScrollCoordinationRole::Scrolling);
-        if (scrollingNodeID)
+        if (overflowLayer.isComposited()) {
+            if (auto scrollingNodeID = overflowLayer.backing()->scrollingNodeIDForRole(ScrollCoordinationRole::Scrolling)) {
             scrollingNodes.append(scrollingNodeID);
-        else
-            LOG(Scrolling, "Layer %p doesn't have scrolling node ID yet", &overflowLayer);
+                return;
+            }
+        }
+        LOG(Scrolling, "Layer %p isn't composited or doesn't have scrolling node ID yet", &overflowLayer);
     };
 
     // Collect all the composited scrollers which affect the position of this layer relative to its compositing ancestor (which might be inside the scroller or the scroller itself).

@@ -54,8 +54,7 @@
 #define G_DEFINE_CONSTRUCTOR(_func) static void __attribute__((constructor)) _func (void);
 #define G_DEFINE_DESTRUCTOR(_func) static void __attribute__((destructor)) _func (void);
 
-#elif defined (_MSC_VER) && (_MSC_VER >= 1500)
-/* Visual studio 2008 and later has _Pragma */
+#elif defined (_MSC_VER)
 
 /*
  * Only try to include gslist.h if not already included via glib.h,
@@ -109,28 +108,6 @@
    __pragma(comment(linker,"/include:" _sym_prefix # _func "_constructor")) \
   __pragma(section(".CRT$XCU",read)) \
   __declspec(allocate(".CRT$XCU")) int (* _array ## _func)(void) = _func ## _constructor;
-
-#elif defined (_MSC_VER)
-
-#define G_HAS_CONSTRUCTORS 1
-
-/* Pre Visual studio 2008 must use #pragma section */
-#define G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA 1
-#define G_DEFINE_DESTRUCTOR_NEEDS_PRAGMA 1
-
-#define G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(_func) \
-  section(".CRT$XCU",read)
-#define G_DEFINE_CONSTRUCTOR(_func) \
-  static void _func(void); \
-  static int _func ## _wrapper(void) { _func(); return 0; } \
-  __declspec(allocate(".CRT$XCU")) static int (*p)(void) = _func ## _wrapper;
-
-#define G_DEFINE_DESTRUCTOR_PRAGMA_ARGS(_func) \
-  section(".CRT$XCU",read)
-#define G_DEFINE_DESTRUCTOR(_func) \
-  static void _func(void); \
-  static int _func ## _constructor(void) { atexit (_func); return 0; } \
-  __declspec(allocate(".CRT$XCU")) static int (* _array ## _func)(void) = _func ## _constructor;
 
 #elif defined(__SUNPRO_C)
 

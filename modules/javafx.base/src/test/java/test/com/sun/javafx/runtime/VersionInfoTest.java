@@ -29,9 +29,9 @@ import com.sun.javafx.runtime.VersionInfo;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Properties;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
@@ -107,7 +107,7 @@ public class VersionInfoTest {
         properties = new Properties();
     }
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException {
         try (var reader = new FileReader(PROPERTIES_FILE)) {
             properties.load(reader);
@@ -180,7 +180,7 @@ public class VersionInfoTest {
     public void testVersionFormat() {
         String version = VersionInfo.getVersion();
         String message = String.format("Wrong short version string: '%s'", version);
-        assertTrue(message, version.matches(SVSTR));
+        assertTrue(version.matches(SVSTR), message);
     }
 
     @Test

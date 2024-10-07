@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,10 @@
 
 package javafx.scene.paint;
 
-import javafx.animation.Interpolatable;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import com.sun.javafx.util.InterpolationUtils;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.NamedArg;
@@ -105,7 +106,7 @@ import javafx.beans.NamedArg;
  *
  * @since JavaFX 2.0
  */
-public final class Color extends Paint implements Interpolatable<Color> {
+public final class Color extends Paint {
 
     /**
      * Brightness change factor for darker() and brighter() methods.
@@ -1841,6 +1842,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * @return the red component of the {@code Color}, in the range {@code 0.0-1.0}
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getRed() { return red; }
     private final float red;
@@ -1850,6 +1852,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * @return the green component of the {@code Color}, in the range {@code 0.0-1.0}
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getGreen() { return green; }
     private final float green;
@@ -1859,6 +1862,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * @return the blue component of the {@code Color}, in the range {@code 0.0-1.0}
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getBlue() { return blue; }
     private final float blue;
@@ -1868,6 +1872,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * @return the opacity of the {@code Color}, in the range {@code 0.0-1.0}
      * @defaultValue 1.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getOpacity() { return opacity; }
     private final float opacity;
@@ -1935,10 +1940,20 @@ public final class Color extends Paint implements Interpolatable<Color> {
     }
 
     /**
-     * {@inheritDoc}
+     * Returns an intermediate value between the value of this {@code Color} and the specified
+     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
+     * to 1 (inclusive).
+     *
+     * @param endValue the target value
+     * @param t the interpolation factor
+     * @throws NullPointerException if {@code endValue} is {@code null}
+     * @return the intermediate value
      */
-    @Override public Color interpolate(Color endValue, double t) {
-        if (t <= 0.0) return this;
+    public Color interpolate(Color endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        // If both instances are equal, return this instance to prevent the creation of numerous small objects.
+        if (t <= 0.0 || equals(endValue)) return this;
         if (t >= 1.0) return endValue;
         float ft = (float) t;
         return new Color(
@@ -1947,6 +1962,17 @@ public final class Color extends Paint implements Interpolatable<Color> {
             blue    + (endValue.blue    - blue)    * ft,
             opacity + (endValue.opacity - opacity) * ft
         );
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Paint interpolate(Paint endValue, double t) {
+        return InterpolationUtils.interpolatePaint(this, endValue, t);
     }
 
     /**

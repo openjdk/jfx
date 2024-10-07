@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,12 +24,12 @@
 
 package test.com.sun.javafx.sg.prism;
 
-import static org.junit.Assert.assertEquals;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
@@ -39,11 +39,10 @@ import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Label;
 import javafx.scene.image.WritableImage;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 public class RT36296Test {
@@ -67,18 +66,19 @@ public class RT36296Test {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
 
-    @Test(timeout = 15000)
+    @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void TestBug() {
         Label label = new Label();
         label.setStyle(" -fx-border-style:dashed; -fx-border-width:0; ");
@@ -94,6 +94,7 @@ public class RT36296Test {
             latch.await();
         } catch (InterruptedException ex) {
             Logger.getLogger(RT36296Test.class.getName()).log(Level.SEVERE, null, ex);
+            fail(ex);
         }
     }
 

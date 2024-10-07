@@ -1635,6 +1635,11 @@ void HTMLMediaElement::loadResource(const URL& initialURL, ContentType& contentT
         return;
     }
 
+    if (!m_player) {
+        ASSERT_NOT_REACHED("It should not be possible to enter loadResource without a valid m_player object");
+        mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
+        return;
+    }
     URL url = initialURL;
 #if PLATFORM(COCOA)
     if (url.protocolIsFile() && !frame->loader().willLoadMediaElementURL(url, *this)) {
@@ -3342,6 +3347,9 @@ void HTMLMediaElement::progressEventTimerFired()
     ASSERT(m_player);
     if (m_networkState != NETWORK_LOADING)
         return;
+
+    updateSleepDisabling();
+
     if (!m_player->supportsProgressMonitoring())
         return;
 
@@ -5088,6 +5096,9 @@ void HTMLMediaElement::updateCaptionContainer()
 void HTMLMediaElement::layoutSizeChanged()
 {
     auto task = [this] {
+        if (isContextStopped())
+            return;
+
             if (auto root = userAgentShadowRoot())
             root->dispatchEvent(Event::create(eventNames().resizeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 
