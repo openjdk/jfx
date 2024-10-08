@@ -55,7 +55,9 @@ public class LightBaseHelper extends NodeHelper {
 
     @Override
     protected NGNode createPeerImpl(Node node) {
-        throw new AssertionError();
+        // This method is only implemented so that LightBaseHelper can be instantiated,
+        // but it will never be called.
+        throw new InternalError();
     }
 
     @Override
