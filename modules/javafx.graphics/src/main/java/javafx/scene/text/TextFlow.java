@@ -29,7 +29,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableIntegerProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
@@ -40,11 +49,6 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.PathElement;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
-import javafx.css.converter.EnumConverter;
-import javafx.css.converter.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
@@ -52,11 +56,8 @@ import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.text.PrismLayoutInfo;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.property.IntegerProperty;
-import javafx.css.Styleable;
-import javafx.css.StyleableIntegerProperty;
-import javafx.css.StyleableProperty;
 
 /**
  * A specialized layout for rich text.
@@ -686,5 +687,14 @@ public class TextFlow extends Pane {
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
+    }
+
+    /**
+     * Obtains the snapshot of the current text layout information.
+     * @return the layout information
+     * @since 24
+     */
+    public final LayoutInfo getLayoutInfo() {
+        return PrismLayoutInfo.of(getTextLayout());
     }
 }

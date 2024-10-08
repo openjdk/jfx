@@ -46,6 +46,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.text.PrismLayoutInfo;
 import com.sun.javafx.text.TextRun;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
@@ -2064,5 +2065,14 @@ public class Text extends Shape {
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
+    }
+
+    /**
+     * Obtains the snapshot of the current text layout information.
+     * @return the layout information
+     * @since 24
+     */
+    public final LayoutInfo getLayoutInfo() {
+        return PrismLayoutInfo.of(getTextLayout());
     }
 }
