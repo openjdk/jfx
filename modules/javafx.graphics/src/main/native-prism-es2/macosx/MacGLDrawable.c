@@ -106,10 +106,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_MacGLDrawable_nSwapBuffers
 
 /*
  * Class:     com_sun_prism_es2_MacGLDrawable
- * Method:    nDestroyDrawable
+ * Method:    nReleaseDrawable
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_MacGLDrawable_nDestroyDrawable
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_MacGLDrawable_nReleaseDrawable
 (JNIEnv *env, jclass class, jlong nativeDInfo) {
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
     if (dInfo == NULL) {

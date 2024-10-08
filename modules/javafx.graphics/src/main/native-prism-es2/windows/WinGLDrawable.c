@@ -35,7 +35,6 @@
 
 extern void printAndReleaseResources(HWND hwnd, HGLRC hglrc,
         HDC hdc, LPCTSTR szAppName, char *message);
-extern void initializeDrawableInfo(DrawableInfo *dInfo);
 
 /*
  * Class:     com_sun_prism_es2_WinGLDrawable
@@ -130,10 +129,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_WinGLDrawable_nSwapBuffers
 
 /*
  * Class:     com_sun_prism_es2_WinGLDrawable
- * Method:    nDestroyDrawable
+ * Method:    nReleaseDrawable
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_WinGLDrawable_nDestroyDrawable
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_WinGLDrawable_nReleaseDrawable
 (JNIEnv *env, jclass class, jlong nativeDInfo) {
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
     if (dInfo == NULL) {

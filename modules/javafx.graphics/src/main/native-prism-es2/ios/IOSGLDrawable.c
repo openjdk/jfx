@@ -32,8 +32,6 @@
 #include "PrismES2Defs.h"
 #include "com_sun_prism_es2_IOSGLDrawable.h"
 
-extern void initializeDrawableInfo(DrawableInfo* dInfo);
-
 /*
  * Class:     com_sun_prism_es2_IOSGLDrawable
  * Method:    nCreateDrawable
@@ -112,10 +110,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_IOSGLDrawable_nSwapBuffers
 
 /*
  * Class:     com_sun_prism_es2_IOSGLDrawable
- * Method:    nDestroyDrawable
+ * Method:    nReleaseDrawable
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_IOSGLDrawable_nDestroyDrawable
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_IOSGLDrawable_nReleaseDrawable
 (JNIEnv *env, jclass class, jlong nativeDInfo) {
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
     if (dInfo == NULL) {
