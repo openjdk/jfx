@@ -33,13 +33,27 @@ import javafx.geometry.Rectangle2D;
  */
 public interface LayoutInfo {
     /**
-     * Provides the number of text lines in the layout.
+     * Returns the logical bounds of the layout:
+     * <ul>
+     * <li>{@code minX} is always zero
+     * <li>{@code minY} is the ascent of the first line (negative)
+     * <li>{@code width} the width of the widest line
+     * <li>{@code height} the sum of all lines height
+     * </ul>
+     *
+     * @return the layout bounds
+     */
+    public Rectangle2D getBounds();
+
+    /**
+     * Returns the number of text lines in the layout.
      * @return the number of text lines
      */
     public int getTextLineCount();
 
     /**
      * Returns the start offset for the line at index {@code index}.
+     *
      * @param index the line index
      * @return the start offset
      */
@@ -47,29 +61,32 @@ public interface LayoutInfo {
 
     /**
      * Returns the end offset for the line at index {@code index}.
+     *
      * @param index the line index
      * @return the end offset
      */
     public int getTextLineEnd(int index);
 
     /**
-     * Returns metrics information about the line as follows:
-     * <p>
+     * Returns the information about the line:
+     * <ul>
+     * <li>
      * {@code minX} - the x origin of the line (relative to the layout).
      * The x origin is defined by TextAlignment of the text layout, always zero
      * for left-aligned text.
-     * <p>
+     * <li>
      * {@code minY} - the ascent of the line (negative).
      * The ascent of the line is the max ascent of all fonts in the line.
-     * <p>
+     * <li>
      * {@code width} - the width of the line.
      * The width for the line is sum of all the run widths in the line, it is not
      * affect by the wrapping width but it will include any changes caused by
      * justification.
-     * <p>
+     * <li>
      * {@code height} - the height of the line.
      * The height of the line is sum of the max ascent, max descent, and
      * max line gap of all the fonts in the line.
+     * </ul>
      *
      * @param index the line index
      * @return the line bounds
