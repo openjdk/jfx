@@ -189,6 +189,9 @@ enum
 #define DEFAULT_BLOCKSIZE       4096
 #define DEFAULT_NUM_BUFFERS     -1
 #define DEFAULT_DO_TIMESTAMP    FALSE
+/* FIXME 2.0: automatic_eos should probably be disabled by default,
+ * see https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/1330 */
+#define DEFAULT_AUTOMATIC_EOS   TRUE
 
 enum
 {
@@ -198,7 +201,8 @@ enum
 #ifndef GST_REMOVE_DEPRECATED
   PROP_TYPEFIND,
 #endif
-  PROP_DO_TIMESTAMP
+  PROP_DO_TIMESTAMP,
+  PROP_AUTOMATIC_EOS
 };
 
 /* The basesrc implementation need to respect the following locking order:
@@ -261,6 +265,9 @@ struct _GstBaseSrcPrivate
 
   /* for _submit_buffer_list() */
   GstBufferList *pending_bufferlist;
+
+  /* to delay unlock_stop */
+  gboolean pending_unlock_stop;
 };
 
 #define BASE_SRC_HAS_PENDING_BUFFER_LIST(src) \
@@ -404,6 +411,18 @@ gst_base_src_class_init (GstBaseSrcClass * klass)
           "Apply current stream time to buffers", DEFAULT_DO_TIMESTAMP,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
+  /**
+   * GstBaseSrc:automatic-eos:
+   *
+   * See gst_base_src_set_automatic_eos()
+   *
+   * Since: 1.24
+   */
+  g_object_class_install_property (gobject_class, PROP_AUTOMATIC_EOS,
+      g_param_spec_boolean ("automatic-eos", "Automatic EOS",
+          "Automatically EOS when the segment is done", DEFAULT_AUTOMATIC_EOS,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
   gstelement_class->change_state =
       GST_DEBUG_FUNCPTR (gst_base_src_change_state);
   gstelement_class->send_event = GST_DEBUG_FUNCPTR (gst_base_src_send_event);
@@ -442,7 +461,7 @@ gst_base_src_init (GstBaseSrc * basesrc, gpointer g_class)
   g_cond_init (&basesrc->live_cond);
   basesrc->num_buffers = DEFAULT_NUM_BUFFERS;
   basesrc->num_buffers_left = -1;
-  g_atomic_int_set (&basesrc->priv->automatic_eos, TRUE);
+  g_atomic_int_set (&basesrc->priv->automatic_eos, DEFAULT_AUTOMATIC_EOS);
 
   basesrc->can_activate_push = TRUE;
 
@@ -2204,6 +2223,9 @@ gst_base_src_set_property (GObject * object, guint prop_id,
     case PROP_DO_TIMESTAMP:
       gst_base_src_set_do_timestamp (src, g_value_get_boolean (value));
       break;
+    case PROP_AUTOMATIC_EOS:
+      gst_base_src_set_automatic_eos (src, g_value_get_boolean (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -2232,6 +2254,9 @@ gst_base_src_get_property (GObject * object, guint prop_id, GValue * value,
 #endif
     case PROP_DO_TIMESTAMP:
       g_value_set_boolean (value, gst_base_src_get_do_timestamp (src));
+      break;
+    case PROP_AUTOMATIC_EOS:
+      g_value_set_boolean (value, g_atomic_int_get (&src->priv->automatic_eos));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -2538,6 +2563,7 @@ gst_base_src_get_range (GstBaseSrc * src, guint64 offset, guint length,
   GstBuffer *res_buf;
   GstBuffer *in_buf;
   gboolean own_res_buf;
+  gboolean pending_unlock_stop;
 
   bclass = GST_BASE_SRC_GET_CLASS (src);
 
@@ -2588,7 +2614,19 @@ again:
   res_buf = in_buf = *buf;
   own_res_buf = (*buf == NULL);
 
+retry_create:
   GST_LIVE_UNLOCK (src);
+
+  /* Undo our unlocking initiated from set_playing function. This is done here
+   * since we require the stream lock to call this virtual function. */
+  GST_OBJECT_LOCK (src);
+  pending_unlock_stop = src->priv->pending_unlock_stop;
+  src->priv->pending_unlock_stop = FALSE;
+  GST_OBJECT_UNLOCK (src);
+
+  if (pending_unlock_stop && bclass->unlock_stop)
+    bclass->unlock_stop (src);
+
   ret = bclass->create (src, offset, length, &res_buf);
   GST_LIVE_LOCK (src);
 
@@ -2596,13 +2634,19 @@ again:
   if (src->is_live) {
     if (G_UNLIKELY (!src->live_running)) {
       GstFlowReturn wait_ret;
+
+      /* no need keep old buffer while in pause */
+      if (ret == GST_FLOW_OK && own_res_buf)
+        gst_clear_buffer (&res_buf);
+      gst_clear_buffer_list (&src->priv->pending_bufferlist);
+
       wait_ret = gst_base_src_wait_playing_unlocked (src);
       if (wait_ret != GST_FLOW_OK) {
-        if (ret == GST_FLOW_OK && own_res_buf)
-          gst_buffer_unref (res_buf);
         ret = wait_ret;
         goto stopped;
       }
+
+      goto retry_create;
     }
   }
 
@@ -2612,7 +2656,8 @@ again:
   if (G_UNLIKELY (g_atomic_int_get (&src->priv->has_pending_eos))) {
     if (ret == GST_FLOW_OK) {
       if (own_res_buf)
-        gst_buffer_unref (res_buf);
+        gst_clear_buffer (&res_buf);
+      gst_clear_buffer_list (&src->priv->pending_bufferlist);
     }
     src->priv->forced_eos = TRUE;
     goto eos;
@@ -3690,7 +3735,7 @@ not_activated_yet:
   {
     GST_PAD_STREAM_UNLOCK (basesrc->srcpad);
     gst_base_src_stop (basesrc);
-    GST_WARNING_OBJECT (basesrc, "pad not activated yet");
+    GST_INFO_OBJECT (basesrc, "pad not activated yet");
     ret = GST_FLOW_ERROR;
     goto error;
   }
@@ -3845,11 +3890,22 @@ gst_base_src_set_flushing (GstBaseSrc * basesrc, gboolean flushing)
 static gboolean
 gst_base_src_set_playing (GstBaseSrc * basesrc, gboolean live_play)
 {
+  GstBaseSrcClass *bclass;
+
+  bclass = GST_BASE_SRC_GET_CLASS (basesrc);
+
   /* we are now able to grab the LIVE lock, when we get it, we can be
    * waiting for PLAYING while blocked in the LIVE cond or we can be waiting
    * for the clock. */
   GST_LIVE_LOCK (basesrc);
   GST_DEBUG_OBJECT (basesrc, "unschedule clock");
+
+  /* unlock subclasses locked in ::create, we only do this when we stop playing. */
+  if (!live_play) {
+    GST_DEBUG_OBJECT (basesrc, "unlock");
+    if (bclass->unlock)
+      bclass->unlock (basesrc);
+  }
 
   /* unblock clock sync (if any) */
   if (basesrc->clock_id)
@@ -3865,6 +3921,7 @@ gst_base_src_set_playing (GstBaseSrc * basesrc, gboolean live_play)
     /* for live sources we restart the timestamp correction */
     GST_OBJECT_LOCK (basesrc);
     basesrc->priv->latency = -1;
+    basesrc->priv->pending_unlock_stop = TRUE;
     GST_OBJECT_UNLOCK (basesrc);
     /* have to restart the task in case it stopped because of the unlock when
      * we went to PAUSED. Only do this if we operating in push mode. */
@@ -4141,4 +4198,67 @@ gst_base_src_submit_buffer_list (GstBaseSrc * src, GstBufferList * buffer_list)
 
   GST_LOG_OBJECT (src, "%u buffers submitted in buffer list",
       gst_buffer_list_length (buffer_list));
+}
+
+/**
+ * gst_base_src_push_segment:
+ * @src: a #GstBaseSrc
+ * @segment: a pointer to a #GstSegment
+ *
+ * Send a new segment downstream. This function must
+ * only be called by derived sub-classes, and only from the #GstBaseSrcClass::create function,
+ * as the stream-lock needs to be held.
+ * This method also requires that an out caps has been configured, so
+ * gst_base_src_set_caps() needs to have been called before.
+ *
+ * The format for the @segment must be identical with the current format
+ * of the source, as configured with gst_base_src_set_format().
+ *
+ * The format of @src must not be %GST_FORMAT_UNDEFINED and the format
+ * should be configured via gst_base_src_set_format() before calling this method.
+ *
+ * This is a variant of gst_base_src_new_segment() sending the segment right away,
+ * which can be useful to ensure events ordering.
+ *
+ * Returns: %TRUE if sending of new segment succeeded.
+ *
+ * Since: 1.24
+*/
+gboolean
+gst_base_src_push_segment (GstBaseSrc * src, const GstSegment * segment)
+{
+  GstEvent *seg_event;
+
+  g_return_val_if_fail (GST_IS_BASE_SRC (src), FALSE);
+  g_return_val_if_fail (segment != NULL, FALSE);
+
+  GST_OBJECT_LOCK (src);
+
+  if (src->segment.format == GST_FORMAT_UNDEFINED) {
+    /* subclass must set valid format before calling this method */
+    GST_WARNING_OBJECT (src, "segment format is not configured yet, ignore");
+    GST_OBJECT_UNLOCK (src);
+    return FALSE;
+  }
+
+  if (src->segment.format != segment->format) {
+    GST_WARNING_OBJECT (src, "segment format mismatched, ignore");
+    GST_OBJECT_UNLOCK (src);
+    return FALSE;
+  }
+
+  gst_segment_copy_into (segment, &src->segment);
+  seg_event = gst_event_new_segment (&src->segment);
+  src->priv->segment_pending = FALSE;
+  src->priv->segment_seqnum = gst_util_seqnum_next ();
+  gst_event_set_seqnum (seg_event, src->priv->segment_seqnum);
+
+  GST_OBJECT_UNLOCK (src);
+
+  GST_DEBUG_OBJECT (src, "Sending new segment %" GST_SEGMENT_FORMAT, segment);
+  gst_pad_push_event (src->srcpad, seg_event);
+
+  src->running = TRUE;
+
+  return TRUE;
 }

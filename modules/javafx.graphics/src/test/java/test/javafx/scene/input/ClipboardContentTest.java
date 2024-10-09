@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,8 +34,14 @@ import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
 import javafx.scene.image.Image;
 import javafx.scene.input.ClipboardContent;
-import org.junit.Test;
-import static org.junit.Assert.*;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ClipboardContentTest {
 
@@ -224,13 +230,15 @@ public class ClipboardContentTest {
         assertEquals(0, cc.getFiles().size());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void nullFilesByPathShouldRemoveFiles() {
-        ClipboardContent cc = new ClipboardContent();
-        cc.putFilesByPath(new ArrayList<String>(0));
-        cc.putFilesByPath(null);
+        assertThrows(NullPointerException.class, () -> {
+            ClipboardContent cc = new ClipboardContent();
+            cc.putFilesByPath(new ArrayList<String>(0));
+            cc.putFilesByPath(null);
 
-        assertFalse(cc.hasFiles());
-        assertNull(cc.getFiles());
+            assertFalse(cc.hasFiles());
+            assertNull(cc.getFiles());
+        });
     }
 }

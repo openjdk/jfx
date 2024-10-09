@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,43 +25,42 @@
 
 package test.com.sun.javafx.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.fail;
-
-import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class ObjectMethodsTestBase {
-    private final Configuration configuration;
 
-    public ObjectMethodsTestBase(final Configuration configuration) {
-        this.configuration = configuration;
-    }
-
-    @Test
-    public void testEquals() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testEquals(Configuration configuration) {
         configuration.equalsTest();
     }
 
-    @Test
-    public void testHashCode() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testHashCode(Configuration configuration) {
         configuration.hashCodeTest();
     }
 
-    @Test
-    public void testToString() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testToString(Configuration configuration) {
         configuration.toStringTest();
     }
 
-    public static Object[] equalObjects(final Object... objects) {
+    public static Arguments equalObjects(final Object... objects) {
         return config(new Configuration(EQUAL_OBJECTS_EQUALS_TEST,
                                         EQUAL_OBJECTS_HASHCODE_TEST,
                                         EQUAL_OBJECTS_TOSTRING_TEST,
                                         objects));
     }
 
-    public static Object[] differentObjects(
+    public static Arguments differentObjects(
             final Object... objects) {
         return config(new Configuration(DIFFERENT_OBJECTS_EQUALS_TEST,
                                         DIFFERENT_OBJECTS_HARD_HASHCODE_TEST,
@@ -69,7 +68,7 @@ public abstract class ObjectMethodsTestBase {
                                         objects));
     }
 
-    public static Object[] differentObjectsEasyHashcode(
+    public static Arguments differentObjectsEasyHashcode(
             final Object... objects) {
         return config(new Configuration(DIFFERENT_OBJECTS_EQUALS_TEST,
                                         DIFFERENT_OBJECTS_EASY_HASHCODE_TEST,
@@ -77,7 +76,7 @@ public abstract class ObjectMethodsTestBase {
                                         objects));
     }
 
-    public static Object[] differentObjectsMediumHashcode(
+    public static Arguments differentObjectsMediumHashcode(
             final Object... objects) {
         return config(new Configuration(DIFFERENT_OBJECTS_EQUALS_TEST,
                                         DIFFERENT_OBJECTS_MEDIUM_HASHCODE_TEST,
@@ -85,8 +84,8 @@ public abstract class ObjectMethodsTestBase {
                                         objects));
     }
 
-    public static Object[] config(final Configuration configuration) {
-        return new Object[] { configuration };
+    public static Arguments config(final Configuration configuration) {
+        return Arguments.of( configuration );
     }
 
     public static final class Configuration {

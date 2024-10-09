@@ -30,9 +30,10 @@
 #include "config.h"
 #endif
 
-#include <string.h>
-
 #include "gstaudiometa.h"
+
+#include <string.h>
+#include <gst/base/base.h>
 
 static gboolean
 gst_audio_downmix_meta_init (GstMeta * meta, gpointer params,
@@ -327,7 +328,7 @@ gst_audio_meta_free (GstMeta * meta, GstBuffer * buffer)
   GstAudioMeta *ameta = (GstAudioMeta *) meta;
 
   if (ameta->offsets && ameta->offsets != ameta->priv_offsets_arr)
-    g_slice_free1 (ameta->info.channels * sizeof (gsize), ameta->offsets);
+    g_free (ameta->offsets);
 }
 
 static gboolean
@@ -349,6 +350,111 @@ gst_audio_meta_transform (GstBuffer * dest, GstMeta * meta,
   }
 
   return TRUE;
+}
+
+static gboolean
+gst_audio_meta_serialize (const GstMeta * meta, GstByteArrayInterface * data,
+    guint8 * version)
+{
+  GstAudioMeta *ameta = (GstAudioMeta *) meta;
+
+  /* Position is limited to 64 */
+  gint n_position = ameta->info.channels > 64 ? 0 : ameta->info.channels;
+
+  gsize size = 28 + n_position * 4 + ameta->info.channels * 8;
+  guint8 *ptr = gst_byte_array_interface_append (data, size);
+  if (ptr == NULL)
+    return FALSE;
+
+  GstByteWriter bw;
+  gboolean success = TRUE;
+  gst_byte_writer_init_with_data (&bw, ptr, size, FALSE);
+  success &= gst_byte_writer_put_int32_le (&bw, ameta->info.finfo->format);
+  success &= gst_byte_writer_put_int32_le (&bw, ameta->info.flags);
+  success &= gst_byte_writer_put_int32_le (&bw, ameta->info.layout);
+  success &= gst_byte_writer_put_int32_le (&bw, ameta->info.rate);
+  success &= gst_byte_writer_put_int32_le (&bw, ameta->info.channels);
+  for (int i = 0; i < n_position; i++)
+    success &= gst_byte_writer_put_int32_le (&bw, ameta->info.position[i]);
+  success &= gst_byte_writer_put_uint64_le (&bw, ameta->samples);
+  for (int i = 0; i < ameta->info.channels; i++)
+    success &= gst_byte_writer_put_uint64_le (&bw, ameta->offsets[i]);
+  g_assert (success);
+
+  return TRUE;
+}
+
+static GstMeta *
+gst_audio_meta_deserialize (const GstMetaInfo * info, GstBuffer * buffer,
+    const guint8 * data, gsize size, guint8 version)
+{
+  GstAudioMeta *ameta = NULL;
+  gint32 format;
+  gint32 flags;
+  gint32 layout;
+  gint32 rate;
+  gint32 channels;
+
+  if (version != 0)
+    return NULL;
+
+  GstByteReader br;
+  gboolean success = TRUE;
+  gst_byte_reader_init (&br, data, size);
+  success &= gst_byte_reader_get_int32_le (&br, &format);
+  success &= gst_byte_reader_get_int32_le (&br, &flags);
+  success &= gst_byte_reader_get_int32_le (&br, &layout);
+  success &= gst_byte_reader_get_int32_le (&br, &rate);
+  success &= gst_byte_reader_get_int32_le (&br, &channels);
+
+  if (!success)
+    return NULL;
+
+  /* Position is limited to 64 */
+  gint n_position = channels > 64 ? 0 : channels;
+  gint32 *position = g_new (gint32, n_position);
+  guint64 *offsets64 = g_new (guint64, channels);
+  guint64 samples = 0;
+
+  for (int i = 0; i < n_position; i++)
+    success &= gst_byte_reader_get_int32_le (&br, &position[i]);
+  success &= gst_byte_reader_get_uint64_le (&br, &samples);
+  for (int i = 0; i < channels; i++)
+    success &= gst_byte_reader_get_uint64_le (&br, &offsets64[i]);
+
+  if (!success) {
+    g_free (position);
+    g_free (offsets64);
+    return NULL;
+  }
+#if GLIB_SIZEOF_SIZE_T != 8
+  gsize *offsets = g_new (gsize, channels);
+  for (int i = 0; i < channels; i++) {
+    if (offsets64[i] > G_MAXSIZE) {
+      g_free (offsets64);
+      g_free (offsets);
+      g_free (position);
+      return NULL;
+    }
+    offsets[i] = offsets64[i];
+  }
+  g_free (offsets64);
+#else
+  gsize *offsets = (gsize *) offsets64;
+#endif
+
+  GstAudioInfo audio_info;
+  gst_audio_info_set_format (&audio_info, format, rate, channels,
+      (channels > 64) ? NULL : position);
+  audio_info.flags = flags;
+  audio_info.layout = layout;
+
+  ameta = gst_buffer_add_audio_meta (buffer, &audio_info, samples, offsets);
+
+  g_free (offsets);
+  g_free (position);
+
+  return (GstMeta *) ameta;
 }
 
 /**
@@ -413,7 +519,7 @@ gst_buffer_add_audio_meta (GstBuffer * buffer, const GstAudioInfo * info,
 #endif
 
     if (G_UNLIKELY (info->channels > 8))
-      meta->offsets = g_slice_alloc (info->channels * sizeof (gsize));
+      meta->offsets = g_new (gsize, info->channels);
     else
       meta->offsets = meta->priv_offsets_arr;
 
@@ -482,11 +588,16 @@ gst_audio_meta_get_info (void)
   static const GstMetaInfo *audio_meta_info = NULL;
 
   if (g_once_init_enter ((GstMetaInfo **) & audio_meta_info)) {
-    const GstMetaInfo *meta = gst_meta_register (GST_AUDIO_META_API_TYPE,
-        "GstAudioMeta", sizeof (GstAudioMeta),
-        gst_audio_meta_init,
-        gst_audio_meta_free,
-        gst_audio_meta_transform);
+    GstMetaInfo *info = gst_meta_info_new (GST_AUDIO_META_API_TYPE,
+        "GstAudioMeta", sizeof (GstAudioMeta));
+
+    info->init_func = gst_audio_meta_init;
+    info->free_func = gst_audio_meta_free;
+    info->transform_func = gst_audio_meta_transform;
+    info->serialize_func = gst_audio_meta_serialize;
+    info->deserialize_func = gst_audio_meta_deserialize;
+    const GstMetaInfo *meta = gst_meta_info_register (info);
+
     g_once_init_leave ((GstMetaInfo **) & audio_meta_info,
         (GstMetaInfo *) meta);
   }

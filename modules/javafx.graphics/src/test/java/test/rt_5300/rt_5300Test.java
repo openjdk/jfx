@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,15 +30,18 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import java.nio.ByteBuffer;
-import org.junit.Test;
-import org.junit.Assert;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class rt_5300Test {
 
     public rt_5300Test() {
     }
 
-    @Test()
+    @Test
     public void RT5346() {
         int num_bands = 4;
         byte[] bytes = new byte[32 * 32 * num_bands];
@@ -58,10 +61,11 @@ public class rt_5300Test {
             //throw exception System.out.println("Exception Caught: " + e.toString() );
         }
 
-        Assert.assertTrue(assertImageIcon(image));
+        assertTrue(assertImageIcon(image));
     }
 
-    @Test(timeout=5000)
+    @Test
+    @Timeout(value=5000, unit=TimeUnit.MILLISECONDS)
     public void testArcs() {
         test(10f, null);
         test(10f, new float[] {2f, 2f});

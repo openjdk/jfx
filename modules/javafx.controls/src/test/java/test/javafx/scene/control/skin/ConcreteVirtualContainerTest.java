@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,11 @@
 
 package test.javafx.scene.control.skin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
-
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-
 import javafx.collections.FXCollections;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TableView;
@@ -44,6 +40,7 @@ import javafx.scene.control.skin.ListViewSkin;
 import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.control.skin.TreeViewSkin;
+import org.junit.jupiter.api.Test;
 
 /**
  * Contains tests that should pass for all concrete implementations
@@ -59,8 +56,7 @@ public class ConcreteVirtualContainerTest {
         TableView<Locale> control = new TableView<>(FXCollections.observableArrayList(Locale.getAvailableLocales()));
         control.setSkin(new TableViewSkin<>(control) {
             {
-                assertEquals("flow's cellCount must be initialized", control.getItems().size(),
-                        getVirtualFlow().getCellCount());
+                assertEquals(control.getItems().size(), getVirtualFlow().getCellCount(), "flow's cellCount must be initialized");
             }
         });
     }
@@ -76,8 +72,7 @@ public class ConcreteVirtualContainerTest {
         TreeTableView<Locale> control = new TreeTableView<>(root);
         control.setSkin(new TreeTableViewSkin<>(control) {
             {
-                assertEquals("flow's cellCount must be initialized", treeItems.size() + 1,
-                        getVirtualFlow().getCellCount());
+                assertEquals(treeItems.size() + 1, getVirtualFlow().getCellCount(), "flow's cellCount must be initialized");
             }
         });
     }
@@ -93,8 +88,7 @@ public class ConcreteVirtualContainerTest {
         TreeView<Locale> control = new TreeView<>(root);
         control.setSkin(new TreeViewSkin<>(control) {
             {
-                assertEquals("flow's cellCount must be initialized", treeItems.size() +1,
-                        getVirtualFlow().getCellCount());
+                assertEquals(treeItems.size() + 1, getVirtualFlow().getCellCount(), "flow's cellCount must be initialized");
             }
         });
     }
@@ -104,8 +98,7 @@ public class ConcreteVirtualContainerTest {
         ListView<Locale> control = new ListView<>(FXCollections.observableArrayList(Locale.getAvailableLocales()));
         control.setSkin(new ListViewSkin<>(control) {
             {
-                assertEquals("flow's cellCount must be initialized", control.getItems().size(),
-                        getVirtualFlow().getCellCount());
+                assertEquals(control.getItems().size(), getVirtualFlow().getCellCount(), "flow's cellCount must be initialized");
             }
         });
     }

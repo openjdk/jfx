@@ -1,4 +1,5 @@
 #
+--add-exports javafx.base/com.sun.javafx=ALL-UNNAMED
 --add-exports javafx.base/com.sun.javafx.binding=ALL-UNNAMED
 --add-exports javafx.base/com.sun.javafx.collections=ALL-UNNAMED
 --add-exports javafx.base/com.sun.javafx.event=ALL-UNNAMED

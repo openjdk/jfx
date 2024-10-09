@@ -169,7 +169,7 @@ _priv_gst_tracing_deinit (void)
     for (t_node = h_node->data; t_node; t_node = g_list_next (t_node)) {
       hook = (GstTracerHook *) t_node->data;
       gst_object_unref (hook->tracer);
-      g_slice_free (GstTracerHook, hook);
+      g_free (hook);
     }
     g_list_free (h_node->data);
   }
@@ -183,7 +183,7 @@ gst_tracing_register_hook_id (GstTracer * tracer, GQuark detail, GCallback func)
 {
   gpointer key = GINT_TO_POINTER (detail);
   GList *list = g_hash_table_lookup (_priv_tracers, key);
-  GstTracerHook *hook = g_slice_new0 (GstTracerHook);
+  GstTracerHook *hook = g_new0 (GstTracerHook, 1);
   hook->tracer = gst_object_ref (tracer);
   hook->func = func;
 

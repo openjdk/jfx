@@ -47,8 +47,10 @@ public class CssTransitionsTest extends Application {
         var tab1 = new Tab("transition", new ScrollPane(createTransitionTab()));
         var tab2 = new Tab("transition-delay", new ScrollPane(createTransitionDelayTab()));
         var tab3 = new Tab("transition-timing-function", new ScrollPane(createTransitionTimingFunctionTab()));
+        var tab4 = new Tab("backgrounds", new ScrollPane(createBackgroundTransitionsTab()));
+        var tab5 = new Tab("borders", new ScrollPane(createBorderTransitionsTab()));
 
-        var tabPane = new TabPane(tab1, tab2, tab3);
+        var tabPane = new TabPane(tab1, tab2, tab3, tab4, tab5);
         stage.setScene(new Scene(tabPane));
         stage.setTitle("CSS Transitions");
         stage.show();
@@ -114,6 +116,75 @@ public class CssTransitionsTest extends Application {
             new RectInfo("#rect3", "rect3"),
             new RectInfo("#rect4", "rect4"),
             new RectInfo("#rect5", "rect5"));
+    }
+
+    private Region createBackgroundTransitionsTab() {
+        return createContent("""
+            .rect {
+              -fx-min-width: 100;
+              -fx-min-height: 50;
+              transition: all 2s;
+            }
+
+            .rect:hover {
+              -fx-min-width: 300;
+            }
+
+            // Color transition
+            #rect1 { -fx-background-color: red; }
+            #rect1:hover { -fx-background-color: blue; }
+
+            // LinearGradient transition
+            #rect2 { -fx-background-color: linear-gradient(to right, red, blue); }
+            #rect2:hover { -fx-background-color: linear-gradient(to right, purple, yellow); }
+
+            // LinearGradient transition with different number of stops
+            #rect3 { -fx-background-color: linear-gradient(to right, red, green); }
+            #rect3:hover { -fx-background-color: linear-gradient(to right, red, yellow, blue); }
+
+            // RadialGradient transition with different number of stops
+            #rect4 { -fx-background-color: radial-gradient(radius 100%, red, green); }
+            #rect4:hover { -fx-background-color: radial-gradient(radius 100%, red, yellow, blue); }
+            """,
+            new RectInfo("#rect1", "rect1"),
+            new RectInfo("#rect2", "rect2"),
+            new RectInfo("#rect3", "rect3"),
+            new RectInfo("#rect4", "rect4"));
+    }
+
+    private Region createBorderTransitionsTab() {
+        return createContent("""
+            .rect {
+              -fx-min-width: 100;
+              -fx-min-height: 50;
+              -fx-border-width: 10;
+              transition: all 2s;
+            }
+
+            .rect:hover {
+              -fx-min-width: 300;
+            }
+
+            // Color transition
+            #rect1 { -fx-border-color: red; }
+            #rect1:hover { -fx-border-color: blue; }
+
+            // LinearGradient transition
+            #rect2 { -fx-border-color: linear-gradient(to right, red, blue); }
+            #rect2:hover { -fx-border-color: linear-gradient(to right, purple, yellow); }
+
+            // LinearGradient transition with different number of stops
+            #rect3 { -fx-border-color: linear-gradient(to right, red, green); }
+            #rect3:hover { -fx-border-color: linear-gradient(to right, red, yellow, blue); }
+
+            // RadialGradient transition with different number of stops
+            #rect4 { -fx-border-color: radial-gradient(radius 100%, red, green); }
+            #rect4:hover { -fx-border-color: radial-gradient(radius 100%, red, yellow, blue); }
+            """,
+            new RectInfo("#rect1", "rect1"),
+            new RectInfo("#rect2", "rect2"),
+            new RectInfo("#rect3", "rect3"),
+            new RectInfo("#rect4", "rect4"));
     }
 
     private Region createContent(String stylesheet, RectInfo... rects) {

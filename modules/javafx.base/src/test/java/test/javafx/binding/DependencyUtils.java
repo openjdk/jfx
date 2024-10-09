@@ -30,7 +30,7 @@ import java.util.ListIterator;
 import javafx.beans.binding.Binding;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class DependencyUtils {
 

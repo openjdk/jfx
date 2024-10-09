@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,21 +22,36 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.css;
 
-import java.util.List;
-import java.util.Set;
+package test.launchertest;
 
-public class SimpleSelectorShim {
+import static test.launchertest.Constants.*;
 
-    public static SimpleSelector getSimpleSelector(
-            final String name, final List<String> styleClasses,
-            final List<String> pseudoClasses, final String id) {
-        return new SimpleSelector(name, styleClasses, pseudoClasses, id);
+public class Util {
+
+    // Timeout in milliseconds (must be at least 15 seconds)
+    private static final int TIMEOUT = 20000;
+
+    public static void sleep(long msec) {
+        try {
+            Thread.sleep(msec);
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+            System.exit(ERROR_UNEXPECTED_EXCEPTION);
+        }
     }
 
-    public static Set<PseudoClass> getPseudoClassStates(SimpleSelector ss) {
-        return ss.getPseudoClassStates();
+    public static void setupTimeoutThread() {
+        // Timeout thread
+        Thread th = new Thread(() -> {
+            sleep(TIMEOUT);
+            System.exit(ERROR_TIMEOUT);
+        });
+        th.setDaemon(true);
+        th.start();
     }
+
+    // No need to ever create an instance of this class
+    private Util() {}
 
 }

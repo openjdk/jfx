@@ -25,17 +25,13 @@
 
 package test.javafx.scene.chart;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.Arrays;
 import java.util.List;
-
 import javafx.collections.FXCollections;
-import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.Path;
-import org.junit.Assert;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import javafx.collections.*;
-
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
@@ -45,7 +41,10 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChart.Series;
 import javafx.scene.chart.XYChartShim;
 import javafx.scene.layout.StackPane;
-import org.junit.Ignore;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class BarChartTest extends XYChartTestBase {
 
@@ -55,10 +54,11 @@ public class BarChartTest extends XYChartTestBase {
     static double[] pillsSold = { 1154, 1927, 2774 };
     final CategoryAxis xAxis = new CategoryAxis();
     final NumberAxis yAxis = new NumberAxis();
-    final BarChart<String,Number> bc = new BarChart<>(xAxis,yAxis);
+    BarChart<String,Number> bc;
 
     @Override
-    protected Chart createChart() {
+    protected void createChart() {
+        bc = new BarChart<>(xAxis,yAxis);
         xAxis.setLabel("X Axis");
         xAxis.setCategories(FXCollections.<String>observableArrayList(Arrays.asList(years)));
         yAxis.setLabel("Y Axis");
@@ -76,12 +76,18 @@ public class BarChartTest extends XYChartTestBase {
         series2.getData().add(new XYChart.Data<String,Number>(years[2], 2450));
         bc.getData().add(series1);
         bc.getData().add(series2);
+        bc.setAnimated(false);
+    }
+
+    @Override
+    protected Chart getChart() {
         return bc;
     }
 
-    @Ignore("JDK-8162547")
+    @Disabled("JDK-8162547")
     @Test
     public void testAddingCustomStyleClassToBarChartBarNodes() {
+        createChart();
         startApp();
         XYChart.Series<String, Number> series = new XYChart.Series();
         XYChart.Data<String, Number> item = new XYChart.Data("A", 20);
@@ -99,6 +105,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testCategoryAxisCategoriesOnAddDataAtIndex() {
+        createChart();
         startApp();
         bc.getData().clear();
         xAxis.getCategories().clear();
@@ -120,6 +127,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testRemoveAndAddSameSeriesBeforeAnimationCompletes() {
+        createChart();
         startApp();
         assertEquals(2, bc.getData().size());
         // remove and add the same series.
@@ -130,6 +138,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testRemoveAndAddSameDataBeforeAnimationCompletes() {
+        createChart();
         startApp();
         Series s = bc.getData().get(0);
         assertEquals(3, XYChartShim.Series_getDataSize(s));
@@ -139,6 +148,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testRemoveNotAnimated() {
+        createChart();
         startApp();
         bc.setAnimated(false);
         Series s = bc.getData().get(0);
@@ -175,6 +185,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testSeriesRemoveAnimatedStyleClasses() {
+        createChart();
         startApp();
         bc.getData().clear();
         xAxis.getCategories().clear();
@@ -186,6 +197,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testAddingNonEmptySeries() {
+        createChart();
         startApp();
         ObservableList<XYChart.Data<String, Number>> list = FXCollections.observableArrayList();
         list.add(new XYChart.Data<>("1", 1));
@@ -199,6 +211,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testAddingDuplicateCategory() {
+        createChart();
         startApp();
         ObservableList<XYChart.Data<String, Number>> list = FXCollections.observableArrayList();
         list.add(new XYChart.Data<>("1", 1));
@@ -212,6 +225,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testAddingDataAtIndex() {
+        createChart();
         startApp();
         ObservableList<XYChart.Data<String, Number>> list = FXCollections.observableArrayList();
         list.add(new XYChart.Data<>("1", 1));
@@ -235,6 +249,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testAddingMultipleSeriesWithDuplicateCategories() {
+        createChart();
         startApp();
         var series1 = new Series<String, Number>();
         var series2 = new Series<String, Number>();
@@ -277,6 +292,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testNegativeStyleIsAddedToNewData() {
+        createChart();
         startApp();
         Series<String, Number> series = bc.getData().getFirst();
         series.getData().addFirst(new XYChart.Data<>("1", -1));
@@ -287,6 +303,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testNegativeStyleIsAddedToDataOfNewSeries() {
+        createChart();
         startApp();
         Series<String, Number> series = new Series<>();
         series.getData().addFirst(new XYChart.Data<>("1", -1));
@@ -298,6 +315,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testNegativeStyleIsRemovedWhenChangingData() {
+        createChart();
         startApp();
         Series<String, Number> series = bc.getData().getFirst();
 
@@ -306,12 +324,13 @@ public class BarChartTest extends XYChartTestBase {
         checkStyleClass(bar, "negative");
 
         series.getData().getFirst().setYValue(1);
-        Assert.assertFalse(bar.getStyleClass().contains("negative"));
+        assertFalse(bar.getStyleClass().contains("negative"));
     }
 
     @Test
     public void testAddingDataToEmptySeries() {
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> Assert.fail("Exception: " + e));
+        createChart();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("Exception: " + e));
         startApp();
         BarChart<String, Number> chart = new BarChart<>(new CategoryAxis(), new NumberAxis());
         XYChart.Series<String, Number> series = new XYChart.Series<>();
@@ -327,7 +346,8 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testAddingDataToNonEmptySeries() {
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> Assert.fail("Exception: " + e));
+        createChart();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("Exception: " + e));
         startApp();
         BarChart<String, Number> chart = new BarChart<>(new CategoryAxis(), new NumberAxis());
         XYChart.Series<String, Number> series = new XYChart.Series<>();
@@ -342,7 +362,8 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testAddingDataToSeriesContainingDuplicateCategories() {
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> Assert.fail("Exception: " + e));
+        createChart();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("Exception: " + e));
         startApp();
         BarChart<String, Number> chart = new BarChart<>(new CategoryAxis(), new NumberAxis());
         XYChart.Series<String, Number> series = new XYChart.Series<>();
@@ -360,6 +381,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testTickMarksMatchBarPositionsAfterAnimation() {
+        createChart();
         startApp();
         CategoryAxis xAxis = new CategoryAxis();
         NumberAxis yAxis = new NumberAxis();
@@ -400,6 +422,7 @@ public class BarChartTest extends XYChartTestBase {
 
     @Test
     public void testBarPositionsWithMultipleIncompleteSeries() {
+        createChart();
         startApp();
         CategoryAxis xAxis = new CategoryAxis();
         NumberAxis yAxis = new NumberAxis();
@@ -446,5 +469,4 @@ public class BarChartTest extends XYChartTestBase {
         assertEquals(3, normalized2.get(0), delta);
         assertEquals(5, normalized2.get(1), delta);
     }
-
 }

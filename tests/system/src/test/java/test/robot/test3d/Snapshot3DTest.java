@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,10 @@
 
 package test.robot.test3d;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.AmbientLight;
@@ -41,33 +43,27 @@ import javafx.scene.shape.Box;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 import javafx.stage.Stage;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import test.robot.testharness.VisualTestBase;
-
-import static org.junit.Assume.assumeTrue;
 
 /**
  * 3D Snapshot validation tests.
  */
-@RunWith(Parameterized.class)
-public class Snapshot3DTest extends VisualTestBase {
-
-    private static Collection params = null;
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
+public final class Snapshot3DTest extends VisualTestBase {
 
     private static final Object[] pUseSphere = { Boolean.FALSE, Boolean.TRUE };
     private static final Object[] pNumLights = { 0, 1, 2, 3 };
 
-    @Parameterized.Parameters
-    public static Collection getParams() {
-        if (params == null) {
-            params = new ArrayList();
-            for (Object o0 : pUseSphere) {
-                for (Object o1 : pNumLights) {
-                    params.add(new Object[] { o0, o1 });
-                }
+    private static List<Arguments> parameters() {
+        List<Arguments> params = new ArrayList();
+        for (Object o0 : pUseSphere) {
+            for (Object o1 : pNumLights) {
+                params.add(Arguments.of(o0, o1));
             }
         }
         return params;
@@ -88,15 +84,15 @@ public class Snapshot3DTest extends VisualTestBase {
     private Scene testScene;
     private WritableImage wImage;
 
-    private boolean createSphere;
-    private int numLights;
+//    private boolean createSphere;
+//    private int numLights;
+//
+//    public Snapshot3DTest(boolean createSphere, int numLights) {
+//        this.createSphere = createSphere;
+//        this.numLights = numLights;
+//    }
 
-    public Snapshot3DTest(boolean createSphere, int numLights) {
-        this.createSphere = createSphere;
-        this.numLights = numLights;
-    }
-
-    private Scene buildScene() {
+    private Scene buildScene(boolean createSphere, int numLights) {
         Group root = new Group();
 
         PhongMaterial material = new PhongMaterial();
@@ -150,7 +146,7 @@ public class Snapshot3DTest extends VisualTestBase {
         assertColorEquals(exColor, sColor, TOLERANCE);
     }
 
-    @Before
+    @BeforeEach
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
@@ -159,14 +155,15 @@ public class Snapshot3DTest extends VisualTestBase {
     // Tests
     // -------------------------------------------------------------
 
-    @Test(timeout = 15000)
-    public void testSnapshot3D() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot3D(boolean createSphere, int numLights) {
 
         runAndWait(() -> {
             testStage = getStage();
             testStage.setTitle("Snapshot 3D Test");
 
-            testScene = buildScene();
+            testScene = buildScene(createSphere, numLights);
 
             // Take snapshot
             wImage = testScene.snapshot(null);
@@ -182,5 +179,4 @@ public class Snapshot3DTest extends VisualTestBase {
             compareColors(testScene, wImage, SAMPLE_X3, SAMPLE_Y3);
         });
     }
-
 }

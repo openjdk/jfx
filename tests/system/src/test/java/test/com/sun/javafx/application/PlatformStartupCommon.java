@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,11 @@
 
 package test.com.sun.javafx.application;
 
-import com.sun.javafx.application.PlatformImplShim;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.TIMEOUT;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,11 +38,8 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
+import com.sun.javafx.application.PlatformImplShim;
 import test.util.Util;
-
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
 
 /**
  * Test program for Platform startup.
@@ -90,7 +91,7 @@ public class PlatformStartupCommon {
 
         try {
             if (!startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Toolkit to start");
+                fail("Timeout waiting for Toolkit to start");
             }
 
             final CountDownLatch rDone = new CountDownLatch(1);
@@ -103,7 +104,7 @@ public class PlatformStartupCommon {
                 }
             });
             if (!rDone.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for runLater with Exception");
+                fail("Timeout waiting for runLater with Exception");
             }
 
             // Create and show main stage
@@ -143,14 +144,14 @@ public class PlatformStartupCommon {
                 Platform.exit();
 
                 if (!exitLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                    throw new AssertionFailedError("Timeout waiting for Platform to exit");
+                    fail("Timeout waiting for Platform to exit");
                 }
             }
         } catch (InterruptedException ex) {
             if (testError[0] != null) {
                 Util.throwError(testError[0]);
             } else {
-                fail("Unexpected exception: " + ex);
+                fail(ex);
             }
         }
     }
@@ -164,5 +165,4 @@ public class PlatformStartupCommon {
     protected void doTestStartupImplicitExit() {
         doTestCommon(true);
     }
-
 }
