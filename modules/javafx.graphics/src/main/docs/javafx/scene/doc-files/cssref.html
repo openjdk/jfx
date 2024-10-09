@@ -446,6 +446,16 @@
           </li>
         </ul>
       </li>
+      <li><a href="#incubator-modules">Incubator Modules</a>
+        <ul>
+          <li>jfx.incubator.scene.control.richtext
+            <ul>
+              <li><a href="#codearea">CodeArea</a></li>
+              <li><a href="#richtextarea">RichTextArea</a></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
       <li><a href="#references">References</a></li>
     </ul>
     <h2><a id="intro">Introduction</a></h2>
@@ -6372,6 +6382,191 @@
         <li>chart-vertical-zero-line &mdash; Line</li>
         <li>chart-horizontal-zero-line &mdash; Line</li>
     </ul>
+
+    <!-- Incubator Modules -->
+    <h2><a id="incubator-modules">Incubator Modules</a></h2>
+    <table class="package" width="100%">
+      <tbody>
+        <tr>
+          <td>jfx.incubator.scene.control.richtext</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4><a id="richtextarea">RichTextArea</a></h4>
+    <p class="styleclass">Style class: rich-text-area</p>
+      <table class="csspropertytable">
+        <caption>Available CSS Properties</caption>
+        <thead>
+          <tr>
+            <th class="propertyname" scope="col">CSS Property</th>
+            <th class="value" scope="col">Values</th>
+            <th scope="col">Default</th>
+            <th scope="col">Comments</th>
+          </tr>
+        </thead>   
+        <tbody>
+          <tr>
+            <th class="propertyname" scope="row">-fx-caret-blink-period</th>
+            <td class="value"><a href="#typeduration" class="typelink">&lt;duration&gt;</a></td>
+            <td>1000 ms</td>
+            <td>Determines the caret blink period.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-content-padding</th>
+			<td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a>
+			  | <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
+			    class="typelink">&lt;size&gt;</a>
+			  <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
+			    class="typelink">&lt;size&gt;</a>
+			</td>
+            <td>0 0 0 0</td>
+            <td>Amount of padding in the content area.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-display-caret</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>Determines whether the caret is displayed.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-highlight-current-paragraph</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>Determines whether the current paragraph is highlighted.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-use-content-height</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>Determines whether the preferred height is the same as the content height.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-use-content-width</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>Determines whether the preferred width is the same as the content width.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-wrap-text</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>Determines whether text should be wrapped.</td>
+          </tr>
+          <tr>
+           <th colspan="4" class="parents" scope="row">Also has all properties of <a href="#control">Control</a></th>
+          </tr>
+        </tbody>
+      </table>
+    <h4>Pseudo-classes</h4>
+    <table class="csspropertytable">
+      <caption>Available CSS Pseudo-classes</caption>
+      <thead>
+        <tr>
+        <th class="propertyname" scope="col">CSS Pseudo-class</th>
+        <th scope="col">Comments</th>
+      </tr>
+      </thead>
+      <tbody>
+        <!--
+        <tr>
+        <th class="propertyname" scope="row">horizontal</th>
+            <td>applies if this Slider is horizontal</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">vertical</th>
+            <td>applies if this Slider is vertical</td>
+        </tr>
+        -->
+        <tr>
+          <th colspan="2" class="parents" scope="row">Also has all pseudo&#8209;classes of <a href="#control">Control</a></th>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+      <li>main-pane &mdash; Pane</li>
+        <ul>
+          <li>vflow &mdash; Pane</li>
+          <ul>
+            <li>content &mdash; Pane</li>
+            <ul>
+              <li>caret-line &mdash; Path</li>
+              <li>selection-highlight &mdash; Path</li>
+              <li>flow &mdash; Pane</li>
+              <li>caret &mdash; Path</li>
+            </ul>
+            <li>left-side &mdash; Pane</li>
+            <li>right-side &mdash; Pane</li>
+          </ul>
+          <li>scroll-bar:vertical &mdash; ScrollBar</li>
+          <li>scroll-bar:horizontal &mdash; ScrollBar</li>
+        </ul>
+    </ul>
+
+    <h4><a id="codearea">CodeArea</a></h4>
+    <p>The CodeArea control has all the properties of <a href="#richtextarea">RichTextArea</a></p>
+    <p class="styleclass">Style class: code-area</p>
+      <table class="csspropertytable">
+        <caption>Available CSS Properties</caption>
+        <thead>
+          <tr>
+            <th class="propertyname" scope="col">CSS Property</th>
+            <th class="value" scope="col">Values</th>
+            <th scope="col">Default</th>
+            <th scope="col">Comments</th>
+          </tr>
+        </thead>   
+        <tbody>
+          <tr>
+            <th class="propertyname" scope="row">-fx-font</th>
+            <td class="value"><a href="#typefont" class="typelink">&lt;font&gt;</a></td>
+            <td>Monospaced 12px</td>
+            <td>Determines the font to use for text.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-line-spacing</th>
+            <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+            <td>0</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-tab-size</th>
+            <td class="value"><a href="#typenumber" class="typelink">&lt;integer&gt;</a></td>
+            <td>8</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+           <th colspan="4" class="parents" scope="row">Also has all properties of <a href="#richtextarea">RichTextArea</a></th>
+          </tr>
+        </tbody>
+      </table>
+    <h4>Pseudo-classes</h4>
+    <table class="csspropertytable">
+      <caption>Available CSS Pseudo-classes</caption>
+      <thead>
+        <tr>
+        <th class="propertyname" scope="col">CSS Pseudo-class</th>
+        <th scope="col">Comments</th>
+      </tr>
+      </thead>
+      <tbody>
+        <!--
+        <tr>
+        <th class="propertyname" scope="row">horizontal</th>
+            <td>applies if this Slider is horizontal</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">vertical</th>
+            <td>applies if this Slider is vertical</td>
+        </tr>
+        -->
+        <tr>
+          <th colspan="2" class="parents" scope="row">Also has all pseudo&#8209;classes of <a href="#richtextarea">RichTextArea</a></th>
+        </tr>
+        </tbody>
+    </table>
+
     <h2><a id="references">References</a></h2>
     <p>[1] CSS 2.1: <a href="http://www.w3.org/TR/CSS21/" target="_blank">http://www.w3.org/TR/CSS21/</a>
     </p>
