@@ -139,7 +139,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_LinuxGLDrawable_nReleaseDrawable
     }
 
     if (!eglDestroySurface(dInfo->eglDisplay, dInfo->eglSurface)) {
-        fprintf(stderr, "Prism ES2 Error: ReleaseDrawable - Could not destroy EGL surface [%s]\n", eglGetErrorString(eglGetError()));
+        fprintf(stderr, "Prism ES2 Error: ReleaseDrawable - Could not destroy EGL surface [%s]\n",
+                    eglGetErrorString(eglGetError()));
     }
 
     free(dInfo);
