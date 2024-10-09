@@ -55,7 +55,6 @@ public class MenuDoubleShortcutTest {
 
     static CountDownLatch startupLatch = new CountDownLatch(1);
 
-    static volatile Stage stage;
     static volatile TestApp testApp;
     static private final int delayMilliseconds = 100;
 
@@ -164,10 +163,9 @@ public class MenuDoubleShortcutTest {
         }
 
         @Override
-        public void start(Stage primaryStage) {
+        public void start(Stage stage) {
 
             testApp = this;
-            stage = primaryStage;
 
             Label label = new Label("Testing accelerator double processing");
 

@@ -54,7 +54,7 @@
     BOOL didCommitText;
     BOOL isHiDPIAware;
 
-    NSEvent             *lastKeyEvent;
+    NSEvent *lastKeyEvent;
 }
 
 - (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties;

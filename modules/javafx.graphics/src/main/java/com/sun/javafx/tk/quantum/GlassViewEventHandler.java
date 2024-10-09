@@ -237,8 +237,9 @@ class GlassViewEventHandler extends View.EventHandler {
     }
 
     @SuppressWarnings("removal")
-    @Override public boolean handleKeyEvent(View view, long time, int type, int key,
-                                         char[] chars, int modifiers)
+    @Override
+    public boolean handleKeyEvent(View view, long time, int type, int key,
+                                  char[] chars, int modifiers)
     {
         keyNotification.view = view;
         keyNotification.time = time;
@@ -247,7 +248,7 @@ class GlassViewEventHandler extends View.EventHandler {
         keyNotification.chars = chars;
         keyNotification.modifiers = modifiers;
 
-        final boolean consumed = QuantumToolkit.runWithoutRenderLock(() -> {
+        boolean consumed = QuantumToolkit.runWithoutRenderLock(() -> {
             return AccessController.doPrivileged(keyNotification, scene.getAccessControlContext());
         });
         return consumed;
