@@ -119,6 +119,7 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
+import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -452,8 +453,8 @@ public class Scene implements EventTarget {
                         }
 
                         @Override
-                        public void processKeyEvent(Scene scene, KeyEvent e) {
-                            scene.processKeyEvent(e);
+                        public boolean processKeyEvent(Scene scene, KeyEvent e) {
+                            return scene.processKeyEvent(e);
                         }
 
                         @Override
@@ -2222,7 +2223,7 @@ public class Scene implements EventTarget {
         FocusTraversal.traverse(node, TraversalDirection.NEXT, TraversalMethod.DEFAULT);
     }
 
-    void processKeyEvent(KeyEvent e) {
+    boolean processKeyEvent(KeyEvent e) {
         if (dndGesture != null) {
             if (!dndGesture.processKey(e)) {
                 dndGesture = null;
@@ -2233,9 +2234,11 @@ public class Scene implements EventTarget {
         final EventTarget eventTarget =
                 (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner : Scene.this;
 
+        if (eventTarget == null) return false;
+
         // send the key event to the current focus owner or to scene if
         // the focus owner is not set
-        Event.fireEvent(eventTarget, e);
+        return EventUtil.fireEvent(eventTarget, e) == null;
     }
 
     void requestFocus(Node node, boolean focusVisible) {
@@ -2754,9 +2757,9 @@ public class Scene implements EventTarget {
 
 
         @Override
-        public void keyEvent(KeyEvent keyEvent)
+        public boolean keyEvent(KeyEvent keyEvent)
         {
-            processKeyEvent(keyEvent);
+            return processKeyEvent(keyEvent);
         }
 
         @Override
