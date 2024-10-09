@@ -28,7 +28,7 @@ import javafx.geometry.Rectangle2D;
 
 /**
  * Represents an immutable snapshot of certain aspects of the text layout
- * in a {@code Text} or {@TextFlow} node,
+ * in a {@code Text} or {@code TextFlow} node,
  * such as break up of the text into lines and the their bounds.
  * <p>
  * The snapshot is valid until the layout changes due to any change that
@@ -37,6 +37,12 @@ import javafx.geometry.Rectangle2D;
  * @since 24
  */
 public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutInfo {
+    /**
+     * Constructor for subclasses to call.
+     */
+    protected LayoutInfo() {
+    }
+
     /**
      * Returns the logical bounds of the layout:
      * <ul>
