@@ -33,7 +33,7 @@ import com.sun.javafx.scene.text.TextLayout;
 /**
  * Layout information as reported by PrismLayout.
  */
-public final class PrismLayoutInfo implements LayoutInfo {
+public final class PrismLayoutInfo extends LayoutInfo {
     private final TLine[] lines;
     private final Rectangle2D bounds;
 

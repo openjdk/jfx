@@ -27,11 +27,16 @@ package javafx.scene.text;
 import javafx.geometry.Rectangle2D;
 
 /**
- * Represents an immutable snapshot of certain aspects of the text layout.
+ * Represents an immutable snapshot of certain aspects of the text layout
+ * in a {@code Text} or {@TextFlow} node,
+ * such as break up of the text into lines and the their bounds.
+ * <p>
+ * The snapshot is valid until the layout changes due to any change that
+ * triggers that, such as resizing of the container or modification of properties.
  *
  * @since 24
  */
-public interface LayoutInfo {
+public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutInfo {
     /**
      * Returns the logical bounds of the layout:
      * <ul>
@@ -43,13 +48,13 @@ public interface LayoutInfo {
      *
      * @return the layout bounds
      */
-    public Rectangle2D getBounds();
+    public abstract Rectangle2D getBounds();
 
     /**
      * Returns the number of text lines in the layout.
      * @return the number of text lines
      */
-    public int getTextLineCount();
+    public abstract int getTextLineCount();
 
     /**
      * Returns the start offset for the line at index {@code index}.
@@ -57,7 +62,7 @@ public interface LayoutInfo {
      * @param index the line index
      * @return the start offset
      */
-    public int getTextLineStart(int index);
+    public abstract int getTextLineStart(int index);
 
     /**
      * Returns the end offset for the line at index {@code index}.
@@ -65,7 +70,7 @@ public interface LayoutInfo {
      * @param index the line index
      * @return the end offset
      */
-    public int getTextLineEnd(int index);
+    public abstract int getTextLineEnd(int index);
 
     /**
      * Returns the information about the line:
@@ -91,5 +96,5 @@ public interface LayoutInfo {
      * @param index the line index
      * @return the line bounds
      */
-    public Rectangle2D getLineBounds(int index);
+    public abstract Rectangle2D getLineBounds(int index);
 }
