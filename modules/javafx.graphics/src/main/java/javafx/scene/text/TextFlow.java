@@ -692,7 +692,8 @@ public class TextFlow extends Pane {
     /**
      * Obtains the snapshot of the current text layout information.
      * <p>
-     * The snapshot remains valid until the layout changes due to resizing or changes in properties.
+     * The layout snapshot is no longer valid after actions such as resizing of the container,
+     * or modification of certain properties.
      * Typically it means that the {@code LayoutInfo} object should not be cached and should be discarded
      * immediatley after use.
      *

@@ -29,10 +29,12 @@ import javafx.geometry.Rectangle2D;
 /**
  * Represents an immutable snapshot of certain aspects of the text layout
  * in a {@code Text} or {@code TextFlow} node,
- * such as break up of the text into lines and the their bounds.
+ * such as break up of the text into lines and their bounds.
  * <p>
- * The snapshot is valid until the layout changes due to any change that
- * triggers that, such as resizing of the container or modification of properties.
+ * The layout snapshot is no longer valid after actions such as resizing of the container,
+ * or modification of certain properties.
+ * For example updating the text or the font would invalidate the layout snapshot,
+ * but a change of color would not.
  *
  * @since 24
  */
