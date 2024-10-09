@@ -27,109 +27,54 @@ package com.sun.javafx.text;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.text.LayoutInfo;
 import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLine;
 
 /**
  * Layout information as reported by PrismLayout.
  */
 public final class PrismLayoutInfo extends LayoutInfo {
-    private final TLine[] lines;
-    private final Rectangle2D bounds;
+    private final TextLayout layout;
 
-    public PrismLayoutInfo(TLine[] lines, Rectangle2D bounds) {
-        this.lines = lines;
-        this.bounds = bounds;
+    private PrismLayoutInfo(TextLayout layout) {
+        this.layout = layout;
     }
 
     public static LayoutInfo of(TextLayout layout) {
-        com.sun.javafx.scene.text.TextLine[] ls = layout.getLines();
-        TLine[] lines = new TLine[ls.length];
-        for (int i = 0; i < ls.length; i++) {
-            com.sun.javafx.scene.text.TextLine ln = ls[i];
-            lines[i] = TLine.of(ls[i]);
-        }
-
-        BaseBounds b = layout.getBounds();
-        Rectangle2D bounds = new Rectangle2D(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight());
-        return new PrismLayoutInfo(lines, bounds);
+        return new PrismLayoutInfo(layout);
     }
 
     @Override
     public Rectangle2D getBounds() {
-        return bounds;
+        return toRectangle2D(layout.getBounds());
     }
 
     @Override
     public int getTextLineCount() {
-        return lines.length;
+        return layout.getLines().length;
     }
 
     @Override
     public int getTextLineStart(int ix) {
-        return lines[ix].start;
+        return line(ix).getStart();
     }
 
     @Override
     public int getTextLineEnd(int ix) {
-        return lines[ix].end;
+        TextLine line = line(ix);
+        return line.getStart() + line.getLength();
     }
 
     @Override
     public Rectangle2D getLineBounds(int ix) {
-        return lines[ix].bounds;
+        return toRectangle2D(line(ix).getBounds());
     }
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("PrismLayoutInfo{");
-        sb.append("lines=[");
-        boolean sep = false;
-        for (TLine li : lines) {
-            if (sep) {
-                sb.append(",");
-            } else {
-                sep = true;
-            }
-            li.print(sb);
-        }
-        sb.append("]");
-        sb.append(", bounds=").append(bounds);
-        sb.append("}");
-        return sb.toString();
+    private TextLine line(int ix) {
+        return layout.getLines()[ix];
     }
 
-    /**
-     * Contains a snapshot of the mutable TextLine.
-     */
-    private static record TLine(
-        int start,
-        int end,
-        Rectangle2D bounds) {
-
-        public static TLine of(com.sun.javafx.scene.text.TextLine t) {
-            int start = t.getStart();
-            int end = t.getStart() + t.getLength();
-            RectBounds r = t.getBounds();
-            Rectangle2D bounds = new Rectangle2D(r.getMinX(), r.getMinY(), r.getWidth(), r.getHeight());
-
-            return new TLine(
-                start,
-                end,
-                bounds
-            );
-            // TODO also available:
-            // public float getLeftSideBearing(); // what is that??
-            // public float getRightSideBearing();
-            // TODO we could also capture the text runs information if needed
-        }
-
-        void print(StringBuilder sb) {
-            sb.append("{start=").append(start);
-            sb.append(", end=").append(end);
-            sb.append(", bounds=").append(bounds);
-            sb.append("}");
-        }
+    private static Rectangle2D toRectangle2D(BaseBounds b) {
+        return new Rectangle2D(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight());
     }
 }

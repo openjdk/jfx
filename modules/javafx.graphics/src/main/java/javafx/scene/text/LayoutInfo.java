@@ -27,14 +27,17 @@ package javafx.scene.text;
 import javafx.geometry.Rectangle2D;
 
 /**
- * Represents an immutable snapshot of certain aspects of the text layout
- * in a {@code Text} or {@code TextFlow} node,
- * such as break up of the text into lines and their bounds.
+ * Provides a think wrapper of the text layout used in a {@code Text} or a {@code TextFlow} node,
+ * with the purpose of querying the details of the layout such as break up of the text into lines
+ * and their bounds.
  * <p>
- * The layout snapshot is no longer valid after actions such as resizing of the container,
+ * The information obtained via this object may change to reflect the underlying layout changes
+ * as a result of actions such as resizing of the container,
  * or modification of certain properties.
- * For example updating the text or the font would invalidate the layout snapshot,
- * but a change of color would not.
+ * <p>
+ * For example updating the text or the font might change the layout, but a change of color would not.
+ * <p>
+ * It is safe to cache this object.
  *
  * @since 24
  */
