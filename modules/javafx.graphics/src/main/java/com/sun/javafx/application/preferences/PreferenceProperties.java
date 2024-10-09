@@ -208,18 +208,18 @@ final class PreferenceProperties {
             fireValueChangedEvent();
         }
 
+        public void fireValueChangedIfNecessary() {
+            if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
+                lastEffectiveValue = effectiveValue;
+                fireValueChangedEvent();
+            }
+        }
+
         private void updateEffectiveValue() {
             // Choose the first non-null value in this order: overrideValue, platformValue, defaultValue.
             effectiveValue = Objects.requireNonNullElse(
                 overrideValue != null ? overrideValue : platformValue,
                 defaultValue);
-        }
-
-        void fireValueChangedIfNecessary() {
-            if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
-                lastEffectiveValue = effectiveValue;
-                fireValueChangedEvent();
-            }
         }
     }
 
