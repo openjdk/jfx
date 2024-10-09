@@ -113,11 +113,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_LinuxGLDrawable_nSwapBuffers
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLDrawable
+ * Class:     com_sun_prism_es2_LinuxGLDrawable
  * Method:    nReleaseDrawable
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLDrawable_nReleaseDrawable
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_LinuxGLDrawable_nReleaseDrawable
 (JNIEnv *env, jclass class, jlong nativeDInfo) {
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
     if (dInfo == NULL) {
