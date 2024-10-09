@@ -33,8 +33,6 @@
 #include "../PrismES2Defs.h"
 #include "com_sun_prism_es2_LinuxGLDrawable.h"
 
-extern void initializeDrawableInfo(DrawableInfo *dInfo);
-extern void deleteDrawableInfo(DrawableInfo *dInfo);
 extern const char* eglGetErrorString(EGLint error);
 
 /*
