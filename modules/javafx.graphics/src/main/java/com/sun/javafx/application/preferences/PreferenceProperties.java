@@ -25,7 +25,6 @@
 
 package com.sun.javafx.application.preferences;
 
-import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
 import javafx.application.ColorScheme;
 import javafx.beans.InvalidationListener;
@@ -36,7 +35,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.paint.Color;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -45,14 +44,13 @@ import java.util.Objects;
  */
 final class PreferenceProperties {
 
+    private final Map<String, DeferredProperty<?>> deferredProperties = new HashMap<>();
     private final DeferredProperty<Color> backgroundColor = new DeferredProperty<>("backgroundColor", Color.WHITE);
     private final DeferredProperty<Color> foregroundColor = new DeferredProperty<>("foregroundColor", Color.BLACK);
     private final DeferredProperty<Color> accentColor = new DeferredProperty<>("accentColor", Color.rgb(21, 126, 251));
-    private final List<DeferredProperty<Color>> allColors = List.of(backgroundColor, foregroundColor, accentColor);
     private final ColorSchemeProperty colorScheme = new ColorSchemeProperty();
     private final DeferredProperty<Boolean> reducedMotion = new DeferredProperty<>("reducedMotion", false);
     private final DeferredProperty<Boolean> reducedTransparency = new DeferredProperty<>("reducedTransparency", false);
-    private final List<DeferredProperty<Boolean>> allFlags = List.of(reducedMotion, reducedTransparency);
     private final ReadOnlyBooleanWrapper reducedMotionFlag;
     private final ReadOnlyBooleanWrapper reducedTransparencyFlag;
     private final Object bean;
@@ -141,49 +139,15 @@ final class PreferenceProperties {
 
     public void update(Map<String, ChangedValue> changedPreferences,
                        Map<String, PreferenceMapping<?>> platformKeyMappings) {
-        outerLoop:
         for (Map.Entry<String, ChangedValue> entry : changedPreferences.entrySet()) {
-            PreferenceMapping<?> mapping = platformKeyMappings.get(entry.getKey());
-            if (mapping != null) {
-                for (DeferredProperty<Color> color : allColors) {
-                    if (color.getName().equals(mapping.keyName())) {
-                        updateDeferredProperty(color, Color.class, entry.getValue().newValue());
-                        continue outerLoop;
-                    }
-                }
-
-                for (DeferredProperty<Boolean> flag : allFlags) {
-                    if (flag.getName().equals(mapping.keyName())) {
-                        updateDeferredProperty(flag, Boolean.class, mapping.map(entry.getValue().newValue()));
-                        continue outerLoop;
-                    }
-                }
+            if (platformKeyMappings.get(entry.getKey()) instanceof PreferenceMapping<?> mapping
+                    && deferredProperties.get(mapping.keyName()) instanceof DeferredProperty<?> property) {
+                property.setPlatformValue(mapping.map(entry.getValue().newValue()));
             }
         }
 
-        fireValueChangedIfNecessary();
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> void updateDeferredProperty(DeferredProperty<T> property, Class<T> valueType, Object value) {
-        if (valueType.isInstance(value)) {
-            property.setValue((T)value);
-        } else {
-            if (value != null) {
-                Logging.getJavaFXLogger().warning(
-                    "Unexpected value of " + property.getName() + " platform preference, " +
-                    "using default value instead (expected = " + valueType.getName() +
-                    ", actual = " + value.getClass().getName() + ")");
-            }
-
-            // Setting a DeferredProperty to 'null' restores its platform value or default value.
-            property.setValue(null);
-        }
-    }
-
-    private void fireValueChangedIfNecessary() {
-        for (DeferredProperty<Color> colorProperty : allColors) {
-            colorProperty.fireValueChangedIfNecessary();
+        for (DeferredProperty<?> property : deferredProperties.values()) {
+            property.fireValueChangedIfNecessary();
         }
     }
 
@@ -203,6 +167,8 @@ final class PreferenceProperties {
         private T lastEffectiveValue;
 
         DeferredProperty(String name, T initialValue) {
+            Objects.requireNonNull(initialValue);
+            PreferenceProperties.this.deferredProperties.put(name, this);
             this.name = name;
             this.defaultValue = initialValue;
             this.platformValue = initialValue;
@@ -226,11 +192,13 @@ final class PreferenceProperties {
         }
 
         /**
-         * Only called by {@link #updateDeferredProperty}, this method doesn't fire a change notification.
+         * Only called from {@link PreferenceProperties#update}, this method doesn't fire a change notification.
          * Change notifications are fired after the new values of all deferred properties have been set.
          */
-        public void setValue(T value) {
-            this.platformValue = value;
+        @SuppressWarnings("unchecked")
+        public void setPlatformValue(Object value) {
+            Class<?> expectedType = defaultValue.getClass();
+            this.platformValue = expectedType.isInstance(value) ? (T)value : null;
             updateEffectiveValue();
         }
 

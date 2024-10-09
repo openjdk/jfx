@@ -332,39 +332,37 @@ public class PlatformPreferencesTest {
 
     @Test
     void testReducedMotionProperty() {
-        var observer = new MockMapObserver<String, Object>();
-        prefs.addListener(observer);
+        var trace = new ArrayList<Boolean>();
+        prefs.reducedMotionProperty().addListener((observable, ov, nv) -> trace.add(nv));
 
         assertFalse(prefs.isReducedMotion());
         prefs.update(Map.of("test.reducedMotion", true));
 
+        assertEquals(1, trace.size());
+        assertEquals(Boolean.TRUE, trace.get(0));
         assertTrue(prefs.isReducedMotion());
-        assertEquals(1, observer.getCallsNumber());
-        observer.assertAdded(0, tup("test.reducedMotion", true));
-        observer.clear();
 
         prefs.update(new HashMap<>() {{ put("test.reducedMotion", null); }});
-        assertEquals(1, observer.getCallsNumber());
-        observer.assertRemoved(0, tup("test.reducedMotion", true));
+        assertEquals(2, trace.size());
+        assertEquals(Boolean.FALSE, trace.get(1));
         assertFalse(prefs.isReducedMotion());
     }
 
     @Test
     void testReducedTransparencyPropertyWithInverseMapping() {
-        var observer = new MockMapObserver<String, Object>();
-        prefs.addListener(observer);
+        var trace = new ArrayList<Boolean>();
+        prefs.reducedTransparencyProperty().addListener((observable, ov, nv) -> trace.add(nv));
 
         assertFalse(prefs.isReducedTransparency());
         prefs.update(Map.of("test.enableTransparency", false));
 
+        assertEquals(1, trace.size());
+        assertEquals(Boolean.TRUE, trace.get(0));
         assertTrue(prefs.isReducedTransparency());
-        assertEquals(1, observer.getCallsNumber());
-        observer.assertAdded(0, tup("test.enableTransparency", false));
-        observer.clear();
 
         prefs.update(new HashMap<>() {{ put("test.enableTransparency", null); }});
-        assertEquals(1, observer.getCallsNumber());
-        observer.assertRemoved(0, tup("test.enableTransparency", false));
-        assertFalse(prefs.isReducedMotion());
+        assertEquals(2, trace.size());
+        assertEquals(Boolean.FALSE, trace.get(1));
+        assertFalse(prefs.isReducedTransparency());
     }
 }
