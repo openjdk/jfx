@@ -46,11 +46,6 @@ package netscape.javascript;
  * @since 1.5
  */
 public abstract class JSObject {
-
-    static {
-        System.err.println("KCR: JavaFX version of jdk.jsobject loaded");
-    }
-
     /**
      * Constructs a new JSObject. Users should neither call this method nor
      * subclass JSObject.
