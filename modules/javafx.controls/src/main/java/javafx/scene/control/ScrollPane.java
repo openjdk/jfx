@@ -73,8 +73,12 @@ import javafx.css.Styleable;
  * node in a Group.
  * <p>
  * ScrollPane sets focusTraversable to false.
- * </p>
- *
+ * <p>
+ * ScrollPane by default only acts on key presses when it has the focus
+ * ({@link #isFocused()} returns {@code true}) and won't respond to unconsumed
+ * key events that bubble up from a focused child control. The key presses it
+ * acts on are platform specific, but by default should include keys for panning
+ * and paging the view.
  * <p>
  * This example creates a ScrollPane, which contains a Rectangle:
  * <pre><code> Rectangle rect = new Rectangle(200, 200, Color.RED);
