@@ -23,49 +23,32 @@
  * questions.
  */
 
-#include <jni.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
+package com.sun.prism.es2;
 
-#include "PrismES2Defs.h"
 
-void initializePixelFormatInfo(PixelFormatInfo *pfInfo) {
-    if (pfInfo == NULL) {
-        return;
+abstract class LinuxGLPixelFormat extends GLPixelFormat {
+
+    private static native long nCreatePixelFormat(long nativeScreen, int[] attrArr);
+
+    static int[] getAttributesArray(Attributes attrs) {
+        // holds the list of attributes to be translated for native call
+        int[] attrArr = new int[Attributes.NUM_ITEMS];
+
+        attrArr[Attributes.RED_SIZE] = attrs.getRedSize();
+        attrArr[Attributes.GREEN_SIZE] = attrs.getGreenSize();
+        attrArr[Attributes.BLUE_SIZE] = attrs.getBlueSize();
+        attrArr[Attributes.ALPHA_SIZE] = attrs.getAlphaSize();
+        attrArr[Attributes.DEPTH_SIZE] = attrs.getDepthSize();
+        attrArr[Attributes.DOUBLEBUFFER] = attrs.isDoubleBuffer() ? 1 : 0;
+        attrArr[Attributes.ONSCREEN] = attrs.isOnScreen() ? 1 : 0;
+
+        return attrArr;
     }
-    // Initialize structure to all zeros
-    memset(pfInfo, 0, sizeof (PixelFormatInfo));
-}
 
-void deletePixelFormatInfo(PixelFormatInfo *pfInfo) {
-    if (pfInfo == NULL) {
-        return;
-    }
-#ifdef WIN32 /* WIN32 */
-    if ((pfInfo->dummyHdc != NULL) && (pfInfo->dummyHwnd != NULL)) {
-        ReleaseDC(pfInfo->dummyHwnd, pfInfo->dummyHdc);
-    }
-    if (pfInfo->dummyHwnd != NULL) {
-        DestroyWindow(pfInfo->dummyHwnd);
-        UnregisterClass(pfInfo->dummySzAppName, (HINSTANCE) NULL);
-    }
-#endif
+    LinuxGLPixelFormat(long nativeScreen, Attributes attrs) {
+        super(nativeScreen, attrs);
 
-#if defined(IS_LINUX_GLX) || defined(IS_LINUX_EGL)
-    if (pfInfo->display != NULL) {
-        if (pfInfo->dummyWin != None) {
-            XDestroyWindow(pfInfo->display, pfInfo->dummyWin);
-        }
+        long nativePF = nCreatePixelFormat(nativeScreen, getAttributesArray(attrs));
+        setNativePFInfo(nativePF);
     }
-#endif
-
-#ifdef IS_LINUX_EGL
-    eglTerminate(pfInfo->eglDisplay);
-#endif
-
-    // Initialize structure to all zeros
-    memset(pfInfo, 0, sizeof (PixelFormatInfo));
 }

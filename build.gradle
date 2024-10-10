@@ -2474,7 +2474,12 @@ project(":graphics") {
     addNative(project, "font")
     addNative(project, "iio")
     if (IS_INCLUDE_ES2) {
-        addNative(project, "prismES2")
+        if (IS_LINUX) {
+            addNative(project, "prismES2GLX")
+            addNative(project, "prismES2EGLX11")
+        } else {
+            addNative(project, "prismES2")
+        }
     }
 
     if (IS_COMPILE_PANGO) {
@@ -5324,8 +5329,7 @@ compileTargets { t ->
                 if (!targetProperties.includeGTK) { //usually IS_LINUX
                     exclude (
                              "com/sun/glass/ui/gtk",
-                             "com/sun/prism/es2/EGL*",
-                             "com/sun/prism/es2/X11GL*"
+                             "com/sun/prism/es2/Linux*",
                              )
                 }
 
@@ -5462,7 +5466,11 @@ compileTargets { t ->
             from("${graphicsProject.buildDir}/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
             def libs = ['font', 'prism', 'prismSW', 'glass', 'iio']
             if (IS_INCLUDE_ES2) {
-                libs += ['prismES2'];
+                if (IS_LINUX) {
+                    libs += ['prismES2GLX', 'prismES2EGLX11'];
+                } else {
+                    libs += ['prismES2'];
+                }
             }
             if (IS_COMPILE_PANGO) {
                 libs += ['fontFreetype', 'fontPango'];
