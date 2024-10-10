@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,12 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "swing", "swt", "fxml", "jsobject", "web", "media", "systemTests"
-
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":jsobject").projectDir = file("modules/jdk.jsobject")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
-
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
-
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+/**
+ * Defines the API for the JavaScript Object.
+ *
+ * @moduleGraph
+ * @since 9
+ */
+module jdk.jsobject {
+    exports netscape.javascript;
 }
-
-include 'apps'
-
