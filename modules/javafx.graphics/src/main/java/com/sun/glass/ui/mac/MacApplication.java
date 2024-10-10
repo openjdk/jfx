@@ -28,6 +28,7 @@ import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.util.Logging;
 import javafx.scene.paint.Color;
 
@@ -439,11 +440,13 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     public native Map<String, Object> getPlatformPreferences();
 
     @Override
-    public Map<String, String> getPlatformKeyMappings() {
+    public Map<String, PreferenceMapping<?>> getPlatformKeyMappings() {
         return Map.of(
-            "macOS.NSColor.textColor", "foregroundColor",
-            "macOS.NSColor.textBackgroundColor", "backgroundColor",
-            "macOS.NSColor.controlAccentColor", "accentColor"
+            "macOS.NSColor.textColor", new PreferenceMapping<>("foregroundColor", Color.class),
+            "macOS.NSColor.textBackgroundColor", new PreferenceMapping<>("backgroundColor", Color.class),
+            "macOS.NSColor.controlAccentColor", new PreferenceMapping<>("accentColor", Color.class),
+            "macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", new PreferenceMapping<>("reducedMotion", Boolean.class),
+            "macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class)
         );
     }
 
@@ -496,7 +499,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("macOS.NSColor.systemPurpleColor", Color.class),
             Map.entry("macOS.NSColor.systemRedColor", Color.class),
             Map.entry("macOS.NSColor.systemTealColor", Color.class),
-            Map.entry("macOS.NSColor.systemYellowColor", Color.class)
+            Map.entry("macOS.NSColor.systemYellowColor", Color.class),
+            Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", Boolean.class),
+            Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", Boolean.class)
         );
     }
 
