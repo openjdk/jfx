@@ -40,6 +40,7 @@ import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.AbstractNode;
 import test.com.sun.javafx.css.TestNode;
 import test.com.sun.javafx.css.TestNodeBase;
 import javafx.beans.value.WritableValue;
@@ -242,7 +243,7 @@ public class CssMetaDataTest {
     @Test
     public void testEquals() {
         TestNode testNode = new TestNode();
-        Node node = new Node() {
+        Node node = new AbstractNode() {
         };
 
         CssMetaData testNodeOpacity = get(TestNode.getClassCssMetaData(), "-fx-opacity");

@@ -79,8 +79,10 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DragEvent;
@@ -98,6 +100,7 @@ import javafx.scene.input.SwipeEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.input.ZoomEvent;
+import javafx.scene.shape.Shape;
 import javafx.scene.text.Font;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
@@ -147,6 +150,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.perf.PerformanceTracker;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.CssFlags;
@@ -225,11 +229,6 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * The JavaFX Application Thread is created as part of the startup process for
  * the JavaFX runtime. See the {@link javafx.application.Application} class and
  * the {@link Platform#startup(Runnable)} method for more information.
- * </p>
- *
- * <p>
- * An application should not extend the Node class directly. Doing so may lead to
- * an UnsupportedOperationException being thrown.
  * </p>
  *
  * <h2><a id="StringID">String ID</a></h2>
@@ -412,7 +411,9 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * @since JavaFX 2.0
  */
 @IDProperty("id")
-public abstract class Node implements EventTarget, Styleable {
+public abstract sealed class Node
+        implements EventTarget, Styleable
+        permits AbstractNode, Camera, LightBase, Parent, SubScene, Canvas, ImageView, Shape, Shape3D {
 
     /*
      * Store the singleton instance of the NodeHelper subclass corresponding

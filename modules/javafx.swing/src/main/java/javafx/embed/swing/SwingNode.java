@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,7 @@ import java.security.PrivilegedAction;
 import com.sun.javafx.embed.swing.Disposer;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGExternalNode;
 import com.sun.javafx.sg.prism.NGNode;
@@ -116,7 +117,7 @@ import com.sun.javafx.embed.swing.newimpl.SwingNodeInteropN;
  * </pre>
  * @since JavaFX 8.0
  */
-public class SwingNode extends Node {
+public class SwingNode extends AbstractNode {
     private static boolean isThreadMerged;
 
     static {
