@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package javafx.scene.control.skin;
 
 import static com.sun.javafx.scene.control.skin.Utils.boundedSize;
-
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -59,14 +58,12 @@ import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
-
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.util.Utils;
 
 /**
@@ -631,13 +628,6 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         ScrollPane control = getSkinnable();
         scrollNode = control.getContent();
 
-        ParentTraversalEngine traversalEngine = new ParentTraversalEngine(getSkinnable());
-        traversalEngine.addTraverseListener((node, bounds) -> {
-            // auto-scroll so node is within (0,0),(contentWidth,contentHeight)
-            scrollBoundsIntoView(bounds);
-        });
-        ParentHelper.setTraversalEngine(getSkinnable(), traversalEngine);
-
         if (scrollNode != null) {
             scrollNode.layoutBoundsProperty().addListener(weakNodeListener);
             scrollNode.layoutBoundsProperty().addListener(weakBoundsChangeListener);
@@ -668,6 +658,14 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         };
 
         ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addSceneFocusOwnerListener(control, (n) -> {
+            // auto-scroll node to view
+            Bounds b = TraversalUtils.getLayoutBounds(n, control);
+            if (b != null) {
+                scrollBoundsIntoView(b);
+            }
+        });
 
         lh.addEventFilter(hsb, MouseEvent.MOUSE_PRESSED, barHandler);
         lh.addEventFilter(vsb, MouseEvent.MOUSE_PRESSED, barHandler);

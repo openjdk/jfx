@@ -25,13 +25,11 @@
 package javafx.scene.control.skin;
 
 import java.util.List;
-
 import javafx.css.PseudoClass;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleRole;
-import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.Spinner;
@@ -40,15 +38,10 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-
-import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
-import com.sun.javafx.scene.traversal.Algorithm;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalContext;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**
  * Default skin implementation for the {@link Spinner} control.
@@ -233,25 +226,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
         textField.focusTraversableProperty().bind(control.editableProperty());
 
-        // Following code borrowed from ComboBoxPopupControl, to resolve the
-        // issue initially identified in RT-36902, but specifically (for Spinner)
-        // identified in RT-40625
-        ParentHelper.setTraversalEngine(control,
-                new ParentTraversalEngine(control, new Algorithm() {
-
-            @Override public Node select(Node owner, Direction dir, TraversalContext context) {
-                return null;
-            }
-
-            @Override public Node selectFirst(TraversalContext context) {
-                return null;
-            }
-
-            @Override public Node selectLast(TraversalContext context) {
-                return null;
-            }
-        }));
-
         lh.addChangeListener(control.sceneProperty(), (op) -> {
             // Stop spinning when sceneProperty is modified
             behavior.stopSpinning();
@@ -274,6 +248,11 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // when replacing the skin, the textField (which comes from the control), must first be uninstalled
         // by the old skin in its dispose(), followed by (re-)adding it here.
         getChildren().add(textField);
+
+        // Following code borrowed from ComboBoxPopupControl, to resolve the
+        // issue initially identified in RT-36902, but specifically (for Spinner)
+        // identified in RT-40625
+        getSkinnable().setTraversalPolicy(TraversalUtils.EMPTY_POLICY);
     }
 
     /** {@inheritDoc} */

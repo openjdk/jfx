@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene;
 
-import com.sun.glass.ui.Accessible;
-import com.sun.javafx.tk.TKScene;
-import com.sun.javafx.util.Utils;
 import javafx.scene.Camera;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -35,6 +32,9 @@ import javafx.scene.Scene;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Window;
+import com.sun.glass.ui.Accessible;
+import com.sun.javafx.tk.TKScene;
+import com.sun.javafx.util.Utils;
 
 /**
  * Used to access internal scene methods.
@@ -144,5 +144,4 @@ public final class SceneHelper {
 
         Accessible getAccessible(Scene scene);
     }
-
 }

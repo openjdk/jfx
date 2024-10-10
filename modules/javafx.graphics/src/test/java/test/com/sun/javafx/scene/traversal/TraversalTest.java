@@ -25,34 +25,24 @@
 
 package test.com.sun.javafx.scene.traversal;
 
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.SceneTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalMethod;
-import com.sun.javafx.scene.traversal.TraverseListener;
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.stream.Stream;
-
-import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.traversal.TraversalDirection;
+import javafx.scene.traversal.TraversalMethod;
 import javafx.stage.Stage;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 
 /**
- * Tests for TraversalEngine with the default ContainerTabOrder algorithm,
- * tests if using the WeightedClosestCorner algorithm have been
- * left in comments.
+ * Tests for TraversalEngine with the default ContainerTabOrder policy.
  */
 public final class TraversalTest {
     private Stage stage;
@@ -75,62 +65,45 @@ public final class TraversalTest {
      * </ul>
      */
     private Node[] keypadNodes;
-    private SceneTraversalEngine traversalEngine;
 
     /*
-     * Parameters: [fromNumber], [direction], [toNumber], [toNumberTransformed]
+     * Parameters: [fromNumber], [traversalDirection], [toNumber], [toNumberTransformed]
      */
-    public static Stream<Arguments> data() {
+    private static Stream<Arguments> parameters() {
         return Stream.of(
             /* traversal from center */
-            Arguments.of( 5, Direction.LEFT, 4, 8 ),
-            Arguments.of( 5, Direction.RIGHT, 6, 2 ),
-            Arguments.of( 5, Direction.UP, 2, 4 ),
-            Arguments.of( 5, Direction.DOWN, 8, 6 ),
-
-            // using WeightedClosestCorner, target varies according to transform
-            //Arguments.of( 5, Direction.PREVIOUS, 4, 8 ),
-            //Arguments.of( 5, Direction.NEXT, 6, 2 ),
+            Arguments.of( 5, TraversalDirection.LEFT, 4, 8 ),
+            Arguments.of( 5, TraversalDirection.RIGHT, 6, 2 ),
+            Arguments.of( 5, TraversalDirection.UP, 2, 4 ),
+            Arguments.of( 5, TraversalDirection.DOWN, 8, 6 ),
 
             // using ContainerTabOrder, target is always the same
-            Arguments.of( 5, Direction.PREVIOUS, 4, 4 ),
-            Arguments.of( 5, Direction.NEXT, 6, 6 ),
+            Arguments.of( 5, TraversalDirection.PREVIOUS, 4, 4 ),
+            Arguments.of( 5, TraversalDirection.NEXT, 6, 6 ),
 
             /* traversal from borders (untransformed) */
-            Arguments.of( 4, Direction.LEFT, 4, 7 ),
-            Arguments.of( 6, Direction.RIGHT, 6, 3 ),
-            Arguments.of( 2, Direction.UP, 2, 1 ),
-            Arguments.of( 8, Direction.DOWN, 8, 9 ),
-
-            // using WeightedClosestCorner, target varies according to transform
-            //Arguments.of( 4, Direction.PREVIOUS, 3, 7 ),
-            //Arguments.of( 1, Direction.PREVIOUS, 9, 4 ),
-            //Arguments.of( 6, Direction.NEXT, 7, 3 ),
-            //Arguments.of( 9, Direction.NEXT, 1, 6 ),
+            Arguments.of( 4, TraversalDirection.LEFT, 4, 7 ),
+            Arguments.of( 6, TraversalDirection.RIGHT, 6, 3 ),
+            Arguments.of( 2, TraversalDirection.UP, 2, 1 ),
+            Arguments.of( 8, TraversalDirection.DOWN, 8, 9 ),
 
             // using ContainerTabOrder, target always the same
-            Arguments.of( 4, Direction.PREVIOUS, 3, 3 ),
-            Arguments.of( 1, Direction.PREVIOUS, 9, 9 ),
-            Arguments.of( 6, Direction.NEXT, 7, 7 ),
-            Arguments.of( 9, Direction.NEXT, 1, 1 ),
+            Arguments.of( 4, TraversalDirection.PREVIOUS, 3, 3 ),
+            Arguments.of( 1, TraversalDirection.PREVIOUS, 9, 9 ),
+            Arguments.of( 6, TraversalDirection.NEXT, 7, 7 ),
+            Arguments.of( 9, TraversalDirection.NEXT, 1, 1 ),
 
             /* traversal from borders (transformed) */
-            Arguments.of( 2, Direction.RIGHT, 3, 2 ),
-            Arguments.of( 8, Direction.LEFT, 7, 8 ),
-            Arguments.of( 4, Direction.UP, 1, 4 ),
-            Arguments.of( 6, Direction.DOWN, 9, 6 ),
-
-            // using WeightedClosestCorner, target varies according to transform
-            //Arguments.of( 8, Direction.PREVIOUS, 7, 1 ),
-            //Arguments.of( 7, Direction.PREVIOUS, 6, 3 ),
-            //Arguments.of( 2, Direction.NEXT, 3, 9 ),
-            //Arguments.of( 3, Direction.NEXT, 4, 7)}
+            Arguments.of( 2, TraversalDirection.RIGHT, 3, 2 ),
+            Arguments.of( 8, TraversalDirection.LEFT, 7, 8 ),
+            Arguments.of( 4, TraversalDirection.UP, 1, 4 ),
+            Arguments.of( 6, TraversalDirection.DOWN, 9, 6 ),
 
             // using ContainerTabOrder, target always the same
-            Arguments.of( 8, Direction.PREVIOUS, 7, 7 ),
-            Arguments.of( 7, Direction.PREVIOUS, 6, 6 ),
-            Arguments.of( 2, Direction.NEXT, 3, 3 ),
-            Arguments.of( 3, Direction.NEXT, 4, 4)
+            Arguments.of( 8, TraversalDirection.PREVIOUS, 7, 7 ),
+            Arguments.of( 7, TraversalDirection.PREVIOUS, 6, 6 ),
+            Arguments.of( 2, TraversalDirection.NEXT, 3, 3 ),
+            Arguments.of( 3, TraversalDirection.NEXT, 4, 4)
         );
     }
 
@@ -140,9 +113,7 @@ public final class TraversalTest {
         scene = new Scene(new Group(), 500, 500);
         stage.setScene(scene);
 
-        traversalEngine = new SceneTraversalEngine(scene);
-
-        keypadNodes = createKeypadNodesInScene(scene, traversalEngine);
+        keypadNodes = createKeypadNodesInScene(scene);
 
         stage.show();
         stage.requestFocus();
@@ -150,58 +121,42 @@ public final class TraversalTest {
 
     @AfterEach
     public void tearDown() {
+        if (stage != null) {
+            stage.hide();
+        }
         stage = null;
         scene = null;
         keypadNodes = null;
-        traversalEngine = null;
     }
 
     @ParameterizedTest
-    @MethodSource("data")
-    public void untransformedTraversalTest(int fromNumber,
-                                           Direction direction,
-                                           int toNumber,
-                                           int toNumberTransformed) {
+    @MethodSource("parameters")
+    public void untransformedTraversalTest(
+        int fromNumber,
+        TraversalDirection direction,
+        int toNumber,
+        int toNumberTransformed)
+    {
         keypadNodes[fromNumber - 1].requestFocus();
-        traversalEngine.trav(keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
+        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
         assertTrue(keypadNodes[toNumber - 1].isFocused());
     }
 
     @ParameterizedTest
-    @MethodSource("data")
-    public void transformedTraversalTest(int fromNumber,
-                                         Direction direction,
-                                         int toNumber,
-                                         int toNumberTransformed) {
+    @MethodSource("parameters")
+    public void transformedTraversalTest(
+        int fromNumber,
+        TraversalDirection direction,
+        int toNumber,
+        int toNumberTransformed)
+    {
         scene.getRoot().setRotate(90);
         keypadNodes[fromNumber - 1].requestFocus();
-        traversalEngine.trav(keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
+        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
         assertTrue(keypadNodes[toNumberTransformed - 1].isFocused());
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void traverseListenerTest(int fromNumber,
-                                     Direction direction,
-                                     int toNumber,
-                                     int toNumberTransformed) {
-        final TraverseListenerImpl traverseListener =
-                new TraverseListenerImpl();
-        traversalEngine.addTraverseListener(traverseListener);
-        keypadNodes[fromNumber - 1].requestFocus();
-        traversalEngine.trav(keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
-        if (fromNumber != toNumber) {
-            assertEquals(1, traverseListener.getCallCounter());
-            assertSame(keypadNodes[toNumber - 1],
-                       traverseListener.getLastNode());
-        } else {
-            assertEquals(0, traverseListener.getCallCounter());
-        }
-    }
-
-    private static Node[] createKeypadNodesInScene(
-            final Scene scene,
-            final TraversalEngine traversalEngine) {
+    private static Node[] createKeypadNodesInScene(final Scene scene) {
         final Node[] keypad = new Node[9];
 
         int index = 0;
@@ -218,25 +173,5 @@ public final class TraversalTest {
         }
 
         return keypad;
-    }
-
-    private static final class TraverseListenerImpl
-            implements TraverseListener {
-        private int callCounter;
-        private Node lastNode;
-
-        public int getCallCounter() {
-            return callCounter;
-        }
-
-        public Node getLastNode() {
-            return lastNode;
-        }
-
-        @Override
-        public void onTraverse(final Node node, final Bounds bounds) {
-            ++callCounter;
-            lastNode = node;
-        }
     }
 }

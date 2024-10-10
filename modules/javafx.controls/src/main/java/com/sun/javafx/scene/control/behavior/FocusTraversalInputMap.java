@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,23 +24,21 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalMethod;
-import javafx.event.EventTarget;
-import javafx.scene.Node;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
-import javafx.scene.input.KeyEvent;
-
-import java.util.List;
-
-import static com.sun.javafx.scene.control.inputmap.InputMap.*;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.LEFT;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.TAB;
 import static javafx.scene.input.KeyCode.UP;
+import java.util.List;
+import javafx.event.EventTarget;
+import javafx.scene.Node;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.traversal.FocusTraversal;
+import javafx.scene.traversal.TraversalDirection;
+import javafx.scene.traversal.TraversalMethod;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 
 public class FocusTraversalInputMap {
 
@@ -89,12 +87,12 @@ public class FocusTraversalInputMap {
      * @param dir The direction to traverse
      * @param method The focus traversal method
      */
-    public static void traverse(final Node node, final Direction dir, TraversalMethod method) {
+    public static void traverse(final Node node, final TraversalDirection dir, TraversalMethod method) {
         if (node == null) {
             throw new IllegalArgumentException("Attempting to traverse on a null Node. " +
                     "Most probably a KeyEvent has been fired with a null target specified.");
         }
-        NodeHelper.traverse(node, dir, method);
+        FocusTraversal.traverse(node, dir, method);
     }
 
     /**
@@ -102,7 +100,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node above the current one.
      */
     public static final void traverseUp(KeyEvent e) {
-        traverse(getNode(e), com.sun.javafx.scene.traversal.Direction.UP, TraversalMethod.KEY);
+        traverse(getNode(e), TraversalDirection.UP, TraversalMethod.KEY);
     }
 
     /**
@@ -110,7 +108,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node below the current one.
      */
     public static final void traverseDown(KeyEvent e) {
-        traverse(getNode(e), com.sun.javafx.scene.traversal.Direction.DOWN, TraversalMethod.KEY);
+        traverse(getNode(e), TraversalDirection.DOWN, TraversalMethod.KEY);
     }
 
     /**
@@ -118,7 +116,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node left of the current one.
      */
     public static final void traverseLeft(KeyEvent e) {
-        traverse(getNode(e), com.sun.javafx.scene.traversal.Direction.LEFT, TraversalMethod.KEY);
+        traverse(getNode(e), TraversalDirection.LEFT, TraversalMethod.KEY);
     }
 
     /**
@@ -126,7 +124,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node right of the current one.
      */
     public static final void traverseRight(KeyEvent e) {
-        traverse(getNode(e), com.sun.javafx.scene.traversal.Direction.RIGHT, TraversalMethod.KEY);
+        traverse(getNode(e), TraversalDirection.RIGHT, TraversalMethod.KEY);
     }
 
     /**
@@ -134,7 +132,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node in the focus traversal cycle.
      */
     public static final void traverseNext(KeyEvent e) {
-        traverse(getNode(e), com.sun.javafx.scene.traversal.Direction.NEXT, TraversalMethod.KEY);
+        traverse(getNode(e), TraversalDirection.NEXT, TraversalMethod.KEY);
     }
 
     /**
@@ -142,7 +140,7 @@ public class FocusTraversalInputMap {
      * go the previous focusTraversable Node in the focus traversal cycle.
      */
     public static final void traversePrevious(KeyEvent e) {
-        traverse(getNode(e), com.sun.javafx.scene.traversal.Direction.PREVIOUS, TraversalMethod.KEY);
+        traverse(getNode(e), TraversalDirection.PREVIOUS, TraversalMethod.KEY);
     }
 
     private static Node getNode(KeyEvent e) {

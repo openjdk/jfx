@@ -25,24 +25,26 @@
 
 package com.sun.javafx.scene.control;
 
+import static com.sun.javafx.PlatformUtil.isMac;
+import static java.time.temporal.ChronoField.DAY_OF_WEEK;
+import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
+import static java.time.temporal.ChronoUnit.DAYS;
+import static java.time.temporal.ChronoUnit.MONTHS;
+import static java.time.temporal.ChronoUnit.WEEKS;
+import static java.time.temporal.ChronoUnit.YEARS;
 import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.chrono.ChronoLocalDate;
+import java.time.chrono.Chronology;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DecimalStyle;
-import java.time.chrono.Chronology;
-import java.time.chrono.ChronoLocalDate;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.ValueRange;
 import java.time.temporal.WeekFields;
-import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-
-import static java.time.temporal.ChronoField.*;
-import static java.time.temporal.ChronoUnit.*;
-
-import com.sun.javafx.scene.control.skin.*;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -51,8 +53,8 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.DatePicker;
 import javafx.scene.control.DateCell;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -61,15 +63,13 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.scene.layout.StackPane;
-
+import javafx.scene.layout.VBox;
+import javafx.scene.traversal.FocusTraversal;
+import javafx.scene.traversal.TraversalDirection;
+import javafx.scene.traversal.TraversalMethod;
+import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalMethod;
-
-import static com.sun.javafx.PlatformUtil.*;
-import com.sun.javafx.scene.NodeHelper;
 
 /**
  * The full content for the DatePicker popup. This class could
@@ -171,7 +171,7 @@ public class DatePickerContent extends VBox {
                 if (newFocusOwner == gridPane) {
                     if (oldFocusOwner instanceof DateCell) {
                         // Backwards traversal, skip gridPane.
-                        NodeHelper.traverse(gridPane, Direction.PREVIOUS, TraversalMethod.DEFAULT);
+                        FocusTraversal.traverse(gridPane, TraversalDirection.PREVIOUS, TraversalMethod.DEFAULT);
                     } else {
                         // Forwards traversal, pass focus to day cell.
                         if (lastFocusedDayCell != null) {

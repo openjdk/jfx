@@ -47,16 +47,12 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.stage.WindowEvent;
 import javafx.util.StringConverter;
-import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
-import com.sun.javafx.scene.traversal.Algorithm;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalContext;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**
  * An abstract class that extends the functionality of {@link ComboBoxBaseSkin}
@@ -191,21 +187,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         }
 
         // Fix for RT-36902, where focus traversal was getting stuck inside the ComboBox
-        ParentHelper.setTraversalEngine(comboBoxBase,
-                new ParentTraversalEngine(comboBoxBase, new Algorithm() {
-
-            @Override public Node select(Node owner, Direction dir, TraversalContext context) {
-                return null;
-            }
-
-            @Override public Node selectFirst(TraversalContext context) {
-                return null;
-            }
-
-            @Override public Node selectLast(TraversalContext context) {
-                return null;
-            }
-        }));
+        comboBoxBase.setTraversalPolicy(TraversalUtils.EMPTY_POLICY);
 
         updateEditable();
     }

@@ -25,25 +25,25 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.ParentHelper;
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.traversal.Algorithm;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalContext;
-
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.SetChangeListener;
+import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -56,8 +56,8 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.CustomMenuItem;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SkinBase;
@@ -67,20 +67,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableProperty;
-import javafx.css.CssMetaData;
-
-import javafx.css.converter.EnumConverter;
-import javafx.css.converter.SizeConverter;
-import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
-import com.sun.javafx.scene.traversal.Direction;
-
-import javafx.css.Styleable;
+import javafx.scene.traversal.TraversalDirection;
+import javafx.scene.traversal.TraversalPolicy;
 import javafx.stage.WindowEvent;
-
-import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 
 /**
  * Default skin implementation for the {@link ToolBar} control.
@@ -111,7 +103,6 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     private double savedPrefWidth = 0;
     private double savedPrefHeight = 0;
     private boolean needsUpdate = false;
-    private final ParentTraversalEngine engine;
     private final BehaviorBase<ToolBar> behavior;
 
     private ListChangeListener<Node> itemsListener;
@@ -139,14 +130,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         initialize();
         registerChangeListener(control.orientationProperty(), e -> initialize());
 
-        engine = new ParentTraversalEngine(getSkinnable(), new Algorithm() {
-
-            private Node selectPrev(int from, TraversalContext context) {
+        getSkinnable().setTraversalPolicy(new TraversalPolicy() {
+            private Node selectPrev(int from, Parent root) {
                 for (int i = from; i >= 0; --i) {
                     Node n = box.getChildren().get(i);
                     if (n.isDisabled() || !NodeHelper.isTreeShowing(n)) continue;
-                    if (n instanceof Parent) {
-                        Node selected = context.selectLastInParent((Parent)n);
+                    if (n instanceof Parent p) {
+                        Node selected = TraversalPolicy.getDefault().selectLast(p);
                         if (selected != null) return selected;
                     }
                     if (n.isFocusTraversable() ) {
@@ -156,15 +146,15 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 return null;
             }
 
-            private Node selectNext(int from, TraversalContext context) {
+            private Node selectNext(int from, Parent root) {
                 for (int i = from, max = box.getChildren().size(); i < max; ++i) {
                     Node n = box.getChildren().get(i);
                     if (n.isDisabled() || !NodeHelper.isTreeShowing(n)) continue;
                     if (n.isFocusTraversable()) {
                         return n;
                     }
-                    if (n instanceof Parent) {
-                        Node selected = context.selectFirstInParent((Parent)n);
+                    if (n instanceof Parent p) {
+                        Node selected = TraversalPolicy.getDefault().selectFirst(p);
                         if (selected != null) return selected;
                     }
                 }
@@ -172,7 +162,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             }
 
             @Override
-            public Node select(Node owner, Direction dir, TraversalContext context) {
+            public Node select(Parent root, Node owner, TraversalDirection dir) {
 
                 dir = dir.getDirectionForNodeOrientation(control.getEffectiveNodeOrientation());
 
@@ -181,7 +171,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                     if (dir.isForward()) {
                         return null;
                     } else {
-                        Node selected = selectPrev(boxChildren.size() - 1, context);
+                        Node selected = selectPrev(boxChildren.size() - 1, root);
                         if (selected != null) return selected;
                     }
                 }
@@ -194,22 +184,24 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                     while (!boxChildren.contains(item)) {
                         item = item.getParent();
                     }
-                    Node selected = context.selectInSubtree(item, owner, dir);
+                    Node selected = TraversalPolicy.getDefault().select(item, owner, dir);
                     if (selected != null) return selected;
                     idx = boxChildren.indexOf(item);
-                    if (dir == Direction.NEXT) dir = Direction.NEXT_IN_LINE;
+                    if (dir == TraversalDirection.NEXT) {
+                        dir = TraversalDirection.NEXT_IN_LINE;
+                    }
                 }
 
                 if (idx >= 0) {
                     if (dir.isForward()) {
-                        Node selected = selectNext(idx + 1, context);
+                        Node selected = selectNext(idx + 1, root);
                         if (selected != null) return selected;
                         if (overflow) {
                             overflowMenu.requestFocus();
                             return overflowMenu;
                         }
                     } else {
-                        Node selected = selectPrev(idx - 1, context);
+                        Node selected = selectPrev(idx - 1, root);
                         if (selected != null) return selected;
                     }
                 }
@@ -217,8 +209,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             }
 
             @Override
-            public Node selectFirst(TraversalContext context) {
-                Node selected = selectNext(0, context);
+            public Node selectFirst(Parent root) {
+                Node selected = selectNext(0, root);
                 if (selected != null) return selected;
                 if (overflow) {
                     return overflowMenu;
@@ -227,14 +219,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             }
 
             @Override
-            public Node selectLast(TraversalContext context) {
+            public Node selectLast(Parent root) {
                 if (overflow) {
                     return overflowMenu;
                 }
-                return selectPrev(box.getChildren().size() - 1, context);
+                return selectPrev(box.getChildren().size() - 1, root);
             }
         });
-        ParentHelper.setTraversalEngine(getSkinnable(), engine);
 
         registerChangeListener(control.focusedProperty(), ov -> {
             if (getSkinnable().isFocused()) {
@@ -636,10 +627,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 overflowBox.getChildren().add(node);
                 if (node.isFocused()) {
                     if (!box.getChildren().isEmpty()) {
-                        Node last = engine.selectLast();
-                        if (last != null) {
-                            last.requestFocus();
-                        }
+                        selectAndFocusLast();
                     } else {
                         overflowMenu.requestFocus();
                     }
@@ -651,13 +639,20 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         overflow = !overflowBox.getChildren().isEmpty();
         overflowNodeIndex = newOverflowNodeIndex;
         if (!overflow && overflowMenu.isFocused()) {
-            Node last = engine.selectLast();
+            selectAndFocusLast();
+        }
+        overflowMenu.setVisible(overflow);
+        overflowMenu.setManaged(overflow);
+    }
+
+    private void selectAndFocusLast() {
+        TraversalPolicy p = getSkinnable().getTraversalPolicy();
+        if (p != null) {
+            Node last = p.selectLast(getSkinnable());
             if (last != null) {
                 last.requestFocus();
             }
         }
-        overflowMenu.setVisible(overflow);
-        overflowMenu.setManaged(overflow);
     }
 
     private void addNodesToToolBar() {

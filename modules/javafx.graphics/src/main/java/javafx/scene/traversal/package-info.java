@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,9 @@
  * questions.
  */
 
-package com.sun.javafx.scene.traversal;
-
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-
 /**
- * Traversal engine for Scene.
+ * Provides the set of classes for focus traversal.
+ *
+ * @since 24
  */
-public final class SceneTraversalEngine extends TopMostTraversalEngine{
-
-    private final Scene scene;
-
-    public SceneTraversalEngine(Scene scene) {
-        this.scene = scene;
-    }
-
-    @Override
-    protected Parent getRoot() {
-        return scene.getRoot();
-    }
-}
+package javafx.scene.traversal;

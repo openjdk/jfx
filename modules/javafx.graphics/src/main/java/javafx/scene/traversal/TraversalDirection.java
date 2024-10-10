@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,46 +22,59 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-package com.sun.javafx.scene.traversal;
+package javafx.scene.traversal;
 
 import javafx.geometry.NodeOrientation;
 
 /**
- * Specifies the direction of traversal.
+ * Specifies the direction of focus traversal.
+ *
+ * @since 24
  */
-public enum Direction {
+public enum TraversalDirection {
+    /** Moves focus downward. */
+    DOWN,
+    /** Moves focus left. */
+    LEFT,
+    /** Moves focus to the next focusable Node. */
+    NEXT,
+    /** Moving focus to the next in line focusable Node (like NEXT, but does not traverse into the current parent). */
+    NEXT_IN_LINE,
+    /** Moves focus to the previous focusable Node. */
+    PREVIOUS,
+    /** Moves focus right. */
+    RIGHT,
+    /** Moves focus upward. */
+    UP;
 
-    UP(false),
-    DOWN(true),
-    LEFT(false),
-    RIGHT(true),
-    NEXT(true),
-    NEXT_IN_LINE(true), // Like NEXT, but does not traverse into the current parent
-    PREVIOUS(false);
-    private final boolean forward;
-
-    Direction(boolean forward) {
-        this.forward = forward;
-    }
-
+    /**
+     * Returns true if the traversal is considered a forward movement.
+     * @return true if forward
+     */
     public boolean isForward() {
-        return forward;
+        switch (this) {
+        case UP:
+        case LEFT:
+        case PREVIOUS:
+            return false;
+        }
+        return true;
     }
 
     /**
      * Returns the direction with respect to the node's orientation. It affect's only arrow keys however, so it's not
      * an error to ignore this call if handling only next/previous traversal.
-     * @param orientation
-     * @return
+     *
+     * @param orientation the node orientation
+     * @return the traverse direction
      */
-    public Direction getDirectionForNodeOrientation(NodeOrientation orientation) {
+    public TraversalDirection getDirectionForNodeOrientation(NodeOrientation orientation) {
         if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
             switch (this) {
-                case LEFT:
-                    return RIGHT;
-                case RIGHT:
-                    return LEFT;
+            case LEFT:
+                return RIGHT;
+            case RIGHT:
+                return LEFT;
             }
         }
         return this;

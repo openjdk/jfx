@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,12 +23,23 @@
  * questions.
  */
 
-package com.sun.javafx.scene.traversal;
+package javafx.scene.traversal;
 
-public abstract class TopMostTraversalEngineShim extends TopMostTraversalEngine {
+/**
+ * Specifies the traversal method.
+ *
+ * @since 24
+ */
+public enum TraversalMethod {
+    /**
+     * Traversal was initiated programmatically or by clicking.
+     */
+    DEFAULT,
 
-    public TopMostTraversalEngineShim(Algorithm algorithm) {
-        super(algorithm);
-    }
-
+    /**
+     * Traversal was initiated by pressing a key on the keyboard.
+     * This method results in the {@code Node} visibly indicating focus by setting
+     * {@link javafx.scene.Node#focusVisibleProperty() Node.focusVisibleProperty}.
+     */
+    KEY
 }
