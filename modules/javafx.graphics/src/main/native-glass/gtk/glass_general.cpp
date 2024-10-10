@@ -66,6 +66,10 @@ jmethodID jViewNotifyInputMethodDraw;
 jmethodID jViewNotifyInputMethodCaret;
 jmethodID jViewNotifyPreeditMode;
 jmethodID jViewNotifyMenu;
+jmethodID jViewNotifyBeginTouch;
+jmethodID jViewNotifyNextTouch;
+jmethodID jViewNotifyEndTouch;
+
 jfieldID  jViewPtr;
 
 jmethodID jWindowNotifyResize;
@@ -232,6 +236,12 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jViewNotifyInputMethod = env->GetMethodID(clazz, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyMenu = env->GetMethodID(clazz, "notifyMenu", "(IIIIZ)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jViewNotifyBeginTouch = env->GetMethodID(clazz, "notifyBeginTouchEvent", "(IZI)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jViewNotifyNextTouch = env->GetMethodID(clazz, "notifyNextTouchEvent", "(IJIIII)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jViewNotifyEndTouch = env->GetMethodID(clazz, "notifyEndTouchEvent", "()V");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewPtr = env->GetFieldID(clazz, "ptr", "J");
     if (env->ExceptionCheck()) return JNI_ERR;

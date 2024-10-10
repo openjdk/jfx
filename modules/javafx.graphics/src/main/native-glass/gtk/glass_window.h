@@ -30,6 +30,7 @@
 
 #include <jni.h>
 #include <set>
+#include <map>
 #include <vector>
 
 #include "DeletedMemDebug.h"
@@ -92,6 +93,16 @@ struct WindowGeometry {
     WindowFrameExtents extents;
 };
 
+struct TouchPoint{
+  jint x;
+  jint y;
+  jint x_abs;
+  jint y_abs;
+
+  TouchPoint() : x(0), y(0), x_abs(0), y_abs(0) {}
+  TouchPoint(const GdkEventTouch* e) : x((jint)e->x), y((jint)e->y), x_abs((jint)e->x_root), y_abs((jint)e->y_root) {}
+};
+
 class WindowContextTop;
 
 class WindowContext : public DeletedMemDebug<0xCC> {
@@ -142,6 +153,7 @@ public:
     virtual void process_mouse_motion(GdkEventMotion*) = 0;
     virtual void process_mouse_scroll(GdkEventScroll*) = 0;
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
+    virtual void process_touch(GdkEventTouch*) = 0;
     virtual void process_key(GdkEventKey*) = 0;
     virtual void process_state(GdkEventWindowState*) = 0;
 
@@ -177,7 +189,10 @@ class WindowContextBase: public WindowContext {
     size_t events_processing_cnt;
     bool can_be_deleted;
 protected:
+    typedef std::map<GdkEventSequence*, TouchPoint> TouchPointsMap;
+
     std::set<WindowContextTop*> children;
+    TouchPointsMap touchPoints;
     jobject jwindow;
     jobject jview;
     GtkWidget* gtk_widget;
@@ -241,6 +256,7 @@ public:
     void process_mouse_cross(GdkEventCrossing*);
     void process_key(GdkEventKey*);
     void process_state(GdkEventWindowState*);
+    void process_touch(GdkEventTouch*);
 
     void notify_state(jint);
 
