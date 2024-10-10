@@ -52,7 +52,7 @@ import java.util.Objects;
  * the Region's right edge.
  * @since JavaFX 8.0
  */
-public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
+public final class BackgroundPosition implements Interpolatable<BackgroundPosition> {
     /**
      * The default BackgroundPosition for any BackgroundImage. The default
      * is to have no insets and to be defined as 0% and 0%. That is, the
@@ -76,7 +76,7 @@ public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final Side getHorizontalSide() { return horizontalSide; }
-    final Side horizontalSide;
+    private final Side horizontalSide;
 
     /**
      * The side along the vertical axis to which the BackgroundImage is
@@ -85,7 +85,7 @@ public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final Side getVerticalSide() { return verticalSide; }
-    final Side verticalSide;
+    private final Side verticalSide;
 
     /**
      * The value indicating the position of the BackgroundImage relative
@@ -102,7 +102,7 @@ public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
      *                    otherwise <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getHorizontalPosition() { return horizontalPosition; }
-    final double horizontalPosition;
+    private final double horizontalPosition;
 
     /**
      * The value indicating the position of the BackgroundImage relative
@@ -118,7 +118,7 @@ public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
      *                    otherwise <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getVerticalPosition() { return verticalPosition; }
-    final double verticalPosition;
+    private final double verticalPosition;
 
     /**
      * Specifies whether the {@link #getHorizontalPosition() horizontalPosition} should
@@ -128,7 +128,7 @@ public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isHorizontalAsPercentage() { return horizontalAsPercentage; }
-    final boolean horizontalAsPercentage;
+    private final boolean horizontalAsPercentage;
 
     /**
      * Specifies whether the {@link #getVerticalPosition() verticalPosition} should
@@ -138,7 +138,7 @@ public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isVerticalAsPercentage() { return verticalAsPercentage; }
-    final boolean verticalAsPercentage;
+    private final boolean verticalAsPercentage;
 
     /**
      * A cached has code value.

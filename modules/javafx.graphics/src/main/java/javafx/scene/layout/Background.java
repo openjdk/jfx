@@ -144,7 +144,7 @@ public final class Background implements Interpolatable<Background> {
      * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BackgroundFill> getFills() { return fills; }
-    final List<BackgroundFill> fills;
+    private final List<BackgroundFill> fills;
 
     /**
      * The list of BackgroundImages which together define the image portion
@@ -155,7 +155,7 @@ public final class Background implements Interpolatable<Background> {
      * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BackgroundImage> getImages() { return images; }
-    final List<BackgroundImage> images;
+    private final List<BackgroundImage> images;
 
     /**
      * The outsets of this Background. This represents the largest
@@ -169,7 +169,7 @@ public final class Background implements Interpolatable<Background> {
      * @interpolationType the intermediate value is derived from {@link #getFills() fills}
      */
     public final Insets getOutsets() { return outsets; }
-    final Insets outsets;
+    private final Insets outsets;
 
     /**
      * Gets whether the background is empty. It is empty if there are no fills or images.
@@ -185,18 +185,17 @@ public final class Background implements Interpolatable<Background> {
     private final boolean hasOpaqueFill;
 
     /**
-     * Package-private immutable fields referring to the opaque insets
-     * of this Background.
+     * The opaque insets of this Background.
      */
     private final double opaqueFillTop, opaqueFillRight, opaqueFillBottom, opaqueFillLeft;
-    final boolean hasPercentageBasedOpaqueFills;
+    private final boolean hasPercentageBasedOpaqueFills;
 
     /**
      * True if there are any fills that are in some way based on the size of the region.
      * For example, if a CornerRadii on the fill is percentage based in either or both
      * dimensions.
      */
-    final boolean hasPercentageBasedFills;
+    private final boolean hasPercentageBasedFills;
 
     /**
      * The cached hash code computation for the Background. One very big
@@ -314,7 +313,7 @@ public final class Background implements Interpolatable<Background> {
             // The common case is to NOT have percent based radii
             final boolean b = fill.getRadii().hasPercentBasedRadii;
             hasPercentFillRadii |= b;
-            if (fill.fill.isOpaque()) {
+            if (fill.getFill().isOpaque()) {
                 opaqueFill = true;
                 if (b) {
                     hasPercentOpaqueInsets = true;
@@ -452,7 +451,7 @@ public final class Background implements Interpolatable<Background> {
                     final double fillBottom = fillInsets.getBottom();
                     final double fillLeft = fillInsets.getLeft();
 
-                    if (fill.fill.isOpaque()) {
+                    if (fill.getFill().isOpaque()) {
                         // Some possible configurations:
                         //     (a) rect1 is completely contained by rect2
                         //     (b) rect2 is completely contained by rect1
@@ -532,7 +531,7 @@ public final class Background implements Interpolatable<Background> {
             if (bi.opaque == null) {
                 // If the image is not yet loaded, just skip it
                 // Note: Unit test wants this to be com.sun.javafx.tk.PlatformImage, not com.sun.prism.Image
-                final com.sun.javafx.tk.PlatformImage platformImage = acc.getImageProperty(bi.image).get();
+                final com.sun.javafx.tk.PlatformImage platformImage = acc.getImageProperty(bi.getImage()).get();
                 if (platformImage == null) continue;
 
                 // The image has been loaded, so update the opaque flag
@@ -547,9 +546,9 @@ public final class Background implements Interpolatable<Background> {
             // and we know whether it is opaque or not. Of course, we only care about processing
             // opaque images.
             if (bi.opaque) {
-                if (bi.size.cover ||
-                        (bi.size.height == BackgroundSize.AUTO && bi.size.width == BackgroundSize.AUTO &&
-                        bi.size.widthAsPercentage && bi.size.heightAsPercentage)) {
+                if (bi.size.isCover() ||
+                        (bi.size.getHeight() == BackgroundSize.AUTO && bi.size.getWidth() == BackgroundSize.AUTO &&
+                        bi.size.isWidthAsPercentage() && bi.size.isHeightAsPercentage())) {
                     // If the size mode is "cover" or AUTO, AUTO, and percentage based, then we're done -- we can simply
                     // accumulate insets of "0"
                     opaqueRegionTop = Double.isNaN(opaqueRegionTop) ? 0 : Math.min(0, opaqueRegionTop);
@@ -585,16 +584,16 @@ public final class Background implements Interpolatable<Background> {
 
                     // We know that one or the other dimension is not filled, so we have to compute the right
                     // width / height. This is basically a big copy/paste from NGRegion! Blah!
-                    final double w = bi.size.widthAsPercentage ? bi.size.width * width : bi.size.width;
-                    final double h = bi.size.heightAsPercentage ? bi.size.height * height : bi.size.height;
-                    final double imgUnscaledWidth = bi.image.getWidth();
-                    final double imgUnscaledHeight = bi.image.getHeight();
+                    final double w = bi.size.isWidthAsPercentage() ? bi.size.getWidth() * width : bi.size.getWidth();
+                    final double h = bi.size.isHeightAsPercentage() ? bi.size.getHeight() * height : bi.size.getHeight();
+                    final double imgUnscaledWidth = bi.getImage().getWidth();
+                    final double imgUnscaledHeight = bi.getImage().getHeight();
 
                     // Now figure out the width and height of each tile to be drawn. The actual image
                     // dimensions may be one thing, but we need to figure out what the size of the image
                     // in the destination is going to be.
                     final double tileWidth, tileHeight;
-                    if (bi.size.contain) {
+                    if (bi.size.isContain()) {
                         // In the case of "contain", we compute the destination size based on the largest
                         // possible scale such that the aspect ratio is maintained, yet one side of the
                         // region is completely filled.
@@ -603,7 +602,7 @@ public final class Background implements Interpolatable<Background> {
                         final double scale = Math.min(scaleX, scaleY);
                         tileWidth = Math.ceil(scale * imgUnscaledWidth);
                         tileHeight = Math.ceil(scale * imgUnscaledHeight);
-                    } else if (bi.size.width >= 0 && bi.size.height >= 0) {
+                    } else if (bi.size.getWidth() >= 0 && bi.size.getHeight() >= 0) {
                         // The width and height have been expressly defined. Note that AUTO is -1,
                         // and all other negative values are disallowed, so by checking >= 0, we
                         // are essentially saying "if neither is AUTO"

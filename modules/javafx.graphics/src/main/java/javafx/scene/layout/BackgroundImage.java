@@ -59,7 +59,7 @@ public final class BackgroundImage implements Interpolatable<BackgroundImage> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final Image getImage() { return image; }
-    final Image image;
+    private final Image image;
 
     /**
      * Indicates in what manner (if at all) the background image

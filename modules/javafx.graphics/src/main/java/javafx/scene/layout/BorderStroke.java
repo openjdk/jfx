@@ -48,7 +48,7 @@ import java.util.Objects;
  *
  * @since JavaFX 8.0
  */
-public class BorderStroke implements Interpolatable<BorderStroke> {
+public final class BorderStroke implements Interpolatable<BorderStroke> {
     /**
      * The default insets when "thin" is specified.
      */
@@ -78,7 +78,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType see {@link Paint}
      */
     public final Paint getTopStroke() { return topStroke; }
-    final Paint topStroke;
+    private final Paint topStroke;
     // TODO: The spec says the default color is "currentColor", which appears to mean
     // by default the color is "inherit". So we should file a JIRA on this so that
     // we use inherit. But first I'd like a performance analysis.
@@ -92,7 +92,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType see {@link Paint}
      */
     public final Paint getRightStroke() { return rightStroke; }
-    final Paint rightStroke;
+    private final Paint rightStroke;
 
     /**
      * Defines the fill of bottom side of this border. If {@code null}, then the
@@ -103,7 +103,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType see {@link Paint}
      */
     public final Paint getBottomStroke() { return bottomStroke; }
-    final Paint bottomStroke;
+    private final Paint bottomStroke;
 
     /**
      * Defines the fill of left side of this border. If {@code null}, then the
@@ -114,7 +114,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType see {@link Paint}
      */
     public final Paint getLeftStroke() { return leftStroke; }
-    final Paint leftStroke;
+    private final Paint leftStroke;
 
     /**
      * Defines the style of top side of this border.
@@ -124,7 +124,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getTopStyle() { return topStyle; }
-    final BorderStrokeStyle topStyle;
+    private final BorderStrokeStyle topStyle;
 
     /**
      * Defines the style of right side of this border. If {@code null}, then
@@ -135,7 +135,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getRightStyle() { return rightStyle; }
-    final BorderStrokeStyle rightStyle;
+    private final BorderStrokeStyle rightStyle;
 
     /**
      * Defines the style of bottom side of this border. If {@code null}, then
@@ -147,7 +147,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getBottomStyle() { return bottomStyle; }
-    final BorderStrokeStyle bottomStyle;
+    private final BorderStrokeStyle bottomStyle;
 
     /**
      * Defines the style of left side of this border. If {@code null}, then
@@ -159,7 +159,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getLeftStyle() { return leftStyle; }
-    final BorderStrokeStyle leftStyle;
+    private final BorderStrokeStyle leftStyle;
 
     /**
      * Defines the thickness of each side of the {@code BorderStroke}. This will never
@@ -169,7 +169,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final BorderWidths getWidths() { return widths; }
-    final BorderWidths widths;
+    private final BorderWidths widths;
 
     /**
      * Defines the insets of each side of the {@code BorderStroke}. This will never
@@ -179,7 +179,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final Insets getInsets() { return insets; }
-    final Insets insets;
+    private final Insets insets;
 
     // These two are used by Border to compute the insets and outsets of the border
     final Insets innerEdge;
@@ -233,9 +233,9 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
         // widths, you get 0 instead of whatever was specified. See 4.3 of the CSS Spec.
 
         // Strokes can only differ in width
-        strokeUniform = this.widths.left == this.widths.top &&
-                        this.widths.left == this.widths.right &&
-                        this.widths.left == this.widths.bottom;
+        strokeUniform = this.widths.getLeft() == this.widths.getTop() &&
+                        this.widths.getLeft() == this.widths.getRight() &&
+                        this.widths.getLeft() == this.widths.getBottom();
 
         // Since insets are empty, don't have to worry about it
         innerEdge = new Insets(
@@ -307,9 +307,9 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
                 this.leftStroke.equals(this.rightStroke) &&
                 this.leftStroke.equals(this.bottomStroke);
         final boolean widthsSame =
-                this.widths.left == this.widths.top &&
-                this.widths.left == this.widths.right &&
-                this.widths.left == this.widths.bottom;
+                this.widths.getLeft() == this.widths.getTop() &&
+                this.widths.getLeft() == this.widths.getRight() &&
+                this.widths.getLeft() == this.widths.getBottom();
         final boolean stylesSame =
                 this.leftStyle.equals(this.topStyle) &&
                 this.leftStyle.equals(this.rightStyle) &&
