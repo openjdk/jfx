@@ -354,8 +354,6 @@ public class ScrollPane extends Control {
      * If true and if the contained node is a Resizable, then the node will be
      * kept resized to match the width of the ScrollPane's viewport. If the
      * contained node is not a Resizable, this value is ignored.
-     *
-     * @defaultValue false
      */
     private BooleanProperty fitToWidth;
     public final void setFitToWidth(boolean value) {
@@ -393,8 +391,6 @@ public class ScrollPane extends Control {
      * If true and if the contained node is a Resizable, then the node will be
      * kept resized to match the height of the ScrollPane's viewport. If the
      * contained node is not a Resizable, this value is ignored.
-     *
-     * @defaultValue false
      */
     private BooleanProperty fitToHeight;
     public final void setFitToHeight(boolean value) {
