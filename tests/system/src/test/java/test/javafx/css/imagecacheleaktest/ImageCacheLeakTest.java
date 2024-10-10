@@ -53,7 +53,7 @@ public class ImageCacheLeakTest {
 
         // Launch the test app
         final ArrayList<String> cmd = test.util.Util.createApplicationLaunchCommand(
-                testAppName, null, null, jvmArgs);
+                testAppName, null, jvmArgs);
         ProcessBuilder builder = new ProcessBuilder(cmd);
         builder.redirectError(ProcessBuilder.Redirect.INHERIT);
         builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);

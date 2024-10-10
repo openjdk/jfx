@@ -107,8 +107,6 @@ public final class PrinterJob {
      * a document. These will be enumerated here so long as the
      * platform also enumerates them as if they are printers.
      * @return a new PrinterJob instance, or null.
-     * @throws SecurityException if a job does not have permission
-     * to initiate a printer job.
      */
     public static final PrinterJob createPrinterJob() {
         @SuppressWarnings("removal")
@@ -131,8 +129,6 @@ public final class PrinterJob {
      * @param printer to use for the job. If the printer is currently
      * unavailable (eg offline) then this may return null.
      * @return a new PrinterJob, or null.
-     * @throws SecurityException if a job does not have permission
-     * to initiate a printer job.
      */
     public static final PrinterJob createPrinterJob(Printer printer) {
         @SuppressWarnings("removal")
