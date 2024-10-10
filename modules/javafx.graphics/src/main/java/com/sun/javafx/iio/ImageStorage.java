@@ -37,6 +37,7 @@ import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.util.DataURI;
 import com.sun.javafx.util.Logging;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -62,56 +63,107 @@ public class ImageStorage {
          */
         GRAY,
         /**
-         * An image with with two 8-bit valued channels, one of gray levels,
+         * An image with two 8-bit valued channels, one of gray levels,
          * the other of non-premultiplied opacity, ordered as GAGAGA...
          */
         GRAY_ALPHA,
         /**
-         * An image with with two 8-bit valued channels, one of gray levels,
+         * An image with two 8-bit valued channels, one of gray levels,
          * the other of premultiplied opacity, ordered as GAGAGA...
          */
         GRAY_ALPHA_PRE,
         /**
-         * An image with with one 8-bit channel of indexes into a 24-bit
+         * An image with one 8-bit channel of indexes into a 24-bit
          * lookup table which maps the indexes to 8-bit RGB components.
          */
         PALETTE,
         /**
-         * An image with with one 8-bit channel of indexes into a 32-bit
+         * An image with one 8-bit channel of indexes into a 32-bit
          * lookup table which maps the indexes to 8-bit RGBA components
          * wherein the opacity is not-premultiplied.
          */
         PALETTE_ALPHA,
         /**
-         * An image with with one 8-bit channel of indexes into a 32-bit
+         * An image with one 8-bit channel of indexes into a 32-bit
          * lookup table which maps the indexes to 8-bit RGBA components
          * wherein the opacity is premultiplied.
          */
         PALETTE_ALPHA_PRE,
         /**
-         * An image with with one 8-bit channel of indexes into a 24-bit
+         * An image with one 8-bit channel of indexes into a 24-bit
          * lookup table which maps the indexes to 8-bit RGB components, and
          * a single transparent index to indicate the location of transparent
          * pixels.
          */
         PALETTE_TRANS,
         /**
-         * An image with with three 8-bit valued channels of red, green, and
+         * An image with three 8-bit valued channels of red, green, and
          * blue, respectively, ordered as RGBRGBRGB...
          */
         RGB,
         /**
-         * An image with with four 8-bit valued channels of red, green, blue,
+         * An image with three 8-bit valued channels of red, green, and
+         * blue, respectively, ordered as BGRBGRBGR...
+         */
+        BGR,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
          * and non-premultiplied opacity, respectively, ordered as
          * RGBARGBARGBA...
          */
         RGBA,
         /**
-         * An image with with four 8-bit valued channels of red, green, blue,
+         * An image with four 8-bit valued channels of red, green, blue,
          * and premultiplied opacity, respectively, ordered as
          * RGBARGBARGBA...
          */
-        RGBA_PRE
+        RGBA_PRE,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
+         * and non-premultiplied opacity, respectively, ordered as
+         * BGRABGRABGRA...
+         */
+        BGRA,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
+         * and premultiplied opacity, respectively, ordered as
+         * BGRABGRABGRA...
+         */
+        BGRA_PRE,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
+         * and non-premultiplied opacity, respectively, ordered as
+         * ABGRABGRABGR...
+         */
+        ABGR,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
+         * and premultiplied opacity, respectively, ordered as
+         * ABGRABGRABGR...
+         */
+        ABGR_PRE,
+        /**
+         * An image with three 8-bit valued channels of red, green, and blue,
+         * packed into a 32-bit integer, ordered as XRGBXRGBXRGB...
+         */
+        INT_RGB,
+        /**
+         * An image with three 8-bit valued channels of red, green, and blue,
+         * packed into a 32-bit integer, ordered as XBGRXBGRXBGR...
+         */
+        INT_BGR,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue, and
+         * non-premultiplied opacity, packed into a 32-bit integer, ordered as
+         * ARGBARGBARGB...
+         */
+        INT_ARGB,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue, and
+         * premultiplied opacity, packed into a 32-bit integer, ordered as
+         * ARGBARGBARGB...
+         */
+        INT_ARGB_PRE
     }
 //    /**
 //     * A mapping of lower case file extensions to loader factories.
@@ -126,6 +178,7 @@ public class ImageStorage {
      */
     private final HashMap<String, ImageLoaderFactory> loaderFactoriesByMimeSubtype;
     private final ImageLoaderFactory[] loaderFactories;
+    private final ImageLoaderFactory xImageLoaderFactory = tryGetXImageLoaderFactory();
     private int maxSignatureLength;
 
     private static final boolean isIOS = PlatformUtil.isIOS();
@@ -136,6 +189,15 @@ public class ImageStorage {
 
     public static ImageStorage getInstance() {
         return InstanceHolder.INSTANCE;
+    }
+
+    private static ImageLoaderFactory tryGetXImageLoaderFactory() {
+        try {
+            Class<?> factoryClass = Class.forName("com.sun.javafx.iio.javax.XImageLoaderFactory");
+            return (ImageLoaderFactory)factoryClass.getMethod("getInstance").invoke(null);
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
     }
 
     public ImageStorage() {
@@ -281,15 +343,10 @@ public class ImageStorage {
         ImageFrame[] images = null;
 
         try {
-            if (isIOS) {
-                // no extension/signature recognition done here,
-                // we always want the iOS native loader
-                loader = IosImageLoaderFactory.getInstance().createImageLoader(input);
-            } else {
-                loader = getLoaderBySignature(input, listener);
-            }
+            loader = findImageLoader(input, listener);
+
             if (loader != null) {
-                images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, smooth);
+                images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, 1, smooth);
             } else {
                 throw new ImageStorageException("No loader for image data");
             }
@@ -332,40 +389,65 @@ public class ImageStorage {
 
                     // Find a factory that can load images with the specified MIME type.
                     var factory = loaderFactoriesByMimeSubtype.get(dataUri.getMimeSubtype().toLowerCase());
-                    if (factory == null) {
-                        throw new IllegalArgumentException(
-                            "Unsupported MIME subtype: image/" + dataUri.getMimeSubtype());
-                    }
+                    if (factory != null) {
+                        // We also inspect the image file signature to confirm that it matches the MIME type.
+                        theStream = new ByteArrayInputStream(dataUri.getData());
+                        ImageLoader loaderBySignature = getLoaderBySignature(theStream, listener);
 
-                    // We also inspect the image file signature to confirm that it matches the MIME type.
-                    theStream = new ByteArrayInputStream(dataUri.getData());
-                    ImageLoader loaderBySignature = getLoaderBySignature(theStream, listener);
+                        if (loaderBySignature != null) {
+                            // If the MIME type doesn't agree with the file signature, log a warning and
+                            // continue with the image loader that matches the file signature.
+                            boolean imageTypeMismatch = !factory.getFormatDescription().getFormatName().equals(
+                                loaderBySignature.getFormatDescription().getFormatName());
 
-                    if (loaderBySignature != null) {
-                        // If the MIME type doesn't agree with the file signature, log a warning and
-                        // continue with the image loader that matches the file signature.
-                        boolean imageTypeMismatch = !factory.getFormatDescription().getFormatName().equals(
-                            loaderBySignature.getFormatDescription().getFormatName());
+                            if (imageTypeMismatch) {
+                                var logger = Logging.getJavaFXLogger();
+                                if (logger.isLoggable(PlatformLogger.Level.WARNING)) {
+                                    logger.warning(String.format(
+                                        "Image format '%s' does not match MIME type '%s/%s' in URI '%s'",
+                                        loaderBySignature.getFormatDescription().getFormatName(),
+                                        dataUri.getMimeType(), dataUri.getMimeSubtype(), dataUri));
+                                }
+                            }
+
+                            loader = loaderBySignature;
+                        } else {
+                            // We're here because the image format doesn't have a detectable signature.
+                            // In this case, we need to close the input stream (because we already consumed
+                            // parts of it to detect a potential file signature) and create a new input
+                            // stream for the image loader that matches the MIME type.
+                            theStream.close();
+                            theStream = new ByteArrayInputStream(dataUri.getData());
+                            loader = factory.createImageLoader(theStream);
+                        }
+                    } else {
+                        // If we don't have a built-in loader factory we try to find an ImageIO loader
+                        // that can load the content of the data URI.
+                        ImageLoader imageLoader = xImageLoaderFactory != null
+                            ? xImageLoaderFactory.createImageLoader(new ByteArrayInputStream(dataUri.getData()))
+                            : null;
+
+                        if (imageLoader == null) {
+                            throw new IllegalArgumentException(
+                                "Unsupported MIME subtype: image/" + dataUri.getMimeSubtype());
+                        }
+
+                        // If the specified MIME type doesn't agree with any of the supported MIME types of
+                        // the XImageLoader, we log a warning but continue to load the image.
+                        boolean imageTypeMismatch = imageLoader.getFormatDescription().getMIMESubtypes().stream()
+                                .noneMatch(dataUri.getMimeSubtype()::equals);
 
                         if (imageTypeMismatch) {
                             var logger = Logging.getJavaFXLogger();
                             if (logger.isLoggable(PlatformLogger.Level.WARNING)) {
                                 logger.warning(String.format(
                                     "Image format '%s' does not match MIME type '%s/%s' in URI '%s'",
-                                    loaderBySignature.getFormatDescription().getFormatName(),
+                                    imageLoader.getFormatDescription().getFormatName(),
                                     dataUri.getMimeType(), dataUri.getMimeSubtype(), dataUri));
                             }
                         }
 
-                        loader = loaderBySignature;
-                    } else {
-                        // We're here because the image format doesn't have a detectable signature.
-                        // In this case, we need to close the input stream (because we already consumed
-                        // parts of it to detect a potential file signature) and create a new input
-                        // stream for the image loader that matches the MIME type.
-                        theStream.close();
-                        theStream = new ByteArrayInputStream(dataUri.getData());
-                        loader = factory.createImageLoader(theStream);
+                        loader = imageLoader;
                     }
                 } else {
                     // Use Mac Retina conventions for >= 1.5f (rounded to the next integer scale)
@@ -383,18 +465,14 @@ public class ImageStorage {
                         theStream = ImageTools.createInputStream(input);
                     }
 
-                    if (isIOS) {
-                        loader = IosImageLoaderFactory.getInstance().createImageLoader(theStream);
-                    } else {
-                        loader = getLoaderBySignature(theStream, listener);
-                    }
+                    loader = findImageLoader(theStream, listener);
                 }
             } catch (Exception e) {
                 throw new ImageStorageException(e.getMessage(), e);
             }
 
             if (loader != null) {
-                images = loadAll(loader, width, height, preserveAspectRatio, imgPixelScale, smooth);
+                images = loadAll(loader, width, height, preserveAspectRatio, devPixelScale, imgPixelScale, smooth);
             } else {
                 throw new ImageStorageException("No loader for image data");
             }
@@ -430,16 +508,14 @@ public class ImageStorage {
 
     private ImageFrame[] loadAll(ImageLoader loader,
             double width, double height, boolean preserveAspectRatio,
-            float pixelScale, boolean smooth) throws ImageStorageException {
+            float devPixelScale, float imgPixelScale, boolean smooth) throws ImageStorageException {
         ImageFrame[] images = null;
         ArrayList<ImageFrame> list = new ArrayList<>();
         int imageIndex = 0;
         ImageFrame image = null;
-        int imgw = (int) Math.round(width * pixelScale);
-        int imgh = (int) Math.round(height * pixelScale);
         do {
             try {
-                image = loader.load(imageIndex++, imgw, imgh, preserveAspectRatio, smooth);
+                image = loader.load(imageIndex++, width, height, preserveAspectRatio, smooth, devPixelScale, imgPixelScale);
             } catch (Exception e) {
                 // allow partially loaded animated images
                 if (imageIndex > 1) {
@@ -449,7 +525,6 @@ public class ImageStorage {
                 }
             }
             if (image != null) {
-                image.setPixelScale(pixelScale);
                 list.add(image);
             } else {
                 break;
@@ -461,6 +536,29 @@ public class ImageStorage {
             list.toArray(images);
         }
         return images;
+    }
+
+    private ImageLoader findImageLoader(InputStream stream, ImageLoadListener listener) throws IOException {
+        if (isIOS) {
+            return IosImageLoaderFactory.getInstance().createImageLoader(stream);
+        }
+
+        // We need a stream that supports the mark and reset methods, since XImageLoader
+        // is used as a fallback after our built-in loader selection has already consumed
+        // part of the input stream.
+        if (!stream.markSupported()) {
+            stream = new BufferedInputStream(stream);
+        }
+
+        stream.mark(Integer.MAX_VALUE);
+        ImageLoader loader = getLoaderBySignature(stream, listener);
+
+        if (loader == null && xImageLoaderFactory != null) {
+            stream.reset();
+            loader = xImageLoaderFactory.createImageLoader(stream);
+        }
+
+        return loader;
     }
 
 //    private static ImageLoader getLoaderByExtension(String input, ImageLoadListener listener) {
