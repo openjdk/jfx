@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,55 +23,39 @@
  * questions.
  */
 
-package com.sun.javafx.scene.control.behavior;
+package com.sun.javafx.scene.control.input;
 
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
-import javafx.scene.control.skin.TextFieldSkin;
-import javafx.scene.text.HitInfo;
+import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.input.InputMap;
+import com.sun.javafx.util.Utils;
 
 /**
- * Password field behavior.
+ * Hides execute() methods in InputMap from the public.
  */
-public class PasswordFieldBehavior extends TextFieldBehavior {
-
-    public PasswordFieldBehavior(PasswordField c, TextFieldSkin skin) {
-        super(c, skin);
+public class InputMapHelper {
+    public interface Accessor {
+        public void execute(Object source, InputMap inputMap, FunctionTag tag);
+        public void executeDefault(Object source, InputMap inputMap, FunctionTag tag);
     }
 
-    // RT-18711 & RT-18854: Stub out word based navigation and editing
-    // for security reasons.
-    @Override
-    protected void deletePreviousWord() {
+    static {
+        Utils.forceInit(InputMap.class);
     }
 
-    @Override
-    protected void deleteNextWord() {
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
     }
 
-    @Override
-    protected void selectPreviousWord() {
+    public static void execute(Object source, InputMap inputMap, FunctionTag tag) {
+        accessor.execute(source, inputMap, tag);
     }
 
-    @Override
-    public void selectNextWord() {
-    }
-
-    @Override
-    protected void previousWord() {
-    }
-
-    @Override
-    protected void nextWord() {
-    }
-
-    @Override
-    protected void selectWord() {
-        selectAll();
-    }
-
-    @Override
-    protected void mouseDoubleClick(HitInfo hit) {
-        getControl().selectAll();
+    public static void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
+        accessor.executeDefault(source, inputMap, tag);
     }
 }
