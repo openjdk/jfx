@@ -497,4 +497,17 @@ public class Actions {
         }
         Platform.exit();
     }
+
+    /**
+     * returns true if the user hits cancel and does not want to quit
+     * @return true if user chose to cancel
+     */
+    public boolean checkSaveOnHide() {
+        if (isModified()) {
+            if (askToSave()) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

@@ -41,6 +41,7 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import com.oracle.demo.richtext.rta.RichTextAreaWindow;
 import com.oracle.demo.richtext.util.FX;
 import jfx.incubator.scene.control.richtext.RichTextArea;
@@ -81,6 +82,12 @@ public class RichEditorDemoWindow extends Stage {
         pane.actions.fileNameProperty().addListener((x) -> {
             updateTitle();
         });
+        addEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, (ev) -> {
+            if (pane.actions.checkSaveOnHide()) {
+                ev.consume();
+            }
+        });
+
         updateStatus();
         updateTitle();
     }
