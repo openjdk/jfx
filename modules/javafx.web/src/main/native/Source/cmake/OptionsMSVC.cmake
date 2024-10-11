@@ -117,16 +117,14 @@ if (NOT COMPILER_IS_CLANG_CL)
     )
 endif ()
 
-if (NOT WTF_CPU_X86)
-    if (PORT STREQUAL "Java")
+if (PORT STREQUAL "Java")
     # Suppress creation of pdb files for Release builds
     # FIXME: Need to re-enable the flag for Debug builds
     #add_compile_options(/Zi /GS)
 
-    else()
+else()
     # Create pdb files for debugging purposes, also for Release builds
     add_compile_options(/Zi /GS)
-    endif()
 endif()
 
 # Disable ICF (identical code folding) optimization,
