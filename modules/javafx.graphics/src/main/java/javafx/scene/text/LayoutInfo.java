@@ -24,20 +24,17 @@
  */
 package javafx.scene.text;
 
+import java.util.List;
 import javafx.geometry.Rectangle2D;
 
 /**
- * Provides a think wrapper of the text layout used in a {@code Text} or a {@code TextFlow} node,
- * with the purpose of querying the details of the layout such as break up of the text into lines
- * and their bounds.
+ * Provides a view into the text layout used in a {@code Text} or a {@code TextFlow} node,
+ * with purpose of querying the details of the layout such as break up of the text into lines,
+ * as well as geometry of other shapes derived from the layout (selection, underline, etc.).
  * <p>
- * The information obtained via this object may change to reflect the underlying layout changes
- * as a result of actions such as resizing of the container,
- * or modification of certain properties.
- * <p>
+ * The information obtained via this object may change after the next layout cycle, which may come as a result
+ * of actions such as resizing of the container, or modification of certain properties.
  * For example updating the text or the font might change the layout, but a change of color would not.
- * <p>
- * It is safe to cache this object.
  *
  * @since 24
  */
@@ -68,44 +65,48 @@ public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutI
     public abstract int getTextLineCount();
 
     /**
-     * Returns the start offset for the line at index {@code index}.
+     * Returns the list of text lines in the layout.
      *
-     * @param index the line index
-     * @return the start offset
+     * @return the list of {@code TextLineInfo} objects
      */
-    public abstract int getTextLineStart(int index);
+    public abstract List<TextLineInfo> getTextLines();
 
     /**
-     * Returns the end offset for the line at index {@code index}.
+     * Returns the {@code TextLineInfo} object which contains information about
+     * the text line at index {@code index}.
      *
      * @param index the line index
-     * @return the end offset
+     * @return the {@code TextLineInfo} object
      */
-    public abstract int getTextLineEnd(int index);
+    public abstract TextLineInfo getTextLine(int index);
 
     /**
-     * Returns the information about the line:
-     * <ul>
-     * <li>
-     * {@code minX} - the x origin of the line (relative to the layout).
-     * The x origin is defined by TextAlignment of the text layout, always zero
-     * for left-aligned text.
-     * <li>
-     * {@code minY} - the ascent of the line (negative).
-     * The ascent of the line is the max ascent of all fonts in the line.
-     * <li>
-     * {@code width} - the width of the line.
-     * The width for the line is sum of all the run widths in the line, it is not
-     * affect by the wrapping width but it will include any changes caused by
-     * justification.
-     * <li>
-     * {@code height} - the height of the line.
-     * The height of the line is sum of the max ascent, max descent, and
-     * max line gap of all the fonts in the line.
-     * </ul>
+     * Returns the geometry of the text selection, as an array of {@code Rectangle2D} objects,
+     * for the given start and end offsets.
      *
-     * @param index the line index
-     * @return the line bounds
+     * @param start the start offset
+     * @param end the end offset
+     * @return the array of {@code Rectangle2D} objects
      */
-    public abstract Rectangle2D getLineBounds(int index);
+    public abstract List<Rectangle2D> selectionShape(int start, int end);
+
+    /**
+     * Returns the geometry of the strike-through shape, as an array of {@code Rectangle2D} objects,
+     * for the given start and end offsets.
+     *
+     * @param start the start offset
+     * @param end the end offset
+     * @return the array of {@code Rectangle2D} objects
+     */
+    public abstract List<Rectangle2D> strikeThroughShape(int start, int end);
+
+    /**
+     * Returns the geometry of the underline shape, as an array of {@code Rectangle2D} objects,
+     * for the given start and end offsets.
+     *
+     * @param start the start offset
+     * @param end the end offset
+     * @return the array of {@code Rectangle2D} objects
+     */
+    public abstract List<Rectangle2D> underlineShape(int start, int end);
 }

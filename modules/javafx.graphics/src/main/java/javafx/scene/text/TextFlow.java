@@ -57,6 +57,7 @@ import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.PrismLayoutInfo;
+import com.sun.javafx.text.TextUtils;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -243,6 +244,18 @@ public class TextFlow extends Pane {
         return getRange(start, end, TextLayout.TYPE_UNDERLINE);
     }
 
+    /**
+     * Returns the shape for the strike-through in local coordinates.
+     *
+     * @param start the beginning character index for the range
+     * @param end the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 24
+     */
+    public final PathElement[] strikeThroughShape(int start, int end) {
+        return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH);
+    }
+
     @Override
     public boolean usesMirroring() {
         return false;
@@ -365,7 +378,7 @@ public class TextFlow extends Pane {
 
     private PathElement[] getRange(int start, int end, int type) {
         TextLayout layout = getTextLayout();
-        return layout.getRange(start, end, type, 0, 0);
+        return TextUtils.getRange(layout, start, end, type, 0, 0);
     }
 
     private static class EmbeddedSpan implements TextSpan {
@@ -690,15 +703,21 @@ public class TextFlow extends Pane {
     }
 
     /**
-     * Obtains the text layout information.
-     * <p>
-     * The object returned is a thin wrapper of the this node text layout, allowing for querying
+     * Returns the object which provides a view into the text layout for this node, which allows for querying
      * the details of the layout.
+     * <p>
+     * While there is no general guarantee that successive invocations of this method return the same instance,
+     * it is safe to cache this object, as the information obtained from it remains valid until the next
+     * layout cycle.
+     * <p>
+     * The information obtained after the next layout cycle might be different as a result
+     * of actions such as resizing of the container, or modification of certain properties.
+     * For example updating the text or the font might change the layout, but a change of color would not.
      *
      * @return the layout information
      * @since 24
      */
     public final LayoutInfo getLayoutInfo() {
-        return PrismLayoutInfo.of(getTextLayout());
+        return new PrismLayoutInfo(getTextLayout());
     }
 }

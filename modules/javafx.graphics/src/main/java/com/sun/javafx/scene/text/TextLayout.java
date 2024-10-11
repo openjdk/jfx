@@ -25,11 +25,10 @@
 
 package com.sun.javafx.scene.text;
 
+import java.util.Objects;
 import javafx.scene.shape.PathElement;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Shape;
-
-import java.util.Objects;
 
 public interface TextLayout {
 
@@ -78,6 +77,12 @@ public interface TextLayout {
     public static final int TYPE_BEARINGS       = 1 << 5;
 
     public static final int DEFAULT_TAB_SIZE = 8;
+
+    /** Callback to be called for each rectangular shape */
+    @FunctionalInterface
+    public static interface GeometryCallback {
+        public void addRectangle(float left, float top, float right, float bottom);
+    }
 
     public static class Hit {
         int charIndex;
@@ -235,6 +240,19 @@ public interface TextLayout {
 
     public PathElement[] getCaretShape(int offset, boolean isLeading,
                                        float x, float y);
-    public PathElement[] getRange(int start, int end, int type,
-                                  float x, float y);
+
+    /**
+     * Queries the range geometry of the range of text within the text layout for one of the three possible types:
+     * <ul>
+     * <li>{@link #TYPE_STRIKETHROUGH} - strike-through shape
+     * <li>{@link #TYPE_TEXT} - text selection shape
+     * <li>{@link #TYPE_UNDERLINE} - underline shape
+     * </ul>
+     *
+     * @param start the start offset
+     * @param end the end offset
+     * @param the type of the geometry
+     * @param client the callback to invoke for each rectangular shape
+     */
+    public void getRange(int start, int end, int type, GeometryCallback client);
 }

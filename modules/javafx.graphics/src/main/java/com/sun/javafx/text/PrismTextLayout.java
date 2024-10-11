@@ -478,8 +478,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getRange(int start, int end, int type,
-                                  float x, float y) {
+    public void getRange(int start, int end, int type, GeometryCallback client) {
         ensureLayout();
         int lineCount = getLineCount();
         ArrayList<PathElement> result = new ArrayList<>();
@@ -575,11 +574,7 @@ public class PrismTextLayout implements TextLayout {
                                 l = width - l;
                                 r = width - r;
                             }
-                            result.add(new MoveTo(x + l,  y + top));
-                            result.add(new LineTo(x + r, y + top));
-                            result.add(new LineTo(x + r, y + bottom));
-                            result.add(new LineTo(x + l,  y + bottom));
-                            result.add(new LineTo(x + l,  y + top));
+                            client.addRectangle(l, top, r, bottom);
                         }
                         left = runLeft;
                         right = runRight;
@@ -592,11 +587,7 @@ public class PrismTextLayout implements TextLayout {
                             l = width - l;
                             r = width - r;
                         }
-                        result.add(new MoveTo(x + l,  y + top));
-                        result.add(new LineTo(x + r, y + top));
-                        result.add(new LineTo(x + r, y + bottom));
-                        result.add(new LineTo(x + l,  y + bottom));
-                        result.add(new LineTo(x + l,  y + top));
+                        client.addRectangle(l, top, r, bottom);
                     }
                 }
                 lineX += runWidth;
@@ -604,7 +595,6 @@ public class PrismTextLayout implements TextLayout {
             }
             lineY += lineBounds.getHeight() + spacing;
         }
-        return result.toArray(new PathElement[result.size()]);
     }
 
     @Override

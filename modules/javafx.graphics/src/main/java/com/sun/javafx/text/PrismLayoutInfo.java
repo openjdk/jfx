@@ -24,9 +24,11 @@
  */
 package com.sun.javafx.text;
 
+import java.util.ArrayList;
+import java.util.List;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.text.LayoutInfo;
-import com.sun.javafx.geom.BaseBounds;
+import javafx.scene.text.TextLineInfo;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
 
@@ -36,17 +38,13 @@ import com.sun.javafx.scene.text.TextLine;
 public final class PrismLayoutInfo extends LayoutInfo {
     private final TextLayout layout;
 
-    private PrismLayoutInfo(TextLayout layout) {
+    public PrismLayoutInfo(TextLayout layout) {
         this.layout = layout;
-    }
-
-    public static LayoutInfo of(TextLayout layout) {
-        return new PrismLayoutInfo(layout);
     }
 
     @Override
     public Rectangle2D getBounds() {
-        return toRectangle2D(layout.getBounds());
+        return TextUtils.toRectangle2D(layout.getBounds());
     }
 
     @Override
@@ -55,26 +53,50 @@ public final class PrismLayoutInfo extends LayoutInfo {
     }
 
     @Override
-    public int getTextLineStart(int ix) {
-        return line(ix).getStart();
+    public List<TextLineInfo> getTextLines() {
+        TextLine[] lines = layout.getLines();
+        int sz = lines.length;
+        ArrayList<TextLineInfo> rv = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            rv.add(TextUtils.toLineInfo(lines[i]));
+        }
+        return rv;
     }
 
     @Override
-    public int getTextLineEnd(int ix) {
-        TextLine line = line(ix);
-        return line.getStart() + line.getLength();
+    public TextLineInfo getTextLine(int index) {
+        return TextUtils.toLineInfo(layout.getLines()[index]);
     }
 
     @Override
-    public Rectangle2D getLineBounds(int ix) {
-        return toRectangle2D(line(ix).getBounds());
+    public List<Rectangle2D> selectionShape(int start, int end) {
+        return getGeometry(start, end, TextLayout.TYPE_TEXT);
+    }
+
+    @Override
+    public List<Rectangle2D> strikeThroughShape(int start, int end) {
+        return getGeometry(start, end, TextLayout.TYPE_STRIKETHROUGH);
+    }
+
+    @Override
+    public List<Rectangle2D> underlineShape(int start, int end) {
+        return getGeometry(start, end, TextLayout.TYPE_UNDERLINE);
+    }
+
+    // TODO padding?
+    private List<Rectangle2D> getGeometry(int start, int end, int type) {
+        ArrayList<Rectangle2D> rv = new ArrayList<>();
+        layout.getRange(start, end, type, (left, top, right, bottom) -> {
+            if (left < right) {
+                rv.add(new Rectangle2D(left, top, right - left, bottom - top));
+            } else {
+                rv.add(new Rectangle2D(right, top, left - right, bottom - top));
+            }
+        });
+        return rv;
     }
 
     private TextLine line(int ix) {
         return layout.getLines()[ix];
-    }
-
-    private static Rectangle2D toRectangle2D(BaseBounds b) {
-        return new Rectangle2D(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight());
     }
 }
