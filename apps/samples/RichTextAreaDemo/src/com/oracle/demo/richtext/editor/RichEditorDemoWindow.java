@@ -116,8 +116,9 @@ public class RichEditorDemoWindow extends Stage {
 
         // view
         FX.menu(m, "View");
+        FX.checkItem(m, "Highlight Current Paragraph", actions.highlightCurrentLine);
+        FX.checkItem(m, "Show Line Numbers", actions.lineNumbers);
         FX.checkItem(m, "Wrap Text", actions.wrapText);
-        // TODO line numbers
         // TODO line spacing
 
         // help

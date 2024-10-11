@@ -260,6 +260,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         leftCache = updateSideCache(control.getLeftDecorator(), leftCache);
         rightCache = updateSideCache(control.getRightDecorator(), rightCache);
         requestControlLayout(false);
+        updateHorizontalScrollBar();
     }
 
     private FastCache<Node> updateSideCache(SideDecorator decorator, FastCache<Node> cache) {
@@ -280,8 +281,8 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     public void invalidateLayout() {
         cellCache.clear();
         requestLayout();
-        updateHorizontalScrollBar();
-        updateVerticalScrollBar();
+        updateHorizontalScrollBar(); // defer?
+        updateVerticalScrollBar(); // defer?
     }
 
     public void handleContentPadding() {
@@ -1592,6 +1593,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         } else {
             if (unwrappedContentWidth != unwrappedWidth) {
                 setUnwrappedContentWidth(unwrappedWidth);
+                updateHorizontalScrollBar();
 
                 if (useContentWidth) {
                     requestControlLayout(false);

@@ -53,6 +53,7 @@ import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.util.ExceptionDialog;
 import com.oracle.demo.richtext.util.FX;
 import com.oracle.demo.richtext.util.FxAction;
+import jfx.incubator.scene.control.richtext.LineNumberDecorator;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -94,6 +95,8 @@ public class Actions {
     public final FxAction selectAll = new FxAction(this::selectAll);
     public final FxAction undo = new FxAction(this::undo);
     // view
+    public final FxAction highlightCurrentLine = new FxAction();
+    public final FxAction lineNumbers = new FxAction();
     public final FxAction wrapText = new FxAction();
 
     private final RichTextArea control;
@@ -117,7 +120,12 @@ public class Actions {
             return !control.isRedoable();
         }, control.redoableProperty()));
 
+        highlightCurrentLine.selectedProperty().bindBidirectional(control.highlightCurrentParagraphProperty());
         wrapText.selectedProperty().bindBidirectional(control.wrapTextProperty());
+
+        lineNumbers.selectedProperty().addListener((s,p,on) -> {
+            control.setLeftDecorator(on ? new LineNumberDecorator() : null);
+        });
 
         control.getModel().addListener(new StyledTextModel.Listener() {
             @Override
@@ -142,6 +150,10 @@ public class Actions {
         });
 
         updateSourceStyles();
+
+        // defaults
+        highlightCurrentLine.setSelected(true, false);
+        wrapText.setSelected(true, false);
 
         handleEdit();
         handleCaret();
