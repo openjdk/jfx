@@ -212,7 +212,7 @@ public class StubTextLayout implements TextLayout {
     @Override
     public float[] getCaretInf(int offset, boolean isLeading) {
         // FIX this can be implemented if needed, following the logic used in getBounds() and getHitInfo()
-        return new float[0];
+        return null;
     }
 
     @Override

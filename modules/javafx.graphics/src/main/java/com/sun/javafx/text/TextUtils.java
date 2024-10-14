@@ -83,7 +83,9 @@ public final class TextUtils {
     }
 
     public static PathElement[] getCaretShape(float[] c, double dx, double dy) {
-        if (c.length == 3) {
+        if (c == null) {
+            return null;
+        } else if (c.length == 3) {
             // [x, ymin, ymax] - corresponds to a single line from (x, ymin) tp (x, ymax)
             double x = c[0] + dx;
             double ymin = c[1] + dy;
