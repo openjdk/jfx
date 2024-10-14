@@ -32,27 +32,23 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.shape.Rectangle;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.glass.ui.monocle.TestLogShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
-public class DragAndDropTest extends ParameterizedTestBase {
+public final class DragAndDropTest extends ParameterizedTestBase {
 
-    public DragAndDropTest(TestTouchDevice device) {
-        super(device);
-    }
-
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
-    @Test
-    public void testDragOneNodeToAnother() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testDragOneNodeToAnother(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         TestRunnable.invokeAndWait(() -> {
             Node n1 = new Rectangle(10, 10, 10, 10);
             Node n2 = new Rectangle(210, 10, 10, 10);
@@ -94,5 +90,4 @@ public class DragAndDropTest extends ParameterizedTestBase {
             TestRunnable.invokeAndWait(() -> TestApplication.getRootGroup().getChildren().clear());
         }
     }
-
 }

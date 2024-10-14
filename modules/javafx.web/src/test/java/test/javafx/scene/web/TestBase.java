@@ -25,6 +25,8 @@
 
 package test.javafx.scene.web;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.awt.Color;
 import java.io.File;
 import java.util.concurrent.Callable;
@@ -63,7 +65,9 @@ public class TestBase implements ChangeListener, InvalidationListener {
 
         try {
             startupLatch.await();
-        } catch (InterruptedException ex) {}
+        } catch (InterruptedException ex) {
+            fail(ex);
+        }
     }
 
     public TestBase() {

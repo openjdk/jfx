@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,24 +28,20 @@ import java.awt.Dimension;
 import java.awt.event.MouseEvent;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class JFXPanelTest {
@@ -60,25 +56,25 @@ public class JFXPanelTest {
         @Override
         public void start(Stage primaryStage) throws Exception {
             Platform.setImplicitExit(false);
-            Assert.assertTrue(Platform.isFxApplicationThread());
-            Assert.assertNotNull(primaryStage);
+            Assertions.assertTrue(Platform.isFxApplicationThread());
+            Assertions.assertNotNull(primaryStage);
 
             launchLatch.countDown();
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void doSetupOnce() throws Exception {
         Util.launch(launchLatch, MyApp.class);
-        Assert.assertEquals(0, launchLatch.getCount());
+        Assertions.assertEquals(0, launchLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void doTeardownOnce() {
         Util.shutdown();
     }
 
-    @After
+    @AfterEach
     public void doCleanup() {
         if (jframe != null) {
             SwingUtilities.invokeLater(() -> jframe.dispose());
@@ -132,11 +128,11 @@ public class JFXPanelTest {
             });
         });
 
-        Assert.assertTrue(firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS));
+        Assertions.assertTrue(firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS));
 
         Thread.sleep(500); // there should be no pressed event after the initial one. Let's wait for 0.5s and check again.
 
-        Assert.assertEquals(1, pressedEventCounter[0]);
+        Assertions.assertEquals(1, pressedEventCounter[0]);
     }
 
     @Test
@@ -154,7 +150,7 @@ public class JFXPanelTest {
             firstPressedEventLatch.countDown();
         });
 
-        Assert.assertTrue(firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS));
+        Assertions.assertTrue(firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -179,8 +175,7 @@ public class JFXPanelTest {
             });
         });
 
-        Assert.assertTrue("Timeout waiting for setScene to complete",
-                completionLatch.await(5000, TimeUnit.MILLISECONDS));
+        Assertions.assertTrue(completionLatch.await(5000, TimeUnit.MILLISECONDS), "Timeout waiting for setScene to complete");
     }
 
     @Test
@@ -207,7 +202,6 @@ public class JFXPanelTest {
             });
         });
 
-        Assert.assertTrue("Timeout waiting for setScene to complete",
-                completionLatch.await(5000, TimeUnit.MILLISECONDS));
+        Assertions.assertTrue(completionLatch.await(5000, TimeUnit.MILLISECONDS), "Timeout waiting for setScene to complete");
     }
 }

@@ -25,6 +25,7 @@
 
 package test.util;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -46,8 +47,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
 import javafx.stage.Window;
-import org.junit.Assert;
-import junit.framework.AssertionFailedError;
+import org.junit.jupiter.api.Assertions;
 import com.sun.javafx.PlatformUtil;
 
 /**
@@ -70,20 +70,19 @@ public class Util {
             } else if (testError instanceof RuntimeException) {
                 throw (RuntimeException)testError;
             } else {
-                AssertionFailedError err = new AssertionFailedError("Unknown exception");
-                err.initCause(testError.getCause());
-                throw err;
+                fail(testError);
             }
         } else {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            throw err;
+            fail("Unexpected exception");
         }
     }
 
     public static void sleep(long msec) {
         try {
             Thread.sleep(msec);
-        } catch (InterruptedException ex) {}
+        } catch (InterruptedException ex) {
+            fail(ex);
+        }
     }
 
     public static boolean await(final CountDownLatch latch) {
@@ -117,9 +116,7 @@ public class Util {
                     return false;
                 }
             } catch (InterruptedException ex) {
-                AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-                err.initCause(ex);
-                throw err;
+                fail(ex);
             }
 
             if (testError[0] != null) {
@@ -128,9 +125,7 @@ public class Util {
                 } else if (testError[0] instanceof RuntimeException) {
                     throw (RuntimeException)testError[0];
                 } else {
-                    AssertionFailedError err = new AssertionFailedError("Unknown execution exception");
-                    err.initCause(testError[0].getCause());
-                    throw err;
+                    fail(testError[0].getCause());
                 }
             }
 
@@ -170,7 +165,7 @@ public class Util {
         }
 
         if (!futures.isEmpty()) {
-            throw new AssertionFailedError("Exceeded timeout limit of " + TIMEOUT + " msec");
+            fail("Exceeded timeout limit of " + TIMEOUT + " msec");
         }
     }
 
@@ -349,9 +344,9 @@ public class Util {
 
         String msg = "Failed to launch FX application " + applicationClass + " within " + timeoutSeconds + " sec.";
         try {
-            Assert.assertTrue(msg, startupLatch.await(timeoutSeconds, TimeUnit.SECONDS));
+            Assertions.assertTrue(startupLatch.await(timeoutSeconds, TimeUnit.SECONDS), msg);
         } catch (InterruptedException e) {
-            throw new AssertionError(e);
+            fail(e);
         }
     }
 
@@ -368,9 +363,9 @@ public class Util {
         Platform.startup(r);
         try {
             String msg = "Timeout waiting for FX runtime to start";
-            Assert.assertTrue(msg, startupLatch.await(STARTUP_TIMEOUT, TimeUnit.SECONDS));
+            Assertions.assertTrue(startupLatch.await(STARTUP_TIMEOUT, TimeUnit.SECONDS), msg);
         } catch (InterruptedException e) {
-            throw new AssertionError(e);
+            fail(e);
         }
     }
 
@@ -393,9 +388,9 @@ public class Util {
      */
     public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
         try {
-            Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
+            Assertions.assertTrue(latch.await(seconds, TimeUnit.SECONDS), "Timeout: " + msg);
         } catch (InterruptedException e) {
-            throw new AssertionError(e);
+            fail(e);
         }
     }
 

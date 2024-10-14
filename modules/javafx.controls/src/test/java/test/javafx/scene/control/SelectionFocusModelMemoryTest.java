@@ -26,6 +26,7 @@
 package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.List;
@@ -242,7 +243,7 @@ public class SelectionFocusModelMemoryTest {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-               System.err.println("InterruptedException occurred during Thread.sleep()");
+                fail(e);
             }
         }
     }

@@ -61,7 +61,7 @@ extern jmethodID jWindowNotifyDelegatePtr;
 extern jmethodID jViewNotifyEvent;
 extern jmethodID jViewNotifyRepaint;
 extern jmethodID jViewNotifyResize;
-extern jmethodID jViewNotifyKey;
+extern jmethodID jViewNotifyKeyAndReturnConsumed;
 extern jmethodID jViewNotifyMouse;
 extern jmethodID jViewNotifyMenu;
 extern jmethodID jViewNotifyInputMethod;
