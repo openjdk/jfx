@@ -25,7 +25,6 @@
 
 package test.com.sun.javafx.pgstub;
 
-import javafx.scene.shape.PathElement;
 import javafx.scene.text.Font;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
@@ -80,8 +79,12 @@ public class StubTextLayout implements TextLayout {
     @Override
     public boolean setLineSpacing(float spacing) {
         this.spacing = spacing;
-
         return true;
+    }
+
+    @Override
+    public float getLineSpacing() {
+        return spacing;
     }
 
     @Override
@@ -207,14 +210,14 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getCaretShape(int offset, boolean isLeading, float x,
-            float y) {
-        return new PathElement[0];
+    public float[] getCaretInf(int offset, boolean isLeading) {
+        // FIX this can be implemented if needed, following the logic used in getBounds() and getHitInfo()
+        return new float[0];
     }
 
     @Override
     public void getRange(int start, int end, int type, GeometryCallback client) {
-        // FIX this can be implemented later, following the logic used in getBounds() and getHitInfo()
+        // FIX this can be implemented if needed, following the logic used in getBounds() and getHitInfo()
     }
 
     @Override

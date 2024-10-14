@@ -217,7 +217,9 @@ public class TextFlow extends Pane {
      * @since 9
      */
     public PathElement[] caretShape(int charIndex, boolean leading) {
-        return getTextLayout().getCaretShape(charIndex, leading, 0, 0);
+        float[] c = getTextLayout().getCaretInf(charIndex, leading);
+        // TODO padding JDK-8341438?
+        return TextUtils.getCaretShape(c, 0.0, 0.0);
     }
 
     /**
@@ -707,8 +709,8 @@ public class TextFlow extends Pane {
      * the details of the layout.
      * <p>
      * While there is no general guarantee that successive invocations of this method return the same instance,
-     * it is safe to cache this object, as the information obtained from it remains valid until the next
-     * layout cycle.
+     * it is safe to either cache this object or call this method each time, since the information obtained from
+     * this lightweight object remains valid until the next layout cycle.
      * <p>
      * The information obtained after the next layout cycle might be different as a result
      * of actions such as resizing of the container, or modification of certain properties.

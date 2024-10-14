@@ -109,4 +109,13 @@ public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutI
      * @return the array of {@code Rectangle2D} objects
      */
     public abstract List<Rectangle2D> underlineShape(int start, int end);
+
+    /**
+     * Returns the information related to the caret at the specified character index and the character bias.
+     *
+     * @param charIndex the character index
+     * @param leading whether the caret is biased on the leading edge of the character
+     * @return the {@code CaretInfo} object
+     */
+    public abstract CaretInfo caretInfo(int charIndex, boolean leading);
 }

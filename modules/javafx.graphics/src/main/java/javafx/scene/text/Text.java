@@ -1073,9 +1073,11 @@ public class Text extends Shape {
      */
     public final PathElement[] caretShape(int charIndex, boolean caretBias) {
         if (0 <= charIndex && charIndex <= getTextInternal().length()) {
-            float x = (float)getX();
-            float y = (float)getY() - getYRendering();
-            return getTextLayout().getCaretShape(charIndex, caretBias, x, y);
+            // TODO padding JDK-8341438?
+            double dx = getX();
+            double dy = getY() - getYRendering();
+            float[] c = getTextLayout().getCaretInf(charIndex, caretBias);
+            return TextUtils.getCaretShape(c, dx, dy);
         } else {
             return null;
         }
@@ -1849,18 +1851,18 @@ public class Text extends Shape {
         final ReadOnlyObjectProperty<PathElement[]> caretShapeProperty() {
             if (caretShape == null) {
                 caretBinding = new ObjectBinding<>() {
-                    {bind(caretPositionProperty(), caretBiasProperty());}
-                    @Override protected PathElement[] computeValue() {
+                    {
+                        bind(caretPositionProperty(), caretBiasProperty());
+                    }
+
+                    @Override
+                    protected PathElement[] computeValue() {
                         int pos = getCaretPosition();
-                        int length = getTextInternal().length();
-                        if (0 <= pos && pos <= length) {
-                            boolean bias = isCaretBias();
-                            float x = (float)getX();
-                            float y = (float)getY() - getYRendering();
-                            TextLayout layout = getTextLayout();
-                            return layout.getCaretShape(pos, bias, x, y);
+                        PathElement[] pe = caretShape(pos, isCaretBias());
+                        if (pe == null) {
+                            return EMPTY_PATH_ELEMENT_ARRAY;
                         }
-                        return EMPTY_PATH_ELEMENT_ARRAY;
+                        return pe;
                     }
                 };
                 caretShape = new SimpleObjectProperty<>(Text.this, "caretShape");
@@ -2085,8 +2087,8 @@ public class Text extends Shape {
      * the details of the layout.
      * <p>
      * While there is no general guarantee that successive invocations of this method return the same instance,
-     * it is safe to cache this object, as the information obtained from it remains valid until the next
-     * layout cycle.
+     * it is safe to either cache this object or call this method each time, since the information obtained from
+     * this lightweight object remains valid until the next layout cycle.
      * <p>
      * The information obtained after the next layout cycle might be different as a result
      * of actions such as resizing of the container, or modification of certain properties.

@@ -30,8 +30,6 @@ import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
@@ -224,6 +222,11 @@ public class PrismTextLayout implements TextLayout {
         return true;
     }
 
+    @Override
+    public float getLineSpacing() {
+        return spacing;
+    }
+
     private void ensureLayout() {
         if (lines == null) {
             layout();
@@ -310,8 +313,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getCaretShape(int offset, boolean isLeading,
-                                       float x, float y) {
+    public float[] getCaretInf(int offset, boolean isLeading) {
         ensureLayout();
         int lineIndex = 0;
         int lineCount = getLineCount();
@@ -382,8 +384,7 @@ public class PrismTextLayout implements TextLayout {
         if (isMirrored()) {
             lineX = getMirroringWidth() - lineX;
         }
-        lineX += x;
-        lineY += y;
+
         if (splitCaretOffset != -1) {
             for (int i = 0; i < runs.length; i++) {
                 TextRun run = runs[i];
@@ -401,21 +402,22 @@ public class PrismTextLayout implements TextLayout {
                         if (isMirrored()) {
                             lineX2 = getMirroringWidth() - lineX2;
                         }
-                        lineX2 += x;
-                        PathElement[] result = new PathElement[4];
-                        result[0] = new MoveTo(lineX, lineY);
-                        result[1] = new LineTo(lineX, lineY + lineHeight / 2);
-                        result[2] = new MoveTo(lineX2, lineY + lineHeight / 2);
-                        result[3] = new LineTo(lineX2, lineY + lineHeight);
-                        return result;
+                        return new float[] {
+                            lineX,
+                            lineY,
+                            lineY + lineHeight / 2,
+                            lineX2,
+                            lineY + lineHeight
+                        };
                     }
                 }
             }
         }
-        PathElement[] result = new PathElement[2];
-        result[0] = new MoveTo(lineX, lineY);
-        result[1] = new LineTo(lineX, lineY + lineHeight);
-        return result;
+        return new float[] {
+            lineX,
+            lineY,
+            lineY + lineHeight
+        };
     }
 
     @Override

@@ -81,4 +81,33 @@ public final class TextUtils {
     public static Rectangle2D toRectangle2D(BaseBounds b) {
         return new Rectangle2D(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight());
     }
+
+    public static PathElement[] getCaretShape(float[] c, double dx, double dy) {
+        if (c.length == 3) {
+            // [x, ymin, ymax] - corresponds to a single line from (x, ymin) tp (x, ymax)
+            double x = c[0] + dx;
+            double ymin = c[1] + dy;
+            double ymax = c[2] + dy;
+
+            return new PathElement[] {
+                new MoveTo(x, ymin),
+                new LineTo(x, ymax)
+            };
+        } else {
+            // [x, ymin, y2, x2, ymax] - corresponds to a split caret drawn as two lines, the first line
+            // drawn from (x,ymin) to (x, y2), the second line drawn from (x2, y2) to (x2, ymax).
+            double x = c[0];
+            double ymin = c[1];
+            double y2 = c[2];
+            double x2 = c[3];
+            double ymax = c[4];
+
+            return new PathElement[] {
+                new MoveTo(x, ymin),
+                new LineTo(x, y2),
+                new MoveTo(x2, y2),
+                new LineTo(x2, ymax)
+            };
+        }
+    }
 }

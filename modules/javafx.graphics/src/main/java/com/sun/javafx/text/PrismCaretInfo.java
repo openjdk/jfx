@@ -22,36 +22,34 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.text;
+package com.sun.javafx.text;
 
-import javafx.geometry.Rectangle2D;
+import javafx.scene.text.CaretInfo;
 
 /**
- * Provides the information about a text line in a text layout.
- *
- * @param start the start offset for the line
- * @param end the end offset for the line (index of the last character + 1)
- * @param bounds the bounds of the text line, in local coordinates:
- * <ul>
- * <li>
- * {@code minX} - the x origin of the line (relative to the layout).
- * The x origin is defined by TextAlignment of the text layout, always zero
- * for left-aligned text.
- * <li>
- * {@code minY} - the ascent of the line (negative).
- * The ascent of the line is the max ascent of all fonts in the line.
- * <li>
- * {@code width} - the width of the line.
- * The width for the line is sum of all the run widths in the line, it is not
- * affect by the wrapping width but it will include any changes caused by
- * justification.
- * <li>
- * {@code height} - the height of the line.
- * The height of the line is sum of the max ascent, max descent, and
- * max line gap of all the fonts in the line.
- * </ul>
- *
- * @since 24
+ * CaretInfo as reported by the PrismTextLayout.
  */
-public record TextLineInfo(int start, int end, Rectangle2D bounds) {
+public final class PrismCaretInfo extends CaretInfo {
+    private final double[][] lines;
+    private final double lineSpacing;
+    
+    public PrismCaretInfo(double[][] lines, float lineSpacing) {
+        this.lines = lines;
+        this.lineSpacing = lineSpacing;
+    }
+
+    @Override
+    public double lineSpacing() {
+        return lineSpacing;
+    }
+
+    @Override
+    public int getLineCount() {
+        return lines.length;
+    }
+
+    @Override
+    public double[] getLineAt(int index) {
+        return lines[index];
+    }
 }

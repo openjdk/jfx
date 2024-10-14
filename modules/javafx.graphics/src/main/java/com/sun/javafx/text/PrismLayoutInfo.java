@@ -27,6 +27,7 @@ package com.sun.javafx.text;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.text.CaretInfo;
 import javafx.scene.text.LayoutInfo;
 import javafx.scene.text.TextLineInfo;
 import com.sun.javafx.scene.text.TextLayout;
@@ -83,9 +84,9 @@ public final class PrismLayoutInfo extends LayoutInfo {
         return getGeometry(start, end, TextLayout.TYPE_UNDERLINE);
     }
 
-    // TODO padding?
     private List<Rectangle2D> getGeometry(int start, int end, int type) {
         ArrayList<Rectangle2D> rv = new ArrayList<>();
+        // TODO padding/border JDK-8341438?
         layout.getRange(start, end, type, (left, top, right, bottom) -> {
             if (left < right) {
                 rv.add(new Rectangle2D(left, top, right - left, bottom - top));
@@ -98,5 +99,34 @@ public final class PrismLayoutInfo extends LayoutInfo {
 
     private TextLine line(int ix) {
         return layout.getLines()[ix];
+    }
+
+    @Override
+    public CaretInfo caretInfo(int charIndex, boolean leading) {
+        float[] c = layout.getCaretInf(charIndex, leading);
+
+        // TODO padding/border JDK-8341438?
+        double[][] lines;
+        if (c.length == 3) {
+            // {x, ymin, ymax} - corresponds to a single line from (x, ymin) tp (x, ymax)
+            lines = new double[][] {
+                new double[] {
+                    c[0], c[1], c[2]
+                }
+            };
+        } else {
+            // {x, y, y2, x2, ymax} - corresponds to a split caret drawn as two lines, the first line
+            // drawn from (x,y) to (x, y2), the second line drawn from (x2, y2) to (x2, ymax).
+            double y2 = c[2];
+            lines = new double[][] {
+                new double[] {
+                    c[0], c[1], y2
+                },
+                new double[] {
+                    c[3], y2, c[4]
+                }
+            };
+        }
+        return new PrismCaretInfo(lines, layout.getLineSpacing());
     }
 }

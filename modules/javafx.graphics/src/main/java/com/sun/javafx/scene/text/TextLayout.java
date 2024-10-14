@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.text;
 
 import java.util.Objects;
-import javafx.scene.shape.PathElement;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Shape;
 
@@ -159,6 +158,12 @@ public interface TextLayout {
     public boolean setLineSpacing(float spacing);
 
     /**
+     * Returns the line spacing for the TextLayout.
+     * @return returns the line spacing
+     */
+    public float getLineSpacing();
+
+    /**
      * Sets the direction (bidi algorithm's) for the TextLayout.
      *
      * @return returns true is the call modifies the layout internal state.
@@ -238,8 +243,23 @@ public interface TextLayout {
      */
     public Hit getHitInfo(float x, float y);
 
-    public PathElement[] getCaretShape(int offset, boolean isLeading,
-                                       float x, float y);
+    /**
+     * Queries the caret geometry and associated information at the specified text position.
+     * <p>
+     * The geometry is encoded as a sequence of coordinates using two different formats,
+     * depending on whether the caret is drawn as a single vertical line or as two separate
+     * lines (a "split" caret).
+     * <ul>
+     * <li>{@code x, ymin, ymax} - corresponds to a single line from (x, ymin) tp (x, ymax)
+     * <li>{@code x, ymin, y2, x2, ymax} - corresponds to a split caret drawn as two lines, the first line
+     * drawn from (x,ymin) to (x, y2), the second line drawn from (x2, y2) to (x2, ymax).
+     * </ul>
+     *
+     * @param offset the character offset
+     * @param leading whether the caret is biased on the leading edge of the character
+     * @return the caret geometry
+     */
+    public float[] getCaretInf(int offset, boolean leading);
 
     /**
      * Queries the range geometry of the range of text within the text layout for one of the three possible types:
