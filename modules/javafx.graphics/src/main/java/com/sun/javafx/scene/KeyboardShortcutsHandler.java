@@ -43,7 +43,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.traversal.FocusTraversal;
 import javafx.scene.traversal.TraversalDirection;
-import javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.collections.ObservableMapWrapper;
@@ -99,7 +98,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     }
 
     private void traverse(Event event, Node node, TraversalDirection dir) {
-        if (FocusTraversal.traverse(node, dir, TraversalMethod.KEY)) {
+        if (FocusTraversal.traverse(node, dir, true)) {
             event.consume();
         }
     }

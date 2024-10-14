@@ -46,19 +46,19 @@ public final class FocusTraversal {
      *
      * @param node the node to traverse focus from
      * @param dir the direction of traversal
-     * @param method the method which initiated the traversal
+     * @param focusVisible whether the focused Node should visible indicate focus
      * @return true if traversal was successful
      */
-    public static boolean traverse(Node node, TraversalDirection dir, TraversalMethod method) {
+    public static boolean traverse(Node node, TraversalDirection dir, boolean focusVisible) {
         if (node != null) {
             SubScene ss = NodeHelper.getSubScene(node);
             if (ss != null) {
-                return TopMostTraversalEngine.trav(ss.getRoot(), node, dir, method) != null;
+                return TopMostTraversalEngine.trav(ss.getRoot(), node, dir, focusVisible) != null;
             }
 
             Scene sc = node.getScene();
             if (sc != null) {
-                return TopMostTraversalEngine.trav(sc.getRoot(), node, dir, method) != null;
+                return TopMostTraversalEngine.trav(sc.getRoot(), node, dir, focusVisible) != null;
             }
         }
         return false;
@@ -68,39 +68,39 @@ public final class FocusTraversal {
      * Traverse focus downward as a response to pressing a key.
      * <p>
      * This convenience method is equivalent to calling
-     * {@code traverse(node, TraversalDirection.DOWN, TraversalMethod.KEY);}
+     * {@code traverse(node, TraversalDirection.DOWN, true);}
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseDown(Node node) {
-        return traverse(node, TraversalDirection.DOWN, TraversalMethod.KEY);
+        return traverse(node, TraversalDirection.DOWN, true);
     }
 
     /**
      * Traverse focus left as a response to pressing a key.
      * <p>
      * This convenience method is equivalent to calling
-     * {@code traverse(node, TraversalDirection.LEFT, TraversalMethod.KEY)}.
+     * {@code traverse(node, TraversalDirection.LEFT, true)}.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseLeft(Node node) {
-        return traverse(node, TraversalDirection.LEFT, TraversalMethod.KEY);
+        return traverse(node, TraversalDirection.LEFT, true);
     }
 
     /**
      * Traverse focus to the next focuseable Node as a response to pressing a key.
      * <p>
      * This convenience method is equivalent to calling
-     * {@code traverse(node, TraversalDirection.NEXT, TraversalMethod.KEY)}.
+     * {@code traverse(node, TraversalDirection.NEXT, true)}.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseNext(Node node) {
-        return traverse(node, TraversalDirection.NEXT, TraversalMethod.KEY);
+        return traverse(node, TraversalDirection.NEXT, true);
     }
 
     /**
@@ -108,52 +108,52 @@ public final class FocusTraversal {
      * This method does not traverse into the current parent.
      * <p>
      * This convenience method is equivalent to calling
-     * {@code traverse(node, TraversalDirection.NEXT_IN_LINE, TraversalMethod.KEY)}.
+     * {@code traverse(node, TraversalDirection.NEXT_IN_LINE, true)}.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseNextInLine(Node node) {
-        return traverse(node, TraversalDirection.NEXT_IN_LINE, TraversalMethod.KEY);
+        return traverse(node, TraversalDirection.NEXT_IN_LINE, true);
     }
 
     /**
      * Traverse focus to the previous focusable Node as a response to pressing a key.
      * <p>
      * This convenience method is equivalent to calling
-     * {@code traverse(node, TraversalDirection.PREVIOUS, TraversalMethod.KEY)}.
+     * {@code traverse(node, TraversalDirection.PREVIOUS, true)}.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traversePrevious(Node node) {
-        return traverse(node, TraversalDirection.PREVIOUS, TraversalMethod.KEY);
+        return traverse(node, TraversalDirection.PREVIOUS, true);
     }
 
     /**
      * Traverse focus right as a response to pressing a key.
      * <p>
      * This convenience method is equivalent to calling
-     * {@code traverse(node, TraversalDirection.RIGHT, TraversalMethod.KEY)}.
+     * {@code traverse(node, TraversalDirection.RIGHT, true)}.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseRight(Node node) {
-        return traverse(node, TraversalDirection.RIGHT, TraversalMethod.KEY);
+        return traverse(node, TraversalDirection.RIGHT, true);
     }
 
     /**
      * Traverse focus upward as a response to pressing a key.
      * <p>
      * This convenience method is equivalent to calling
-     * {@code traverse(node, TraversalDirection.UP, TraversalMethod.KEY)}.
+     * {@code traverse(node, TraversalDirection.UP, true)}.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseUp(Node node) {
-        return traverse(node, TraversalDirection.UP, TraversalMethod.KEY);
+        return traverse(node, TraversalDirection.UP, true);
     }
 
     private FocusTraversal() {

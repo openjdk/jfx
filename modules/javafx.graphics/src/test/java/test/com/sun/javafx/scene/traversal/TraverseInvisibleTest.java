@@ -32,7 +32,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.traversal.TraversalDirection;
-import javafx.scene.traversal.TraversalMethod;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,7 +94,7 @@ public final class TraverseInvisibleTest {
     {
         keypadNodes[fromNumber].requestFocus();
         keypadNodes[invisibleNumber].setVisible(false);
-        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber], direction, TraversalMethod.DEFAULT);
+        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber], direction, false);
 
         assertTrue(keypadNodes[toNumber].isFocused());
 

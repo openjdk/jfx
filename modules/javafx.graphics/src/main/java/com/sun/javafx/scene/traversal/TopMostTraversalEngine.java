@@ -28,7 +28,6 @@ package com.sun.javafx.scene.traversal;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.traversal.TraversalDirection;
-import javafx.scene.traversal.TraversalMethod;
 import javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.scene.NodeHelper;
 
@@ -47,10 +46,10 @@ public final class TopMostTraversalEngine {
      *
      * @param node The starting node to traverse from
      * @param dir the traversal direction
-     * @param method the traversal method
+     * @param focusVisible whether the focused Node should visible indicate focus
      * @return the new focus owner or null if none found (in that case old focus owner is still valid)
      */
-    public static final Node trav(Parent root, Node node, TraversalDirection dir, TraversalMethod method) {
+    public static final Node trav(Parent root, Node node, TraversalDirection dir, boolean focusVisible) {
         Node newNode = null;
         Parent p = node.getParent();
         Node traverseNode = node;
@@ -85,13 +84,13 @@ public final class TopMostTraversalEngine {
             }
         }
         if (newNode != null) {
-            focusAndNotify(root, newNode, method);
+            focusAndNotify(root, newNode, focusVisible);
         }
         return newNode;
     }
 
-    private static void focusAndNotify(Parent root, Node n, TraversalMethod method) {
-        if (method == TraversalMethod.KEY) {
+    private static void focusAndNotify(Parent root, Node n, boolean focusVisible) {
+        if (focusVisible) {
             NodeHelper.requestFocusVisible(n);
         } else {
             n.requestFocus();
@@ -105,7 +104,7 @@ public final class TopMostTraversalEngine {
     public static final Node traverseToFirst(Parent root) {
         Node n = TraversalPolicy.getDefault().selectFirst(root);
         if (n != null) {
-            focusAndNotify(root, n, TraversalMethod.DEFAULT);
+            focusAndNotify(root, n, false);
         }
         return n;
     }

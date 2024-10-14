@@ -34,7 +34,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.traversal.FocusTraversal;
 import javafx.scene.traversal.TraversalDirection;
-import javafx.scene.traversal.TraversalMethod;
 import javafx.scene.traversal.TraversalPolicy;
 import javafx.stage.Stage;
 import org.junit.AfterClass;
@@ -150,7 +149,7 @@ public final class TraversalPolicyTest {
         checkFocused(from);
 
         for (Node n : nodes) {
-            boolean success = FocusTraversal.traverse(from, dir, TraversalMethod.DEFAULT);
+            boolean success = FocusTraversal.traverse(from, dir, false);
             Assertions.assertTrue(success, "failed to traverse from node: " + from);
             firePulse();
             checkFocused(n);

@@ -105,7 +105,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.traversal.FocusTraversal;
 import javafx.scene.traversal.TraversalDirection;
-import javafx.scene.traversal.TraversalMethod;
 import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -2220,7 +2219,7 @@ public class Scene implements EventTarget {
      * function assumes that it is still a member of the same scene.
      */
     private void focusIneligible(Node node) {
-        FocusTraversal.traverse(node, TraversalDirection.NEXT, TraversalMethod.DEFAULT);
+        FocusTraversal.traverse(node, TraversalDirection.NEXT, false);
     }
 
     boolean processKeyEvent(KeyEvent e) {

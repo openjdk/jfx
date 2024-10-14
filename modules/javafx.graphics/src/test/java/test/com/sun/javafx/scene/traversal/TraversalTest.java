@@ -32,7 +32,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.traversal.TraversalDirection;
-import javafx.scene.traversal.TraversalMethod;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -138,7 +137,7 @@ public final class TraversalTest {
         int toNumberTransformed)
     {
         keypadNodes[fromNumber - 1].requestFocus();
-        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
+        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber - 1], direction, false);
         assertTrue(keypadNodes[toNumber - 1].isFocused());
     }
 
@@ -152,7 +151,7 @@ public final class TraversalTest {
     {
         scene.getRoot().setRotate(90);
         keypadNodes[fromNumber - 1].requestFocus();
-        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
+        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber - 1], direction, false);
         assertTrue(keypadNodes[toNumberTransformed - 1].isFocused());
     }
 
