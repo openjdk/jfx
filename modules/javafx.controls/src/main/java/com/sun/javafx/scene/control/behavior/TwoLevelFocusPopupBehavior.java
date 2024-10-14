@@ -151,7 +151,7 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
             if (
                 !ev.isMetaDown() &&
                 !ev.isControlDown() &&
-                !ev.isAltDown()) 
+                !ev.isAltDown())
             {
                 if (!isExternalFocus()) {
                     //
