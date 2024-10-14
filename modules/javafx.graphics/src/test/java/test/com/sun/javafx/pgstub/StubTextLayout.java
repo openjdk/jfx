@@ -83,11 +83,6 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
-    public float getLineSpacing() {
-        return spacing;
-    }
-
-    @Override
     public boolean setDirection(int direction) {
         return true;
     }

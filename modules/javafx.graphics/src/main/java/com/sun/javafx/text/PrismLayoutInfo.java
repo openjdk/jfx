@@ -127,6 +127,6 @@ public final class PrismLayoutInfo extends LayoutInfo {
                 }
             };
         }
-        return new PrismCaretInfo(lines, layout.getLineSpacing());
+        return new PrismCaretInfo(lines);
     }
 }

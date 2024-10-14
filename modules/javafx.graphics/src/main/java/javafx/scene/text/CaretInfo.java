@@ -39,13 +39,6 @@ public sealed abstract class CaretInfo permits PrismCaretInfo {
     }
 
     /**
-     * Returns the text line spacing at the caret position.
-     *
-     * @return the line spacing
-     */
-    public abstract double lineSpacing();
-
-    /**
      * Returns the number of lines representing the caret.
      *
      * @return the number of parts representing the caret

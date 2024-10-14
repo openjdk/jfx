@@ -158,12 +158,6 @@ public interface TextLayout {
     public boolean setLineSpacing(float spacing);
 
     /**
-     * Returns the line spacing for the TextLayout.
-     * @return returns the line spacing
-     */
-    public float getLineSpacing();
-
-    /**
      * Sets the direction (bidi algorithm's) for the TextLayout.
      *
      * @return returns true is the call modifies the layout internal state.

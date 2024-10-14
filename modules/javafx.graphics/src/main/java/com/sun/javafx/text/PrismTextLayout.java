@@ -222,11 +222,6 @@ public class PrismTextLayout implements TextLayout {
         return true;
     }
 
-    @Override
-    public float getLineSpacing() {
-        return spacing;
-    }
-
     private void ensureLayout() {
         if (lines == null) {
             layout();

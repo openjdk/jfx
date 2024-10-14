@@ -31,16 +31,9 @@ import javafx.scene.text.CaretInfo;
  */
 public final class PrismCaretInfo extends CaretInfo {
     private final double[][] lines;
-    private final double lineSpacing;
 
-    public PrismCaretInfo(double[][] lines, float lineSpacing) {
+    public PrismCaretInfo(double[][] lines) {
         this.lines = lines;
-        this.lineSpacing = lineSpacing;
-    }
-
-    @Override
-    public double lineSpacing() {
-        return lineSpacing;
     }
 
     @Override
