@@ -291,6 +291,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             () -> {
                 getSkinnable().requestLayout();
                 viewRect.requestLayout();
+                viewContent.requestLayout();
             },
             control.fitToWidthProperty(),
             control.fitToHeightProperty()
