@@ -1060,13 +1060,4 @@ public class PlatformImpl {
             setAccessibilityTheme(null);
         }
     }
-
-    private static native void _overrideNativeWindowHandle(Class lwFrameWrapperClass,
-                                                           Object frame,
-                                                           long handle, Runnable closeWindow);
-
-    public static void overrideNativeWindowHandle(Class lwFrameWrapperClass, Object frame,
-                                                  long handle, Runnable closeWindow) {
-        _overrideNativeWindowHandle(lwFrameWrapperClass, frame, handle, closeWindow);
-    }
 }

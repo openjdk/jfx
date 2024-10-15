@@ -25,8 +25,8 @@
 
 package com.sun.javafx.embed.swing.newimpl;
 
+import com.sun.glass.ui.Application;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.embed.swing.FXDnD;
 import com.sun.javafx.embed.swing.SwingCursors;
@@ -124,9 +124,8 @@ public class SwingNodeInteropN {
 
     public void overrideNativeWindowHandle(Object frame, long handle, Runnable closeWindow) {
         LightweightFrameWrapper lwFrame = (LightweightFrameWrapper)frame;
-        PlatformImpl.overrideNativeWindowHandle(lwFrameWrapperClass, lwFrame, handle, closeWindow);
+        Application.overrideNativeWindowHandle(lwFrameWrapperClass, lwFrame, handle, closeWindow);
     }
-
 
     public void notifyDisplayChanged(Object frame, double scaleX, double scaleY) {
         LightweightFrameWrapper lwFrame = (LightweightFrameWrapper)frame;
