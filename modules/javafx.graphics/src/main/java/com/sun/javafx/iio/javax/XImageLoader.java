@@ -209,12 +209,7 @@ public class XImageLoader implements ImageLoader {
         byte[] data = byteBuffer.getData();
         int offset = byteBuffer.getOffset();
         int size = byteBuffer.getSize();
-
-        if (offset == 0 && size == data.length) {
-            return ByteBuffer.wrap(data);
-        }
-
-        return ByteBuffer.wrap(Arrays.copyOf(data, size - offset));
+        return ByteBuffer.wrap(data, offset, size);
     }
 
     private static IntBuffer getIntBuffer(DataBuffer buffer) {
@@ -222,12 +217,7 @@ public class XImageLoader implements ImageLoader {
         int[] data = byteBuffer.getData();
         int offset = byteBuffer.getOffset();
         int size = byteBuffer.getSize();
-
-        if (offset == 0 && size == data.length) {
-            return IntBuffer.wrap(data);
-        }
-
-        return IntBuffer.wrap(Arrays.copyOf(data, size - offset));
+        return IntBuffer.wrap(data, offset, size);
     }
 
     private final class LoadListenerImpl implements IIOReadProgressListener, IIOReadWarningListener {

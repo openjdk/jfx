@@ -222,7 +222,6 @@ public class Image implements PlatformImage {
 
         // GRAY, RGB, BGRA_PRE, and INT_ARGB_PRE are directly supported by Prism.
         // We'll need to convert all other formats that we might encounter to one of the supported formats.
-        // TODO: 3D - need a way to handle pre versus non-Pre
         return switch (type) {
             case GRAY -> fromByteGrayData((ByteBuffer)frame.getImageData(), w, h, stride, ps);
             case RGB -> fromByteRgbData((ByteBuffer)frame.getImageData(), w, h, stride, ps);

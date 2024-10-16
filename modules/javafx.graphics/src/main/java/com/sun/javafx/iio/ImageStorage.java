@@ -46,6 +46,7 @@ import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.Optional;
 
 /**
  * A convenience class for simple image loading. Factories for creating loaders
@@ -178,7 +179,7 @@ public class ImageStorage {
      */
     private final HashMap<String, ImageLoaderFactory> loaderFactoriesByMimeSubtype;
     private final ImageLoaderFactory[] loaderFactories;
-    private final ImageLoaderFactory xImageLoaderFactory = tryGetXImageLoaderFactory();
+    private Optional<ImageLoaderFactory> xImageLoaderFactory;
     private int maxSignatureLength;
 
     private static final boolean isIOS = PlatformUtil.isIOS();
@@ -191,14 +192,6 @@ public class ImageStorage {
         return InstanceHolder.INSTANCE;
     }
 
-    private static ImageLoaderFactory tryGetXImageLoaderFactory() {
-        try {
-            Class<?> factoryClass = Class.forName("com.sun.javafx.iio.javax.XImageLoaderFactory");
-            return (ImageLoaderFactory)factoryClass.getMethod("getInstance").invoke(null);
-        } catch (ReflectiveOperationException e) {
-            return null;
-        }
-    }
 
     public ImageStorage() {
         if (isIOS) {
@@ -423,9 +416,7 @@ public class ImageStorage {
                     } else {
                         // If we don't have a built-in loader factory we try to find an ImageIO loader
                         // that can load the content of the data URI.
-                        ImageLoader imageLoader = xImageLoaderFactory != null
-                            ? xImageLoaderFactory.createImageLoader(new ByteArrayInputStream(dataUri.getData()))
-                            : null;
+                        ImageLoader imageLoader = tryCreateXImageLoader(new ByteArrayInputStream(dataUri.getData()));
 
                         if (imageLoader == null) {
                             throw new IllegalArgumentException(
@@ -553,9 +544,9 @@ public class ImageStorage {
         stream.mark(Integer.MAX_VALUE);
         ImageLoader loader = getLoaderBySignature(stream, listener);
 
-        if (loader == null && xImageLoaderFactory != null) {
+        if (loader == null) {
             stream.reset();
-            loader = xImageLoaderFactory.createImageLoader(stream);
+            loader = tryCreateXImageLoader(stream);
         }
 
         return loader;
@@ -608,5 +599,27 @@ public class ImageStorage {
 
         // not found
         return null;
+    }
+
+    /**
+     * Tries to create an {@link com.sun.javafx.iio.javax.XImageLoader} for the specified input stream.
+     * This might fail in the future if the {@code java.desktop} module is not present on the module path.
+     * At present, this will not fail because JavaFX requires the {@code java.desktop} module.
+     */
+    private synchronized ImageLoader tryCreateXImageLoader(InputStream stream) throws IOException {
+        if (xImageLoaderFactory == null) {
+            try {
+                Class<?> factoryClass = Class.forName("com.sun.javafx.iio.javax.XImageLoaderFactory");
+                xImageLoaderFactory = Optional.of((ImageLoaderFactory)factoryClass.getMethod("getInstance").invoke(null));
+            } catch (ReflectiveOperationException e) {
+                xImageLoaderFactory = Optional.empty();
+            }
+        }
+
+        if (xImageLoaderFactory.isEmpty()) {
+            return null;
+        }
+
+        return xImageLoaderFactory.get().createImageLoader(stream);
     }
 }
