@@ -67,6 +67,30 @@ public class ImageStorageTest {
         assertNotNull(new ImageStorage().loadAll(path, null, 0, 0, true, 1.0f, true));
     }
 
+    @Test
+    public void testImageLoadNoFallbackWith1xPresent() throws ImageStorageException {
+        // lightblue.png is 40x40, but lightblue@1x.png is 50x50
+        // we want to make sure we load the 40x40 version unless explicitly stated
+        String path = getResourcePath("lightblue.png");
+        ImageStorage img = new ImageStorage();
+        ImageFrame[] frames = img.loadAll(path, null, 0, 0, true, 1.0f, true);
+        assertNotNull(frames);
+        assertEquals(1, frames.length);
+
+        assertEquals(40, frames[0].getWidth());
+        assertEquals(40, frames[0].getHeight());
+
+        // confidence check - load lightblue@1x.png and make sure it's different
+        String path1x = getResourcePath("lightblue@1x.png");
+        ImageStorage img1x = new ImageStorage();
+        ImageFrame[] frames1x = img1x.loadAll(path1x, null, 0, 0, true, 1.0f, true);
+        assertNotNull(frames1x);
+        assertEquals(1, frames1x.length);
+
+        assertEquals(50, frames1x[0].getWidth());
+        assertEquals(50, frames1x[0].getHeight());
+    }
+
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 4})
     public void testImageNames(int scale) {
