@@ -90,9 +90,9 @@ public:
         NoRules, // For parsing at-rules inside declaration lists (without nesting support)
     };
 
-    static CSSParser::ParseResult parseValue(MutableStyleProperties*, CSSPropertyID, const String&, bool important, const CSSParserContext&);
-    static CSSParser::ParseResult parseCustomPropertyValue(MutableStyleProperties*, const AtomString& propertyName, const String&, bool important, const CSSParserContext&);
-    static Ref<ImmutableStyleProperties> parseInlineStyleDeclaration(const String&, const Element*);
+    static CSSParser::ParseResult parseValue(MutableStyleProperties&, CSSPropertyID, const String&, bool important, const CSSParserContext&);
+    static CSSParser::ParseResult parseCustomPropertyValue(MutableStyleProperties&, const AtomString& propertyName, const String&, bool important, const CSSParserContext&);
+    static Ref<ImmutableStyleProperties> parseInlineStyleDeclaration(const String&, const Element&);
     static bool parseDeclarationList(MutableStyleProperties*, const String&, const CSSParserContext&);
     static RefPtr<StyleRuleBase> parseRule(const String&, const CSSParserContext&, StyleSheetContents*, AllowedRulesType, CSSParserEnum::IsNestedContext = CSSParserEnum::IsNestedContext::No);
     static void parseStyleSheet(const String&, const CSSParserContext&, StyleSheetContents&);
@@ -107,9 +107,9 @@ public:
     RefPtr<StyleRuleBase> consumeAtRule(CSSParserTokenRange&, AllowedRulesType);
 
     static void parseDeclarationListForInspector(const String&, const CSSParserContext&, CSSParserObserver&);
-    static void parseStyleSheetForInspector(const String&, const CSSParserContext&, StyleSheetContents*, CSSParserObserver&);
+    static void parseStyleSheetForInspector(const String&, const CSSParserContext&, StyleSheetContents&, CSSParserObserver&);
 
-    CSSTokenizer* tokenizer() const { return m_tokenizer.get(); };
+    CSSTokenizer* tokenizer() const { return m_tokenizer.get(); }
 
 private:
     struct NestingContext {
@@ -134,8 +134,10 @@ private:
     // This function updates the range it's given.
     RefPtr<StyleRuleBase> consumeQualifiedRule(CSSParserTokenRange&, AllowedRulesType);
 
-    // This function is used for all the nested group rules (@media, @supports,..etc)
-    Vector<Ref<StyleRuleBase>> consumeRegularRuleList(CSSParserTokenRange block);
+    // This function is used for all the nested group rules (@media, @layer, @supports, @scope, @container,..etc)
+    // It handles potentially orphaned declarations (in the context of style nesting)
+    // https://drafts.csswg.org/css-nesting/#conditionals
+    Vector<Ref<StyleRuleBase>> consumeNestedGroupRules(CSSParserTokenRange block);
 
     static RefPtr<StyleRuleCharset> consumeCharsetRule(CSSParserTokenRange prelude);
     RefPtr<StyleRuleImport> consumeImportRule(CSSParserTokenRange prelude);
@@ -153,6 +155,8 @@ private:
     RefPtr<StyleRuleLayer> consumeLayerRule(CSSParserTokenRange prelude, std::optional<CSSParserTokenRange> block);
     RefPtr<StyleRuleContainer> consumeContainerRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleProperty> consumePropertyRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleScope> consumeScopeRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleStartingStyle> consumeStartingStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
 
     RefPtr<StyleRuleKeyframe> consumeKeyframeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleBase> consumeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
@@ -163,14 +167,16 @@ private:
     enum class ParsingStyleDeclarationsInRuleList : bool { No, Yes };
 
     // FIXME: We should return value for all those functions instead of using class member attributes.
-    void consumeDeclarationListOrStyleBlockHelper(CSSParserTokenRange, StyleRuleType, OnlyDeclarations, ParsingStyleDeclarationsInRuleList = ParsingStyleDeclarationsInRuleList::No);
+    void consumeBlockContent(CSSParserTokenRange, StyleRuleType, OnlyDeclarations, ParsingStyleDeclarationsInRuleList = ParsingStyleDeclarationsInRuleList::No);
     void consumeDeclarationList(CSSParserTokenRange, StyleRuleType);
     void consumeStyleBlock(CSSParserTokenRange, StyleRuleType, ParsingStyleDeclarationsInRuleList = ParsingStyleDeclarationsInRuleList::No);
-    void consumeDeclaration(CSSParserTokenRange, StyleRuleType);
+    bool consumeDeclaration(CSSParserTokenRange, StyleRuleType);
     void consumeDeclarationValue(CSSParserTokenRange, CSSPropertyID, bool important, StyleRuleType);
     void consumeCustomPropertyValue(CSSParserTokenRange, const AtomString& propertyName, bool important);
 
     static Vector<double> consumeKeyframeKeyList(CSSParserTokenRange);
+
+    RefPtr<StyleSheetContents> protectedStyleSheet() const;
 
     Ref<StyleRuleBase> createNestingParentRule();
     void runInNewNestingContext(auto&& run);
@@ -179,14 +185,30 @@ private:
         ASSERT(!m_nestingContextStack.isEmpty());
         return m_nestingContextStack.last();
     }
-    bool isNestedContext()
+
+    bool isStyleNestedContext()
     {
         return (m_isAlwaysNestedContext == CSSParserEnum::IsNestedContext::Yes || m_styleRuleNestingLevel) && context().cssNestingEnabled;
     }
 
+    bool isNestedContext()
+    {
+        return m_scopeRuleNestingLevel || isStyleNestedContext();
+    }
+
     CSSParserEnum::IsNestedContext m_isAlwaysNestedContext { CSSParserEnum::IsNestedContext::No }; // Do we directly start in a nested context (for CSSOM)
+
+    // FIXME: we could unify all those into a single stack data structure.
+    // https://bugs.webkit.org/show_bug.cgi?id=265566
     unsigned m_styleRuleNestingLevel { 0 };
+    unsigned m_scopeRuleNestingLevel { 0 };
     unsigned m_ruleListNestingLevel { 0 };
+    enum class AncestorRuleType : bool {
+        Style,
+        Scope,
+    };
+    Vector<AncestorRuleType, 16> m_ancestorRuleTypeStack;
+    static void appendImplicitSelectorIfNeeded(MutableCSSSelector&, AncestorRuleType);
 
     Vector<NestingContext> m_nestingContextStack { NestingContext { } };
     const CSSParserContext& m_context;
@@ -195,7 +217,7 @@ private:
     std::unique_ptr<CSSTokenizer> m_tokenizer;
 
     // For the inspector
-    CSSParserObserverWrapper* m_observerWrapper { nullptr };
+    WeakPtr<CSSParserObserverWrapper> m_observerWrapper;
 };
 
 } // namespace WebCore

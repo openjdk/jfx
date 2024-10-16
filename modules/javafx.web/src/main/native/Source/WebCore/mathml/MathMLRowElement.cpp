@@ -42,7 +42,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLRowElement);
 
 using namespace MathMLNames;
 
-MathMLRowElement::MathMLRowElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+MathMLRowElement::MathMLRowElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> constructionType)
     : MathMLPresentationElement(tagName, document, constructionType)
 {
 }
@@ -68,7 +68,7 @@ RenderPtr<RenderElement> MathMLRowElement::createElementRenderer(RenderStyle&& s
         return createRenderer<RenderMathMLFenced>(*this, WTFMove(style));
 
     ASSERT(hasTagName(merrorTag) || hasTagName(mphantomTag) || hasTagName(mrowTag) || hasTagName(mstyleTag));
-    return createRenderer<RenderMathMLRow>(*this, WTFMove(style));
+    return createRenderer<RenderMathMLRow>(RenderObject::Type::MathMLRow, *this, WTFMove(style));
 }
 
 bool MathMLRowElement::acceptsMathVariantAttribute()

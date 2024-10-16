@@ -58,12 +58,12 @@ video[controls]::-webkit-media-text-track-container.visible-controls-bar {
 }
 
 ::-webkit-media-text-track-display {
-    position: absolute;
     unicode-bidi: plaintext;
     overflow: visible;
     writing-mode: writing-mode;
     overflow-wrap: break-word;
     white-space: pre-line;
+    text-wrap: balance;
 }
 
 ::-webkit-media-text-track-display {
@@ -76,22 +76,25 @@ video[controls]::-webkit-media-text-track-container.visible-controls-bar {
     display: inline-block;
 }
 
+::-webkit-media-text-track-region {
+    position: absolute;
+    writing-mode: horizontal-tb;
+    background: rgba(0,0,0,0.8);
+    overflow-wrap: break-word;
+    font: 5cqmin sans-serif;
+    color: rgba(255,255,255,1);
+    overflow: hidden;
+    min-height: 0px;
+    display: inline-flex;
+    flex-flow: column;
+    justify-content: flex-end;
+}
+
 ::cue(:future) {
     color: gray;
 }
 
-[pseudo="-webkit-media-text-track-display"] b {
-    font-weight: bold;
-}
-
-[pseudo="-webkit-media-text-track-display"] u {
-    text-decoration: underline;
-}
-
-[pseudo="-webkit-media-text-track-display"] i {
-    font-style: italic;
-}
-
-[pseudo="-webkit-media-text-track-display"] .hidden {
-    display: none;
-}
+[useragentpart="-webkit-media-text-track-display"] b { font-weight: bold; }
+[useragentpart="-webkit-media-text-track-display"] u { text-decoration: underline; }
+[useragentpart="-webkit-media-text-track-display"] i { font-style: italic; }
+[useragentpart="-webkit-media-text-track-display"] .hidden { display: none; }

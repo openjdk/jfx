@@ -25,28 +25,25 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import javafx.beans.property.SimpleStringProperty;
-import javafx.scene.control.IndexedCell;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.sun.javafx.tk.Toolkit;
-
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.CellShim;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableCellShim;
@@ -56,6 +53,10 @@ import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.skin.TableCellSkin;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
@@ -69,7 +70,8 @@ public class TableCellTest {
     private ObservableList<String> model;
     private StageLoader stageLoader;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException)throwable;
@@ -86,7 +88,7 @@ public class TableCellTest {
         row = new TableRow<>();
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stageLoader != null) stageLoader.dispose();
         Thread.currentThread().setUncaughtExceptionHandler(null);
@@ -492,8 +494,8 @@ public class TableCellTest {
         List<CellEditEvent<?, ?>> events = new ArrayList<>();
         editingColumn.setOnEditCancel(events::add);
         cell.cancelEdit();
-        assertEquals("column must have received editCancel", 1, events.size());
-        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+        assertEquals(1, events.size(), "column must have received editCancel");
+        assertEquals(editingPosition, events.get(0).getTablePosition(), "editing location of cancel event");
     }
 
     @Test
@@ -506,8 +508,8 @@ public class TableCellTest {
         List<CellEditEvent<?, ?>> events = new ArrayList<>();
         editingColumn.setOnEditCancel(events::add);
         table.edit(-1, null);
-        assertEquals("column must have received editCancel", 1, events.size());
-        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+        assertEquals(1, events.size(), "column must have received editCancel");
+        assertEquals(editingPosition, events.get(0).getTablePosition(), "editing location of cancel event");
     }
 
     @Test
@@ -520,8 +522,8 @@ public class TableCellTest {
         List<CellEditEvent<?, ?>> events = new ArrayList<>();
         editingColumn.setOnEditCancel(events::add);
         cell.updateIndex(0);
-        assertEquals("column must have received editCancel", 1, events.size());
-        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+        assertEquals(1, events.size(), "column must have received editCancel");
+        assertEquals(editingPosition, events.get(0).getTablePosition(), "editing location of cancel event");
     }
 
     @Test
@@ -535,8 +537,8 @@ public class TableCellTest {
         editingColumn.setOnEditCancel(events::add);
         table.getItems().add(0, "added");
         Toolkit.getToolkit().firePulse();
-        assertEquals("column must have received editCancel", 1, events.size());
-        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+        assertEquals(1, events.size(), "column must have received editCancel");
+        assertEquals(editingPosition, events.get(0).getTablePosition(), "editing location of cancel event");
     }
 
     /**
@@ -554,9 +556,9 @@ public class TableCellTest {
         editingColumn.setOnEditCancel(events::add);
         table.getItems().remove(editingIndex);
         Toolkit.getToolkit().firePulse();
-        assertNull("sanity: editing terminated on items modification", table.getEditingCell());
-        assertEquals("column must have received editCancel", 1, events.size());
-        assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
+        assertNull(table.getEditingCell(), "sanity: editing terminated on items modification");
+        assertEquals(1, events.size(), "column must have received editCancel");
+        assertEquals(editingPosition, events.get(0).getTablePosition(), "editing location of cancel event");
     }
 
     /**
@@ -579,7 +581,7 @@ public class TableCellTest {
         editingItem = null;
         Toolkit.getToolkit().firePulse();
         attemptGC(itemRef);
-        assertEquals("item must be gc'ed", null, itemRef.get());
+        assertEquals(null, itemRef.get(), "item must be gc'ed");
     }
 
     @Test
@@ -589,7 +591,7 @@ public class TableCellTest {
         List<CellEditEvent<?, ?>> events = new ArrayList<>();
         editingColumn.setOnEditStart(events::add);
         cell.startEdit();
-        assertEquals("startEdit must fire", 1, events.size());
+        assertEquals(1, events.size(), "startEdit must fire");
     }
 
     @Test
@@ -599,7 +601,7 @@ public class TableCellTest {
         cell.updateIndex(editingRow);
         TablePosition<?, ?> editingCell = new TablePosition<>(table, editingRow, editingColumn);
         cell.startEdit();
-        assertEquals("table must be editing at", editingCell, table.getEditingCell());
+        assertEquals(editingCell, table.getEditingCell(), "table must be editing at");
     }
 
     @Test
@@ -611,7 +613,7 @@ public class TableCellTest {
         TablePosition<?, ?> editingCell = new TablePosition<>(table, editingRow, null);
         cell.startEdit();
         assertTrue(cell.isEditing());
-        assertEquals("table must be editing at", editingCell, table.getEditingCell());
+        assertEquals(editingCell, table.getEditingCell(), "table must be editing at");
     }
 
     @Test
@@ -622,7 +624,7 @@ public class TableCellTest {
         List<CellEditEvent<?, ?>> events = new ArrayList<>();
         editingColumn.setOnEditStart(events::add);
         cell.startEdit();
-        assertEquals("startEdit must not fire while editing", 0, events.size());
+        assertEquals(0, events.size(), "startEdit must not fire while editing");
     }
 
     @Test
@@ -668,8 +670,8 @@ public class TableCellTest {
         editingColumn.setOnEditCancel(events::add);
         String value = "edited";
         cell.commitEdit(value);
-        assertEquals("sanity: value committed", value, table.getItems().get(editingRow));
-        assertEquals("commit must not have fired editCancel", 0, events.size());
+        assertEquals(value, table.getItems().get(editingRow), "sanity: value committed");
+        assertEquals(0, events.size(), "commit must not have fired editCancel");
     }
 
 
@@ -685,9 +687,8 @@ public class TableCellTest {
          List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.setOnEditCommit(events::add);
          cell.commitEdit("edited");
-         assertEquals("column must have received editCommit", 1, events.size());
-         assertEquals("editing location of commit event must be same as table's editingCell",
-                 editingPosition, events.get(0).getTablePosition());
+         assertEquals(1, events.size(), "column must have received editCommit");
+         assertEquals(editingPosition, events.get(0).getTablePosition(), "editing location of commit event must be same as table's editingCell");
      }
 
      @Test
@@ -700,9 +701,8 @@ public class TableCellTest {
          List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.setOnEditCommit(events::add);
          cell.commitEdit("edited");
-         assertEquals("column must have received editCommit", 1, events.size());
-         assertEquals("editing location of commit event  must be same as editingCellAtStartEdit",
-                 editingCellAtStartEdit, events.get(0).getTablePosition());
+         assertEquals(1, events.size(), "column must have received editCommit");
+         assertEquals(editingCellAtStartEdit, events.get(0).getTablePosition(), "editing location of commit event  must be same as editingCellAtStartEdit");
      }
 
      @Test
@@ -713,9 +713,8 @@ public class TableCellTest {
          List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.addEventHandler(TableColumn.editAnyEvent(), events::add);
          cell.commitEdit("edited");
-         assertEquals("column must have received editCommit", 1, events.size());
-         assertEquals("editing location of commit event must be same as editingCellAtStartEdit",
-                 editingCellAtStartEdit, events.get(0).getTablePosition());
+         assertEquals(1, events.size(), "column must have received editCommit");
+         assertEquals(editingCellAtStartEdit, events.get(0).getTablePosition(), "editing location of commit event must be same as editingCellAtStartEdit");
      }
 
 // --- JDK-8271474: implement consistent event firing pattern
@@ -802,8 +801,8 @@ public class TableCellTest {
          List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.addEventHandler(TableColumn.editStartEvent(), events::add);
          cell.startEdit();
-         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
-         assertEquals("must not fire editStart", 0, events.size());
+         assertFalse(cell.isEditing(), "sanity: off-range cell must not be editing");
+         assertEquals(0, events.size(), "must not fire editStart");
      }
 
      @Test
@@ -812,8 +811,8 @@ public class TableCellTest {
          int editingRow = table.getItems().size();
          cell.updateIndex(editingRow);
          cell.startEdit();
-         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
-         assertNull("table editing location must not be updated", table.getEditingCell());
+         assertFalse(cell.isEditing(), "sanity: off-range cell must not be editing");
+         assertNull(table.getEditingCell(), "table editing location must not be updated");
      }
 
  //--------- test the test setup
@@ -882,26 +881,26 @@ public class TableCellTest {
         int intermediate = 0;
         cell.updateIndex(editingIndex);
         table.edit(editingIndex, editingColumn);
-        assertTrue("sanity: ", cell.isEditing());
+        assertTrue(cell.isEditing(), "sanity: ");
         try {
             table.edit(intermediate, editingColumn);
         } catch (Exception ex) {
             // just catching to test in finally
         } finally {
-            assertFalse("cell must not be editing", cell.isEditing());
-            assertEquals("table must be editing at intermediate index", intermediate, table.getEditingCell().getRow());
+            assertFalse(cell.isEditing(), "cell must not be editing");
+            assertEquals(intermediate, table.getEditingCell().getRow(), "table must be editing at intermediate index");
         }
         // test editing: second round
         // switch cell off editing by cell api
         table.edit(editingIndex, editingColumn);
-        assertTrue("sanity: ", cell.isEditing());
+        assertTrue(cell.isEditing(), "sanity: ");
         try {
             cell.cancelEdit();
         } catch (Exception ex) {
             // just catching to test in finally
         } finally {
-            assertFalse("cell must not be editing", cell.isEditing());
-            assertNull("table editing must be cancelled by cell", table.getEditingCell());
+            assertFalse(cell.isEditing(), "cell must not be editing");
+            assertNull(table.getEditingCell(), "table editing must be cancelled by cell");
         }
     }
 

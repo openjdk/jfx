@@ -25,7 +25,7 @@
 
 package test.javafx.binding.expression;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.DoubleExpression;
 import javafx.beans.binding.ObjectExpression;
@@ -35,10 +35,11 @@ import javafx.beans.value.ObservableDoubleValueStub;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.ObservableValueStub;
 import javafx.collections.FXCollections;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class DoubleExpressionTest {
 
@@ -53,7 +54,7 @@ public class DoubleExpressionTest {
     private short short1;
     private byte byte1;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         data = -67.0975;
         op1 = new SimpleDoubleProperty(data);
@@ -211,8 +212,10 @@ public class DoubleExpressionTest {
         assertEquals(op1, DoubleExpression.doubleExpression((ObservableValue)op1));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testFactory_Null() {
-        DoubleExpression.doubleExpression(null);
+        assertThrows(NullPointerException.class, () -> {
+            DoubleExpression.doubleExpression(null);
+        });
     }
 }

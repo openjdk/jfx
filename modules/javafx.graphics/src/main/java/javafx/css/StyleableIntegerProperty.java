@@ -28,6 +28,7 @@ package javafx.css;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
@@ -76,13 +77,13 @@ public abstract class StyleableIntegerProperty
 
         if (transition == null) {
             set(newValue);
-        } else if (mediator == null || mediator.newValue != newValue) {
+        } else if (mediator == null || mediator.endValue != newValue) {
             // We only start a new transition if the new target value is different from the target
             // value of the existing transition. This scenario can sometimes happen when a CSS value
             // is redundantly applied, which would cause unexpected animations if we allowed the new
             // transition to interrupt the existing transition.
             mediator = new TransitionMediatorImpl(get(), newValue);
-            mediator.run(transition);
+            mediator.run(transition, getCssMetaData().getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
         }
 
         this.origin = origin;
@@ -92,59 +93,69 @@ public abstract class StyleableIntegerProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = StyleOrigin.USER;
-
-        // Calling the 'bind' method always cancels a transition timer.
-        if (mediator != null) {
-            mediator.cancel(true);
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(int v) {
         super.set(v);
-
-        if (mediator == null || mediator.cancel(false)) {
-            origin = StyleOrigin.USER;
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
-    private TransitionMediatorImpl mediator = null;
+    private void onUserChange() {
+        origin = StyleOrigin.USER;
+
+        if (mediator != null) {
+            mediator.cancel();
+        }
+    }
+
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
 
     private final class TransitionMediatorImpl extends TransitionMediator {
-        private final int oldValue;
-        private final int newValue;
+        private final int startValue;
+        private final int endValue;
+        private int reversingAdjustedStartValue;
 
-        public TransitionMediatorImpl(int oldValue, int newValue) {
-            this.oldValue = oldValue;
-            this.newValue = newValue;
+        public TransitionMediatorImpl(int startValue, int endValue) {
+            this.startValue = startValue;
+            this.endValue = endValue;
+            this.reversingAdjustedStartValue = startValue;
         }
 
         @Override
         public void onUpdate(double progress) {
-            set(progress < 1 ? oldValue + (int)((newValue - oldValue) * progress) : newValue);
+            // Integers are interpolated in real number space and rounded to the nearest integer.
+            StyleableIntegerProperty.super.set(
+                progress < 1 ? (int)Math.round(startValue + (endValue - startValue) * progress) : endValue);
         }
 
         @Override
         public void onStop() {
-            // When the transition is cancelled or completed, we clear the reference to this mediator.
-            // However, when this mediator was cancelled by a reversing transition, the 'mediator' field
-            // refers to the reversing mediator, and not to this mediator. We need to be careful to only
-            // clear references to this mediator.
-            if (mediator == this) {
-                mediator = null;
-            }
+            mediator = null;
         }
 
         @Override
         public StyleableProperty<?> getStyleableProperty() {
             return StyleableIntegerProperty.this;
+        }
+
+        @Override
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            var mediator = (TransitionMediatorImpl)existingMediator;
+
+            if (mediator.reversingAdjustedStartValue == endValue) {
+                reversingAdjustedStartValue = mediator.endValue;
+                return true;
+            }
+
+            return false;
         }
     }
 }

@@ -71,10 +71,11 @@ bool AccessibilityListBoxOption::isEnabled() const
 
 bool AccessibilityListBoxOption::isSelected() const
 {
-    if (!is<HTMLOptionElement>(m_optionElement))
+    if (!m_optionElement)
         return false;
 
-    return downcast<HTMLOptionElement>(*m_optionElement).selected();
+    RefPtr option = dynamicDowncast<HTMLOptionElement>(*m_optionElement);
+    return option && option->selected();
 }
 
 bool AccessibilityListBoxOption::isSelectedOptionActive() const
@@ -88,24 +89,20 @@ bool AccessibilityListBoxOption::isSelectedOptionActive() const
 
 LayoutRect AccessibilityListBoxOption::elementRect() const
 {
-    LayoutRect rect;
-    if (!m_optionElement)
-        return rect;
+    auto* optionParent = listBoxOptionParentNode();
+    CheckedPtr parentRenderer = optionParent ? dynamicDowncast<RenderListBox>(optionParent->renderer()) : nullptr;
+    if (!parentRenderer)
+        return { };
 
-    HTMLSelectElement* listBoxParentNode = listBoxOptionParentNode();
-    if (!listBoxParentNode)
-        return rect;
-
-    RenderElement* listBoxRenderer = listBoxParentNode->renderer();
-    if (!listBoxRenderer)
-        return rect;
-
-    LayoutRect parentRect = listBoxRenderer->document().axObjectCache()->getOrCreate(listBoxRenderer)->boundingBoxRect();
+    auto* cache = parentRenderer->document().axObjectCache();
+    if (RefPtr axObject = cache ? cache->getOrCreate(parentRenderer.get()) : nullptr) {
     int index = listBoxOptionIndex();
-    if (index != -1)
-        rect = downcast<RenderListBox>(*listBoxRenderer).itemBoundingBoxRect(parentRect.location(), index);
-
-    return rect;
+        if (index != -1) {
+            auto parentRect = axObject->boundingBoxRect();
+            return parentRenderer->itemBoundingBoxRect(parentRect.location(), index);
+        }
+    }
+    return { };
 }
 
 bool AccessibilityListBoxOption::computeAccessibilityIsIgnored() const
@@ -140,15 +137,15 @@ String AccessibilityListBoxOption::stringValue() const
     if (!m_optionElement)
         return String();
 
-    const AtomString& ariaLabel = getAttribute(aria_labelAttr);
+    const auto& ariaLabel = getAttribute(aria_labelAttr);
     if (!ariaLabel.isNull())
         return ariaLabel;
 
-    if (is<HTMLOptionElement>(*m_optionElement))
-        return downcast<HTMLOptionElement>(*m_optionElement).label();
+    if (RefPtr option = dynamicDowncast<HTMLOptionElement>(*m_optionElement))
+        return option->label();
 
-    if (is<HTMLOptGroupElement>(*m_optionElement))
-        return downcast<HTMLOptGroupElement>(*m_optionElement).groupLabelText();
+    if (RefPtr optgroup = dynamicDowncast<HTMLOptGroupElement>(*m_optionElement))
+        return optgroup->groupLabelText();
 
     return String();
 }
@@ -195,11 +192,11 @@ HTMLSelectElement* AccessibilityListBoxOption::listBoxOptionParentNode() const
     if (!m_optionElement)
         return nullptr;
 
-    if (is<HTMLOptionElement>(*m_optionElement))
-        return downcast<HTMLOptionElement>(*m_optionElement).ownerSelectElement();
+    if (RefPtr option = dynamicDowncast<HTMLOptionElement>(*m_optionElement))
+        return option->ownerSelectElement();
 
-    if (is<HTMLOptGroupElement>(*m_optionElement))
-        return downcast<HTMLOptGroupElement>(*m_optionElement).ownerSelectElement();
+    if (RefPtr optgroup = dynamicDowncast<HTMLOptGroupElement>(*m_optionElement))
+        return optgroup->ownerSelectElement();
 
     return nullptr;
 }

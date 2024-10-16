@@ -283,7 +283,7 @@ static Vector<FloatPointGraph::Polygon> polygonsForRect(const Vector<FloatRect>&
         }
 
         if (!isContained)
-            rectPolygons.uncheckedAppend(edgesForRect(rect, graph));
+            rectPolygons.append(edgesForRect(rect, graph));
     }
     return unitePolygons(rectPolygons, graph);
 }
@@ -309,9 +309,7 @@ Vector<Path> PathUtilities::pathsWithShrinkWrappedRects(const Vector<FloatRect>&
         return { WTFMove(path) };
     }
 
-    Vector<Path> paths;
-    paths.reserveInitialCapacity(polys.size());
-    for (auto& poly : polys) {
+    return WTF::map(polys, [&](auto& poly) {
         Path path;
         for (unsigned i = 0; i < poly.size(); ++i) {
             FloatPointGraph::Edge& toEdge = poly[i];
@@ -342,9 +340,8 @@ Vector<Path> PathUtilities::pathsWithShrinkWrappedRects(const Vector<FloatRect>&
             path.addArcTo(*fromEdge.second, *toEdge.first + toOffset, clampedRadius);
         }
         path.closeSubpath();
-        paths.uncheckedAppend(WTFMove(path));
-    }
-    return paths;
+        return path;
+    });
 }
 
 Path PathUtilities::pathWithShrinkWrappedRects(const Vector<FloatRect>& rects, float radius)
@@ -356,6 +353,19 @@ Path PathUtilities::pathWithShrinkWrappedRects(const Vector<FloatRect>& rects, f
         unionPath.addPath(path, AffineTransform());
 
     return unionPath;
+}
+
+Path PathUtilities::pathWithShrinkWrappedRects(const Vector<FloatRect>& rects, const FloatRoundedRect::Radii& radii)
+{
+    if (radii.isUniformCornerRadius())
+        return pathWithShrinkWrappedRects(rects, radii.topLeft().width());
+
+    // FIXME: This could potentially take non-uniform radii into account when running the
+    // shrink-wrap algorithm above, by averaging corner radii between adjacent edges.
+    Path path;
+    for (auto& rect : rects)
+        path.addRoundedRect(FloatRoundedRect { rect, radii });
+    return path;
 }
 
 static std::pair<FloatPoint, FloatPoint> startAndEndPointsForCorner(const FloatPointGraph::Edge& fromEdge, const FloatPointGraph::Edge& toEdge, const FloatSize& radius)

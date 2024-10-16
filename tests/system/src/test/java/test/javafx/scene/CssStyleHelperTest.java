@@ -25,11 +25,9 @@
 
 package test.javafx.scene;
 
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -38,12 +36,10 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class CssStyleHelperTest {
@@ -77,12 +73,12 @@ public class CssStyleHelperTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
@@ -90,18 +86,17 @@ public class CssStyleHelperTest {
     @Test
     public void testCssIsCorrectlyAppliedToLabelOnStageHideAndShow() throws Exception {
         // sanity
-        Assert.assertNull("Label1 should have no background", label1.getBackground());
-        Assert.assertNull("Label2 should have no background", label2.getBackground());
+        Assertions.assertNull(label1.getBackground(), "Label1 should have no background");
+        Assertions.assertNull(label2.getBackground(), "Label2 should have no background");
 
         startupLatch = new CountDownLatch(1);
         Util.runAndWait(() -> {
             stage.hide();
             stage.show();
         });
-        assertTrue("Timeout waiting for Stage to show after hide",
-                   startupLatch.await(15, TimeUnit.SECONDS));
+        assertTrue(startupLatch.await(15, TimeUnit.SECONDS), "Timeout waiting for Stage to show after hide");
 
-        Assert.assertNull("Label1 should have no background", label1.getBackground());
-        Assert.assertNull("Label2 should have no background", label2.getBackground());
+        Assertions.assertNull(label1.getBackground(), "Label1 should have no background");
+        Assertions.assertNull(label2.getBackground(), "Label2 should have no background");
     }
 }

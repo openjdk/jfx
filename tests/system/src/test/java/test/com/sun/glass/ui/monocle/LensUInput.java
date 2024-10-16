@@ -25,6 +25,8 @@
 
 package test.com.sun.glass.ui.monocle;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import com.sun.glass.ui.monocle.LinuxInputShim;
 import com.sun.glass.ui.monocle.LinuxSystemShim;
 import javafx.animation.AnimationTimer;
@@ -232,7 +234,9 @@ public class LensUInput extends NativeUInput {
                 if (LinuxSystemShim.errno() == LinuxSystemShim.ENXIO) { // no reader on pipe
                     try {
                         Thread.sleep(100l);
-                    } catch (InterruptedException e) { }
+                    } catch (InterruptedException e) {
+                        fail(e);
+                    }
                 } else {
                     break;
                 }
@@ -266,7 +270,7 @@ public class LensUInput extends NativeUInput {
                     try {
                         Thread.sleep(1);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        fail(e);
                     }
                 } else {
                     throw new IOException(LinuxSystemShim.getErrorMessage());

@@ -111,6 +111,7 @@ void LLIntPlan::compileFunction(uint32_t functionIndex)
 
 void LLIntPlan::didCompleteCompilation()
 {
+#if ENABLE(JIT)
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
         // LLInt entrypoint thunks generation
@@ -130,11 +131,14 @@ void LLIntPlan::didCompleteCompilation()
             if (m_moduleInformation->usesSIMD(i))
                 JIT_COMMENT(jit, "SIMD function entrypoint");
             JIT_COMMENT(jit, "Entrypoint for function[", i, "]");
+            {
             CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - prologueStackPointerDelta());
-            jit.storePtr(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(m_calleesVector[i].ptr())), calleeSlot.withOffset(PayloadOffset));
-#if USE(JSVALUE32_64)
-            jit.store32(CCallHelpers::TrustedImm32(JSValue::WasmTag), calleeSlot.withOffset(TagOffset));
-#endif
+                jit.loadPtr(calleeSlot.withOffset(PayloadOffset), GPRInfo::nonPreservedNonArgumentGPR0);
+                auto good = jit.branchPtr(MacroAssembler::Equal, GPRInfo::nonPreservedNonArgumentGPR0,
+                    MacroAssembler::TrustedImmPtr(reinterpret_cast<uint64_t>(CalleeBits::boxNativeCallee(m_calleesVector[i].ptr()))));
+                jit.breakpoint();
+                good.link(&jit);
+            }
             jumps[i] = jit.jump();
         }
 
@@ -157,10 +161,12 @@ void LLIntPlan::didCompleteCompilation()
         if (!m_moduleInformation->clobberingTailCalls().isEmpty())
             computeTransitiveTailCalls();
     }
+#endif
 
     if (m_compilerMode == CompilerMode::Validation)
         return;
 
+#if ENABLE(JIT)
     for (uint32_t functionIndex = 0; functionIndex < m_moduleInformation->functions.size(); functionIndex++) {
         const uint32_t functionIndexSpace = functionIndex + m_moduleInformation->importFunctionCount();
         if (m_exportedFunctionIndices.contains(functionIndex) || m_moduleInformation->hasReferencedFunction(functionIndexSpace)) {
@@ -170,7 +176,7 @@ void LLIntPlan::didCompleteCompilation()
             // The LLInt always bounds checks
             MemoryMode mode = MemoryMode::BoundsChecking;
             Ref<JSEntrypointCallee> callee = JSEntrypointCallee::create();
-            std::unique_ptr<InternalFunction> function = createJSToWasmWrapper(jit, callee.get(), signature, &m_unlinkedWasmToWasmCalls[functionIndex], m_moduleInformation.get(), mode, functionIndex);
+            std::unique_ptr<InternalFunction> function = createJSToWasmWrapper(jit, callee.get(), m_callees[functionIndex].ptr(), signature, &m_unlinkedWasmToWasmCalls[functionIndex], m_moduleInformation.get(), mode, functionIndex);
 
             LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::WasmThunk, JITCompilationCanFail);
             if (UNLIKELY(linkBuffer.didFailToAllocate())) {
@@ -188,6 +194,7 @@ void LLIntPlan::didCompleteCompilation()
             ASSERT_UNUSED(result, result.isNewEntry);
         }
     }
+#endif
 
     for (auto& unlinked : m_unlinkedWasmToWasmCalls) {
         for (auto& call : unlinked) {

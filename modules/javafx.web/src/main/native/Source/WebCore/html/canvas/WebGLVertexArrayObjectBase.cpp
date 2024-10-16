@@ -35,11 +35,11 @@
 
 namespace WebCore {
 
-WebGLVertexArrayObjectBase::WebGLVertexArrayObjectBase(WebGLRenderingContextBase& context, Type type)
-    : WebGLContextObject(context)
+WebGLVertexArrayObjectBase::WebGLVertexArrayObjectBase(WebGLRenderingContextBase& context, PlatformGLObject object, Type type)
+    : WebGLObject(context, object)
     , m_type(type)
 {
-    m_vertexAttribState.resize(context.getMaxVertexAttribs());
+    m_vertexAttribState.grow(context.maxVertexAttribs());
 }
 
 void WebGLVertexArrayObjectBase::setElementArrayBuffer(const AbstractLocker& locker, WebGLBuffer* buffer)
@@ -47,7 +47,7 @@ void WebGLVertexArrayObjectBase::setElementArrayBuffer(const AbstractLocker& loc
     if (buffer)
         buffer->onAttached();
     if (m_boundElementArrayBuffer)
-        m_boundElementArrayBuffer->onDetached(locker, context()->graphicsContextGL());
+        m_boundElementArrayBuffer->onDetached(locker, context()->protectedGraphicsContextGL().get());
     m_boundElementArrayBuffer = buffer;
 
 }
@@ -70,7 +70,7 @@ void WebGLVertexArrayObjectBase::setVertexAttribState(const AbstractLocker& lock
     if (buffer)
         buffer->onAttached();
     if (state.bufferBinding)
-        state.bufferBinding->onDetached(locker, context()->graphicsContextGL());
+        state.bufferBinding->onDetached(locker, context()->protectedGraphicsContextGL().get());
     state.bufferBinding = buffer;
     if (!state.validateBinding())
         m_allEnabledAttribBuffersBoundCache = false;
@@ -89,13 +89,13 @@ void WebGLVertexArrayObjectBase::setVertexAttribState(const AbstractLocker& lock
 void WebGLVertexArrayObjectBase::unbindBuffer(const AbstractLocker& locker, WebGLBuffer& buffer)
 {
     if (m_boundElementArrayBuffer == &buffer) {
-        m_boundElementArrayBuffer->onDetached(locker, context()->graphicsContextGL());
+        m_boundElementArrayBuffer->onDetached(locker, context()->protectedGraphicsContextGL().get());
         m_boundElementArrayBuffer = nullptr;
     }
 
     for (auto& state : m_vertexAttribState) {
         if (state.bufferBinding == &buffer) {
-            buffer.onDetached(locker, context()->graphicsContextGL());
+            buffer.onDetached(locker, context()->protectedGraphicsContextGL().get());
             state.bufferBinding = nullptr;
             if (!state.validateBinding())
                 m_allEnabledAttribBuffersBoundCache = false;

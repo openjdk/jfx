@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,9 +34,13 @@ import test.javafx.concurrent.mocks.InfiniteTask;
 import test.javafx.concurrent.mocks.MythicalEvent;
 import test.javafx.concurrent.mocks.SimpleTask;
 import javafx.event.EventHandler;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests that the event notification machinery on Task works as expected.
@@ -53,23 +57,27 @@ public class TaskEventTest {
      *
      **************************************************************************/
 
-    @Test public void onScheduledPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onScheduledPropertyNameShouldMatchMethodName() {
         Task task = new SimpleTask();
         assertEquals("onScheduled", task.onScheduledProperty().getName());
     }
 
-    @Test public void onScheduledBeanShouldMatchTask() {
+    @Test
+    public void onScheduledBeanShouldMatchTask() {
         Task task = new SimpleTask();
         assertSame(task, task.onScheduledProperty().getBean());
     }
 
-    @Test public void onScheduledIsInitializedToNull() {
+    @Test
+    public void onScheduledIsInitializedToNull() {
         Task task = new SimpleTask();
         assertNull(task.getOnScheduled());
         assertNull(task.onScheduledProperty().get());
     }
 
-    @Test public void onScheduledCalledWhenSetViaProperty() {
+    @Test
+    public void onScheduledCalledWhenSetViaProperty() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
         task.onScheduledProperty().set(workerStateEvent -> handlerCalled.set(true));
@@ -79,7 +87,8 @@ public class TaskEventTest {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void onScheduledFilterCalledBefore_onScheduled() {
+    @Test
+    public void onScheduledFilterCalledBefore_onScheduled() {
         SimpleTask task = new SimpleTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
@@ -92,7 +101,8 @@ public class TaskEventTest {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void scheduledCalledAfterHandler() {
+    @Test
+    public void scheduledCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean scheduledCalledLast = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask() {
@@ -108,7 +118,8 @@ public class TaskEventTest {
         assertTrue(scheduledCalledLast.get());
     }
 
-    @Test public void scheduledCalledAfterHandlerEvenIfConsumed() {
+    @Test
+    public void scheduledCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean scheduledCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask() {
             @Override protected void scheduled() {
@@ -123,7 +134,8 @@ public class TaskEventTest {
         assertTrue(scheduledCalled.get());
     }
 
-    @Test public void onScheduledHandlerCalled() {
+    @Test
+    public void onScheduledHandlerCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
         task.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> handlerCalled.set(true));
@@ -133,7 +145,8 @@ public class TaskEventTest {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void removed_onScheduledHandlerNotCalled() {
+    @Test
+    public void removed_onScheduledHandlerNotCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
@@ -147,7 +160,8 @@ public class TaskEventTest {
         assertFalse(handlerCalled.get());
     }
 
-    @Test public void removed_onScheduledFilterNotCalled() {
+    @Test
+    public void removed_onScheduledFilterNotCalled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
@@ -167,23 +181,27 @@ public class TaskEventTest {
      *
      **************************************************************************/
 
-    @Test public void onRunningPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onRunningPropertyNameShouldMatchMethodName() {
         Task task = new SimpleTask();
         assertEquals("onRunning", task.onRunningProperty().getName());
     }
 
-    @Test public void onRunningBeanShouldMatchTask() {
+    @Test
+    public void onRunningBeanShouldMatchTask() {
         Task task = new SimpleTask();
         assertSame(task, task.onRunningProperty().getBean());
     }
 
-    @Test public void onRunningIsInitializedToNull() {
+    @Test
+    public void onRunningIsInitializedToNull() {
         Task task = new SimpleTask();
         assertNull(task.getOnRunning());
         assertNull(task.onRunningProperty().get());
     }
 
-    @Test public void onRunningCalledWhenSetViaProperty() {
+    @Test
+    public void onRunningCalledWhenSetViaProperty() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
         task.onRunningProperty().set(workerStateEvent -> handlerCalled.set(true));
@@ -193,7 +211,8 @@ public class TaskEventTest {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void onRunningFilterCalledBefore_onRunning() {
+    @Test
+    public void onRunningFilterCalledBefore_onRunning() {
         SimpleTask task = new SimpleTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
@@ -206,7 +225,8 @@ public class TaskEventTest {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void runningCalledAfterHandler() {
+    @Test
+    public void runningCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean runningCalledLast = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask() {
@@ -221,7 +241,8 @@ public class TaskEventTest {
         assertTrue(runningCalledLast.get());
     }
 
-    @Test public void runningCalledAfterHandlerEvenIfConsumed() {
+    @Test
+    public void runningCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean runningCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask() {
             @Override protected void running() {
@@ -241,23 +262,27 @@ public class TaskEventTest {
      *
      **************************************************************************/
 
-    @Test public void onSucceededPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onSucceededPropertyNameShouldMatchMethodName() {
         Task task = new SimpleTask();
         assertEquals("onSucceeded", task.onSucceededProperty().getName());
     }
 
-    @Test public void onSucceededBeanShouldMatchTask() {
+    @Test
+    public void onSucceededBeanShouldMatchTask() {
         Task task = new SimpleTask();
         assertSame(task, task.onSucceededProperty().getBean());
     }
 
-    @Test public void onSucceededIsInitializedToNull() {
+    @Test
+    public void onSucceededIsInitializedToNull() {
         Task task = new SimpleTask();
         assertNull(task.getOnSucceeded());
         assertNull(task.onSucceededProperty().get());
     }
 
-    @Test public void onSucceededCalledWhenSetViaProperty() {
+    @Test
+    public void onSucceededCalledWhenSetViaProperty() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
         task.onSucceededProperty().set(workerStateEvent -> handlerCalled.set(true));
@@ -267,7 +292,8 @@ public class TaskEventTest {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void onSucceededFilterCalledBefore_onSucceeded() {
+    @Test
+    public void onSucceededFilterCalledBefore_onSucceeded() {
         SimpleTask task = new SimpleTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
@@ -279,7 +305,8 @@ public class TaskEventTest {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void succeededCalledAfterHandler() {
+    @Test
+    public void succeededCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean succeededCalledLast = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask() {
@@ -294,7 +321,8 @@ public class TaskEventTest {
         assertTrue(succeededCalledLast.get());
     }
 
-    @Test public void succeededCalledAfterHandlerEvenIfConsumed() {
+    @Test
+    public void succeededCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean succeededCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask() {
             @Override protected void succeeded() {
@@ -314,23 +342,27 @@ public class TaskEventTest {
      *
      **************************************************************************/
 
-    @Test public void onCancelledPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onCancelledPropertyNameShouldMatchMethodName() {
         Task task = new SimpleTask();
         assertEquals("onCancelled", task.onCancelledProperty().getName());
     }
 
-    @Test public void onCancelledBeanShouldMatchTask() {
+    @Test
+    public void onCancelledBeanShouldMatchTask() {
         Task task = new SimpleTask();
         assertSame(task, task.onCancelledProperty().getBean());
     }
 
-    @Test public void onCancelledIsInitializedToNull() {
+    @Test
+    public void onCancelledIsInitializedToNull() {
         Task task = new SimpleTask();
         assertNull(task.getOnCancelled());
         assertNull(task.onCancelledProperty().get());
     }
 
-    @Test public void onCancelledCalledWhenSetViaProperty() throws Exception {
+    @Test
+    public void onCancelledCalledWhenSetViaProperty() throws Exception {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         InfiniteTask task = new InfiniteTask();
         task.onCancelledProperty().set(workerStateEvent -> handlerCalled.set(true));
@@ -343,7 +375,8 @@ public class TaskEventTest {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void onCancelledFilterCalledBefore_onCancelled() throws Exception {
+    @Test
+    public void onCancelledFilterCalledBefore_onCancelled() throws Exception {
         InfiniteTask task = new InfiniteTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
@@ -358,7 +391,8 @@ public class TaskEventTest {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void cancelledCalledAfterHandler() throws Exception {
+    @Test
+    public void cancelledCalledAfterHandler() throws Exception {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean cancelledCalledLast = new AtomicBoolean(false);
         InfiniteTask task = new InfiniteTask() {
@@ -376,7 +410,8 @@ public class TaskEventTest {
         assertTrue(cancelledCalledLast.get());
     }
 
-    @Test public void cancelledCalledAfterHandlerEvenIfConsumed() throws Exception {
+    @Test
+    public void cancelledCalledAfterHandlerEvenIfConsumed() throws Exception {
         final AtomicBoolean cancelledCalled = new AtomicBoolean(false);
         InfiniteTask task = new InfiniteTask() {
             @Override protected void cancelled() {
@@ -399,23 +434,27 @@ public class TaskEventTest {
      *
      **************************************************************************/
 
-    @Test public void onFailedPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onFailedPropertyNameShouldMatchMethodName() {
         Task task = new SimpleTask();
         assertEquals("onFailed", task.onFailedProperty().getName());
     }
 
-    @Test public void onFailedBeanShouldMatchTask() {
+    @Test
+    public void onFailedBeanShouldMatchTask() {
         Task task = new SimpleTask();
         assertSame(task, task.onFailedProperty().getBean());
     }
 
-    @Test public void onFailedIsInitializedToNull() {
+    @Test
+    public void onFailedIsInitializedToNull() {
         Task task = new SimpleTask();
         assertNull(task.getOnFailed());
         assertNull(task.onFailedProperty().get());
     }
 
-    @Test public void onFailedCalledWhenSetViaProperty() {
+    @Test
+    public void onFailedCalledWhenSetViaProperty() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         Task<String> task = new EpicFailTask();
         task.onFailedProperty().set(workerStateEvent -> handlerCalled.set(true));
@@ -425,7 +464,8 @@ public class TaskEventTest {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void onFailedFilterCalledBefore_onFailed() {
+    @Test
+    public void onFailedFilterCalledBefore_onFailed() {
         Task<String> task = new EpicFailTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
@@ -437,7 +477,8 @@ public class TaskEventTest {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void failedCalledAfterHandler() {
+    @Test
+    public void failedCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean failedCalledLast = new AtomicBoolean(false);
         EpicFailTask task = new EpicFailTask() {
@@ -452,7 +493,8 @@ public class TaskEventTest {
         assertTrue(failedCalledLast.get());
     }
 
-    @Test public void failedCalledAfterHandlerEvenIfConsumed() {
+    @Test
+    public void failedCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean failedCalled = new AtomicBoolean(false);
         EpicFailTask task = new EpicFailTask() {
             @Override protected void failed() {
@@ -473,7 +515,8 @@ public class TaskEventTest {
      *
      **************************************************************************/
 
-    @Test public void eventFiredOnSubclassWorks() {
+    @Test
+    public void eventFiredOnSubclassWorks() {
         final AtomicBoolean result = new AtomicBoolean(false);
         MythicalTask task = new MythicalTask();
         task.setHandler(mythicalEvent -> result.set(true));

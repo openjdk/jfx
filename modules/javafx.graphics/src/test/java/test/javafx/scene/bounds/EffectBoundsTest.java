@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,19 +26,20 @@
 package test.javafx.scene.bounds;
 
 import static test.com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.assertEquals;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Glow;
 import javafx.scene.effect.Reflection;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 public class EffectBoundsTest {
 
     // test setting an effect on a Node alters the bounds
-    public @Test void testBoundsOnRectangleWithShadow() {
+    @Test
+    public void testBoundsOnRectangleWithShadow() {
         Rectangle rect = new Rectangle(100, 100);
         DropShadow ds = new DropShadow();
         ds.setRadius(2);
@@ -49,7 +50,8 @@ public class EffectBoundsTest {
     }
 
     // test setting an effect on a Node and removing the effect is right bounds
-    public @Test void testBoundsOnRectangleWithShadowRemoved() {
+    @Test
+    public void testBoundsOnRectangleWithShadowRemoved() {
         Rectangle rect = new Rectangle(100, 100);
         DropShadow ds = new DropShadow();
         ds.setRadius(2);
@@ -65,7 +67,8 @@ public class EffectBoundsTest {
 
     // test setting an effect on a Node and changing the effect params
     //   (which causes the effect bounds to change) will update the bounds
-    public @Test void testBoundsOnRectangleWithShadowChanged() {
+    @Test
+    public void testBoundsOnRectangleWithShadowChanged() {
         Rectangle rect = new Rectangle(100, 100);
         DropShadow ds = new DropShadow();
         ds.setRadius(2);
@@ -81,7 +84,8 @@ public class EffectBoundsTest {
 
     // test setting chained effects on a Node and changing the effect params
     //   (which causes the effect bounds to change) will update the bounds
-    public @Test void testBoundsOnRectangleWithShadowAndGlowChanged() {
+    @Test
+    public void testBoundsOnRectangleWithShadowAndGlowChanged() {
         Rectangle rect = new Rectangle(100, 100);
         DropShadow ds = new DropShadow();
         ds.setRadius(2);
@@ -98,7 +102,8 @@ public class EffectBoundsTest {
     }
 
     // test setting an effect on a Node and a Clip works as expected
-    public @Test void testBoundsOnRectangleWithShadowAndClip() {
+    @Test
+    public void testBoundsOnRectangleWithShadowAndClip() {
         Rectangle rect = new Rectangle(100, 100);
         DropShadow ds = new DropShadow();
         ds.setRadius(2);
@@ -110,7 +115,8 @@ public class EffectBoundsTest {
     }
 
     // test setting an effect on a Node alters the bounds
-    public @Test void testBoundsOnRectangleWithShadowAndReflection() {
+    @Test
+    public void testBoundsOnRectangleWithShadowAndReflection() {
         Rectangle rect = new Rectangle(100, 100);
         DropShadow ds = new DropShadow();
         ds.setRadius(2);
@@ -125,7 +131,8 @@ public class EffectBoundsTest {
     // test setting an effect on two Nodes and changing the effect params
     //   (which causes the effect bounds to change) will update the bounds
     // of both nodes
-    public @Test void testBoundsOnRectanglesWithShadowChanged() {
+    @Test
+    public void testBoundsOnRectanglesWithShadowChanged() {
         Rectangle rect1 = new Rectangle(100, 100);
         Rectangle rect2 = new Rectangle(100, 100);
         DropShadow ds = new DropShadow();
@@ -148,7 +155,8 @@ public class EffectBoundsTest {
     // test setting two effects on two Nodes and changing the effect params
     //   (which causes the effect bounds to change) will update the bounds
     // of both nodes
-    public @Test void testBoundsOnRectanglesWithShadowAndGlowChanged() {
+    @Test
+    public void testBoundsOnRectanglesWithShadowAndGlowChanged() {
         Rectangle rect1 = new Rectangle(100, 100);
         Rectangle rect2 = new Rectangle(100, 100);
         DropShadow ds = new DropShadow();

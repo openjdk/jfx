@@ -63,6 +63,9 @@ void PresentationContextImpl::configure(const CanvasConfiguration& canvasConfigu
         m_width,
         m_height,
         WGPUPresentMode_Immediate,
+        canvasConfiguration.viewFormats.map([&convertToBackingContext = m_convertToBackingContext.get()](auto colorFormat) {
+            return convertToBackingContext.convertToBacking(colorFormat);
+        })
     };
 
     m_swapChain = adoptWebGPU(wgpuDeviceCreateSwapChain(m_convertToBackingContext->convertToBacking(canvasConfiguration.device), m_backing.get(), &backingDescriptor));
@@ -97,7 +100,8 @@ RefPtr<Texture> PresentationContextImpl::getCurrentTexture()
 
 void PresentationContextImpl::present()
 {
-    wgpuSwapChainPresent(m_swapChain.get());
+    if (auto* surface = m_swapChain.get())
+        wgpuSwapChainPresent(surface);
     m_currentTexture = nullptr;
 }
 

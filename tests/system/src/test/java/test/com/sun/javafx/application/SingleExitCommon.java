@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,11 @@
 
 package test.com.sun.javafx.application;
 
-import com.sun.javafx.application.PlatformImplShim;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.TIMEOUT;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
@@ -34,11 +38,8 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
+import com.sun.javafx.application.PlatformImplShim;
 import test.util.Util;
-
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
 
 /**
  * Test program for Platform implicit exit behavior using the primary stage.
@@ -127,7 +128,7 @@ public class SingleExitCommon {
                 assertEquals(0, stopped.getCount());
             } else {
                 stopped.countDown();
-                throw new AssertionFailedError("Unexpected call to stop method");
+                fail("Unexpected call to stop method");
             }
         }
     }
@@ -165,11 +166,11 @@ public class SingleExitCommon {
 
         try {
             if (!initialized.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch and initialize");
+                fail("Timeout waiting for Application to launch and initialize");
             }
 
             if (!started.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to start");
+                fail("Timeout waiting for Application to start");
             }
 
             final CountDownLatch rDone = new CountDownLatch(1);
@@ -186,7 +187,7 @@ public class SingleExitCommon {
             });
 
             if (!rDone.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for runLater, throwableType = "
+                fail("Timeout waiting for runLater, throwableType = "
                         + throwableType);
             }
 
@@ -217,15 +218,15 @@ public class SingleExitCommon {
             }
 
             if (!stopped.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to stop");
+                fail("Timeout waiting for Application to stop");
             }
 
             if (!exitLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Platform to exit");
+                fail("Timeout waiting for Platform to exit");
             }
 
             if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for launch to return");
+                fail("Timeout waiting for launch to return");
             }
         } catch (InterruptedException ex) {
             Util.throwError(testError[0]);

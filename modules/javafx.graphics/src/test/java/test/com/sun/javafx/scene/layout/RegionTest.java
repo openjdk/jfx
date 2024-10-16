@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,15 @@
 
 package test.com.sun.javafx.scene.layout;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class RegionTest {
 
     public RegionTest() {
     }
 
-    @Test public void dummy() { }
+    @Test
+    public void dummy() { }
 //    CSSProperty getCssMetaDataByName(String name, List<CSSProperty> keys) {
 //        CSSProperty keyForName = null;
 //        for (CSSProperty k : keys) {

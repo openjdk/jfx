@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "ArrayPrototype.h"
+#include "CPUInlines.h"
 #include "CacheableIdentifierInlines.h"
 #include "DFGGraph.h"
 #include "DFGInsertionSet.h"
@@ -640,6 +641,65 @@ private:
 #endif
                 node->clearFlags(NodeMustGenerate);
                 break;
+            }
+
+            if (node->canSpeculateInt32(node->sourceFor(FixupPass)) && !m_graph.hasExitSite(node->origin.semantic, BadType)) {
+                auto convertToInt32 = [&](Edge& edge) {
+                    Node* toNumber = m_insertionSet.insertNode(m_indexInBlock, SpecInt32Only, ToNumber, node->origin, Edge(edge.node(), StringUse));
+                    toNumber->clearFlags(NodeMustGenerate);
+                    edge.setNode(toNumber);
+                    fixIntOrBooleanEdge(edge);
+                };
+
+                auto fixupNode = [&](Node* node) {
+                    node->setOp(ArithMul);
+                    node->setResult(NodeResultNumber);
+                    if (bytecodeCanTruncateInteger(node->arithNodeFlags()))
+                        node->setArithMode(Arith::Unchecked);
+                    else if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()) || leftChild.node() == rightChild.node())
+                        node->setArithMode(Arith::CheckOverflow);
+                    else
+                        node->setArithMode(Arith::CheckOverflowAndNegativeZero);
+                };
+
+                if (leftChild->shouldSpeculateInt32() && rightChild->shouldSpeculateString()) {
+                    fixIntOrBooleanEdge(leftChild);
+                    convertToInt32(rightChild);
+                    fixupNode(node);
+                    break;
+                }
+
+                if (rightChild->shouldSpeculateInt32() && leftChild->shouldSpeculateString()) {
+                    fixIntOrBooleanEdge(rightChild);
+                    convertToInt32(leftChild);
+                    fixupNode(node);
+                    break;
+                }
+            }
+
+            if (node->shouldSpeculateNumber()) {
+                auto convertToDouble = [&](Edge& edge) {
+                    Node* toNumber = m_insertionSet.insertNode(m_indexInBlock, SpecBytecodeNumber, ToNumber, node->origin, Edge(edge.node(), StringUse));
+                    toNumber->clearFlags(NodeMustGenerate);
+                    edge.setNode(toNumber);
+                    fixDoubleOrBooleanEdge(edge);
+                };
+
+                if (leftChild->shouldSpeculateNumber() && rightChild->shouldSpeculateString()) {
+                    fixDoubleOrBooleanEdge(leftChild);
+                    convertToDouble(rightChild);
+                    node->setOp(ArithMul);
+                    node->setResult(NodeResultDouble);
+                    break;
+                }
+
+                if (rightChild->shouldSpeculateNumber() && leftChild->shouldSpeculateString()) {
+                    fixDoubleOrBooleanEdge(rightChild);
+                    convertToDouble(leftChild);
+                    node->setOp(ArithMul);
+                    node->setResult(NodeResultDouble);
+                    break;
+                }
             }
 
             // There are cases where we can have BigInt + Int32 operands reaching ValueMul.
@@ -2910,6 +2970,37 @@ private:
             break;
         }
 
+        case ToIntegerOrInfinity: {
+            if (node->child1()->shouldSpeculateInt32()) {
+                fixIntOrBooleanEdge(node->child1());
+                node->convertToIdentity();
+                break;
+            }
+
+            if (node->child1()->shouldSpeculateNumber()) {
+                fixEdge<DoubleRepUse>(node->child1());
+                node->clearFlags(NodeMustGenerate);
+                break;
+            }
+            break;
+        }
+
+        case ToLength: {
+            if (node->child1()->shouldSpeculateInt32()) {
+                fixIntOrBooleanEdge(node->child1());
+                node->clearFlags(NodeMustGenerate);
+                node->setResult(NodeResultInt32);
+                break;
+            }
+
+            if (node->child1()->shouldSpeculateNumber()) {
+                fixEdge<DoubleRepUse>(node->child1());
+                node->clearFlags(NodeMustGenerate);
+                break;
+            }
+            break;
+        }
+
         case IdentityWithProfile: {
             node->convertToIdentity();
             break;
@@ -3079,6 +3170,8 @@ private:
         case NewAsyncGenerator:
         case NewInternalFieldObject:
         case NewRegexp:
+        case NewMap:
+        case NewSet:
         case IsTypedArrayView:
         case IsEmpty:
         case TypeOfIsUndefined:
@@ -3133,6 +3226,8 @@ private:
         case GetWebAssemblyInstanceExports:
         case NewBoundFunction:
         case MakeAtomString:
+        case CallCustomAccessorGetter:
+        case CallCustomAccessorSetter:
             break;
 #else // not ASSERT_ENABLED
         default:
@@ -3873,6 +3968,14 @@ private:
             m_indexInBlock, SpecNone, Check, node->origin,
             Edge(searchRegExp, RegExpObjectUse));
 
+        // Check that searchRegExp.lastIndex is a number
+        Node* lastIndexProperty = m_insertionSet.insertNode(
+            m_indexInBlock, SpecNone, GetRegExpObjectLastIndex, node->origin,
+            Edge(searchRegExp, RegExpObjectUse));
+        m_insertionSet.insertNode(
+            m_indexInBlock, SpecNone, Check, node->origin,
+            Edge(lastIndexProperty, NumberUse));
+
         auto emitPrimordialCheckFor = [&] (JSValue primordialProperty, UniquedStringImpl* propertyUID) {
             m_graph.identifiers().ensure(propertyUID);
             Node* actualProperty = m_insertionSet.insertNode(
@@ -4319,7 +4422,7 @@ private:
             ConcurrentJSLocker locker(profiledBlock->m_lock);
             ArrayProfile* arrayProfile = profiledBlock->getArrayProfile(locker, node->origin.semantic.bytecodeIndex());
             if (arrayProfile) {
-            arrayProfile->computeUpdatedPrediction(locker, profiledBlock);
+                arrayProfile->computeUpdatedPrediction(profiledBlock);
             arrayMode = ArrayMode::fromObserved(locker, arrayProfile, Array::Read, false);
             if (arrayMode.type() == Array::Unprofiled) {
                 // For normal array operations, it makes sense to treat Unprofiled

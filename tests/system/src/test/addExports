@@ -22,11 +22,13 @@
 --add-exports javafx.graphics/com.sun.javafx.iio.png=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.image.impl=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.image=ALL-UNNAMED
+--add-exports=javafx.graphics/com.sun.javafx.menu=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.scene=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.text=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED
+--add-exports=javafx.graphics/com.sun.javafx.tk.quantum=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.prism.impl=ALL-UNNAMED
 #
 --add-exports=javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED

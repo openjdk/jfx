@@ -78,7 +78,7 @@ void AutoscrollController::startAutoscrollForSelection(RenderObject* renderer)
         return;
     auto* scrollable = RenderBox::findAutoscrollable(renderer);
     if (!scrollable)
-        scrollable = renderer->isListBox() ? downcast<RenderListBox>(renderer) : nullptr;
+        scrollable = renderer->isRenderListBox() ? downcast<RenderListBox>(renderer) : nullptr;
     if (!scrollable)
         return;
     m_autoscrollType = AutoscrollForSelection;
@@ -98,7 +98,7 @@ void AutoscrollController::stopAutoscrollTimer(bool rendererIsBeingDestroyed)
 
     auto* frame = scrollable->document().frame();
     if (autoscrollInProgress() && frame && frame->eventHandler().mouseDownWasInSubframe()) {
-        if (auto subframe = frame->eventHandler().subframeForTargetNode(frame->eventHandler().mousePressNode()))
+        if (auto subframe = dynamicDowncast<LocalFrame>(frame->eventHandler().subframeForTargetNode(frame->eventHandler().mousePressNode())))
             subframe->eventHandler().stopAutoscrollTimer(rendererIsBeingDestroyed);
         return;
     }
@@ -206,7 +206,7 @@ void AutoscrollController::handleMouseReleaseEvent(const PlatformMouseEvent& mou
 {
     switch (m_autoscrollType) {
     case AutoscrollForPan:
-        if (mouseEvent.button() == MiddleButton)
+        if (mouseEvent.button() == MouseButton::Middle)
             m_autoscrollType = AutoscrollForPanCanStop;
         break;
     case AutoscrollForPanCanStop:
