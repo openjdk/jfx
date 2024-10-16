@@ -293,7 +293,7 @@ abstract class BaseByteToByteConverter
                        int w, int h)
         {
             srcscanbytes -= w * 3;
-            srcscanbytes -= w * 4;
+            dstscanbytes -= w * 3;
             while (--h >= 0) {
                 for (int x = 0; x < w; x++) {
                     byte b0 = srcarr[srcoff];
@@ -315,7 +315,7 @@ abstract class BaseByteToByteConverter
                        int w, int h)
         {
             srcscanbytes -= w * 3;
-            srcscanbytes -= w * 4;
+            dstscanbytes -= w * 3;
             while (--h >= 0) {
                 for (int x = 0; x < w; x++) {
                     byte b0 = srcbuf.get(srcoff);
