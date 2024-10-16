@@ -1060,4 +1060,5 @@ public class PlatformImpl {
             setAccessibilityTheme(null);
         }
     }
+
 }
