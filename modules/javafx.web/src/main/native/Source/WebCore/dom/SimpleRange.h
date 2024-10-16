@@ -34,11 +34,15 @@ struct SimpleRange {
     BoundaryPoint end;
 
     Node& startContainer() const { return start.container.get(); }
+    Ref<Node> protectedStartContainer() const { return start.container.copyRef(); }
     unsigned startOffset() const { return start.offset; }
     Node& endContainer() const { return end.container.get(); }
+    Ref<Node> protectedEndContainer() const { return end.container.copyRef(); }
     unsigned endOffset() const { return end.offset; }
 
     bool collapsed() const { return start == end; }
+
+    friend bool operator==(const SimpleRange&, const SimpleRange&) = default;
 
     WEBCORE_EXPORT SimpleRange(const BoundaryPoint&, const BoundaryPoint&);
     WEBCORE_EXPORT SimpleRange(BoundaryPoint&&, BoundaryPoint&&);
@@ -60,8 +64,6 @@ template<typename ...T> auto makeSimpleRange(T&& ...arguments) -> decltype(makeS
 // FIXME: Would like these two functions to have shorter names; another option is to change prefix to makeSimpleRange.
 WEBCORE_EXPORT std::optional<SimpleRange> makeRangeSelectingNode(Node&);
 WEBCORE_EXPORT SimpleRange makeRangeSelectingNodeContents(Node&);
-
-WEBCORE_EXPORT bool operator==(const SimpleRange&, const SimpleRange&);
 
 template<TreeType = Tree> Node* commonInclusiveAncestor(const SimpleRange&);
 
@@ -133,6 +135,8 @@ public:
 
 private:
     void enforceEndInvariant();
+
+    RefPtr<Node> protectedNode() const { return m_node; }
 
     RefPtr<Node> m_node;
     RefPtr<Node> m_pastLastNode;

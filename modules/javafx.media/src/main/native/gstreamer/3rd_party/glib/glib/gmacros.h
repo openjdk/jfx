@@ -185,6 +185,7 @@
 #define g_macro__has_attribute___pure__ G_GNUC_CHECK_VERSION (2, 96)
 #define g_macro__has_attribute___sentinel__ G_GNUC_CHECK_VERSION (4, 0)
 #define g_macro__has_attribute___unused__ G_GNUC_CHECK_VERSION (2, 4)
+#define g_macro__has_attribute___weak__ G_GNUC_CHECK_VERSION (2, 8)
 #define g_macro__has_attribute_cleanup G_GNUC_CHECK_VERSION (3, 3)
 #define g_macro__has_attribute_fallthrough G_GNUC_CHECK_VERSION (6, 0)
 #define g_macro__has_attribute_may_alias G_GNUC_CHECK_VERSION (3, 3)

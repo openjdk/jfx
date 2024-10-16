@@ -60,13 +60,14 @@ constexpr unsigned styleIdentifierLength = 5;
 bool WebVTTParser::parseFloatPercentageValue(VTTScanner& valueScanner, float& percentage)
 {
     float number;
-    if (!valueScanner.scanFloat(number))
+    bool isNegative = false;
+    if (!valueScanner.scanFloat(number, &isNegative))
         return false;
     // '%' must be present and at the end of the setting value.
     if (!valueScanner.scan('%'))
         return false;
 
-    if (number < 0 || number > 100)
+    if (isNegative || number > 100)
         return false;
 
     percentage = number;
@@ -250,7 +251,7 @@ bool WebVTTParser::hasRequiredFileIdentifier(const String& line)
     // and any number of characters that are not line terminators ...
     if (!line.startsWith(fileIdentifier))
         return false;
-    if (line.length() > fileIdentifierLength && !isASCIIWhitespace(line[fileIdentifierLength]))
+    if (line.length() > fileIdentifierLength && !isTabOrSpace(line[fileIdentifierLength]))
         return false;
     return true;
 }
@@ -389,11 +390,11 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
     StringBuilder sanitizedStyleSheetBuilder;
 
     for (const auto& rule : childRules) {
-        if (!rule->isStyleRule())
+        auto styleRule = dynamicDowncast<StyleRule>(rule);
+        if (!styleRule)
             return true;
-        const auto& styleRule = downcast<StyleRule>(rule);
 
-        const auto& selectorList = styleRule.selectorList();
+        const auto& selectorList = styleRule->selectorList();
         if (selectorList.listSize() != 1)
             return true;
         auto selector = selectorList.selectorAt(0);
@@ -403,10 +404,10 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
         if (!isCue)
             return true;
 
-        if (styleRule.properties().isEmpty())
+        if (styleRule->properties().isEmpty())
             continue;
 
-        sanitizedStyleSheetBuilder.append(selectorText, " { ", styleRule.properties().asText(), "  }\n");
+        sanitizedStyleSheetBuilder.append(selectorText, " { ", styleRule->properties().asText(), "  }\n");
     }
 
     // It would be more stylish to parse the stylesheet only once instead of serializing a sanitized version.
@@ -509,7 +510,10 @@ public:
 private:
     void constructTreeFromToken(Document&);
 
+    WebVTTNodeType currentType() const { return m_typeStack.isEmpty() ? WebVTTNodeTypeNone : m_typeStack.last(); }
+
     WebVTTToken m_token;
+    Vector<WebVTTNodeType> m_typeStack;
     RefPtr<ContainerNode> m_currentNode;
     Vector<AtomString> m_languageStack;
     Document& m_document;
@@ -531,7 +535,7 @@ Ref<DocumentFragment> WebVTTTreeBuilder::buildFromString(const String& cueText)
 
     WebVTTTokenizer tokenizer(cueText);
     m_languageStack.clear();
-
+    m_typeStack.clear();
     while (tokenizer.nextToken(m_token))
         constructTreeFromToken(m_document);
 
@@ -584,7 +588,7 @@ bool WebVTTParser::collectTimeStamp(VTTScanner& input, MediaTime& timeStamp)
 
     // Steps 5 - 7 - Collect a sequence of characters that are 0-9.
     // If not 2 characters or value is greater than 59, interpret as hours.
-    int value1;
+    unsigned value1;
     unsigned value1Digits = input.scanDigits(value1);
     if (!value1Digits)
         return false;
@@ -592,12 +596,12 @@ bool WebVTTParser::collectTimeStamp(VTTScanner& input, MediaTime& timeStamp)
         mode = hours;
 
     // Steps 8 - 11 - Collect the next sequence of 0-9 after ':' (must be 2 chars).
-    int value2;
+    unsigned value2;
     if (!input.scan(':') || input.scanDigits(value2) != 2)
         return false;
 
     // Step 12 - Detect whether this timestamp includes hours.
-    int value3;
+    unsigned value3;
     if (mode == hours || input.match(':')) {
         if (!input.scan(':') || input.scanDigits(value3) != 2)
             return false;
@@ -608,7 +612,7 @@ bool WebVTTParser::collectTimeStamp(VTTScanner& input, MediaTime& timeStamp)
     }
 
     // Steps 13 - 17 - Collect next sequence of 0-9 after '.' (must be 3 chars).
-    int value4;
+    unsigned value4;
     if (!input.scan('.') || input.scanDigits(value4) != 3)
         return false;
     if (value2 > 59 || value3 > 59)
@@ -648,6 +652,38 @@ static WebVTTNodeType tokenToNodeType(WebVTTToken& token)
     return WebVTTNodeTypeNone;
 }
 
+template<int width>
+static inline void appendNumber(StringBuilder& builder, unsigned value)
+{
+    String valueString = String::number(value);
+    int fillingZerosCount = width - valueString.length();
+    for (int i = 0; i < fillingZerosCount; ++i)
+        builder.append('0');
+    builder.append(valueString);
+}
+
+static WTF::String serializeTimestamp(double timestamp)
+{
+    uint64_t total = timestamp * 1000;
+    unsigned milliseconds = total % 1000;
+    total /= 1000;
+    unsigned seconds = total % 60;
+    total /= 60;
+    unsigned minutes = total % 60;
+    unsigned hours = total / 60;
+
+    StringBuilder builder;
+    appendNumber<2>(builder, hours);
+    builder.append(':');
+    appendNumber<2>(builder, minutes);
+    builder.append(':');
+    appendNumber<2>(builder, seconds);
+    builder.append('.');
+    appendNumber<3>(builder, milliseconds);
+
+    return builder.toString();
+}
+
 void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
 {
     // http://dev.w3.org/html5/webvtt/#webvtt-cue-text-dom-construction-rules
@@ -662,12 +698,12 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
         if (nodeType == WebVTTNodeTypeNone)
             break;
 
-        WebVTTNodeType currentType = is<WebVTTElement>(*m_currentNode) ? downcast<WebVTTElement>(*m_currentNode).webVTTNodeType() : WebVTTNodeTypeNone;
         // <rt> is only allowed if the current node is <ruby>.
-        if (nodeType == WebVTTNodeTypeRubyText && currentType != WebVTTNodeTypeRuby)
+        if (nodeType == WebVTTNodeTypeRubyText && currentType() != WebVTTNodeTypeRuby)
             break;
 
-        auto child = WebVTTElement::create(nodeType, document);
+        auto language = !m_languageStack.isEmpty() ? m_languageStack.last() : emptyAtom();
+        auto child = WebVTTElementImpl::create(nodeType, language, document);
         if (!m_token.classes().isEmpty())
             child->setAttributeWithoutSynchronization(classAttr, m_token.classes());
 
@@ -677,10 +713,9 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
             m_languageStack.append(m_token.annotation());
             child->setAttributeWithoutSynchronization(WebVTTElement::langAttributeName(), m_languageStack.last());
         }
-        if (!m_languageStack.isEmpty())
-            child->setLanguage(m_languageStack.last());
         m_currentNode->parserAppendChild(child);
         m_currentNode = WTFMove(child);
+        m_typeStack.append(nodeType);
         break;
     }
     case WebVTTTokenTypes::EndTag: {
@@ -690,30 +725,32 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
 
         // The only non-VTTElement would be the DocumentFragment root. (Text
         // nodes and PIs will never appear as m_currentNode.)
-        if (!is<WebVTTElement>(*m_currentNode))
+        if (currentType() == WebVTTNodeTypeNone)
             break;
 
-        WebVTTNodeType currentType = downcast<WebVTTElement>(*m_currentNode).webVTTNodeType();
-        bool matchesCurrent = nodeType == currentType;
+        bool matchesCurrent = nodeType == currentType();
         if (!matchesCurrent) {
             // </ruby> auto-closes <rt>
-            if (currentType == WebVTTNodeTypeRubyText && nodeType == WebVTTNodeTypeRuby) {
-                if (m_currentNode->parentNode())
+            if (currentType() == WebVTTNodeTypeRubyText && nodeType == WebVTTNodeTypeRuby) {
+                if (m_currentNode->parentNode()) {
                     m_currentNode = m_currentNode->parentNode();
+                    m_typeStack.removeLast();
+                }
             } else
                 break;
         }
         if (nodeType == WebVTTNodeTypeLanguage)
             m_languageStack.removeLast();
-        if (m_currentNode->parentNode())
+        if (m_currentNode->parentNode()) {
             m_currentNode = m_currentNode->parentNode();
+            m_typeStack.removeLast();
+        }
         break;
     }
     case WebVTTTokenTypes::TimestampTag: {
-        String charactersString = m_token.characters();
         MediaTime parsedTimeStamp;
-        if (WebVTTParser::collectTimeStamp(charactersString, parsedTimeStamp))
-            m_currentNode->parserAppendChild(ProcessingInstruction::create(document, "timestamp"_s, WTFMove(charactersString)));
+        if (WebVTTParser::collectTimeStamp(m_token.characters(), parsedTimeStamp))
+            m_currentNode->parserAppendChild(ProcessingInstruction::create(document, "timestamp"_s, serializeTimestamp(parsedTimeStamp.toDouble())));
         break;
     }
     default:

@@ -26,9 +26,12 @@
 #include "config.h"
 #include "SVGMaskElement.h"
 
+#include "LegacyRenderSVGResourceMaskerInlines.h"
 #include "NodeName.h"
-#include "RenderSVGResourceMaskerInlines.h"
+#include "RenderElementInlines.h"
+#include "RenderSVGResourceMasker.h"
 #include "SVGElementInlines.h"
+#include "SVGLayerTransformComputation.h"
 #include "SVGNames.h"
 #include "SVGRenderSupport.h"
 #include "SVGStringList.h"
@@ -111,6 +114,14 @@ void SVGMaskElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     if (PropertyRegistry::isKnownAttribute(attrName)) {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (document().settings().layerBasedSVGEngineEnabled()) {
+            if (CheckedPtr renderer = this->renderer())
+                renderer->repaintClientsOfReferencedSVGResources();
+            return;
+        }
+#endif
+
         updateSVGRendererForElementChange();
         return;
     }
@@ -125,12 +136,60 @@ void SVGMaskElement::childrenChanged(const ChildChange& change)
     if (change.source == ChildChange::Source::Parser)
         return;
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled()) {
+        if (CheckedPtr renderer = this->renderer())
+            renderer->repaintClientsOfReferencedSVGResources();
+        return;
+    }
+#endif
+
     updateSVGRendererForElementChange();
 }
 
 RenderPtr<RenderElement> SVGMaskElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
     return createRenderer<RenderSVGResourceMasker>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGResourceMasker>(*this, WTFMove(style));
+}
+
+FloatRect SVGMaskElement::calculateMaskContentRepaintRect(RepaintRectCalculation repaintRectCalculation)
+{
+    ASSERT(renderer());
+    auto transformationMatrixFromChild = [&](const RenderLayerModelObject& child) -> std::optional<AffineTransform> {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (!document().settings().layerBasedSVGEngineEnabled())
+            return std::nullopt;
+#endif
+        if (!(renderer()->isTransformed() || child.isTransformed()) || !child.hasLayer())
+            return std::nullopt;
+
+        ASSERT(child.isSVGLayerAwareRenderer());
+        ASSERT(!child.isRenderSVGRoot());
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        auto transform = SVGLayerTransformComputation(child).computeAccumulatedTransform(downcast<RenderLayerModelObject>(renderer()), TransformState::TrackSVGCTMMatrix);
+        return transform.isIdentity() ? std::nullopt : std::make_optional(WTFMove(transform));
+#endif
+    };
+    FloatRect maskRepaintRect;
+    for (auto* childNode = firstChild(); childNode; childNode = childNode->nextSibling()) {
+        auto* renderer = childNode->renderer();
+        if (!childNode->isSVGElement() || !renderer)
+            continue;
+        const auto& style = renderer->style();
+        if (style.display() == DisplayType::None || style.visibility() != Visibility::Visible)
+            continue;
+        auto r = renderer->repaintRectInLocalCoordinates(repaintRectCalculation);
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (auto transform = transformationMatrixFromChild(downcast<RenderLayerModelObject>(*renderer)))
+            r = transform->mapRect(r);
+#endif
+        maskRepaintRect.unite(r);
+    }
+    return maskRepaintRect;
 }
 
 }

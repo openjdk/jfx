@@ -26,8 +26,6 @@
 #include "config.h"
 #include "ServiceWorkerRegistrationBackgroundFetchAPI.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BackgroundFetchManager.h"
 #include "ServiceWorkerRegistration.h"
 #include <wtf/StdLibExtras.h>
@@ -72,11 +70,9 @@ ServiceWorkerRegistrationBackgroundFetchAPI& ServiceWorkerRegistrationBackground
     return *supplement;
 }
 
-const char* ServiceWorkerRegistrationBackgroundFetchAPI::supplementName()
+ASCIILiteral ServiceWorkerRegistrationBackgroundFetchAPI::supplementName()
 {
-    return "ServiceWorkerRegistrationBackgroundFetchAPI";
+    return "ServiceWorkerRegistrationBackgroundFetchAPI"_s;
 }
 
 }
-
-#endif // ENABLE(SERVICE_WORKER)

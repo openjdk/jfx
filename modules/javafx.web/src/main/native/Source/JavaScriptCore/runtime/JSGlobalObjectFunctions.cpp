@@ -98,7 +98,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
 
         // 4-d-ii. If the code unit value of C is less than 0xD800 or greater than 0xDBFF, then
         // 4-d-ii-1. Let V be the code unit value of C.
-        UChar32 codePoint;
+        char32_t codePoint;
         if (!U16_IS_LEAD(character))
             codePoint = character;
         else {
@@ -186,10 +186,10 @@ static JSValue decode(JSGlobalObject* globalObject, const CharType* characters, 
                         }
                     }
                     if (charLen != 0) {
-                        UChar32 character;
+                        char32_t character;
                         int32_t offset = 0;
                         U8_NEXT(sequence, offset, sequenceLen, character);
-                        if (character < 0)
+                        if (character == static_cast<char32_t>(U_SENTINEL))
                             charLen = 0;
                         else if (!U_IS_BMP(character)) {
                             // Convert to surrogate pair.
@@ -361,52 +361,53 @@ static double jsStrDecimalLiteral(const CharType*& data, const CharType* end)
     return PNaN;
 }
 
-template <typename CharType>
-static double toDouble(const CharType* characters, unsigned size)
+template <typename CharacterType>
+static double toDouble(std::span<const CharacterType> characters)
 {
-    const CharType* endCharacters = characters + size;
+    const auto* rawCharacters = characters.data();
+    const auto* endRawCharacters = rawCharacters + characters.size();
 
     // Skip leading white space.
-    for (; characters < endCharacters; ++characters) {
-        if (!isStrWhiteSpace(*characters))
+    for (; rawCharacters < endRawCharacters; ++rawCharacters) {
+        if (!isStrWhiteSpace(*rawCharacters))
             break;
     }
 
     // Empty string.
-    if (characters == endCharacters)
+    if (rawCharacters == endRawCharacters)
         return 0.0;
 
     double number;
-    if (characters[0] == '0' && characters + 2 < endCharacters) {
-        if ((characters[1] | 0x20) == 'x' && isASCIIHexDigit(characters[2]))
-            number = jsHexIntegerLiteral(characters, endCharacters);
-        else if ((characters[1] | 0x20) == 'o' && isASCIIOctalDigit(characters[2]))
-            number = jsOctalIntegerLiteral(characters, endCharacters);
-        else if ((characters[1] | 0x20) == 'b' && isASCIIBinaryDigit(characters[2]))
-            number = jsBinaryIntegerLiteral(characters, endCharacters);
+    if (rawCharacters[0] == '0' && rawCharacters + 2 < endRawCharacters) {
+        if ((rawCharacters[1] | 0x20) == 'x' && isASCIIHexDigit(rawCharacters[2]))
+            number = jsHexIntegerLiteral(rawCharacters, endRawCharacters);
+        else if ((rawCharacters[1] | 0x20) == 'o' && isASCIIOctalDigit(rawCharacters[2]))
+            number = jsOctalIntegerLiteral(rawCharacters, endRawCharacters);
+        else if ((rawCharacters[1] | 0x20) == 'b' && isASCIIBinaryDigit(rawCharacters[2]))
+            number = jsBinaryIntegerLiteral(rawCharacters, endRawCharacters);
         else
-            number = jsStrDecimalLiteral(characters, endCharacters);
+            number = jsStrDecimalLiteral(rawCharacters, endRawCharacters);
     } else
-        number = jsStrDecimalLiteral(characters, endCharacters);
+        number = jsStrDecimalLiteral(rawCharacters, endRawCharacters);
 
     // Allow trailing white space.
-    for (; characters < endCharacters; ++characters) {
-        if (!isStrWhiteSpace(*characters))
+    for (; rawCharacters < endRawCharacters; ++rawCharacters) {
+        if (!isStrWhiteSpace(*rawCharacters))
             break;
     }
-    if (characters != endCharacters)
+    if (rawCharacters != endRawCharacters)
         return PNaN;
 
     return number;
 }
 
 // See ecma-262 6th 11.8.3
-double jsToNumber(StringView s)
+template<typename CharacterType>
+static ALWAYS_INLINE double jsToNumber(std::span<const CharacterType> characters)
 {
-    unsigned size = s.length();
-
-    if (size == 1) {
-        UChar c = s[0];
+    auto* rawCharacters = characters.data();
+    if (characters.size() == 1) {
+        auto c = rawCharacters[0];
         if (isASCIIDigit(c))
             return c - '0';
         if (isStrWhiteSpace(c))
@@ -414,8 +415,8 @@ double jsToNumber(StringView s)
         return PNaN;
     }
 
-    if (size == 2 && s[0] == '-') {
-        UChar c = s[1];
+    if (characters.size() == 2 && rawCharacters[0] == '-') {
+        auto c = rawCharacters[1];
         if (c == '0')
             return -0.0;
         if (isASCIIDigit(c))
@@ -423,9 +424,14 @@ double jsToNumber(StringView s)
         return PNaN;
     }
 
+    return toDouble(characters);
+}
+
+double jsToNumber(StringView s)
+{
     if (s.is8Bit())
-        return toDouble(s.characters8(), size);
-    return toDouble(s.characters16(), size);
+        return jsToNumber(s.span8());
+    return jsToNumber(s.span16());
 }
 
 static double parseFloat(StringView s)
@@ -505,7 +511,8 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
         return JSValue::encode(parsedObject);
 
     SourceOrigin sourceOrigin = callFrame->callerSourceOrigin(vm);
-    EvalExecutable* eval = IndirectEvalExecutable::tryCreate(globalObject, makeSource(s, sourceOrigin), DerivedContextType::None, false, EvalContextType::None);
+    SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+    EvalExecutable* eval = IndirectEvalExecutable::tryCreate(globalObject, makeSource(s, sourceOrigin, sourceTaintedOrigin), DerivedContextType::None, false, EvalContextType::None);
     EXCEPTION_ASSERT(!!scope.exception() == !eval);
     if (!eval)
         return encodedJSValue();
@@ -881,7 +888,7 @@ static CodeBlock* getCallerCodeBlock(CallFrame* callFrame)
     CodeOrigin codeOrigin = callerFrame->codeOrigin();
     if (codeOrigin && codeOrigin.inlineCallFrame())
         return baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame());
-    if (callerFrame->isWasmFrame())
+    if (callerFrame->isNativeCalleeFrame())
         return nullptr;
     return callerFrame->codeBlock();
 }
@@ -935,7 +942,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         RETURN_IF_EXCEPTION(scope, { });
     }
 
-    if (canPerformFastPropertyEnumerationForCopyDataProperties(source->structure())) {
+    if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(source->structure()))) {
         Vector<RefPtr<UniquedStringImpl>, 8> properties;
         MarkedArgumentBuffer values;
 
@@ -946,7 +953,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         // that ends up transitioning the structure underneath us.
         // https://bugs.webkit.org/show_bug.cgi?id=187837
 
-        source->structure()->forEachProperty(vm, [&] (const PropertyTableEntry& entry) -> bool {
+        source->structure()->forEachProperty(vm, [&](const PropertyTableEntry& entry) ALWAYS_INLINE_LAMBDA {
             PropertyName propertyName(entry.key());
             if (propertyName.isPrivateName())
                 return true;
@@ -961,15 +968,20 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
             values.appendWithCrashOnOverflow(source->getDirect(entry.offset()));
             return true;
         });
-
         RETURN_IF_EXCEPTION(scope, { });
 
-        for (size_t i = 0; i < properties.size(); ++i) {
-            // FIXME: We could put properties in a batching manner to accelerate CopyDataProperties more.
-            // https://bugs.webkit.org/show_bug.cgi?id=185358
+        // excludedSet is no longer used.
+        ensureStillAliveHere(unlinkedCodeBlock);
+
+        if (LIKELY(target->inherits<JSFinalObject>() && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible()))
+            target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+        else {
+            for (size_t i = 0; i < properties.size(); ++i)
             target->putDirect(vm, properties[i].get(), values.at(i));
         }
-    } else {
+        return JSValue::encode(target);
+    }
+
         PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
         source->methodTable()->getOwnPropertyNames(source, globalObject, propertyNames, DontEnumPropertiesMode::Include);
         RETURN_IF_EXCEPTION(scope, { });
@@ -996,23 +1008,8 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
             target->putDirectMayBeIndex(globalObject, propertyName, value);
             RETURN_IF_EXCEPTION(scope, { });
         }
-    }
-
     ensureStillAliveHere(unlinkedCodeBlock);
     return JSValue::encode(target);
-}
-
-JSC_DEFINE_HOST_FUNCTION(globalFuncDateTimeFormat, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    IntlDateTimeFormat* dateTimeFormat = IntlDateTimeFormat::create(vm, globalObject->dateTimeFormatStructure());
-    dateTimeFormat->initializeDateTimeFormat(globalObject, callFrame->argument(0), callFrame->argument(1));
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    double value = callFrame->argument(2).toNumber(globalObject);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    RELEASE_AND_RETURN(scope, JSValue::encode(dateTimeFormat->format(globalObject, value)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncHandleNegativeProxyHasTrapResult, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -1070,6 +1067,27 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncIsNaN, (JSGlobalObject* globalObject, CallFra
 {
     JSValue argument = callFrame->argument(0);
     return JSValue::encode(jsBoolean(std::isnan(argument.toNumber(globalObject))));
+}
+
+JSC_DEFINE_HOST_FUNCTION(globalFuncToIntegerOrInfinity, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    JSValue argument = callFrame->argument(0);
+    if (argument.isInt32())
+        return JSValue::encode(argument);
+    return JSValue::encode(jsNumber(argument.toIntegerOrInfinity(globalObject)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(globalFuncToLength, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    JSValue argument = callFrame->argument(0);
+    if (argument.isInt32())
+        return JSValue::encode(jsNumber(std::max<int32_t>(argument.asInt32(), 0)));
+    return JSValue::encode(jsNumber(argument.toLength(globalObject)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(globalFuncSpeciesGetter, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return JSValue::encode(callFrame->thisValue().toThis(globalObject, ECMAMode::strict()));
 }
 
 } // namespace JSC

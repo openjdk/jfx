@@ -41,13 +41,12 @@ struct ContentAlignmentData {
     WTF_MAKE_NONCOPYABLE(ContentAlignmentData); WTF_MAKE_FAST_ALLOCATED;
 public:
     ContentAlignmentData() = default;
-    bool isValid() const { return positionOffset >= 0 && distributionOffset >= 0; }
 
     LayoutUnit positionOffset;
     LayoutUnit distributionOffset;
 };
 
-enum GridAxisPosition {GridAxisStart, GridAxisEnd, GridAxisCenter};
+enum class GridAxisPosition : uint8_t { GridAxisStart, GridAxisEnd, GridAxisCenter };
 
 class RenderGrid final : public RenderBlock {
     WTF_MAKE_ISO_ALLOCATED(RenderGrid);
@@ -76,6 +75,7 @@ public:
     LayoutUnit guttersSize(GridTrackSizingDirection, unsigned startLine, unsigned span, std::optional<LayoutUnit> availableSize) const;
     LayoutUnit gridItemOffset(GridTrackSizingDirection) const;
 
+    std::optional<LayoutUnit> explicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
     void updateGridAreaLogicalSize(RenderBox&, std::optional<LayoutUnit> width, std::optional<LayoutUnit> height) const;
     bool isBaselineAlignmentForChild(const RenderBox&) const;
     bool isBaselineAlignmentForChild(const RenderBox& child, GridAxis, AllowedBaseLine = AllowedBaseLine::BothLines) const;
@@ -98,18 +98,18 @@ public:
     bool isSubgrid(GridTrackSizingDirection) const;
     bool isSubgridRows() const
     {
-        return isSubgrid(ForRows);
+        return isSubgrid(GridTrackSizingDirection::ForRows);
     }
     bool isSubgridColumns() const
     {
-        return isSubgrid(ForColumns);
+        return isSubgrid(GridTrackSizingDirection::ForColumns);
     }
     bool isSubgridInParentDirection(GridTrackSizingDirection parentDirection) const;
 
     // Returns true if this grid is inheriting subgridded tracks for
     // the given direction from the specified ancestor. This handles
     // nested subgrids, where ancestor may not be our direct parent.
-    bool isSubgridOf(GridTrackSizingDirection, const RenderGrid& ancestor);
+    bool isSubgridOf(GridTrackSizingDirection, const RenderGrid& ancestor) const;
 
     bool isMasonry() const;
     bool isMasonry(GridTrackSizingDirection) const;
@@ -128,6 +128,10 @@ public:
     LayoutUnit gridGap(GridTrackSizingDirection, std::optional<LayoutUnit> availableSize) const;
 
     LayoutUnit masonryContentSize() const;
+    Vector<LayoutRect> gridItemsLayoutRects();
+
+    bool shouldCheckExplicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
+
 private:
     friend class GridTrackSizingAlgorithm;
     friend class GridMasonryLayout;
@@ -139,7 +143,6 @@ private:
     }
 
     ASCIILiteral renderName() const override;
-    bool isRenderGrid() const override { return true; }
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
 
     bool selfAlignmentChangedToStretch(GridAxis, const RenderStyle& oldStyle, const RenderStyle& newStyle, const RenderBox&) const;
@@ -150,8 +153,6 @@ private:
     bool namedGridLinesDefinitionDidChange(const RenderStyle&) const;
     bool implicitGridLinesDefinitionDidChange(const RenderStyle&) const;
 
-    bool shouldCheckExplicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
-    std::optional<LayoutUnit> explicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
     unsigned computeAutoRepeatTracksCount(GridTrackSizingDirection, std::optional<LayoutUnit> availableSize) const;
 
     unsigned clampAutoRepeatTracks(GridTrackSizingDirection, unsigned autoRepeatTracks) const;
@@ -159,11 +160,11 @@ private:
     std::unique_ptr<OrderedTrackIndexSet> computeEmptyTracksForAutoRepeat(GridTrackSizingDirection) const;
 
     enum class ShouldUpdateGridAreaLogicalSize : bool { No, Yes };
-    void performGridItemsPreLayout(const GridTrackSizingAlgorithm&, const ShouldUpdateGridAreaLogicalSize) const;
+    void performPreLayoutForGridItems(const GridTrackSizingAlgorithm&, const ShouldUpdateGridAreaLogicalSize) const;
 
     void placeItemsOnGrid(std::optional<LayoutUnit> availableLogicalWidth);
     void populateExplicitGridAndOrderIterator();
-    std::unique_ptr<GridArea> createEmptyGridAreaAtSpecifiedPositionsOutsideGrid(const RenderBox&, GridTrackSizingDirection, const GridSpan&) const;
+    GridArea createEmptyGridAreaAtSpecifiedPositionsOutsideGrid(const RenderBox&, GridTrackSizingDirection, const GridSpan&) const;
     void placeSpecifiedMajorAxisItemsOnGrid(const Vector<RenderBox*>&);
     void placeAutoMajorAxisItemsOnGrid(const Vector<RenderBox*>&);
     void placeItemUsingMasonryPositioning(Grid&, RenderBox*) const;
@@ -174,7 +175,7 @@ private:
 
     static bool itemGridAreaIsWithinImplicitGrid(const GridArea& area, unsigned gridAxisLinesCount, GridTrackSizingDirection gridAxisDirection)
     {
-        auto itemSpan = gridAxisDirection == ForColumns ? area.columns : area.rows;
+        auto itemSpan = gridAxisDirection == GridTrackSizingDirection::ForColumns ? area.columns : area.rows;
         return itemSpan.startLine() <  gridAxisLinesCount && itemSpan.endLine() < gridAxisLinesCount;
     }
 
@@ -214,6 +215,8 @@ private:
     LayoutUnit gridAreaBreadthForChildIncludingAlignmentOffsets(const RenderBox&, GridTrackSizingDirection) const;
 
     void paintChildren(PaintInfo& forSelf, const LayoutPoint& paintOffset, PaintInfo& forChild, bool usePrintRect) override;
+    LayoutOptionalOutsets allowedLayoutOverflow() const override;
+
     LayoutUnit availableAlignmentSpaceForChildBeforeStretching(LayoutUnit gridAreaBreadthForChild, const RenderBox&, GridTrackSizingDirection) const;
     StyleSelfAlignmentData justifySelfForChild(const RenderBox&, StretchingMode = StretchingMode::Any, const RenderStyle* = nullptr) const;
     StyleSelfAlignmentData alignSelfForChild(const RenderBox&, StretchingMode = StretchingMode::Any, const RenderStyle* = nullptr) const;
@@ -233,7 +236,7 @@ private:
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
     std::optional<LayoutUnit> firstLineBaseline() const final;
     std::optional<LayoutUnit> lastLineBaseline() const final;
-    WeakPtr<RenderBox> getBaselineChild(ItemPosition alignment) const;
+    SingleThreadWeakPtr<RenderBox> getBaselineChild(ItemPosition alignment) const;
     std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode) const final;
     bool isInlineBaselineAlignedChild(const RenderBox&) const;
 
@@ -275,7 +278,7 @@ private:
 
     mutable GridMasonryLayout m_masonryLayout;
 
-    typedef HashMap<const RenderBox*, std::optional<size_t>> OutOfFlowPositionsMap;
+    using OutOfFlowPositionsMap = HashMap<SingleThreadWeakRef<const RenderBox>, std::optional<size_t>>;
     OutOfFlowPositionsMap m_outOfFlowItemColumn;
     OutOfFlowPositionsMap m_outOfFlowItemRow;
 

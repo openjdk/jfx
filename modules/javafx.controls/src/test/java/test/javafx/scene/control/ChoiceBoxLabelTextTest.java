@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,12 @@
 
 package test.javafx.scene.control;
 
-import java.util.Arrays;
-import java.util.Collection;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
-
+import java.util.stream.Stream;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -49,6 +43,9 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Contains tests around the text shown in the box's label, mainly covering
@@ -58,268 +55,322 @@ import javafx.util.StringConverter;
  * It is parameterized in the converter
  * used by ChoiceBox.
  */
-@RunWith(Parameterized.class)
 public class ChoiceBoxLabelTextTest {
 
     private Scene scene;
     private Stage stage;
     private Pane root;
-
     private ChoiceBox<String> box;
-
-    private StringConverter<String> converter;
     private String uncontained;
 
 // -------------- test change uncontained -> different selected
 
-    @Test
-    public void testChangeUncontainedSelectIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeUncontainedSelectIndex(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.getSelectionModel().select(1);
-        assertEquals("label updated after select index ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select index ");
     }
 
-    @Test
-    public void testChangeUncontainedSelectItem() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeUncontainedSelectItem(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.getSelectionModel().select(box.getItems().get(1));
-        assertEquals("label updated after select item ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select item ");
     }
 
-    @Test
-    public void testChangeUncontainedSelectItemOtherUncontained() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeUncontainedSelectItemOtherUncontained(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.getSelectionModel().select(uncontained + "xx");
-        assertEquals("label updated after select item ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select item ");
     }
 
-    @Test
-    public void testChangeUncontainedSetValue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeUncontainedSetValue(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.setValue(box.getItems().get(1));
-        assertEquals("label updated after select item ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select item ");
     }
 
-    @Test
-    public void testChangeContainedSetValueOtherUncontained() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeContainedSetValueOtherUncontained(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.setValue(uncontained + "xx");
-        assertEquals("label updated after select item ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select item ");
     }
 
-    @Test
-    public void testChangeUncontainedClear() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeUncontainedClear(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.getSelectionModel().clearSelection();
-        assertEquals("label updated after select item ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select item ");
     }
 
 
 // ------------- test change selected contained -> different selected
 
-    @Test
-    public void testChangeContainedSelectIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeContainedSelectIndex(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         int index = 1;
         box.setValue(box.getItems().get(index));
         box.getSelectionModel().select(index -1);
-        assertEquals("label updated after select index ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select index ");
     }
 
-    @Test
-    public void testChangeContainedSelectItem() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeContainedSelectItem(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         int index = 1;
         box.setValue(box.getItems().get(index));
         box.getSelectionModel().select(box.getItems().get(index -1));
-        assertEquals("label updated after select item ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select item ");
     }
 
-    @Test
-    public void testChangeContainedSelectItemUncontained() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeContainedSelectItemUncontained(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         int index = 1;
         box.setValue(box.getItems().get(index));
         box.getSelectionModel().select(uncontained);
-        assertEquals("label updated after select item ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select item ");
     }
 
-    @Test
-    public void testChangeContainedSetValue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeContainedSetValue(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         int index = 1;
         box.setValue(box.getItems().get(index));
         box.setValue(box.getItems().get(index -1));
-        assertEquals("label updated after set value ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after set value ");
     }
 
-    @Test
-    public void testChangeContainedSetValueUncontained() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeContainedSetValueUncontained(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         int index = 1;
         box.setValue(box.getItems().get(index));
         box.setValue(uncontained);
-        assertEquals("label updated after set value ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after set value ");
     }
 
-    @Test
-    public void testChangeContainedClear() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeContainedClear(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         int index = 1;
         box.setValue(box.getItems().get(index));
         box.getSelectionModel().clearSelection();
-        assertEquals("label updated after clear selection ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after clear selection ");
     }
 
 // ------------- test empty -> selected
 
-    @Test
-    public void testChangeEmptySelectIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeEmptySelectIndex(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.getSelectionModel().select(1);
-        assertEquals("label updated after select index ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select index ");
     }
 
-    @Test
-    public void testChangeEmptySelectItem() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeEmptySelectItem(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.getSelectionModel().select(box.getItems().get(1));
-        assertEquals("label updated after select item ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select item ");
     }
 
-    @Test
-    public void testChangeEmptySelectItemUncontained() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeEmptySelectItemUncontained(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.getSelectionModel().select(uncontained);
-        assertEquals("label updated after select item ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after select item ");
     }
 
-    @Test
-    public void testChangeEmptySetValue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeEmptySetValue(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(box.getItems().get(1));
-        assertEquals("label updated after set value ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after set value ");
     }
 
-    @Test
-    public void testChangeEmptySetValueUncontained() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeEmptySetValueUncontained(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
-        assertEquals("label updated after set value ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label updated after set value ");
     }
 
 
 //------------- test initial label text
 
-    @Test
-    public void testInitialEmpty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testInitialEmpty(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
-        assertEquals("label has empty value ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label has empty value ");
     }
 
-    @Test
-    public void testInitialUncontained() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testInitialUncontained(StringConverter<String> converter) {
+        setup(converter);
         box.setValue(uncontained);
         showChoiceBox();
-        assertEquals("label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label has uncontainedValue ");
     }
 
-    @Test
-    public void testInitialUncontained1999() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testInitialUncontained1999(StringConverter<String> converter) {
+        setup(converter);
         box.getSelectionModel().select(1);
         box.setValue(uncontained);
         showChoiceBox();
-        assertEquals("label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label has uncontainedValue ");
     }
 
-    @Test
-    public void testInitialContained() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testInitialContained(StringConverter<String> converter) {
+        setup(converter);
         int index = 1;
         box.setValue(box.getItems().get(index));
         showChoiceBox();
-        assertEquals("label has contained value", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label has contained value");
     }
 
 //------------- test label text sync after modifications of items
 
-    @Test
-    public void testModifyItemsSetEqualList() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testModifyItemsSetEqualList(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.setItems(FXCollections.observableArrayList(box.getItems()));
-        assertEquals("label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label has uncontainedValue ");
     }
 
-    @Test
-    public void testModifyItemsSetItems() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testModifyItemsSetItems(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.setItems(FXCollections.observableArrayList("one", "two", "three"));
-        assertEquals("label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label has uncontainedValue ");
     }
 
-    @Test
-    public void testModifyItemsSetAll() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testModifyItemsSetAll(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.getItems().setAll(FXCollections.observableArrayList("one", "two", "three"));
-        assertEquals("label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label has uncontainedValue ");
     }
 
-    @Test
-    public void testModifyItemsRemoveItem() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testModifyItemsRemoveItem(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.getItems().remove(0);
-        assertEquals("sanity: is still set to uncontained", uncontained, box.getValue());
-        assertEquals("label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(uncontained, box.getValue(), "sanity: is still set to uncontained");
+        assertEquals(getValueText(), getLabelText(), "label has uncontainedValue ");
     }
 
-    @Test
-    public void testModifyItemsReplaceItem() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testModifyItemsReplaceItem(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.getItems().set(0, "replaced");
-        assertEquals("label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label has uncontainedValue ");
     }
 
-    @Test
-    public void testModifyItemsAddItem() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testModifyItemsAddItem(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         box.getItems().add(0, "added");
-        assertEquals("label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "label has uncontainedValue ");
     }
 
-    @Test
-    public void testToggleText() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testToggleText(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         ContextMenu popup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin) box.getSkin());
         for (int i = 0; i < popup.getItems().size(); i++) {
             MenuItem item = popup.getItems().get(i);
-            assertEquals("menuItem text at " + i, getItemText(box.getItems().get(i)), item.getText());
+            assertEquals(getItemText(box.getItems().get(i)), item.getText(), "menuItem text at " + i);
         }
     }
 
-    @Test
-    public void testToggleConverter() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testToggleConverter(StringConverter<String> converter) {
+        setup(converter);
         showChoiceBox();
         box.setValue(uncontained);
         // before fix failing here: initial state incorrect
-        assertEquals("sanity: label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(getValueText(), getLabelText(), "sanity: label has uncontainedValue ");
         if (box.getConverter() == null) {
             box.setConverter(createStringConverter());
         } else {
             box.setConverter(null);
         }
-        assertEquals("after change converter - sanity: value is set to uncontained", uncontained, box.getValue());
-        assertEquals("after change converter - label has uncontainedValue ", getValueText(), getLabelText());
+        assertEquals(uncontained, box.getValue(), "after change converter - sanity: value is set to uncontained");
+        assertEquals(getValueText(), getLabelText(), "after change converter - label has uncontainedValue ");
     }
 
 // -------- helper methods
@@ -362,17 +413,11 @@ public class ChoiceBoxLabelTextTest {
         return value != null ? value : "";
     }
 
-
-//------------------ parameterized
-    // Note: name property not supported before junit 4.11
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        // converter
-        Object[][] data = new Object[][] {
-            {null},
-            {createStringConverter()},
-        };
-        return Arrays.asList(data);
+    private static Stream<StringConverter<String>> parameters() {
+        return Stream.of(
+            null,
+            createStringConverter()
+        );
     }
 
     protected static StringConverter<String> createStringConverter() {
@@ -388,18 +433,15 @@ public class ChoiceBoxLabelTextTest {
                 throw new UnsupportedOperationException(
                         "conversion to value not supported");
             }
-
         };
-    }
-
-    public ChoiceBoxLabelTextTest(StringConverter<String> converter) {
-        this.converter = converter;
     }
 
 //------------------ setup/cleanup and initial state
 
-    @Test
-    public void testSetupState() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSetupState(StringConverter<String> converter) {
+        setup(converter);
         assertNotNull(box);
         showChoiceBox();
         List<Node> expected = List.of(box);
@@ -415,13 +457,14 @@ public class ChoiceBoxLabelTextTest {
         assertSame(box, scene.getFocusOwner());
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         stage.hide();
     }
 
-    @Before
-    public void setup() {
+    // @Before
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(StringConverter<String> converter) {
         uncontained = "uncontained";
         root = new VBox();
         scene = new Scene(root);
@@ -431,6 +474,4 @@ public class ChoiceBoxLabelTextTest {
         box.setConverter(converter);
         root.getChildren().addAll(box);
     }
-
-
 }

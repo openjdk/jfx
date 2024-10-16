@@ -32,7 +32,7 @@ public:
     inline SVGGraphicsElement& graphicsElement() const;
 
 protected:
-    RenderSVGBlock(SVGGraphicsElement&, RenderStyle&&);
+    RenderSVGBlock(Type, SVGGraphicsElement&, RenderStyle&&);
     void willBeDestroyed() override;
 
     void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false) override;
@@ -45,7 +45,6 @@ protected:
 
 private:
     void element() const = delete;
-    bool isRenderSVGBlock() const final { return true; }
 
     void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
@@ -58,8 +57,10 @@ private:
 #endif
 
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
+    RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const final;
+
     std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
-    std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
+    std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const final;
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const final;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const final;

@@ -38,10 +38,10 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
@@ -88,8 +88,7 @@ public class TreeTableViewResizeColumnToFitContentTest {
         Util.waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
         Util.waitForIdle(scene);
 
-        Assert.assertTrue("resizeColumnToFitContent failed",
-                (wid1 != treeTableView.getColumns().get(1).getWidth()));
+        Assertions.assertTrue((wid1 != treeTableView.getColumns().get(1).getWidth()), "resizeColumnToFitContent failed");
 
         wid1 = treeTableView.getColumns().get(1).getWidth();
         wid2 = treeTableView.getColumns().get(2).getWidth();
@@ -101,15 +100,15 @@ public class TreeTableViewResizeColumnToFitContentTest {
             ", diff=" + Math.abs(colsWidthBeforeResize - colsWidthAfterResize) +
             ", tolerance=" + tolerance +
             ", tol+eps=" + (tolerance + EPSILON);
-        Assert.assertEquals(message, colsWidthBeforeResize, colsWidthAfterResize, tolerance + EPSILON);
+        Assertions.assertEquals(colsWidthBeforeResize, colsWidthAfterResize, tolerance + EPSILON, message);
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown();
     }

@@ -25,19 +25,22 @@
 
 package test.com.sun.webkit;
 
-import java.io.File;
 import static java.util.Arrays.asList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.io.File;
 import java.util.List;
-import static org.junit.Assert.assertEquals;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * @test
  * @bug 8242361
  * @summary Check if webkit main thread <-> java integration works correctly
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class MainThreadTest {
-    @Test (timeout = 15000)
+    @Test
     public void testMainThreadDoesNotSegfault() throws Exception {
         // This is an indirect test of the webkit main thread <-> java
         // integration. It was observed, that using a data-url caused the
@@ -57,6 +60,7 @@ public class MainThreadTest {
 
         final List<String> cmd = asList(
             workerJavaCmd,
+            "--enable-native-access=ALL-UNNAMED",
             "-cp", appModulePath + "/mymod",
             "-Djava.library.path=" + javaLibraryPath,
             "-Dmodule.path=" + appModulePath + "/mymod" + File.pathSeparator + workerModulePath,
@@ -70,6 +74,6 @@ public class MainThreadTest {
         Process process = builder.start();
         int retVal = process.waitFor();
 
-        assertEquals("Process did not exit cleanly", 0, retVal);
+        assertEquals(0, retVal, "Process did not exit cleanly");
     }
 }

@@ -50,7 +50,7 @@ static std::optional<ClientOrigin> clientOriginFromContext(ScriptExecutionContex
 {
     if (!context)
         return std::nullopt;
-    auto* origin = context->securityOrigin();
+    RefPtr origin = context->securityOrigin();
     if (!origin || origin->isOpaque())
         return std::nullopt;
     return { { context->topOrigin().data(), origin->data() } };
@@ -180,47 +180,48 @@ void WebLockManager::request(const String& name, Options&& options, Ref<WebLockG
 {
     UNUSED_PARAM(name);
     if (!scriptExecutionContext()) {
-        releasePromise->reject(InvalidStateError, "Context is invalid"_s);
+        releasePromise->reject(ExceptionCode::InvalidStateError, "Context is invalid"_s);
         return;
     }
     auto& context = *scriptExecutionContext();
-    if ((is<Document>(context) && !downcast<Document>(context).isFullyActive())) {
-        releasePromise->reject(InvalidStateError, "Responsible document is not fully active"_s);
+    auto* document = dynamicDowncast<Document>(context);
+    if (document && !document->isFullyActive()) {
+        releasePromise->reject(ExceptionCode::InvalidStateError, "Responsible document is not fully active"_s);
         return;
     }
 
     if (!m_mainThreadBridge) {
-        releasePromise->reject(SecurityError, "Context's origin is opaque"_s);
+        releasePromise->reject(ExceptionCode::SecurityError, "Context's origin is opaque"_s);
         return;
     }
 
     if (name.startsWith('-')) {
-        releasePromise->reject(NotSupportedError, "Lock name cannot start with '-'"_s);
+        releasePromise->reject(ExceptionCode::NotSupportedError, "Lock name cannot start with '-'"_s);
         return;
     }
 
     if (name.length() > WebLock::maxNameLength) {
-        releasePromise->reject(NotSupportedError, makeString("Lock name cannot cannot be longer than "_s, WebLock::maxNameLength, " characters"));
+        releasePromise->reject(ExceptionCode::NotSupportedError, makeString("Lock name cannot cannot be longer than "_s, WebLock::maxNameLength, " characters"));
         return;
     }
 
     if (options.steal && options.ifAvailable) {
-        releasePromise->reject(NotSupportedError, "WebLockOptions's steal and ifAvailable cannot both be true"_s);
+        releasePromise->reject(ExceptionCode::NotSupportedError, "WebLockOptions's steal and ifAvailable cannot both be true"_s);
         return;
     }
 
     if (options.steal && options.mode != WebLockMode::Exclusive) {
-        releasePromise->reject(NotSupportedError, "WebLockOptions's steal is true but mode is not 'exclusive'"_s);
+        releasePromise->reject(ExceptionCode::NotSupportedError, "WebLockOptions's steal is true but mode is not 'exclusive'"_s);
         return;
     }
 
     if (options.signal && (options.steal || options.ifAvailable)) {
-        releasePromise->reject(NotSupportedError, "WebLockOptions's steal and ifAvailable need to be false when a signal is provided"_s);
+        releasePromise->reject(ExceptionCode::NotSupportedError, "WebLockOptions's steal and ifAvailable need to be false when a signal is provided"_s);
         return;
     }
 
     if (options.signal && options.signal->aborted()) {
-        releasePromise->reject(AbortError, "WebLockOptions's signal is aborted"_s);
+        releasePromise->reject(ExceptionCode::AbortError, "WebLockOptions's signal is aborted"_s);
         return;
     }
 
@@ -241,7 +242,7 @@ void WebLockManager::request(const String& name, Options&& options, Ref<WebLockG
             weakThis->didCompleteLockRequest(lockIdentifier, success);
     }, [weakThis = WeakPtr { *this }, lockIdentifier]() mutable {
         if (weakThis)
-            weakThis->settleReleasePromise(lockIdentifier, Exception { AbortError, "Lock was stolen by another request"_s });
+            weakThis->settleReleasePromise(lockIdentifier, Exception { ExceptionCode::AbortError, "Lock was stolen by another request"_s });
     });
 }
 
@@ -263,7 +264,7 @@ void WebLockManager::didCompleteLockRequest(WebLockIdentifier lockIdentifier, bo
             RefPtr<DOMPromise> waitingPromise = result.type() == CallbackResultType::Success ? result.releaseReturnValue() : nullptr;
             if (!waitingPromise || waitingPromise->isSuspended()) {
                 m_mainThreadBridge->releaseLock(request.lockIdentifier, request.name);
-                settleReleasePromise(request.lockIdentifier, Exception { ExistingExceptionError });
+                settleReleasePromise(request.lockIdentifier, Exception { ExceptionCode::ExistingExceptionError });
                 return;
             }
 
@@ -277,7 +278,7 @@ void WebLockManager::didCompleteLockRequest(WebLockIdentifier lockIdentifier, bo
             auto result = request.grantedCallback->handleEvent(nullptr);
             RefPtr<DOMPromise> waitingPromise = result.type() == CallbackResultType::Success ? result.releaseReturnValue() : nullptr;
             if (!waitingPromise || waitingPromise->isSuspended()) {
-                settleReleasePromise(request.lockIdentifier, Exception { ExistingExceptionError });
+                settleReleasePromise(request.lockIdentifier, Exception { ExceptionCode::ExistingExceptionError });
                 return;
             }
             settleReleasePromise(request.lockIdentifier, static_cast<JSC::JSValue>(waitingPromise->promise()));
@@ -288,17 +289,18 @@ void WebLockManager::didCompleteLockRequest(WebLockIdentifier lockIdentifier, bo
 void WebLockManager::query(Ref<DeferredPromise>&& promise)
 {
     if (!scriptExecutionContext()) {
-        promise->reject(InvalidStateError, "Context is invalid"_s);
+        promise->reject(ExceptionCode::InvalidStateError, "Context is invalid"_s);
         return;
     }
     auto& context = *scriptExecutionContext();
-    if ((is<Document>(context) && !downcast<Document>(context).isFullyActive())) {
-        promise->reject(InvalidStateError, "Responsible document is not fully active"_s);
+    auto* document = dynamicDowncast<Document>(context);
+    if (document && !document->isFullyActive()) {
+        promise->reject(ExceptionCode::InvalidStateError, "Responsible document is not fully active"_s);
         return;
     }
 
     if (!m_mainThreadBridge) {
-        promise->reject(SecurityError, "Context's origin is opaque"_s);
+        promise->reject(ExceptionCode::SecurityError, "Context's origin is opaque"_s);
         return;
     }
 

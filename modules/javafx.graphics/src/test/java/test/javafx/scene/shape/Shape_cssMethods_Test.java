@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,7 @@
 
 package test.javafx.scene.shape;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -34,19 +33,13 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
 import test.com.sun.javafx.test.CssMethodsTestBase;
 
-@RunWith(Parameterized.class)
 public class Shape_cssMethods_Test extends CssMethodsTestBase {
     private static final Rectangle TEST_SHAPE = new Rectangle(100, 100);
 
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(new Object[] {
+    public static Stream<Configuration> data() {
+        return Stream.of(
             config(TEST_SHAPE, "fill", null, "-fx-fill", Color.RED),
             config(TEST_SHAPE, "fill", null, "-fx-fill", null),
             config(TEST_SHAPE, "smooth", false, "-fx-smooth", true),
@@ -70,11 +63,7 @@ public class Shape_cssMethods_Test extends CssMethodsTestBase {
 //                 new GenericObservableList<Double>(10.0, 5.0, 2.0)),
             config(TEST_SHAPE, "translateY", 0.0,
                    "-fx-translate-y", 10.0)
-        });
-    }
-
-    public Shape_cssMethods_Test(final Configuration configuration) {
-        super(configuration);
+        );
     }
 
     static {

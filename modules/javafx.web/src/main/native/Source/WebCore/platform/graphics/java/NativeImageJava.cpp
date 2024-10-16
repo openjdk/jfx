@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-IntSize NativeImage::size() const
+IntSize PlatformImageNativeImageBackend::size() const
 {
     if (!m_platformImage || !m_platformImage->getImage()) {
         return {};
@@ -65,7 +65,7 @@ IntSize NativeImage::size() const
     return frameSize;
 }
 
-bool NativeImage::hasAlpha() const
+bool PlatformImageNativeImageBackend::hasAlpha() const
 {
     // FIXME-java: Get alpha details from ImageMetadata class
     return true;
@@ -81,7 +81,7 @@ void NativeImage::clearSubimages()
     notImplemented();
 }
 
-DestinationColorSpace NativeImage::colorSpace() const //TBD
+DestinationColorSpace PlatformImageNativeImageBackend::colorSpace() const //TBD
 {
     notImplemented();
     return DestinationColorSpace::SRGB();

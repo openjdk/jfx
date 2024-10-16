@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WasmOSREntryPlan.h"
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 
 #include "JITCompilation.h"
 #include "LinkBuffer.h"
@@ -107,7 +107,7 @@ void OSREntryPlan::work(CompilationEffort)
 
     Vector<UnlinkedWasmToWasmCall> unlinkedCalls;
     CompilationContext context;
-    auto parseAndCompileResult = parseAndCompileB3(context, callee.get(), function, signature, unlinkedCalls, m_moduleInformation.get(), m_mode, targetCompilationMode, m_functionIndex, m_hasExceptionHandlers, m_loopIndex);
+    auto parseAndCompileResult = parseAndCompileB3(context, callee.get(), function, signature, unlinkedCalls, m_calleeGroup.get(), m_moduleInformation.get(), m_mode, targetCompilationMode, m_functionIndex, m_hasExceptionHandlers, m_loopIndex);
 
     if (UNLIKELY(!parseAndCompileResult)) {
         Locker locker { m_lock };
@@ -140,12 +140,16 @@ void OSREntryPlan::work(CompilationEffort)
         Locker locker { m_calleeGroup->m_lock };
         for (auto& call : callee->wasmToWasmCallsites()) {
             CodePtr<WasmEntryPtrTag> entrypoint;
+            Wasm::Callee* wasmCallee = nullptr;
             if (call.functionIndexSpace < m_module->moduleInformation().importFunctionCount())
                 entrypoint = m_calleeGroup->m_wasmToWasmExitStubs[call.functionIndexSpace].code();
-            else
-                entrypoint = m_calleeGroup->wasmEntrypointCalleeFromFunctionIndexSpace(locker, call.functionIndexSpace).entrypoint().retagged<WasmEntryPtrTag>();
+            else {
+                wasmCallee = &m_calleeGroup->wasmEntrypointCalleeFromFunctionIndexSpace(locker, call.functionIndexSpace);
+                entrypoint = wasmCallee->entrypoint().retagged<WasmEntryPtrTag>();
+            }
 
             MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
+            MacroAssembler::repatchPointer(call.calleeLocation, CalleeBits::boxNativeCalleeIfExists(wasmCallee));
         }
         m_calleeGroup->callsiteCollection().addCallsites(locker, m_calleeGroup.get(), callee->wasmToWasmCallsites());
 
@@ -159,6 +163,13 @@ void OSREntryPlan::work(CompilationEffort)
                 Locker locker { llintCallee->tierUpCounter().m_lock };
                 llintCallee->setOSREntryCallee(callee.copyRef(), mode());
                 llintCallee->tierUpCounter().m_loopCompilationStatus = LLIntTierUpCounter::CompilationStatus::Compiled;
+                break;
+            }
+            case CompilationMode::IPIntMode: {
+                IPIntCallee* ipintCallee = static_cast<IPIntCallee*>(m_callee.ptr());
+                Locker locker { ipintCallee->tierUpCounter().m_lock };
+                ipintCallee->setOSREntryCallee(callee.copyRef(), mode());
+                ipintCallee->tierUpCounter().m_loopCompilationStatus = IPIntTierUpCounter::CompilationStatus::Compiled;
                 break;
             }
             case CompilationMode::BBQMode: {
@@ -181,4 +192,4 @@ void OSREntryPlan::work(CompilationEffort)
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

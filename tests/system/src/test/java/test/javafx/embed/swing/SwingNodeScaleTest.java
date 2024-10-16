@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,24 +31,20 @@ import java.awt.Rectangle;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.util.concurrent.CountDownLatch;
-
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class SwingNodeScaleTest {
@@ -57,7 +53,7 @@ public class SwingNodeScaleTest {
     static Rectangle result;
     static JButton b;
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         System.setProperty("glass.win.uiScale", "2");
         System.setProperty("glass.gtk.uiScale", "2");
@@ -67,7 +63,7 @@ public class SwingNodeScaleTest {
         Util.launch(launchLatch, 50, MyApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
@@ -76,8 +72,8 @@ public class SwingNodeScaleTest {
     public void testScale() throws Exception {
         SwingUtilities.invokeAndWait(() -> result = b.getBounds());
         System.out.println(result);
-        Assert.assertEquals(2 * request.width, 2 * result.x + result.width);
-        Assert.assertEquals(2 * request.height, 2 * result.y + result.height);
+        Assertions.assertEquals(2 * request.width, 2 * result.x + result.width);
+        Assertions.assertEquals(2 * request.height, 2 * result.y + result.height);
     }
 
     public static class MyApp extends Application {

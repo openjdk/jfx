@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -244,7 +244,7 @@ static jobject currentPreferences = nil;
     jobject prefKey = (*env)->NewStringUTF(env, colorName);
     GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefKey);
 
-    NSColor* c = [color colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
+    NSColor* c = [color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
     jobject prefValue = (*env)->CallStaticObjectMethod(
         env, jColorClass, jColorRgbMethod,
         (int)([c redComponent] * 255.0f),
@@ -268,7 +268,7 @@ static jobject currentPreferences = nil;
     GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefValue);
 
     for (int i = 0; i < count; ++i) {
-        NSColor* c = [colors[i] colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
+        NSColor* c = [colors[i] colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
         jobject fxcolor = (*env)->CallStaticObjectMethod(
             env, jColorClass, jColorRgbMethod,
             (int)([c redComponent] * 255.0f),

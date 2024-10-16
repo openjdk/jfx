@@ -349,7 +349,7 @@ inline void insertIntoBoundedVector(VectorType& vector, size_t size, const Eleme
 WTF_EXPORT_PRIVATE bool isCompilationThread();
 
 template<typename Func>
-bool isStatelessLambda()
+constexpr bool isStatelessLambda()
 {
     return std::is_empty<Func>::value;
 }
@@ -466,9 +466,6 @@ struct alternative_index_helper<index, Type, std::variant<T, Types...>> {
 } // namespace detail
 
 template<class T, class Variant> struct variant_alternative_index;
-
-template<class T, class Variant> struct variant_alternative_index<T, const Variant>
-    : variant_alternative_index<T, Variant> { };
 
 template<class T, class... Types> struct variant_alternative_index<T, std::variant<Types...>>
     : std::integral_constant<size_t, detail::alternative_index_helper<0, T, std::variant<Types...>>::value> {

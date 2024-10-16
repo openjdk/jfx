@@ -24,8 +24,8 @@
  */
 package test.robot.javafx.scene;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -39,12 +39,12 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
@@ -144,9 +144,10 @@ public class TabPaneDragPolicyTest {
         testReorder(DX, DY, 1, 0, false);
         tabPane.getTabs().removeListener(reorderListener);
         selectedTab = (Tab)tabPane.getSelectionModel().getSelectedItem();
-        Assert.assertEquals("Expected " + expectedTab.getText() + " to be "
-            + "first tab after reordering.", expectedTab.getText(), selectedTab.getText());
-        Assert.assertTrue("Incorrect permutation change received", listenerTestResult);
+        Assertions.assertEquals(
+            expectedTab.getText(), selectedTab.getText(),
+            "Expected " + expectedTab.getText() + " to be first tab after reordering.");
+        Assertions.assertTrue(listenerTestResult, "Incorrect permutation change received");
     }
 
     @Test
@@ -159,9 +160,10 @@ public class TabPaneDragPolicyTest {
         testReorder(DX, SCENE_HEIGHT - DY, 1, 0, false);
         tabPane.getTabs().removeListener(reorderListener);
         selectedTab = (Tab)tabPane.getSelectionModel().getSelectedItem();
-        Assert.assertEquals("Expected " + expectedTab.getText() + " to be "
-            + "first tab after reordering.", expectedTab.getText(), selectedTab.getText());
-        Assert.assertTrue("Incorrect permutation change received", listenerTestResult);
+        Assertions.assertEquals(
+            expectedTab.getText(), selectedTab.getText(),
+            "Expected " + expectedTab.getText() + " to be first tab after reordering.");
+        Assertions.assertTrue(listenerTestResult, "Incorrect permutation change received");
     }
 
     @Test
@@ -174,9 +176,10 @@ public class TabPaneDragPolicyTest {
         testReorder(DX, DY, 0, 1, false);
         tabPane.getTabs().removeListener(reorderListener);
         selectedTab = (Tab)tabPane.getSelectionModel().getSelectedItem();
-        Assert.assertEquals("Expected " + expectedTab.getText() + " to be "
-            + "first tab after reordering.", expectedTab.getText(), selectedTab.getText());
-        Assert.assertTrue("Incorrect permutation change received", listenerTestResult);
+        Assertions.assertEquals(
+            expectedTab.getText(), selectedTab.getText(),
+            "Expected " + expectedTab.getText() + " to be first tab after reordering.");
+        Assertions.assertTrue(listenerTestResult, "Incorrect permutation change received");
     }
 
     @Test
@@ -189,9 +192,10 @@ public class TabPaneDragPolicyTest {
         testReorder(SCENE_WIDTH - DX, DY, 0, 1, false);
         tabPane.getTabs().removeListener(reorderListener);
         selectedTab = (Tab)tabPane.getSelectionModel().getSelectedItem();
-        Assert.assertEquals("Expected " + expectedTab.getText() + " to be "
-            + "first tab after reordering.", expectedTab.getText(), selectedTab.getText());
-        Assert.assertTrue("Incorrect permutation change received", listenerTestResult);
+        Assertions.assertEquals(
+            expectedTab.getText(), selectedTab.getText(),
+            "Expected " + expectedTab.getText() + " to be first tab after reordering.");
+        Assertions.assertTrue(listenerTestResult, "Incorrect permutation change received");
     }
 
     @Test
@@ -203,9 +207,10 @@ public class TabPaneDragPolicyTest {
         testReorder(DX, DY, 1, 0, true);
         tabPane.getTabs().removeListener(fixedListener);
         selectedTab = (Tab)tabPane.getSelectionModel().getSelectedItem();
-        Assert.assertEquals("Expected " + expectedTab.getText() + " to remain "
-            + "first tab.", expectedTab.getText(), selectedTab.getText());
-        Assert.assertTrue("Change event should not be received", listenerTestResult);
+        Assertions.assertEquals(
+            expectedTab.getText(), selectedTab.getText(),
+            "Expected " + expectedTab.getText() + " to remain first tab.");
+        Assertions.assertTrue(listenerTestResult, "Change event should not be received");
     }
 
     @Test
@@ -217,9 +222,10 @@ public class TabPaneDragPolicyTest {
         testReorder(DX, SCENE_HEIGHT - DY, 1, 0, true);
         tabPane.getTabs().removeListener(fixedListener);
         selectedTab = (Tab)tabPane.getSelectionModel().getSelectedItem();
-        Assert.assertEquals("Expected " + expectedTab.getText() + " to remain "
-            + "first tab.", expectedTab.getText(), selectedTab.getText());
-        Assert.assertTrue("Change event should not be received", listenerTestResult);
+        Assertions.assertEquals(
+            expectedTab.getText(), selectedTab.getText(),
+            "Expected " + expectedTab.getText() + " to remain first tab.");
+        Assertions.assertTrue(listenerTestResult, "Change event should not be received");
     }
 
     @Test
@@ -231,9 +237,10 @@ public class TabPaneDragPolicyTest {
         testReorder(DX, DY, 0, 1, true);
         tabPane.getTabs().removeListener(fixedListener);
         selectedTab = (Tab)tabPane.getSelectionModel().getSelectedItem();
-        Assert.assertEquals("Expected " + expectedTab.getText() + " to remain "
-            + "first tab.", expectedTab.getText(), selectedTab.getText());
-        Assert.assertTrue("Change event should not be received", listenerTestResult);
+        Assertions.assertEquals(
+            expectedTab.getText(), selectedTab.getText(),
+            "Expected " + expectedTab.getText() + " to remain first tab.");
+        Assertions.assertTrue(listenerTestResult, "Change event should not be received");
     }
 
     @Test
@@ -245,9 +252,10 @@ public class TabPaneDragPolicyTest {
         testReorder(SCENE_WIDTH - DX, DY, 0, 1, true);
         tabPane.getTabs().removeListener(fixedListener);
         selectedTab = (Tab)tabPane.getSelectionModel().getSelectedItem();
-        Assert.assertEquals("Expected " + expectedTab.getText() + " to remain "
-            + "first tab.", expectedTab.getText(), selectedTab.getText());
-        Assert.assertTrue("Change event should not be received", listenerTestResult);
+        Assertions.assertEquals(
+            expectedTab.getText(), selectedTab.getText(),
+            "Expected " + expectedTab.getText() + " to remain first tab.");
+        Assertions.assertTrue(listenerTestResult, "Change event should not be received");
     }
 
     public void testReorder(int dX, int dY, int xIncr, int yIncr, boolean isFixed) {
@@ -340,17 +348,17 @@ public class TabPaneDragPolicyTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void setupTest() {
         changeListenerLatch = new CountDownLatch(1);
         latches = new CountDownLatch[4];
@@ -374,7 +382,7 @@ public class TabPaneDragPolicyTest {
         Util.waitForLatch(latch, 5, "Timeout waiting for setupTest().");
     }
 
-    @After
+    @AfterEach
     public void resetTest() {
         expectedTab = null;
         selectedTab = null;

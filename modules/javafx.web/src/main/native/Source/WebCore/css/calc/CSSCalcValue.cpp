@@ -74,8 +74,8 @@ static Vector<Ref<CSSCalcExpressionNode>> createCSS(const Vector<std::unique_ptr
 
 static RefPtr<CSSCalcExpressionNode> createCSSIgnoringZeroLength(const CalcExpressionNode& node, const RenderStyle& style)
 {
-    if (node.type() == CalcExpressionNodeType::Length) {
-        auto& length = downcast<CalcExpressionLength>(node).length();
+    if (auto* lengthNode = dynamicDowncast<CalcExpressionLength>(node)) {
+        auto& length = lengthNode->length();
         if (!length.isPercent() && length.isZero())
             return nullptr;
     }
@@ -93,28 +93,28 @@ static RefPtr<CSSCalcExpressionNode> createCSS(const CalcExpressionNode& node, c
 {
     switch (node.type()) {
     case CalcExpressionNodeType::Number: {
-        float value = downcast<CalcExpressionNumber>(node).value(); // double?
+        float value = uncheckedDowncast<CalcExpressionNumber>(node).value(); // double?
         return CSSCalcPrimitiveValueNode::create(CSSPrimitiveValue::create(value));
     }
     case CalcExpressionNodeType::Length: {
-        auto& length = downcast<CalcExpressionLength>(node).length();
+        auto& length = uncheckedDowncast<CalcExpressionLength>(node).length();
         return createCSS(length, style);
     }
 
     case CalcExpressionNodeType::Negation: {
-        auto childNode = createCSS(*downcast<CalcExpressionNegation>(node).child(), style);
+        RefPtr childNode = createCSS(*uncheckedDowncast<CalcExpressionNegation>(node).child(), style);
         if (!childNode)
             return nullptr;
         return CSSCalcNegateNode::create(childNode.releaseNonNull());
     }
     case CalcExpressionNodeType::Inversion: {
-        auto childNode = createCSS(*downcast<CalcExpressionInversion>(node).child(), style);
+        RefPtr childNode = createCSS(*uncheckedDowncast<CalcExpressionInversion>(node).child(), style);
         if (!childNode)
             return nullptr;
         return CSSCalcInvertNode::create(childNode.releaseNonNull());
     }
     case CalcExpressionNodeType::Operation: {
-        auto& operationNode = downcast<CalcExpressionOperation>(node);
+        auto& operationNode = uncheckedDowncast<CalcExpressionOperation>(node);
         auto& operationChildren = operationNode.children();
         CalcOperator op = operationNode.getOperator();
 
@@ -133,13 +133,13 @@ static RefPtr<CSSCalcExpressionNode> createCSS(const CalcExpressionNode& node, c
             Vector<Ref<CSSCalcExpressionNode>> values;
             values.reserveInitialCapacity(operationChildren.size());
 
-            auto firstChild = createCSS(*operationChildren[0], style);
-            auto secondChild = createCSSIgnoringZeroLength(*operationChildren[1], style);
+            RefPtr firstChild = createCSS(*operationChildren[0], style);
+            RefPtr secondChild = createCSSIgnoringZeroLength(*operationChildren[1], style);
 
             if (!secondChild)
                 return firstChild;
 
-            auto negateNode = CSSCalcNegateNode::create(secondChild.releaseNonNull());
+            Ref negateNode = CSSCalcNegateNode::create(secondChild.releaseNonNull());
             if (!firstChild)
                 return negateNode;
 
@@ -160,14 +160,14 @@ static RefPtr<CSSCalcExpressionNode> createCSS(const CalcExpressionNode& node, c
             Vector<Ref<CSSCalcExpressionNode>> values;
             values.reserveInitialCapacity(operationChildren.size());
 
-            auto firstChild = createCSS(*operationChildren[0], style);
+            RefPtr firstChild = createCSS(*operationChildren[0], style);
             if (!firstChild)
                 return nullptr;
 
-            auto secondChild = createCSS(*operationChildren[1], style);
+            RefPtr secondChild = createCSS(*operationChildren[1], style);
             if (!secondChild)
                 return nullptr;
-            auto invertNode = CSSCalcInvertNode::create(secondChild.releaseNonNull());
+            Ref invertNode = CSSCalcInvertNode::create(secondChild.releaseNonNull());
 
             values.append(firstChild.releaseNonNull());
             values.append(WTFMove(invertNode));
@@ -258,7 +258,7 @@ static RefPtr<CSSCalcExpressionNode> createCSS(const CalcExpressionNode& node, c
     }
     case CalcExpressionNodeType::BlendLength: {
         // FIXME: (http://webkit.org/b/122036) Create a CSSCalcExpressionNode equivalent of CalcExpressionBlendLength.
-        auto& blend = downcast<CalcExpressionBlendLength>(node);
+        auto& blend = uncheckedDowncast<CalcExpressionBlendLength>(node);
         float progress = blend.progress();
         return CSSCalcOperationNode::create(CalcOperator::Add, createBlendHalf(blend.from(), style, 1 - progress), createBlendHalf(blend.to(), style, progress));
     }
@@ -277,6 +277,7 @@ static RefPtr<CSSCalcExpressionNode> createCSS(const Length& length, const Rende
     case LengthType::Calculated:
         return createCSS(length.calculationValue().expression(), style);
     case LengthType::Auto:
+    case LengthType::Normal:
     case LengthType::Content:
     case LengthType::Intrinsic:
     case LengthType::MinIntrinsic:
@@ -312,7 +313,7 @@ CSSUnitType CSSCalcValue::primitiveType() const
 
 Ref<CalculationValue> CSSCalcValue::createCalculationValue(const CSSToLengthConversionData& conversionData) const
 {
-    return CalculationValue::create(m_expression->createCalcExpression(conversionData), m_shouldClampToNonNegative ? ValueRange::NonNegative : ValueRange::All);
+    return CalculationValue::create(protectedExpressionNode()->createCalcExpression(conversionData), m_shouldClampToNonNegative ? ValueRange::NonNegative : ValueRange::All);
 }
 
 void CSSCalcValue::setPermittedValueRange(ValueRange range)
@@ -322,13 +323,13 @@ void CSSCalcValue::setPermittedValueRange(ValueRange range)
 
 void CSSCalcValue::collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const
 {
-    m_expression->collectComputedStyleDependencies(dependencies);
+    protectedExpressionNode()->collectComputedStyleDependencies(dependencies);
 }
 
 String CSSCalcValue::customCSSText() const
 {
     StringBuilder builder;
-    CSSCalcOperationNode::buildCSSText(m_expression.get(), builder);
+    CSSCalcOperationNode::buildCSSText(protectedExpressionNode().get(), builder);
     return builder.toString();
 }
 
@@ -349,17 +350,12 @@ inline double CSSCalcValue::clampToPermittedRange(double value) const
 
 double CSSCalcValue::doubleValue() const
 {
-    return clampToPermittedRange(m_expression->doubleValue(primitiveType()));
+    return clampToPermittedRange(protectedExpressionNode()->doubleValue(primitiveType()));
 }
 
 double CSSCalcValue::computeLengthPx(const CSSToLengthConversionData& conversionData) const
 {
-    return clampToPermittedRange(m_expression->computeLengthPx(conversionData));
-}
-
-bool CSSCalcValue::convertingToLengthRequiresNonNullStyle(int lengthConversion) const
-{
-    return m_expression->convertingToLengthRequiresNonNullStyle(lengthConversion);
+    return clampToPermittedRange(protectedExpressionNode()->computeLengthPx(conversionData));
 }
 
 bool CSSCalcValue::isCalcFunction(CSSValueID functionId)
@@ -408,13 +404,18 @@ void CSSCalcValue::dump(TextStream& ts) const
     ts << ")\n";
 }
 
+Ref<CSSCalcExpressionNode> CSSCalcValue::protectedExpressionNode() const
+{
+    return m_expression;
+}
+
 RefPtr<CSSCalcValue> CSSCalcValue::create(CSSValueID function, const CSSParserTokenRange& tokens, CalculationCategory destinationCategory, ValueRange range, const CSSCalcSymbolTable& symbolTable, bool allowsNegativePercentage)
 {
     CSSCalcExpressionNodeParser parser(destinationCategory, symbolTable);
     auto expression = parser.parseCalc(tokens, function, allowsNegativePercentage);
     if (!expression)
         return nullptr;
-    auto result = adoptRef(new CSSCalcValue(expression.releaseNonNull(), range != ValueRange::All));
+    RefPtr result = adoptRef(new CSSCalcValue(expression.releaseNonNull(), range != ValueRange::All));
     LOG_WITH_STREAM(Calc, stream << "CSSCalcValue::create " << *result);
     return result;
 }
@@ -426,13 +427,13 @@ RefPtr<CSSCalcValue> CSSCalcValue::create(CSSValueID function, const CSSParserTo
 
 RefPtr<CSSCalcValue> CSSCalcValue::create(const CalculationValue& value, const RenderStyle& style)
 {
-    auto expression = createCSS(value.expression(), style);
+    RefPtr expression = createCSS(value.expression(), style);
     if (!expression)
         return nullptr;
 
-    auto simplifiedExpression = CSSCalcOperationNode::simplify(expression.releaseNonNull());
+    Ref simplifiedExpression = CSSCalcOperationNode::simplify(expression.releaseNonNull());
 
-    auto result = adoptRef(new CSSCalcValue(WTFMove(simplifiedExpression), value.shouldClampToNonNegative()));
+    RefPtr result = adoptRef(new CSSCalcValue(WTFMove(simplifiedExpression), value.shouldClampToNonNegative()));
     LOG_WITH_STREAM(Calc, stream << "CSSCalcValue::create from CalculationValue: " << *result);
     return result;
 }

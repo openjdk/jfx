@@ -69,6 +69,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/PrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringConcatenate.h>
 
 namespace Inspector {
@@ -121,7 +122,7 @@ JSValue JSInjectedScriptHost::evaluateWithScopeExtension(JSGlobalObject* globalO
 
     NakedPtr<Exception> exception;
     JSObject* scopeExtension = callFrame->argument(1).getObject();
-    JSValue result = JSC::evaluateWithScopeExtension(globalObject, makeSource(program, callFrame->callerSourceOrigin(vm)), scopeExtension, exception);
+    JSValue result = JSC::evaluateWithScopeExtension(globalObject, makeSource(program, callFrame->callerSourceOrigin(vm), SourceTaintedOrigin::Untainted), scopeExtension, exception);
     if (exception)
         throwException(globalObject, scope, exception);
 
@@ -292,7 +293,7 @@ static JSObject* constructInternalProperty(JSGlobalObject* globalObject, const S
     return result;
 }
 
-JSValue JSInjectedScriptHost::getOwnPrivatePropertyDescriptors(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSValue JSInjectedScriptHost::getOwnPrivatePropertySymbols(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     if (callFrame->argumentCount() < 1)
         return jsUndefined();
@@ -301,13 +302,14 @@ JSValue JSInjectedScriptHost::getOwnPrivatePropertyDescriptors(JSGlobalObject* g
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue value = callFrame->uncheckedArgument(0);
 
-    JSObject* result = constructEmptyObject(globalObject);
+    JSArray* result = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
     JSObject* object = jsDynamicCast<JSObject*>(value);
     if (!object)
         return result;
 
+    unsigned index = 0;
     PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Include);
     JSObject::getOwnPropertyNames(object, globalObject, propertyNames, DontEnumPropertiesMode::Include);
     for (const auto& propertyName : propertyNames) {
@@ -318,7 +320,7 @@ JSValue JSInjectedScriptHost::getOwnPrivatePropertyDescriptors(JSGlobalObject* g
         if (!propertyName.string().startsWith('#'))
             continue;
 
-        result->putDirect(vm, Identifier::fromString(vm, String(propertyName.impl()->isolatedCopy())), objectConstructorGetOwnPropertyDescriptor(globalObject, object, propertyName));
+        result->putDirectIndex(globalObject, index++, Symbol::create(vm, *static_cast<SymbolImpl*>(propertyName.impl())));
     }
 
     return result;
@@ -770,7 +772,7 @@ JSValue JSInjectedScriptHost::queryInstances(JSGlobalObject* globalObject, CallF
 }
 
 class HeapHolderFinder final : public HeapAnalyzer {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HeapHolderFinder);
 public:
     HeapHolderFinder(HeapProfiler& profiler, JSCell* target)
         : HeapAnalyzer()
@@ -902,6 +904,8 @@ private:
     HashSet<JSCell*> m_holders;
     const JSCell* m_target;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HeapHolderFinder);
 
 JSValue JSInjectedScriptHost::queryHolders(JSGlobalObject* globalObject, CallFrame* callFrame)
 {

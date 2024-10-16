@@ -26,14 +26,44 @@
 #include "config.h"
 #include "Lexer.h"
 
+#include "ConstantValue.h"
+#include <charconv>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/dtoa.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WGSL {
 
 template <typename T>
-Token Lexer<T>::lex()
+Vector<Token> Lexer<T>::lex()
+{
+    Vector<Token> tokens;
+
+    while (true) {
+        auto token = nextToken();
+        tokens.append(token);
+        switch (token.type) {
+        case TokenType::GtGtEq:
+            tokens.append(makeToken(TokenType::Placeholder));
+            FALLTHROUGH;
+        case TokenType::GtGt:
+        case TokenType::GtEq:
+            tokens.append(makeToken(TokenType::Placeholder));
+            break;
+        default:
+            break;
+        }
+
+        if (token.type == TokenType::EndOfFile || token.type == TokenType::Invalid)
+            break;
+    }
+
+    return tokens;
+}
+
+template <typename T>
+Token Lexer<T>::nextToken()
 {
     if (!skipWhitespaceAndComments())
         return makeToken(TokenType::Invalid);
@@ -164,26 +194,6 @@ Token Lexer<T>::lex()
         default:
         return makeToken(TokenType::Slash);
         }
-    case '.': {
-        shift();
-        unsigned offset = currentOffset();
-        std::optional<uint64_t> postPeriod = parseDecimalInteger();
-        if (!postPeriod)
-            return makeToken(TokenType::Period);
-        double literalValue = postPeriod.value();
-        // FIXME: verify that there is no unnaceptable precision loss
-        // It should be tested in the CTS, for now let's get something that works
-        // Also the same code appears in a few places below.
-        literalValue /= pow(10, currentOffset() - offset);
-        std::optional<int64_t> exponent = parseDecimalFloatExponent();
-        if (exponent)
-            literalValue *= pow(10, exponent.value());
-        if (m_current == 'f') {
-            shift();
-            return makeLiteralToken(TokenType::FloatLiteral, literalValue);
-        }
-        return makeLiteralToken(TokenType::AbstractFloatLiteral, literalValue);
-    }
     case '-':
         shift();
         switch (m_current) {
@@ -232,159 +242,188 @@ Token Lexer<T>::lex()
         default:
             return makeToken(TokenType::Or);
         }
-    case '0': {
-        shift();
-        double literalValue = 0;
-        if (m_current == 'x') {
-            // FIXME: add support for hexadecimal floating point literals
-            shift();
-            bool hexNumberIsEmpty = true;
-            while (isASCIIHexDigit(m_current)) {
-                literalValue *= 16;
-                literalValue += toASCIIHexValue(m_current);
-                shift();
-                hexNumberIsEmpty = false;
-            }
-            if (hexNumberIsEmpty)
-                break;
-            return parseIntegerLiteralSuffix(literalValue);
-        }
-
-        bool isFloatingPoint = false;
-        if (isASCIIDigit(m_current) || m_current == '.' || m_current == 'e' || m_current == 'E') {
-            std::optional<uint64_t> integerPart = parseDecimalInteger();
-            if (integerPart)
-                literalValue = integerPart.value();
-            if (m_current == '.') {
-                isFloatingPoint = true;
-                shift();
-                // FIXME: share this code with the [1-9] case
-                unsigned offset = currentOffset();
-                std::optional<uint64_t> postPeriod = parseDecimalInteger();
-                if (postPeriod) {
-                    double fractionalPart = postPeriod.value();
-                    fractionalPart /= pow(10, currentOffset() - offset);
-                    literalValue += fractionalPart;
-                }
-                if (m_current == 'f') {
-                    shift();
-                    return makeLiteralToken(TokenType::FloatLiteral, literalValue);
-                }
-            }
-            if (std::optional<int64_t> exponent = parseDecimalFloatExponent()) {
-                isFloatingPoint = true;
-                literalValue *= pow(10, exponent.value());
-            }
-            // Decimal integers are not allowed to start with 0.
-            if (!isFloatingPoint)
-                return makeToken(TokenType::Invalid);
-        }
-        if (m_current == 'f') {
-            shift();
-            return makeLiteralToken(TokenType::FloatLiteral, literalValue);
-        }
-        if (isFloatingPoint)
-            return makeLiteralToken(TokenType::AbstractFloatLiteral, literalValue);
-        return parseIntegerLiteralSuffix(literalValue);
-    }
     case '~':
         shift();
         return makeToken(TokenType::Tilde);
     default:
-        if (isASCIIDigit(m_current)) {
-            std::optional<uint64_t> value = parseDecimalInteger();
-            if (!value)
-                return makeToken(TokenType::Invalid);
-            double literalValue = value.value();
-            bool isFloatingPoint = false;
-            if (m_current == '.') {
-                isFloatingPoint = true;
-                shift();
-                unsigned offset = currentOffset();
-                std::optional<uint64_t> postPeriod = parseDecimalInteger();
-                if (postPeriod) {
-                    double fractionalPart = postPeriod.value();
-                    fractionalPart /= pow(10, currentOffset() - offset);
-                    literalValue += fractionalPart;
-                }
-            }
-            if (std::optional<int64_t> exponent = parseDecimalFloatExponent()) {
-                isFloatingPoint = true;
-                literalValue *= pow(10, exponent.value());
-            }
-            if (m_current == 'f') {
-                shift();
-                return makeLiteralToken(TokenType::FloatLiteral, literalValue);
-            }
-            if (!isFloatingPoint)
-                return parseIntegerLiteralSuffix(literalValue);
-            return makeLiteralToken(TokenType::AbstractFloatLiteral, literalValue);
-        } else if (isIdentifierStart(m_current)) {
+        if (isASCIIDigit(m_current) || m_current == '.')
+            return lexNumber();
+        if (isIdentifierStart(m_current)) {
             const T* startOfToken = m_code;
             shift();
             while (isIdentifierContinue(m_current))
                 shift();
             // FIXME: a trie would be more efficient here, look at JavaScriptCore/KeywordLookupGenerator.py for an example of code autogeneration that produces such a trie.
             String view(StringImpl::createWithoutCopying(startOfToken, currentTokenLength()));
-            // FIXME: I don't think that true/false/f32/u32/i32/bool need to be their own tokens, they could just be regular identifiers.
 
-            static constexpr std::pair<ComparableASCIILiteral, TokenType> wordMappings[] {
+            static constexpr std::pair<ComparableASCIILiteral, TokenType> keywordMappings[] {
                 { "_", TokenType::Underbar },
-                { "array", TokenType::KeywordArray },
-                { "asm", TokenType::ReservedWord },
-                { "bf16", TokenType::ReservedWord },
-                { "bool", TokenType::KeywordBool },
-                { "break", TokenType::KeywordBreak },
-                { "const", TokenType::KeywordConst },
-                { "continue", TokenType::KeywordContinue },
-                { "do", TokenType::ReservedWord },
-                { "else", TokenType::KeywordElse },
-                { "enum", TokenType::ReservedWord },
-                { "f16", TokenType::ReservedWord },
-                { "f32", TokenType::KeywordF32 },
-                { "f64", TokenType::ReservedWord },
-                { "false", TokenType::LiteralFalse },
-                { "fn", TokenType::KeywordFn },
-                { "for", TokenType::KeywordFor },
-                { "function", TokenType::KeywordFunction },
-                { "handle", TokenType::ReservedWord },
-                { "i16", TokenType::ReservedWord },
-                { "i32", TokenType::KeywordI32 },
-                { "i64", TokenType::ReservedWord },
-                { "i8", TokenType::ReservedWord },
-                { "if", TokenType::KeywordIf },
-                { "let", TokenType::KeywordLet },
-                { "mat", TokenType::ReservedWord },
-                { "override", TokenType::KeywordOverride },
-                { "premerge", TokenType::ReservedWord },
-                { "private", TokenType::KeywordPrivate },
-                { "read", TokenType::KeywordRead },
-                { "read_write", TokenType::KeywordReadWrite },
-                { "regardless", TokenType::ReservedWord },
-                { "return", TokenType::KeywordReturn },
-                { "storage", TokenType::KeywordStorage },
-                { "struct", TokenType::KeywordStruct },
-                { "true", TokenType::LiteralTrue },
-                { "typedef", TokenType::ReservedWord },
-                { "u16", TokenType::ReservedWord },
-                { "u32", TokenType::KeywordU32 },
-                { "u64", TokenType::ReservedWord },
-                { "u8", TokenType::ReservedWord },
-                { "uniform", TokenType::KeywordUniform },
-                { "unless", TokenType::ReservedWord },
-                { "using", TokenType::ReservedWord },
-                { "var", TokenType::KeywordVar },
-                { "vec", TokenType::ReservedWord },
-                { "void", TokenType::ReservedWord },
-                { "while", TokenType::ReservedWord },
-                { "workgroup", TokenType::KeywordWorkgroup },
-                { "write", TokenType::KeywordWrite },
-            };
-            static constexpr SortedArrayMap words { wordMappings };
 
-            auto tokenType = words.get(view);
+#define MAPPING_ENTRY(lexeme, name)\
+                { #lexeme, TokenType::Keyword##name },
+FOREACH_KEYWORD(MAPPING_ENTRY)
+#undef MAPPING_ENTRY
+
+            };
+            static constexpr SortedArrayMap keywords { keywordMappings };
+
+            // https://www.w3.org/TR/WGSL/#reserved-words
+            static constexpr ComparableASCIILiteral reservedWords[] {
+                "NULL",
+                "Self",
+                "abstract",
+                "active",
+                "alignas",
+                "alignof",
+                "as",
+                "asm",
+                "asm_fragment",
+                "async",
+                "attribute",
+                "auto",
+                "await",
+                "become",
+                "binding_array",
+                "cast",
+                "catch",
+                "class",
+                "co_await",
+                "co_return",
+                "co_yield",
+                "coherent",
+                "column_major",
+                "common",
+                "compile",
+                "compile_fragment",
+                "concept",
+                "const_cast",
+                "consteval",
+                "constexpr",
+                "constinit",
+                "crate",
+                "debugger",
+                "decltype",
+                "delete",
+                "demote",
+                "demote_to_helper",
+                "do",
+                "dynamic_cast",
+                "enum",
+                "explicit",
+                "export",
+                "extends",
+                "extern",
+                "external",
+                "fallthrough",
+                "filter",
+                "final",
+                "finally",
+                "friend",
+                "from",
+                "fxgroup",
+                "get",
+                "goto",
+                "groupshared",
+                "highp",
+                "impl",
+                "implements",
+                "import",
+                "inline",
+                "instanceof",
+                "interface",
+                "layout",
+                "lowp",
+                "macro",
+                "macro_rules",
+                "match",
+                "mediump",
+                "meta",
+                "mod",
+                "module",
+                "move",
+                "mut",
+                "mutable",
+                "namespace",
+                "new",
+                "nil",
+                "noexcept",
+                "noinline",
+                "nointerpolation",
+                "noperspective",
+                "null",
+                "nullptr",
+                "of",
+                "operator",
+                "package",
+                "packoffset",
+                "partition",
+                "pass",
+                "patch",
+                "pixelfragment",
+                "precise",
+                "precision",
+                "premerge",
+                "priv",
+                "protected",
+                "pub",
+                "public",
+                "readonly",
+                "ref",
+                "regardless",
+                "register",
+                "reinterpret_cast",
+                "require",
+                "resource",
+                "restrict",
+                "self",
+                "set",
+                "shared",
+                "sizeof",
+                "smooth",
+                "snorm",
+                "static",
+                "static_assert",
+                "static_cast",
+                "std",
+                "subroutine",
+                "super",
+                "target",
+                "template",
+                "this",
+                "thread_local",
+                "throw",
+                "trait",
+                "try",
+                "type",
+                "typedef",
+                "typeid",
+                "typename",
+                "typeof",
+                "union",
+                "unless",
+                "unorm",
+                "unsafe",
+                "unsized",
+                "use",
+                "using",
+                "varying",
+                "virtual",
+                "volatile",
+                "wgsl",
+                "where",
+                "with",
+                "writeonly",
+                "yield",
+            };
+            static constexpr SortedArraySet reservedWordSet { reservedWords };
+
+            auto tokenType = keywords.get(view);
             if (tokenType != TokenType::Invalid)
                 return makeToken(tokenType);
+
+            if (UNLIKELY(reservedWordSet.contains(view)))
+                return makeToken(TokenType::ReservedWord);
+
             return makeIdentifierToken(WTFMove(view));
         }
         break;
@@ -496,69 +535,475 @@ bool Lexer<T>::isAtEndOfFile() const
 }
 
 template <typename T>
-std::optional<uint64_t> Lexer<T>::parseDecimalInteger()
+Token Lexer<T>::lexNumber()
 {
+    /* Grammar:
+    decimal_int_literal:
+    | /0[iu]?/
+    | /[1-9][0-9]*[iu]?/
+
+    hex_int_literal :
+    | /0[xX][0-9a-fA-F]+[iu]?/
+
+    decimal_float_literal:
+    | /0[fh]/`
+    | /[0-9]*\.[0-9]+([eE][+-]?[0-9]+)?[fh]?/
+    | /[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?[fh]?/
+    | /[0-9]+[eE][+-]?[0-9]+[fh]?/
+    | /[1-9][0-9]*[fh]/
+
+    hex_float_literal:
+    | /0[xX][0-9a-fA-F]*\.[0-9a-fA-F]+([pP][+-]?[0-9]+[fh]?)?/
+    | /0[xX][0-9a-fA-F]+\.[0-9a-fA-F]*([pP][+-]?[0-9]+[fh]?)?/
+    | /0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/
+    */
+
+    /* State machine:
+    Start -> InitZero (0)
+          -> Decimal (1-9)
+          -> FloatFractNoIntegral(.)
+
+    InitZero -> End (i, u, f, h, ∅)
+             -> Hex (x, X)
+             -> Float (0-9)
+             -> FloatFract(.)
+             -> FloatExponent(e, E)
+
+    Decimal -> End (i, u, f, h, ∅)
+            -> Decimal (0-9)
+            -> FloatFract(.)
+            -> FloatExponent(e, E)
+
+    Float -> Float (0-9)
+          -> FloatFract(.)
+          -> FloatExponent(e, E)
+
+    FloatFractNoIntegral -> FloatFract (0-9)
+                         -> End(∅)
+
+    FloatFract -> FloatFract (0-9)
+               -> FloatExponent(e, E)
+               -> End(f, h, ∅)
+
+    FloatExponent -> FloatExponentPostSign(+, -)
+                  -> FloatExponentNonEmpty(0-9)
+
+    FloatExponentPostSign -> FloatExponentNonEmpty(0-9)
+
+    FloatExponentNonEmpty -> FloatExponentNonEmpty(0-9)
+                          -> End(f, h, ∅)
+
+    Hex -> HexNonEmpty(0-9, a-f, A-F)
+        -> HexFloatFractNoIntegral(.)
+
+    HexNonEmpty -> HexNonEmpty(0-9, a-f, A-F)
+                -> End(i, u, ∅)
+                -> HexFloatFract(.)
+                -> HexFloatExponentRequireSuffix(p, P)
+
+    HexFloatFractNoIntegral -> HexFloatFract(0-9, a-f, A-F)
+
+    HexFloatFract -> HexFloatFract(0-9, a-f, A-F)
+                  -> HexFloatExponent(p, P)
+                  -> End(∅)
+
+    HexFloatExponent -> HexFloatExponentNonEmpty(0-9)
+                     -> HexFloatExponentPostSign(+, -)
+
+    HexFloatExponentPostSign -> HexFloatExponentNonEmpty(0-9)
+
+    HexFloatExponentNonEmpty -> HexFloatExponentNonEmpty(0-9)
+                             -> End(f, h, ∅)
+
+    HexFloatExponentRequireSuffix -> HexFloatExponentRequireSuffixNonEmpty(0-9)
+                                  -> HexFloatExponentRequireSuffixPostSign(+, -)
+
+    HexFloatExponentRequireSuffixPostSign -> HexFloatExponentRequireSuffixNonEmpty(0-9)
+
+    HexFloatExponentRequireSuffixNonEmpty -> HexFloatExponentRequireSuffixNonEmpty(0-9)
+                                          -> End(f, h)
+    */
+
+    enum State : uint8_t {
+        Start,
+
+        InitZero,
+        Decimal,
+
+        Float,
+        FloatFractNoIntegral,
+        FloatFract,
+        FloatExponent,
+        FloatExponentPostSign,
+        FloatExponentNonEmpty,
+
+        Hex,
+        HexNonEmpty,
+        HexFloatFractNoIntegral,
+        HexFloatFract,
+        HexFloatExponent,
+        HexFloatExponentPostSign,
+        HexFloatExponentNonEmpty,
+        HexFloatExponentRequireSuffix,
+        HexFloatExponentRequireSuffixPostSign,
+        HexFloatExponentRequireSuffixNonEmpty,
+
+        End,
+        EndNoShift,
+    };
+
+    auto state = Start;
+    char suffix = '\0';
+    char exponentSign = '\0';
+    bool isHex = false;
+    const T* integral = m_code;
+    const T* fract = nullptr;
+    const T* exponent = nullptr;
+
+    while (true) {
+        switch (state) {
+        case Start:
+            switch (m_current) {
+            case '0':
+                state = InitZero;
+                break;
+            case '.':
+                state = FloatFractNoIntegral;
+                break;
+            default:
+                ASSERT(isASCIIDigit(m_current));
+                state = Decimal;
+                break;
+            }
+            break;
+
+        case InitZero:
+            switch (m_current) {
+            case 'i':
+            case 'u':
+            case 'f':
+            case 'h':
+                state = End;
+                suffix = m_current;
+                break;
+
+            case 'x':
+            case 'X':
+                state = Hex;
+                break;
+
+            case '.':
+                state = FloatFract;
+                break;
+
+            case 'e':
+            case 'E':
+                state = FloatExponent;
+                break;
+
+            default:
+                if (isASCIIDigit(m_current))
+                    state = Float;
+                else
+                    state = EndNoShift;
+            }
+            break;
+
+        case Decimal:
+            switch (m_current) {
+            case 'i':
+            case 'u':
+            case 'f':
+            case 'h':
+                state = End;
+                suffix = m_current;
+                break;
+
+            case '.':
+                state = FloatFract;
+                break;
+
+            case 'e':
+            case 'E':
+                state = FloatExponent;
+                break;
+
+            default:
     if (!isASCIIDigit(m_current))
-        return std::nullopt;
+                    state = EndNoShift;
+            }
+            break;
 
-    CheckedUint64 value = 0;
-    while (isASCIIDigit(m_current)) {
-        value *= 10ull;
-        value += readDecimal(m_current);
-        shift();
+        case Float:
+            switch (m_current) {
+            case '.':
+                state = FloatFract;
+                break;
+
+            case 'e':
+            case 'E':
+                state = FloatExponent;
+                break;
+
+            default:
+                if (!isASCIIDigit(m_current))
+                    return makeToken(TokenType::Invalid);
     }
-    if (value.hasOverflowed())
-        return std::nullopt;
-    return { value.value() };
+            break;
+        case FloatFractNoIntegral:
+            fract = m_code;
+            if (!isASCIIDigit(m_current))
+                return makeToken(TokenType::Period);
+            state = FloatFract;
+            break;
+        case FloatFract:
+            if (!fract)
+                fract = m_code;
+            switch (m_current) {
+            case 'f':
+            case 'h':
+                state = End;
+                suffix = m_current;
+                break;
+
+            case 'e':
+            case 'E':
+                state = FloatExponent;
+                break;
+
+            default:
+                if (!isASCIIDigit(m_current))
+                    state = EndNoShift;
+            }
+            break;
+        case FloatExponent:
+            exponent = m_code;
+            switch (m_current) {
+            case '+':
+            case '-':
+                exponentSign = m_current;
+                state = FloatExponentPostSign;
+                break;
+            default:
+                if (!isASCIIDigit(m_current))
+                    return makeToken(TokenType::Invalid);
+                state = FloatExponentNonEmpty;
+            }
+            break;
+        case FloatExponentPostSign:
+            if (exponentSign == '+')
+                exponent = m_code;
+            if (!isASCIIDigit(m_current))
+                return makeToken(TokenType::Invalid);
+            state = FloatExponentNonEmpty;
+            break;
+        case FloatExponentNonEmpty:
+            switch (m_current) {
+            case 'f':
+            case 'h':
+                state = End;
+                suffix = m_current;
+                break;
+            default:
+                if (!isASCIIDigit(m_current))
+                    state = EndNoShift;
+            }
+            break;
+        case Hex:
+            isHex = true;
+            integral = m_code;
+            if (m_current == '.')
+                state = HexFloatFractNoIntegral;
+            else if (isASCIIHexDigit(m_current))
+                state = HexNonEmpty;
+            else
+                return makeToken(TokenType::Invalid);
+            break;
+        case HexNonEmpty:
+            switch (m_current) {
+            case 'i':
+            case 'u':
+                state = End;
+                suffix = m_current;
+                break;
+
+            case 'p':
+            case 'P':
+                state = HexFloatExponentRequireSuffix;
+                break;
+
+            case '.':
+                state = HexFloatFract;
+                break;
+
+            default:
+                if (!isASCIIHexDigit(m_current))
+                    state = EndNoShift;
+            }
+            break;
+        case HexFloatFractNoIntegral:
+            fract = m_code;
+            if (!isASCIIHexDigit(m_current))
+                return makeToken(TokenType::Invalid);
+            state = HexFloatFract;
+            break;
+        case HexFloatFract:
+            if (!fract)
+                fract = m_code;
+            if (isASCIIHexDigit(m_current))
+                break;
+            if (m_current == 'p' || m_current == 'P')
+                state = HexFloatExponent;
+            else
+                state = EndNoShift;
+            break;
+        case HexFloatExponent:
+            exponent = m_code;
+            if (isASCIIDigit(m_current))
+                state = HexFloatExponentNonEmpty;
+            else if (m_current == '+' || m_current == '-') {
+                exponentSign = m_current;
+                state = HexFloatExponentPostSign;
+            } else
+                return makeToken(TokenType::Invalid);
+            break;
+        case HexFloatExponentPostSign:
+            if (exponentSign == '+')
+                exponent = m_code;
+            if (isASCIIDigit(m_current)) {
+                state = HexFloatExponentNonEmpty;
+                break;
+            }
+            return makeToken(TokenType::Invalid);
+        case HexFloatExponentNonEmpty:
+            if (isASCIIDigit(m_current))
+                state = HexFloatExponentNonEmpty;
+            else if (m_current == 'f' || m_current == 'h') {
+                state = End;
+                suffix = m_current;
+            } else
+                state = EndNoShift;
+            break;
+        case HexFloatExponentRequireSuffix:
+            exponent = m_code;
+            if (isASCIIDigit(m_current))
+                state = HexFloatExponentRequireSuffixNonEmpty;
+            else if (m_current == '+' || m_current == '-') {
+                exponentSign = m_current;
+                state = HexFloatExponentRequireSuffixPostSign;
+            } else
+                return makeToken(TokenType::Invalid);
+            break;
+        case HexFloatExponentRequireSuffixPostSign:
+            if (exponentSign == '+')
+                exponent = m_code;
+            if (isASCIIDigit(m_current)) {
+                state = HexFloatExponentRequireSuffixNonEmpty;
+                break;
+            }
+            return makeToken(TokenType::Invalid);
+        case HexFloatExponentRequireSuffixNonEmpty:
+            if (isASCIIDigit(m_current))
+                state = HexFloatExponentNonEmpty;
+            else if (m_current == 'f' || m_current == 'h') {
+                state = End;
+                suffix = m_current;
+            } else
+                return makeToken(TokenType::Invalid);
+            break;
+        case End:
+        case EndNoShift:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+
+        if (state == EndNoShift)
+            break;
+        shift();
+        if (state == End)
+            break;
+    }
+
+    const auto& convert = [&](auto value) -> Token {
+        switch (suffix) {
+        case 'i': {
+            if constexpr (std::is_integral_v<decltype(value)>) {
+                if (auto result = convertInteger<int>(value))
+                    return makeLiteralToken(TokenType::IntegerLiteralSigned, *result);
+    }
+            return makeToken(TokenType::Invalid);
+        }
+        case 'u': {
+            if constexpr (std::is_integral_v<decltype(value)>) {
+                if (auto result = convertInteger<unsigned>(value))
+                    return makeLiteralToken(TokenType::IntegerLiteralUnsigned, *result);
+            }
+            break;
+        }
+        case 'f': {
+            if (auto result = convertFloat<float>(value))
+                return makeLiteralToken(TokenType::FloatLiteral, *result);
+            break;
+        }
+        case 'h':
+            if (auto result = convertFloat<half>(value))
+                return makeLiteralToken(TokenType::HalfLiteral, *result);
+            break;
+        default:
+            if constexpr (std::is_floating_point_v<decltype(value)>) {
+                if (auto result = convertFloat<double>(value))
+                    return makeLiteralToken(TokenType::AbstractFloatLiteral, *result);
+            } else {
+                if (auto result = convertInteger<int64_t>(value))
+                    return makeLiteralToken(TokenType::IntegerLiteral, *result);
+            }
+        }
+        return makeToken(TokenType::Invalid);
+    };
+
+    auto* end = m_code - (suffix ? 1 : 0);
+    if (!fract && !exponent) {
+        auto length = static_cast<size_t>(end - integral);
+        if (length > 19)
+            return makeToken(TokenType::Invalid);
+
+        char ascii[20];
+        const char* asciiStart;
+        const char* asciiEnd;
+        if constexpr (sizeof(T) == 1) {
+            asciiStart = bitwise_cast<const char*>(integral);
+            asciiEnd = bitwise_cast<const char*>(end);
+        } else {
+            for (unsigned i = 0; i < length; ++i) {
+                auto digit = integral[i];
+                RELEASE_ASSERT(isASCIIHexDigit(digit));
+                ascii[i] = digit;
+            }
+            ascii[length] = '\0';
+            asciiStart = ascii;
+            asciiEnd = ascii + length;
+        }
+
+        int64_t result;
+        auto base = isHex ? 16 : 10;
+        auto remaining = std::from_chars(asciiStart, asciiEnd, result, base);
+        RELEASE_ASSERT(remaining.ptr == asciiEnd);
+        if (remaining.ec == std::errc::result_out_of_range)
+            return makeToken(TokenType::Invalid);
+        return convert(result);
+    }
+
+    if (!isHex) {
+        size_t parsedLength;
+        double result = parseDouble(integral, m_code - integral, parsedLength);
+        ASSERT(integral + parsedLength == end);
+        return convert(result);
+    }
+
+    char* parseEnd;
+    double result = std::strtod(bitwise_cast<const char*>(integral) - 2, &parseEnd);
+    ASSERT(parseEnd == bitwise_cast<const char*>(end));
+    return convert(result);
 }
-
-// Parse pattern (e|E)(\+|-)?[0-9]+f? if it is present, and return the exponent
-template <typename T>
-std::optional<int64_t> Lexer<T>::parseDecimalFloatExponent()
-{
-    T char1 = peek(1);
-    T char2 = peek(2);
-    // Check for pattern (e|E)(\+|-)?[0-9]+
-    if (m_current != 'e' && m_current != 'E')
-        return std::nullopt;
-    if (char1 == '+' || char1 == '-') {
-        if (!isASCIIDigit(char2))
-            return std::nullopt;
-    } else if (!isASCIIDigit(char1))
-        return std::nullopt;
-    shift();
-
-    bool negateExponent = false;
-    if (m_current == '-') {
-        negateExponent = true;
-        shift();
-    } else if (m_current == '+')
-        shift();
-
-    std::optional<int64_t> exponent = parseDecimalInteger();
-    if (!exponent)
-        return std::nullopt;
-    CheckedInt64 exponentValue = exponent.value();
-    if (negateExponent)
-        exponentValue = - exponentValue;
-    if (exponentValue.hasOverflowed())
-        return std::nullopt;
-    return { exponentValue.value() };
-};
-
-template <typename T>
-Token Lexer<T>::parseIntegerLiteralSuffix(double literalValue)
-{
-    if (m_current == 'i') {
-        shift();
-        return makeLiteralToken(TokenType::IntegerLiteralSigned, literalValue);
-    }
-    if (m_current == 'u') {
-        shift();
-        return makeLiteralToken(TokenType::IntegerLiteralUnsigned, literalValue);
-    }
-    return makeLiteralToken(TokenType::IntegerLiteral, literalValue);
-};
 
 template class Lexer<LChar>;
 template class Lexer<UChar>;

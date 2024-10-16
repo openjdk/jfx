@@ -38,6 +38,8 @@ namespace WebCore {
 class PixelBuffer : public RefCounted<PixelBuffer> {
     WTF_MAKE_NONCOPYABLE(PixelBuffer);
 public:
+    WEBCORE_EXPORT static CheckedUint32 computeBufferSize(PixelFormat, const IntSize&);
+
     WEBCORE_EXPORT static bool supportedPixelFormat(PixelFormat);
 
     WEBCORE_EXPORT virtual ~PixelBuffer();
@@ -52,7 +54,7 @@ public:
     virtual RefPtr<PixelBuffer> createScratchPixelBuffer(const IntSize&) const = 0;
 
     bool setRange(const uint8_t* data, size_t dataByteLength, size_t byteOffset);
-    bool zeroRange(size_t byteOffset, size_t rangeByteLength);
+    WEBCORE_EXPORT bool zeroRange(size_t byteOffset, size_t rangeByteLength);
     void zeroFill() { zeroRange(0, sizeInBytes()); }
 
     WEBCORE_EXPORT uint8_t item(size_t index) const;
@@ -60,8 +62,6 @@ public:
 
 protected:
     WEBCORE_EXPORT PixelBuffer(const PixelBufferFormat&, const IntSize&, uint8_t* bytes, size_t sizeInBytes);
-
-    WEBCORE_EXPORT static CheckedUint32 computeBufferSize(const PixelBufferFormat&, const IntSize&);
 
     PixelBufferFormat m_format;
     IntSize m_size;

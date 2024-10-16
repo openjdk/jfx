@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021 Apple Inc.
+ * Copyright (C) 2021-2023 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,12 +29,13 @@
 #include "IntlObject.h"
 #include "TemporalObject.h"
 #include <wtf/Int128.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 namespace ISO8601 {
 
 class Duration {
-    WTF_MAKE_FAST_ALLOCATED(Duration);
+    WTF_MAKE_TZONE_ALLOCATED(Duration);
 public:
     using const_iterator = std::array<double, numberOfTemporalUnits>::const_iterator;
 
@@ -83,7 +84,7 @@ private:
 };
 
 class ExactTime {
-    WTF_MAKE_FAST_ALLOCATED(ExactTime);
+    WTF_MAKE_TZONE_ALLOCATED(ExactTime);
 public:
     static constexpr Int128 dayRangeSeconds { 86400'00000000 }; // 1e8 days
     static constexpr Int128 nsPerMicrosecond { 1000 };
@@ -161,10 +162,7 @@ public:
     {
         return m_epochNanoseconds <= other.m_epochNanoseconds;
     }
-    constexpr bool operator==(ExactTime other) const
-    {
-        return m_epochNanoseconds == other.m_epochNanoseconds;
-    }
+    friend constexpr bool operator==(const ExactTime&, const ExactTime&) = default;
     constexpr bool operator>=(ExactTime other) const
     {
         return m_epochNanoseconds >= other.m_epochNanoseconds;
@@ -194,7 +192,7 @@ private:
 };
 
 class PlainTime {
-    WTF_MAKE_FAST_ALLOCATED(PlainTime);
+    WTF_MAKE_TZONE_ALLOCATED(PlainTime);
 public:
     constexpr PlainTime()
         : m_millisecond(0)
@@ -217,15 +215,7 @@ public:
     JSC_TEMPORAL_PLAIN_TIME_UNITS(JSC_DEFINE_ISO8601_PLAIN_TIME_FIELD);
 #undef JSC_DEFINE_ISO8601_DURATION_FIELD
 
-    friend bool operator==(PlainTime lhs, PlainTime rhs)
-    {
-        return lhs.hour() == rhs.hour()
-            && lhs.minute() == rhs.minute()
-            && lhs.second() == rhs.second()
-            && lhs.millisecond() == rhs.millisecond()
-            && lhs.microsecond() == rhs.microsecond()
-            && lhs.nanosecond() == rhs.nanosecond();
-    }
+    friend bool operator==(const PlainTime&, const PlainTime&) = default;
 
 private:
     uint8_t m_hour { 0 };
@@ -240,7 +230,7 @@ static_assert(sizeof(PlainTime) <= sizeof(uint64_t));
 // Note that PlainDate does not include week unit.
 // year can be negative. And month and day starts with 1.
 class PlainDate {
-    WTF_MAKE_FAST_ALLOCATED(PlainDate);
+    WTF_MAKE_TZONE_ALLOCATED(PlainDate);
 public:
     constexpr PlainDate()
         : m_year(0)
@@ -256,12 +246,7 @@ public:
     {
     }
 
-    friend bool operator==(PlainDate lhs, PlainDate rhs)
-    {
-        return lhs.year() == rhs.year()
-            && lhs.month() == rhs.month()
-            && lhs.day() == rhs.day();
-    }
+    friend bool operator==(const PlainDate&, const PlainDate&) = default;
 
     int32_t year() const { return m_year; }
     uint8_t month() const { return m_month; }
@@ -296,6 +281,7 @@ struct CalendarRecord {
 std::optional<TimeZoneID> parseTimeZoneName(StringView);
 std::optional<Duration> parseDuration(StringView);
 std::optional<int64_t> parseTimeZoneNumericUTCOffset(StringView);
+std::optional<int64_t> parseUTCOffsetInMinutes(StringView);
 enum class ValidateTimeZoneID : bool { No, Yes };
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parseTime(StringView);
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringView);

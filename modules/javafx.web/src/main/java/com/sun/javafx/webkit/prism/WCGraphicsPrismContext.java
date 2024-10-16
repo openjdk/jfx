@@ -146,6 +146,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     ? l.getGraphics()
                     : baseGraphics;
 
+            if (cachedGraphics == null) {
+                log.fine("getGraphics failed - couldn't acquire cachedGraphics");
+                return null;
+            }
+
             ResourceFactory rf = cachedGraphics.getResourceFactory();
             if (!rf.isDisposed()) {
                 state.apply(cachedGraphics);

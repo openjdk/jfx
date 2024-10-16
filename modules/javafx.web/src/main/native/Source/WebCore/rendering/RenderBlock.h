@@ -27,7 +27,7 @@
 #include "RenderBox.h"
 #include "TextRun.h"
 #include <memory>
-#include <wtf/ListHashSet.h>
+#include <wtf/WeakListHashSet.h>
 
 namespace WebCore {
 
@@ -39,7 +39,7 @@ class RenderText;
 struct BidiRun;
 struct PaintInfo;
 
-typedef ListHashSet<RenderBox*> TrackedRendererListHashSet;
+using TrackedRendererListHashSet = SingleThreadWeakListHashSet<RenderBox>;
 
 enum CaretType { CursorCaret, DragCaret };
 enum ContainingBlockState { NewContainingBlock, SameContainingBlock };
@@ -59,8 +59,8 @@ public:
     virtual ~RenderBlock();
 
 protected:
-    RenderBlock(Element&, RenderStyle&&, BaseTypeFlags);
-    RenderBlock(Document&, RenderStyle&&, BaseTypeFlags);
+    RenderBlock(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags = { });
+    RenderBlock(Type, Document&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags = { });
 
 public:
     // These two functions are overridden for inline-block.
@@ -83,8 +83,8 @@ public:
     TrackedRendererListHashSet* positionedObjects() const;
     bool hasPositionedObjects() const
     {
-        TrackedRendererListHashSet* objects = positionedObjects();
-        return objects && !objects->isEmpty();
+        auto* objects = positionedObjects();
+        return objects && !objects->isEmptyIgnoringNullReferences();
     }
 
     void addPercentHeightDescendant(RenderBox&);
@@ -92,8 +92,8 @@ public:
     TrackedRendererListHashSet* percentHeightDescendants() const;
     bool hasPercentHeightDescendants() const
     {
-        TrackedRendererListHashSet* objects = percentHeightDescendants();
-        return objects && !objects->isEmpty();
+        auto* objects = percentHeightDescendants();
+        return objects && !objects->isEmptyIgnoringNullReferences();
     }
     static bool hasPercentHeightContainerMap();
     static bool hasPercentHeightDescendant(RenderBox&);
@@ -222,7 +222,6 @@ public:
     LayoutSize logicalSizeForChild(const RenderBox& child) const { return isHorizontalWritingMode() ? child.size() : child.size().transposedSize(); }
     LayoutUnit logicalTopForChild(const RenderBox& child) const { return isHorizontalWritingMode() ? child.y() : child.x(); }
     LayoutUnit logicalLeftForChild(const RenderBox& child) const { return isHorizontalWritingMode() ? child.x() : child.y(); }
-    LayoutUnit logicalMarginBoxTopForChild(const RenderBox& child) const { return logicalTopForChild(child) - marginBeforeForChild(child); }
     void setLogicalLeftForChild(RenderBox& child, LayoutUnit logicalLeft, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
     void setLogicalTopForChild(RenderBox& child, LayoutUnit logicalTop, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
     LayoutUnit marginBeforeForChild(const RenderBoxModelObject& child) const { return child.marginBefore(&style()); }
@@ -293,6 +292,8 @@ public:
     static String updateSecurityDiscCharacters(const RenderStyle&, String&&);
 
     virtual bool hasLineIfEmpty() const;
+
+    void updateDescendantTransformsAfterLayout();
 
 protected:
     RenderFragmentedFlow* locateEnclosingFragmentedFlow() const override;
@@ -375,6 +376,8 @@ public:
     Node* nodeForHitTest() const override;
 
 protected:
+    virtual bool isPointInOverflowControl(HitTestResult&, const LayoutPoint& locationInContainer, const LayoutPoint& accumulatedOffset);
+
     virtual void addOverflowFromChildren();
     // FIXME-BLOCKFLOW: Remove virtualization when all callers have moved to RenderBlockFlow
     virtual void addOverflowFromInlineChildren() { }
@@ -430,8 +433,6 @@ private:
     virtual bool hitTestChildren(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& adjustedLocation, HitTestAction);
     virtual bool hitTestInlineChildren(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, HitTestAction) { return false; }
     bool hitTestExcludedChildrenInBorder(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction);
-
-    virtual bool isPointInOverflowControl(HitTestResult&, const LayoutPoint& locationInContainer, const LayoutPoint& accumulatedOffset);
 
     void computeBlockPreferredLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
 

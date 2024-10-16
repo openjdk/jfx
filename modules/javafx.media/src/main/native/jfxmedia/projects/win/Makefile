@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -84,10 +84,6 @@ CFLAGS = -DWIN32 \
          -D_MBCS \
          $(INCLUDES) \
          $(CL_COMPILER_FLAGS)
-
-ifeq ($(VS_VER), 100)
-    CFLAGS += -D_STATIC_CPPLIB -D_DISABLE_DEPRECATE_STATIC_CPPLIB
-endif
 
 LIBS = gstreamer-lite.lib \
        glib-lite.lib \

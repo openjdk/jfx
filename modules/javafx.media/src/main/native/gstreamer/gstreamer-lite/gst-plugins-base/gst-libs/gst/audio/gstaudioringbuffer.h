@@ -27,6 +27,10 @@
 #ifndef __GST_AUDIO_RING_BUFFER_H__
 #define __GST_AUDIO_RING_BUFFER_H__
 
+#ifndef GSTREAMER_LITE
+#include <gst/audio/gstdsdformat.h>
+#endif // GSTREAMER_LITE
+
 G_BEGIN_DECLS
 
 #define GST_TYPE_AUDIO_RING_BUFFER             (gst_audio_ring_buffer_get_type())
@@ -88,6 +92,7 @@ typedef enum {
  * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG2_AAC_RAW: samples in MPEG-2 AAC raw format (Since: 1.12)
  * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG4_AAC_RAW: samples in MPEG-4 AAC raw format (Since: 1.12)
  * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_FLAC: samples in FLAC format (Since: 1.12)
+ * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DSD: samples in DSD format (Since: 1.24)
  *
  * The format of the samples in the ringbuffer.
  */
@@ -107,7 +112,8 @@ typedef enum
   GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG4_AAC,
   GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG2_AAC_RAW,
   GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG4_AAC_RAW,
-  GST_AUDIO_RING_BUFFER_FORMAT_TYPE_FLAC
+  GST_AUDIO_RING_BUFFER_FORMAT_TYPE_FLAC,
+  GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DSD
 } GstAudioRingBufferFormatType;
 
 /**
@@ -121,8 +127,13 @@ typedef enum
  * @segtotal: the total number of segments
  * @seglatency: number of segments queued in the lower level device,
  *  defaults to segtotal
+ * @dsd_format: the #GstDsdFormat (Since: 1.24)
  *
  * The structure containing the format specification of the ringbuffer.
+ *
+ * When @type is GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DSD, the @dsd_format
+ * is valid (otherwise it is unused). Also, when DSD is the sample type,
+ * only the rate, channels, position, and bpf fields in @info are populated.
  */
 struct _GstAudioRingBufferSpec
 {
@@ -152,9 +163,29 @@ struct _GstAudioRingBufferSpec
   gint     seglatency;          /* number of segments queued in the lower
          * level device, defaults to segtotal. */
 
-  /*< private >*/
-  gpointer _gst_reserved[GST_PADDING];
+#ifndef GSTREAMER_LITE
+  /* Union preserves padded struct size for backwards compat
+   * Consumer code should use the accessor macros for fields */
+  union {
+    struct { /* < skip > */
+      GstDsdFormat  dsd_format;
+    } abi;
+    /*< private >*/
+    gpointer _gst_reserved[GST_PADDING];
+  } ABI;
+#endif // GSTREAMER_LITE
 };
+
+#define GST_AUDIO_RING_BUFFER_SPEC_FORMAT_TYPE(spec)   ((spec)->type)
+#define GST_AUDIO_RING_BUFFER_SPEC_INFO(spec)          ((spec)->info)
+#define GST_AUDIO_RING_BUFFER_SPEC_LATENCY_TIME(spec)  ((spec)->latency_time)
+#define GST_AUDIO_RING_BUFFER_SPEC_BUFFER_TIME(spec)   ((spec)->buffer_time)
+#define GST_AUDIO_RING_BUFFER_SPEC_SEGSIZE(spec)       ((spec)->segsize)
+#define GST_AUDIO_RING_BUFFER_SPEC_SEGTOTAL(spec)      ((spec)->segtotal)
+#define GST_AUDIO_RING_BUFFER_SPEC_SEGLATENCY(spec)    ((spec)->seglatency)
+#ifndef GSTREAMER_LITE
+#define GST_AUDIO_RING_BUFFER_SPEC_DSD_FORMAT(spec)    ((spec)->ABI.abi.dsd_format)
+#endif // GSTREAMER_LITE
 
 #define GST_AUDIO_RING_BUFFER_GET_COND(buf) (&(((GstAudioRingBuffer *)buf)->cond))
 #define GST_AUDIO_RING_BUFFER_WAIT(buf)     (g_cond_wait (GST_AUDIO_RING_BUFFER_GET_COND (buf), GST_OBJECT_GET_LOCK (buf)))
@@ -353,6 +384,9 @@ gboolean        gst_audio_ring_buffer_pause           (GstAudioRingBuffer *buf);
 
 GST_AUDIO_API
 gboolean        gst_audio_ring_buffer_stop            (GstAudioRingBuffer *buf);
+
+GST_AUDIO_API
+void            gst_audio_ring_buffer_set_errored     (GstAudioRingBuffer *buf);
 
 /* get status */
 

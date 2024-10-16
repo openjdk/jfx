@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,24 @@
 package com.oracle.tools.fx.monkey.util;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
-import javafx.scene.control.Accordion;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 
 /**
  * Option Pane - a vertical option sheet.
  */
-public class OptionPane extends Accordion {
+public class OptionPane extends VBox {
 
     public OptionPane() {
         FX.name(this, "OptionPane");
+        FX.style(this, "option-pane");
     }
 
     public void label(String text) {
@@ -70,14 +72,17 @@ public class OptionPane extends Accordion {
         section(name, new OptionGridPane());
     }
 
+    private List<TitledPane> getPanes() {
+        return getChildren().
+            stream().
+            filter((n) -> n instanceof TitledPane).
+            map((n) -> (TitledPane)n).
+            collect(Collectors.toList());
+    }
+
     public void section(String name, OptionGridPane content) {
         TitledPane t = new TitledPane(name, content);
-        getPanes().add(t);
-
-        List<TitledPane> panes = getPanes();
-        if (panes.size() == 1) {
-            setExpandedPane(panes.get(0));
-        }
+        getChildren().add(t);
     }
 
     private OptionGridPane lastSection() {
@@ -85,6 +90,7 @@ public class OptionPane extends Accordion {
         if (panes.size() == 0) {
             section("Properties");
         }
+        panes = getPanes();
         TitledPane t = panes.get(panes.size() - 1);
         return (OptionGridPane)t.getContent();
     }
@@ -97,6 +103,7 @@ public class OptionPane extends Accordion {
 
         public OptionGridPane() {
             setPadding(PADDING);
+            setMaxWidth(Double.MAX_VALUE);
         }
 
         public void label(String text) {

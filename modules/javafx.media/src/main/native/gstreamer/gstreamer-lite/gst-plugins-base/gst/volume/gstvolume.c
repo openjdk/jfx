@@ -62,8 +62,7 @@
 #include "gstvolume.h"
 
 /* some defines for audio processing */
-/* the volume factor is a range from 0.0 to (arbitrary) VOLUME_MAX_DOUBLE = 10.0
- * we map 1.0 to VOLUME_UNITY_INT*
+/* we map VOLUME_UNITY_INT* to volume = 1.0
  */
 #define VOLUME_UNITY_INT8            8  /* internal int for unity 2^(8-5) */
 #define VOLUME_UNITY_INT8_BIT_SHIFT  3  /* number of bits to shift for unity */
@@ -73,7 +72,6 @@
 #define VOLUME_UNITY_INT24_BIT_SHIFT 19 /* number of bits to shift for unity */
 #define VOLUME_UNITY_INT32           134217728  /* internal int for unity 2^(32-5) */
 #define VOLUME_UNITY_INT32_BIT_SHIFT 27
-#define VOLUME_MAX_DOUBLE            10.0
 #define VOLUME_MAX_INT8              G_MAXINT8
 #define VOLUME_MIN_INT8              G_MININT8
 #define VOLUME_MAX_INT16             G_MAXINT16
@@ -82,6 +80,8 @@
 #define VOLUME_MIN_INT24             -8388608
 #define VOLUME_MAX_INT32             G_MAXINT32
 #define VOLUME_MIN_INT32             G_MININT32
+#define VOLUME_MAX_INT64             G_MAXINT64
+#define VOLUME_MIN_INT64             G_MININT64
 
 #define GST_CAT_DEFAULT gst_volume_debug
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_DEFAULT);
@@ -100,7 +100,8 @@ enum
 {
   PROP_0,
   PROP_MUTE,
-  PROP_VOLUME
+  PROP_VOLUME,
+  PROP_VOLUME_FULL_RANGE
 };
 
 #if G_BYTE_ORDER == G_LITTLE_ENDIAN
@@ -144,24 +145,32 @@ static void volume_process_int32 (GstVolume * self, gpointer bytes,
     guint n_bytes);
 static void volume_process_int32_clamp (GstVolume * self, gpointer bytes,
     guint n_bytes);
+static void volume_process_int32_via_double_with_clamp (GstVolume * self,
+    gpointer bytes, guint n_bytes);
 static void volume_process_controlled_int32_clamp (GstVolume * self,
     gpointer bytes, gdouble * volume, guint channels, guint n_bytes);
 static void volume_process_int24 (GstVolume * self, gpointer bytes,
     guint n_bytes);
 static void volume_process_int24_clamp (GstVolume * self, gpointer bytes,
     guint n_bytes);
+static void volume_process_int24_via_float_with_clamp (GstVolume * self,
+    gpointer bytes, guint n_bytes);
 static void volume_process_controlled_int24_clamp (GstVolume * self,
     gpointer bytes, gdouble * volume, guint channels, guint n_bytes);
 static void volume_process_int16 (GstVolume * self, gpointer bytes,
     guint n_bytes);
 static void volume_process_int16_clamp (GstVolume * self, gpointer bytes,
     guint n_bytes);
+static void volume_process_int16_via_float_with_clamp (GstVolume * self,
+    gpointer bytes, guint n_bytes);
 static void volume_process_controlled_int16_clamp (GstVolume * self,
     gpointer bytes, gdouble * volume, guint channels, guint n_bytes);
 static void volume_process_int8 (GstVolume * self, gpointer bytes,
     guint n_bytes);
 static void volume_process_int8_clamp (GstVolume * self, gpointer bytes,
     guint n_bytes);
+static void volume_process_int8_via_float_with_clamp (GstVolume * self,
+    gpointer bytes, guint n_bytes);
 static void volume_process_controlled_int8_clamp (GstVolume * self,
     gpointer bytes, gdouble * volume, guint channels, guint n_bytes);
 
@@ -185,7 +194,12 @@ volume_choose_func (GstVolume * self, const GstAudioInfo * info)
     case GST_AUDIO_FORMAT_S32:
       /* only clamp if the gain is greater than 1.0 */
       if (self->current_vol_i32 > VOLUME_UNITY_INT32) {
-        self->process = volume_process_int32_clamp;
+        /* Fixed-point multiplication only supports small subset of volumes */
+        if (self->current_vol_i32 > VOLUME_MAX_INT32) {
+          self->process = volume_process_int32_via_double_with_clamp;
+        } else {
+          self->process = volume_process_int32_clamp;
+        }
       } else {
         self->process = volume_process_int32;
       }
@@ -194,7 +208,12 @@ volume_choose_func (GstVolume * self, const GstAudioInfo * info)
     case GST_AUDIO_FORMAT_S24:
       /* only clamp if the gain is greater than 1.0 */
       if (self->current_vol_i24 > VOLUME_UNITY_INT24) {
-        self->process = volume_process_int24_clamp;
+        /* Fixed-point multiplication only supports small subset of volumes */
+        if (self->current_vol_i24 > VOLUME_MAX_INT24) {
+          self->process = volume_process_int24_via_float_with_clamp;
+        } else {
+          self->process = volume_process_int24_clamp;
+        }
       } else {
         self->process = volume_process_int24;
       }
@@ -203,7 +222,12 @@ volume_choose_func (GstVolume * self, const GstAudioInfo * info)
     case GST_AUDIO_FORMAT_S16:
       /* only clamp if the gain is greater than 1.0 */
       if (self->current_vol_i16 > VOLUME_UNITY_INT16) {
-        self->process = volume_process_int16_clamp;
+        /* Fixed-point multiplication only supports small subset of volumes */
+        if (self->current_vol_i16 > VOLUME_MAX_INT16) {
+          self->process = volume_process_int16_via_float_with_clamp;
+        } else {
+          self->process = volume_process_int16_clamp;
+        }
       } else {
         self->process = volume_process_int16;
       }
@@ -212,7 +236,12 @@ volume_choose_func (GstVolume * self, const GstAudioInfo * info)
     case GST_AUDIO_FORMAT_S8:
       /* only clamp if the gain is greater than 1.0 */
       if (self->current_vol_i8 > VOLUME_UNITY_INT8) {
-        self->process = volume_process_int8_clamp;
+        /* Fixed-point multiplication only supports small subset of volumes */
+        if (self->current_vol_i8 > VOLUME_MAX_INT8) {
+          self->process = volume_process_int8_via_float_with_clamp;
+        } else {
+          self->process = volume_process_int8_clamp;
+        }
       } else {
         self->process = volume_process_int8;
       }
@@ -256,16 +285,49 @@ volume_update_volume (GstVolume * self, const GstAudioInfo * info,
     self->current_mute = FALSE;
     self->current_volume = volume;
 
-    self->current_vol_i8 =
-        (gint) ((gdouble) volume * (gdouble) VOLUME_UNITY_INT8);
-    self->current_vol_i16 =
-        (gint) ((gdouble) volume * (gdouble) VOLUME_UNITY_INT16);
-    self->current_vol_i24 =
-        (gint) ((gdouble) volume * (gdouble) VOLUME_UNITY_INT24);
-    self->current_vol_i32 =
-        (gint) ((gdouble) volume * (gdouble) VOLUME_UNITY_INT32);
+    gdouble current_fp_vol_i8 = (gdouble) volume * (gdouble) VOLUME_UNITY_INT8;
+    gdouble current_fp_vol_i16 =
+        (gdouble) volume * (gdouble) VOLUME_UNITY_INT16;
+    gdouble current_fp_vol_i24 =
+        (gdouble) volume * (gdouble) VOLUME_UNITY_INT24;
+    gdouble current_fp_vol_i32 =
+        (gdouble) volume * (gdouble) VOLUME_UNITY_INT32;
 
-    passthrough = (self->current_vol_i16 == VOLUME_UNITY_INT16);
+    /* Perform "saturating" FP->int conversion.
+     * We want to be able to tell when current_fp_vol_i32 is *larger* than
+     * VOLUME_MAX_INT32, *and* don't have UB on FP->int cast overflow,
+     * `2 * VOLUME_MAX_INT32` achieves both of these points.
+     */
+    self->current_vol_i8 = (glong) (CLAMP (current_fp_vol_i8, (gdouble) 0,
+            (gdouble) 2 * VOLUME_MAX_INT32));
+    self->current_vol_i16 = (glong) (CLAMP (current_fp_vol_i16, (gdouble) 0,
+            (gdouble) 2 * VOLUME_MAX_INT32));
+    self->current_vol_i24 = (glong) (CLAMP (current_fp_vol_i24, (gdouble) 0,
+            (gdouble) 2 * VOLUME_MAX_INT32));
+    self->current_vol_i32 = (glong) (CLAMP (current_fp_vol_i32, (gdouble) 0,
+            (gdouble) 2 * VOLUME_MAX_INT32));
+
+    switch (GST_AUDIO_INFO_FORMAT (info)) {
+      case GST_AUDIO_FORMAT_F32:
+      case GST_AUDIO_FORMAT_F64:
+        passthrough = (self->current_volume == 1.0);
+        break;
+      case GST_AUDIO_FORMAT_S8:
+        passthrough = (self->current_vol_i8 == VOLUME_UNITY_INT8);
+        break;
+      case GST_AUDIO_FORMAT_S16:
+        passthrough = (self->current_vol_i16 == VOLUME_UNITY_INT16);
+        break;
+      case GST_AUDIO_FORMAT_S24:
+        passthrough = (self->current_vol_i24 == VOLUME_UNITY_INT24);
+        break;
+      case GST_AUDIO_FORMAT_S32:
+        passthrough = (self->current_vol_i32 == VOLUME_UNITY_INT32);
+        break;
+      default:
+        passthrough = FALSE;
+        break;
+    }
   }
 
   /* If a controller is used, never use passthrough mode
@@ -323,9 +385,26 @@ gst_volume_class_init (GstVolumeClass * klass)
           DEFAULT_PROP_MUTE,
           G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE | G_PARAM_STATIC_STRINGS));
 
+  /**
+   * GstVolume:volume-full-range:
+   *
+   * The volume-full-range factor is a range from 0.0 to G_MAXDOUBLE so
+   * it is *very* inclusive, e.g. gain of +48 dB is very reasonable. This
+   * property allows setting higher value than the #GstVolume:volume property.
+   *
+   * Since: 1.24
+   */
+  /* This property has been exposed as another property to keep the backward compatibility
+   * when using #GstDirectControlBinding with GstDirectControlBinding:absolute set to FALSE. */
+  g_object_class_install_property (gobject_class, PROP_VOLUME_FULL_RANGE,
+      g_param_spec_double ("volume-full-range", "Volume",
+          "volume factor with a full range of values, 1.0=100%", 0.0,
+          G_MAXDOUBLE, DEFAULT_PROP_VOLUME,
+          G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE | G_PARAM_STATIC_STRINGS));
+
   g_object_class_install_property (gobject_class, PROP_VOLUME,
       g_param_spec_double ("volume", "Volume", "volume factor, 1.0=100%",
-          0.0, VOLUME_MAX_DOUBLE, DEFAULT_PROP_VOLUME,
+          0.0, 10.0, DEFAULT_PROP_VOLUME,
           G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE | G_PARAM_STATIC_STRINGS));
 
   gst_element_class_set_static_metadata (element_class, "Volume",
@@ -441,6 +520,26 @@ volume_process_int32_clamp (GstVolume * self, gpointer bytes, guint n_bytes)
   volume_orc_process_int32_clamp (data, self->current_vol_i32, num_samples);
 }
 
+// TODO: Add ORC implementation for this
+static void
+volume_process_int32_via_double_with_clamp (GstVolume * self,
+    gpointer bytes, guint n_bytes)
+{
+  gint32 *data = (gint32 *) bytes;
+  guint i;
+  guint num_samples = n_bytes / sizeof (gint32);
+  /* Cast between the 32-bit integer and 32-bit floating point is lossy,
+   * but not between 64-bit floating point, so use it instead. */
+  /* WARNING: (gint32)((gfloat)VOLUME_MAX_INT32)) is UB! */
+  gdouble vol = self->current_volume;
+  gdouble val;
+
+  for (i = 0; i < num_samples; i++) {
+    val = *data * vol;
+    *data++ = (gint32) CLAMP (val, VOLUME_MIN_INT32, VOLUME_MAX_INT32);
+  }
+}
+
 static void
 volume_process_controlled_int32_clamp (GstVolume * self, gpointer bytes,
     gdouble * volume, guint channels, guint n_bytes)
@@ -464,6 +563,7 @@ volume_process_controlled_int32_clamp (GstVolume * self, gpointer bytes,
 }
 
 #if (G_BYTE_ORDER == G_LITTLE_ENDIAN)
+/* NOTE: does not sign-extend, result is an 24-bit unsigned integer! */
 #define get_unaligned_i24(_x) ( (((guint8*)_x)[0]) | ((((guint8*)_x)[1]) << 8) | ((((gint8*)_x)[2]) << 16) )
 
 #define write_unaligned_u24(_x,samp) \
@@ -474,6 +574,7 @@ G_STMT_START { \
 } G_STMT_END
 
 #else /* BIG ENDIAN */
+/* NOTE: does not sign-extend, result is an 24-bit unsigned integer! */
 #define get_unaligned_i24(_x) ( (((guint8*)_x)[2]) | ((((guint8*)_x)[1]) << 8) | ((((gint8*)_x)[0]) << 16) )
 #define write_unaligned_u24(_x,samp) \
 G_STMT_START { \
@@ -482,6 +583,9 @@ G_STMT_START { \
   *(_x)++ = samp & 0xFF; \
 } G_STMT_END
 #endif
+
+#define sign_extend_i24(_x)                                                    \
+  (((gint32)(((guint32)(_x)) << (32 - 24))) >> (32 - 24))
 
 static void
 volume_process_int24 (GstVolume * self, gpointer bytes, guint n_bytes)
@@ -523,6 +627,30 @@ volume_process_int24_clamp (GstVolume * self, gpointer bytes, guint n_bytes)
         (((gint64) self->current_vol_i24 *
             val) >> VOLUME_UNITY_INT24_BIT_SHIFT);
     samp = (guint32) CLAMP (val, VOLUME_MIN_INT24, VOLUME_MAX_INT24);
+
+    /* write the value back into the stream */
+    write_unaligned_u24 (data, samp);
+  }
+}
+
+static void
+volume_process_int24_via_float_with_clamp (GstVolume * self,
+    gpointer bytes, guint n_bytes)
+{
+  gint8 *data = (gint8 *) bytes;        /* treat the data as a byte stream */
+  guint i, num_samples;
+  guint32 samp;
+  gfloat vol = self->current_volume;
+  gfloat val;
+
+  num_samples = n_bytes / (sizeof (gint8) * 3);
+  for (i = 0; i < num_samples; i++) {
+    samp = get_unaligned_i24 (data);    /* NOT SIGN-EXTENDED!!! */
+
+    val = (gfloat) (sign_extend_i24 (samp));
+    val *= vol;
+    /* NOTE: we *MUST* first cast FP to int, and only then to unsigned. */
+    samp = (guint32) ((gint32) CLAMP (val, VOLUME_MIN_INT24, VOLUME_MAX_INT24));
 
     /* write the value back into the stream */
     write_unaligned_u24 (data, samp);
@@ -572,6 +700,23 @@ volume_process_int16_clamp (GstVolume * self, gpointer bytes, guint n_bytes)
   volume_orc_process_int16_clamp (data, self->current_vol_i16, num_samples);
 }
 
+// TODO: Add ORC implementation for this
+static void
+volume_process_int16_via_float_with_clamp (GstVolume * self,
+    gpointer bytes, guint n_bytes)
+{
+  gint16 *data = (gint16 *) bytes;
+  guint i;
+  guint num_samples = n_bytes / sizeof (gint16);
+  gfloat vol = self->current_volume;
+  gfloat val;
+
+  for (i = 0; i < num_samples; i++) {
+    val = *data * vol;
+    *data++ = (gint16) CLAMP (val, VOLUME_MIN_INT16, VOLUME_MAX_INT16);
+  }
+}
+
 static void
 volume_process_controlled_int16_clamp (GstVolume * self, gpointer bytes,
     gdouble * volume, guint channels, guint n_bytes)
@@ -618,6 +763,24 @@ volume_process_int8_clamp (GstVolume * self, gpointer bytes, guint n_bytes)
   g_assert (VOLUME_UNITY_INT8_BIT_SHIFT == 3);
 
   volume_orc_process_int8_clamp (data, self->current_vol_i8, num_samples);
+}
+
+// TODO: Add ORC implementation for this
+static void
+volume_process_int8_via_float_with_clamp (GstVolume * self,
+    gpointer bytes, guint n_bytes)
+{
+  gint8 *data = (gint8 *) bytes;
+  guint i;
+  guint num_samples = n_bytes / sizeof (gint8);
+  gfloat vol = self->current_volume;
+  gfloat val;
+
+  for (i = 0; i < num_samples; i++) {
+    val = *data;
+    val *= vol;
+    *data++ = (gint8) CLAMP (val, VOLUME_MIN_INT8, VOLUME_MAX_INT8);
+  }
 }
 
 static void
@@ -836,6 +999,11 @@ volume_set_property (GObject * object, guint prop_id, const GValue * value,
       self->volume = g_value_get_double (value);
       GST_OBJECT_UNLOCK (self);
       break;
+    case PROP_VOLUME_FULL_RANGE:
+      GST_OBJECT_LOCK (self);
+      self->volume = g_value_get_double (value);
+      GST_OBJECT_UNLOCK (self);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -855,6 +1023,17 @@ volume_get_property (GObject * object, guint prop_id, GValue * value,
       GST_OBJECT_UNLOCK (self);
       break;
     case PROP_VOLUME:
+      GST_OBJECT_LOCK (self);
+      if (self->volume > 10.0) {
+        GST_WARNING_OBJECT (object,
+            "Volume is greater than its max value 10.0, reporting as 10.0");
+        g_value_set_double (value, 10.0);
+      } else {
+        g_value_set_double (value, self->volume);
+      }
+      GST_OBJECT_UNLOCK (self);
+      break;
+    case PROP_VOLUME_FULL_RANGE:
       GST_OBJECT_LOCK (self);
       g_value_set_double (value, self->volume);
       GST_OBJECT_UNLOCK (self);
