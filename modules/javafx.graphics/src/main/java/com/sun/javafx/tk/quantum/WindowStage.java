@@ -287,9 +287,13 @@ public class WindowStage extends GlassStage {
             });
         }
         if (oldScene != null) {
-            ViewPainter painter = ((ViewScene)oldScene).getPainter();
-            QuantumRenderer.getInstance().disposePresentable(painter.presentable);   // latched on RT
+            disposeScenePainter((ViewScene) oldScene);
         }
+    }
+
+    private static void disposeScenePainter(ViewScene oldScene) {
+        ViewPainter painter = oldScene.getPainter();
+        QuantumRenderer.getInstance().disposePresentable(painter.presentable);   // latched on RT
     }
 
     @Override public void setBounds(float x, float y, boolean xSet, boolean ySet,
@@ -792,9 +796,10 @@ public class WindowStage extends GlassStage {
                 }
                 platformWindow = null;
             }
-            GlassScene oldScene = getViewScene();
+            ViewScene oldScene = getViewScene();
             if (oldScene != null) {
                 oldScene.updateSceneState();
+                disposeScenePainter(oldScene);
             }
             return null;
         });
