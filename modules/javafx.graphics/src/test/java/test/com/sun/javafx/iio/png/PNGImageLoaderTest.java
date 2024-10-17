@@ -40,7 +40,7 @@ public class PNGImageLoaderTest {
 
     private void testImage(InputStream stream) throws IOException {
         PNGImageLoader2 loader = new PNGImageLoader2(stream);
-        loader.load(0, 0, 0, true, true);
+        loader.load(0, 0, 0, true, true, 1, 1);
     }
 
     @Test
