@@ -164,6 +164,11 @@ public class Text extends Shape {
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Text) shape).doConfigShape();
             }
+
+            @Override
+            public float getVisualWidth(Text t) {
+                return t.getVisualBounds().getWidth();
+            }
         });
     }
 
