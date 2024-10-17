@@ -23,11 +23,13 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+include "base", "graphics", "controls", "incubator.input", "incubator.richtext", "swing", "swt", "fxml", "web", "media", "systemTests"
 
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
+project(":incubator.input").projectDir = file("modules/jfx.incubator.input")
+project(":incubator.richtext").projectDir = file("modules/jfx.incubator.richtext")
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")
