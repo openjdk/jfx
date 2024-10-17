@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,55 +23,16 @@
  * questions.
  */
 
-package com.sun.javafx.scene.control.behavior;
-
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
-import javafx.scene.control.skin.TextFieldSkin;
-import javafx.scene.text.HitInfo;
-
 /**
- * Password field behavior.
+ * <p>The <code>javafx.scene.control.input</code> package contains classes related
+ * to the handling of the input events by the Control: input maps, key bindings, and related classes.
+ * </p>
+ * See
+ * <a href="https://github.com/andy-goryachev-oracle/Test/blob/main/doc/InputMap/InputMapV3.md">Public InputMap Proposal</a>
+ * for more info.
+ * <p>
+ * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * Will be removed in a future release.</b>
+ * @since 999 TODO
  */
-public class PasswordFieldBehavior extends TextFieldBehavior {
-
-    public PasswordFieldBehavior(PasswordField c, TextFieldSkin skin) {
-        super(c, skin);
-    }
-
-    // RT-18711 & RT-18854: Stub out word based navigation and editing
-    // for security reasons.
-    @Override
-    protected void deletePreviousWord() {
-    }
-
-    @Override
-    protected void deleteNextWord() {
-    }
-
-    @Override
-    protected void selectPreviousWord() {
-    }
-
-    @Override
-    public void selectNextWord() {
-    }
-
-    @Override
-    protected void previousWord() {
-    }
-
-    @Override
-    protected void nextWord() {
-    }
-
-    @Override
-    protected void selectWord() {
-        selectAll();
-    }
-
-    @Override
-    protected void mouseDoubleClick(HitInfo hit) {
-        getControl().selectAll();
-    }
-}
+package javafx.scene.control.input;
