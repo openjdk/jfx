@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ line.setEndY(100.0f);
 </PRE>
  * @since JavaFX 2.0
  */
-public class Line extends Shape {
+public non-sealed class Line extends Shape {
     static {
         LineHelper.setLineAccessor(new LineHelper.LineAccessor() {
             @Override

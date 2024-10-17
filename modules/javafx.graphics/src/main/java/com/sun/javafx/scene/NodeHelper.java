@@ -47,8 +47,6 @@ import javafx.css.StyleableProperty;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.SubScene;
-import javafx.scene.shape.Shape;
-import javafx.scene.shape.Shape3D;
 import javafx.scene.text.Font;
 
 /**
@@ -65,23 +63,7 @@ public abstract class NodeHelper {
     }
 
     protected static NodeHelper getHelper(Node node) {
-
-        NodeHelper helper = nodeAccessor.getHelper(node);
-        if (helper == null) {
-            String nodeType;
-            if (node instanceof Shape) {
-                nodeType = "Shape";
-            } else if (node instanceof Shape3D) {
-                nodeType = "Shape3D";
-            } else {
-                nodeType = "Node";
-            }
-
-            throw new UnsupportedOperationException(
-                    "Applications should not extend the "
-                    + nodeType + " class directly.");
-        }
-        return helper;
+        return nodeAccessor.getHelper(node);
     }
 
     protected static void setHelper(Node node, NodeHelper nodeHelper) {
