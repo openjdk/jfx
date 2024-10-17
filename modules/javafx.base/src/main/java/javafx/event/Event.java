@@ -25,11 +25,13 @@
 
 package javafx.event;
 
-import java.util.EventObject;
-
-import com.sun.javafx.event.EventUtil;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.EventObject;
+import java.util.List;
 import javafx.beans.NamedArg;
+import com.sun.javafx.event.EventHelper;
+import com.sun.javafx.event.EventUtil;
 
 // PENDING_DOC_REVIEW
 /**
@@ -54,6 +56,8 @@ public class Event extends EventObject implements Cloneable {
      */
     public static final EventType<Event> ANY = EventType.ROOT;
 
+    static { initHelper(); }
+
     /**
      * Type of the event.
      */
@@ -69,6 +73,9 @@ public class Event extends EventObject implements Cloneable {
      * Whether this event has been consumed by any filter or handler.
      */
     protected boolean consumed;
+
+    private transient boolean propagateConsume;
+    private transient List<Event> consumeListeners;
 
     /**
      * Construct a new {@code Event} with the specified event type. The source
@@ -134,6 +141,10 @@ public class Event extends EventObject implements Cloneable {
         newEvent.target = (newTarget != null) ? newTarget : NULL_SOURCE_TARGET;
         newEvent.consumed = false;
 
+        if (propagateConsume) {
+            newEvent.setNotifyConsumed(this);
+        }
+
         return newEvent;
     }
 
@@ -153,6 +164,24 @@ public class Event extends EventObject implements Cloneable {
      */
     public void consume() {
         consumed = true;
+
+        // consume parent events when the child is consumed
+        if (consumeListeners != null) {
+            List<Event> cs = consumeListeners;
+            consumeListeners = null;
+
+            for (int i = cs.size() - 1; i >= 0; i--) {
+                Event ev = cs.get(i);
+                ev.consume();
+            }
+        }
+    }
+
+    private void setNotifyConsumed(Event ev) {
+        if (consumeListeners == null) {
+            consumeListeners = new ArrayList(1);
+        }
+        consumeListeners.add(ev);
     }
 
     /**
@@ -197,5 +226,14 @@ public class Event extends EventObject implements Cloneable {
         }
 
         EventUtil.fireEvent(eventTarget, event);
+    }
+
+    private static void initHelper() {
+        EventHelper.setAccessor(new EventHelper.Accessor() {
+            @Override
+            public void propagateConsume(Event ev) {
+                ev.propagateConsume = true;
+            }
+        });
     }
 }
