@@ -213,8 +213,6 @@ public class XImageLoader implements ImageLoader {
                     case TYPE_USHORT_565_RGB -> "TYPE_USHORT_565_RGB";
                     case TYPE_USHORT_555_RGB -> "TYPE_USHORT_555_RGB";
                     case TYPE_USHORT_GRAY -> "TYPE_USHORT_GRAY";
-                    case TYPE_BYTE_BINARY -> "TYPE_BYTE_BINARY";
-                    case TYPE_BYTE_INDEXED -> "TYPE_BYTE_INDEXED";
                     default -> Integer.toString(image.getType());
                 });
         };
