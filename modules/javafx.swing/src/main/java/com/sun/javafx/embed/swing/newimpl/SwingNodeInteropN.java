@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.embed.swing.newimpl;
 
+import com.sun.glass.ui.Application;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.embed.swing.FXDnD;
@@ -65,9 +66,7 @@ public class SwingNodeInteropN {
      */
     private static OptionalMethod<LightweightFrameWrapper> jlfNotifyDisplayChanged;
     private static Class lwFrameWrapperClass = null;
-    private static native void overrideNativeWindowHandle(Class lwFrameWrapperClass,
-                                  LightweightFrameWrapper lwFrame, long handle,
-                                                    Runnable closeWindow);
+
     static {
         jlfNotifyDisplayChanged = new OptionalMethod<>(LightweightFrameWrapper.class,
                 "notifyDisplayChanged", Double.TYPE, Double.TYPE);
@@ -125,7 +124,7 @@ public class SwingNodeInteropN {
 
     public void overrideNativeWindowHandle(Object frame, long handle, Runnable closeWindow) {
         LightweightFrameWrapper lwFrame = (LightweightFrameWrapper)frame;
-        overrideNativeWindowHandle(lwFrameWrapperClass, lwFrame, handle, closeWindow);
+        Application.overrideNativeWindowHandle(lwFrameWrapperClass, lwFrame, handle, closeWindow);
     }
 
     public void notifyDisplayChanged(Object frame, double scaleX, double scaleY) {
