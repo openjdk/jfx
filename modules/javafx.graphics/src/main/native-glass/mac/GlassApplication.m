@@ -768,6 +768,14 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return self->started;
 }
 
+// The OS may invoke a GlassRunnable either in the runMode:beforeDate: call or
+// the nextEventMatchingMask call. If a runnable invoked during
+// runMode:beforeDate: schedules a new runnable it will be invoked by
+// nextEventMatchingMask. If a runnable invoked during nextEventMatchingMask
+// schedules a new runnable it may be invoked in the same nextEventMatchingMask
+// call or it may be deferred to the next loop iteration. So we can't guarantee
+// that a newly scheduled runnable will be invoked in the next event loop
+// cycle, it may happen in the current cycle.
 + (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env
 {
     jobject ret = NULL;
