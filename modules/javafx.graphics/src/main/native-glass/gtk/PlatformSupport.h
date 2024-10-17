@@ -30,6 +30,11 @@
 class PlatformSupport final
 {
 public:
+    static constexpr const char* observedSettings[] = {
+        "notify::gtk-theme-name",
+        "notify::gtk-enable-animations"
+    };
+
     PlatformSupport(JNIEnv*, jobject);
     ~PlatformSupport();
     PlatformSupport(PlatformSupport const&) = delete;

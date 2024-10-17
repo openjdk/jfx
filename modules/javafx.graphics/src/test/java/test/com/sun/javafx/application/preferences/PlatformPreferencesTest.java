@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.com.sun.javafx.application.preferences;
 
 import com.sun.javafx.application.preferences.PlatformPreferences;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import javafx.animation.Interpolatable;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
@@ -65,9 +66,11 @@ public class PlatformPreferencesTest {
             ),
             // Platform-specific key mappings
             Map.of(
-                "test.foregroundColor", "foregroundColor",
-                "test.backgroundColor", "backgroundColor",
-                "test.accentColor", "accentColor"
+                "test.foregroundColor", new PreferenceMapping<>("foregroundColor", Color.class),
+                "test.backgroundColor", new PreferenceMapping<>("backgroundColor", Color.class),
+                "test.accentColor", new PreferenceMapping<>("accentColor", Color.class),
+                "test.reducedMotion", new PreferenceMapping<>("reducedMotion", Boolean.class),
+                "test.enableTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b)
             ));
     }
 
@@ -327,4 +330,39 @@ public class PlatformPreferencesTest {
         }
     }
 
+    @Test
+    void testReducedMotionProperty() {
+        var trace = new ArrayList<Boolean>();
+        prefs.reducedMotionProperty().addListener((observable, ov, nv) -> trace.add(nv));
+
+        assertFalse(prefs.isReducedMotion());
+        prefs.update(Map.of("test.reducedMotion", true));
+
+        assertEquals(1, trace.size());
+        assertEquals(Boolean.TRUE, trace.get(0));
+        assertTrue(prefs.isReducedMotion());
+
+        prefs.update(new HashMap<>() {{ put("test.reducedMotion", null); }});
+        assertEquals(2, trace.size());
+        assertEquals(Boolean.FALSE, trace.get(1));
+        assertFalse(prefs.isReducedMotion());
+    }
+
+    @Test
+    void testReducedTransparencyPropertyWithInverseMapping() {
+        var trace = new ArrayList<Boolean>();
+        prefs.reducedTransparencyProperty().addListener((observable, ov, nv) -> trace.add(nv));
+
+        assertFalse(prefs.isReducedTransparency());
+        prefs.update(Map.of("test.enableTransparency", false));
+
+        assertEquals(1, trace.size());
+        assertEquals(Boolean.TRUE, trace.get(0));
+        assertTrue(prefs.isReducedTransparency());
+
+        prefs.update(new HashMap<>() {{ put("test.enableTransparency", null); }});
+        assertEquals(2, trace.size());
+        assertEquals(Boolean.FALSE, trace.get(1));
+        assertFalse(prefs.isReducedTransparency());
+    }
 }

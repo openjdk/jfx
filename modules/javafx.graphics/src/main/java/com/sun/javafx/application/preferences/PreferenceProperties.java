@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,17 @@
 
 package com.sun.javafx.application.preferences;
 
-import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
 import javafx.application.ColorScheme;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.Property;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.paint.Color;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -43,15 +44,49 @@ import java.util.Objects;
  */
 final class PreferenceProperties {
 
-    private final ColorProperty backgroundColor = new ColorProperty("backgroundColor", Color.WHITE);
-    private final ColorProperty foregroundColor = new ColorProperty("foregroundColor", Color.BLACK);
-    private final ColorProperty accentColor = new ColorProperty("accentColor", Color.rgb(21, 126, 251));
-    private final List<ColorProperty> allColors = List.of(backgroundColor, foregroundColor, accentColor);
+    private final Map<String, DeferredProperty<?>> deferredProperties = new HashMap<>();
+    private final DeferredProperty<Color> backgroundColor = new DeferredProperty<>("backgroundColor", Color.WHITE);
+    private final DeferredProperty<Color> foregroundColor = new DeferredProperty<>("foregroundColor", Color.BLACK);
+    private final DeferredProperty<Color> accentColor = new DeferredProperty<>("accentColor", Color.rgb(21, 126, 251));
     private final ColorSchemeProperty colorScheme = new ColorSchemeProperty();
+    private final DeferredProperty<Boolean> reducedMotion = new DeferredProperty<>("reducedMotion", false);
+    private final DeferredProperty<Boolean> reducedTransparency = new DeferredProperty<>("reducedTransparency", false);
+    private final ReadOnlyBooleanWrapper reducedMotionFlag;
+    private final ReadOnlyBooleanWrapper reducedTransparencyFlag;
     private final Object bean;
 
     PreferenceProperties(Object bean) {
         this.bean = bean;
+
+        reducedMotionFlag = new ReadOnlyBooleanWrapper(bean, reducedMotion.getName());
+        reducedMotionFlag.bind(reducedMotion);
+
+        reducedTransparencyFlag = new ReadOnlyBooleanWrapper(bean, reducedTransparency.getName());
+        reducedTransparencyFlag.bind(reducedTransparency);
+    }
+
+    public ReadOnlyBooleanProperty reducedMotionProperty() {
+        return reducedMotionFlag.getReadOnlyProperty();
+    }
+
+    public boolean isReducedMotion() {
+        return reducedMotion.get();
+    }
+
+    public void setReducedMotion(boolean value) {
+        reducedMotion.setValueOverride(value);
+    }
+
+    public ReadOnlyBooleanProperty reducedTransparencyProperty() {
+        return reducedTransparencyFlag.getReadOnlyProperty();
+    }
+
+    public boolean isReducedTransparency() {
+        return reducedTransparency.get();
+    }
+
+    public void setReducedTransparency(boolean value) {
+        reducedTransparency.setValueOverride(value);
     }
 
     public ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty() {
@@ -102,60 +137,38 @@ final class PreferenceProperties {
         accentColor.setValueOverride(color);
     }
 
-    public void update(Map<String, ChangedValue> changedPreferences, Map<String, String> platformKeyMappings) {
+    public void update(Map<String, ChangedValue> changedPreferences,
+                       Map<String, PreferenceMapping<?>> platformKeyMappings) {
         for (Map.Entry<String, ChangedValue> entry : changedPreferences.entrySet()) {
-            String key = platformKeyMappings.get(entry.getKey());
-            if (key != null) {
-                for (ColorProperty colorProperty : allColors) {
-                    if (colorProperty.getName().equals(key)) {
-                        updateColorProperty(colorProperty, entry.getValue().newValue());
-                        break;
-                    }
-                }
+            if (platformKeyMappings.get(entry.getKey()) instanceof PreferenceMapping<?> mapping
+                    && deferredProperties.get(mapping.keyName()) instanceof DeferredProperty<?> property) {
+                property.setPlatformValue(mapping.map(entry.getValue().newValue()));
             }
         }
 
-        fireValueChangedIfNecessary();
-    }
-
-    private void updateColorProperty(ColorProperty property, Object value) {
-        if (value instanceof Color color) {
-            property.setValue(color);
-        } else {
-            if (value != null) {
-                Logging.getJavaFXLogger().warning(
-                    "Unexpected value of " + property.getName() + " platform preference, " +
-                    "using default value instead (expected = " + Color.class.getName() +
-                    ", actual = " + value.getClass().getName() + ")");
-            }
-
-            // Setting a ColorProperty to 'null' restores its platform value or default value.
-            property.setValue(null);
-        }
-    }
-
-    private void fireValueChangedIfNecessary() {
-        for (ColorProperty colorProperty : allColors) {
-            colorProperty.fireValueChangedIfNecessary();
+        for (DeferredProperty<?> property : deferredProperties.values()) {
+            property.fireValueChangedIfNecessary();
         }
     }
 
     /**
-     * ColorProperty implements a deferred notification mechanism, where change notifications
-     * are only fired after changes of all color properties have been applied.
-     * This ensures that observers will never see a transient state where two color properties
+     * DeferredProperty implements a deferred notification mechanism, where change notifications
+     * are only fired after changes of all properties have been applied.
+     * This ensures that observers will never see a transient state where two properties
      * are inconsistent (for example, both foreground and background could be the same color
      * when going from light to dark mode).
      */
-    private final class ColorProperty extends ReadOnlyObjectPropertyBase<Color> {
+    private final class DeferredProperty<T> extends ReadOnlyObjectPropertyBase<T> {
         private final String name;
-        private final Color defaultValue;
-        private Color overrideValue;
-        private Color platformValue;
-        private Color effectiveValue;
-        private Color lastEffectiveValue;
+        private final T defaultValue;
+        private T overrideValue;
+        private T platformValue;
+        private T effectiveValue;
+        private T lastEffectiveValue;
 
-        ColorProperty(String name, Color initialValue) {
+        DeferredProperty(String name, T initialValue) {
+            Objects.requireNonNull(initialValue);
+            PreferenceProperties.this.deferredProperties.put(name, this);
             this.name = name;
             this.defaultValue = initialValue;
             this.platformValue = initialValue;
@@ -174,23 +187,32 @@ final class PreferenceProperties {
         }
 
         @Override
-        public Color get() {
+        public T get() {
             return effectiveValue;
         }
 
         /**
-         * Only called by {@link #updateColorProperty}, this method doesn't fire a change notification.
-         * Change notifications are fired after the new values of all color properties have been set.
+         * Only called from {@link PreferenceProperties#update}, this method doesn't fire a change notification.
+         * Change notifications are fired after the new values of all deferred properties have been set.
          */
-        public void setValue(Color value) {
-            this.platformValue = value;
+        @SuppressWarnings("unchecked")
+        public void setPlatformValue(Object value) {
+            Class<?> expectedType = defaultValue.getClass();
+            this.platformValue = expectedType.isInstance(value) ? (T)value : null;
             updateEffectiveValue();
         }
 
-        public void setValueOverride(Color value) {
+        public void setValueOverride(T value) {
             this.overrideValue = value;
             updateEffectiveValue();
             fireValueChangedEvent();
+        }
+
+        public void fireValueChangedIfNecessary() {
+            if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
+                lastEffectiveValue = effectiveValue;
+                fireValueChangedEvent();
+            }
         }
 
         private void updateEffectiveValue() {
@@ -198,13 +220,6 @@ final class PreferenceProperties {
             effectiveValue = Objects.requireNonNullElse(
                 overrideValue != null ? overrideValue : platformValue,
                 defaultValue);
-        }
-
-        void fireValueChangedIfNecessary() {
-            if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
-                lastEffectiveValue = effectiveValue;
-                fireValueChangedEvent();
-            }
         }
     }
 
