@@ -52,7 +52,7 @@ public class PlatformExitTest {
     public void testPlatformExit() throws Exception {
 
         final ArrayList<String> cmd =
-                Util.createApplicationLaunchCommand(testAppName, null, null);
+                Util.createApplicationLaunchCommand(testAppName, null);
 
         ProcessBuilder builder = new ProcessBuilder(cmd);
         builder.redirectErrorStream(true);
