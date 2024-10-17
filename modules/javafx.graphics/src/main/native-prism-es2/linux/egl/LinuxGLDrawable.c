@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,25 +31,34 @@
 #include <math.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_X11GLDrawable.h"
+#include "com_sun_prism_es2_LinuxGLDrawable.h"
+
+extern const char* eglGetErrorString(EGLint error);
 
 /*
- * Class:     com_sun_prism_es2_X11GLDrawable
+ * Class:     com_sun_prism_es2_LinuxGLDrawable
  * Method:    nCreateDrawable
  * Signature: (JJ)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nCreateDrawable
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLDrawable_nCreateDrawable
 (JNIEnv *env, jclass class, jlong nativeWindow, jlong nativePFInfo) {
     DrawableInfo *dInfo = NULL;
     PixelFormatInfo *pfInfo = (PixelFormatInfo *) jlong_to_ptr(nativePFInfo);
     if (pfInfo == NULL) {
         return 0;
     }
-
     /* allocate the structure */
     dInfo = (DrawableInfo *) malloc(sizeof (DrawableInfo));
     if (dInfo == NULL) {
-        fprintf(stderr, "nCreateDrawable: Failed in malloc\n");
+        fprintf(stderr, "Prism ES2 Error: CreateDrawable - Failed in malloc\n");
+        return 0;
+    }
+
+    EGLSurface eglSurface = eglCreateWindowSurface(pfInfo->eglDisplay, pfInfo->eglConfig,
+                                        (EGLNativeWindowType) jlong_to_ptr(nativeWindow), NULL);
+
+    if (eglSurface == EGL_NO_SURFACE) {
+        fprintf(stderr, "Prism ES2 Error: CreateDrawable - Could not create EGL surface [%s]\n", eglGetErrorString(eglGetError()));
         return 0;
     }
 
@@ -59,18 +68,20 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nCreateDrawable
     // Use the dummyWin that was already created in the pfInfo
     // since this is an non-onscreen drawable.
     dInfo->display = pfInfo->display;
+    dInfo->eglDisplay = pfInfo->eglDisplay;
     dInfo->win = (Window) jlong_to_ptr(nativeWindow);
     dInfo->onScreen = JNI_TRUE;
+    dInfo->eglSurface = eglSurface;
 
     return ptr_to_jlong(dInfo);
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLDrawable
+ * Class:     com_sun_prism_es2_LinuxGLDrawable
  * Method:    nGetDummyDrawable
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nGetDummyDrawable
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLDrawable_nGetDummyDrawable
 (JNIEnv *env, jclass class, jlong nativePFInfo) {
     DrawableInfo *dInfo = NULL;
     PixelFormatInfo *pfInfo = (PixelFormatInfo *) jlong_to_ptr(nativePFInfo);
@@ -81,7 +92,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nGetDummyDrawable
     /* allocate the structure */
     dInfo = (DrawableInfo *) malloc(sizeof (DrawableInfo));
     if (dInfo == NULL) {
-        fprintf(stderr, "nGetDummyDrawable: Failed in malloc\n");
+        fprintf(stderr, "Prism ES2 Error: GetDummyDrawable - Failed in malloc\n");
         return 0;
     }
 
@@ -98,30 +109,36 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nGetDummyDrawable
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLDrawable
+ * Class:     com_sun_prism_es2_LinuxGLDrawable
  * Method:    nSwapBuffers
  * Signature: (J)Z
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_X11GLDrawable_nSwapBuffers
+JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_LinuxGLDrawable_nSwapBuffers
 (JNIEnv *env, jclass class, jlong nativeDInfo) {
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
     if (dInfo == NULL) {
         return JNI_FALSE;
     }
-    glXSwapBuffers(dInfo->display, dInfo->win);
-    return JNI_TRUE;
+
+    return eglSwapBuffers(eglGetCurrentDisplay(), dInfo->eglSurface);
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLDrawable
+ * Class:     com_sun_prism_es2_LinuxGLDrawable
  * Method:    nReleaseDrawable
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLDrawable_nReleaseDrawable
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_LinuxGLDrawable_nReleaseDrawable
 (JNIEnv *env, jclass class, jlong nativeDInfo) {
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
+
     if (dInfo == NULL) {
         return;
+    }
+
+    if (!eglDestroySurface(dInfo->eglDisplay, dInfo->eglSurface)) {
+        fprintf(stderr, "Prism ES2 Error: ReleaseDrawable - Could not destroy EGL surface [%s]\n",
+                    eglGetErrorString(eglGetError()));
     }
 
     free(dInfo);

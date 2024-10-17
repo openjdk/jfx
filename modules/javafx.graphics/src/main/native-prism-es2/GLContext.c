@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -100,18 +100,26 @@ void deleteCtxInfo(ContextInfo *ctxInfo) {
 #endif
 
 #ifdef UNIX
+#ifdef IS_LINUX_IS_GLX
     if (ctxInfo->glxExtensionStr != NULL) {
         free(ctxInfo->glxExtensionStr);
     }
-    if (ctxInfo->context != NULL) {
-#if defined(IS_GLX)
-        glXDestroyContext(ctxInfo->display, ctxInfo->context);
 #endif
-#ifdef IS_EGL
+#ifdef IS_LINUX_EGL
+    if (ctxInfo->eglExtensionStr != NULL) {
+        free(ctxInfo->eglExtensionStr);
+    }
+#endif
+    if (ctxInfo->context != NULL) {
+#if defined(IS_MONOCLE_EGL) || defined(IS_LINUX_EGL)
         eglDestroyContext(ctxInfo->display, ctxInfo->context);
+#endif
+#ifdef IS_LINUX_GLX
+        glXDestroyContext(ctxInfo->display, ctxInfo->context);
 #endif
     }
 #endif
+
     // Initialize structure to all zeros
     memset(ctxInfo, 0, sizeof (ContextInfo));
 }

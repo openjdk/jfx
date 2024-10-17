@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,14 +31,16 @@
 #include <math.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_X11GLContext.h"
+#include "com_sun_prism_es2_LinuxGLContext.h"
+
+extern const char* eglGetErrorString(EGLint error);
 
 /*
- * Class:     com_sun_prism_es2_X11GLContext
+ * Class:     com_sun_prism_es2_LinuxGLContext
  * Method:    nInitialize
  * Signature: (JJZ)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLContext_nInitialize
 (JNIEnv *env, jclass class, jlong nativeDInfo, jlong nativePFInfo,
         jboolean vSyncRequested) {
     const char *glVersion;
@@ -47,43 +49,30 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
     char *tmpVersionStr;
     int versionNumbers[2];
     const char *glExtensions;
-    const char *glxExtensions;
+    const char *eglExtensions;
 
-    Window win = None;
-    GLXFBConfig fbConfig = NULL;
-    GLXContext ctx = NULL;
-    XVisualInfo *visualInfo = NULL;
-    int numFBConfigs, index, visualID;
-    Display *display = NULL;
-    ContextInfo *ctxInfo = NULL;
-    DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
     PixelFormatInfo *pfInfo = (PixelFormatInfo *) jlong_to_ptr(nativePFInfo);
+    EGLDisplay eglDisplay = pfInfo->eglDisplay;
 
-    if ((dInfo == NULL) || (pfInfo == NULL)) {
-        return 0;
-    }
-    display = pfInfo->display;
-    fbConfig = pfInfo->fbConfig;
-    win = dInfo->win;
+    ContextInfo *ctxInfo = NULL;
+    EGLContext eglContext = eglCreateContext(eglDisplay, pfInfo->eglConfig, EGL_NO_CONTEXT, NULL);
 
-    ctx = glXCreateNewContext(display, fbConfig, GLX_RGBA_TYPE, NULL, True);
-
-    if (ctx == NULL) {
-        fprintf(stderr, "Failed in glXCreateNewContext");
+    if (eglContext == EGL_NO_CONTEXT) {
+        fprintf(stderr, "Prism ES2 Error: Initialize - eglCreateContext failed [%s]\n", eglGetErrorString(eglGetError()));
         return 0;
     }
 
-    if (!glXMakeCurrent(display, win, ctx)) {
-        glXDestroyContext(display, ctx);
-        fprintf(stderr, "Failed in glXMakeCurrent");
+    if (!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, eglContext)) {
+        fprintf(stderr, "Prism ES2 Error: Initialize - eglMakeCurrent failed [%s]\n",  eglGetErrorString(eglGetError()));
+        eglDestroyContext(eglDisplay, eglContext);
         return 0;
     }
 
     /* Get the OpenGL version */
     glVersion = (char *) glGetString(GL_VERSION);
     if (glVersion == NULL) {
-        glXDestroyContext(display, ctx);
-        fprintf(stderr, "glVersion == null");
+        eglDestroyContext(eglDisplay, eglContext);
+        fprintf(stderr, "glVersion == null\n");
         return 0;
     }
 
@@ -105,7 +94,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
      * Check for OpenGL 2.1 or later.
      */
     if ((versionNumbers[0] < 2) || ((versionNumbers[0] == 2) && (versionNumbers[1] < 1))) {
-        glXDestroyContext(display, ctx);
+        eglDestroyContext(eglDisplay, eglContext);
         fprintf(stderr, "Prism-ES2 Error : GL_VERSION (major.minor) = %d.%d\n",
                 versionNumbers[0], versionNumbers[1]);
         return 0;
@@ -123,35 +112,35 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
 
     glExtensions = (const char *) glGetString(GL_EXTENSIONS);
     if (glExtensions == NULL) {
-        glXDestroyContext(display, ctx);
-        fprintf(stderr, "glExtensions == null");
+        eglDestroyContext(eglDisplay, eglContext);
+        fprintf(stderr, "glExtensions == null\n");
         return 0;
     }
 
     // We use GL_ARB_pixel_buffer_object as an guide to
     // determine PS 3.0 capable.
     if (!isExtensionSupported(glExtensions, "GL_ARB_pixel_buffer_object")) {
-        glXDestroyContext(display, ctx);
-        fprintf(stderr, "GL profile isn't PS 3.0 capable");
+        eglDestroyContext(eglDisplay, eglContext);
+        fprintf(stderr, "GL profile isn't PS 3.0 capable\n");
         return 0;
     }
 
-    glxExtensions = (const char *) glXGetClientString(display, GLX_EXTENSIONS);
-    if (glxExtensions == NULL) {
-        glXDestroyContext(display, ctx);
-        fprintf(stderr, "glxExtensions == null");
+    eglExtensions = (const char *) eglQueryString(eglDisplay, EGL_EXTENSIONS);
+    if (eglExtensions == NULL) {
+        eglDestroyContext(eglDisplay, eglContext);
+        fprintf(stderr, "eglExtensions == null\n");
         return 0;
     }
 
     /*
         fprintf(stderr, "glExtensions: %s\n", glExtensions);
         fprintf(stderr, "glxExtensions: %s\n", glxExtensions);
-     */
+    */
 
     /* allocate the structure */
     ctxInfo = (ContextInfo *) malloc(sizeof (ContextInfo));
     if (ctxInfo == NULL) {
-        fprintf(stderr, "nInitialize: Failed in malloc\n");
+        fprintf(stderr, "Prism ES2 Error: Initialize - Failed in malloc\n");
         return 0;
     }
 
@@ -161,179 +150,175 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
     ctxInfo->vendorStr = strdup(glVendor);
     ctxInfo->rendererStr = strdup(glRenderer);
     ctxInfo->glExtensionStr = strdup(glExtensions);
-    ctxInfo->glxExtensionStr = strdup(glxExtensions);
+    ctxInfo->eglExtensionStr = strdup(eglExtensions);
     ctxInfo->versionNumbers[0] = versionNumbers[0];
     ctxInfo->versionNumbers[1] = versionNumbers[1];
-    ctxInfo->display = display;
-    ctxInfo->context = ctx;
+    ctxInfo->context = eglContext;
 
     /* set function pointers */
     ctxInfo->glActiveTexture = (PFNGLACTIVETEXTUREPROC)
-            dlsym(RTLD_DEFAULT, "glActiveTexture");
+            eglGetProcAddress("glActiveTexture");
     ctxInfo->glAttachShader = (PFNGLATTACHSHADERPROC)
-            dlsym(RTLD_DEFAULT, "glAttachShader");
+            eglGetProcAddress("glAttachShader");
     ctxInfo->glBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)
-            dlsym(RTLD_DEFAULT, "glBindAttribLocation");
+            eglGetProcAddress("glBindAttribLocation");
     ctxInfo->glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)
-            dlsym(RTLD_DEFAULT, "glBindFramebuffer");
+            eglGetProcAddress("glBindFramebuffer");
     ctxInfo->glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC)
-            dlsym(RTLD_DEFAULT, "glBindRenderbuffer");
+            eglGetProcAddress("glBindRenderbuffer");
     ctxInfo->glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)
-            dlsym(RTLD_DEFAULT, "glCheckFramebufferStatus");
+            eglGetProcAddress("glCheckFramebufferStatus");
     ctxInfo->glCreateProgram = (PFNGLCREATEPROGRAMPROC)
-            dlsym(RTLD_DEFAULT, "glCreateProgram");
+            eglGetProcAddress("glCreateProgram");
     ctxInfo->glCreateShader = (PFNGLCREATESHADERPROC)
-            dlsym(RTLD_DEFAULT, "glCreateShader");
+            eglGetProcAddress("glCreateShader");
     ctxInfo->glCompileShader = (PFNGLCOMPILESHADERPROC)
-            dlsym(RTLD_DEFAULT, "glCompileShader");
+            eglGetProcAddress("glCompileShader");
     ctxInfo->glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)
-            dlsym(RTLD_DEFAULT, "glDeleteBuffers");
+            eglGetProcAddress("glDeleteBuffers");
     ctxInfo->glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)
-            dlsym(RTLD_DEFAULT, "glDeleteFramebuffers");
+            eglGetProcAddress("glDeleteFramebuffers");
     ctxInfo->glDeleteProgram = (PFNGLDELETEPROGRAMPROC)
-            dlsym(RTLD_DEFAULT, "glDeleteProgram");
+            eglGetProcAddress("glDeleteProgram");
     ctxInfo->glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC)
-            dlsym(RTLD_DEFAULT, "glDeleteRenderbuffers");
+            eglGetProcAddress("glDeleteRenderbuffers");
     ctxInfo->glDeleteShader = (PFNGLDELETESHADERPROC)
-            dlsym(RTLD_DEFAULT, "glDeleteShader");
+            eglGetProcAddress("glDeleteShader");
     ctxInfo->glDetachShader = (PFNGLDETACHSHADERPROC)
-            dlsym(RTLD_DEFAULT, "glDetachShader");
+            eglGetProcAddress("glDetachShader");
     ctxInfo->glDisableVertexAttribArray = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)
-            dlsym(RTLD_DEFAULT, "glDisableVertexAttribArray");
+            eglGetProcAddress("glDisableVertexAttribArray");
     ctxInfo->glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)
-            dlsym(RTLD_DEFAULT, "glEnableVertexAttribArray");
+            eglGetProcAddress("glEnableVertexAttribArray");
     ctxInfo->glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)
-            dlsym(RTLD_DEFAULT, "glFramebufferRenderbuffer");
+            eglGetProcAddress("glFramebufferRenderbuffer");
     ctxInfo->glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)
-            dlsym(RTLD_DEFAULT, "glFramebufferTexture2D");
+            eglGetProcAddress("glFramebufferTexture2D");
     ctxInfo->glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)
-            dlsym(RTLD_DEFAULT, "glGenFramebuffers");
+            eglGetProcAddress("glGenFramebuffers");
     ctxInfo->glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC)
-            dlsym(RTLD_DEFAULT, "glGenRenderbuffers");
+            eglGetProcAddress("glGenRenderbuffers");
     ctxInfo->glGetProgramiv = (PFNGLGETPROGRAMIVPROC)
-            dlsym(RTLD_DEFAULT, "glGetProgramiv");
+            eglGetProcAddress("glGetProgramiv");
     ctxInfo->glGetShaderiv = (PFNGLGETSHADERIVPROC)
-            dlsym(RTLD_DEFAULT, "glGetShaderiv");
+            eglGetProcAddress("glGetShaderiv");
     ctxInfo->glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)
-            dlsym(RTLD_DEFAULT, "glGetUniformLocation");
+            eglGetProcAddress("glGetUniformLocation");
     ctxInfo->glLinkProgram = (PFNGLLINKPROGRAMPROC)
-            dlsym(RTLD_DEFAULT, "glLinkProgram");
+            eglGetProcAddress("glLinkProgram");
     ctxInfo->glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC)
-            dlsym(RTLD_DEFAULT, "glRenderbufferStorage");
+            eglGetProcAddress("glRenderbufferStorage");
     ctxInfo->glShaderSource = (PFNGLSHADERSOURCEPROC)
-            dlsym(RTLD_DEFAULT, "glShaderSource");
+            eglGetProcAddress("glShaderSource");
     ctxInfo->glUniform1f = (PFNGLUNIFORM1FPROC)
-            dlsym(RTLD_DEFAULT, "glUniform1f");
+            eglGetProcAddress("glUniform1f");
     ctxInfo->glUniform2f = (PFNGLUNIFORM2FPROC)
-            dlsym(RTLD_DEFAULT, "glUniform2f");
+            eglGetProcAddress("glUniform2f");
     ctxInfo->glUniform3f = (PFNGLUNIFORM3FPROC)
-            dlsym(RTLD_DEFAULT, "glUniform3f");
+            eglGetProcAddress("glUniform3f");
     ctxInfo->glUniform4f = (PFNGLUNIFORM4FPROC)
-            dlsym(RTLD_DEFAULT, "glUniform4f");
+            eglGetProcAddress("glUniform4f");
     ctxInfo->glUniform4fv = (PFNGLUNIFORM4FVPROC)
-            dlsym(RTLD_DEFAULT, "glUniform4fv");
+            eglGetProcAddress("glUniform4fv");
     ctxInfo->glUniform1i = (PFNGLUNIFORM1IPROC)
-            dlsym(RTLD_DEFAULT, "glUniform1i");
+            eglGetProcAddress("glUniform1i");
     ctxInfo->glUniform2i = (PFNGLUNIFORM2IPROC)
-            dlsym(RTLD_DEFAULT, "glUniform2i");
+            eglGetProcAddress("glUniform2i");
     ctxInfo->glUniform3i = (PFNGLUNIFORM3IPROC)
-            dlsym(RTLD_DEFAULT, "glUniform3i");
+            eglGetProcAddress("glUniform3i");
     ctxInfo->glUniform4i = (PFNGLUNIFORM4IPROC)
-            dlsym(RTLD_DEFAULT, "glUniform4i");
+            eglGetProcAddress("glUniform4i");
     ctxInfo->glUniform4iv = (PFNGLUNIFORM4IVPROC)
-            dlsym(RTLD_DEFAULT, "glUniform4iv");
+            eglGetProcAddress("glUniform4iv");
     ctxInfo->glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)
-            dlsym(RTLD_DEFAULT, "glUniformMatrix4fv");
+            eglGetProcAddress("glUniformMatrix4fv");
     ctxInfo->glUseProgram = (PFNGLUSEPROGRAMPROC)
-            dlsym(RTLD_DEFAULT, "glUseProgram");
+            eglGetProcAddress("glUseProgram");
     ctxInfo->glValidateProgram = (PFNGLVALIDATEPROGRAMPROC)
-            dlsym(RTLD_DEFAULT, "glValidateProgram");
+            eglGetProcAddress("glValidateProgram");
     ctxInfo->glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)
-            dlsym(RTLD_DEFAULT, "glVertexAttribPointer");
+            eglGetProcAddress("glVertexAttribPointer");
     ctxInfo->glGenBuffers = (PFNGLGENBUFFERSPROC)
-            dlsym(RTLD_DEFAULT, "glGenBuffers");
+            eglGetProcAddress("glGenBuffers");
     ctxInfo->glBindBuffer = (PFNGLBINDBUFFERPROC)
-            dlsym(RTLD_DEFAULT, "glBindBuffer");
+            eglGetProcAddress("glBindBuffer");
     ctxInfo->glBufferData = (PFNGLBUFFERDATAPROC)
-            dlsym(RTLD_DEFAULT, "glBufferData");
+            eglGetProcAddress("glBufferData");
     ctxInfo->glBufferSubData = (PFNGLBUFFERSUBDATAPROC)
-            dlsym(RTLD_DEFAULT, "glBufferSubData");
+            eglGetProcAddress("glBufferSubData");
     ctxInfo->glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)
-            dlsym(RTLD_DEFAULT, "glGetShaderInfoLog");
+            eglGetProcAddress("glGetShaderInfoLog");
     ctxInfo->glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)
-            dlsym(RTLD_DEFAULT, "glGetProgramInfoLog");
+            eglGetProcAddress("glGetProgramInfoLog");
     ctxInfo->glTexImage2DMultisample = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)
-            dlsym(RTLD_DEFAULT,"glTexImage2DMultisample");
+            eglGetProcAddress("glTexImage2DMultisample");
     ctxInfo->glRenderbufferStorageMultisample = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC)
-            dlsym(RTLD_DEFAULT,"glRenderbufferStorageMultisample");
+            eglGetProcAddress("glRenderbufferStorageMultisample");
     ctxInfo->glBlitFramebuffer = (PFNGLBLITFRAMEBUFFERPROC)
-            dlsym(RTLD_DEFAULT,"glBlitFramebuffer");
+            eglGetProcAddress("glBlitFramebuffer");
 
-    if (isExtensionSupported(ctxInfo->glxExtensionStr,
-            "GLX_SGI_swap_control")) {
-        ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
-                dlsym(RTLD_DEFAULT, "glXSwapIntervalSGI");
-
-        if (ctxInfo->glXSwapIntervalSGI == NULL) {
-            ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
-                glXGetProcAddress((const GLubyte *)"glXSwapIntervalSGI");
-        }
-
-    }
-
-    // initialize platform states and properties to match
-    // cached states and properties
-    if (ctxInfo->glXSwapIntervalSGI != NULL) {
-        ctxInfo->glXSwapIntervalSGI(0);
-    }
     ctxInfo->state.vSyncEnabled = JNI_FALSE;
     ctxInfo->vSyncRequested = vSyncRequested;
+    ctxInfo->eglDisplay = eglDisplay;
+    ctxInfo->display = pfInfo->display;
 
     initState(ctxInfo);
 
     // Release context once we are all done
-    glXMakeCurrent(display, None, NULL);
+    if (!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)) {
+        fprintf(stderr, "Prism ES2 Error: Initialize - eglMakeCurrent failed [%s]\n", eglGetErrorString(eglGetError()));
+        eglDestroyContext(eglDisplay, eglContext);
+        return 0;
+    }
 
     return ptr_to_jlong(ctxInfo);
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLContext
+ * Class:     com_sun_prism_es2_LinuxGLContext
  * Method:    nGetNativeHandle
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nGetNativeHandle
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLContext_nGetNativeHandle
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if (ctxInfo == NULL) {
         return 0;
     }
+
     return ptr_to_jlong(ctxInfo->context);
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLContext
+ * Class:     com_sun_prism_es2_LinuxGLContext
  * Method:    nMakeCurrent
  * Signature: (JJ)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLContext_nMakeCurrent
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_LinuxGLContext_nMakeCurrent
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeDInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
     int interval;
     jboolean vSyncNeeded;
 
-    if (!glXMakeCurrent(ctxInfo->display, dInfo->win, ctxInfo->context)) {
-        fprintf(stderr, "Failed in glXMakeCurrent");
+    if (dInfo == NULL || ctxInfo == NULL) {
+        return;
+    }
+
+    if (!eglMakeCurrent(ctxInfo->eglDisplay, dInfo->eglSurface, dInfo->eglSurface, ctxInfo->context)) {
+        fprintf(stderr, "Prism ES2 Error: MakeCurrent - eglMakeCurrent failed [%s]\n", eglGetErrorString(eglGetError()));
+        return;
     }
 
     vSyncNeeded = ctxInfo->vSyncRequested && dInfo->onScreen;
+    interval = (vSyncNeeded) ? 1 : 0;
     if (vSyncNeeded == ctxInfo->state.vSyncEnabled) {
         return;
     }
-    interval = (vSyncNeeded) ? 1 : 0;
     ctxInfo->state.vSyncEnabled = vSyncNeeded;
-    if (ctxInfo->glXSwapIntervalSGI != NULL) {
-        ctxInfo->glXSwapIntervalSGI(interval);
+
+    if (dInfo->eglSurface != EGL_NO_SURFACE && !eglSwapInterval(ctxInfo->eglDisplay, interval)) {
+        fprintf(stderr, "Prism ES2 Error: MakeCurrent - eglSwapInterval failed [%s]\n", eglGetErrorString(eglGetError()));
+        return;
     }
 }
