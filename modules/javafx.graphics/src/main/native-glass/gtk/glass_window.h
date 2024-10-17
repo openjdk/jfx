@@ -60,6 +60,15 @@ struct WindowFrameExtents {
     int right;
 };
 
+struct ImFilteredKey {
+    ImFilteredKey(jchar key, jint glass_key, jint glass_modifier) :
+        key(key), glass_key(glass_key), glass_modifier(glass_modifier) { }
+
+    jchar key;
+    jint glass_key;
+    jint glass_modifier;
+};
+
 static const guint MOUSE_BUTTONS_MASK = (guint) (GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK);
 
 enum BoundsType {
@@ -100,7 +109,11 @@ public:
     virtual bool hasIME() = 0;
     virtual bool filterIME(GdkEvent *) = 0;
     virtual void enableOrResetIME() = 0;
+    virtual void updateCaretPos() = 0;
     virtual void disableIME() = 0;
+    virtual void setOnPreEdit(bool) = 0;
+    virtual void commitIME(gchar *) = 0;
+
     virtual void paint(void* data, jint width, jint height) = 0;
     virtual WindowFrameExtents get_frame_extents() = 0;
 
@@ -143,6 +156,8 @@ public:
     virtual void process_mouse_scroll(GdkEventScroll*) = 0;
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
     virtual void process_key(GdkEventKey*) = 0;
+    virtual void send_key_event(jchar, jint, jint, bool) = 0;
+
     virtual void process_state(GdkEventWindowState*) = 0;
 
     virtual void notify_state(jint) = 0;
@@ -168,11 +183,13 @@ public:
 
 class WindowContextBase: public WindowContext {
 
-    struct _XIM {
-        XIM im;
-        XIC ic;
+    struct ImContext {
+        GtkIMContext *ctx;
         bool enabled;
-    } xim;
+        bool on_preedit;
+        ImFilteredKey* filtered_key_press;
+        ImFilteredKey* filtered_key_release;
+    } im_ctx;
 
     size_t events_processing_cnt;
     bool can_be_deleted;
@@ -212,6 +229,9 @@ public:
     bool hasIME();
     bool filterIME(GdkEvent *);
     void enableOrResetIME();
+    void setOnPreEdit(bool);
+    void commitIME(gchar *);
+    void updateCaretPos();
     void disableIME();
     void paint(void*, jint, jint);
     GdkWindow *get_gdk_window();
@@ -240,6 +260,7 @@ public:
     void process_mouse_scroll(GdkEventScroll*);
     void process_mouse_cross(GdkEventCrossing*);
     void process_key(GdkEventKey*);
+    void send_key_event(jchar, jint, jint, bool);
     void process_state(GdkEventWindowState*);
 
     void notify_state(jint);
@@ -252,8 +273,6 @@ public:
     ~WindowContextBase();
 protected:
     virtual void applyShapeMask(void*, uint width, uint height) = 0;
-private:
-    bool im_filter_keypress(GdkEventKey*);
 };
 
 class WindowContextTop: public WindowContextBase {

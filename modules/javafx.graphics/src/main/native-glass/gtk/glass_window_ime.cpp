@@ -23,266 +23,202 @@
  * questions.
  */
 
+#include <com_sun_glass_events_KeyEvent.h>
+
 #include "com_sun_glass_ui_View.h"
 #include "glass_window.h"
 #include "glass_general.h"
+#include "glass_key.h"
 
-#include <cstring>
-#include <cstdlib>
-
-bool WindowContextBase::hasIME() {
-    return xim.enabled;
+static void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
+    WindowContext *ctx = (WindowContext *) user_data;
+    ctx->setOnPreEdit(true);
 }
 
-static XKeyPressedEvent convert_event(GdkEventKey *event) {
-    XKeyPressedEvent result;
-    memset(&result, 0, sizeof (result));
+static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
+    WindowContext *ctx = (WindowContext *) user_data;
+    gchar *preedit_text;
+    PangoAttrList* attrList;
+    int cursor_pos;
 
-    result.type = (event->type == GDK_KEY_PRESS) ? KeyPress : KeyRelease;
-    result.send_event = event->send_event;
-    result.display = gdk_x11_display_get_xdisplay(gdk_window_get_display(event->window));
-    result.window = result.subwindow = GDK_WINDOW_XID(event->window);
-    result.root = GDK_WINDOW_XID(gdk_screen_get_root_window(glass_gdk_window_get_screen(event->window)));
-    result.time = event->time;
-    result.state = event->state;
-    result.keycode = event->hardware_keycode;
-    result.same_screen = True;
+    gtk_im_context_get_preedit_string(im_context, &preedit_text, &attrList, &cursor_pos);
+    ctx->updateCaretPos();
 
-    return result;
-}
+    jstring jstr = mainEnv->NewStringUTF(preedit_text);
+    EXCEPTION_OCCURED(mainEnv);
 
-bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
-    static size_t buf_len = 12;
-    static char *buffer = NULL;
+    jsize slen = mainEnv->GetStringLength(jstr);
 
-    if (buffer == NULL) {
-        buffer = (char*)malloc(buf_len * sizeof (char));
-    }
+    PangoAttrIterator *iter = pango_attr_list_get_iterator(attrList);
+    PangoAttribute *pangoAttr;
 
-    if (buffer == NULL) {
-        // dont process the key event
-        fprintf(stderr, "malloc failed in im_filter_keypress\n");
-        return false;
-    }
-
-    KeySym keysym;
-    Status status;
-    XKeyPressedEvent xevent = convert_event(event);
-    if (XFilterEvent((XEvent*) & xevent, GDK_WINDOW_XID(gdk_window))) {
-        return TRUE;
-    }
-
-    if (event->type == GDK_KEY_RELEASE) {
-        process_key(event);
-        return TRUE;
-    }
-
-    int len = Xutf8LookupString(xim.ic, &xevent, buffer, buf_len - 1, &keysym, &status);
-    if (status == XBufferOverflow) {
-        buf_len = len + 1;
-        char *tmpBuffer = (char*)realloc(buffer, buf_len * sizeof (char));
-        if (tmpBuffer == NULL) {
-            SAFE_FREE(buffer);
-            // dont process the key event
-            fprintf(stderr, "realloc failed in im_filter_keypress\n");
-            return false;
-        }
-        buffer = tmpBuffer;
-        len = Xutf8LookupString(xim.ic, &xevent, buffer, buf_len - 1,
-                &keysym, &status);
-    }
-    switch (status) {
-        case XLookupKeySym:
-        case XLookupBoth:
-            if (xevent.keycode) {
-                //process it as a normal key
-                process_key(event);
-                break;
-            }
-            // fall-through
-        case XLookupChars:
-            buffer[len] = 0;
-            jstring str = mainEnv->NewStringUTF(buffer);
-            EXCEPTION_OCCURED(mainEnv);
-            jsize slen = mainEnv->GetStringLength(str);
-            mainEnv->CallVoidMethod(jview,
-                    jViewNotifyInputMethod,
-                    str,
-                    NULL, NULL, NULL,
-                    slen,
-                    slen,
-                    0);
-            LOG_EXCEPTION(mainEnv)
-
+    jbyte attr = com_sun_glass_ui_View_IME_ATTR_INPUT;
+    do {
+        if (pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) {
+             attr = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
+             break;
+        } else if ((pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_UNDERLINE))
+                && (((PangoAttrInt *)pangoAttr)->value == PANGO_UNDERLINE_SINGLE)) {
+            attr = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
             break;
-    }
+        }
+    } while (pango_attr_iterator_next(iter));
 
+    pango_attr_list_unref(attrList);
+    pango_attr_iterator_destroy(iter);
+    g_free(preedit_text);
+
+    mainEnv->CallVoidMethod(ctx->get_jview(),
+            jViewNotifyInputMethodLinux,
+            jstr,
+            0,
+            cursor_pos,
+            attr);
+    LOG_EXCEPTION(mainEnv)
+}
+
+static void on_preedit_end(GtkIMContext *im_context, gpointer user_data) {
+    WindowContext *ctx = (WindowContext *) user_data;
+    ctx->setOnPreEdit(false);
+}
+
+static void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
+    WindowContext *ctx = (WindowContext *) user_data;
+    ctx->commitIME(str);
+}
+
+// Note: JavaFX did not have surround support at this time
+static gboolean on_delete_surrounding(GtkIMContext* self, gint offset, gint n_chars, gpointer user_data) {
     return TRUE;
 }
 
-bool WindowContextBase::filterIME(GdkEvent * event) {
+static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) {
+    return TRUE;
+}
+
+void WindowContextBase::commitIME(gchar *str) {
+    if (!jview) {
+        return;
+    }
+
+    if (im_ctx.on_preedit) {
+        jstring jstr = mainEnv->NewStringUTF(str);
+        EXCEPTION_OCCURED(mainEnv);
+        jsize slen = mainEnv->GetStringLength(jstr);
+
+        mainEnv->CallVoidMethod(jview,
+                jViewNotifyInputMethodLinux,
+                jstr,
+                slen,
+                slen,
+                0);
+        LOG_EXCEPTION(mainEnv)
+    } else {
+        if (im_ctx.filtered_key_press) {
+            send_key_event(im_ctx.filtered_key_press->key,
+                           im_ctx.filtered_key_press->glass_key,
+                           im_ctx.filtered_key_press->glass_modifier,
+                           true);
+
+            delete im_ctx.filtered_key_press;
+            im_ctx.filtered_key_press = NULL;
+        }
+
+        if (im_ctx.filtered_key_release) {
+            send_key_event(im_ctx.filtered_key_release->key,
+                           im_ctx.filtered_key_release->glass_key,
+                           im_ctx.filtered_key_release->glass_modifier,
+                           false);
+
+            delete im_ctx.filtered_key_release;
+            im_ctx.filtered_key_release = NULL;
+        }
+    }
+}
+
+bool WindowContextBase::hasIME() {
+    return im_ctx.enabled;
+}
+
+bool WindowContextBase::filterIME(GdkEvent *event) {
     if (!hasIME()) {
         return false;
     }
 
-    switch (event->type) {
-        case GDK_KEY_PRESS:
-        case GDK_KEY_RELEASE:
-            return im_filter_keypress(reinterpret_cast<GdkEventKey*> (event));
-        default:
-            return FALSE;
-    }
-}
+    bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 
-//Note: this function must return int, despite the fact it doesn't conform to XIMProc type.
-// This is required in documentation of XIM
-static int im_preedit_start(XIM im_xim, XPointer client, XPointer call) {
-    (void)im_xim;
-    (void)call;
+    if (filtered) {
+        GdkEventKey* ke = &event->key;
+        bool press = ke->type == GDK_KEY_PRESS;
+        jint glassKey = get_glass_key(ke);
+        jint glassModifier = gdk_modifier_mask_to_glass(ke->state, glassKey, press);
+        jchar key = gdk_keyval_to_unicode_glass(ke->keyval, ke->state);
 
-    mainEnv->CallVoidMethod((jobject) client, jViewNotifyPreeditMode, JNI_TRUE);
-    CHECK_JNI_EXCEPTION_RET(mainEnv, -1);
-    return -1; // No restrictions
-}
+        ImFilteredKey* im_filtered_key = new ImFilteredKey(key, glassKey, glassModifier);
 
-static void im_preedit_done(XIM im_xim, XPointer client, XPointer call) {
-    (void)im_xim;
-    (void)call;
-
-    mainEnv->CallVoidMethod((jobject) client, jViewNotifyPreeditMode, JNI_FALSE);
-    CHECK_JNI_EXCEPTION(mainEnv);
-}
-
-static void im_preedit_draw(XIM im_xim, XPointer client, XPointer call) {
-    (void)im_xim;
-    (void)call;
-
-    XIMPreeditDrawCallbackStruct *data = (XIMPreeditDrawCallbackStruct*) call;
-    jstring text = NULL;
-    jbyteArray attr = NULL;
-
-    if (data->text != NULL) {
-        if (data->text->string.multi_byte) {
-            if (data->text->encoding_is_wchar) {
-                size_t csize = wcstombs(NULL, data->text->string.wide_char, 0);
-                char *ctext = new char[csize + 1];
-                wcstombs(ctext, data->text->string.wide_char, csize + 1);
-                text = mainEnv->NewStringUTF(ctext);
-                delete[] ctext;
-                CHECK_JNI_EXCEPTION(mainEnv);
-            } else {
-                text = mainEnv->NewStringUTF(data->text->string.multi_byte);
-                CHECK_JNI_EXCEPTION(mainEnv);
-            }
-        }
-
-        if (XIMFeedback* fb = data->text->feedback) {
-            attr = mainEnv->NewByteArray(data->text->length);
-            CHECK_JNI_EXCEPTION(mainEnv)
-            jbyte v[data->text->length];
-            for (int i = 0; i < data->text->length; i++) {
-                if (fb[i] & XIMReverse) {
-                    v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
-                } else if (fb[i] & XIMHighlight) {
-                    v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_CONVERTED;
-                } else if (fb[i] & XIMUnderline) {
-                    v[i] = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
-                } else {
-                    v[i] = com_sun_glass_ui_View_IME_ATTR_INPUT;
-                }
-            }
-            mainEnv->SetByteArrayRegion(attr, 0, data->text->length, v);
-            CHECK_JNI_EXCEPTION(mainEnv)
+        if (press) {
+            im_ctx.filtered_key_press = im_filtered_key;
+        } else {
+            im_ctx.filtered_key_release = im_filtered_key;
         }
     }
 
-    mainEnv->CallVoidMethod((jobject)client, jViewNotifyInputMethodDraw,
-            text, data->chg_first, data->chg_length, data->caret, attr);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    return filtered;
 }
 
-static void im_preedit_caret(XIM im_xim, XPointer client, XPointer call) {
-    (void)im_xim;
-
-    XIMPreeditCaretCallbackStruct *data = (XIMPreeditCaretCallbackStruct*) call;
-    mainEnv->CallVoidMethod((jobject)client, jViewNotifyInputMethodCaret,
-            data->position, data->direction, data->style);
-    CHECK_JNI_EXCEPTION(mainEnv)
+void WindowContextBase::setOnPreEdit(bool preedit) {
+    im_ctx.on_preedit = preedit;
 }
 
-static XIMStyle get_best_supported_style(XIM im_xim)
-{
-    XIMStyles* styles;
-    int i;
-    XIMStyle result = 0;
+void WindowContextBase::updateCaretPos() {
+    double *nativePos;
 
-    if (XGetIMValues(im_xim, XNQueryInputStyle, &styles, NULL) != NULL) { // NULL means it's OK
-        return 0;
+    jdoubleArray pos = (jdoubleArray)mainEnv->CallObjectMethod(get_jview(),
+                                      jViewNotifyInputMethodCandidateRelativePosRequest,
+                                      0);
+
+    nativePos = mainEnv->GetDoubleArrayElements(pos, NULL);
+
+    GdkRectangle rect;
+    if (nativePos) {
+        rect.x = (int) nativePos[0];
+        rect.y = (int) nativePos[1];
+        rect.width = 0;
+        rect.height = 0;
+
+        mainEnv->ReleaseDoubleArrayElements(pos, nativePos, 0);
+        gtk_im_context_set_cursor_location(im_ctx.ctx, &rect);
     }
-
-    for (i = 0; i < styles->count_styles; ++i) {
-        if (styles->supported_styles[i] == (XIMPreeditCallbacks | XIMStatusNothing)
-                || styles->supported_styles[i] == (XIMPreeditNothing | XIMStatusNothing)) {
-            result = styles->supported_styles[i];
-            break;
-        }
-    }
-
-    XFree(styles);
-
-    return result;
 }
 
 void WindowContextBase::enableOrResetIME() {
-    Display *display = gdk_x11_display_get_xdisplay(gdk_window_get_display(gdk_window));
-    if (xim.im == NULL || xim.ic == NULL) {
-        xim.im = XOpenIM(display, NULL, NULL, NULL);
-        if (xim.im == NULL) {
-            return;
-        }
-
-        XIMStyle styles = get_best_supported_style(xim.im);
-        if (styles == 0) {
-            return;
-        }
-
-        XIMCallback startCallback = {(XPointer) jview, (XIMProc) (void *) im_preedit_start};
-        XIMCallback doneCallback = {(XPointer) jview, im_preedit_done};
-        XIMCallback drawCallback = {(XPointer) jview, im_preedit_draw};
-        XIMCallback caretCallback = {(XPointer) jview, im_preedit_caret};
-
-        XVaNestedList list = XVaCreateNestedList(0,
-                XNPreeditStartCallback, &startCallback,
-                XNPreeditDoneCallback, &doneCallback,
-                XNPreeditDrawCallback, &drawCallback,
-                XNPreeditCaretCallback, &caretCallback,
-                NULL);
-
-        xim.ic = XCreateIC(xim.im,
-                XNInputStyle, styles,
-                XNClientWindow, GDK_WINDOW_XID(gdk_window),
-                XNPreeditAttributes, list,
-                NULL);
-
-        XFree(list);
-
-        if (xim.ic == NULL) {
-            return;
-        }
+    if (im_ctx.on_preedit) {
+        gtk_im_context_focus_out(im_ctx.ctx);
     }
 
-    if (xim.enabled) { //called when changed focus to different input
-        XmbResetIC(xim.ic);
+    if (!im_ctx.enabled) {
+        im_ctx.ctx = gtk_im_multicontext_new();
+        gtk_im_context_set_client_window(GTK_IM_CONTEXT(im_ctx.ctx), gdk_window);
+        g_signal_connect(im_ctx.ctx, "preedit-start", G_CALLBACK(on_preedit_start), this);
+        g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
+        g_signal_connect(im_ctx.ctx, "preedit-end", G_CALLBACK(on_preedit_end), this);
+        g_signal_connect(im_ctx.ctx, "commit", G_CALLBACK(on_commit), this);
+        g_signal_connect(im_ctx.ctx, "retrieve-surrounding", G_CALLBACK(on_retrieve_surrounding), this);
+        g_signal_connect(im_ctx.ctx, "delete-surrounding", G_CALLBACK(on_delete_surrounding), this);
     }
 
+    gtk_im_context_reset(im_ctx.ctx);
+    gtk_im_context_focus_in(im_ctx.ctx);
 
-    XSetICFocus(xim.ic);
-
-    xim.enabled = TRUE;
+    im_ctx.on_preedit = false;
+    im_ctx.enabled = true;
 }
 
 void WindowContextBase::disableIME() {
-    if (xim.ic != NULL) {
-        XUnsetICFocus(xim.ic);
+    if (im_ctx.ctx != NULL) {
+        g_object_unref(im_ctx.ctx);
+        im_ctx.ctx = NULL;
     }
+
+    im_ctx.enabled = false;
 }

@@ -138,11 +138,11 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
         ungrab_focus();
     }
 
-    if (xim.enabled && xim.ic) {
+    if (im_ctx.enabled && im_ctx.ctx) {
         if (event->in) {
-            XSetICFocus(xim.ic);
+            gtk_im_context_focus_in(im_ctx.ctx);
         } else {
-            XUnsetICFocus(xim.ic);
+            gtk_im_context_focus_out(im_ctx.ctx);
         }
     }
 
@@ -447,35 +447,20 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
 }
 
 void WindowContextBase::process_key(GdkEventKey* event) {
+    if (!jview) {
+        return;
+    }
+
     bool press = event->type == GDK_KEY_PRESS;
     jint glassKey = get_glass_key(event);
-    jint glassModifier = gdk_modifier_mask_to_glass(event->state);
-    if (press) {
-        glassModifier |= glass_key_to_modifier(glassKey);
-    } else {
-        glassModifier &= ~glass_key_to_modifier(glassKey);
-    }
+    jint glassModifier = gdk_modifier_mask_to_glass(event->state, glassKey, press);
+    jchar key = gdk_keyval_to_unicode_glass(event->keyval, event->state);
+
+    send_key_event(key, glassKey, glassModifier, press);
+}
+
+void WindowContextBase::send_key_event(jchar key, jint glassKey, jint glassModifier, bool press) {
     jcharArray jChars = NULL;
-    jchar key = gdk_keyval_to_unicode(event->keyval);
-    if (key >= 'a' && key <= 'z' && (event->state & GDK_CONTROL_MASK)) {
-        key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
-    } else {
-#ifdef GLASS_GTK2
-        if (key == 0) {
-            // Work around "bug" fixed in gtk-3.0:
-            // http://mail.gnome.org/archives/commits-list/2011-March/msg06832.html
-            switch (event->keyval) {
-            case 0xFF08 /* Backspace */: key =  '\b';
-            case 0xFF09 /* Tab       */: key =  '\t';
-            case 0xFF0A /* Linefeed  */: key =  '\n';
-            case 0xFF0B /* Vert. Tab */: key =  '\v';
-            case 0xFF0D /* Return    */: key =  '\r';
-            case 0xFF1B /* Escape    */: key =  '\033';
-            case 0xFFFF /* Delete    */: key =  '\177';
-            }
-        }
-#endif
-    }
 
     if (key > 0) {
         jChars = mainEnv->NewCharArray(1);
@@ -486,31 +471,23 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     } else {
         jChars = mainEnv->NewCharArray(0);
     }
-    if (jview) {
-        if (press) {
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                    com_sun_glass_events_KeyEvent_PRESS,
-                    glassKey,
-                    jChars,
-                    glassModifier);
-            CHECK_JNI_EXCEPTION(mainEnv)
 
-            if (jview && key > 0) { // TYPED events should only be sent for printable characters.
-                mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                        com_sun_glass_events_KeyEvent_TYPED,
-                        com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-                        jChars,
-                        glassModifier);
-                CHECK_JNI_EXCEPTION(mainEnv)
-            }
-        } else {
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                    com_sun_glass_events_KeyEvent_RELEASE,
-                    glassKey,
-                    jChars,
-                    glassModifier);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
+    mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+            (press) ? com_sun_glass_events_KeyEvent_PRESS
+                    : com_sun_glass_events_KeyEvent_RELEASE,
+            glassKey,
+            jChars,
+            glassModifier);
+    CHECK_JNI_EXCEPTION(mainEnv)
+
+    // jview is checked again because previous call might be an exit key
+    if (press && key > 0 && jview) { // TYPED events should only be sent for printable characters.
+        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+                com_sun_glass_events_KeyEvent_TYPED,
+                com_sun_glass_events_KeyEvent_VK_UNDEFINED,
+                jChars,
+                glassModifier);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
@@ -657,15 +634,7 @@ void WindowContextBase::set_background(float r, float g, float b) {
 }
 
 WindowContextBase::~WindowContextBase() {
-    if (xim.ic) {
-        XDestroyIC(xim.ic);
-        xim.ic = NULL;
-    }
-    if (xim.im) {
-        XCloseIM(xim.im);
-        xim.im = NULL;
-    }
-
+    disableIME();
     gtk_widget_destroy(gtk_widget);
 }
 

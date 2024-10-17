@@ -478,6 +478,27 @@ jint gdk_modifier_mask_to_glass(guint mask)
     return glass_mask;
 }
 
+jint gdk_modifier_mask_to_glass(guint mask, jint glassKey, bool press)
+{
+    jint glassModifier = gdk_modifier_mask_to_glass(mask);
+    if (press) {
+        glassModifier |= glass_key_to_modifier(glassKey);
+    } else {
+        glassModifier &= ~glass_key_to_modifier(glassKey);
+    }
+
+    return glassModifier;
+}
+
+jchar gdk_keyval_to_unicode_glass(guint keyVal, guint state) {
+    jchar key = gdk_keyval_to_unicode(keyVal);
+    if (key >= 'a' && key <= 'z' && (state & GDK_CONTROL_MASK)) {
+        key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
+    }
+
+    return key;
+}
+
 jint glass_key_to_modifier(jint glassKey) {
     switch (glassKey) {
         case com_sun_glass_events_KeyEvent_VK_SHIFT:
