@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,9 @@ public interface PixelConverter<T extends Buffer, U extends Buffer> {
      *
      * @param srcbuf the nio buffer containing the source data
      * @param srcoff the absolute location in the buffer of the first source pixel data
-     * @param srcscanelems number of buffer elements between rows of data in the source
+     * @param srcscanelems number of logical buffer elements between rows of data in the source;
+     *                     note that the definition of a logical buffer element depends on the implementation,
+     *                     usually this is a byte or an int, but for indexed converters it is a bit
      * @param dstbuf the nio buffer containing the destination data
      * @param dstoff the absolute location in the buffer of the first destination pixel data
      * @param dstscanelems number of buffer elements between rows of data in the destination

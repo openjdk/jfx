@@ -557,7 +557,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
         }
 
         return new ImageFrame(ImageStorage.ImageType.RGB, img,
-                width, height, width * bpp, null, imagePixelScale, imageMetadata);
+                width, height, width * bpp, imagePixelScale, imageMetadata);
     }
 }
 

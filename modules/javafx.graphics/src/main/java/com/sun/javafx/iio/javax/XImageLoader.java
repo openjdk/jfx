@@ -45,6 +45,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferInt;
+import java.awt.image.IndexColorModel;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -152,44 +153,59 @@ public class XImageLoader implements ImageLoader {
 
         return switch (image.getType()) {
             case TYPE_BYTE_GRAY -> new ImageFrame(ImageStorage.ImageType.GRAY,
-                    getByteBuffer(image.getData().getDataBuffer()),
+                    getByteBuffer(image.getRaster().getDataBuffer()),
                     image.getWidth(), image.getHeight(), image.getWidth(),
-                    null, pixelScale, metadata);
+                    pixelScale, metadata);
 
             case TYPE_3BYTE_BGR -> new ImageFrame(ImageStorage.ImageType.BGR,
-                    getByteBuffer(image.getData().getDataBuffer()),
+                    getByteBuffer(image.getRaster().getDataBuffer()),
                     image.getWidth(), image.getHeight(), image.getWidth() * 3,
-                    null, pixelScale, metadata);
+                    pixelScale, metadata);
 
             case TYPE_4BYTE_ABGR -> new ImageFrame(ImageStorage.ImageType.ABGR,
-                    getByteBuffer(image.getData().getDataBuffer()),
+                    getByteBuffer(image.getRaster().getDataBuffer()),
                     image.getWidth(), image.getHeight(), image.getWidth() * 4,
-                    null, pixelScale, metadata);
+                    pixelScale, metadata);
 
             case TYPE_4BYTE_ABGR_PRE -> new ImageFrame(ImageStorage.ImageType.ABGR_PRE,
-                    getByteBuffer(image.getData().getDataBuffer()),
+                    getByteBuffer(image.getRaster().getDataBuffer()),
                     image.getWidth(), image.getHeight(), image.getWidth() * 4,
-                    null, pixelScale, metadata);
+                    pixelScale, metadata);
 
             case TYPE_INT_RGB -> new ImageFrame(ImageStorage.ImageType.INT_RGB,
-                    getIntBuffer(image.getData().getDataBuffer()),
+                    getIntBuffer(image.getRaster().getDataBuffer()),
                     image.getWidth(), image.getHeight(), image.getWidth() * 4,
-                    null, pixelScale, metadata);
+                    pixelScale, metadata);
 
             case TYPE_INT_BGR -> new ImageFrame(ImageStorage.ImageType.INT_BGR,
-                    getIntBuffer(image.getData().getDataBuffer()),
+                    getIntBuffer(image.getRaster().getDataBuffer()),
                     image.getWidth(), image.getHeight(), image.getWidth() * 4,
-                    null, pixelScale, metadata);
+                    pixelScale, metadata);
 
             case TYPE_INT_ARGB -> new ImageFrame(ImageStorage.ImageType.INT_ARGB,
-                    getIntBuffer(image.getData().getDataBuffer()),
+                    getIntBuffer(image.getRaster().getDataBuffer()),
                     image.getWidth(), image.getHeight(), image.getWidth() * 4,
-                    null, pixelScale, metadata);
+                    pixelScale, metadata);
 
             case TYPE_INT_ARGB_PRE -> new ImageFrame(ImageStorage.ImageType.INT_ARGB_PRE,
-                    getIntBuffer(image.getData().getDataBuffer()),
+                    getIntBuffer(image.getRaster().getDataBuffer()),
                     image.getWidth(), image.getHeight(), image.getWidth() * 4,
-                    null, pixelScale, metadata);
+                    pixelScale, metadata);
+
+            case TYPE_BYTE_BINARY, TYPE_BYTE_INDEXED -> {
+                var colorModel = (IndexColorModel)image.getColorModel();
+                var palette = new int[colorModel.getMapSize()];
+                colorModel.getRGBs(palette);
+                yield new ImageFrame(
+                    colorModel.hasAlpha()
+                        ? colorModel.isAlphaPremultiplied()
+                            ? ImageStorage.ImageType.PALETTE_ALPHA_PRE
+                            : ImageStorage.ImageType.PALETTE_ALPHA
+                        : ImageStorage.ImageType.PALETTE,
+                    getByteBuffer(image.getRaster().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), image.getWidth() * colorModel.getPixelSize(),
+                    palette, colorModel.getPixelSize(), pixelScale, metadata);
+            }
 
             default ->
                 throw new ImageStorageException("Unsupported image type: " + switch (image.getType()) {

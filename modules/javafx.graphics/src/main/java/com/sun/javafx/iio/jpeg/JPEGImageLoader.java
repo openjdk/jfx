@@ -269,7 +269,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         }
 
         return new ImageFrame(outImageType, buffer,
-                width, height, width * outNumComponents, null, imagePixelScale, md);
+                width, height, width * outNumComponents, imagePixelScale, md);
     }
 
     private static class Lock {

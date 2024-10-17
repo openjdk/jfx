@@ -37,7 +37,8 @@ public final class ImageFrame {
     private final int width;
     private final int height;
     private final int stride;
-    private final byte[][] palette;
+    private final int[] palette;
+    private final int paletteIndexBits;
     private final ImageMetadata metadata;
     private float pixelScale;
 
@@ -50,18 +51,31 @@ public final class ImageFrame {
      * @param width The image width.
      * @param height The image height.
      * @param stride The stride from a pixel position in one row to the same
-     * horizontal position in the next row, in bytes
-     * @param palette The image palette. This is ignored unless the type is
-     * one of the palette types.
+     * horizontal position in the next row.
      * @param metadata The image metadata.
      */
     public ImageFrame(ImageType imageType, Buffer imageData,
-                      int width, int height, int stride, byte[][] palette,
-                      ImageMetadata metadata)
-    {
-        this(imageType, imageData,
-             width, height, stride, palette,
-             1.0f, metadata);
+                      int width, int height, int stride,
+                      ImageMetadata metadata) {
+        this(imageType, imageData, width, height, stride, 1.0f, metadata);
+    }
+
+    /**
+     * Create an <code>ImageFrame</code>.
+     *
+     * @param imageType The type of image data. The value of this field also implies the number of bands.
+     * @param imageData The image data.
+     * @param width The image width.
+     * @param height The image height.
+     * @param stride The stride from a pixel position in one row to the same horizontal position in the next row.
+     * @param pixelScale The scale of a 72DPI virtual pixel in the resolution of the image
+     *                   (1.0f for 72DPI images, 2.0f for 144DPI images, etc.).
+     * @param metadata The image metadata.
+     */
+    public ImageFrame(ImageType imageType, Buffer imageData,
+                      int width, int height, int stride,
+                      float pixelScale, ImageMetadata metadata) {
+        this(imageType, imageData, width, height, stride, null, -1, pixelScale, metadata);
     }
 
     /**
@@ -72,24 +86,23 @@ public final class ImageFrame {
      * @param imageData The image data.
      * @param width The image width.
      * @param height The image height.
-     * @param stride The stride from a pixel position in one row to the same
-     * horizontal position in the next row, in bytes
-     * @param palette The image palette. This is ignored unless the type is
-     * one of the palette types.
+     * @param stride The stride from a pixel position in one row to the same horizontal position in the next row.
+     * @param palette The image palette. This is ignored unless the type is one of the palette types.
+     * @param paletteIndexBits The size of a palette index, in bits.
      * @param pixelScale The scale of a 72DPI virtual pixel in the resolution
      * of the image (1.0f for 72DPI images, 2.0f for 144DPI images, etc.).
      * @param metadata The image metadata.
      */
     public ImageFrame(ImageType imageType, Buffer imageData,
-                      int width, int height, int stride, byte[][] palette,
-                      float pixelScale, ImageMetadata metadata)
-    {
+                      int width, int height, int stride, int[] palette,
+                      int paletteIndexBits, float pixelScale, ImageMetadata metadata) {
         this.imageType = imageType;
         this.imageData = imageData;
         this.width = width;
         this.height = height;
         this.stride = stride;
         this.palette = palette;
+        this.paletteIndexBits = paletteIndexBits;
         this.pixelScale = pixelScale;
         this.metadata = metadata;
     }
@@ -114,8 +127,12 @@ public final class ImageFrame {
         return this.stride;
     }
 
-    public byte[][] getPalette() {
+    public int[] getPalette() {
         return this.palette;
+    }
+
+    public int getPaletteIndexBits() {
+        return paletteIndexBits;
     }
 
     public void setPixelScale(float pixelScale) {

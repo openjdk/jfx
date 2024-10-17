@@ -312,8 +312,6 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
                 return tRNS_present
                         ? ImageStorage.ImageType.RGBA
                         : ImageStorage.ImageType.RGB;
-            case PNG_COLOR_PALETTE:
-                return ImageStorage.ImageType.PALETTE;
             case PNG_COLOR_GRAY_ALPHA:
                 return ImageStorage.ImageType.GRAY_ALPHA;
             case PNG_COLOR_RGB_ALPHA:
@@ -620,7 +618,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
                 : ImageStorage.ImageType.RGB;
 
         return new ImageFrame(type, ByteBuffer.wrap(newImage), width, height,
-                width * bpp, null, metadata);
+                width * bpp, metadata);
     }
 
     // we won`t decode palette on fly, we will do it later
@@ -684,7 +682,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
 
         ImageFrame imgPNG = colorType == PNG_COLOR_PALETTE
                 ? decodePalette(bb.array(), metaData)
-                : new ImageFrame(getType(), bb, width, height, bpp * width, palette, metaData);
+                : new ImageFrame(getType(), bb, width, height, bpp * width, metaData);
 
         imgPNG.setPixelScale(imagePixelScale);
 

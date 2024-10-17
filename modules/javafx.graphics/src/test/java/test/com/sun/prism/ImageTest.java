@@ -35,6 +35,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Arrays;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -45,108 +47,112 @@ public class ImageTest {
      */
     enum SupportedConversions {
         GRAY(ImageType.GRAY, PixelFormat.BYTE_GRAY, 2,
-            new byte[] { 1, 2, 3, 4 },
-            new byte[] { 1, 2, 3, 4 }),
+            byteArray(
+                1, 2, 3, 4
+            ),
+            byteArray(
+                1, 2, 3, 4
+            )),
 
         GRAY_ALPHA(ImageType.GRAY_ALPHA, PixelFormat.BYTE_BGRA_PRE, 4,
-            new byte[] {
+            byteArray(
                 100, 127, 50, 127,
                 100, 0, 50, 0
-            },
-            new byte[] {
+            ),
+            byteArray(
                 50, 50, 50, 127, 25, 25, 25, 127,
                 0, 0, 0, 0, 0, 0, 0, 0
-            }),
+            )),
 
         GRAY_ALPHA_PRE(ImageType.GRAY_ALPHA_PRE, PixelFormat.BYTE_BGRA_PRE, 4,
-            new byte[] {
+            byteArray(
                 100, 127, 50, 127,
                 100, 0, 50, 0
-            },
-            new byte[] {
+            ),
+            byteArray(
                 100, 100, 100, 127, 50, 50, 50, 127,
                 100, 100, 100, 0, 50, 50, 50, 0
-            }),
+            )),
 
         RGB(ImageType.RGB, PixelFormat.BYTE_RGB, 6,
-            new byte[] {
+            byteArray(
                 1, 2, 3, 4, 5, 6,
                 7, 8, 9, 10, 11, 12
-            },
-            new byte[] {
+            ),
+            byteArray(
                 1, 2, 3, 4, 5, 6,
                 7, 8, 9, 10, 11, 12
-            }),
+            )),
 
         BGR(ImageType.BGR, PixelFormat.BYTE_RGB, 6,
-            new byte[] {
+            byteArray(
                 1, 2, 3, 4, 5, 6,
                 7, 8, 9, 10, 11, 12
-            },
-            new byte[] {
+            ),
+            byteArray(
                 3, 2, 1, 6, 5, 4,
                 9, 8, 7, 12, 11, 10
-            }),
+            )),
 
         RGBA(ImageType.RGBA, PixelFormat.BYTE_BGRA_PRE, 8,
-            new byte[] {
+            byteArray(
                 100, 0, 0, 127, 0, 50, 0, 127,
-                (byte)255, 127, 0, 127, 50, 60, 70, (byte)255
-            },
-            new byte[] {
+                255, 127, 0, 127, 50, 60, 70, 255
+            ),
+            byteArray(
                 0, 0, 50, 127, 0, 25, 0, 127,
-                0, 63, 127, 127, 70, 60, 50, (byte)255
-            }),
+                0, 63, 127, 127, 70, 60, 50, 255
+            )),
 
         RGBA_PRE(ImageType.RGBA_PRE, PixelFormat.BYTE_BGRA_PRE, 8,
-            new byte[] {
+            byteArray(
                 100, 0, 0, 127, 0, 50, 0, 127,
-                (byte)255, 127, 0, 127, 50, 40, 30, 0
-            },
-            new byte[] {
+                255, 127, 0, 127, 50, 40, 30, 0
+            ),
+            byteArray(
                 0, 0, 100, 127, 0, 50, 0, 127,
-                0, 127, (byte)255, 127, 30, 40, 50, 0
-            }),
+                0, 127, 255, 127, 30, 40, 50, 0
+            )),
 
         BGRA(ImageType.BGRA, PixelFormat.BYTE_BGRA_PRE, 8,
-            new byte[] {
+            byteArray(
                 100, 0, 0, 127, 0, 50, 0, 127,
-                (byte)255, 127, 0, 127, 50, 50, 50, 0
-            },
-            new byte[] {
+                255, 127, 0, 127, 50, 50, 50, 0
+            ),
+            byteArray(
                 50, 0, 0, 127, 0, 25, 0, 127,
                 127, 63, 0, 127, 0, 0, 0, 0
-            }),
+            )),
 
         BGRA_PRE(ImageType.BGRA_PRE, PixelFormat.BYTE_BGRA_PRE, 8,
-            new byte[] {
+            byteArray(
                 100, 0, 0, 127, 0, 50, 0, 127,
-                (byte)255, 127, 0, 127, 50, 50, 50, 0
-            },
-            new byte[] {
+                255, 127, 0, 127, 50, 50, 50, 0
+            ),
+            byteArray(
                 100, 0, 0, 127, 0, 50, 0, 127,
-                (byte)255, 127, 0, 127, 50, 50, 50, 0
-            }),
+                255, 127, 0, 127, 50, 50, 50, 0
+            )),
 
         ABGR(ImageType.ABGR, PixelFormat.BYTE_BGRA_PRE, 8,
-            new byte[] {
+            byteArray(
                 127, 100, 0, 0, 127, 50, 0, 100,
-                127, (byte)255, 127, 0, 0, 50, 50, 50
-            },
-            new byte[] {
+                127, 255, 127, 0, 0, 50, 50, 50
+            ),
+            byteArray(
                 50, 0, 0, 127, 25, 0, 50, 127,
                 127, 63, 0, 127, 0, 0, 0, 0
-            }),
+            )),
 
         ABGR_PRE(ImageType.ABGR_PRE, PixelFormat.BYTE_BGRA_PRE, 8,
-            new byte[] {
+            byteArray(
                 127, 100, 0, 0, 127, 50, 0, 100,
-                127, (byte)255, 127, 0, 0, 50, 50, 50
-            },
-            new byte[] {
+                127, 255, 127, 0, 0, 50, 50, 50
+            ),
+            byteArray(
                 100, 0, 0, 127, 50, 0, 100, 127,
-                (byte)255, 127, 0, 127, 50, 50, 50, 0
-            }),
+                255, 127, 0, 127, 50, 50, 50, 0
+            )),
 
         INT_RGB(ImageType.INT_RGB, PixelFormat.INT_ARGB_PRE, 8,
             new int[] {
@@ -186,7 +192,163 @@ public class ImageTest {
             new int[] {
                 argb(127, 50, 100, 150), argb(127, 10, 20, 30),
                 argb(255, 0, 0, 0), argb(0, 255, 255, 255)
-            });
+            }),
+
+        PALETTE_ONE_BIT_OPAQUE(ImageType.PALETTE, PixelFormat.BYTE_RGB, 2, 1,
+            new int[] {
+                rgb(255, 0, 0), rgb(0, 127, 0)
+            },
+            encodeBits(
+                0, 1,
+                1, 0
+            ),
+            byteArray(
+                255, 0, 0, 0, 127, 0,
+                0, 127, 0, 255, 0, 0
+            )),
+
+        PALETTE_ONE_BIT_ALPHA(ImageType.PALETTE_ALPHA, PixelFormat.BYTE_BGRA_PRE, 2, 1,
+            new int[] {
+                argb(127, 255, 0, 0), argb(255, 0, 127, 0)
+            },
+            encodeBits(
+                0, 1,
+                1, 0
+            ),
+            byteArray(
+                0, 0, 127, 127, 0, 127, 0, 255,
+                0, 127, 0, 255, 0, 0, 127, 127
+            )),
+
+        PALETTE_ONE_BIT_ALPHA_PRE(ImageType.PALETTE_ALPHA_PRE, PixelFormat.BYTE_BGRA_PRE, 2, 1,
+            new int[] {
+                argb(127, 255, 0, 0), argb(255, 0, 127, 0)
+            },
+            encodeBits(
+                0, 1,
+                1, 0
+            ),
+            byteArray(
+                0, 0, 255, 127, 0, 127, 0, 255,
+                0, 127, 0, 255, 0, 0, 255, 127
+            )),
+
+        PALETTE_TWO_BIT_OPAQUE(ImageType.PALETTE, PixelFormat.BYTE_RGB, 4, 2,
+            new int[] {
+                rgb(255, 0, 0), rgb(0, 127, 0), rgb(10, 20, 30), rgb(50, 60, 70)
+            },
+            encodeBits(
+                0, 0, 0, 1,
+                1, 0, 1, 1
+            ),
+            byteArray(
+                255, 0, 0, 0, 127, 0,
+                10, 20, 30, 50, 60, 70
+            )),
+
+        PALETTE_TWO_BIT_ALPHA(ImageType.PALETTE_ALPHA, PixelFormat.BYTE_BGRA_PRE, 4, 2,
+            new int[] {
+                argb(127, 255, 0, 0), argb(255, 0, 127, 0), argb(0, 10, 20, 30), argb(255, 50, 60, 70)
+            },
+            encodeBits(
+                0, 0, 0, 1,
+                1, 0, 1, 1
+            ),
+            byteArray(
+                0, 0, 127, 127, 0, 127, 0, 255,
+                0, 0, 0, 0, 70, 60, 50, 255
+            )),
+
+        PALETTE_TWO_BIT_ALPHA_PRE(ImageType.PALETTE_ALPHA_PRE, PixelFormat.BYTE_BGRA_PRE, 4, 2,
+            new int[] {
+                argb(127, 255, 0, 0), argb(255, 0, 127, 0), argb(0, 10, 20, 30), argb(255, 50, 60, 70)
+            },
+            encodeBits(
+                0, 0, 0, 1,
+                1, 0, 1, 1
+            ),
+            byteArray(
+                0, 0, 255, 127, 0, 127, 0, 255,
+                30, 20, 10, 0, 70, 60, 50, 255
+            )),
+
+        PALETTE_FOUR_BIT_OPAQUE(ImageType.PALETTE, PixelFormat.BYTE_RGB, 8, 4,
+            new int[] {
+                rgb(255, 0, 0), rgb(0, 127, 0), rgb(10, 20, 30), rgb(50, 60, 70)
+            },
+            encodeBits(
+                0, 0, 0, 0, 0, 0, 0, 1,
+                0, 0, 1, 0, 0, 0, 1, 1
+            ),
+            byteArray(
+                255, 0, 0, 0, 127, 0,
+                10, 20, 30, 50, 60, 70
+            )),
+
+        PALETTE_FOUR_BIT_ALPHA(ImageType.PALETTE_ALPHA, PixelFormat.BYTE_BGRA_PRE, 8, 4,
+            new int[] {
+                argb(127, 255, 0, 0), argb(255, 0, 127, 0), argb(0, 10, 20, 30), argb(255, 50, 60, 70)
+            },
+            encodeBits(
+                0, 0, 0, 0, 0, 0, 0, 1,
+                0, 0, 1, 0, 0, 0, 1, 1
+            ),
+            byteArray(
+                0, 0, 127, 127, 0, 127, 0, 255,
+                0, 0, 0, 0, 70, 60, 50, 255
+            )),
+
+        PALETTE_FOUR_BIT_ALPHA_PRE(ImageType.PALETTE_ALPHA_PRE, PixelFormat.BYTE_BGRA_PRE, 8, 4,
+            new int[] {
+                argb(127, 255, 0, 0), argb(255, 0, 127, 0), argb(0, 10, 20, 30), argb(255, 50, 60, 70)
+            },
+            encodeBits(
+                0, 0, 0, 0, 0, 0, 0, 1,
+                0, 0, 1, 0, 0, 0, 1, 1
+            ),
+            byteArray(
+                0, 0, 255, 127, 0, 127, 0, 255,
+                30, 20, 10, 0, 70, 60, 50, 255
+            )),
+
+        PALETTE_EIGHT_BIT_OPAQUE(ImageType.PALETTE, PixelFormat.BYTE_RGB, 16, 8,
+            new int[] {
+                rgb(255, 0, 0), rgb(0, 127, 0), rgb(10, 20, 30), rgb(50, 60, 70)
+            },
+            encodeBits(
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1
+            ),
+            byteArray(
+                255, 0, 0, 0, 127, 0,
+                10, 20, 30, 50, 60, 70
+            )),
+
+        PALETTE_EIGHT_BIT_ALPHA(ImageType.PALETTE_ALPHA, PixelFormat.BYTE_BGRA_PRE, 16, 8,
+            new int[] {
+                argb(127, 255, 0, 0), argb(255, 0, 127, 0), argb(0, 10, 20, 30), argb(255, 50, 60, 70)
+            },
+            encodeBits(
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1
+            ),
+            byteArray(
+                0, 0, 127, 127, 0, 127, 0, 255,
+                0, 0, 0, 0, 70, 60, 50, 255
+            )),
+
+        PALETTE_EIGHT_BIT_ALPHA_PRE(ImageType.PALETTE_ALPHA_PRE, PixelFormat.BYTE_BGRA_PRE, 16, 8,
+            new int[] {
+                argb(127, 255, 0, 0), argb(255, 0, 127, 0), argb(0, 10, 20, 30), argb(255, 50, 60, 70)
+            },
+            encodeBits(
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1
+            ),
+            byteArray(
+                0, 0, 255, 127, 0, 127, 0, 255,
+                30, 20, 10, 0, 70, 60, 50, 255
+            ));
 
         static int rgb(int r, int g, int b) {
             return 255 << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
@@ -196,22 +358,53 @@ public class ImageTest {
             return a << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
         }
 
+        static byte[] encodeBits(int... bits) {
+            var result = new byte[bits.length / 8 + 1];
+            for (int i = 0; i < bits.length; ++i) {
+                result[i / 8] |= (byte)(bits[i] << (7 - (i % 8)));
+            }
+
+            return result;
+        }
+
+        // Allows us to create byte arrays with unsigned literals without casting to (byte)
+        static byte[] byteArray(int... bytes) {
+            var result = new byte[bytes.length];
+            for (int i = 0; i < bytes.length; ++i) {
+                result[i] = (byte)Objects.checkIndex(bytes[i], 256);
+            }
+
+            return result;
+        }
+
+        SupportedConversions(ImageType sourceType, PixelFormat targetType, int stride,
+                             int paletteIndexBits, int[] palette,
+                             byte[] sourceData, byte[] targetData) {
+            this(sourceType, targetType, stride, palette, paletteIndexBits,
+                 ByteBuffer.wrap(sourceData), ByteBuffer.wrap(targetData));
+        }
+
         SupportedConversions(ImageType sourceType, PixelFormat targetType, int stride,
                              byte[] sourceData, byte[] targetData) {
-            this(sourceType, targetType, stride, ByteBuffer.wrap(sourceData), ByteBuffer.wrap(targetData));
+            this(sourceType, targetType, stride, null, -1,
+                 ByteBuffer.wrap(sourceData), ByteBuffer.wrap(targetData));
         }
 
         SupportedConversions(ImageType sourceType, PixelFormat targetType, int stride,
                              int[] sourceData, int[] targetData) {
-            this(sourceType, targetType, stride, IntBuffer.wrap(sourceData), IntBuffer.wrap(targetData));
+            this(sourceType, targetType, stride, null, -1,
+                 IntBuffer.wrap(sourceData), IntBuffer.wrap(targetData));
         }
 
         SupportedConversions(ImageType sourceType, PixelFormat targetType, int stride,
+                             int[] palette, int paletteIndexBits,
                              Buffer sourceData, Buffer targetData) {
             this.sourceType = sourceType;
             this.targetType = targetType;
             this.sourceData = sourceData;
             this.targetData = targetData;
+            this.palette = palette;
+            this.paletteIndexBits = paletteIndexBits;
             this.stride = stride;
         }
 
@@ -219,6 +412,8 @@ public class ImageTest {
         final PixelFormat targetType;
         final Buffer sourceData;
         final Buffer targetData;
+        final int paletteIndexBits;
+        final int[] palette;
         final int stride;
     }
 
@@ -230,7 +425,8 @@ public class ImageTest {
     @EnumSource(SupportedConversions.class)
     void convertImageFrame(SupportedConversions conversion) {
         var imageFrame = new ImageFrame(
-            conversion.sourceType, conversion.sourceData, 2, 2, conversion.stride, null,
+            conversion.sourceType, conversion.sourceData, 2, 2, conversion.stride,
+            conversion.palette, conversion.paletteIndexBits, 1,
             new ImageMetadata(null, null, null, null, null, null, null, 2, 2, null, null, null));
 
         var image = Image.convertImageFrame(imageFrame);
@@ -238,6 +434,17 @@ public class ImageTest {
         assertEquals(2, image.getWidth());
         assertEquals(2, image.getHeight());
         assertEquals(conversion.targetType, image.getPixelFormat());
-        assertEquals(conversion.targetData, image.getPixelBuffer());
+        assertEquals(conversion.targetData, image.getPixelBuffer(), () ->
+            "Expected: %s\nActual: %s".formatted(
+                formatArray(conversion.targetData.array()),
+                formatArray(image.getPixelBuffer().array())));
+    }
+
+    private static String formatArray(Object array) {
+        return switch (array) {
+            case byte[] byteArray -> Arrays.toString(byteArray);
+            case int[] intArray -> Arrays.toString(intArray);
+            default -> throw new AssertionError();
+        };
     }
 }

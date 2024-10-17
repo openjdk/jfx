@@ -25,6 +25,12 @@
 
 package com.sun.prism;
 
+import com.sun.javafx.image.IndexedToBytePixelConverter;
+import com.sun.javafx.image.impl.ByteIndexed;
+import com.sun.javafx.image.impl.EightBitIndexed;
+import com.sun.javafx.image.impl.FourBitIndexed;
+import com.sun.javafx.image.impl.OneBitIndexed;
+import com.sun.javafx.image.impl.TwoBitIndexed;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritablePixelFormat;
 import javafx.util.Pair;
@@ -299,7 +305,55 @@ public class Image implements PlatformImage {
                 yield fromIntArgbPreData(imageData, w, h, stride, ps);
             }
 
-            case PALETTE, PALETTE_ALPHA, PALETTE_ALPHA_PRE, PALETTE_TRANS ->
+            case PALETTE, PALETTE_ALPHA, PALETTE_ALPHA_PRE -> {
+                Boolean premultiplied = switch (type) {
+                    case PALETTE_ALPHA -> Boolean.FALSE;
+                    case PALETTE_ALPHA_PRE -> Boolean.TRUE;
+                    default -> null; // PALETTE
+                };
+
+                var converter = switch (frame.getPaletteIndexBits()) {
+                    case 1 -> {
+                        var getter = OneBitIndexed.createGetter(frame.getPalette(), premultiplied);
+                        yield premultiplied == null
+                            ? OneBitIndexed.createToByteRgb(getter, ByteRgb.setter)
+                            : OneBitIndexed.createToByteBgraAny(getter, ByteBgraPre.setter);
+                    }
+
+                    case 2 -> {
+                        var getter = TwoBitIndexed.createGetter(frame.getPalette(), premultiplied);
+                        yield premultiplied == null
+                            ? TwoBitIndexed.createToByteRgb(getter, ByteRgb.setter)
+                            : TwoBitIndexed.createToByteBgraAny(getter, ByteBgraPre.setter);
+                    }
+
+                    case 4 -> {
+                        var getter = FourBitIndexed.createGetter(frame.getPalette(), premultiplied);
+                        yield premultiplied == null
+                            ? FourBitIndexed.createToByteRgb(getter, ByteRgb.setter)
+                            : FourBitIndexed.createToByteBgraAny(getter, ByteBgraPre.setter);
+                    }
+
+                    case 8 -> {
+                        var getter = EightBitIndexed.createGetter(frame.getPalette(), premultiplied);
+                        yield premultiplied == null
+                            ? EightBitIndexed.createToByteRgb(getter, ByteRgb.setter)
+                            : EightBitIndexed.createToByteBgraAny(getter, ByteBgraPre.setter);
+                    }
+
+                    default -> throw new RuntimeException("Unsupported bits per pixel: " + frame.getPaletteIndexBits());
+                };
+
+                int dstPixelSize = premultiplied == null ? 3 : 4;
+                byte[] buffer = new byte[w * h * dstPixelSize];
+                converter.convert((ByteBuffer)frame.getImageData(), 0, stride, buffer, 0, w * dstPixelSize, w, h);
+
+                yield premultiplied == null
+                    ? fromByteRgbData(buffer, w, h)
+                    : fromByteBgraPreData(buffer, w, h, ps);
+            }
+
+            case PALETTE_TRANS ->
                 throw new RuntimeException("Unsupported image type: " + type);
         };
     }

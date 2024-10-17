@@ -242,7 +242,7 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
         }
 
         return new ImageFrame(ImageStorage.ImageType.RGBA, img,
-                width, height, width * 4, null, imagePixelScale, metadata);
+                width, height, width * 4, imagePixelScale, metadata);
     }
 
     // IO helpers

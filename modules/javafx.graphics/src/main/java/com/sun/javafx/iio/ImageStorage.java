@@ -74,24 +74,24 @@ public class ImageStorage {
          */
         GRAY_ALPHA_PRE,
         /**
-         * An image with one 8-bit channel of indexes into a 24-bit
+         * An image with one channel of indexes into a 24-bit
          * lookup table which maps the indexes to 8-bit RGB components.
          */
         PALETTE,
         /**
-         * An image with one 8-bit channel of indexes into a 32-bit
+         * An image with one channel of indexes into a 32-bit
          * lookup table which maps the indexes to 8-bit RGBA components
          * wherein the opacity is not-premultiplied.
          */
         PALETTE_ALPHA,
         /**
-         * An image with one 8-bit channel of indexes into a 32-bit
+         * An image with one channel of indexes into a 32-bit
          * lookup table which maps the indexes to 8-bit RGBA components
          * wherein the opacity is premultiplied.
          */
         PALETTE_ALPHA_PRE,
         /**
-         * An image with one 8-bit channel of indexes into a 24-bit
+         * An image with one channel of indexes into a 24-bit
          * lookup table which maps the indexes to 8-bit RGB components, and
          * a single transparent index to indicate the location of transparent
          * pixels.

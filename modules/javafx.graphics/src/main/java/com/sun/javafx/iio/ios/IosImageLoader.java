@@ -261,7 +261,6 @@ public class IosImageLoader extends ImageLoaderImpl {
                 width,
                 height,
                 width * nComponents,
-                null,
                 imagePixelScale,
                 md);
     }

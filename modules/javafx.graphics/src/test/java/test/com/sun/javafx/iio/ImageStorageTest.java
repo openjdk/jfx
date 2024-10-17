@@ -318,7 +318,7 @@ public class ImageStorageTest {
         };
 
         var expectedImage = new ImageFrame(ImageStorage.ImageType.RGBA_PRE, ByteBuffer.wrap(new byte[0]),
-            0, 0, 0, null, null);
+            0, 0, 0, null);
 
         class TestFactory implements ImageLoaderFactory {
             @Override public ImageFormatDescription getFormatDescription() { return formatWithoutSignature; }
