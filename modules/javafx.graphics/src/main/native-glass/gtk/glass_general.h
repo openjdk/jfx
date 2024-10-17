@@ -64,6 +64,8 @@ extern JavaVM* javaVM;
 
 #define GLASS_GDK_KEY_CONSTANT(key) (GDK_KEY_ ## key)
 
+#define GLASS_EVENTS_MASK GDK_ALL_EVENTS_MASK
+
 #include <exception>
 
 struct jni_exception: public std::exception {
@@ -178,6 +180,9 @@ private:
     extern jmethodID jViewNotifyInputMethodCaret; //com.sun.glass.ui.gtk.GtkView#notifyInputMethodCaret (III)V
     extern jmethodID jViewNotifyPreeditMode; //com.sun.glass.ui.gtk.GtkView#notifyPreeditMode (Z)V
     extern jmethodID jViewNotifyMenu; //com.sun.glass.ui.View#notifyMenu (IIIIZ)V
+    extern jmethodID jViewNotifyBeginTouch; //com.sun.glass.ui.View#notifyBeginTouchEvent (IZI)V
+    extern jmethodID jViewNotifyNextTouch; //com.sun.glass.ui.View#notifyNextTouchEvent (IJIIII)V
+    extern jmethodID jViewNotifyEndTouch; //com.sun.glass.ui.View#notifyEndTouchEvent ()V
     extern jfieldID  jViewPtr; //com.sun.glass.ui.View.ptr
 
     extern jmethodID jWindowNotifyResize; // com.sun.glass.ui.Window#notifyResize (III)V
