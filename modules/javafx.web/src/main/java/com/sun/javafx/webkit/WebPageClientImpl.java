@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,9 @@
 
 package com.sun.javafx.webkit;
 
-import com.sun.javafx.scene.NodeHelper;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
@@ -40,7 +36,8 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.web.WebView;
 import javafx.stage.Screen;
 import javafx.stage.Window;
-
+import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.util.Utils;
 import com.sun.webkit.CursorManager;
 import com.sun.webkit.WebPageClient;
@@ -111,8 +108,9 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
         }
     }
 
-    @Override public void transferFocus(boolean forward) {
-        NodeHelper.traverse(accessor.getView(), forward ? Direction.NEXT : Direction.PREVIOUS, TraversalMethod.DEFAULT);
+    @Override
+    public void transferFocus(boolean forward) {
+        TraversalUtils.traverse(accessor.getView(), forward ? TraversalDirection.NEXT : TraversalDirection.PREVIOUS, false);
     }
 
     @Override public WCRectangle getScreenBounds(boolean available) {
