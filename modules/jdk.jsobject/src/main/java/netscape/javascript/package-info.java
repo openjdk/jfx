@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,32 +23,18 @@
  * questions.
  */
 
-package test.robot.javafx.embed.swing;
+/**
+ * <p>
+ * Provides Java code the ability to access the JavaScript engine and the
+ * HTML DOM in the web browser.
+ * </p>
+ *
+ * <p>
+ * The classes in this package were initially specified by Netscape, and are the
+ * de facto standard mechanism for calling JavaScript from the Java runtime.
+ * </p>
+ *
+ * @since 1.5
+ */
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.CountDownLatch;
-import javax.swing.SwingUtilities;
-import javafx.application.Platform;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import test.util.Util;
-
-public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
-
-    @Test
-    @Disabled("JDK-8340849")
-    public void testPlatformExitBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
-        myApp.createAndShowStage();
-        CountDownLatch latch = new CountDownLatch(1);
-        SwingUtilities.invokeLater(()-> {
-            myApp.createDialogRunnable.run();
-            latch.countDown();
-            Util.sleep(LONG_WAIT_TIME);
-            myApp.dialog.setVisible(true);
-        });
-        latch.await();
-        testAbove(false);
-        runWaitSleep(()-> Platform.exit());
-        myApp.disposeDialog();
-    }
-}
+package netscape.javascript;

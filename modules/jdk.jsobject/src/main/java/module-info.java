@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,32 +23,12 @@
  * questions.
  */
 
-package test.robot.javafx.embed.swing;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.CountDownLatch;
-import javax.swing.SwingUtilities;
-import javafx.application.Platform;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import test.util.Util;
-
-public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
-
-    @Test
-    @Disabled("JDK-8340849")
-    public void testPlatformExitBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
-        myApp.createAndShowStage();
-        CountDownLatch latch = new CountDownLatch(1);
-        SwingUtilities.invokeLater(()-> {
-            myApp.createDialogRunnable.run();
-            latch.countDown();
-            Util.sleep(LONG_WAIT_TIME);
-            myApp.dialog.setVisible(true);
-        });
-        latch.await();
-        testAbove(false);
-        runWaitSleep(()-> Platform.exit());
-        myApp.disposeDialog();
-    }
+/**
+ * Defines the API for the JavaScript Object.
+ *
+ * @moduleGraph
+ * @since 9
+ */
+module jdk.jsobject {
+    exports netscape.javascript;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,32 +23,39 @@
  * questions.
  */
 
-package test.robot.javafx.embed.swing;
+package netscape.javascript;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.CountDownLatch;
-import javax.swing.SwingUtilities;
-import javafx.application.Platform;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import test.util.Util;
+/**
+ * Thrown when an exception is raised in the JavaScript engine. This is merely
+ * a marker class to indicate an exception relating to the JavaScript
+ * interface.
+ * @since 1.5
+ */
+public class JSException extends RuntimeException {
+    private static final long serialVersionUID = 2778103758223661489L;
 
-public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
+    /**
+     * Constructs a new JavaScript exception with null as it's detail message.
+     */
+    public JSException() {
+        super();
+    }
 
-    @Test
-    @Disabled("JDK-8340849")
-    public void testPlatformExitBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
-        myApp.createAndShowStage();
-        CountDownLatch latch = new CountDownLatch(1);
-        SwingUtilities.invokeLater(()-> {
-            myApp.createDialogRunnable.run();
-            latch.countDown();
-            Util.sleep(LONG_WAIT_TIME);
-            myApp.dialog.setVisible(true);
-        });
-        latch.await();
-        testAbove(false);
-        runWaitSleep(()-> Platform.exit());
-        myApp.disposeDialog();
+    /**
+     * Construct a new JavaScript exception with the specified detail message.
+     *
+     * @param s The detail message
+     */
+    public JSException(String s) {
+        super(s);
+    }
+
+    /**
+     * Construct a new JavaScript exception with the specified cause.
+     *
+     * @param t Throwable cause
+     */
+    public JSException(Throwable t) {
+        super(t);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,32 +23,33 @@
  * questions.
  */
 
-package test.robot.javafx.embed.swing;
+#import "JFXStaticTextAccessibility.h"
+#import "GlassMacros.h"
+#import "GlassAccessible.h"
+#import "com_sun_glass_ui_mac_MacAccessible.h"
+#import "com_sun_glass_ui_mac_MacVariant.h"
+#import "common.h"
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.CountDownLatch;
-import javax.swing.SwingUtilities;
-import javafx.application.Platform;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import test.util.Util;
-
-public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
-
-    @Test
-    @Disabled("JDK-8340849")
-    public void testPlatformExitBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
-        myApp.createAndShowStage();
-        CountDownLatch latch = new CountDownLatch(1);
-        SwingUtilities.invokeLater(()-> {
-            myApp.createDialogRunnable.run();
-            latch.countDown();
-            Util.sleep(LONG_WAIT_TIME);
-            myApp.dialog.setVisible(true);
-        });
-        latch.await();
-        testAbove(false);
-        runWaitSleep(()-> Platform.exit());
-        myApp.disposeDialog();
-    }
+@implementation JFXStaticTextAccessibility
+- (NSAccessibilityRole)accessibilityRole
+{
+    return NSAccessibilityStaticTextRole;
 }
+
+- (id)accessibilityParent
+{
+    return [super accessibilityParent];
+}
+
+- (NSRect)accessibilityFrame
+{
+    return [super accessibilityFrame];
+}
+
+- (NSString *)accessibilityValue
+{
+    return [super accessibilityValue];
+}
+
+@end
+

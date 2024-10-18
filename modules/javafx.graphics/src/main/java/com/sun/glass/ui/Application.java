@@ -811,4 +811,13 @@ public abstract class Application {
      * and if so, emits a warning.
      */
     public void checkPlatformPreferencesSupport() {}
+
+    private static native void _overrideNativeWindowHandle(Class lwFrameWrapperClass,
+                                                           Object frame,
+                                                           long handle, Runnable closeWindow);
+
+    public static void overrideNativeWindowHandle(Class lwFrameWrapperClass, Object frame,
+                                                  long handle, Runnable closeWindow) {
+        _overrideNativeWindowHandle(lwFrameWrapperClass, frame, handle, closeWindow);
+    }
 }
