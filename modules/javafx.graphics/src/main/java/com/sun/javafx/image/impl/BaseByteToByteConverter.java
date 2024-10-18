@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -275,6 +275,56 @@ abstract class BaseByteToByteConverter
                     dstbuf.put(dstoff + 3, b3);
                     srcoff += 4;
                     dstoff += 4;
+                }
+                srcoff += srcscanbytes;
+                dstoff += dstscanbytes;
+            }
+        }
+    }
+
+    static class SwapThreeByteConverter extends BaseByteToByteConverter {
+        public SwapThreeByteConverter(BytePixelGetter getter, BytePixelSetter setter) {
+            super(getter, setter);
+        }
+
+        @Override
+        void doConvert(byte[] srcarr, int srcoff, int srcscanbytes,
+                       byte[] dstarr, int dstoff, int dstscanbytes,
+                       int w, int h)
+        {
+            srcscanbytes -= w * 3;
+            dstscanbytes -= w * 3;
+            while (--h >= 0) {
+                for (int x = 0; x < w; x++) {
+                    byte b0 = srcarr[srcoff];
+                    byte b1 = srcarr[srcoff + 1];
+                    byte b2 = srcarr[srcoff + 2];
+                    dstarr[dstoff++] = b2;
+                    dstarr[dstoff++] = b1;
+                    dstarr[dstoff++] = b0;
+                    srcoff += 3;
+                }
+                srcoff += srcscanbytes;
+                dstoff += dstscanbytes;
+            }
+        }
+
+        @Override
+        void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
+                       ByteBuffer dstbuf, int dstoff, int dstscanbytes,
+                       int w, int h)
+        {
+            srcscanbytes -= w * 3;
+            dstscanbytes -= w * 3;
+            while (--h >= 0) {
+                for (int x = 0; x < w; x++) {
+                    byte b0 = srcbuf.get(srcoff);
+                    byte b1 = srcbuf.get(srcoff + 1);
+                    byte b2 = srcbuf.get(srcoff + 2);
+                    dstbuf.put(dstoff++, b2);
+                    dstbuf.put(dstoff++, b1);
+                    dstbuf.put(dstoff++, b0);
+                    srcoff += 3;
                 }
                 srcoff += srcscanbytes;
                 dstoff += dstscanbytes;
