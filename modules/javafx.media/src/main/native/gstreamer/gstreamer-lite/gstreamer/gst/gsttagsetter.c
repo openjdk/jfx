@@ -108,7 +108,7 @@ gst_tag_data_free (gpointer p)
 
   g_mutex_clear (&data->lock);
 
-  g_slice_free (GstTagData, data);
+  g_free (data);
 }
 
 static GstTagData *
@@ -125,7 +125,7 @@ gst_tag_setter_get_data (GstTagSetter * setter)
 
     data = g_object_get_qdata (G_OBJECT (setter), gst_tag_key);
     if (!data) {
-      data = g_slice_new (GstTagData);
+      data = g_new (GstTagData, 1);
       g_mutex_init (&data->lock);
       data->list = NULL;
       data->mode = GST_TAG_MERGE_KEEP;

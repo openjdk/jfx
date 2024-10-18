@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,12 @@
 
 package test.robot.com.sun.glass.ui.monocle.input.devices;
 
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.UInput;
-import org.junit.Assume;
-
 import java.util.HashSet;
 import java.util.Set;
+import org.junit.jupiter.api.Assumptions;
+import com.sun.glass.ui.monocle.TestLogShim;
+import test.robot.com.sun.glass.ui.monocle.TestApplication;
+import test.robot.com.sun.glass.ui.monocle.UInput;
 
 /** The touch screen used in the Freescale i.MX6Q Sabre Device Platform,
  * extrapolated to five touch points. There is some guesswork here as to
@@ -76,7 +75,7 @@ public class EGalaxMultiTouchDeviceBase extends TestTouchDevice {
     @Override
     public void create() {
         // this device fails multitouch tests on Lens
-        Assume.assumeTrue(TestApplication.isMonocle());
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         ui = new UInput();
         ui.processLine("OPEN");
         ui.processLine("EVBIT EV_SYN");

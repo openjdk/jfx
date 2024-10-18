@@ -26,17 +26,17 @@
 package test.javafx.util.converter;
 
 import javafx.util.converter.LongStringConverter;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  */
 public class LongStringConverterTest {
     private LongStringConverter converter;
 
-    @Before public void setup() {
+    @BeforeEach public void setup() {
         converter = new LongStringConverter();
     }
 

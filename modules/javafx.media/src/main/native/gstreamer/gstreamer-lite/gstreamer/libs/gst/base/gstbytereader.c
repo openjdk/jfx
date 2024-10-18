@@ -99,7 +99,7 @@
 GstByteReader *
 gst_byte_reader_new (const guint8 * data, guint size)
 {
-  GstByteReader *ret = g_slice_new0 (GstByteReader);
+  GstByteReader *ret = g_new0 (GstByteReader, 1);
 
   ret->data = data;
   ret->size = size;
@@ -119,7 +119,7 @@ gst_byte_reader_free (GstByteReader * reader)
 {
   g_return_if_fail (reader != NULL);
 
-  g_slice_free (GstByteReader, reader);
+  g_free (reader);
 }
 
 /**

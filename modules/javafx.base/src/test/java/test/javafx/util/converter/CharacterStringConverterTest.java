@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,10 @@
 package test.javafx.util.converter;
 
 import javafx.util.converter.CharacterStringConverter;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -39,7 +39,7 @@ public class CharacterStringConverterTest {
     private final char char_c = 'c';
     private final char char_C = 'C';
 
-    @Before public void setup() {
+    @BeforeEach public void setup() {
         converter = new CharacterStringConverter();
     }
 

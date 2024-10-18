@@ -194,7 +194,7 @@ public class ClipboardViewer extends BorderPane {
 
     private static String convert(Object x) {
         // String, ByteBuffer
-        return x.toString();
+        return x == null ? null : x.toString();
     }
 
     private static class Entry {

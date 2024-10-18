@@ -179,7 +179,8 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetURL(JNIE
 // entry.getTitle()
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetTitle(JNIEnv* env, jclass, jlong jitem)
 {
-    String title= ""_s;
+    HistoryItem* item = getItem(jitem);
+    String title = item->title();
     return title.toJavaString(env).releaseLocal();
 
 }

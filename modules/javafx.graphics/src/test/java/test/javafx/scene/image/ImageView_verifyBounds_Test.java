@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,106 +31,98 @@ import static test.javafx.scene.image.ImageViewConfig.config;
 import static test.javafx.scene.image.TestImages.TEST_IMAGE_100x200;
 import static test.javafx.scene.image.TestImages.TEST_IMAGE_200x100;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.geometry.BoundingBox;
 import javafx.scene.image.ImageView;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+// import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
 public final class ImageView_verifyBounds_Test {
-
-    private final ImageViewConfig imageViewConfig;
-    private final BoundingBox expectedBounds;
 
     private ImageView imageView;
 
     /*
      * Parameters: [image view config], [expected bounds]
      */
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(new Object[][] {
-            { config(TEST_IMAGE_100x200, 0, 0), box(0, 0, 100, 200) },
-            { config(TEST_IMAGE_200x100, 20, 10), box(20, 10, 200, 100) },
-            {
+    public static Stream<Arguments> data() {
+        return Stream.of(
+            Arguments.of( config(TEST_IMAGE_100x200, 0, 0), box(0, 0, 100, 200) ),
+            Arguments.of( config(TEST_IMAGE_200x100, 20, 10), box(20, 10, 200, 100) ),
+            Arguments.of(
                 config(null, 0, 0, 400, 400, false),
                 box(0, 0, 400, 400)
-            },
-            {
+            ),
+            Arguments.of(
                 config(TEST_IMAGE_100x200, 10, 20, 0, 400, false),
                 box(10, 20, 100, 400)
-            },
-            {
+            ),
+            Arguments.of(
                 config(TEST_IMAGE_200x100, 20, 10, 400, 0, false),
                 box(20, 10, 400, 100)
-            },
-            {
+            ),
+            Arguments.of(
                 config(null, 0, 0, 400, 400, true),
                 box(0, 0, 400, 400)
-            },
-            {
+            ),
+            Arguments.of(
                 config(TEST_IMAGE_100x200, 10, 20, 400, 400, true),
                 box(10, 20, 200, 400)
-            },
-            {
+            ),
+            Arguments.of(
                 config(TEST_IMAGE_200x100, 20, 10, 400, 400, true),
                 box(20, 10, 400, 200)
-            },
-            {
+            ),
+            Arguments.of(
                 config(TEST_IMAGE_100x200, 10, 20,
                        -50, 100, 200, 100,
                        400, 0, true),
                 box(10, 20, 400, 200)
-            },
-            {
+            ),
+            Arguments.of(
                 config(TEST_IMAGE_200x100, 20, 10,
                        100, -50, 100, 200,
                        0, 400, true),
                 box(20, 10, 200, 400)
-            },
+            ),
             /* tests for invalid viewport */
-            {
+            Arguments.of(
                 config(TEST_IMAGE_200x100, 0, 0,
                        0, 0, 0, 100,
                        400, 400, true),
                 box(0, 0, 400, 200)
-            },
-            {
+            ),
+            Arguments.of(
                 config(TEST_IMAGE_100x200, 0, 0,
                        0, 0, 100, 0,
                        400, 400, true),
                 box(0, 0, 200, 400)
-            }
-        });
+            )
+        );
     }
 
-    public ImageView_verifyBounds_Test(final ImageViewConfig imageViewConfig,
-                                       final BoundingBox expectedBounds) {
-        this.imageViewConfig = imageViewConfig;
-        this.expectedBounds = expectedBounds;
-    }
-
-    @Before
-    public void setUp() {
+    // NOTE: This should be reverted once parametrized class tests are added to JUnit5
+    //       For now, tests call this manually
+    // @BeforeEach
+    public void setUp(ImageViewConfig imageViewConfig) {
         imageView = new ImageView();
         imageViewConfig.applyTo(imageView);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         imageView = null;
     }
 
-    @Test
-    public void verifyBounds() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void verifyBounds(ImageViewConfig imageViewConfig,
+                             BoundingBox expectedBounds) {
+        setUp(imageViewConfig);
         assertBoundsEqual(expectedBounds, imageView.getBoundsInLocal());
     }
 }

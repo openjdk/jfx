@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@ import javafx.css.ParsedValue;
 import javafx.css.CssMetaData;
 import javafx.css.CssParserShim;
 import javafx.css.StyleableProperty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -41,10 +39,12 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.TilePane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.Assert;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 public class TilePaneTest {
@@ -53,7 +53,8 @@ public class TilePaneTest {
     TilePane htilepane;
     TilePane vtilepane;
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         tilepane = new TilePane(); // 12 children
         for(int i = 0; i < 6; i++) {
             MockResizable child1 = new MockResizable(50,60, 100,200, 500,600);
@@ -77,35 +78,43 @@ public class TilePaneTest {
 
     }
 
-    @Test public void testOrientationDefaultsToHorizontal() {
+    @Test
+    public void testOrientationDefaultsToHorizontal() {
         assertEquals(Orientation.HORIZONTAL, tilepane.getOrientation());
     }
 
-    @Test public void testPrefColumnsDefault() {
+    @Test
+    public void testPrefColumnsDefault() {
         assertEquals(5, tilepane.getPrefColumns());
     }
 
-    @Test public void testPrefRowsDefault() {
+    @Test
+    public void testPrefRowsDefault() {
         assertEquals(5, vtilepane.getPrefColumns());
     }
 
-    @Test public void testPrefTileWidthDefaultsToUSE_COMPUTED_SIZE() {
+    @Test
+    public void testPrefTileWidthDefaultsToUSE_COMPUTED_SIZE() {
         assertEquals(Region.USE_COMPUTED_SIZE, tilepane.getPrefTileWidth(), 0);
     }
 
-    @Test public void testPrefTileHeightDefaultsToUSE_COMPUTED_SIZE() {
+    @Test
+    public void testPrefTileHeightDefaultsToUSE_COMPUTED_SIZE() {
         assertEquals(Region.USE_COMPUTED_SIZE, tilepane.getPrefTileHeight(), 0);
     }
 
-    @Test public void testAlignmentDefaultsToTopLeft() {
+    @Test
+    public void testAlignmentDefaultsToTopLeft() {
         assertEquals(Pos.TOP_LEFT, tilepane.getAlignment());
     }
 
-    @Test public void testTileAlignmentDefaultsToCenter() {
+    @Test
+    public void testTileAlignmentDefaultsToCenter() {
         assertEquals(Pos.CENTER, tilepane.getTileAlignment());
     }
 
-    @Test public void testTilePaneNulls() {
+    @Test
+    public void testTilePaneNulls() {
         tilepane.setAlignment(null);
         tilepane.setTileAlignment(null);
         tilepane.setOrientation(null);
@@ -114,60 +123,69 @@ public class TilePaneTest {
         tilepane.autosize();
         tilepane.layout();
 
-        assertNull(null, tilepane.getAlignment());
-        assertNull(null, tilepane.getTileAlignment());
-        assertNull(null, tilepane.getOrientation());
-        assertNull(null, tilepane.alignmentProperty().get());
-        assertNull(null, tilepane.tileAlignmentProperty().get());
-        assertNull(null, tilepane.orientationProperty().get());
+        assertNull(tilepane.getAlignment());
+        assertNull(tilepane.getTileAlignment());
+        assertNull(tilepane.getOrientation());
+        assertNull(tilepane.alignmentProperty().get());
+        assertNull(tilepane.tileAlignmentProperty().get());
+        assertNull(tilepane.orientationProperty().get());
     }
 
-    @Test public void testHorizontalTilePaneMinSize() {
+    @Test
+    public void testHorizontalTilePaneMinSize() {
         assertEquals(200, htilepane.minWidth(-1), 1e-100);
         assertEquals(2400, htilepane.minHeight(100), 1e-100);
     }
 
-    @Test public void testHorizontalTilePanePrefSize() {
+    @Test
+    public void testHorizontalTilePanePrefSize() {
         assertEquals(1000, htilepane.prefWidth(-1), 1e-100);
         assertEquals(600, htilepane.prefHeight(-1), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneMinSize() {
+    @Test
+    public void testVerticalTilePaneMinSize() {
         assertEquals(300, vtilepane.minHeight(-1), 1e-100);
         assertEquals(1600, vtilepane.minWidth(300), 1e-100);
     }
 
-    @Test public void testVerticalTilePanePrefSize() {
+    @Test
+    public void testVerticalTilePanePrefSize() {
         assertEquals(1500, vtilepane.prefHeight(-1), 1e-100);
         assertEquals(400, vtilepane.prefWidth(-1), 1e-100);
     }
 
 
-    @Test public void testEmptyHorizontalTilePaneMinWidthIsZero() {
+    @Test
+    public void testEmptyHorizontalTilePaneMinWidthIsZero() {
         TilePane Tilepane = new TilePane();
 
         assertEquals(0, Tilepane.minWidth(-1), 0);
     }
 
-    @Test public void testEmptyHorizontalTilePaneMinHeightIsZero() {
+    @Test
+    public void testEmptyHorizontalTilePaneMinHeightIsZero() {
         TilePane Tilepane = new TilePane();
 
         assertEquals(0, Tilepane.minHeight(-1), 0);
     }
 
-    @Test public void testEmptyVerticalTilePaneMinWidthIsZero() {
+    @Test
+    public void testEmptyVerticalTilePaneMinWidthIsZero() {
         TilePane Tilepane = new TilePane(Orientation.VERTICAL);
 
         assertEquals(0, Tilepane.minWidth(-1), 0);
     }
 
-    @Test public void testEmptyVerticalTilePaneMinHeightIsZero() {
+    @Test
+    public void testEmptyVerticalTilePaneMinHeightIsZero() {
         TilePane Tilepane = new TilePane(Orientation.VERTICAL);
 
         assertEquals(0, Tilepane.minHeight(-1), 0);
     }
 
-    @Test public void testLayoutWithPrefSize() {
+    @Test
+    public void testLayoutWithPrefSize() {
         tilepane.autosize();
         tilepane.layout();
 
@@ -185,7 +203,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testLayoutWithLargerThanPrefSize() {
+    @Test
+    public void testLayoutWithLargerThanPrefSize() {
         tilepane.resize(800,800);
         tilepane.layout();
 
@@ -202,7 +221,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentTopLeft() {
+    @Test
+    public void testHorizontalTilePaneAlignmentTopLeft() {
         htilepane.setAlignment(Pos.TOP_LEFT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -221,7 +241,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentTopCenter() {
+    @Test
+    public void testHorizontalTilePaneAlignmentTopCenter() {
         htilepane.setAlignment(Pos.TOP_CENTER);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -240,7 +261,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentTopRight() {
+    @Test
+    public void testHorizontalTilePaneAlignmentTopRight() {
         htilepane.setAlignment(Pos.TOP_RIGHT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -259,7 +281,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentCenterLeft() {
+    @Test
+    public void testHorizontalTilePaneAlignmentCenterLeft() {
         htilepane.setAlignment(Pos.CENTER_LEFT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -278,7 +301,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentCenter() {
+    @Test
+    public void testHorizontalTilePaneAlignmentCenter() {
         htilepane.setAlignment(Pos.CENTER);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -297,7 +321,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentCenterRight() {
+    @Test
+    public void testHorizontalTilePaneAlignmentCenterRight() {
         htilepane.setAlignment(Pos.CENTER_RIGHT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -316,7 +341,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentBottomLeft() {
+    @Test
+    public void testHorizontalTilePaneAlignmentBottomLeft() {
         htilepane.setAlignment(Pos.BOTTOM_LEFT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -335,7 +361,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentBottomCenter() {
+    @Test
+    public void testHorizontalTilePaneAlignmentBottomCenter() {
         htilepane.setAlignment(Pos.BOTTOM_CENTER);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -354,7 +381,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentBottomRight() {
+    @Test
+    public void testHorizontalTilePaneAlignmentBottomRight() {
         htilepane.setAlignment(Pos.BOTTOM_RIGHT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -373,7 +401,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneAlignmentTopLeft() {
+    @Test
+    public void testVerticalTilePaneAlignmentTopLeft() {
         vtilepane.setAlignment(Pos.TOP_LEFT);
         vtilepane.resize(700,1000);
         vtilepane.layout();
@@ -392,7 +421,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneAlignmentTopCenter() {
+    @Test
+    public void testVerticalTilePaneAlignmentTopCenter() {
         vtilepane.setAlignment(Pos.TOP_CENTER);
         vtilepane.resize(700,1000);
         vtilepane.layout();
@@ -411,7 +441,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneAlignmentTopRight() {
+    @Test
+    public void testVerticalTilePaneAlignmentTopRight() {
         vtilepane.setAlignment(Pos.TOP_RIGHT);
         vtilepane.resize(700,1000);
         vtilepane.layout();
@@ -430,7 +461,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneAlignmentCenterLeft() {
+    @Test
+    public void testVerticalTilePaneAlignmentCenterLeft() {
         vtilepane.setAlignment(Pos.CENTER_LEFT);
         vtilepane.resize(700,1000);
         vtilepane.layout();
@@ -449,7 +481,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneAlignmentCenter() {
+    @Test
+    public void testVerticalTilePaneAlignmentCenter() {
         vtilepane.setAlignment(Pos.CENTER);
         vtilepane.resize(700,1000);
         vtilepane.layout();
@@ -468,7 +501,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneAlignmentCenterRight() {
+    @Test
+    public void testVerticalTilePaneAlignmentCenterRight() {
         vtilepane.setAlignment(Pos.CENTER_RIGHT);
         vtilepane.resize(700,1000);
         vtilepane.layout();
@@ -487,7 +521,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneAlignmentBottomLeft() {
+    @Test
+    public void testVerticalTilePaneAlignmentBottomLeft() {
         vtilepane.setAlignment(Pos.BOTTOM_LEFT);
         vtilepane.resize(700,1000);
         vtilepane.layout();
@@ -506,7 +541,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneAlignmentBottomCenter() {
+    @Test
+    public void testVerticalTilePaneAlignmentBottomCenter() {
         vtilepane.setAlignment(Pos.BOTTOM_CENTER);
         vtilepane.resize(700,1000);
         vtilepane.layout();
@@ -525,7 +561,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneAlignmentBottomRight() {
+    @Test
+    public void testVerticalTilePaneAlignmentBottomRight() {
         vtilepane.setAlignment(Pos.BOTTOM_RIGHT);
         vtilepane.resize(700,1000);
         vtilepane.layout();
@@ -544,7 +581,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTileAlignmentTopLeft() {
+    @Test
+    public void testTileAlignmentTopLeft() {
         htilepane.setTileAlignment(Pos.TOP_LEFT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -563,7 +601,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTileAlignmentTopCenter() {
+    @Test
+    public void testTileAlignmentTopCenter() {
         htilepane.setTileAlignment(Pos.TOP_CENTER);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -582,7 +621,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTileAlignmentTopRight() {
+    @Test
+    public void testTileAlignmentTopRight() {
         htilepane.setTileAlignment(Pos.TOP_RIGHT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -601,7 +641,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTileAlignmentCenterLeft() {
+    @Test
+    public void testTileAlignmentCenterLeft() {
         htilepane.setTileAlignment(Pos.CENTER_LEFT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -620,7 +661,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTileAlignmentCenter() {
+    @Test
+    public void testTileAlignmentCenter() {
         htilepane.setTileAlignment(Pos.CENTER);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -639,7 +681,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTileAlignmentCenterRight() {
+    @Test
+    public void testTileAlignmentCenterRight() {
         htilepane.setTileAlignment(Pos.CENTER_RIGHT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -658,7 +701,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTileAlignmentBottomLeft() {
+    @Test
+    public void testTileAlignmentBottomLeft() {
         htilepane.setTileAlignment(Pos.BOTTOM_LEFT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -677,7 +721,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTileAlignmentBottomCenter() {
+    @Test
+    public void testTileAlignmentBottomCenter() {
         htilepane.setTileAlignment(Pos.BOTTOM_CENTER);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -696,7 +741,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTileAlignmentBottomRight() {
+    @Test
+    public void testTileAlignmentBottomRight() {
         htilepane.setTileAlignment(Pos.BOTTOM_RIGHT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -715,7 +761,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testSetMarginConstraint() {
+    @Test
+    public void testSetMarginConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
         assertNull(TilePane.getMargin(child1));
@@ -728,7 +775,8 @@ public class TilePaneTest {
         assertNull(TilePane.getMargin(child1));
     }
 
-    @Test public void testMarginConstraint() {
+    @Test
+    public void testMarginConstraint() {
         TilePane tilepane = new TilePane();
 
         for(int i = 0; i < 6; i++) {
@@ -763,7 +811,8 @@ public class TilePaneTest {
 
     }
 
-    @Test public void testSetAlignmentConstraint() {
+    @Test
+    public void testSetAlignmentConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
         assertNull(TilePane.getAlignment(child1));
@@ -775,7 +824,8 @@ public class TilePaneTest {
         assertNull(TilePane.getAlignment(child1));
     }
 
-    @Test public void testHorizontalTilePaneAlignmentConstraint() {
+    @Test
+    public void testHorizontalTilePaneAlignmentConstraint() {
         TilePane tilepane = new TilePane();
 
         for(int i = 0; i < 6; i++) {
@@ -822,7 +872,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testWithHorizontalBiasedChild() {
+    @Test
+    public void testWithHorizontalBiasedChild() {
         TilePane tilepane = new TilePane();
 
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100,100);
@@ -846,7 +897,8 @@ public class TilePaneTest {
 
     }
 
-    @Test public void testWithVerticalBiasedChild() {
+    @Test
+    public void testWithVerticalBiasedChild() {
         TilePane tilepane = new TilePane();
 
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 100,100);
@@ -869,7 +921,8 @@ public class TilePaneTest {
         assertEquals(150, rect.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneWithFixedTileWidth() {
+    @Test
+    public void testHorizontalTilePaneWithFixedTileWidth() {
         TilePane tilepane = new TilePane();
         tilepane.setPrefColumns(3);
         tilepane.setPrefTileWidth(200);
@@ -906,7 +959,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneWithFixedTileHeight() {
+    @Test
+    public void testHorizontalTilePaneWithFixedTileHeight() {
         TilePane tilepane = new TilePane();
         tilepane.setPrefColumns(3);
         tilepane.setPrefTileHeight(200);
@@ -944,7 +998,8 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneWithPrefSize() {
+    @Test
+    public void testHorizontalTilePaneWithPrefSize() {
         TilePane tilepane = new TilePane(Orientation.HORIZONTAL);
         tilepane.setPrefSize(100,100);
 
@@ -974,7 +1029,8 @@ public class TilePaneTest {
         assertEquals(160, tilepane.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVerticalTilePaneWithPrefSize() {
+    @Test
+    public void testVerticalTilePaneWithPrefSize() {
         TilePane tilepane = new TilePane(Orientation.VERTICAL);
         tilepane.setPrefSize(100,100);
 
@@ -1002,7 +1058,8 @@ public class TilePaneTest {
         assertEquals(100, tilepane.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testTilePaneWithBaselineAlignment() {
+    @Test
+    public void testTilePaneWithBaselineAlignment() {
         TilePane tilepane = new TilePane(Orientation.HORIZONTAL);
         tilepane.setPrefSize(100,100);
         tilepane.setTileAlignment(Pos.BASELINE_CENTER);
@@ -1023,7 +1080,8 @@ public class TilePaneTest {
         assertEquals(160, tilepane.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testCSSsetPrefTileWidthAndHeight_RT20388() {
+    @Test
+    public void testCSSsetPrefTileWidthAndHeight_RT20388() {
         Scene scene = new Scene(tilepane);
         Stage stage = new Stage();
         stage.setScene(scene);
@@ -1035,11 +1093,12 @@ public class TilePaneTest {
             ((StyleableProperty)tilepane.prefTileWidthProperty()).applyStyle(null, val);
             assertEquals(67.0, tilepane.getPrefTileWidth(), 0.00001);
         } catch (Exception e) {
-            Assert.fail(e.toString());
+            fail(e.toString());
         }
     }
 
-    @Test public void testCSSsetPrefRow_RT20437() {
+    @Test
+    public void testCSSsetPrefRow_RT20437() {
         Scene scene = new Scene(tilepane);
         Stage stage = new Stage();
         stage.setScene(scene);
@@ -1051,12 +1110,13 @@ public class TilePaneTest {
             ((StyleableProperty)tilepane.prefRowsProperty()).applyStyle(null, val);
             assertEquals(2, tilepane.getPrefRows(), 0.00001);
         } catch (Exception e) {
-            Assert.fail(e.toString());
+            fail(e.toString());
         }
     }
 
 
-    @Test public void testCSSsetPrefColumns_RT22929() {
+    @Test
+    public void testCSSsetPrefColumns_RT22929() {
         Scene scene = new Scene(tilepane);
         Stage stage = new Stage();
         stage.setScene(scene);
@@ -1069,7 +1129,7 @@ public class TilePaneTest {
             ((StyleableProperty)tilepane.prefColumnsProperty()).applyStyle(null,val);
             assertEquals(2, tilepane.getPrefColumns(), 0.00001);
         } catch (Exception e) {
-            Assert.fail(e.toString());
+            fail(e.toString());
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,10 +31,13 @@ import javafx.concurrent.Task;
 import javafx.concurrent.Worker;
 
 import test.javafx.concurrent.mocks.SimpleTask;
-import org.junit.Before;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A Task which simply completes normally. It never throws an Exception.
@@ -44,7 +47,8 @@ import static org.junit.Assert.*;
 public class TaskSimpleTest {
     private Task<String> task;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         task = new SimpleTask();
 
         // Checks that the running property is always correct.
@@ -62,47 +66,58 @@ public class TaskSimpleTest {
      * Test the initial values for the Task,
      ***********************************************************************/
 
-    @Test public void stateShouldBe_READY_ByDefault() {
+    @Test
+    public void stateShouldBe_READY_ByDefault() {
         assertEquals(Worker.State.READY, task.getState());
     }
 
-    @Test public void workDoneShouldBe_Indeterminate_ByDefault() {
+    @Test
+    public void workDoneShouldBe_Indeterminate_ByDefault() {
         assertEquals(-1, task.getWorkDone(), 0);
     }
 
-    @Test public void totalWorkShouldBe_Indeterminate_ByDefault() {
+    @Test
+    public void totalWorkShouldBe_Indeterminate_ByDefault() {
         assertEquals(-1, task.getTotalWork(), 0);
     }
 
-    @Test public void progressShouldBe_Indeterminate_ByDefault() {
+    @Test
+    public void progressShouldBe_Indeterminate_ByDefault() {
         assertEquals(-1, task.getWorkDone(), 0);
     }
 
-    @Test public void valueShouldBe_Null_ByDefault() {
+    @Test
+    public void valueShouldBe_Null_ByDefault() {
         assertNull(task.getValue());
     }
 
-    @Test public void exceptionShouldBe_Null_ByDefault() {
+    @Test
+    public void exceptionShouldBe_Null_ByDefault() {
         assertNull(task.getException());
     }
 
-    @Test public void runningShouldBe_False_ByDefault() {
+    @Test
+    public void runningShouldBe_False_ByDefault() {
         assertEquals(false, task.isRunning());
     }
 
-    @Test public void messageShouldBe_EmptyString_ByDefault() {
+    @Test
+    public void messageShouldBe_EmptyString_ByDefault() {
         assertEquals("", task.getMessage());
     }
 
-    @Test public void titleShouldBe_EmptyString_ByDefault() {
+    @Test
+    public void titleShouldBe_EmptyString_ByDefault() {
         assertEquals("", task.getTitle());
     }
 
-    @Test public void isCancelledShouldBe_False_ByDefault() {
+    @Test
+    public void isCancelledShouldBe_False_ByDefault() {
         assertEquals(false, task.isCancelled());
     }
 
-    @Test public void isDoneShouldBe_False_ByDefault() {
+    @Test
+    public void isDoneShouldBe_False_ByDefault() {
         assertEquals(false, task.isDone());
     }
 
@@ -114,7 +129,8 @@ public class TaskSimpleTest {
      * exception should be null, running should be false.
      ***********************************************************************/
 
-    @Test public void afterRunningStatesShouldHaveBeen_SCHEDULED_RUNNING_SUCCEEDED() {
+    @Test
+    public void afterRunningStatesShouldHaveBeen_SCHEDULED_RUNNING_SUCCEEDED() {
         final List<Worker.State> states = new ArrayList<>();
         task.stateProperty().addListener((observable, oldValue, newValue) -> {
             states.add(newValue);
@@ -129,47 +145,56 @@ public class TaskSimpleTest {
         });
     }
 
-    @Test public void afterRunningWorkDoneShouldBe_Indeterminate() {
+    @Test
+    public void afterRunningWorkDoneShouldBe_Indeterminate() {
         task.run();
         assertEquals(-1, task.getWorkDone(), 0);
     }
 
-    @Test public void afterRunningTotalWorkShouldBe_Indeterminate() {
+    @Test
+    public void afterRunningTotalWorkShouldBe_Indeterminate() {
         task.run();
         assertEquals(-1, task.getTotalWork(), 0);
     }
 
-    @Test public void afterRunningProgressShouldBe_Indeterminate() {
+    @Test
+    public void afterRunningProgressShouldBe_Indeterminate() {
         task.run();
         assertEquals(-1, task.getWorkDone(), 0);
     }
 
-    @Test public void afterRunningValueShouldBe_Finished() {
+    @Test
+    public void afterRunningValueShouldBe_Finished() {
         task.run();
         assertEquals("Sentinel", task.getValue());
     }
 
-    @Test public void afterRunningExceptionShouldBe_Null() {
+    @Test
+    public void afterRunningExceptionShouldBe_Null() {
         task.run();
         assertNull(task.getException());
     }
 
-    @Test public void afterRunningMessageShouldBe_EmptyString() {
+    @Test
+    public void afterRunningMessageShouldBe_EmptyString() {
         task.run();
         assertEquals("", task.getMessage());
     }
 
-    @Test public void afterRunningTitleShouldBe_EmptyString() {
+    @Test
+    public void afterRunningTitleShouldBe_EmptyString() {
         task.run();
         assertEquals("", task.getTitle());
     }
 
-    @Test public void afterRunning_isCancelled_ShouldBe_False() {
+    @Test
+    public void afterRunning_isCancelled_ShouldBe_False() {
         task.run();
         assertEquals(false, task.isCancelled());
     }
 
-    @Test public void afterRunning_isDone_ShouldBe_True() {
+    @Test
+    public void afterRunning_isDone_ShouldBe_True() {
         task.run();
         assertEquals(true, task.isDone());
     }

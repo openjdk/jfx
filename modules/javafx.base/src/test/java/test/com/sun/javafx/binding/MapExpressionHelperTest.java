@@ -30,8 +30,8 @@ import javafx.beans.property.MapProperty;
 import javafx.beans.property.SimpleMapProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import test.javafx.collections.MockMapObserver;
@@ -50,7 +50,7 @@ public class MapExpressionHelperTest {
     private ChangeListenerMock<? super ObservableMap<Object, Object>>[] changeListener;
     private MockMapObserver<Object, Object>[] mapChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         key = new Object();
         value = new Object();
@@ -62,13 +62,13 @@ public class MapExpressionHelperTest {
         observable = new SimpleMapProperty<>(data1);
 
         invalidationListener = new InvalidationListenerMock[]{
-            new InvalidationListenerMock(), new InvalidationListenerMock(), new InvalidationListenerMock()
+                new InvalidationListenerMock(), new InvalidationListenerMock(), new InvalidationListenerMock()
         };
         changeListener = new ChangeListenerMock[]{
-            new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED)
+                new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED)
         };
         mapChangeListener = new MockMapObserver[]{
-            new MockMapObserver<>(), new MockMapObserver<>(), new MockMapObserver<>()
+                new MockMapObserver<>(), new MockMapObserver<>(), new MockMapObserver<>()
         };
     }
 

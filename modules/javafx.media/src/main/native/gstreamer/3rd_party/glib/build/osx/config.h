@@ -39,7 +39,7 @@
 #define GETTEXT_PACKAGE "glib20"
 
 /* Define to the GLIB binary age */
-#define GLIB_BINARY_AGE 7801
+#define GLIB_BINARY_AGE 8004
 
 /* Define to the GLIB interface age */
 #define GLIB_INTERFACE_AGE 1
@@ -51,10 +51,10 @@
 #define GLIB_MAJOR_VERSION 2
 
 /* Define to the GLIB micro version */
-#define GLIB_MICRO_VERSION 1
+#define GLIB_MICRO_VERSION 4
 
 /* Define to the GLIB minor version */
-#define GLIB_MINOR_VERSION 78
+#define GLIB_MINOR_VERSION 80
 
 /* Have inline keyword */
 #define G_HAVE_INLINE 1
@@ -705,7 +705,7 @@
 #define PACKAGE_NAME "glib"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "glib 2.78.1"
+#define PACKAGE_STRING "glib 2.80.4"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "glib"
@@ -714,7 +714,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.78.1"
+#define PACKAGE_VERSION "2.80.4"
 
 /* define if posix_memalign() can allocate any size */
 #define POSIX_MEMALIGN_WITH_COMPLIANT_ALLOCS 1
@@ -828,9 +828,6 @@
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */
-
-/* defines how to decorate public symbols while building */
-#define _GLIB_EXTERN __attribute__((visibility("default"))) extern
 
 /* Define for large files, on AIX-style hosts. */
 /* #undef _LARGE_FILES */

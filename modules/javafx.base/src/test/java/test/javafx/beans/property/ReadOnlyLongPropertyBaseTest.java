@@ -29,8 +29,8 @@ import javafx.beans.property.ReadOnlyLongPropertyBase;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ReadOnlyLongPropertyBaseTest {
 
@@ -43,7 +43,7 @@ public class ReadOnlyLongPropertyBaseTest {
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<Number> changeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new ReadOnlyPropertyMock();
         invalidationListener = new InvalidationListenerMock();

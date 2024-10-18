@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,13 @@
 
 package test.com.sun.glass.ui.gtk;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
-
-import static org.junit.Assert.fail;
+import com.sun.javafx.PlatformUtil;
 
 public class Gtk2RemovalCommon {
 

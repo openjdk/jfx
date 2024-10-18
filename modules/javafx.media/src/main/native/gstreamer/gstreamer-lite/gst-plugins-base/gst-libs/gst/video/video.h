@@ -37,6 +37,9 @@ typedef struct _GstVideoAlignment GstVideoAlignment;
 #include <gst/video/video-scaler.h>
 #endif // GSTREAMER_LITE
 #include <gst/video/video-multiview.h>
+#ifndef GSTREAMER_LITE
+#include <gst/video/video-info-dma.h>
+#endif // GSTREAMER_LITE
 
 G_BEGIN_DECLS
 

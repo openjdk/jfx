@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,10 +29,12 @@ import com.sun.javafx.iio.ImageFrame;
 import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.iio.ImageStorageException;
 import com.sun.prism.Image;
-import org.junit.Before;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test multiple calls to getPixel with both a normal image
@@ -46,7 +48,7 @@ public class ImageHiDPITest {
 
     private String imagePath;
 
-    @Before
+    @BeforeEach
     public void setup() {
         imagePath = this.getClass().getResource(IMAGE_NAME).toExternalForm();
         assertNotNull(imagePath);
@@ -62,12 +64,11 @@ public class ImageHiDPITest {
             ImageFrame imageFrame = imageFrames[0];
             assertNotNull(imageFrame);
 
-            assertEquals("Unexpected pixel scale",
-                    pixelScale, imageFrame.getPixelScale(), 0.0001f);
+            assertEquals(pixelScale, imageFrame.getPixelScale(), 0.0001f, "Unexpected pixel scale");
 
             int width = imageFrame.getWidth();
             int height = imageFrame.getHeight();
-            assertTrue("Image size must be at least 8x8", width >= 8 && height >= 8);
+            assertTrue(width >= 8 && height >= 8, "Image size must be at least 8x8");
 
             return imageFrame;
         } catch (ImageStorageException ex) {
@@ -123,9 +124,9 @@ public class ImageHiDPITest {
 
         for (int i = 0; i < xvals.length; i++) {
             int pix1 = image.getArgb(xvals[i], yvals[i]);
-            assertEquals("getArgb returns incorrect color", exColors[i], pix1);
+            assertEquals(exColors[i], pix1, "getArgb returns incorrect color");
             int pix2 = image.getArgb(xvals[i], yvals[i]);
-            assertEquals("second call to getArgb returns different result", pix1, pix2);
+            assertEquals(pix1, pix2, "second call to getArgb returns different result");
         }
     }
 
@@ -150,8 +151,8 @@ public class ImageHiDPITest {
         // Check that the size of the @2x image is twice that of the normal image
         int exWidth2 = imageFrame1.getWidth() * 2;
         int exHeight2 = imageFrame1.getHeight()* 2;
-        assertEquals("width of @2x image is wrong", exWidth2, imageFrame2.getWidth());
-        assertEquals("height of @2x image is wrong", exHeight2, imageFrame2.getHeight());
+        assertEquals(exWidth2, imageFrame2.getWidth(), "width of @2x image is wrong");
+        assertEquals(exHeight2, imageFrame2.getHeight(), "height of @2x image is wrong");
     }
 
 }

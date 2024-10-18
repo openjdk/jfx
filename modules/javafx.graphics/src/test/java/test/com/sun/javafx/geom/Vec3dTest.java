@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,9 @@ package test.com.sun.javafx.geom;
 
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.Vec3f;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * PRELIMINARY unit tests for Vec3d.

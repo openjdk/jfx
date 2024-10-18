@@ -328,9 +328,16 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
         virtualReadIndex = readIndex;
     } else if (!pitchRate) {
         unsigned readIndex = static_cast<unsigned>(virtualReadIndex);
+        int deltaFrames = static_cast<int>(virtualDeltaFrames);
+        maxFrame = static_cast<unsigned>(virtualMaxFrame);
+
+        if (readIndex >= maxFrame)
+            readIndex -= deltaFrames;
 
         for (unsigned i = 0; i < numberOfChannels; ++i)
             std::fill_n(destinationChannels[i] + writeIndex, framesToProcess, sourceChannels[i][readIndex]);
+
+        virtualReadIndex = readIndex;
     } else if (reverse) {
         unsigned maxFrame = static_cast<unsigned>(virtualMaxFrame);
         unsigned minFrame = static_cast<unsigned>(floorf(virtualMinFrame));
@@ -342,6 +349,12 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
             unsigned readIndex2 = readIndex + 1;
             if (readIndex2 >= maxFrame)
                 readIndex2 = m_isLooping ? minFrame : readIndex;
+
+            // Final sanity check on buffer access.
+            // FIXME: as an optimization, try to get rid of this inner-loop check and
+            // put assertions and guards before the loop.
+            if (readIndex >= bufferLength || readIndex2 >= bufferLength)
+                break;
 
             // Linear interpolation.
             for (unsigned i = 0; i < numberOfChannels; ++i) {
@@ -409,6 +422,15 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
     return true;
 }
 
+void AudioBufferSourceNode::acquireBufferContent()
+{
+    ASSERT(isMainThread());
+
+    // FIXME: We should implement https://www.w3.org/TR/webaudio/#acquire-the-content.
+    if (m_buffer)
+        m_buffer->markBuffersAsNonDetachable();
+}
+
 ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer>&& buffer)
 {
     ASSERT(isMainThread());
@@ -445,6 +467,9 @@ ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer
     // In case the buffer gets set after playback has started, we need to clamp the grain parameters now.
     if (m_isGrain)
         adjustGrainParameters();
+
+    if (isPlayingOrScheduled())
+        acquireBufferContent();
 
     return { };
 }
@@ -513,6 +538,7 @@ ExceptionOr<void> AudioBufferSourceNode::startPlaying(double when, double grainO
 
     adjustGrainParameters();
 
+    acquireBufferContent();
     m_playbackState = SCHEDULED_STATE;
 
     return { };

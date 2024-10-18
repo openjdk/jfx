@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,26 @@
 
 package test.javafx.print;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import org.junit.Before;
-import org.junit.Test;
-
 import javafx.beans.property.*;
 
 import javafx.print.*;
 import java.util.*;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 public class JobSettingsTest {
 
-  @Test public void dummyTest() {
+  @Test
+  public void dummyTest() {
   }
 
 
   private PrinterJob job;
 
-  @Before
+  @BeforeEach
   public void setUp() {
      try {
          job = PrinterJob.createPrinterJob();
@@ -57,7 +58,8 @@ public class JobSettingsTest {
      }
   }
 
-  @Test public void testCopiesSettings() {
+  @Test
+  public void testCopiesSettings() {
      if (job == null) {
          return;
      }
@@ -73,7 +75,8 @@ public class JobSettingsTest {
      assertEquals(copies, js.getCopies());
   }
 
-  @Test public void testPageRangeSettings() {
+  @Test
+  public void testPageRangeSettings() {
      if (job == null) {
          return;
      }
@@ -93,7 +96,8 @@ public class JobSettingsTest {
         }
   }
 
-  @Test public void testPrintColorSettings() {
+  @Test
+  public void testPrintColorSettings() {
      PrinterJob job = PrinterJob.createPrinterJob();
 
      if (job == null) {
@@ -118,7 +122,8 @@ public class JobSettingsTest {
      }
   }
 
-  @Test public void testPrintResolutions() {
+  @Test
+  public void testPrintResolutions() {
      if (job == null) {
          return;
      }
@@ -142,7 +147,8 @@ public class JobSettingsTest {
   }
 
 
-   @Test public void testPrintSides() {
+   @Test
+   public void testPrintSides() {
      if (job == null) {
          return;
      }
@@ -171,7 +177,8 @@ public class JobSettingsTest {
   }
 
 
-  @Test public void testPageOrientation() {
+  @Test
+  public void testPageOrientation() {
      if (job == null) {
          return;
      }
@@ -192,7 +199,8 @@ public class JobSettingsTest {
      assertEquals(newpageorientation, pagelayout.getPageOrientation());
   }
 
-    @Test public void testPaper() {
+    @Test
+    public void testPaper() {
      if (job == null) {
          return;
      }
@@ -235,7 +243,8 @@ public class JobSettingsTest {
      }
   }
 
-  @Test public void testPaperSource() {
+  @Test
+  public void testPaperSource() {
      if (job == null) {
          return;
      }
@@ -259,7 +268,8 @@ public class JobSettingsTest {
      }
   }
 
-  @Test public void testCollationSettings() {
+  @Test
+  public void testCollationSettings() {
      if (job == null) {
          return;
      }

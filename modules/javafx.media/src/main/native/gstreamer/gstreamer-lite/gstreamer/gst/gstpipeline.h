@@ -130,6 +130,12 @@ void            gst_pipeline_set_auto_flush_bus (GstPipeline *pipeline, gboolean
 GST_API
 gboolean        gst_pipeline_get_auto_flush_bus (GstPipeline *pipeline);
 
+GST_API
+gboolean        gst_pipeline_is_live            (GstPipeline *pipeline);
+
+GST_API
+GstClockTime    gst_pipeline_get_configured_latency    (GstPipeline * pipeline);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstPipeline, gst_object_unref)
 
 G_END_DECLS

@@ -25,7 +25,7 @@
 
 package test.robot.javafx.web;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.util.Util.TIMEOUT;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
@@ -40,9 +40,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.robot.Robot;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
@@ -94,18 +95,20 @@ public class TooltipFXTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Util.shutdown();
     }
 
 // ========================== TEST CASE ==========================
-    @Test(timeout = 20000) public void testTooltipLeak() throws Exception {
+    @Test
+    @Timeout(value=20)
+    public void testTooltipLeak() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
 
         Util.runAndWait(() -> {

@@ -273,7 +273,7 @@ int readFromFile(PlatformFileHandle handle, void* data, int length)
     return result;
 }
 
-String pathGetFileName(const String& path)
+String pathFileName(const String& path)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -439,13 +439,6 @@ bool isHiddenFile(const String& path)
     fprintf(stderr, "isHiddenFile(const String& path) NOT IMPLEMENTED\n");
     UNUSED_PARAM(path);
     return false;
-}
-
-String pathFileName(const String& path)
-{
-    UNUSED_PARAM(path);
-   // return path.substring(path.reverseFind('/') + 1);
-   return nullString();
 }
 
 bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath)
