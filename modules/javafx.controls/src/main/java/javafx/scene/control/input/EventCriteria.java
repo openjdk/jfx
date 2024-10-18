@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,56 +22,28 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene.control.input;
 
-package com.sun.javafx.scene.control.behavior;
-
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
-import javafx.scene.control.skin.TextFieldSkin;
-import javafx.scene.text.HitInfo;
+import javafx.event.Event;
+import javafx.event.EventType;
 
 /**
- * Password field behavior.
+ * Determines whether an event passes certain criteria.
+ *
+ * @param <T> the type of the event
+ * @since 999 TODO
  */
-public class PasswordFieldBehavior extends TextFieldBehavior {
+public interface EventCriteria<T extends Event> {
+    /**
+     * Returns the event type for which this criteria are valid.
+     * @return the event type
+     */
+    public EventType<T> getEventType();
 
-    public PasswordFieldBehavior(PasswordField c, TextFieldSkin skin) {
-        super(c, skin);
-    }
-
-    // RT-18711 & RT-18854: Stub out word based navigation and editing
-    // for security reasons.
-    @Override
-    protected void deletePreviousWord() {
-    }
-
-    @Override
-    protected void deleteNextWord() {
-    }
-
-    @Override
-    protected void selectPreviousWord() {
-    }
-
-    @Override
-    public void selectNextWord() {
-    }
-
-    @Override
-    protected void previousWord() {
-    }
-
-    @Override
-    protected void nextWord() {
-    }
-
-    @Override
-    protected void selectWord() {
-        selectAll();
-    }
-
-    @Override
-    protected void mouseDoubleClick(HitInfo hit) {
-        getControl().selectAll();
-    }
+    /**
+     * Returns true if the specified event matches this criteria.
+     * @param ev the event
+     * @return true if match occurs
+     */
+    public boolean isEventAcceptable(T ev);
 }
