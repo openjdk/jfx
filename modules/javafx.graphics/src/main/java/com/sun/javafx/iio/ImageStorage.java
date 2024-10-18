@@ -380,7 +380,22 @@ public class ImageStorage {
                     }
 
                     if (theStream == null) {
-                        theStream = ImageTools.createInputStream(input);
+                        try {
+                            theStream = ImageTools.createInputStream(input);
+                        } catch (IOException ignored) {
+                        }
+                    }
+
+                    if (theStream == null) {
+                        try {
+                            // last fallback, try to see if the file exists with @1x suffix
+                            String scaled1xName = ImageTools.getScaledImageName(input, 1);
+                            theStream = ImageTools.createInputStream(scaled1xName);
+                        } catch (IOException ignored) {
+                            // landing here means the main route failed, so just redo createInputStream
+                            // on main input file to get the proper exception thrown
+                            ImageTools.createInputStream(input);
+                        }
                     }
 
                     if (isIOS) {
