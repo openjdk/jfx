@@ -95,7 +95,7 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      *                    <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getWidth() { return width; }
-    final double width;
+    private final double width;
 
     /**
      * The height of the area within the Region where the associated BackgroundImage should
@@ -112,7 +112,7 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      *                    <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getHeight() { return height; }
-    final double height;
+    private final double height;
 
     /**
      * Specifies whether the value contained in {@code width} should be interpreted
@@ -122,7 +122,7 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isWidthAsPercentage() { return widthAsPercentage; }
-    final boolean widthAsPercentage;
+    private final boolean widthAsPercentage;
 
     /**
      * Specifies whether the value contained in {@code height} should be interpreted
@@ -132,7 +132,7 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isHeightAsPercentage() { return heightAsPercentage; }
-    final boolean heightAsPercentage;
+    private final boolean heightAsPercentage;
 
     /**
      * If true, scale the image, while preserving its intrinsic aspect ratio (if any), to the
@@ -143,7 +143,7 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isContain() { return contain; }
-    final boolean contain;
+    private final boolean contain;
 
     /**
      * If true, scale the image, while preserving its intrinsic aspect ratio (if any), to the
@@ -154,7 +154,7 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isCover() { return cover; }
-    final boolean cover;
+    private final boolean cover;
 
     /**
      * A cached hash code value
