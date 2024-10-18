@@ -33,6 +33,8 @@ jint gdk_keyval_to_glass(guint keyval);
 jint get_glass_key(GdkEventKey* e);
 jint glass_key_to_modifier(jint glassKey);
 jint gdk_modifier_mask_to_glass(guint mask);
+jint gdk_modifier_mask_to_glass(guint mask, jint glassKey, bool press);
+jchar gdk_keyval_to_unicode_glass(guint keyVal, guint state);
 gint find_gdk_keyval_for_glass_keycode(jint code);
 gint find_gdk_keycode_for_keyval(gint keyval);
 #endif        /* GLASS_KEY_H */
