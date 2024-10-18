@@ -50,6 +50,7 @@ public final class FocusTraversal {
      * @return true if traversal was successful
      */
     public static boolean traverse(Node node, TraversalDirection dir, boolean focusVisible) {
+        System.out.println(dir + " node=" + node);
         if (node != null) {
             SubScene ss = NodeHelper.getSubScene(node);
             if (ss != null) {

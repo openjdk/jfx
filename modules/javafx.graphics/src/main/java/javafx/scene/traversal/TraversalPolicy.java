@@ -40,11 +40,18 @@ import com.sun.javafx.scene.traversal.TraversalUtils;
  * Note that in order to avoid cycles or dead-ends in traversal the algorithms should respect the following order:
  * <ul>
  *   <li>For {@link TraversalDirection#NEXT NEXT}:
- *       node -> node subtree -> node siblings (first sibling then its subtree) -> {@link TraversalDirection#NEXT_IN_LINE NEXT_IN_LINE} for node's parent</li>
+ *       node ->
+ *       node subtree ->
+ *       node siblings (first sibling then its subtree) ->
+ *       {@link TraversalDirection#NEXT_IN_LINE NEXT_IN_LINE} for node's parent
  *   <li>For {@link TraversalDirection#NEXT_IN_LINE NEXT_IN_LINE}:
- *       node -> node siblings (first sibling then its subtree) -> {@link TraversalDirection#NEXT_IN_LINE NEXT_IN_LINE} for node's parent</li>
+ *       node ->
+ *       node siblings (first sibling then its subtree) ->
+ *       {@link TraversalDirection#NEXT_IN_LINE NEXT_IN_LINE} for node's parent
  *   <li>For {@link TraversalDirection#PREVIOUS PREVIOUS}:
- *       node -> node siblings ( ! first subtree then the node itself ! ) -> {@link TraversalDirection#PREVIOUS PREVIOUS} for node's parent</li>
+ *       node ->
+ *       node siblings (first subtree then the node itself) ->
+ *       {@link TraversalDirection#PREVIOUS PREVIOUS} for node's parent
  * </ul>
  * <p>
  * This ensures that the next direction will traverse the same nodes as previous (in the opposite order).

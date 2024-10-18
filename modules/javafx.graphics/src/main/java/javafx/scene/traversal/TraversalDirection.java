@@ -36,12 +36,9 @@ public enum TraversalDirection {
     DOWN,
     /** Moves focus left. */
     LEFT,
-    /** Moves focus to the next focusable Node. */
+    /** Moves focus to the next focusable Node, possibly traversing into the children of the current parent. */
     NEXT,
-    /**
-     * Moving focus to the next in line focusable Node
-     * (like NEXT, but does not traverse into the children of the current parent).
-     */
+    /** Moves focus to the next in line focusable Node, possibly traversing outside of the current parent. */
     NEXT_IN_LINE,
     /** Moves focus to the previous focusable Node. */
     PREVIOUS,
