@@ -42,7 +42,7 @@ import com.sun.javafx.scene.traversal.TraversalUtils;
 public final class FocusTraversal {
     /**
      * Traverse focus downward.
-     * A successful traversal results in the newly focused {@code Node} visible indicating its focused state.
+     * A successful traversal results in the newly focused {@code Node} visibly indicating its focused state.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
@@ -53,7 +53,7 @@ public final class FocusTraversal {
 
     /**
      * Traverse focus left.
-     * A successful traversal results in the newly focused {@code Node} visible indicating its focused state.
+     * A successful traversal results in the newly focused {@code Node} visibly indicating its focused state.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
@@ -64,7 +64,7 @@ public final class FocusTraversal {
 
     /**
      * Traverse focus to the next focuseable {@code Node}.
-     * A successful traversal results in the newly focused {@code Node} visible indicating its focused state.
+     * A successful traversal results in the newly focused {@code Node} visibly indicating its focused state.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
@@ -75,7 +75,7 @@ public final class FocusTraversal {
 
     /**
      * Traverse focus to the previous focusable Node.
-     * A successful traversal results in the newly focused {@code Node} visible indicating its focused state.
+     * A successful traversal results in the newly focused {@code Node} visibly indicating its focused state.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
@@ -86,7 +86,7 @@ public final class FocusTraversal {
 
     /**
      * Traverse focus right.
-     * A successful traversal results in the newly focused {@code Node} visible indicating its focused state.
+     * A successful traversal results in the newly focused {@code Node} visibly indicating its focused state.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
@@ -97,7 +97,7 @@ public final class FocusTraversal {
 
     /**
      * Traverse focus upward.
-     * A successful traversal results in the newly focused {@code Node} visible indicating its focused state.
+     * A successful traversal results in the newly focused {@code Node} visibly indicating its focused state.
      *
      * @param node the node to traverse focus from
      * @return true if traversal was successful
