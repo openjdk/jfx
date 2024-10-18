@@ -57,7 +57,6 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
 import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -102,8 +101,7 @@ public abstract class Toolkit {
 
     private static final Map gradientMap = new WeakHashMap();
 
-    @SuppressWarnings("removal")
-    private static final boolean verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.verbose"));
+    private static final boolean verbose = Boolean.getBoolean("javafx.verbose");
 
     private static final String[] msLibNames = {
         "api-ms-win-core-console-l1-1-0",
@@ -200,13 +198,9 @@ public abstract class Toolkit {
             return TOOLKIT;
         }
 
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            // Get the javafx.version and javafx.runtime.version from a preconstructed
-            // java class, VersionInfo, created at build time.
-            VersionInfo.setupSystemProperties();
-            return null;
-        });
+        // Get the javafx.version and javafx.runtime.version from a preconstructed
+        // java class, VersionInfo, created at build time.
+        VersionInfo.setupSystemProperties();
 
         // Load required Microsoft runtime DLLs on Windows platforms
         if (PlatformUtil.isWindows()) {
@@ -216,9 +210,6 @@ public abstract class Toolkit {
         boolean userSpecifiedToolkit = true;
 
         // Check a system property to see if there is a specific toolkit to use.
-        // This is not a doPriviledged check so that applications running
-        // with a security manager cannot use this unless they have permission
-        // to read system properties.
         String forcedToolkit = null;
         try {
             forcedToolkit = System.getProperty("javafx.toolkit");
@@ -397,10 +388,7 @@ public abstract class Toolkit {
             throw new IllegalStateException("Invalid AccessControlContext");
         }
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            listener.pulse();
-            return null;
-        }, acc);
+        listener.pulse();
     }
 
     public void firePulse() {
@@ -536,15 +524,7 @@ public abstract class Toolkit {
     public void notifyWindowListeners(final List<TKStage> windows) {
         for (Map.Entry<TKListener,AccessControlContext> entry : toolkitListeners.entrySet()) {
             final TKListener listener = entry.getKey();
-            final AccessControlContext acc = entry.getValue();
-            if (acc == null) {
-                throw new IllegalStateException("Invalid AccessControlContext");
-            }
-
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                listener.changedTopLevelWindows(windows);
-                return null;
-            }, acc);
+            listener.changedTopLevelWindows(windows);
         }
     }
 

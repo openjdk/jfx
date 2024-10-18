@@ -28,9 +28,6 @@ package com.sun.javafx.tk.quantum;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.impl.PrismSettings;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /**
  * Class containing implementation for logging, and performance tracking.
  */
@@ -46,36 +43,19 @@ abstract class PerformanceTrackerHelper {
     }
 
     private static PerformanceTrackerHelper createInstance() {
-        @SuppressWarnings("removal")
-        PerformanceTrackerHelper trackerImpl = AccessController.doPrivileged(
-                new PrivilegedAction<PerformanceTrackerHelper>() {
-
-                    @Override
-                    public PerformanceTrackerHelper run() {
-                        try {
-                            if (PrismSettings.perfLog != null) {
-                                final PerformanceTrackerHelper trackerImpl =
-                                        new PerformanceTrackerDefaultImpl();
-
-                                if (PrismSettings.perfLogExitFlush) {
-                                    Runtime.getRuntime().addShutdownHook(
-                                            new Thread() {
-
-                                                @Override
-                                                public void run() {
-                                                    trackerImpl.outputLog();
-                                                }
-                                            });
-                                }
-
-                                return trackerImpl;
-                            }
-                        } catch (Throwable t) {
-                        }
-
-                        return null;
-                    }
-                });
+        PerformanceTrackerHelper trackerImpl = null;
+        try {
+            if (PrismSettings.perfLog != null) {
+                final PerformanceTrackerHelper trackerImpl1 = new PerformanceTrackerDefaultImpl();
+                if (PrismSettings.perfLogExitFlush) {
+                    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                        trackerImpl1.outputLog();
+                    }));
+                }
+                trackerImpl = trackerImpl1;
+            }
+        }catch (Throwable t) {
+        }
 
         if (trackerImpl == null) {
             trackerImpl = new PerformanceTrackerDummyImpl();
@@ -130,9 +110,7 @@ abstract class PerformanceTrackerHelper {
                 // Attempt to log launchTime, if not set already
                 if (PerformanceLogger.getStartTime() <= 0) {
                     // Standalone apps record launch time as sysprop
-                    @SuppressWarnings("removal")
-                    String launchTimeString = AccessController.doPrivileged(
-                            (PrivilegedAction<String>) () -> System.getProperty("launchTime"));
+                    String launchTimeString = System.getProperty("launchTime");
 
                     if (launchTimeString != null
                             && !launchTimeString.equals("")) {

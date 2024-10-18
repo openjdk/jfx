@@ -61,8 +61,6 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -136,70 +134,58 @@ import java.util.Optional;
 
 public final class QuantumToolkit extends Toolkit {
 
-    @SuppressWarnings("removal")
-    public static final boolean verbose =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.verbose"));
+    public static final boolean verbose = Boolean.getBoolean("quantum.verbose");
 
-    @SuppressWarnings("removal")
-    public static final boolean pulseDebug =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.pulse"));
+    public static final boolean pulseDebug = Boolean.getBoolean("quantum.pulse");
 
-    @SuppressWarnings("removal")
-    private static final boolean multithreaded =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                // If it is not specified, or it is true, then it should
-                // be true. Otherwise it should be false.
-                String value = System.getProperty("quantum.multithreaded");
-                if (value == null) return true;
-                final boolean result = Boolean.parseBoolean(value);
-                if (verbose) {
-                    System.out.println(result ? "Multi-Threading Enabled" : "Multi-Threading Disabled");
-                }
-                return result;
-            });
+    private static final boolean multithreaded = initMultithreaded();
+    private static boolean initMultithreaded() {
+        // If it is not specified, or it is true, then it should
+        // be true. Otherwise it should be false.
+        String value = System.getProperty("quantum.multithreaded");
+        if (value == null) return true;
+        final boolean result = Boolean.parseBoolean(value);
+        if (verbose) {
+            System.out.println(result ? "Multi-Threading Enabled" : "Multi-Threading Disabled");
+        }
+        return result;
+    }
 
-    @SuppressWarnings("removal")
-    private static boolean debug =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.debug"));
+    private static boolean debug = Boolean.getBoolean("quantum.debug");
 
-    @SuppressWarnings("removal")
-    private static Integer pulseHZ =
-            AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.animation.pulse"));
+    private static Integer pulseHZ = Integer.getInteger("javafx.animation.pulse");
 
-    @SuppressWarnings("removal")
-    static final boolean liveResize =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
-                String result = (PlatformUtil.isMac() || PlatformUtil.isWindows()) && !isSWT ? "true" : "false";
-                return "true".equals(System.getProperty("javafx.live.resize", result));
-            });
+    static final boolean liveResize = initLiveResize();
+    private static final boolean initLiveResize() {
+        boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
+        String result = (PlatformUtil.isMac() || PlatformUtil.isWindows()) && !isSWT ? "true" : "false";
+        return "true".equals(System.getProperty("javafx.live.resize", result));
+    }
 
-    @SuppressWarnings("removal")
-    static final boolean drawInPaint =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
-                String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
-                return "true".equals(System.getProperty("javafx.draw.in.paint", result));});
+    static final boolean drawInPaint = initDrawInPaint();
+    static final boolean initDrawInPaint() {
+        boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
+        String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
+        return "true".equals(System.getProperty("javafx.draw.in.paint", result));
+    }
 
-    @SuppressWarnings("removal")
-    private static boolean singleThreaded =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                Boolean result = Boolean.getBoolean("quantum.singlethreaded");
-                if (/*verbose &&*/ result) {
-                    System.out.println("Warning: Single GUI Threadiong is enabled, FPS should be slower");
-                }
-                return result;
-            });
+    private static final boolean singleThreaded = initSingleThreaded();
+    private static boolean initSingleThreaded() {
+        Boolean result = Boolean.getBoolean("quantum.singlethreaded");
+        if (/*verbose &&*/ result) {
+            System.out.println("Warning: Single GUI Threadiong is enabled, FPS should be slower");
+        }
+        return result;
+    }
 
-    @SuppressWarnings("removal")
-    private static boolean noRenderJobs =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                Boolean result = Boolean.getBoolean("quantum.norenderjobs");
-                if (/*verbose &&*/ result) {
-                    System.out.println("Warning: Quantum will not submit render jobs, nothing should draw");
-                }
-                return result;
-            });
+    private static final boolean noRenderJobs = initNoRenderJobs();
+    private static boolean initNoRenderJobs() {
+        Boolean result = Boolean.getBoolean("quantum.norenderjobs");
+        if (/*verbose &&*/ result) {
+            System.out.println("Warning: Quantum will not submit render jobs, nothing should draw");
+        }
+        return result;
+    }
 
     private class PulseTask {
         private volatile boolean isRunning;
@@ -280,11 +266,7 @@ public final class QuantumToolkit extends Toolkit {
                 }
             }
         };
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            Runtime.getRuntime().addShutdownHook(shutdownHook);
-            return null;
-        });
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
         return true;
     }
 
@@ -876,17 +858,13 @@ public final class QuantumToolkit extends Toolkit {
         super.exit();
     }
 
-    @SuppressWarnings("removal")
     public void dispose() {
         if (toolkitRunning.compareAndSet(true, false)) {
             pulseTimer.stop();
             renderer.stopRenderer();
 
             try {
-                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
-                    return null;
-                });
+                Runtime.getRuntime().removeShutdownHook(shutdownHook);
             } catch (IllegalStateException ignore) {
                 // throw when shutdown hook already removed
             }
