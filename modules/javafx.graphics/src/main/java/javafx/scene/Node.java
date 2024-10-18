@@ -26,8 +26,16 @@
 package javafx.scene;
 
 
-import com.sun.javafx.geometry.BoundsUtils;
-import com.sun.javafx.scene.traversal.TraversalMethod;
+import java.security.AccessControlContext;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -59,6 +67,8 @@ import javafx.collections.ObservableSet;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.PseudoClass;
+import javafx.css.Selector;
+import javafx.css.Style;
 import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
@@ -66,6 +76,11 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.CursorConverter;
+import javafx.css.converter.EffectConverter;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
@@ -98,28 +113,14 @@ import javafx.scene.input.SwipeEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.input.ZoomEvent;
+import javafx.scene.shape.Shape3D;
 import javafx.scene.text.Font;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.stage.Window;
 import javafx.util.Callback;
-import java.security.AccessControlContext;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.sun.glass.ui.Accessible;
 import com.sun.glass.ui.Application;
-import com.sun.javafx.util.Logging;
-import com.sun.javafx.util.TempState;
-import com.sun.javafx.util.Utils;
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
@@ -129,13 +130,6 @@ import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.TransitionTimer;
-import javafx.css.Selector;
-import javafx.css.Style;
-import javafx.css.converter.BooleanConverter;
-import javafx.css.converter.CursorConverter;
-import javafx.css.converter.EffectConverter;
-import javafx.css.converter.EnumConverter;
-import javafx.css.converter.SizeConverter;
 import com.sun.javafx.effect.EffectDirtyBits;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
@@ -146,6 +140,9 @@ import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.geometry.BoundsUtils;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CameraHelper;
@@ -160,15 +157,13 @@ import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.scene.transform.TransformUtils;
-import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.TempState;
+import com.sun.javafx.util.Utils;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.scenario.effect.EffectHelper;
-
-import javafx.scene.shape.Shape3D;
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.logging.PlatformLogger.Level;
 
 /**
  * Base class for scene graph nodes. A scene graph is a set of tree data structures
@@ -526,11 +521,6 @@ public abstract class Node implements EventTarget, Styleable {
             @Override
             public BooleanProperty showMnemonicsProperty(Node node) {
                 return node.showMnemonicsProperty();
-            }
-
-            @Override
-            public boolean traverse(Node node, Direction direction, TraversalMethod method) {
-                return node.traverse(direction, method);
             }
 
             @Override
@@ -8516,19 +8506,6 @@ public abstract class Node implements EventTarget, Styleable {
         if (getScene() != null) {
             getScene().requestFocus(this, true);
         }
-    }
-
-    /**
-     * Traverses from this node in the direction indicated. Note that this
-     * node need not actually have the focus, nor need it be focusTraversable.
-     * However, the node must be part of a scene, otherwise this request
-     * is ignored.
-     */
-    final boolean traverse(Direction dir, TraversalMethod method) {
-        if (getScene() == null) {
-            return false;
-        }
-        return getScene().traverse(this, dir, method);
     }
 
     //--------------------------

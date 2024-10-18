@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,12 +23,9 @@
  * questions.
  */
 
-package com.sun.javafx.scene.traversal;
-
-public abstract class TopMostTraversalEngineShim extends TopMostTraversalEngine {
-
-    public TopMostTraversalEngineShim(Algorithm algorithm) {
-        super(algorithm);
-    }
-
-}
+/**
+ * Provides the set of classes for focus traversal.
+ *
+ * @since 24
+ */
+package javafx.scene.traversal;
