@@ -25,28 +25,27 @@
 
 package javafx.scene;
 
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.SubSceneTraversalEngine;
-import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalMethod;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
-import javafx.beans.property.*;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.Stylesheet;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
 import javafx.scene.input.PickResult;
 import javafx.scene.paint.Paint;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
@@ -57,8 +56,6 @@ import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.tk.Toolkit;
-
-import com.sun.javafx.logging.PlatformLogger;
 
 /**
  * The {@code SubScene} class is the container for content in a scene graph.
@@ -766,12 +763,6 @@ public class SubScene extends Node {
             }
             dirtyLayout = false;
         }
-    }
-
-    private TopMostTraversalEngine traversalEngine = new SubSceneTraversalEngine(this);
-
-    boolean traverse(Node node, Direction dir, TraversalMethod method) {
-        return traversalEngine.trav(node, dir, method) != null;
     }
 
     private enum SubSceneDirtyBits {
