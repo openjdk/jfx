@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -158,6 +158,15 @@ public enum ConditionalFeature {
      * @since JavaFX 8.0
      */
     UNIFIED_WINDOW,
+
+    /**
+     * Indicates that a system supports {@link javafx.stage.StageStyle#EXTENDED}.
+     * <p>
+     * This feature is currently supported on Windows, Linux, and macOS.
+     *
+     * @since 24
+     */
+    EXTENDED_WINDOW,
 
     /**
      * Indicates whether or not controls should use two-level focus. Two-level

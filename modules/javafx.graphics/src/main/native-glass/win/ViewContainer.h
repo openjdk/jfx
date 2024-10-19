@@ -70,6 +70,7 @@ class ViewContainer {
         void HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         void HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         BOOL HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+        void HandleViewNonClientMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         BOOL HandleViewInputMethodEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         LRESULT HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM lParam);
 

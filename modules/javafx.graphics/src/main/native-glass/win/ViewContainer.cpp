@@ -934,6 +934,128 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     return TRUE;
 }
 
+void ViewContainer::HandleViewNonClientMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (!GetGlassView()) {
+        return;
+    }
+
+    int type = 0;
+    int button = com_sun_glass_events_MouseEvent_BUTTON_NONE;
+    POINT pt;   // client coords
+
+    if (msg == WM_NCMOUSELEAVE) {
+        type = com_sun_glass_events_MouseEvent_NC_EXIT;
+        pt.x = GET_X_LPARAM(lParam);
+        pt.y = GET_Y_LPARAM(lParam);
+        ::MapWindowPoints(NULL, hwnd, &pt, 1);
+        m_bTrackingMouse = FALSE;
+        m_lastMouseMovePosition = -1;
+    } else if (msg >= WM_NCMOUSEMOVE && msg <= WM_NCXBUTTONDBLCLK) {
+        pt.x = GET_X_LPARAM(lParam);
+        pt.y = GET_Y_LPARAM(lParam);
+        ::MapWindowPoints(NULL, hwnd, &pt, 1);
+
+        switch (msg) {
+            case WM_NCMOUSEMOVE:
+                if (lParam == m_lastMouseMovePosition) {
+                    // Avoid sending synthetic NC_MOVE events if
+                    // the pointer hasn't moved actually.
+                    // Just consume the messages.
+                    return;
+                }
+
+                m_lastMouseMovePosition = lParam;
+                type = com_sun_glass_events_MouseEvent_NC_MOVE;
+                break;
+            case WM_NCLBUTTONDOWN:
+                type = com_sun_glass_events_MouseEvent_NC_DOWN;
+                button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
+                break;
+            case WM_NCLBUTTONUP:
+                type = com_sun_glass_events_MouseEvent_NC_UP;
+                button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
+                break;
+            case WM_NCRBUTTONDOWN:
+                type = com_sun_glass_events_MouseEvent_NC_DOWN;
+                button = com_sun_glass_events_MouseEvent_BUTTON_RIGHT;
+                break;
+            case WM_NCRBUTTONUP:
+                type = com_sun_glass_events_MouseEvent_NC_UP;
+                button = com_sun_glass_events_MouseEvent_BUTTON_RIGHT;
+                break;
+            case WM_NCMBUTTONDOWN:
+                type = com_sun_glass_events_MouseEvent_NC_DOWN;
+                button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+                break;
+            case WM_NCMBUTTONUP:
+                type = com_sun_glass_events_MouseEvent_NC_UP;
+                button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+                break;
+            case WM_NCXBUTTONDOWN:
+                type = com_sun_glass_events_MouseEvent_NC_DOWN;
+                button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1
+                    ? com_sun_glass_events_MouseEvent_BUTTON_BACK
+                    : com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
+                break;
+            case WM_NCXBUTTONUP:
+                type = com_sun_glass_events_MouseEvent_NC_UP;
+                button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1
+                    ? com_sun_glass_events_MouseEvent_BUTTON_BACK
+                    : com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
+                break;
+        }
+    }
+
+    // Event was not handled
+    if (type == 0) {
+        return;
+    }
+
+    // get screen coords
+    POINT ptAbs = pt;
+    ::ClientToScreen(hwnd, &ptAbs);
+
+    // unmirror the x coordinate
+    LONG style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
+    if (style & WS_EX_LAYOUTRTL) {
+        RECT rect = {0};
+        ::GetClientRect(hwnd, &rect);
+        pt.x = max(0, rect.right - rect.left) - pt.x;
+    }
+
+    jint jModifiers = GetModifiers();
+    jboolean isSynthesized = jboolean(IsTouchEvent());
+    JNIEnv* env = GetEnv();
+
+    if (!m_bTrackingMouse && type != com_sun_glass_events_MouseEvent_NC_EXIT) {
+        TRACKMOUSEEVENT trackData;
+        trackData.cbSize = sizeof(trackData);
+        trackData.dwFlags = TME_LEAVE | TME_NONCLIENT;
+        trackData.hwndTrack = hwnd;
+        trackData.dwHoverTime = HOVER_DEFAULT;
+
+        if (::TrackMouseEvent(&trackData)) {
+            // Mouse tracking will be canceled automatically upon receiving WM_NCMOUSELEAVE
+            m_bTrackingMouse = TRUE;
+        }
+
+        env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
+            com_sun_glass_events_MouseEvent_NC_ENTER,
+            com_sun_glass_events_MouseEvent_BUTTON_NONE,
+            pt.x, pt.y, ptAbs.x, ptAbs.y,
+            jModifiers, JNI_FALSE, isSynthesized);
+        CheckAndClearException(env);
+    }
+
+    env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
+        type, button, pt.x, pt.y, ptAbs.x, ptAbs.y,
+        jModifiers,
+        type == com_sun_glass_events_MouseEvent_NC_UP && button == com_sun_glass_events_MouseEvent_BUTTON_RIGHT,
+        isSynthesized);
+    CheckAndClearException(env);
+}
+
 void ViewContainer::NotifyCaptureChanged(HWND hwnd, HWND to)
 {
     m_mouseButtonDownCounter = 0;
@@ -948,7 +1070,7 @@ void ViewContainer::ResetMouseTracking(HWND hwnd)
     // We don't expect WM_MOUSELEAVE anymore, so we cancel mouse tracking manually
     TRACKMOUSEEVENT trackData;
     trackData.cbSize = sizeof(trackData);
-    trackData.dwFlags = TME_LEAVE | TME_CANCEL;
+    trackData.dwFlags = TME_LEAVE | TME_NONCLIENT | TME_CANCEL;
     trackData.hwndTrack = hwnd;
     trackData.dwHoverTime = HOVER_DEFAULT;
     ::TrackMouseEvent(&trackData);

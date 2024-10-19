@@ -463,6 +463,11 @@ final class GtkApplication extends Application implements
     }
 
     @Override
+    protected boolean _supportsExtendedWindows() {
+        return true;
+    }
+
+    @Override
     protected native int _getKeyCodeForChar(char c, int hint);
 
     @Override

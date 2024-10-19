@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,4 +120,13 @@ public interface TKSceneListener {
     public void touchEventEnd();
 
     public Accessible getSceneAccessible();
+
+    /**
+     * Tests whether the specified coordinate identifies a draggable area.
+     *
+     * @param x the X coordinate relative to the scene
+     * @param y the Y coordinate relative to the scene
+     * @return {@code true} if the area is draggable, {@code false} otherwise
+     */
+    public boolean dragAreaHitTest(double x, double y);
 }

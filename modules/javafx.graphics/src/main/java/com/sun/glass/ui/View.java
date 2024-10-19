@@ -365,6 +365,10 @@ public abstract class View {
                                             int yAbs) {
         }
 
+        public boolean handleDragAreaHitTestEvent(double x, double y) {
+            return false;
+        }
+
         public Accessible getSceneAccessible() {
             return null;
         }
@@ -395,6 +399,7 @@ public abstract class View {
      */
     private volatile long ptr; // Native handle (NSView*, or internal structure pointer)
     private Window window; // parent window
+    private NonClientHandler nonClientHandler;
     private EventHandler eventHandler;
 
     private int width = -1;     // not set
@@ -494,6 +499,12 @@ public abstract class View {
         this.window = window;
         _setParent(this.ptr, window == null ? 0L : window.getNativeHandle());
         this.isValid = this.ptr != 0 && window != null;
+
+        if (this.isValid && window.isExtendedWindow()) {
+            this.nonClientHandler = window.getNonClientHandler();
+        } else {
+            this.nonClientHandler = null;
+        }
     }
 
     // package private
@@ -913,15 +924,6 @@ public abstract class View {
     protected void notifyMouse(int type, int button, int x, int y, int xAbs,
                                int yAbs, int modifiers, boolean isPopupTrigger,
                                boolean isSynthesized) {
-        // gznote: optimize - only call for undecorated Windows!
-        if (this.window != null) {
-            // handled by window (programmatical move/resize)
-            if (this.window.handleMouseEvent(type, button, x, y, xAbs, yAbs)) {
-                // The evnet has been processed by Glass
-                return;
-            }
-        }
-
         long now = System.nanoTime();
         if (type == MouseEvent.DOWN) {
             View lastClickedView = View.lastClickedView == null ? null : View.lastClickedView.get();
@@ -943,6 +945,20 @@ public abstract class View {
             }
 
             lastClickedTime = now;
+        }
+
+        // If we have a non-client handler, we give it the first chance to handle the event.
+        // Note that a full-screen window has no non-client area, and thus the non-client handler
+        // is not notified.
+        if (!inFullscreen
+                && nonClientHandler != null
+                && nonClientHandler.handleMouseEvent(type, button, x, y, xAbs, yAbs, clickCount)) {
+            return;
+        }
+
+        // We never send non-client events to the application.
+        if (MouseEvent.isNonClientEvent(type)) {
+            return;
         }
 
         handleMouseEvent(now, type, button, x, y, xAbs, yAbs,

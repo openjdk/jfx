@@ -76,6 +76,7 @@ import javafx.event.*;
 import javafx.geometry.*;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
+import javafx.scene.layout.HeaderBarBase;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.PopupWindow;
@@ -566,6 +567,10 @@ public class Scene implements EventTarget {
     }
 
     private void doCSSPass() {
+        if (peer != null) {
+            peer.processOverlayCSS();
+        }
+
         final Parent sceneRoot = getRoot();
         //
         // RT-17547: when the tree is synchronized, the dirty bits are
@@ -592,6 +597,10 @@ public class Scene implements EventTarget {
     }
 
     void doLayoutPass() {
+        if (peer != null) {
+            peer.layoutOverlay();
+        }
+
         final Parent r = getRoot();
         if (r != null) {
             r.layout();
@@ -2630,6 +2639,7 @@ public class Scene implements EventTarget {
                         if (PULSE_LOGGING_ENABLED) {
                             PulseLogger.newPhase("Copy state to render graph");
                         }
+                        peer.synchronizeOverlay();
                         syncLights();
                         synchronizeSceneProperties();
                         // Run the synchronizer
@@ -2987,6 +2997,35 @@ public class Scene implements EventTarget {
                 // gesture finished
                 touchEventSetId = 0;
             }
+        }
+
+        private final PickRay pickRay = new PickRay();
+
+        @Override
+        public boolean dragAreaHitTest(double x, double y) {
+            Node root = Scene.this.getRoot();
+            if (root != null) {
+                pickRay.set(x, y, 1, 0, Double.POSITIVE_INFINITY);
+                var pickResultChooser = new PickResultChooser();
+                root.pickNode(pickRay, pickResultChooser);
+                var intersectedNode = pickResultChooser.getIntersectedNode();
+
+                if (intersectedNode instanceof HeaderBarBase) {
+                    return true;
+                }
+
+                while (intersectedNode != null) {
+                    if (HeaderBarBase.isDraggable(intersectedNode) instanceof Boolean value) {
+                        return value;
+                    }
+
+                    intersectedNode = intersectedNode.getParent();
+                }
+
+                return false;
+            }
+
+            return false;
         }
 
         @Override

@@ -407,6 +407,11 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return true;
     }
 
+    @Override
+    protected boolean _supportsExtendedWindows() {
+        return true;
+    }
+
     @Override native protected boolean _supportsSystemMenu();
 
     // NOTE: this will not return a valid result until the native _runloop

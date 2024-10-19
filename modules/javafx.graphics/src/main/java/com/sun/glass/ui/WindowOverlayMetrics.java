@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,47 +23,23 @@
  * questions.
  */
 
-#ifndef _GLASS_COMMON_
-#define _GLASS_COMMON_
+package com.sun.glass.ui;
 
-#ifndef _WIN32_WINNT
-    #define _WIN32_WINNT 0x0601
-#endif
-#ifndef _WIN32_IE
-    #define _WIN32_IE 0x0500
-#endif
+import javafx.geometry.Dimension2D;
+import javafx.geometry.HorizontalDirection;
+import javafx.stage.StageStyle;
+import java.util.Objects;
 
-#ifndef _WIN32_WINNT_
-    #define _WIN32_WINNT_ _WIN32_WINNT
-#endif
+/**
+ * Provides metrics about the window buttons of {@link StageStyle#EXTENDED} windows.
+ *
+ * @param placement the placement of the window buttons
+ * @param size the size of the window buttons
+ */
+public record WindowOverlayMetrics(HorizontalDirection placement, Dimension2D size) {
 
-#pragma warning(disable : 4675)
-
-#include <assert.h>
-#include <comdef.h>
-#include <comutil.h>
-#include <imm.h>
-#include <jni.h>
-#include <malloc.h>
-#include <manipulations.h>
-#include <memory>
-#include <mmsystem.h>
-#include <new>
-#include <ole2.h>
-#include <shlobj.h>
-#include <stdio.h>
-#include <string.h>
-#include <Tpcshrd.h>
-#include <tchar.h>
-#include <vector>
-#include <wchar.h>
-#include <windows.h>
-#include <windowsx.h>
-#include <shellapi.h>
-#include <versionhelpers.h>
-
-#include "Utils.h"
-#include "OleUtils.h"
-#include "Dwmapi.h"
-
-#endif /* #ifndef _GLASS_COMMON_ */
+    public WindowOverlayMetrics {
+        Objects.requireNonNull(placement, "placement cannot be null");
+        Objects.requireNonNull(size, "size cannot be null");
+    }
+}

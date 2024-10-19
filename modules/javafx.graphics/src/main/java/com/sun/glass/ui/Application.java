@@ -714,6 +714,12 @@ public abstract class Application {
         return _supportsUnifiedWindows();
     }
 
+    protected abstract boolean _supportsExtendedWindows();
+    public final boolean supportsExtendedWindows() {
+        checkEventThread();
+        return _supportsExtendedWindows();
+    }
+
     protected boolean _supportsSystemMenu() {
         // Overridden in subclasses
         return false;
