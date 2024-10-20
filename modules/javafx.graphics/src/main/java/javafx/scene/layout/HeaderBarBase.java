@@ -42,7 +42,7 @@ import javafx.util.Subscription;
 /**
  * Base class for a client-area header bar that is used as a replacement for the system-provided header bar
  * in stages with the {@link StageStyle#EXTENDED} style. This class is intended for application developers
- * to use as a starting point for custom header bar implementations, and it enables the <em>drag to move</em>
+ * to use as a starting point for custom header bar implementations, and it enables the <em>click-and-drag</em>
  * and <em>double-click to maximize</em> behaviors that are usually afforded by system-provided header bars.
  * The entire {@code HeaderBarBase} background is draggable by default, but its content is not. Applications
  * can specify draggable content nodes of the {@code HeaderBarBase} with the {@link #setDraggable} method.
