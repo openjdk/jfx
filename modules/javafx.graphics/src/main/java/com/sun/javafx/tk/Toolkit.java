@@ -520,10 +520,8 @@ public abstract class Toolkit {
         }
     }
 
-    @SuppressWarnings("removal")
     public void notifyWindowListeners(final List<TKStage> windows) {
-        for (Map.Entry<TKListener,AccessControlContext> entry : toolkitListeners.entrySet()) {
-            final TKListener listener = entry.getKey();
+        for (TKListener listener : toolkitListeners.keySet()) {
             listener.changedTopLevelWindows(windows);
         }
     }
