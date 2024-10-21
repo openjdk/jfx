@@ -238,7 +238,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      * @param format data format
      */
     public void copyText(DataFormat format) {
-        behavior.copy(format);
+        behavior.copyWithFormat(format);
     }
 
     /**
@@ -249,7 +249,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      * @param format data format
      */
     public void pasteText(DataFormat format) {
-        behavior.paste(format);
+        behavior.pasteWithFormat(format);
     }
 
     /**

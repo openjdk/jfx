@@ -336,12 +336,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         return false;
     }
 
-    public void insertTab() {
+    public boolean insertTab() {
         if (canEdit()) {
             handleTypedChar("\t");
-        } else {
-            traverseNext();
+            return true;
         }
+        return false;
     }
 
     public void insertLineBreak() {
@@ -1123,12 +1123,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void copy() {
-        copy(false);
+        copyWithCut(false);
     }
 
     public void cut() {
         if (canEdit()) {
-            copy(true);
+            copyWithCut(true);
         }
     }
 
@@ -1141,7 +1141,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    public void paste(DataFormat f) {
+    public void pasteWithFormat(DataFormat f) {
         if (canEdit()) {
             Clipboard c = Clipboard.getSystemClipboard();
             if (c.hasContent(f)) {
@@ -1151,7 +1151,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void pastePlainText() {
-        paste(DataFormat.PLAIN_TEXT);
+        pasteWithFormat(DataFormat.PLAIN_TEXT);
     }
 
     /**
@@ -1199,7 +1199,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    protected void copy(boolean cut) {
+    protected void copyWithCut(boolean cut) {
         RichTextArea control = getControl();
         if (control.hasNonEmptySelection()) {
             StyledTextModel m = control.getModel(); // non null at this point
@@ -1238,7 +1238,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    public void copy(DataFormat f) {
+    public void copyWithFormat(DataFormat f) {
         RichTextArea control = getControl();
         try {
             if (control.hasNonEmptySelection()) {
@@ -1269,17 +1269,17 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * also has the effect of clearing the selection.
      */
     public void previousWord() {
-        moveCaret(false, this::previousWord);
+        moveCaret(false, this::toPreviousWord);
     }
 
     /** moves the caret to the beginning of the previos word (LTR) or next word (RTL) */
     public void leftWord() {
-        leftWord(false);
+        toLeftWord(false);
     }
 
     /** moves the caret to the beginning of the next word (LTR) or previous word (RTL) */
     public void rightWord() {
-        rightWord(false);
+        toRightWord(false);
     }
 
     /**
@@ -1295,7 +1295,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * also has the effect of clearing the selection.
      */
     public void nextWordEnd() {
-        moveCaret(false, this::nextWordEnd);
+        moveCaret(false, this::toWordEnd);
     }
 
     /**
@@ -1304,7 +1304,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * moved to the beginning of previous word.
      */
     public void selectWordPrevious() {
-        moveCaret(true, this::previousWord);
+        moveCaret(true, this::toPreviousWord);
     }
 
     /**
@@ -1321,7 +1321,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * the selection to be cleared.
      */
     public void selectNextWordEnd() {
-        moveCaret(true, this::nextWordEnd);
+        moveCaret(true, this::toWordEnd);
     }
 
     /**
@@ -1331,7 +1331,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * moved to the beginning of previous word.
      */
     public void selectWordLeft() {
-        leftWord(true);
+        toLeftWord(true);
     }
 
     /**
@@ -1341,34 +1341,34 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * moved to the beginning of next word.
      */
     public void selectWordRight() {
-        rightWord(true);
+        toRightWord(true);
     }
 
-    protected void leftWord(boolean extendSelection) {
+    protected void toLeftWord(boolean extendSelection) {
         if (isRTLText()) {
             if (isWindows()) {
                 moveCaret(extendSelection, this::nextWordBeg);
             } else {
-                moveCaret(extendSelection, this::nextWordEnd);
+                moveCaret(extendSelection, this::toWordEnd);
             }
         } else {
-            moveCaret(extendSelection, this::previousWord);
+            moveCaret(extendSelection, this::toPreviousWord);
         }
     }
 
-    protected void rightWord(boolean extendSelection) {
+    protected void toRightWord(boolean extendSelection) {
         if (isRTLText()) {
-            moveCaret(extendSelection, this::previousWord);
+            moveCaret(extendSelection, this::toPreviousWord);
         } else {
             if (isWindows()) {
                 moveCaret(extendSelection, this::nextWordBeg);
             } else {
-                moveCaret(extendSelection, this::nextWordEnd);
+                moveCaret(extendSelection, this::toWordEnd);
             }
         }
     }
 
-    protected TextPos previousWord(RichTextArea control, TextPos pos) {
+    protected TextPos toPreviousWord(RichTextArea control, TextPos pos) {
         int index = pos.index();
         int offset = pos.offset();
         BreakIterator br = null;
@@ -1457,7 +1457,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     // skips empty paragraphs
-    protected TextPos nextWordEnd(RichTextArea control, TextPos pos) {
+    protected TextPos toWordEnd(RichTextArea control, TextPos pos) {
         int index = pos.index();
         int offset = pos.offset();
         boolean skipEmpty = true;
@@ -1570,11 +1570,11 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void deleteWordNextEnd() {
-        deleteIgnoreSelection(this::nextWordEnd);
+        deleteIgnoreSelection(this::toWordEnd);
     }
 
     public void deleteWordPrevious() {
-        deleteIgnoreSelection(this::previousWord);
+        deleteIgnoreSelection(this::toPreviousWord);
     }
 
     private void deleteIgnoreSelection(BiFunction<RichTextArea, TextPos, TextPos> getter) {
