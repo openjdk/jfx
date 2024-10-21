@@ -65,7 +65,6 @@ public class Node_transitionEvent_Test {
         scene = new Scene(new Group(node));
         stage = new Stage();
         stage.setScene(scene);
-        stage.show();
     }
 
     @AfterEach
@@ -89,7 +88,7 @@ public class Node_transitionEvent_Test {
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
-        node.applyCss();
+        stage.show();
 
         List<TransitionEvent> trace = new ArrayList<>();
         node.addEventHandler(TransitionEvent.ANY, trace::add);
@@ -132,7 +131,7 @@ public class Node_transitionEvent_Test {
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
-        node.applyCss();
+        stage.show();
 
         List<TransitionEvent> trace = new ArrayList<>();
         node.addEventHandler(TransitionEvent.ANY, trace::add);
@@ -161,7 +160,7 @@ public class Node_transitionEvent_Test {
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
-        node.applyCss();
+        stage.show();
 
         List<TransitionEvent> trace = new ArrayList<>();
         node.addEventHandler(TransitionEvent.ANY, trace::add);
@@ -199,7 +198,7 @@ public class Node_transitionEvent_Test {
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
-        node.applyCss();
+        stage.show();
 
         List<TransitionEvent> trace = new ArrayList<>();
         node.addEventHandler(TransitionEvent.ANY, trace::add);
@@ -237,7 +236,7 @@ public class Node_transitionEvent_Test {
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
-        node.applyCss();
+        stage.show();
 
         List<TransitionEvent> trace = new ArrayList<>();
         node.addEventHandler(TransitionEvent.ANY, trace::add);

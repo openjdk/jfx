@@ -71,9 +71,8 @@ public abstract class StyleableLongProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        // If this.origin == null, we're setting the value for the first time.
-        // No transition should be started in this case.
-        TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
+        // If the value is applied for the first time, we don't start a transition.
+        TransitionDefinition transition = getBean() instanceof Node node && !NodeHelper.isInitialCssState(node) ?
             NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
         long newValue = v != null ? v.longValue() : 0;

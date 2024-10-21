@@ -70,7 +70,8 @@ public abstract class StyleableFloatProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
+        // If the value is applied for the first time, we don't start a transition.
+        TransitionDefinition transition = getBean() instanceof Node node && !NodeHelper.isInitialCssState(node) ?
             NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
         float newValue = v != null ? v.floatValue() : 0;
