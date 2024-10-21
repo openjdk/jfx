@@ -379,10 +379,13 @@ public class ImageStorage {
                         }
                     }
 
+                    IOException mainException = null;
                     if (theStream == null) {
                         try {
                             theStream = ImageTools.createInputStream(input);
-                        } catch (IOException ignored) {
+                        } catch (IOException e) {
+                            // hold on to this exception for a moment, in case below fallback fails too
+                            mainException = e;
                         }
                     }
 
@@ -391,10 +394,10 @@ public class ImageStorage {
                             // last fallback, try to see if the file exists with @1x suffix
                             String scaled1xName = ImageTools.getScaledImageName(input, 1);
                             theStream = ImageTools.createInputStream(scaled1xName);
-                        } catch (IOException ignored) {
-                            // landing here means the main route failed, so just redo createInputStream
-                            // on main input file to get the proper exception thrown
-                            ImageTools.createInputStream(input);
+                        } catch (IOException e) {
+                            // fallback failed, throw previous exception with this one as suppressed
+                            mainException.addSuppressed(e);
+                            throw mainException;
                         }
                     }
 
