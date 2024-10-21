@@ -28,47 +28,53 @@ package com.sun.javafx.image.impl;
 import com.sun.javafx.image.AlphaType;
 import com.sun.javafx.image.BytePixelGetter;
 import com.sun.javafx.image.BytePixelSetter;
-import com.sun.javafx.image.IndexedToBytePixelConverter;
+import com.sun.javafx.image.ByteToBytePixelConverter;
 import com.sun.javafx.image.PixelUtils;
 import java.nio.ByteBuffer;
 
-abstract class BaseIndexedToByteConverter implements IndexedToBytePixelConverter {
+abstract class BaseIndexedToByteConverter implements ByteToBytePixelConverter {
 
     static abstract class IndexedGetter implements BytePixelGetter {
         final int[] preColors;
         final int[] nonPreColors;
-        private final Boolean premultiplied;
+        private final AlphaType alphaType;
 
-        IndexedGetter(int[] colors, Boolean premultiplied) {
-            this.premultiplied = premultiplied;
+        IndexedGetter(int[] colors, AlphaType alphaType) {
+            int[] preColors = null, nonPreColors = null;
 
-            if (premultiplied == null) {
-                this.nonPreColors = colors;
-                this.preColors = colors;
-            } else if (premultiplied) {
-                this.preColors = colors;
-                this.nonPreColors = new int[colors.length];
-
-                for (int i = 0; i < colors.length; i++) {
-                    nonPreColors[i] = PixelUtils.PretoNonPre(colors[i]);
+            switch (alphaType) {
+                case OPAQUE -> {
+                    nonPreColors = colors;
+                    preColors = colors;
                 }
-            } else {
-                this.nonPreColors = colors;
-                this.preColors = new int[colors.length];
 
-                for (int i = 0; i < colors.length; i++) {
-                    preColors[i] = PixelUtils.NonPretoPre(colors[i]);
+                case PREMULTIPLIED -> {
+                    preColors = colors;
+                    nonPreColors = new int[colors.length];
+
+                    for (int i = 0; i < colors.length; i++) {
+                        nonPreColors[i] = PixelUtils.PretoNonPre(colors[i]);
+                    }
+                }
+
+                case NONPREMULTIPLIED -> {
+                    nonPreColors = colors;
+                    preColors = new int[colors.length];
+
+                    for (int i = 0; i < colors.length; i++) {
+                        preColors[i] = PixelUtils.NonPretoPre(colors[i]);
+                    }
                 }
             }
+
+            this.alphaType = alphaType;
+            this.preColors = preColors;
+            this.nonPreColors = nonPreColors;
         }
 
         @Override
         public AlphaType getAlphaType() {
-            return premultiplied == null
-                ? AlphaType.OPAQUE
-                : premultiplied
-                    ? AlphaType.PREMULTIPLIED
-                    : AlphaType.NONPREMULTIPLIED;
+            return alphaType;
         }
     }
 
@@ -94,37 +100,37 @@ abstract class BaseIndexedToByteConverter implements IndexedToBytePixelConverter
         return setter;
     }
 
-    abstract void doConvert(byte[] srcarr, int srcoff, int srcscanbits,
+    abstract void doConvert(byte[] srcarr, int srcoff, int srcscanbytes,
                             byte[] dstarr, int dstoff, int dstscanbytes,
                             int w, int h);
 
-    abstract void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbits,
+    abstract void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
                             ByteBuffer dstbuf, int dstoff, int dstscanbytes,
                             int w, int h);
 
     @Override
-    public final void convert(byte[] srcarr, int srcoff, int srcscanbits,
+    public final void convert(byte[] srcarr, int srcoff, int srcscanbytes,
                               byte[] dstarr, int dstoff, int dstscanbytes,
                               int w, int h) {
         if (w <= 0 || h <= 0) return;
 
-        if (srcscanbits == w * nSrcElems && dstscanbytes == w * nDstElems) {
+        if (srcscanbytes == w * nSrcElems && dstscanbytes == w * nDstElems) {
             w *= h;
             h = 1;
         }
 
-        doConvert(srcarr, srcoff, srcscanbits,
+        doConvert(srcarr, srcoff, srcscanbytes,
                   dstarr, dstoff, dstscanbytes,
                   w, h);
     }
 
     @Override
-    public final void convert(ByteBuffer srcbuf, int srcoff, int srcscanbits,
+    public final void convert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
                               ByteBuffer dstbuf, int dstoff, int dstscanbytes,
                               int w, int h) {
         if (w <= 0 || h <= 0) return;
 
-        if (srcscanbits == w * nSrcElems && dstscanbytes == w * nDstElems) {
+        if (srcscanbytes == w * nSrcElems && dstscanbytes == w * nDstElems) {
             w *= h;
             h = 1;
         }
@@ -132,23 +138,23 @@ abstract class BaseIndexedToByteConverter implements IndexedToBytePixelConverter
         if (srcbuf.hasArray() && dstbuf.hasArray()) {
             srcoff += srcbuf.arrayOffset();
             dstoff += dstbuf.arrayOffset();
-            doConvert(srcbuf.array(), srcoff, srcscanbits,
+            doConvert(srcbuf.array(), srcoff, srcscanbytes,
                       dstbuf.array(), dstoff, dstscanbytes,
                       w, h);
         } else {
-            doConvert(srcbuf, srcoff, srcscanbits,
+            doConvert(srcbuf, srcoff, srcscanbytes,
                       dstbuf, dstoff, dstscanbytes,
                       w, h);
         }
     }
 
     @Override
-    public final void convert(ByteBuffer srcbuf, int srcoff, int srcscanbits,
+    public final void convert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
                               byte[] dstarr, int dstoff, int dstscanbytes,
                               int w, int h) {
         if (w <= 0 || h <= 0) return;
 
-        if (srcscanbits == w * nSrcElems && dstscanbytes == w * nDstElems) {
+        if (srcscanbytes == w * nSrcElems && dstscanbytes == w * nDstElems) {
             w *= h;
             h = 1;
         }
@@ -156,24 +162,24 @@ abstract class BaseIndexedToByteConverter implements IndexedToBytePixelConverter
         if (srcbuf.hasArray()) {
             byte[] srcarr = srcbuf.array();
             srcoff += srcbuf.arrayOffset();
-            doConvert(srcarr, srcoff, srcscanbits,
+            doConvert(srcarr, srcoff, srcscanbytes,
                       dstarr, dstoff, dstscanbytes,
                       w, h);
         } else {
             ByteBuffer dstbuf = ByteBuffer.wrap(dstarr);
-            doConvert(srcbuf, srcoff, srcscanbits,
+            doConvert(srcbuf, srcoff, srcscanbytes,
                       dstbuf, dstoff, dstscanbytes,
                       w, h);
         }
     }
 
     @Override
-    public final void convert(byte[] srcarr, int srcoff, int srcscanbits,
+    public final void convert(byte[] srcarr, int srcoff, int srcscanbytes,
                               ByteBuffer dstbuf, int dstoff, int dstscanbytes,
                               int w, int h) {
         if (w <= 0 || h <= 0) return;
 
-        if (srcscanbits == w * nSrcElems && dstscanbytes == w * nDstElems) {
+        if (srcscanbytes == w * nSrcElems && dstscanbytes == w * nDstElems) {
             w *= h;
             h = 1;
         }
@@ -181,12 +187,12 @@ abstract class BaseIndexedToByteConverter implements IndexedToBytePixelConverter
         if (dstbuf.hasArray()) {
             byte[] dstarr = dstbuf.array();
             dstoff += dstbuf.arrayOffset();
-            doConvert(srcarr, srcoff, srcscanbits,
+            doConvert(srcarr, srcoff, srcscanbytes,
                       dstarr, dstoff, dstscanbytes,
                       w, h);
         } else {
             ByteBuffer srcbuf = ByteBuffer.wrap(srcarr);
-            doConvert(srcbuf, srcoff, srcscanbits,
+            doConvert(srcbuf, srcoff, srcscanbytes,
                       dstbuf, dstoff, dstscanbytes,
                       w, h);
         }

@@ -42,10 +42,13 @@ import javax.imageio.stream.ImageInputStream;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.awt.image.ComponentSampleModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferInt;
 import java.awt.image.IndexColorModel;
+import java.awt.image.MultiPixelPackedSampleModel;
+import java.awt.image.SinglePixelPackedSampleModel;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -196,14 +199,23 @@ public class XImageLoader implements ImageLoader {
                 var colorModel = (IndexColorModel)image.getColorModel();
                 var palette = new int[colorModel.getMapSize()];
                 colorModel.getRGBs(palette);
+
+                var imageType = colorModel.hasAlpha()
+                    ? colorModel.isAlphaPremultiplied()
+                        ? ImageStorage.ImageType.PALETTE_ALPHA_PRE
+                        : ImageStorage.ImageType.PALETTE_ALPHA
+                    : ImageStorage.ImageType.PALETTE;
+
+                var scanlineStride = switch(image.getSampleModel()) {
+                    case ComponentSampleModel m -> m.getScanlineStride();
+                    case MultiPixelPackedSampleModel m -> m.getScanlineStride();
+                    case SinglePixelPackedSampleModel m -> m.getScanlineStride();
+                    default -> throw new IllegalStateException("Unsupported sample model: " + image.getSampleModel());
+                };
+
                 yield new ImageFrame(
-                    colorModel.hasAlpha()
-                        ? colorModel.isAlphaPremultiplied()
-                            ? ImageStorage.ImageType.PALETTE_ALPHA_PRE
-                            : ImageStorage.ImageType.PALETTE_ALPHA
-                        : ImageStorage.ImageType.PALETTE,
-                    getByteBuffer(image.getRaster().getDataBuffer()),
-                    image.getWidth(), image.getHeight(), image.getWidth() * colorModel.getPixelSize(),
+                    imageType, getByteBuffer(image.getRaster().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), scanlineStride,
                     palette, colorModel.getPixelSize(), pixelScale, metadata);
             }
 

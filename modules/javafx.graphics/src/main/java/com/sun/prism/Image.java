@@ -25,7 +25,7 @@
 
 package com.sun.prism;
 
-import com.sun.javafx.image.IndexedToBytePixelConverter;
+import com.sun.javafx.image.AlphaType;
 import com.sun.javafx.image.impl.ByteIndexed;
 import com.sun.javafx.image.impl.EightBitIndexed;
 import com.sun.javafx.image.impl.FourBitIndexed;
@@ -306,37 +306,37 @@ public class Image implements PlatformImage {
             }
 
             case PALETTE, PALETTE_ALPHA, PALETTE_ALPHA_PRE -> {
-                Boolean premultiplied = switch (type) {
-                    case PALETTE_ALPHA -> Boolean.FALSE;
-                    case PALETTE_ALPHA_PRE -> Boolean.TRUE;
-                    default -> null; // PALETTE
+                AlphaType alphaType = switch (type) {
+                    case PALETTE_ALPHA -> AlphaType.NONPREMULTIPLIED;
+                    case PALETTE_ALPHA_PRE -> AlphaType.PREMULTIPLIED;
+                    default -> AlphaType.OPAQUE; // PALETTE
                 };
 
                 var converter = switch (frame.getPaletteIndexBits()) {
                     case 1 -> {
-                        var getter = OneBitIndexed.createGetter(frame.getPalette(), premultiplied);
-                        yield premultiplied == null
+                        var getter = OneBitIndexed.createGetter(frame.getPalette(), alphaType);
+                        yield alphaType == AlphaType.OPAQUE
                             ? OneBitIndexed.createToByteRgb(getter, ByteRgb.setter)
                             : OneBitIndexed.createToByteBgraAny(getter, ByteBgraPre.setter);
                     }
 
                     case 2 -> {
-                        var getter = TwoBitIndexed.createGetter(frame.getPalette(), premultiplied);
-                        yield premultiplied == null
+                        var getter = TwoBitIndexed.createGetter(frame.getPalette(), alphaType);
+                        yield alphaType == AlphaType.OPAQUE
                             ? TwoBitIndexed.createToByteRgb(getter, ByteRgb.setter)
                             : TwoBitIndexed.createToByteBgraAny(getter, ByteBgraPre.setter);
                     }
 
                     case 4 -> {
-                        var getter = FourBitIndexed.createGetter(frame.getPalette(), premultiplied);
-                        yield premultiplied == null
+                        var getter = FourBitIndexed.createGetter(frame.getPalette(), alphaType);
+                        yield alphaType == AlphaType.OPAQUE
                             ? FourBitIndexed.createToByteRgb(getter, ByteRgb.setter)
                             : FourBitIndexed.createToByteBgraAny(getter, ByteBgraPre.setter);
                     }
 
                     case 8 -> {
-                        var getter = EightBitIndexed.createGetter(frame.getPalette(), premultiplied);
-                        yield premultiplied == null
+                        var getter = EightBitIndexed.createGetter(frame.getPalette(), alphaType);
+                        yield alphaType == AlphaType.OPAQUE
                             ? EightBitIndexed.createToByteRgb(getter, ByteRgb.setter)
                             : EightBitIndexed.createToByteBgraAny(getter, ByteBgraPre.setter);
                     }
@@ -344,11 +344,11 @@ public class Image implements PlatformImage {
                     default -> throw new RuntimeException("Unsupported bits per pixel: " + frame.getPaletteIndexBits());
                 };
 
-                int dstPixelSize = premultiplied == null ? 3 : 4;
+                int dstPixelSize = alphaType == AlphaType.OPAQUE ? 3 : 4;
                 byte[] buffer = new byte[w * h * dstPixelSize];
                 converter.convert((ByteBuffer)frame.getImageData(), 0, stride, buffer, 0, w * dstPixelSize, w, h);
 
-                yield premultiplied == null
+                yield alphaType == AlphaType.OPAQUE
                     ? fromByteRgbData(buffer, w, h)
                     : fromByteBgraPreData(buffer, w, h, ps);
             }

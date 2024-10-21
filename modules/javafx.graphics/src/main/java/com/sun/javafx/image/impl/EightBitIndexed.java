@@ -25,29 +25,30 @@
 
 package com.sun.javafx.image.impl;
 
+import com.sun.javafx.image.AlphaType;
 import com.sun.javafx.image.BytePixelSetter;
-import com.sun.javafx.image.IndexedToBytePixelConverter;
+import com.sun.javafx.image.ByteToBytePixelConverter;
 import java.nio.ByteBuffer;
 
 public final class EightBitIndexed {
 
     private EightBitIndexed() {}
 
-    public static Getter createGetter(int[] colors, Boolean premultiplied) {
-        return new Getter(colors, premultiplied);
+    public static Getter createGetter(int[] colors, AlphaType alphaType) {
+        return new Getter(colors, alphaType);
     }
 
-    public static IndexedToBytePixelConverter createToByteRgb(Getter src, BytePixelSetter dst) {
+    public static ByteToBytePixelConverter createToByteRgb(Getter src, BytePixelSetter dst) {
         return new ToByteRgbConverter(src, dst);
     }
 
-    public static IndexedToBytePixelConverter createToByteBgraAny(Getter src, BytePixelSetter dst) {
+    public static ByteToBytePixelConverter createToByteBgraAny(Getter src, BytePixelSetter dst) {
         return new ToByteBgraAnyConverter(src, dst);
     }
 
     public static class Getter extends BaseIndexedToByteConverter.IndexedGetter {
-        Getter(int[] colors, Boolean premultiplied) {
-            super(colors, premultiplied);
+        Getter(int[] colors, AlphaType alphaType) {
+            super(colors, alphaType);
         }
 
         @Override
@@ -82,7 +83,7 @@ public final class EightBitIndexed {
         }
 
         @Override
-        void doConvert(byte[] srcarr, int srcoff, int srcscanbits,
+        void doConvert(byte[] srcarr, int srcoff, int srcscanbytes,
                        byte[] dstarr, int dstoff, int dstscanbytes,
                        int w, int h) {
             int[] colors = switch (setter.getAlphaType()) {
@@ -101,13 +102,13 @@ public final class EightBitIndexed {
                     dstarr[dstoff++] = (byte) (argb >> 24);
                 }
 
-                srcoff += srcscanbits;
+                srcoff += srcscanbytes;
                 dstoff += dstscanbytes;
             }
         }
 
         @Override
-        void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbits,
+        void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
                        ByteBuffer dstbuf, int dstoff, int dstscanbytes,
                        int w, int h) {
             int[] colors = switch (setter.getAlphaType()) {
@@ -127,7 +128,7 @@ public final class EightBitIndexed {
                     dstoff += 4;
                 }
 
-                srcoff += srcscanbits;
+                srcoff += srcscanbytes;
                 dstoff += dstscanbytes;
             }
         }
@@ -139,7 +140,7 @@ public final class EightBitIndexed {
         }
 
         @Override
-        void doConvert(byte[] srcarr, int srcoff, int srcscanbits,
+        void doConvert(byte[] srcarr, int srcoff, int srcscanbytes,
                        byte[] dstarr, int dstoff, int dstscanbytes,
                        int w, int h) {
             int[] colors = getGetter().nonPreColors;
@@ -153,13 +154,13 @@ public final class EightBitIndexed {
                     dstarr[dstoff++] = (byte) argb;
                 }
 
-                srcoff += srcscanbits;
+                srcoff += srcscanbytes;
                 dstoff += dstscanbytes;
             }
         }
 
         @Override
-        void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbits,
+        void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
                        ByteBuffer dstbuf, int dstoff, int dstscanbytes,
                        int w, int h) {
             int[] colors = getGetter().nonPreColors;
@@ -174,7 +175,7 @@ public final class EightBitIndexed {
                     dstoff += 3;
                 }
 
-                srcoff += srcscanbits;
+                srcoff += srcscanbytes;
                 dstoff += dstscanbytes;
             }
         }
