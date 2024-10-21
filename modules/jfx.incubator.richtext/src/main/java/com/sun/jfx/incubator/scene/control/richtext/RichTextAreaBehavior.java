@@ -1411,6 +1411,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         int index = pos.index();
         int offset = pos.offset();
         boolean skipEmpty = true;
+        BreakIterator br = null;
 
         for (;;) {
             TextPos end = control.getDocumentEnd();
@@ -1429,7 +1430,9 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 return new TextPos(index, 0);
             }
 
-            BreakIterator br = BreakIterator.getWordInstance();
+            if (br == null) {
+                br = BreakIterator.getWordInstance();
+            }
             br.setText(text);
 
             int len = text.length();
@@ -1461,6 +1464,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         int index = pos.index();
         int offset = pos.offset();
         boolean skipEmpty = true;
+        BreakIterator br = null;
 
         for (;;) {
             TextPos end = control.getDocumentEnd();
@@ -1479,7 +1483,9 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 return new TextPos(index, 0);
             }
 
-            BreakIterator br = BreakIterator.getWordInstance();
+            if (br == null) {
+                br = BreakIterator.getWordInstance();
+            }
             br.setText(text);
 
             boolean inWord = RichUtils.isLetterOrDigit(text, offset);
