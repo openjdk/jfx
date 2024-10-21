@@ -817,13 +817,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         Text paragraphNode = getTextNode();
 
         if (y < contentView.snappedTopInset()) {
-            // Select the character at x in the first row
             return 0;
         } else if (y > contentView.snappedTopInset() + contentView.getHeight()) {
-            // Select the character at x in the last row
             return (textArea.getLength() - paragraphNode.getText().length());
         } else {
-            // Select the character at x in the row at y
             Bounds bounds = paragraphNode.getBoundsInLocal();
             double paragraphViewY = paragraphNode.getLayoutY() + bounds.getMinY();
             if (y >= paragraphViewY
