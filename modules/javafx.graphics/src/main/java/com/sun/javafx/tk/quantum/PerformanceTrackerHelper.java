@@ -43,25 +43,20 @@ abstract class PerformanceTrackerHelper {
     }
 
     private static PerformanceTrackerHelper createInstance() {
-        PerformanceTrackerHelper trackerImpl = null;
         try {
             if (PrismSettings.perfLog != null) {
-                final PerformanceTrackerHelper trackerImpl1 = new PerformanceTrackerDefaultImpl();
+                final PerformanceTrackerHelper trackerImpl = new PerformanceTrackerDefaultImpl();
                 if (PrismSettings.perfLogExitFlush) {
                     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                        trackerImpl1.outputLog();
+                        trackerImpl.outputLog();
                     }));
                 }
-                trackerImpl = trackerImpl1;
+                return trackerImpl;
             }
         }catch (Throwable t) {
         }
 
-        if (trackerImpl == null) {
-            trackerImpl = new PerformanceTrackerDummyImpl();
-        }
-
-        return trackerImpl;
+        return new PerformanceTrackerDummyImpl();
     }
 
     public abstract void logEvent(final String s);
