@@ -311,4 +311,52 @@ public class NestedEventLoopTest {
             assertEquals(result1, returnedValue1.get());
         });
     }
+
+    // Test the case where we begin exiting the innermost loop but don't wait
+    // for it to fully exit before entering a new loop.
+    @Test(timeout=3000)
+    public void testCanExitAndThenEnterNewLoop() {
+        final long key1 = 1024L;
+        final long key2 = 1025L;
+        final long result1 = 2048L;
+        final long result2 = 2049L;
+        final AtomicLong returnedValue1 = new AtomicLong();
+        final AtomicLong returnedValue2 = new AtomicLong();
+        final AtomicBoolean loopOneRunning = new AtomicBoolean(false);
+        final AtomicBoolean loopTwoRunning = new AtomicBoolean(false);
+
+        Util.runAndWait(
+                () -> {
+                    // enter loop one
+                    assertFalse(Platform.isNestedLoopRunning());
+                    loopOneRunning.set(true);
+                    Long actual = (Long) Platform.enterNestedEventLoop(key1);
+                    loopOneRunning.set(false);
+                    returnedValue1.set(actual);
+                },
+                () -> {
+                    // exit loop one and enter loop two
+                    assertTrue(Platform.isNestedLoopRunning());
+                    Platform.exitNestedEventLoop(key1, result1);
+                    loopTwoRunning.set(true);
+                    Long actual = (Long) Platform.enterNestedEventLoop(key2);
+                    loopTwoRunning.set(false);
+                    returnedValue2.set(actual);
+                },
+                () -> {
+                    // exit loop two
+                    assertTrue(Platform.isNestedLoopRunning());
+                    assertTrue(loopOneRunning.get());
+                    assertTrue(loopTwoRunning.get());
+                    Platform.exitNestedEventLoop(key2, result2);
+                });
+        // check that loops are done
+        Util.runAndWait(() -> {
+            assertFalse(Platform.isNestedLoopRunning());
+            assertFalse(loopOneRunning.get());
+            assertFalse(loopTwoRunning.get());
+            assertEquals(result1, returnedValue1.get());
+            assertEquals(result2, returnedValue2.get());
+        });
+    }
 }

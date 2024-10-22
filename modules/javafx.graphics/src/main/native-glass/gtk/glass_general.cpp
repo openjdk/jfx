@@ -462,6 +462,19 @@ gboolean check_and_clear_exception(JNIEnv *env) {
     return FALSE;
 }
 
+static bool should_leave_nested_event_loop = false;
+
+void glass_set_leave_nested_event_loop(bool v) {
+    should_leave_nested_event_loop = v;
+}
+
+void glass_maybe_leave_nested_event_loop() {
+    if (should_leave_nested_event_loop) {
+        gtk_main_quit();
+        should_leave_nested_event_loop = false;
+    }
+}
+
 // The returned string should be freed with g_free().
 gchar* get_application_name() {
     gchar* ret = NULL;
