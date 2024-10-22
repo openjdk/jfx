@@ -1808,17 +1808,17 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 1;
     -fx-effect: dropshadow( gaussian , rgba(0,0,0,0.2) , 12, 0.0 , 0 , 8 );
 }
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
+.combo-box-popup > .list-view > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell {
     -fx-padding: 4 0 4 5;
     /* No alternate highlighting */
     -fx-background: -fx-control-inner-background;
 }
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover {
+.combo-box-popup > .list-view > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
 }
-.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
-.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
+.combo-box-popup  > .list-view > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected,
+.combo-box-popup  > .list-view > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
     -fx-background-insets: 0, 1, 2;
@@ -2290,12 +2290,12 @@ is being used to size a border should also be in pixels.
     -fx-text-fill: -fx-text-background-color;
 }
 /* Selected rows */
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected,
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected,
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell .tree-table-cell:selected {
+.list-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected,
+.tree-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-cell:filled:selected,
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:selected,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:selected,
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell .table-cell:selected,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell .tree-table-cell:selected {
     -fx-background: -fx-selection-bar;
     -fx-table-cell-border-color: derive(-fx-selection-bar, 20%);
 }
@@ -2310,12 +2310,12 @@ is being used to size a border should also be in pixels.
     -fx-table-cell-border-color: derive(-fx-selection-bar-non-focused, 20%);
 }
 /* focused cell (keyboard navigation) */
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused,
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:focused,
-.table-view:focused:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:focused,
-.tree-table-view:focused:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused,
-.table-view:focused:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
-.tree-table-view:focused:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
+.list-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:focused,
+.tree-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-cell:focused,
+.table-view:focused:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:focused,
+.tree-table-view:focused:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:focused,
+.table-view:focused:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
+.tree-table-view:focused:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
     -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
     -fx-background-insets: 0, 1, 2;
 }
@@ -2395,16 +2395,16 @@ is being used to size a border should also be in pixels.
     -fx-cell-size: 2.0em; /* 24 */
     -fx-text-fill: -fx-text-background-color;
 }
-.table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell:selected,
-.tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell .tree-table-cell:selected {
+.table-view > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell .table-cell:selected,
+.tree-table-view > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell .tree-table-cell:selected {
     -fx-background-color: -fx-table-cell-border-color, -fx-background;
     -fx-background-insets: 0, 0 0 1 0;
 }
 /* When in constrained resize mode, the right-most visible cell should not have
    a right-border, as it is not possible to get this cleanly out of view without
    introducing horizontal scrollbars (see RT-14886). */
-.table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:last-visible,
-.tree-table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:last-visible {
+.table-view:constrained-resize > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell > .table-cell:last-visible,
+.tree-table-view:constrained-resize > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:last-visible {
     -fx-border-color: transparent;
 }
 /***** HEADER **********************************************************************/
@@ -2541,10 +2541,10 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-text-background-color;
     -fx-background-insets: 0;
 }
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box {
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box {
     -fx-background-color: derive(-fx-accent,40%), -fx-background;
 }
 
