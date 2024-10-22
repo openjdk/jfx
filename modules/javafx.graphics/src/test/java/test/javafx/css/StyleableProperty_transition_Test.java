@@ -198,7 +198,6 @@ public class StyleableProperty_transition_Test {
         scene = new Scene(new Group());
         stage = new Stage();
         stage.setScene(scene);
-        stage.show();
     }
 
     @AfterEach
@@ -217,6 +216,7 @@ public class StyleableProperty_transition_Test {
         testRun.property.applyStyle(StyleOrigin.USER, testRun.defaultValue);
         var mediator1 = getFieldValue(testRun.property, testRun.fieldName);
         assertNull(mediator1);
+        stage.show();
 
         // Start the transition. This adds it to the list of running transitions.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.newValue);
@@ -240,6 +240,7 @@ public class StyleableProperty_transition_Test {
         testRun.property.applyStyle(StyleOrigin.USER, testRun.defaultValue);
         var mediator1 = getFieldValue(testRun.property, testRun.fieldName);
         assertNull(mediator1);
+        stage.show();
 
         // Start the transition. This adds it to the list of running transitions.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.newValue);
@@ -271,6 +272,7 @@ public class StyleableProperty_transition_Test {
         // Setting a value for the first time doesn't start a transition.
         setAnimationTime(0);
         property.applyStyle(StyleOrigin.USER, border1);
+        stage.show();
 
         // Start the transition and capture a copy of the sub-property mediator list.
         // -fx-background-color will transition from RED to GREEN
@@ -301,6 +303,7 @@ public class StyleableProperty_transition_Test {
         // Setting a value for the first time doesn't start a transition.
         setAnimationTime(0);
         property.applyStyle(StyleOrigin.USER, 0);
+        stage.show();
 
         // Start the transition and sample the outputs.
         property.applyStyle(StyleOrigin.USER, 2);
@@ -324,6 +327,7 @@ public class StyleableProperty_transition_Test {
         // Setting a value for the first time doesn't start a transition.
         setAnimationTime(0);
         property.applyStyle(StyleOrigin.USER, 0);
+        stage.show();
 
         // Start the transition and sample the outputs.
         property.applyStyle(StyleOrigin.USER, 2);
@@ -347,6 +351,7 @@ public class StyleableProperty_transition_Test {
         // Setting a value for the first time doesn't start a transition.
         setAnimationTime(0);
         property.applyStyle(StyleOrigin.USER, false);
+        stage.show();
 
         // Start the transition and sample the outputs.
         property.applyStyle(StyleOrigin.USER, true);
@@ -364,6 +369,7 @@ public class StyleableProperty_transition_Test {
         // Setting a value for the first time doesn't start a transition.
         setAnimationTime(0);
         property.applyStyle(StyleOrigin.USER, "foo");
+        stage.show();
 
         // Start the transition and sample the outputs.
         property.applyStyle(StyleOrigin.USER, "bar");
@@ -403,6 +409,7 @@ public class StyleableProperty_transition_Test {
         // Setting a value for the first time doesn't start a transition.
         setAnimationTime(0);
         property.applyStyle(StyleOrigin.USER, Fruit.APPLE);
+        stage.show();
 
         // Start the transition and sample the outputs.
         property.applyStyle(StyleOrigin.USER, Fruit.ORANGE);
@@ -427,6 +434,7 @@ public class StyleableProperty_transition_Test {
         // Setting a value for the first time doesn't start a transition.
         setAnimationTime(0);
         property.applyStyle(StyleOrigin.USER, Color.RED);
+        stage.show();
 
         // Start the transition and sample the outputs.
         property.applyStyle(StyleOrigin.USER, null);
@@ -451,6 +459,7 @@ public class StyleableProperty_transition_Test {
         // Setting a value for the first time doesn't start a transition.
         setAnimationTime(0);
         property.applyStyle(StyleOrigin.USER, Background.fill(Color.RED));
+        stage.show();
 
         // Start the transition and sample the outputs.
         property.applyStyle(StyleOrigin.USER, null);

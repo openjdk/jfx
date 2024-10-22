@@ -286,6 +286,10 @@ public abstract class NodeHelper {
         nodeAccessor.reapplyCSS(node);
     }
 
+    public static boolean isInitialCssState(Node node) {
+        return nodeAccessor.isInitialCssState(node);
+    }
+
     public static void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
         nodeAccessor.recalculateRelativeSizeProperties(node, fontForRelativeSizes);
     }
@@ -391,6 +395,7 @@ public abstract class NodeHelper {
         void setLabeledBy(Node node, Node labeledBy);
         Accessible getAccessible(Node node);
         void reapplyCSS(Node node);
+        boolean isInitialCssState(Node node);
         void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes);
         boolean isTreeVisible(Node node);
         BooleanExpression treeVisibleProperty(Node node);
