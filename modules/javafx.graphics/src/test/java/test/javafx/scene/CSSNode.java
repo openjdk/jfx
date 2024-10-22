@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import javafx.css.converter.PaintConverter;
 import javafx.css.converter.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
@@ -42,7 +43,7 @@ import java.util.List;
 import javafx.scene.Node;
 import test.com.sun.javafx.scene.CSSNodeHelper;
 
-public  class CSSNode extends Node {
+public class CSSNode extends AbstractNode {
     static {
         CSSNodeHelper.setCSSNodeAccessor(new CSSNodeHelper.CSSNodeAccessor() {
             @Override

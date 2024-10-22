@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ circle.setRadius(50.0f);
 }</pre>
  * @since JavaFX 2.0
  */
-public class Circle extends Shape {
+public non-sealed class Circle extends Shape {
     static {
         CircleHelper.setCircleAccessor(new CircleHelper.CircleAccessor() {
             @Override

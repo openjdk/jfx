@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.layout;
 
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Node;
 
@@ -33,7 +34,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import test.com.sun.javafx.scene.layout.MockNodeHelper;
 
 
-public class MockNode extends Node {
+public class MockNode extends AbstractNode {
     static {
         MockNodeHelper.setMockNodeAccessor(new MockNodeHelper.MockNodeAccessor() {
             @Override
