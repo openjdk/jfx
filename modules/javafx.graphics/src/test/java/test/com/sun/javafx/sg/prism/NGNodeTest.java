@@ -28,7 +28,9 @@ package test.com.sun.javafx.sg.prism;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.sg.prism.NGNodeShim;
 import com.sun.javafx.sg.prism.NGPath;
 import com.sun.javafx.sg.prism.NGRectangle;
@@ -38,6 +40,7 @@ import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -576,6 +579,35 @@ public class NGNodeTest extends NGTestBase {
         clip.setTransformMatrix(BaseTransform.getRotateInstance(45, 5, 5));
         n.setClipNode(clip);
         assertNull(n.getOpaqueRegion());
+    }
+
+    @Test
+    public void testClippingWithRectangularClipIsCorrectlyCalculated() {
+        AtomicReference<Rectangle> rectRef = new AtomicReference<>();
+
+        n = new NGNodeMock() {
+            @Override
+            protected void renderContent(Graphics g) {
+                super.renderContent(g);
+
+                rectRef.set(g.getClipRectNoClone());
+            }
+        };
+
+        TestGraphics graphics = new TestGraphics(146, 625);
+        graphics.setTransform(new Affine3D(1.25, 0, 0, -3, 0, 1.25, 0, 31, 0, 0, 1, 0));
+
+        final RectBounds bounds = new RectBounds(0, 0, 272, 480);
+        n.setContentBounds(bounds);
+        n.setTransformMatrix(new Translate2D(-15.2, 0));
+
+        TestNGRectangle clip = createRectangle(0, 0, 102.4f, 460.8f);
+        clip.setTransformMatrix(new Translate2D(18.4, 0));
+        n.setClipNode(clip);
+        n.render(graphics);
+
+        Rectangle clipRect = rectRef.get();
+        assertEquals(1, clipRect.x);
     }
 
     class NGNodeMock extends NGNodeShim {

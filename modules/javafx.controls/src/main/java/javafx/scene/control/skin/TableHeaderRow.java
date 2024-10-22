@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -417,7 +417,7 @@ public class TableHeaderRow extends StackPane {
      * @since 12
      */
     protected void updateScrollX() {
-        scrollX = flow.getHbar().isVisible() ? -flow.getHbar().getValue() : 0.0F;
+        scrollX = flow.getHbar().isVisible() ? snapPositionX(-flow.getHbar().getValue()) : 0.0F;
         requestLayout();
 
         // Fix for RT-36392: without this call even though we call requestLayout()
