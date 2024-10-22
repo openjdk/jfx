@@ -34,7 +34,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.PopupControl;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.traversal.FocusTraversal;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 
 public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
 
@@ -106,26 +106,26 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
                     switch (ev.getCode()) {
                     case TAB:
                         if (ev.isShiftDown()) {
-                            FocusTraversal.traversePrevious((Node)obj);
+                            traverse(obj, TraversalDirectionInternal.PREVIOUS);
                         } else {
-                            FocusTraversal.traverseNext((Node)obj);
+                            traverse(obj, TraversalDirectionInternal.NEXT);
                         }
                         event.consume();
                         break;
                     case UP:
-                        FocusTraversal.traverseUp((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.UP);
                         event.consume();
                         break;
                     case DOWN:
-                        FocusTraversal.traverseDown((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.DOWN);
                         event.consume();
                         break;
                     case LEFT:
-                        FocusTraversal.traverseLeft((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.LEFT);
                         event.consume();
                         break;
                     case RIGHT:
-                        FocusTraversal.traverseRight((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.RIGHT);
                         event.consume();
                         break;
                     case ENTER:
@@ -169,24 +169,24 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
                         break;
                     case LEFT:
                         if (obj instanceof Node n) {
-                            FocusTraversal.traverseLeft(n);
+                            traverse(n, TraversalDirectionInternal.LEFT);
                             event.consume();
                         } else if (obj instanceof Scene sc) {
                             Node node = sc.getFocusOwner();
                             if (node != null) {
-                                FocusTraversal.traverseLeft(node);
+                                traverse(node, TraversalDirectionInternal.LEFT);
                                 event.consume();
                             }
                         }
                         break;
                     case RIGHT:
                         if (obj instanceof Node n) {
-                            FocusTraversal.traverseRight(n);
+                            traverse(n, TraversalDirectionInternal.RIGHT);
                             event.consume();
                         } else if (obj instanceof Scene sc) {
                             Node node = sc.getFocusOwner();
                             if (node != null) {
-                                FocusTraversal.traverseRight(node);
+                                traverse(node, TraversalDirectionInternal.RIGHT);
                                 event.consume();
                             }
                         }

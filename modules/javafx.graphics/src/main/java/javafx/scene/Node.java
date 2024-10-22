@@ -157,6 +157,8 @@ import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.scene.transform.TransformUtils;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Logging;
@@ -10436,4 +10438,38 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
+    /**
+     * Requests focus traversal from this {@code Node} in the specified direction.
+     * A successful traversal results in the newly focused {@code Node} visibly indicating its focused state.
+     *
+     * @param direction the direction of focus traversal
+     * @return true if traversal was successful
+     * @since 24
+     */
+    public final boolean traverseFocus(TraversalDirection direction) {
+        TraversalDirectionInternal d;
+        switch (direction) {
+        case DOWN:
+            d = TraversalDirectionInternal.DOWN;
+            break;
+        case LEFT:
+            d = TraversalDirectionInternal.LEFT;
+            break;
+        case NEXT:
+            d = TraversalDirectionInternal.NEXT;
+            break;
+        case PREVIOUS:
+            d = TraversalDirectionInternal.PREVIOUS;
+            break;
+        case RIGHT:
+            d = TraversalDirectionInternal.RIGHT;
+            break;
+        case UP:
+            d = TraversalDirectionInternal.UP;
+            break;
+        default:
+            return false;
+        }
+        return TraversalUtils.traverse(this, d, true);
+    }
 }

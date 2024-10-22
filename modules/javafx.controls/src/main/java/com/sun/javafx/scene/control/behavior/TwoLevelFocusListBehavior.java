@@ -34,8 +34,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.traversal.FocusTraversal;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 
 public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
 
@@ -87,26 +87,26 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
                     switch (((KeyEvent)event).getCode()) {
                     case TAB:
                         if (ev.isShiftDown()) {
-                            FocusTraversal.traversePrevious((Node)obj);
+                            traverse(obj, TraversalDirectionInternal.PREVIOUS);
                         } else {
-                            FocusTraversal.traverseNext((Node)obj);
+                            traverse(obj, TraversalDirectionInternal.NEXT);
                         }
                         event.consume();
                         break;
                     case UP:
-                        FocusTraversal.traverseUp((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.UP);
                         event.consume();
                         break;
                     case DOWN:
-                        FocusTraversal.traverseDown((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.DOWN);
                         event.consume();
                         break;
                     case LEFT:
-                        FocusTraversal.traverseLeft((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.LEFT);
                         event.consume();
                         break;
                     case RIGHT:
-                        FocusTraversal.traverseRight((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.RIGHT);
                         event.consume();
                         break;
                     case ENTER:

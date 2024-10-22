@@ -22,10 +22,24 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene;
 
 /**
- * Provides the set of classes for focus traversal.
+ * Specifies the direction of focus traversal.
  *
  * @since 24
  */
-package javafx.scene.traversal;
+public enum TraversalDirection {
+    /** Moves focus downward. */
+    DOWN,
+    /** Moves focus left. */
+    LEFT,
+    /** Moves focus to the next focusable Node, possibly traversing into the children of the current parent. */
+    NEXT,
+    /** Moves focus to the previous focusable Node. */
+    PREVIOUS,
+    /** Moves focus right. */
+    RIGHT,
+    /** Moves focus upward. */
+    UP;
+}

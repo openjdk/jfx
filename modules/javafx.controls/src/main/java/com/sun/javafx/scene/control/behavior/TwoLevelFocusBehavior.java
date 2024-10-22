@@ -36,7 +36,8 @@ import javafx.scene.control.Control;
 import javafx.scene.control.PopupControl;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.traversal.FocusTraversal;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**
  * A two level focus handler allows a Control to behave as if it
@@ -105,26 +106,26 @@ public class TwoLevelFocusBehavior {
                     switch (ev.getCode()) {
                     case TAB:
                         if (ev.isShiftDown()) {
-                            FocusTraversal.traversePrevious((Node)obj);
+                            traverse(obj, TraversalDirectionInternal.PREVIOUS);
                         } else {
-                            FocusTraversal.traverseNext((Node)obj);
+                            traverse(obj, TraversalDirectionInternal.NEXT);
                         }
                         event.consume();
                         break;
                     case UP:
-                        FocusTraversal.traverseUp((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.UP);
                         event.consume();
                         break;
                     case DOWN:
-                        FocusTraversal.traverseDown((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.DOWN);
                         event.consume();
                         break;
                     case LEFT:
-                        FocusTraversal.traverseLeft((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.LEFT);
                         event.consume();
                         break;
                     case RIGHT:
-                        FocusTraversal.traverseRight((Node)obj);
+                        traverse(obj, TraversalDirectionInternal.RIGHT);
                         event.consume();
                         break;
                     case ENTER:
@@ -231,5 +232,9 @@ public class TwoLevelFocusBehavior {
             tlPopup.pseudoClassStateChanged(INTERNAL_PSEUDOCLASS_STATE, !value);
             tlPopup.pseudoClassStateChanged(EXTERNAL_PSEUDOCLASS_STATE, value);
         }
+    }
+
+    protected static void traverse(Object from, TraversalDirectionInternal dir) {
+        TraversalUtils.traverse((Node)from, dir, true);
     }
 }
