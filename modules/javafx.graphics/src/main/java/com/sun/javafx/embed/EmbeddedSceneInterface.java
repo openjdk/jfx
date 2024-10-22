@@ -32,7 +32,7 @@ import javafx.scene.image.PixelFormat;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 
 /**
  * An interface for embedded FX scene peer. It is used by HostInterface
@@ -111,7 +111,7 @@ public interface EmbeddedSceneInterface {
      */
     public void menuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger);
 
-    public boolean traverseOut(TraversalDirection dir);
+    public boolean traverseOut(TraversalDirectionInternal dir);
 
     public void setDragStartListener(HostDragStartListener l);
 

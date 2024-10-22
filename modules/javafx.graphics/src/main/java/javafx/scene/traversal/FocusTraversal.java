@@ -27,7 +27,7 @@ package javafx.scene.traversal;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**
@@ -48,7 +48,7 @@ public final class FocusTraversal {
      * @return true if traversal was successful
      */
     public static boolean traverseDown(Node node) {
-        return TraversalUtils.traverse(node, TraversalDirection.DOWN, true);
+        return TraversalUtils.traverse(node, TraversalDirectionInternal.DOWN, true);
     }
 
     /**
@@ -59,7 +59,7 @@ public final class FocusTraversal {
      * @return true if traversal was successful
      */
     public static boolean traverseLeft(Node node) {
-        return TraversalUtils.traverse(node, TraversalDirection.LEFT, true);
+        return TraversalUtils.traverse(node, TraversalDirectionInternal.LEFT, true);
     }
 
     /**
@@ -70,7 +70,7 @@ public final class FocusTraversal {
      * @return true if traversal was successful
      */
     public static boolean traverseNext(Node node) {
-        return TraversalUtils.traverse(node, TraversalDirection.NEXT, true);
+        return TraversalUtils.traverse(node, TraversalDirectionInternal.NEXT, true);
     }
 
     /**
@@ -81,7 +81,7 @@ public final class FocusTraversal {
      * @return true if traversal was successful
      */
     public static boolean traversePrevious(Node node) {
-        return TraversalUtils.traverse(node, TraversalDirection.PREVIOUS, true);
+        return TraversalUtils.traverse(node, TraversalDirectionInternal.PREVIOUS, true);
     }
 
     /**
@@ -92,7 +92,7 @@ public final class FocusTraversal {
      * @return true if traversal was successful
      */
     public static boolean traverseRight(Node node) {
-        return TraversalUtils.traverse(node, TraversalDirection.RIGHT, true);
+        return TraversalUtils.traverse(node, TraversalDirectionInternal.RIGHT, true);
     }
 
     /**
@@ -103,7 +103,7 @@ public final class FocusTraversal {
      * @return true if traversal was successful
      */
     public static boolean traverseUp(Node node) {
-        return TraversalUtils.traverse(node, TraversalDirection.UP, true);
+        return TraversalUtils.traverse(node, TraversalDirectionInternal.UP, true);
     }
 
     private FocusTraversal() {

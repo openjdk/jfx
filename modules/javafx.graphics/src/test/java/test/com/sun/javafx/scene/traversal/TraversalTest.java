@@ -38,7 +38,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 
 /**
  * Tests for TraversalEngine with the default ContainerTabOrder policy.
@@ -71,38 +71,38 @@ public final class TraversalTest {
     private static Stream<Arguments> parameters() {
         return Stream.of(
             /* traversal from center */
-            Arguments.of( 5, TraversalDirection.LEFT, 4, 8 ),
-            Arguments.of( 5, TraversalDirection.RIGHT, 6, 2 ),
-            Arguments.of( 5, TraversalDirection.UP, 2, 4 ),
-            Arguments.of( 5, TraversalDirection.DOWN, 8, 6 ),
+            Arguments.of( 5, TraversalDirectionInternal.LEFT, 4, 8 ),
+            Arguments.of( 5, TraversalDirectionInternal.RIGHT, 6, 2 ),
+            Arguments.of( 5, TraversalDirectionInternal.UP, 2, 4 ),
+            Arguments.of( 5, TraversalDirectionInternal.DOWN, 8, 6 ),
 
             // using ContainerTabOrder, target is always the same
-            Arguments.of( 5, TraversalDirection.PREVIOUS, 4, 4 ),
-            Arguments.of( 5, TraversalDirection.NEXT, 6, 6 ),
+            Arguments.of( 5, TraversalDirectionInternal.PREVIOUS, 4, 4 ),
+            Arguments.of( 5, TraversalDirectionInternal.NEXT, 6, 6 ),
 
             /* traversal from borders (untransformed) */
-            Arguments.of( 4, TraversalDirection.LEFT, 4, 7 ),
-            Arguments.of( 6, TraversalDirection.RIGHT, 6, 3 ),
-            Arguments.of( 2, TraversalDirection.UP, 2, 1 ),
-            Arguments.of( 8, TraversalDirection.DOWN, 8, 9 ),
+            Arguments.of( 4, TraversalDirectionInternal.LEFT, 4, 7 ),
+            Arguments.of( 6, TraversalDirectionInternal.RIGHT, 6, 3 ),
+            Arguments.of( 2, TraversalDirectionInternal.UP, 2, 1 ),
+            Arguments.of( 8, TraversalDirectionInternal.DOWN, 8, 9 ),
 
             // using ContainerTabOrder, target always the same
-            Arguments.of( 4, TraversalDirection.PREVIOUS, 3, 3 ),
-            Arguments.of( 1, TraversalDirection.PREVIOUS, 9, 9 ),
-            Arguments.of( 6, TraversalDirection.NEXT, 7, 7 ),
-            Arguments.of( 9, TraversalDirection.NEXT, 1, 1 ),
+            Arguments.of( 4, TraversalDirectionInternal.PREVIOUS, 3, 3 ),
+            Arguments.of( 1, TraversalDirectionInternal.PREVIOUS, 9, 9 ),
+            Arguments.of( 6, TraversalDirectionInternal.NEXT, 7, 7 ),
+            Arguments.of( 9, TraversalDirectionInternal.NEXT, 1, 1 ),
 
             /* traversal from borders (transformed) */
-            Arguments.of( 2, TraversalDirection.RIGHT, 3, 2 ),
-            Arguments.of( 8, TraversalDirection.LEFT, 7, 8 ),
-            Arguments.of( 4, TraversalDirection.UP, 1, 4 ),
-            Arguments.of( 6, TraversalDirection.DOWN, 9, 6 ),
+            Arguments.of( 2, TraversalDirectionInternal.RIGHT, 3, 2 ),
+            Arguments.of( 8, TraversalDirectionInternal.LEFT, 7, 8 ),
+            Arguments.of( 4, TraversalDirectionInternal.UP, 1, 4 ),
+            Arguments.of( 6, TraversalDirectionInternal.DOWN, 9, 6 ),
 
             // using ContainerTabOrder, target always the same
-            Arguments.of( 8, TraversalDirection.PREVIOUS, 7, 7 ),
-            Arguments.of( 7, TraversalDirection.PREVIOUS, 6, 6 ),
-            Arguments.of( 2, TraversalDirection.NEXT, 3, 3 ),
-            Arguments.of( 3, TraversalDirection.NEXT, 4, 4)
+            Arguments.of( 8, TraversalDirectionInternal.PREVIOUS, 7, 7 ),
+            Arguments.of( 7, TraversalDirectionInternal.PREVIOUS, 6, 6 ),
+            Arguments.of( 2, TraversalDirectionInternal.NEXT, 3, 3 ),
+            Arguments.of( 3, TraversalDirectionInternal.NEXT, 4, 4)
         );
     }
 
@@ -132,7 +132,7 @@ public final class TraversalTest {
     @MethodSource("parameters")
     public void untransformedTraversalTest(
         int fromNumber,
-        TraversalDirection direction,
+        TraversalDirectionInternal direction,
         int toNumber,
         int toNumberTransformed)
     {
@@ -145,7 +145,7 @@ public final class TraversalTest {
     @MethodSource("parameters")
     public void transformedTraversalTest(
         int fromNumber,
-        TraversalDirection direction,
+        TraversalDirectionInternal direction,
         int toNumber,
         int toNumberTransformed)
     {

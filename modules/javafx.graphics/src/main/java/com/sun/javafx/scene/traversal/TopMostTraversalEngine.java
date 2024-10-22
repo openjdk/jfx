@@ -33,7 +33,7 @@ import com.sun.javafx.scene.NodeHelper;
  * This is the class for all top-level traversal engines in scenes and subscenes.
  * These traversal engines are created automatically and can only have the default algorithm.
  *
- * These engines should be used by calling {@link #trav(javafx.scene.Node, TraversalDirection)}, {@link #traverseToFirst()} and
+ * These engines should be used by calling {@link #trav(javafx.scene.Node, TraversalDirectionInternal)}, {@link #traverseToFirst()} and
  * {@link #traverseToLast()} methods. These methods do the actual traversal - selecting the Node that's should be focused next and
  * focusing it. Also, listener calls are handled by top-most traversal engines.
  * select* methods can be used as well, but will *not* transfer the focus to the result, they are just query methods.
@@ -47,7 +47,7 @@ public final class TopMostTraversalEngine {
      * @param focusVisible whether the focused Node should visible indicate focus
      * @return the new focus owner or null if none found (in that case old focus owner is still valid)
      */
-    public static final Node trav(Parent root, Node node, TraversalDirection dir, boolean focusVisible) {
+    public static final Node trav(Parent root, Node node, TraversalDirectionInternal dir, boolean focusVisible) {
         Node newNode = null;
         Parent p = node.getParent();
         Node traverseNode = node;
@@ -63,8 +63,8 @@ public final class TopMostTraversalEngine {
                     // So now we try to traverse from the whole parent (associated with that traversal engine)
                     // by a traversal engine that's higher in the hierarchy
                     traverseNode = p;
-                    if (dir == TraversalDirection.NEXT) {
-                        dir = TraversalDirection.NEXT_IN_LINE;
+                    if (dir == TraversalDirectionInternal.NEXT) {
+                        dir = TraversalDirectionInternal.NEXT_IN_LINE;
                     }
                 }
             }
@@ -75,9 +75,9 @@ public final class TopMostTraversalEngine {
             newNode = TraversalPolicy.getDefault().select(root, traverseNode, dir);
         }
         if (newNode == null) {
-            if (dir == TraversalDirection.NEXT || dir == TraversalDirection.NEXT_IN_LINE) {
+            if (dir == TraversalDirectionInternal.NEXT || dir == TraversalDirectionInternal.NEXT_IN_LINE) {
                 newNode = TraversalPolicy.getDefault().selectFirst(root);
-            } else if (dir == TraversalDirection.PREVIOUS) {
+            } else if (dir == TraversalDirectionInternal.PREVIOUS) {
                 newNode = TraversalPolicy.getDefault().selectLast(root);
             }
         }

@@ -86,7 +86,7 @@ import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import com.sun.javafx.scene.control.IDisconnectable;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.MenuBarButton;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -296,17 +296,17 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                             if (control.getScene().getWindow().isFocused()) {
                                 if (openMenu != null && !openMenu.isShowing()) {
                                     if (isRTL) {
-                                        moveToMenu(TraversalDirection.NEXT, false); // just move the selection bar
+                                        moveToMenu(TraversalDirectionInternal.NEXT, false); // just move the selection bar
                                     } else {
-                                        moveToMenu(TraversalDirection.PREVIOUS, false); // just move the selection bar
+                                        moveToMenu(TraversalDirectionInternal.PREVIOUS, false); // just move the selection bar
                                     }
                                     ev.consume();
                                     return;
                                 }
                                 if (isRTL) {
-                                    moveToMenu(TraversalDirection.NEXT, true);
+                                    moveToMenu(TraversalDirectionInternal.NEXT, true);
                                 } else {
-                                    moveToMenu(TraversalDirection.PREVIOUS, true);
+                                    moveToMenu(TraversalDirectionInternal.PREVIOUS, true);
                                 }
                             }
                             ev.consume();
@@ -317,17 +317,17 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                             if (control.getScene().getWindow().isFocused()) {
                                 if (openMenu != null && !openMenu.isShowing()) {
                                     if (isRTL) {
-                                        moveToMenu(TraversalDirection.PREVIOUS, false); // just move the selection bar
+                                        moveToMenu(TraversalDirectionInternal.PREVIOUS, false); // just move the selection bar
                                     } else {
-                                        moveToMenu(TraversalDirection.NEXT, false); // just move the selection bar
+                                        moveToMenu(TraversalDirectionInternal.NEXT, false); // just move the selection bar
                                     }
                                     ev.consume();
                                     return;
                                 }
                                 if (isRTL) {
-                                    moveToMenu(TraversalDirection.PREVIOUS, true);
+                                    moveToMenu(TraversalDirectionInternal.PREVIOUS, true);
                                 } else {
-                                    moveToMenu(TraversalDirection.NEXT, true);
+                                    moveToMenu(TraversalDirectionInternal.NEXT, true);
                                 }
                             }
                             ev.consume();
@@ -1072,7 +1072,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         setFocusedMenuIndex(-1);
     }
 
-    private void moveToMenu(TraversalDirection dir, boolean doShow) {
+    private void moveToMenu(TraversalDirectionInternal dir, boolean doShow) {
         Menu focusedMenu = menuBarButtonAt(focusedMenuIndex).menu;
         boolean showNextMenu = doShow && focusedMenu.isShowing();
         findSibling(dir, focusedMenuIndex).ifPresent(p -> {
@@ -1085,7 +1085,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         });
     }
 
-    private Optional<Pair<Menu,Integer>> findSibling(TraversalDirection dir, int startIndex) {
+    private Optional<Pair<Menu,Integer>> findSibling(TraversalDirectionInternal dir, int startIndex) {
         if (startIndex == -1) {
             return Optional.empty();
         }

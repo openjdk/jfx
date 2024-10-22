@@ -25,13 +25,13 @@
 
 package com.sun.javafx.scene.traversal;
 
-import static com.sun.javafx.scene.traversal.TraversalDirection.DOWN;
-import static com.sun.javafx.scene.traversal.TraversalDirection.LEFT;
-import static com.sun.javafx.scene.traversal.TraversalDirection.NEXT;
-import static com.sun.javafx.scene.traversal.TraversalDirection.NEXT_IN_LINE;
-import static com.sun.javafx.scene.traversal.TraversalDirection.PREVIOUS;
-import static com.sun.javafx.scene.traversal.TraversalDirection.RIGHT;
-import static com.sun.javafx.scene.traversal.TraversalDirection.UP;
+import static com.sun.javafx.scene.traversal.TraversalDirectionInternal.DOWN;
+import static com.sun.javafx.scene.traversal.TraversalDirectionInternal.LEFT;
+import static com.sun.javafx.scene.traversal.TraversalDirectionInternal.NEXT;
+import static com.sun.javafx.scene.traversal.TraversalDirectionInternal.NEXT_IN_LINE;
+import static com.sun.javafx.scene.traversal.TraversalDirectionInternal.PREVIOUS;
+import static com.sun.javafx.scene.traversal.TraversalDirectionInternal.RIGHT;
+import static com.sun.javafx.scene.traversal.TraversalDirectionInternal.UP;
 import java.util.List;
 import java.util.Stack;
 import java.util.function.Function;
@@ -47,7 +47,7 @@ public class Heuristic2D extends TraversalPolicy {
     }
 
     @Override
-    public Node select(Parent root, Node node, TraversalDirection dir) {
+    public Node select(Parent root, Node node, TraversalDirectionInternal dir) {
         System.out.println(dir + " node=" + node);
         Node newNode = null;
 
@@ -117,7 +117,7 @@ public class Heuristic2D extends TraversalPolicy {
         return TabOrderHelper.getLastTargetNode(root);
     }
 
-    private boolean isOnAxis(TraversalDirection dir, Bounds cur, Bounds tgt) {
+    private boolean isOnAxis(TraversalDirectionInternal dir, Bounds cur, Bounds tgt) {
 
         final double cmin, cmax, tmin, tmax;
 
@@ -141,7 +141,7 @@ public class Heuristic2D extends TraversalPolicy {
      * Compute the out-distance to the near edge of the target in the
      * traversal direction. Negative means the near edge is "behind".
      */
-    private double outDistance(TraversalDirection dir, Bounds cur, Bounds tgt) {
+    private double outDistance(TraversalDirectionInternal dir, Bounds cur, Bounds tgt) {
 
         final double distance;
         if (dir == UP) {
@@ -163,7 +163,7 @@ public class Heuristic2D extends TraversalPolicy {
      * Computes the side distance from current center to target center.
      * Always positive. This is only used for on-axis nodes.
      */
-    private double centerSideDistance(TraversalDirection dir, Bounds cur, Bounds tgt) {
+    private double centerSideDistance(TraversalDirectionInternal dir, Bounds cur, Bounds tgt) {
         final double cc; // current center
         final double tc; // target center
 
@@ -182,7 +182,7 @@ public class Heuristic2D extends TraversalPolicy {
      * Computes the side distance between the closest corners of the current
      * and target. Always positive. This is only used for off-axis nodes.
      */
-    private double cornerSideDistance(TraversalDirection dir, Bounds cur, Bounds tgt) {
+    private double cornerSideDistance(TraversalDirectionInternal dir, Bounds cur, Bounds tgt) {
 
         final double distance;
 
@@ -211,12 +211,12 @@ public class Heuristic2D extends TraversalPolicy {
     }
 
     protected Node cacheStartTraversalNode = null;
-    protected TraversalDirection cacheStartTraversalDirection = null;
+    protected TraversalDirectionInternal cacheStartTraversalDirection = null;
     protected boolean reverseDirection = false;
     protected Node cacheLastTraversalNode = null;
     protected Stack<Node> traversalNodeStack = new Stack();
 
-    private void cacheTraversal(Node node, TraversalDirection dir) {
+    private void cacheTraversal(Node node, TraversalDirectionInternal dir) {
         if (!traversalNodeStack.empty() && node != cacheLastTraversalNode) {
             /*
             ** we didn't get here by arrow key,
@@ -227,7 +227,7 @@ public class Heuristic2D extends TraversalPolicy {
         /*
         ** Next or Previous cancels the row caching
         */
-        if (dir == TraversalDirection.NEXT || dir == TraversalDirection.PREVIOUS) {
+        if (dir == TraversalDirectionInternal.NEXT || dir == TraversalDirectionInternal.PREVIOUS) {
             traversalNodeStack.clear();
             reverseDirection = false;
         } else {
@@ -263,7 +263,7 @@ public class Heuristic2D extends TraversalPolicy {
 
     private static final Function<Bounds, Double> BOUNDS_BOTTOM_SIDE = t -> t.getMaxY();
 
-    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, Parent root, TraversalDirection dir) {
+    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, Parent root, TraversalDirectionInternal dir) {
 
         List<Node> nodes = TraversalUtils.getAllTargetNodes(root);
 
@@ -557,7 +557,7 @@ public class Heuristic2D extends TraversalPolicy {
 
     private static final Function<Bounds, Double> BOUNDS_RIGHT_SIDE = t -> t.getMaxX();
 
-    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, Parent root, TraversalDirection dir) {
+    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, Parent root, TraversalDirectionInternal dir) {
 
         List<Node> nodes = TraversalUtils.getAllTargetNodes(root);
 

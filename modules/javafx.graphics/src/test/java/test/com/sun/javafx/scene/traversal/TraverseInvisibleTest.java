@@ -38,7 +38,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 
 /**
  * Tests TraversalEngine with invisible nodes, using the default ContainerTabOrder algorithm,
@@ -57,12 +57,12 @@ public final class TraverseInvisibleTest {
     */
     private static Stream<Arguments> parameters() {
         return Stream.of(
-            Arguments.of( 3, TraversalDirection.RIGHT, 4, 5),
-            Arguments.of( 5, TraversalDirection.LEFT, 4, 3),
-            Arguments.of( 4, TraversalDirection.NEXT, 5, 6),
-            Arguments.of( 6, TraversalDirection.PREVIOUS, 5, 4),
-            Arguments.of( 8, TraversalDirection.UP, 5, 2 ),
-            Arguments.of( 2, TraversalDirection.DOWN, 5, 8)
+            Arguments.of( 3, TraversalDirectionInternal.RIGHT, 4, 5),
+            Arguments.of( 5, TraversalDirectionInternal.LEFT, 4, 3),
+            Arguments.of( 4, TraversalDirectionInternal.NEXT, 5, 6),
+            Arguments.of( 6, TraversalDirectionInternal.PREVIOUS, 5, 4),
+            Arguments.of( 8, TraversalDirectionInternal.UP, 5, 2 ),
+            Arguments.of( 2, TraversalDirectionInternal.DOWN, 5, 8)
         );
     }
 
@@ -88,7 +88,7 @@ public final class TraverseInvisibleTest {
     @MethodSource("parameters")
     public void traverseOverInvisible(
         int fromNumber,
-        TraversalDirection direction,
+        TraversalDirectionInternal direction,
         int invisibleNumber,
         int toNumber)
     {

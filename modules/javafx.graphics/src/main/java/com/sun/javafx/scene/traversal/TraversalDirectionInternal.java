@@ -29,7 +29,7 @@ import javafx.geometry.NodeOrientation;
 /**
  * Specifies the direction of focus traversal.
  */
-public enum TraversalDirection {
+public enum TraversalDirectionInternal {
     /** Moves focus downward. */
     DOWN,
     /** Moves focus left. */
@@ -66,7 +66,7 @@ public enum TraversalDirection {
      * @param orientation the node orientation
      * @return the traverse direction
      */
-    public TraversalDirection getDirectionForNodeOrientation(NodeOrientation orientation) {
+    public TraversalDirectionInternal getDirectionForNodeOrientation(NodeOrientation orientation) {
         if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
             switch (this) {
             case LEFT:

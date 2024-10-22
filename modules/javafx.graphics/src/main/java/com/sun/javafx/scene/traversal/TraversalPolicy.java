@@ -38,24 +38,24 @@ import javafx.scene.Parent;
  * <p>
  * Note that in order to avoid cycles or dead-ends in traversal the algorithms should respect the following order:
  * <ul>
- *   <li>For {@link TraversalDirection#NEXT NEXT}:
+ *   <li>For {@link TraversalDirectionInternal#NEXT NEXT}:
  *       node ->
  *       node subtree ->
  *       node siblings (first sibling then its subtree) ->
- *       {@link TraversalDirection#NEXT_IN_LINE NEXT_IN_LINE} for node's parent
- *   <li>For {@link TraversalDirection#NEXT_IN_LINE NEXT_IN_LINE}:
+ *       {@link TraversalDirectionInternal#NEXT_IN_LINE NEXT_IN_LINE} for node's parent
+ *   <li>For {@link TraversalDirectionInternal#NEXT_IN_LINE NEXT_IN_LINE}:
  *       node ->
  *       node siblings (first sibling then its subtree) ->
- *       {@link TraversalDirection#NEXT_IN_LINE NEXT_IN_LINE} for node's parent
- *   <li>For {@link TraversalDirection#PREVIOUS PREVIOUS}:
+ *       {@link TraversalDirectionInternal#NEXT_IN_LINE NEXT_IN_LINE} for node's parent
+ *   <li>For {@link TraversalDirectionInternal#PREVIOUS PREVIOUS}:
  *       node ->
  *       node siblings (first subtree then the node itself) ->
- *       {@link TraversalDirection#PREVIOUS PREVIOUS} for node's parent
+ *       {@link TraversalDirectionInternal#PREVIOUS PREVIOUS} for node's parent
  * </ul>
  * <p>
  * This ensures that the next direction will traverse the same nodes as previous (in the opposite order).
  *
- * @see TraversalDirection
+ * @see TraversalDirectionInternal
  * @since 24
  */
 public abstract class TraversalPolicy {
@@ -80,7 +80,7 @@ public abstract class TraversalPolicy {
      * @param dir the traversal direction
      * @return the new focus owner or null if none found (in that case old focus owner is still valid)
      */
-    public abstract Node select(Parent root, Node node, TraversalDirection dir);
+    public abstract Node select(Parent root, Node node, TraversalDirectionInternal dir);
 
     /**
      * Return the first {@link javafx.scene.Node#isFocusTraversable() focus traversable}
@@ -129,7 +129,7 @@ public abstract class TraversalPolicy {
 
     /**
      * Finds the next focusable Node.
-     * This method is provided to the policy implementation for handling of the {@link TraversalDirection#NEXT}
+     * This method is provided to the policy implementation for handling of the {@link TraversalDirectionInternal#NEXT}
      * case when it needs to consider traversing into the parent's nodes.
      * <p>
      * Example:<pre>     @Override
@@ -150,7 +150,7 @@ public abstract class TraversalPolicy {
 
     /**
      * Finds the next in line focusable Node.
-     * This method is provided to the policy implementation for handling of the {@link TraversalDirection#NEXT_IN_LINE}
+     * This method is provided to the policy implementation for handling of the {@link TraversalDirectionInternal#NEXT_IN_LINE}
      * case when it needs to consider traversing into the parent's nodes.
      * <p>
      * Example:<pre>     @Override
@@ -173,7 +173,7 @@ public abstract class TraversalPolicy {
 
     /**
      * Finds the previous focusable Node.
-     * This method is provided to the policy implementation for handling of the {@link TraversalDirection#PREVIOUS}
+     * This method is provided to the policy implementation for handling of the {@link TraversalDirectionInternal#PREVIOUS}
      * case when it needs to consider traversing into the parent's nodes.
      * <p>
      * Example:<pre>     @Override

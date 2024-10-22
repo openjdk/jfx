@@ -75,7 +75,7 @@ import org.w3c.dom.html.HTMLDocument;
 import org.w3c.dom.html.HTMLElement;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.skin.FXVK;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
@@ -456,7 +456,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
         TraversalUtils.setTraversalPolicy(getSkinnable(), new TraversalPolicy() {
             @Override
-            public Node select(Parent root, Node owner, TraversalDirection dir) {
+            public Node select(Parent root, Node owner, TraversalDirectionInternal dir) {
                 return cutButton;
             }
 

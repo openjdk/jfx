@@ -45,7 +45,7 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.collections.ObservableMapWrapper;
 import com.sun.javafx.event.BasicEventDispatcher;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 
 public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
@@ -97,7 +97,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         return accelerators;
     }
 
-    private void traverse(Event event, Node node, TraversalDirection dir) {
+    private void traverse(Event event, Node node, TraversalDirectionInternal dir) {
         if (TraversalUtils.traverse(node, dir, true)) {
             event.consume();
         }
@@ -116,23 +116,23 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
             switch (keyEvent.getCode()) {
               case TAB :
                   if (keyEvent.isShiftDown()) {
-                      traverse(event, node, TraversalDirection.PREVIOUS);
+                      traverse(event, node, TraversalDirectionInternal.PREVIOUS);
                   }
                   else {
-                      traverse(event, node, TraversalDirection.NEXT);
+                      traverse(event, node, TraversalDirectionInternal.NEXT);
                   }
                   break;
               case UP :
-                  traverse(event, node, TraversalDirection.UP);
+                  traverse(event, node, TraversalDirectionInternal.UP);
                   break;
               case DOWN :
-                  traverse(event, node, TraversalDirection.DOWN);
+                  traverse(event, node, TraversalDirectionInternal.DOWN);
                   break;
               case LEFT :
-                  traverse(event, node, TraversalDirection.LEFT);
+                  traverse(event, node, TraversalDirectionInternal.LEFT);
                   break;
               case RIGHT :
-                  traverse(event, node, TraversalDirection.RIGHT);
+                  traverse(event, node, TraversalDirectionInternal.RIGHT);
                   break;
               default :
                   break;

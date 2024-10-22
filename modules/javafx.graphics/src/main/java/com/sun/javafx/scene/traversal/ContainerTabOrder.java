@@ -36,7 +36,7 @@ public class ContainerTabOrder extends TraversalPolicy {
     }
 
     @Override
-    public Node select(Parent root, Node node, TraversalDirection dir) {
+    public Node select(Parent root, Node node, TraversalDirectionInternal dir) {
         switch (dir) {
             case NEXT:
                 return findNextFocusableNode(root, node);
@@ -67,7 +67,7 @@ public class ContainerTabOrder extends TraversalPolicy {
         return TabOrderHelper.getLastTargetNode(root);
     }
 
-    private int trav2D(Bounds origin, TraversalDirection dir, List<Node> peers, Parent root) {
+    private int trav2D(Bounds origin, TraversalDirectionInternal dir, List<Node> peers, Parent root) {
 
         Bounds bestBounds = null;
         double bestMetric = 0.0;
@@ -100,11 +100,11 @@ public class ContainerTabOrder extends TraversalPolicy {
         return bestIndex;
     }
 
-    private boolean isOnAxis(TraversalDirection dir, Bounds cur, Bounds tgt) {
+    private boolean isOnAxis(TraversalDirectionInternal dir, Bounds cur, Bounds tgt) {
 
         final double cmin, cmax, tmin, tmax;
 
-        if (dir == TraversalDirection.UP || dir == TraversalDirection.DOWN) {
+        if (dir == TraversalDirectionInternal.UP || dir == TraversalDirectionInternal.DOWN) {
             cmin = cur.getMinX();
             cmax = cur.getMaxX();
             tmin = tgt.getMinX();
@@ -124,17 +124,17 @@ public class ContainerTabOrder extends TraversalPolicy {
      * Compute the out-distance to the near edge of the target in the
      * traversal direction. Negative means the near edge is "behind".
      */
-    private double outDistance(TraversalDirection dir, Bounds cur, Bounds tgt) {
+    private double outDistance(TraversalDirectionInternal dir, Bounds cur, Bounds tgt) {
 
         final double distance;
 
-        if (dir == TraversalDirection.UP) {
+        if (dir == TraversalDirectionInternal.UP) {
             distance = cur.getMinY() - tgt.getMaxY();
         }
-        else if (dir == TraversalDirection.DOWN) {
+        else if (dir == TraversalDirectionInternal.DOWN) {
             distance = tgt.getMinY() - cur.getMaxY();
         }
-        else if (dir == TraversalDirection.LEFT) {
+        else if (dir == TraversalDirectionInternal.LEFT) {
             distance = cur.getMinX() - tgt.getMaxX();
         }
         else { // dir == RIGHT
@@ -148,12 +148,12 @@ public class ContainerTabOrder extends TraversalPolicy {
      * Computes the side distance from current center to target center.
      * Always positive. This is only used for on-axis nodes.
      */
-    private double centerSideDistance(TraversalDirection dir, Bounds cur, Bounds tgt) {
+    private double centerSideDistance(TraversalDirectionInternal dir, Bounds cur, Bounds tgt) {
 
         final double cc; // current center
         final double tc; // target center
 
-        if (dir == TraversalDirection.UP || dir == TraversalDirection.DOWN) {
+        if (dir == TraversalDirectionInternal.UP || dir == TraversalDirectionInternal.DOWN) {
             cc = cur.getMinX() + cur.getWidth() / 2.0f;
             tc = tgt.getMinX() + tgt.getWidth() / 2.0f;
         }
@@ -170,11 +170,11 @@ public class ContainerTabOrder extends TraversalPolicy {
      * Computes the side distance between the closest corners of the current
      * and target. Always positive. This is only used for off-axis nodes.
      */
-    private double cornerSideDistance(TraversalDirection dir, Bounds cur, Bounds tgt) {
+    private double cornerSideDistance(TraversalDirectionInternal dir, Bounds cur, Bounds tgt) {
 
         final double distance;
 
-        if (dir == TraversalDirection.UP || dir == TraversalDirection.DOWN) {
+        if (dir == TraversalDirectionInternal.UP || dir == TraversalDirectionInternal.DOWN) {
 
             if (tgt.getMinX() > cur.getMaxX()) {
                 // on the right

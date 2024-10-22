@@ -38,7 +38,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.tk.Toolkit;
@@ -143,7 +143,7 @@ public final class TraversalPolicyTest {
         }
     }
 
-    void traverse(Node from, TraversalDirection dir, Node... nodes) {
+    void traverse(Node from, TraversalDirectionInternal dir, Node... nodes) {
         from.requestFocus();
         firePulse();
         checkFocused(from);
@@ -203,7 +203,7 @@ public final class TraversalPolicyTest {
         // This custom policy differs from default by explicitly specifying the traversal order.
         return new TraversalPolicy() {
             @Override
-            public Node select(Parent root, Node owner, TraversalDirection dir) {
+            public Node select(Parent root, Node owner, TraversalDirectionInternal dir) {
                 int ix = indexOf(owner);
                 if (ix < 0) {
                     return null;
@@ -279,7 +279,7 @@ public final class TraversalPolicyTest {
     void testDefaultPolicy_DOWN() {
         traverse(
             t0,
-            TraversalDirection.DOWN,
+            TraversalDirectionInternal.DOWN,
             b00, b01, b02
         );
     }
@@ -290,7 +290,7 @@ public final class TraversalPolicyTest {
         setCustomPolicy();
         traverse(
             t0,
-            TraversalDirection.DOWN,
+            TraversalDirectionInternal.DOWN,
             b00, b10, b20,
             b01, b11, b21,
             b02, b12, b22,
@@ -303,7 +303,7 @@ public final class TraversalPolicyTest {
     void testDefaultPolicy_LEFT() {
         traverse(
             t3,
-            TraversalDirection.LEFT,
+            TraversalDirectionInternal.LEFT,
             t2, t1, t0
         );
     }
@@ -313,7 +313,7 @@ public final class TraversalPolicyTest {
     void testDefaultPolicy_LEFT2() {
         traverse(
             b20,
-            TraversalDirection.LEFT,
+            TraversalDirectionInternal.LEFT,
             b10, b00
         );
     }
@@ -324,7 +324,7 @@ public final class TraversalPolicyTest {
         setCustomPolicy();
         traverse(
             b20,
-            TraversalDirection.LEFT,
+            TraversalDirectionInternal.LEFT,
             b10, b00,
             b22, b12, b02,
             b21, b11, b01,
@@ -338,7 +338,7 @@ public final class TraversalPolicyTest {
     void testDefaultPolicy_NEXT() {
         traverse(
             t0,
-            TraversalDirection.NEXT,
+            TraversalDirectionInternal.NEXT,
             t1, t2, t3,
             b00, b01, b02,
             b10, b11, b12,
@@ -353,7 +353,7 @@ public final class TraversalPolicyTest {
         setCustomPolicy();
         traverse(
             t0,
-            TraversalDirection.NEXT,
+            TraversalDirectionInternal.NEXT,
             t1, t2, t3,
             b00, b10, b20,
             b01, b11, b21,
@@ -367,7 +367,7 @@ public final class TraversalPolicyTest {
     void testDefaultPolicy_NEXT_IN_LINE() {
         traverse(
             t0,
-            TraversalDirection.NEXT_IN_LINE,
+            TraversalDirectionInternal.NEXT_IN_LINE,
             t1, t2, t3,
             b00, b01, b02,
             b10, b11, b12,
@@ -382,7 +382,7 @@ public final class TraversalPolicyTest {
         setCustomPolicy();
         traverse(
             t0,
-            TraversalDirection.NEXT_IN_LINE,
+            TraversalDirectionInternal.NEXT_IN_LINE,
             t1, t2, t3,
             b00, b10, b20,
             b01, b11, b21,
@@ -396,7 +396,7 @@ public final class TraversalPolicyTest {
     void testDefaultPolicy_PREVIOUS() {
         traverse(
             t3,
-            TraversalDirection.PREVIOUS,
+            TraversalDirectionInternal.PREVIOUS,
             t2, t1, t0,
             b22
         );
@@ -408,7 +408,7 @@ public final class TraversalPolicyTest {
         setCustomPolicy();
         traverse(
             t3,
-            TraversalDirection.PREVIOUS,
+            TraversalDirectionInternal.PREVIOUS,
             t2, t1, t0,
             b22, b12, b02,
             b21, b11, b01,
@@ -423,7 +423,7 @@ public final class TraversalPolicyTest {
     void testDefaultPolicy_RIGHT() {
         traverse(
             t0,
-            TraversalDirection.RIGHT,
+            TraversalDirectionInternal.RIGHT,
             t1, t2, t3
         );
     }
@@ -433,7 +433,7 @@ public final class TraversalPolicyTest {
     void testDefaultPolicy_RIGHT2() {
         traverse(
             b00,
-            TraversalDirection.RIGHT,
+            TraversalDirectionInternal.RIGHT,
             b10, b20,
             t3
         );
@@ -445,7 +445,7 @@ public final class TraversalPolicyTest {
         setCustomPolicy();
         traverse(
             b00,
-            TraversalDirection.RIGHT,
+            TraversalDirectionInternal.RIGHT,
             b10, b20,
             b01, b11, b21,
             b02, b12, b22,
@@ -458,7 +458,7 @@ public final class TraversalPolicyTest {
     void testDefaultPolicy_UP() {
         traverse(
             b02,
-            TraversalDirection.UP,
+            TraversalDirectionInternal.UP,
             b01, b00, t0
         );
     }
@@ -469,7 +469,7 @@ public final class TraversalPolicyTest {
         setCustomPolicy();
         traverse(
             b02,
-            TraversalDirection.UP,
+            TraversalDirectionInternal.UP,
             b21, b11, b01,
             b20, b10, b00,
             b22, b12, b02

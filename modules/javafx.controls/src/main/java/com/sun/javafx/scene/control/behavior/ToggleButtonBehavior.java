@@ -41,7 +41,7 @@ import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
 import com.sun.javafx.scene.control.skin.Utils;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 
 public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior<C>{
 
@@ -49,10 +49,10 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         super(button);
 
         ObservableList<Mapping<?>> mappings = FXCollections.observableArrayList(
-            new KeyMapping(RIGHT, e -> traverse(e, TraversalDirection.RIGHT)),
-            new KeyMapping(LEFT, e -> traverse(e, TraversalDirection.LEFT)),
-            new KeyMapping(DOWN, e -> traverse(e, TraversalDirection.DOWN)),
-            new KeyMapping(UP, e -> traverse(e, TraversalDirection.UP))
+            new KeyMapping(RIGHT, e -> traverse(e, TraversalDirectionInternal.RIGHT)),
+            new KeyMapping(LEFT, e -> traverse(e, TraversalDirectionInternal.LEFT)),
+            new KeyMapping(DOWN, e -> traverse(e, TraversalDirectionInternal.DOWN)),
+            new KeyMapping(UP, e -> traverse(e, TraversalDirectionInternal.UP))
         );
 
         // we disable auto-consuming, so that unconsumed events work their way
@@ -95,7 +95,7 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         return i;
     }
 
-    private final void traverse(KeyEvent e, TraversalDirection dir) {
+    private final void traverse(KeyEvent e, TraversalDirectionInternal dir) {
         ToggleButton toggleButton = getNode();
         final ToggleGroup toggleGroup = toggleButton.getToggleGroup();
         // A ToggleButton does not have to be in a group.
@@ -138,7 +138,7 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         }
     }
 
-    private boolean traversingToNext(TraversalDirection dir, NodeOrientation effectiveNodeOrientation) {
+    private boolean traversingToNext(TraversalDirectionInternal dir, NodeOrientation effectiveNodeOrientation) {
         boolean rtl = effectiveNodeOrientation == NodeOrientation.RIGHT_TO_LEFT;
         switch (dir) {
             case RIGHT:

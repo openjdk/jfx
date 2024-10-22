@@ -136,7 +136,7 @@ import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.input.TouchPointHelper;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
@@ -2219,7 +2219,7 @@ public class Scene implements EventTarget {
      * function assumes that it is still a member of the same scene.
      */
     private void focusIneligible(Node node) {
-        TraversalUtils.traverse(node, TraversalDirection.NEXT, false);
+        TraversalUtils.traverse(node, TraversalDirectionInternal.NEXT, false);
     }
 
     boolean processKeyEvent(KeyEvent e) {

@@ -37,7 +37,7 @@ public class OverridableTraversalPolicy extends TraversalPolicy {
     }
 
     @Override
-    public Node select(Parent root, Node owner, TraversalDirection dir) {
+    public Node select(Parent root, Node owner, TraversalDirectionInternal dir) {
         return null;
     }
 

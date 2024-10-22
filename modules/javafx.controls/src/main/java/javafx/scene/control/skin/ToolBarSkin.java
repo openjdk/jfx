@@ -71,7 +71,7 @@ import javafx.stage.WindowEvent;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 
@@ -163,7 +163,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             }
 
             @Override
-            public Node select(Parent root, Node owner, TraversalDirection dir) {
+            public Node select(Parent root, Node owner, TraversalDirectionInternal dir) {
 
                 dir = dir.getDirectionForNodeOrientation(control.getEffectiveNodeOrientation());
 
@@ -188,8 +188,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                     Node selected = TraversalPolicy.getDefault().select(item, owner, dir);
                     if (selected != null) return selected;
                     idx = boxChildren.indexOf(item);
-                    if (dir == TraversalDirection.NEXT) {
-                        dir = TraversalDirection.NEXT_IN_LINE;
+                    if (dir == TraversalDirectionInternal.NEXT) {
+                        dir = TraversalDirectionInternal.NEXT_IN_LINE;
                     }
                 }
 

@@ -75,7 +75,7 @@ import javafx.util.Duration;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 
 /**
  * This is a the SkinBase for ContextMenu based controls so that the CSS parts
@@ -540,12 +540,12 @@ public class ContextMenuContent extends Region {
                         break;
                     case DOWN:
                         // move to the next sibling
-                        move(TraversalDirection.NEXT);
+                        move(TraversalDirectionInternal.NEXT);
                         ke.consume();
                         break;
                     case UP:
                         // move to previous sibling
-                        move(TraversalDirection.PREVIOUS);
+                        move(TraversalDirectionInternal.PREVIOUS);
                         ke.consume();
                         break;
                     case SPACE:
@@ -707,12 +707,12 @@ public class ContextMenuContent extends Region {
         });
     }
 
-    private void move(TraversalDirection dir) {
+    private void move(TraversalDirectionInternal dir) {
         int startIndex = currentFocusedIndex != -1 ? currentFocusedIndex : itemsContainer.getChildren().size();
         requestFocusOnIndex(findSibling(dir, startIndex));
     }
 
-    private int findSibling(final TraversalDirection dir, final int startIndex) {
+    private int findSibling(final TraversalDirectionInternal dir, final int startIndex) {
         final int childCount = itemsContainer.getChildren().size();
         int i = startIndex;
         do {

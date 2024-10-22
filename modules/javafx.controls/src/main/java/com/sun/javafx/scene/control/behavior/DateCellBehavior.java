@@ -30,7 +30,7 @@ import javafx.scene.Node;
 import javafx.scene.control.DateCell;
 import com.sun.javafx.scene.control.DatePickerContent;
 import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import java.time.temporal.ChronoUnit;
 
 import static javafx.scene.input.KeyCode.DOWN;
@@ -55,10 +55,10 @@ public class DateCellBehavior extends BehaviorBase<DateCell> {
 
         inputMap = createInputMap();
         addDefaultMapping(inputMap,
-            new InputMap.KeyMapping(UP,    e -> traverse(dateCell, TraversalDirection.UP)),
-            new InputMap.KeyMapping(DOWN,  e -> traverse(dateCell, TraversalDirection.DOWN)),
-            new InputMap.KeyMapping(LEFT,  e -> traverse(dateCell, TraversalDirection.LEFT)),
-            new InputMap.KeyMapping(RIGHT, e -> traverse(dateCell, TraversalDirection.RIGHT)),
+            new InputMap.KeyMapping(UP,    e -> traverse(dateCell, TraversalDirectionInternal.UP)),
+            new InputMap.KeyMapping(DOWN,  e -> traverse(dateCell, TraversalDirectionInternal.DOWN)),
+            new InputMap.KeyMapping(LEFT,  e -> traverse(dateCell, TraversalDirectionInternal.LEFT)),
+            new InputMap.KeyMapping(RIGHT, e -> traverse(dateCell, TraversalDirectionInternal.RIGHT)),
             new InputMap.KeyMapping(ENTER, KEY_RELEASED, e -> selectDate()),
             new InputMap.KeyMapping(SPACE, KEY_RELEASED, e -> selectDate())
         );
@@ -74,7 +74,7 @@ public class DateCellBehavior extends BehaviorBase<DateCell> {
         dpc.selectDayCell(cell);
     }
 
-    public void traverse(final DateCell cell, final TraversalDirection dir) {
+    public void traverse(final DateCell cell, final TraversalDirectionInternal dir) {
         boolean rtl = (cell.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
         DatePickerContent dpc = findDatePickerContent(cell);
         if (dpc != null) {

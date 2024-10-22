@@ -67,7 +67,7 @@ import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.VirtualScrollBar;
 import com.sun.javafx.scene.control.skin.Utils;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 
@@ -657,7 +657,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
 
             @Override
-            public Node select(Parent root, Node owner, TraversalDirection dir) {
+            public Node select(Parent root, Node owner, TraversalDirectionInternal dir) {
                 T cell;
                 if (cells.isEmpty()) return null;
                 if (cells.contains(owner)) {
@@ -668,7 +668,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     if (next != null) {
                         return next;
                     }
-                    if (dir == TraversalDirection.NEXT) dir = TraversalDirection.NEXT_IN_LINE;
+                    if (dir == TraversalDirectionInternal.NEXT) dir = TraversalDirectionInternal.NEXT_IN_LINE;
                 }
                 int cellIndex = cell.getIndex();
                 switch(dir) {

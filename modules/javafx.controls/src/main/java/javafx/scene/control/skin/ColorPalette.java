@@ -61,7 +61,7 @@ import javafx.scene.shape.StrokeType;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.CustomColorDialog;
 import com.sun.javafx.scene.control.skin.Utils;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 
@@ -298,7 +298,7 @@ class ColorPalette extends Region {
 
         TraversalUtils.setTraversalPolicy(this, new TraversalPolicy() {
             @Override
-            public Node select(Parent root, Node owner, TraversalDirection dir) {
+            public Node select(Parent root, Node owner, TraversalDirectionInternal dir) {
                 final Node subsequentNode = TraversalPolicy.getDefault().select(root, owner, dir);
                 switch (dir) {
                     case NEXT:
@@ -323,7 +323,7 @@ class ColorPalette extends Region {
                 return null;
             }
 
-            private Node processArrow(ColorSquare owner, TraversalDirection dir) {
+            private Node processArrow(ColorSquare owner, TraversalDirectionInternal dir) {
                 int row = 0;
                 int column = 0;
 
@@ -352,15 +352,15 @@ class ColorPalette extends Region {
                             // might have different number of columns
                             if (owner.colorType == ColorType.STANDARD) {
                                 subsequentRow = 0;
-                                subsequentColumn = (dir == TraversalDirection.LEFT)? NUM_OF_COLUMNS - 1 : 0;
+                                subsequentColumn = (dir == TraversalDirectionInternal.LEFT)? NUM_OF_COLUMNS - 1 : 0;
                             }
                             else if (owner.colorType == ColorType.CUSTOM) {
-                                subsequentRow = Math.floorMod(dir == TraversalDirection.LEFT ? row - 1 : row + 1, customColorRows);
-                                subsequentColumn = dir == TraversalDirection.LEFT ? subsequentRow == customColorRows - 1 ?
+                                subsequentRow = Math.floorMod(dir == TraversalDirectionInternal.LEFT ? row - 1 : row + 1, customColorRows);
+                                subsequentColumn = dir == TraversalDirectionInternal.LEFT ? subsequentRow == customColorRows - 1 ?
                                         customColorLastRowLength - 1 : NUM_OF_COLUMNS - 1 : 0;
                             } else {
-                                subsequentRow = Math.floorMod(dir == TraversalDirection.LEFT ? row - 1 : row + 1, NUM_OF_ROWS);
-                                subsequentColumn = dir == TraversalDirection.LEFT ? NUM_OF_COLUMNS - 1 : 0;
+                                subsequentRow = Math.floorMod(dir == TraversalDirectionInternal.LEFT ? row - 1 : row + 1, NUM_OF_ROWS);
+                                subsequentColumn = dir == TraversalDirectionInternal.LEFT ? NUM_OF_COLUMNS - 1 : 0;
                             }
                             break;
                         case UP: // custom color are not handled here
@@ -390,7 +390,7 @@ class ColorPalette extends Region {
                 return null;
             }
 
-            private boolean isAtBorder(TraversalDirection dir, int row, int column, boolean custom) {
+            private boolean isAtBorder(TraversalDirectionInternal dir, int row, int column, boolean custom) {
                 switch (dir) {
                     case LEFT:
                         return column == 0;

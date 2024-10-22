@@ -79,7 +79,7 @@ public final class TraversalUtils {
     private static TraversalPolicy initEmptyTraversablePolicy() {
         return new TraversalPolicy() {
             @Override
-            public Node select(Parent root, Node owner, TraversalDirection dir) {
+            public Node select(Parent root, Node owner, TraversalDirectionInternal dir) {
                 return null;
             }
 
@@ -135,7 +135,7 @@ public final class TraversalUtils {
      * @param focusVisible whether the focused Node should visible indicate focus
      * @return true if traversal was successful
      */
-    public static boolean traverse(Node node, TraversalDirection dir, boolean focusVisible) {
+    public static boolean traverse(Node node, TraversalDirectionInternal dir, boolean focusVisible) {
         if (node != null) {
             SubScene ss = NodeHelper.getSubScene(node);
             if (ss != null) {

@@ -36,7 +36,7 @@ import javafx.scene.input.KeyEvent;
 import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
-import com.sun.javafx.scene.traversal.TraversalDirection;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 
 public class FocusTraversalInputMap {
@@ -86,7 +86,7 @@ public class FocusTraversalInputMap {
      * @param dir The direction to traverse
      * @param focusVisible whether the focused Node should visible indicate focus
      */
-    public static void traverse(final Node node, final TraversalDirection dir, boolean focusVisible) {
+    public static void traverse(final Node node, final TraversalDirectionInternal dir, boolean focusVisible) {
         if (node == null) {
             throw new IllegalArgumentException("Attempting to traverse on a null Node. " +
                     "Most probably a KeyEvent has been fired with a null target specified.");
@@ -99,7 +99,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node above the current one.
      */
     public static final void traverseUp(KeyEvent e) {
-        traverse(getNode(e), TraversalDirection.UP, true);
+        traverse(getNode(e), TraversalDirectionInternal.UP, true);
     }
 
     /**
@@ -107,7 +107,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node below the current one.
      */
     public static final void traverseDown(KeyEvent e) {
-        traverse(getNode(e), TraversalDirection.DOWN, true);
+        traverse(getNode(e), TraversalDirectionInternal.DOWN, true);
     }
 
     /**
@@ -115,7 +115,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node left of the current one.
      */
     public static final void traverseLeft(KeyEvent e) {
-        traverse(getNode(e), TraversalDirection.LEFT, true);
+        traverse(getNode(e), TraversalDirectionInternal.LEFT, true);
     }
 
     /**
@@ -123,7 +123,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node right of the current one.
      */
     public static final void traverseRight(KeyEvent e) {
-        traverse(getNode(e), TraversalDirection.RIGHT, true);
+        traverse(getNode(e), TraversalDirectionInternal.RIGHT, true);
     }
 
     /**
@@ -131,7 +131,7 @@ public class FocusTraversalInputMap {
      * go the next focusTraversable Node in the focus traversal cycle.
      */
     public static final void traverseNext(KeyEvent e) {
-        traverse(getNode(e), TraversalDirection.NEXT, true);
+        traverse(getNode(e), TraversalDirectionInternal.NEXT, true);
     }
 
     /**
@@ -139,7 +139,7 @@ public class FocusTraversalInputMap {
      * go the previous focusTraversable Node in the focus traversal cycle.
      */
     public static final void traversePrevious(KeyEvent e) {
-        traverse(getNode(e), TraversalDirection.PREVIOUS, true);
+        traverse(getNode(e), TraversalDirectionInternal.PREVIOUS, true);
     }
 
     private static Node getNode(KeyEvent e) {
