@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@
 #include <X11/Xutil.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_X11GLFactory.h"
+#include "com_sun_prism_es2_LinuxGLFactory.h"
 #ifdef STATIC_BUILD
 JNIEXPORT jint JNICALL
 JNI_OnLoad_prism_es2(JavaVM *vm, void * reserved) {
@@ -159,14 +159,14 @@ static int x11errorDetector (Display *dpy, XErrorEvent *error)
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nInitialize
  * Signature: ([I[J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nInitialize
 (JNIEnv *env, jclass class, jintArray attrArr) {
 
-    int glxAttrs[MAX_GLX_ATTRS_LENGTH]; /* value, attr pair plus a None */
+    int glxAttrs[MAX_GL_ATTRS_LENGTH]; /* value, attr pair plus a None */
     jint *attrs;
     ContextInfo *ctxInfo = NULL;
 
@@ -377,33 +377,33 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetAdapterOrdinal
  * Signature: (J)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetAdapterOrdinal
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetAdapterOrdinal
 (JNIEnv *env, jclass class, jlong screen) {
     //TODO: Needs implementation to handle multi-monitors (RT-27437)
     return 0;
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetAdapterCount
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetAdapterCount
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetAdapterCount
 (JNIEnv *env, jclass class) {
     //TODO: Needs implementation to handle multi-monitors (RT-27437)
     return 1;
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetDefaultScreen
  * Signature: (J)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetDefaultScreen
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetDefaultScreen
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if (ctxInfo == NULL) {
@@ -413,11 +413,11 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetDefaultScreen
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetDisplay
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetDisplay
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetDisplay
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if (ctxInfo == NULL) {
@@ -427,11 +427,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetDisplay
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetVisualID
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetVisualID
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetVisualID
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if (ctxInfo == NULL) {
@@ -441,11 +441,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetVisualID
 }
 
 /*
- * Class:     com_sun_prism_es2_X11_X11GLFactory
+ * Class:     com_sun_prism_es2_X11_LinuxGLFactory
  * Method:    nGetIsGL2
  * Signature: (J)Z
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetIsGL2
+JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetIsGL2
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     return ((ContextInfo *)jlong_to_ptr(nativeCtxInfo))->gl2;
 }

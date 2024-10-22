@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,9 @@
 #define GLX_GLEXT_PROTOTYPES
 #define GLX_GLXEXT_PROTOTYPES
 #define UNIX
-#if defined(IS_EGLX11) || defined(IS_EGLFB)
-#define IS_EGL
-#else
-#define IS_GLX
+
+#if defined(IS_MONOCLE_EGLX11) || defined(IS_MONOCLE_EGLFB)
+#define IS_MONOCLE_EGL
 #endif
 
 #include <limits.h>
@@ -42,7 +41,16 @@
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+
+#ifdef IS_LINUX_EGL
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#endif
+
+#ifdef IS_LINUX_GLX
 #include <GL/glx.h>
+#endif
+
 #endif
 
 #include <GL/gl.h>
@@ -57,9 +65,9 @@
 #define ptr_to_jlong(value) (jlong)((long)(value))
 
 /* Max lenght of value, attr pair plus a None */
-#define  MAX_GLX_ATTRS_LENGTH 50
+#define MAX_GL_ATTRS_LENGTH 50
 
-#ifdef IS_EGL
+#ifdef IS_MONOCLE_EGL
 #include <EGL/egl.h>
 #include "eglWrapper/eglWrapper.h"
 #endif
@@ -76,7 +84,7 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include "ios/ios-window-system.h"
-#define IS_EGL
+#define IS_MONOCLE_EGL
 
 #elif TARGET_OS_MAC /* MacOSX */
 /* Include the OpenGL headers */
@@ -156,9 +164,17 @@ struct PixelFormatInfoRec {
 
 #ifdef UNIX /* LINUX || SOLARIS */
     Display *display;
-    GLXFBConfig fbConfig;
     Window dummyWin;
+
+#ifdef IS_LINUX_GLX
+    GLXFBConfig fbConfig;
     Colormap dummyCmap;
+#endif
+
+#ifdef IS_LINUX_EGL
+    EGLConfig eglConfig;
+    EGLDisplay eglDisplay;
+#endif
 #endif
 
 #ifdef MACOSX /* MACOSX */
@@ -179,13 +195,18 @@ struct DrawableInfoRec {
 #endif /* WIN32 */
 
 #ifdef UNIX /* LINUX || SOLARIS */
-#ifdef IS_EGL
+
+#ifdef IS_MONOCLE_EGL
     EGLDisplay *egldisplay;
     EGLSurface eglsurface;
 #endif
-#ifndef IS_EGLFB
+#ifndef IS_MONOCLE_EGLFB
     Display *display;
     Window win;
+#endif
+#ifdef IS_LINUX_EGL
+    EGLSurface eglSurface;
+    EGLSurface eglDisplay;
 #endif
 #endif
 
@@ -225,15 +246,21 @@ struct ContextInfoRec {
 
 #ifdef UNIX /* LINUX || SOLARIS */
     Display *display;
-#ifdef IS_EGL
+#ifdef IS_MONOCLE_EGL
     EGLContext context;
     EGLDisplay *egldisplay;
     EGLSurface eglsurface;
 #else
-     GLXContext context;
+#ifdef IS_LINUX_GLX
+    GLXContext context;
+#endif
+#ifdef IS_LINUX_EGL
+    EGLContext context;
+    EGLDisplay eglDisplay;
+#endif
 #endif
 
-#if defined(IS_GLX) || defined( IS_EGLX11)
+#if defined(IS_LINUX_GLX) || defined(IS_LINUX_EGL) || defined(IS_MONOCLE_EGLX11)
     /*
      * display screen and visualID are cached
      * for Factory to pass to Glass
@@ -261,8 +288,13 @@ struct ContextInfoRec {
 #endif /* WIN32 */
 
 #ifdef UNIX /* LINUX || SOLARIS */
+#ifdef IS_LINUX_EGL
+    char *eglExtensionStr;
+#endif
+#ifdef IS_LINUX_GLX
     char *glxExtensionStr;
     PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
+#endif
 #endif /* LINUX || SOLARIS */
 
     /* gl function pointers */
