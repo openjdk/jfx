@@ -536,8 +536,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
     NSAutoreleasePool *pool1 = [[NSAutoreleasePool alloc] init];
 
-    jint error = (*jVM)->AttachCurrentThread(jVM, (void **)&jEnv, NULL);
-    //jint error = (*jVM)->AttachCurrentThreadAsDaemon(jVM, (void **)&jEnv, NULL);
+    jint error = (*jVM)->AttachCurrentThreadAsDaemon(jVM, (void **)&jEnv, NULL);
     if (error == 0)
     {
         NSAutoreleasePool *pool2 = [[NSAutoreleasePool alloc] init];
@@ -735,12 +734,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
             (*jEnv)->CallVoidMethod(jEnv, self->jApplication, javaIDs.MacApplication.notifyApplicationDidTerminate);
             GLASS_CHECK_EXCEPTION(jEnv);
-
-            jint err = (*jVM)->DetachCurrentThread(jVM);
-            if (err < 0)
-            {
-                NSLog(@"Unable to detach from JVM. Error code: %d\n", (int)err);
-            }
 
             jEnv = NULL;
         }

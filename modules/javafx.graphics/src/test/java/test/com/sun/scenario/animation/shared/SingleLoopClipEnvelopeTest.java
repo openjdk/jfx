@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,10 +33,13 @@ import javafx.animation.Animation.Status;
 import test.javafx.animation.AnimationMock;
 import test.javafx.animation.AnimationMock.Command;
 import javafx.util.Duration;
-import org.junit.Before;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SingleLoopClipEnvelopeTest {
 
@@ -46,7 +49,7 @@ public class SingleLoopClipEnvelopeTest {
     private ClipEnvelope clip;
     private AnimationMock animation;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         animation = new AnimationMock(Toolkit.getToolkit().getPrimaryTimer(), AnimationMock.DEFAULT_DURATION, AnimationMock.DEFAULT_RATE, 1, AnimationMock.DEFAULT_AUTOREVERSE);
         clip = new SingleLoopClipEnvelopeShim(animation);

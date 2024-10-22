@@ -25,8 +25,8 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -37,10 +37,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.robot.Robot;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import com.sun.glass.ui.monocle.TestLogShim;
 
 /**
@@ -49,25 +48,24 @@ import com.sun.glass.ui.monocle.TestLogShim;
  */
 public class RobotTest {
 
-    @Rule public TestName name = new TestName();
-
-    @Before
-    public void setUpScreen() throws Exception {
+    @BeforeEach
+    public void setUpScreen(TestInfo t) throws Exception {
         TestLogShim.reset();
-        TestLogShim.log(name.getMethodName());
+        // get test name from the junit5
+        TestLogShim.log(t.getDisplayName());
         TestApplication.showFullScreenScene();
     }
 
     @Test
     public void clickKeyModifierTest() throws Exception {
         runWithKeyPress(KeyCode.CONTROL, MouseButton.PRIMARY, "Clicked at 300, 400 with modifier 'CTRL'", evt -> {
-            assertTrue("Ctrl should be down",evt.isControlDown());
+            assertTrue(evt.isControlDown(), "Ctrl should be down");
         });
         runWithKeyPress(KeyCode.SHIFT, MouseButton.PRIMARY, "Clicked at 300, 400 with modifier 'SHIFT'", evt -> {
-            assertTrue("Shift should be down",evt.isShiftDown());
+            assertTrue(evt.isShiftDown(), "Shift should be down");
         });
         runWithKeyPress(KeyCode.ALT, MouseButton.PRIMARY, "Clicked at 300, 400 with modifier 'ALT'", evt -> {
-            assertTrue("Alt should be down",evt.isAltDown());
+            assertTrue(evt.isAltDown(), "Alt should be down");
         });
     }
 

@@ -25,13 +25,19 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import javafx.beans.property.ObjectProperty;
+import javafx.geometry.Pos;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.skin.TitledPaneSkin;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.LabeledPropertySheet;
@@ -48,7 +54,14 @@ public class TitledPanePage extends TestPaneBase implements HasSkinnable {
     public TitledPanePage() {
         super("TitledPane");
 
-        control = new TitledPane();
+        control = new TitledPane() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         OptionPane op = new OptionPane();
         op.section("TitledPane");
@@ -72,10 +85,29 @@ public class TitledPanePage extends TestPaneBase implements HasSkinnable {
         return p;
     }
 
+    private Node makeLabel() {
+        Label t = new Label("Label");
+        t.setAlignment(Pos.CENTER);
+        t.setMaxHeight(Double.MAX_VALUE);
+        t.setMaxWidth(Double.MAX_VALUE);
+        t.setBackground(Background.fill(Color.LIGHTGOLDENRODYELLOW));
+        return t;
+    }
+
+    private Node makeComboBox() {
+        ComboBox<Object> t = new ComboBox<>();
+        t.setEditable(true);
+        t.getItems().addAll(
+            "is a very long string to make the combo box extra wide"
+        );
+        return t;
+    }
+
     private Node createContentOptions(String name, ObjectProperty<Node> p) {
         ObjectOption<Node> s = new ObjectOption<>(name, p);
-        s.addChoiceSupplier("Label", () -> new Label("Label"));
         s.addChoiceSupplier("AnchorPane", () -> makeAnchorPane());
+        s.addChoiceSupplier("ComboBox", () -> makeComboBox());
+        s.addChoiceSupplier("Label", () -> makeLabel());
         s.addChoiceSupplier("<null>", () -> null);
         s.selectFirst();
         return s;

@@ -153,7 +153,7 @@ gst_format_register (const gchar * nick, const gchar * description)
     return query;
 
   g_mutex_lock (&mutex);
-  format = g_slice_new (GstFormatDefinition);
+  format = g_new (GstFormatDefinition, 1);
   format->value = (GstFormat) _n_values;
   format->nick = g_strdup (nick);
   format->description = g_strdup (description);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,35 +26,27 @@
 package test.javafx.scene.control.skin;
 
 import static javafx.scene.control.ControlShim.installDefaultSkin;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.asArrays;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.createControl;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.getControlClasses;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.replaceSkin;
-
 import java.lang.ref.WeakReference;
 import java.util.Collection;
-import java.util.List;
-
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -62,10 +54,8 @@ import com.sun.javafx.tk.Toolkit;
  * <p>
  * This test is parameterized on control type.
  */
-@RunWith(Parameterized.class)
 public class SkinMemoryLeakTest {
 
-    private Class<Control> controlClass;
     private Control control;
 
 //--------- tests
@@ -73,8 +63,10 @@ public class SkinMemoryLeakTest {
     /**
      * default skin -> set another instance of default skin
      */
-    @Test
-    public void testMemoryLeakSameSkinClass() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMemoryLeakSameSkinClass(Class<Control> controlClass) {
+        setup(controlClass);
         installDefaultSkin(control);
         Skin<?> skin = control.getSkin();
         WeakReference<?> weakRef = new WeakReference<>(skin);
@@ -85,15 +77,17 @@ public class SkinMemoryLeakTest {
         Toolkit.getToolkit().firePulse();
 
         attemptGC(weakRef);
-        assertNull("Unused Skin must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "Unused Skin must be gc'ed");
     }
 
     /**
      * default skin -> set another instance of default skin,
      * with scene property set.
      */
-    @Test
-    public void testMemoryLeakSameSkinClassWithScene() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMemoryLeakSameSkinClassWithScene(Class<Control> controlClass) {
+        setup(controlClass);
         showControl(control, true);
         installDefaultSkin(control);
         Skin<?> skin = control.getSkin();
@@ -105,33 +99,40 @@ public class SkinMemoryLeakTest {
         Toolkit.getToolkit().firePulse();
 
         attemptGC(weakRef);
-        assertNull("Unused Skin must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "Unused Skin must be gc'ed");
     }
 
-    @Test
-    public void testControlChildrenSameSkinClass() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testControlChildrenSameSkinClass(Class<Control> controlClass) {
+        setup(controlClass);
         installDefaultSkin(control);
         int childCount = control.getChildrenUnmodifiable().size();
         installDefaultSkin(control);
-        assertEquals("Old skin should dispose children when a new skin is set",
-                childCount, control.getChildrenUnmodifiable().size());
+        assertEquals(
+                childCount, control.getChildrenUnmodifiable().size(),
+                "Old skin should dispose children when a new skin is set");
     }
 
-    @Test
-    public void testSetSkinOfSameClass() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSetSkinOfSameClass(Class<Control> controlClass) {
+        setup(controlClass);
         installDefaultSkin(control);
         Skin<?> oldSkin = control.getSkin();
         installDefaultSkin(control);
         Skin<?> newSkin = control.getSkin();
 
-        assertNotEquals("New skin was not set", oldSkin, newSkin);
+        assertNotEquals(oldSkin, newSkin, "New skin was not set");
     }
 
     /**
      * default skin -> set alternative
      */
-    @Test
-    public void testMemoryLeakAlternativeSkin() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMemoryLeakAlternativeSkin(Class<Control> controlClass) {
+        setup(controlClass);
         installDefaultSkin(control);
         Skin<?> replacedSkin = replaceSkin(control);
         WeakReference<?> weakRef = new WeakReference<>(replacedSkin);
@@ -142,15 +143,17 @@ public class SkinMemoryLeakTest {
         Toolkit.getToolkit().firePulse();
 
         attemptGC(weakRef);
-        assertEquals("Skin must be gc'ed", null, weakRef.get());
+        assertEquals(null, weakRef.get(), "Skin must be gc'ed");
     }
 
     /**
      * default skin -> set alternative,
      * with scene property set
      */
-    @Test
-    public void testMemoryLeakAlternativeSkinWithScene() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMemoryLeakAlternativeSkinWithScene(Class<Control> controlClass) {
+        setup(controlClass);
         showControl(control, true);
         installDefaultSkin(control);
         Skin<?> replacedSkin = replaceSkin(control);
@@ -162,14 +165,16 @@ public class SkinMemoryLeakTest {
         Toolkit.getToolkit().firePulse();
 
         attemptGC(weakRef);
-        assertEquals("Skin must be gc'ed", null, weakRef.get());
+        assertEquals(null, weakRef.get(), "Skin must be gc'ed");
     }
 
     /**
      * default skin -> set alternative while showing
      */
-    @Test
-    public void testMemoryLeakAlternativeSkinShowing() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMemoryLeakAlternativeSkinShowing(Class<Control> controlClass) {
+        setup(controlClass);
         showControl(control, true);
         Skin<?> replacedSkin = replaceSkin(control);
         WeakReference<?> weakRef = new WeakReference<>(replacedSkin);
@@ -180,30 +185,26 @@ public class SkinMemoryLeakTest {
         Toolkit.getToolkit().firePulse();
 
         attemptGC(weakRef);
-        assertEquals("Skin must be gc'ed", null, weakRef.get());
+        assertEquals(null, weakRef.get(), "Skin must be gc'ed");
     }
 
-    @Test
-    public void testControlChildren() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testControlChildren(Class<Control> controlClass) {
+        setup(controlClass);
         installDefaultSkin(control);
         int childCount = control.getChildrenUnmodifiable().size();
         String skinClass = control.getSkin().getClass().getSimpleName();
         replaceSkin(control);
-        assertEquals(skinClass + " must remove direct children that it has added",
-                childCount, control.getChildrenUnmodifiable().size());
+        assertEquals(
+                childCount, control.getChildrenUnmodifiable().size(),
+                skinClass + " must remove direct children that it has added");
     }
 
 //------------ parameters
 
-    // Note: name property not supported before junit 4.11
-    @Parameterized.Parameters //(name = "{index}: {0} ")
-    public static Collection<Object[]> data() {
-        List<Class<Control>> controlClasses = getControlClasses();
-        return asArrays(controlClasses);
-    }
-
-    public SkinMemoryLeakTest(Class<Control> controlClass) {
-        this.controlClass = controlClass;
+    private static Collection<Class<Control>> parameters() {
+        return getControlClasses();
     }
 
 //------------ setup
@@ -238,8 +239,9 @@ public class SkinMemoryLeakTest {
         }
     }
 
-    @Before
-    public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Class<Control> controlClass) {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException)throwable;
@@ -251,10 +253,9 @@ public class SkinMemoryLeakTest {
         assertNotNull(control);
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stage != null) stage.hide();
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
-
 }

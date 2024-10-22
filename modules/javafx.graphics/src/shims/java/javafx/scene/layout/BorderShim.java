@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,21 +22,19 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.css;
 
-import java.util.List;
-import java.util.Set;
+package javafx.scene.layout;
 
-public class SimpleSelectorShim {
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.Node;
 
-    public static SimpleSelector getSimpleSelector(
-            final String name, final List<String> styleClasses,
-            final List<String> pseudoClasses, final String id) {
-        return new SimpleSelector(name, styleClasses, pseudoClasses, id);
+public class BorderShim {
+
+    public static final CssMetaData<Node, String[]> BORDER_IMAGE_SOURCE = Border.BORDER_IMAGE_SOURCE;
+
+    public static StyleConverter<ParsedValue[], Border> getConverter() {
+        return BorderConverter.getInstance();
     }
-
-    public static Set<PseudoClass> getPseudoClassStates(SimpleSelector ss) {
-        return ss.getPseudoClassStates();
-    }
-
 }

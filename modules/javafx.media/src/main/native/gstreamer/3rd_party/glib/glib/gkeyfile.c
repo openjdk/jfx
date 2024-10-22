@@ -74,23 +74,22 @@
 
 
 /**
- * SECTION:gkeyfile
- * @title: Key-value file parser
- * @short_description: parses .ini-like config files
+ * GKeyFile:
  *
- * #GKeyFile lets you parse, edit or create files containing groups of
+ * `GKeyFile` parses .ini-like config files.
+ *
+ * `GKeyFile` lets you parse, edit or create files containing groups of
  * key-value pairs, which we call "key files" for lack of a better name.
  * Several freedesktop.org specifications use key files now, e.g the
  * [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec)
- * and the
- * [Icon Theme Specification](http://freedesktop.org/Standards/icon-theme-spec).
+ * and the [Icon Theme Specification](http://freedesktop.org/Standards/icon-theme-spec).
  *
  * The syntax of key files is described in detail in the
  * [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec),
- * here is a quick summary: Key files
- * consists of groups of key-value pairs, interspersed with comments.
+ * here is a quick summary: Key files consists of groups of key-value pairs, interspersed
+ * with comments.
  *
- * |[
+ * ```txt
  * # this is just an example
  * # there can be comments before the first group
  *
@@ -103,14 +102,13 @@
  * Welcome[de]=Hallo
  * Welcome[fr_FR]=Bonjour
  * Welcome[it]=Ciao
- * Welcome[be@latin]=Hello
  *
  * [Another Group]
  *
  * Numbers=2;20;-200;0
  *
  * Booleans=true;false;true;true
- * ]|
+ * ```
  *
  * Lines beginning with a '#' and blank lines are considered comments.
  *
@@ -118,15 +116,13 @@
  * in '[' and ']', and ended implicitly by the start of the next group or
  * the end of the file. Each key-value pair must be contained in a group.
  *
- * Key-value pairs generally have the form `key=value`, with the
- * exception of localized strings, which have the form
- * `key[locale]=value`, with a locale identifier of the
- * form `lang_COUNTRY@MODIFIER` where `COUNTRY` and `MODIFIER`
- * are optional.
- * Space before and after the '=' character are ignored. Newline, tab,
- * carriage return and backslash characters in value are escaped as \n,
- * \t, \r, and \\\\, respectively. To preserve leading spaces in values,
- * these can also be escaped as \s.
+ * Key-value pairs generally have the form `key=value`, with the exception
+ * of localized strings, which have the form `key[locale]=value`, with a
+ * locale identifier of the form `lang_COUNTRY@MODIFIER` where `COUNTRY`
+ * and `MODIFIER` are optional. Space before and after the '=' character
+ * are ignored. Newline, tab, carriage return and backslash characters in
+ * value are escaped as `\n`, `\t`, `\r`, and `\\\\`, respectively. To preserve
+ * leading spaces in values, these can also be escaped as `\s`.
  *
  * Key files can store strings (possibly with localized variants), integers,
  * booleans and lists of these. Lists are separated by a separator character,
@@ -153,15 +149,14 @@
  *
  * Note that in contrast to the
  * [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec),
- * groups in key files may contain the same
- * key multiple times; the last entry wins. Key files may also contain
- * multiple groups with the same name; they are merged together.
- * Another difference is that keys and group names in key files are not
+ * groups in key files may contain the same key multiple times; the last entry wins.
+ * Key files may also contain multiple groups with the same name; they are merged
+ * together. Another difference is that keys and group names in key files are not
  * restricted to ASCII characters.
  *
  * Here is an example of loading a key file and reading a value:
  *
- * |[<!-- language="C" -->
+ * ```c
  * g_autoptr(GError) error = NULL;
  * g_autoptr(GKeyFile) key_file = g_key_file_new ();
  *
@@ -184,11 +179,11 @@
  *     // Fall back to a default value.
  *     val = g_strdup ("default-value");
  *   }
- * ]|
+ * ```
  *
  * Here is an example of creating and saving a key file:
  *
- * |[<!-- language="C" -->
+ * ```c
  * g_autoptr(GKeyFile) key_file = g_key_file_new ();
  * const gchar *val = ...;
  * g_autoptr(GError) error = NULL;
@@ -211,7 +206,7 @@
  *     return;
  *   }
  * g_autoptr(GBytes) bytes = g_bytes_new_take (g_steal_pointer (&data), data_len);
- * ]|
+ * ```
  */
 
 /**
@@ -499,12 +494,6 @@
 
 typedef struct _GKeyFileGroup GKeyFileGroup;
 
-/**
- * GKeyFile:
- *
- * The GKeyFile struct contains only private data
- * and should not be accessed directly.
- */
 struct _GKeyFile
 {
   GList *groups;
@@ -4431,7 +4420,6 @@ g_key_file_parse_value_as_string (GKeyFile     *key_file,
               break;
 
       case '\0':
-        g_clear_error (error);
         g_set_error_literal (error, G_KEY_FILE_ERROR,
                                    G_KEY_FILE_ERROR_INVALID_VALUE,
                                    _("Key file contains escape character "
@@ -4454,25 +4442,11 @@ g_key_file_parse_value_as_string (GKeyFile     *key_file,
                       sequence[1] = *p;
                       sequence[2] = '\0';
 
-                      /* FIXME: This should be a fatal error, but there was a
-                       * bug which prevented that being reported for a long
-                       * time, so a lot of applications and in-the-field key
-                       * files use invalid escape sequences without anticipating
-                       * problems. For now (GLib 2.78), message about it; in
-                       * future, the behaviour may become fatal again.
-                       *
-                       * The previous behaviour was to set the #GError but not
-                       * return failure from the function, so the caller could
-                       * explicitly check for invalid escapes, but also ignore
-                       * the error if they want. This is not how #GError is
-                       * meant to be used, but the #GKeyFile code is very old.
-                       *
-                       * See https://gitlab.gnome.org/GNOME/glib/-/issues/3098 */
-                      g_clear_error (error);
                       g_set_error (error, G_KEY_FILE_ERROR,
                                    G_KEY_FILE_ERROR_INVALID_VALUE,
                                    _("Key file contains invalid escape "
                                    "sequence '%s'"), sequence);
+                      goto error;
                     }
                 }
               break;

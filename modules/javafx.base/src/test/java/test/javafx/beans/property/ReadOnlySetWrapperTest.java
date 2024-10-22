@@ -35,10 +35,10 @@ import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableObjectValueStub;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ReadOnlySetWrapperTest {
 
@@ -54,7 +54,7 @@ public class ReadOnlySetWrapperTest {
     private ChangeListenerMock<Object> internalChangeListener;
     private ChangeListenerMock<Object> publicChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new ReadOnlySetWrapperMock();
         readOnlyProperty = property.getReadOnlyProperty();
@@ -317,12 +317,15 @@ public class ReadOnlySetWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 2);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
-        final SetProperty<Object> v = new SimpleSetProperty<>(VALUE_1);
-        property.bind(v);
-        property.set(VALUE_1);
+        assertThrows(RuntimeException.class, () -> {
+            final SetProperty<Object> v = new SimpleSetProperty<>(VALUE_1);
+            property.bind(v);
+            property.set(VALUE_1);
+        });
     }
+
 
     @Test
     public void testLazyBind_primitive() {
@@ -548,10 +551,13 @@ public class ReadOnlySetWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> {
+            property.bind(null);
+        });
     }
+
 
     @Test
     public void testRebind() {

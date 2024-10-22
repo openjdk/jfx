@@ -26,17 +26,14 @@
 package test.com.sun.javafx.tk.quantum;
 
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class WindowSceneInitDisposeTest {
@@ -66,12 +63,12 @@ public class WindowSceneInitDisposeTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void shutdown() {
         Util.shutdown();
     }

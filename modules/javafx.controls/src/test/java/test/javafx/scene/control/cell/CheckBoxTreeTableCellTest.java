@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,12 @@
 
 package test.javafx.scene.control.cell;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.CheckBox;
@@ -39,9 +40,8 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.CheckBoxTreeTableCell;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
-
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class CheckBoxTreeTableCellTest {
 
@@ -51,7 +51,8 @@ public class CheckBoxTreeTableCellTest {
     private TreeTableView<Object> tableView;
     private TreeTableColumn<Object, Object> tableColumn;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tableView = new TreeTableView<>();
         tableColumn = new TreeTableColumn<>();
         booleanProperty = new SimpleBooleanProperty(false);
@@ -250,10 +251,12 @@ public class CheckBoxTreeTableCellTest {
      *
      **************************************************************************/
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void test_getSelectedPropertyIsNull() {
-        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>();
-        cell.updateItem("TEST", false);
+        assertThrows(NullPointerException.class, () -> {
+            CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>();
+            cell.updateItem("TEST", false);
+        });
     }
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {

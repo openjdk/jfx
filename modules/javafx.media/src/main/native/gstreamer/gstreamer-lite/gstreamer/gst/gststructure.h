@@ -37,10 +37,22 @@ GST_EXPORT GType _gst_structure_type;
 typedef struct _GstStructure GstStructure;
 
 /**
+ * GST_SERIALIZE_FLAG_STRICT:
+ *
+ * Serialization fails if a value cannot be serialized instead of using
+ * placeholder "NULL" value (e.g. pointers, objects).
+ *
+ * Since: 1.24
+ */
+
+/**
  * GstSerializeFlags:
  * @GST_SERIALIZE_FLAG_NONE: No special flags specified.
  * @GST_SERIALIZE_FLAG_BACKWARD_COMPAT: Serialize using the old format for
  *                                      nested structures.
+ * @GST_SERIALIZE_FLAG_STRICT: Serialization fails if a value cannot be
+ *  serialized instead of using placeholder "NULL" value (e.g. pointers,
+ *  objects). (Since 1.24)
  *
  * Since: 1.20
  */
@@ -48,6 +60,7 @@ typedef enum
 {
   GST_SERIALIZE_FLAG_NONE = 0,
   GST_SERIALIZE_FLAG_BACKWARD_COMPAT = (1 << 0),
+  GST_SERIALIZE_FLAG_STRICT = (1 << 1),
 } GstSerializeFlags;
 
 #define GST_TYPE_STRUCTURE             (_gst_structure_type)
@@ -355,8 +368,11 @@ gboolean              gst_structure_get_flags            (const GstStructure  * 
 
 GST_API
 gchar *               gst_structure_to_string            (const GstStructure * structure) G_GNUC_MALLOC;
-GST_API
+GST_DEPRECATED_FOR(gst_structure_serialize_full)
 gchar *               gst_structure_serialize            (const GstStructure * structure,
+                                                          GstSerializeFlags flags) G_GNUC_MALLOC;
+GST_API
+gchar *               gst_structure_serialize_full       (const GstStructure * structure,
                                                           GstSerializeFlags flags) G_GNUC_MALLOC;
 
 GST_API

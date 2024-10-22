@@ -515,6 +515,11 @@ GLIB_AVAILABLE_IN_2_38
 void     g_test_trap_subprocess         (const char           *test_path,
                                          guint64               usec_timeout,
                                          GTestSubprocessFlags  test_flags);
+GLIB_AVAILABLE_IN_2_80
+void     g_test_trap_subprocess_with_envp (const char           *test_path,
+                                           const char * const   *envp,
+                                           guint64               usec_timeout,
+                                           GTestSubprocessFlags  test_flags);
 
 GLIB_AVAILABLE_IN_ALL
 gboolean g_test_trap_has_passed         (void);

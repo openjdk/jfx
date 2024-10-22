@@ -66,6 +66,129 @@
 #include <mach/mach_time.h>
 #endif
 
+#if defined __APPLE__
+static struct mach_timebase_info mach_timebase;
+#endif
+
+#if defined G_OS_WIN32
+static LARGE_INTEGER performance_counter_frequency;
+#endif
+
+/* Small helper to make the atomics below cheaper.
+ *
+ * GLib always uses SEQ_CST atomic ops while here it's more than enough to use
+ * ACQUIRE/RELEASE atomic ops. On x86 / x86-64 the ACQUIRE load is compiling
+ * to a simple memory read.
+ */
+#if defined __APPLE__ || defined G_OS_WIN32
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__)
+#include <stdatomic.h>
+
+typedef atomic_int gst_atomic_int;
+
+static inline int
+gst_atomic_int_get_acquire (gst_atomic_int * x)
+{
+  return atomic_load_explicit (x, memory_order_acquire);
+}
+
+static inline void
+gst_atomic_int_set_release (gst_atomic_int * x, gint val)
+{
+  atomic_store_explicit (x, val, memory_order_release);
+}
+#elif defined G_OS_WIN32
+/* MSVC's C11 atomic might require special cflags
+ * https://devblogs.microsoft.com/cppblog/c11-atomics-in-visual-studio-2022-version-17-5-preview-2/
+ *
+ * Can remove this code once below GLib MR is merged
+ * https://gitlab.gnome.org/GNOME/glib/-/merge_requests/3436
+ */
+
+typedef LONG gst_atomic_int;
+
+static inline int
+gst_atomic_int_get_acquire (gst_atomic_int * x)
+{
+  return InterlockedAndAcquire (x, 1);
+}
+
+static inline void
+gst_atomic_int_set_release (gst_atomic_int * x, gint val)
+{
+  InterlockedOrRelease (x, 1);
+}
+#else /* defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__) */
+typedef int gst_atomic_int;
+#define gst_atomic_int_get_acquire(x) g_atomic_int_get(x)
+#define gst_atomic_int_set_release(x, val) g_atomic_int_set(x, val)
+#endif /* defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__) */
+#endif /* defined __APPLE__ || defined G_OS_WIN32 */
+
+/* priv_gst_clock_init:
+ *
+ * Initialize internal state of the clock. This is safe to call multiple
+ * times.
+ */
+void
+priv_gst_clock_init (void)
+{
+#if defined __APPLE__
+  static gst_atomic_int inited = FALSE;
+
+  if (!gst_atomic_int_get_acquire (&inited)) {
+    mach_timebase_info (&mach_timebase);
+    gst_atomic_int_set_release (&inited, TRUE);
+  }
+#endif
+
+#if defined G_OS_WIN32
+  static gst_atomic_int inited = FALSE;
+
+  if (!gst_atomic_int_get_acquire (&inited)) {
+    QueryPerformanceFrequency (&performance_counter_frequency);
+    gst_atomic_int_set_release (&inited, TRUE);
+  }
+#endif
+}
+
+GstClockTime
+priv_gst_get_monotonic_time (void)
+{
+#if defined __APPLE__
+  guint64 mach_t = mach_absolute_time ();
+  return gst_util_uint64_scale (mach_t, mach_timebase.numer,
+      mach_timebase.denom);
+#elif defined G_OS_WIN32
+  LARGE_INTEGER now;
+  QueryPerformanceCounter (&now);
+
+  return gst_util_uint64_scale (now.QuadPart, GST_SECOND,
+      performance_counter_frequency.QuadPart);
+#elif defined (HAVE_POSIX_TIMERS) && defined(HAVE_MONOTONIC_CLOCK) &&\
+    defined (HAVE_CLOCK_GETTIME)
+  struct timespec now;
+
+  clock_gettime (CLOCK_MONOTONIC, &now);
+  return GST_TIMESPEC_TO_TIME (now);
+#else
+  return g_get_monotonic_time () * 1000;
+#endif
+}
+
+GstClockTime
+priv_gst_get_real_time (void)
+{
+#if defined (HAVE_POSIX_TIMERS) && defined (HAVE_CLOCK_GETTIME)
+  struct timespec now;
+
+  clock_gettime (CLOCK_REALTIME, &now);
+  return GST_TIMESPEC_TO_TIME (now);
+#else
+  return g_get_real_time () * 1000;
+#endif
+}
+
 /* Define this to get some extra debug about jitter from each clock_wait */
 #undef WAIT_DEBUGGING
 
@@ -133,8 +256,12 @@ gst_futex_cond_broadcast (guint * cond_val)
 {
   g_atomic_int_inc (cond_val);
 
-#if defined(__NR_futex_time64)
+#if defined(HAVE_FUTEX_TIME64)
+#if defined(__BIONIC__)
+  if (__builtin_available (android 30, *)) {
+#else
   {
+#endif
     int res;
     res = syscall (__NR_futex_time64, cond_val, (gsize) FUTEX_WAKE_PRIVATE,
         (gsize) INT_MAX, NULL);
@@ -143,7 +270,7 @@ gst_futex_cond_broadcast (guint * cond_val)
      * normal `futex` syscall. This can happen if newer kernel headers are
      * used than the kernel that is actually running.
      */
-#ifdef __NR_futex
+#if defined(HAVE_FUTEX)
     if (res >= 0 || errno != ENOSYS) {
 #else
     {
@@ -153,7 +280,7 @@ gst_futex_cond_broadcast (guint * cond_val)
   }
 #endif
 
-#if defined(__NR_futex)
+#if defined(HAVE_FUTEX)
   syscall (__NR_futex, cond_val, (gsize) FUTEX_WAKE_PRIVATE, (gsize) INT_MAX,
       NULL);
 #endif
@@ -191,8 +318,12 @@ gst_futex_cond_wait_until (guint * cond_val, GMutex * mutex, gint64 end_time)
    * define `__NR_futex_time64`.
    */
 
-#ifdef __NR_futex_time64
+#if defined(HAVE_FUTEX_TIME64)
+#if defined(__BIONIC__)
+  if (__builtin_available (android 30, *)) {
+#else
   {
+#endif
     struct
     {
       gint64 tv_sec;
@@ -212,7 +343,7 @@ gst_futex_cond_wait_until (guint * cond_val, GMutex * mutex, gint64 end_time)
      * normal `futex` syscall. This can happen if newer kernel headers are
      * used than the kernel that is actually running.
      */
-#ifdef __NR_futex
+#if defined(HAVE_FUTEX)
     if (res >= 0 || errno != ENOSYS) {
 #else
     {
@@ -225,7 +356,7 @@ gst_futex_cond_wait_until (guint * cond_val, GMutex * mutex, gint64 end_time)
   }
 #endif
 
-#ifdef __NR_futex
+#if defined(HAVE_FUTEX)
   {
     struct
     {
@@ -306,7 +437,7 @@ gst_pthread_cond_wait_until (pthread_cond_t * cond, pthread_mutex_t * lock,
    * Since this pthreads wants the relative time, convert it back again.
    */
   {
-    gint64 now = g_get_monotonic_time () * 1000;
+    gint64 now = priv_gst_get_monotonic_time ();
     gint64 relative;
 
     if (end_time <= now)
@@ -452,13 +583,6 @@ struct _GstSystemClockPrivate
   GCond entries_changed;
 
   GstClockType clock_type;
-
-#ifdef G_OS_WIN32
-  LARGE_INTEGER frequency;
-#endif                          /* G_OS_WIN32 */
-#ifdef __APPLE__
-  struct mach_timebase_info mach_timebase;
-#endif
 };
 
 #ifdef HAVE_POSIX_TIMERS
@@ -489,10 +613,6 @@ static void gst_system_clock_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
 static GstClockTime gst_system_clock_get_internal_time (GstClock * clock);
-#if !defined HAVE_POSIX_TIMERS || !defined HAVE_CLOCK_GETTIME
-static GstClockTime gst_system_clock_get_mono_time (GstSystemClock * clock);
-static GstClockTime gst_system_clock_get_real_time ();
-#endif
 static guint64 gst_system_clock_get_resolution (GstClock * clock);
 static GstClockReturn gst_system_clock_id_wait_jitter (GstClock * clock,
     GstClockEntry * entry, GstClockTimeDiff * jitter);
@@ -556,14 +676,6 @@ gst_system_clock_init (GstSystemClock * clock)
 
   priv->entries = NULL;
   g_cond_init (&priv->entries_changed);
-
-#ifdef G_OS_WIN32
-  QueryPerformanceFrequency (&priv->frequency);
-#endif /* G_OS_WIN32 */
-
-#ifdef __APPLE__
-  mach_timebase_info (&priv->mach_timebase);
-#endif
 
 #if 0
   /* Uncomment this to start the async clock thread straight away */
@@ -915,7 +1027,6 @@ clock_type_to_posix_id (GstClockType clock_type)
 #ifdef HAVE_MONOTONIC_CLOCK
   if (clock_type == GST_CLOCK_TYPE_MONOTONIC)
     return CLOCK_MONOTONIC;
-  else
 #endif
   if (clock_type == GST_CLOCK_TYPE_TAI)
 #ifdef CLOCK_TAI
@@ -933,6 +1044,16 @@ static GstClockTime
 gst_system_clock_get_internal_time (GstClock * clock)
 {
   GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
+
+  /* For the monotonic and realtime clock, always directly call the specific
+   * helper functions above */
+  if (sysclock->priv->clock_type == GST_CLOCK_TYPE_MONOTONIC)
+    return priv_gst_get_monotonic_time ();
+  else if (sysclock->priv->clock_type == GST_CLOCK_TYPE_REALTIME)
+    return priv_gst_get_real_time ();
+
+  /* If POSIX timers are available, use those for any other clock,
+   * or otherwise return the monotonic time */
 #if defined HAVE_POSIX_TIMERS && defined HAVE_CLOCK_GETTIME
   // BSD and Linux' Posix timers and clock_gettime cover all of the different clock types
   // without need for special handling so we'll use those.
@@ -945,90 +1066,49 @@ gst_system_clock_get_internal_time (GstClock * clock)
     return GST_CLOCK_TIME_NONE;
 
   return GST_TIMESPEC_TO_TIME (ts);
-#else
-  if (sysclock->priv->clock_type == GST_CLOCK_TYPE_REALTIME) {
-    return gst_system_clock_get_real_time ();
-  } else {
-    return gst_system_clock_get_mono_time (sysclock);
-  }
+#else /* !HAVE_POSIX_TIMERS || !HAVE_CLOCK_GETTIME */
+  return priv_gst_get_monotonic_time ();
 #endif /* !HAVE_POSIX_TIMERS || !HAVE_CLOCK_GETTIME */
 }
-
-#if !defined HAVE_POSIX_TIMERS || !defined HAVE_CLOCK_GETTIME
-static GstClockTime
-gst_system_clock_get_real_time ()
-{
-  gint64 rt_micros = g_get_real_time ();
-  // g_get_real_time returns microseconds but we need nanos, so we'll multiply by 1000
-  return ((guint64) rt_micros) * 1000;
-}
-
-static GstClockTime
-gst_system_clock_get_mono_time (GstSystemClock * sysclock)
-{
-#if defined __APPLE__
-  uint64_t mach_t = mach_absolute_time ();
-  return gst_util_uint64_scale (mach_t, sysclock->priv->mach_timebase.numer,
-      sysclock->priv->mach_timebase.denom);
-#else
-#if defined G_OS_WIN32
-  if (sysclock->priv->frequency.QuadPart != 0) {
-    LARGE_INTEGER now;
-
-    /* we prefer the highly accurate performance counters on windows */
-    QueryPerformanceCounter (&now);
-
-    return gst_util_uint64_scale (now.QuadPart,
-        GST_SECOND, sysclock->priv->frequency.QuadPart);
-  } else
-#endif /* G_OS_WIN32 */
-  {
-    gint64 monotime;
-
-    monotime = g_get_monotonic_time ();
-
-    return monotime * 1000;
-  }
-#endif /* __APPLE__ */
-}
-#endif /* !HAVE_POSIX_TIMERS || !HAVE_CLOCK_GETTIME */
 
 static guint64
 gst_system_clock_get_resolution (GstClock * clock)
 {
   GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
-#if defined __APPLE__ || defined G_OS_WIN32
+
+#if defined G_OS_WIN32
   if (sysclock->priv->clock_type == GST_CLOCK_TYPE_REALTIME) {
     return 1 * GST_USECOND;
-  } else
+  } else {
+    return GST_SECOND / performance_counter_frequency.QuadPart;
+  }
 #endif
+
 #if defined __APPLE__
-  {
+  // On Apple platforms we want to use mach_absolute_time() unconditionally
+  // for the monotonic clock even if clock_gettime() support is available.
+  // Only use the latter for other clock types there.
+  if (sysclock->priv->clock_type == GST_CLOCK_TYPE_MONOTONIC) {
     return gst_util_uint64_scale (GST_NSECOND,
-        sysclock->priv->mach_timebase.numer,
-        sysclock->priv->mach_timebase.denom);
+        mach_timebase.numer, mach_timebase.denom);
   }
-#elif defined G_OS_WIN32
+#endif
+
+#if defined(HAVE_POSIX_TIMERS) && defined(HAVE_CLOCK_GETTIME)
   {
-    if (sysclock->priv->frequency.QuadPart != 0) {
-      return GST_SECOND / sysclock->priv->frequency.QuadPart;
-    } else {
-      return 1 * GST_USECOND;
-    }
-  }
-#elif defined(HAVE_POSIX_TIMERS) && defined(HAVE_CLOCK_GETTIME)
     clockid_t ptype;
-  struct timespec ts;
+    struct timespec ts;
 
-  ptype = clock_type_to_posix_id (sysclock->priv->clock_type);
+    ptype = clock_type_to_posix_id (sysclock->priv->clock_type);
 
-  if (G_UNLIKELY (clock_getres (ptype, &ts)))
-    return GST_CLOCK_TIME_NONE;
+    if (G_UNLIKELY (clock_getres (ptype, &ts)))
+      return GST_CLOCK_TIME_NONE;
 
-  return GST_TIMESPEC_TO_TIME (ts);
-#else
-    return 1 * GST_USECOND;
-#endif /* __APPLE__ */
+    return GST_TIMESPEC_TO_TIME (ts);
+  }
+#endif /* HAVE_POSIX_TIMERS && HAVE_CLOCK_GETTIME */
+
+  return 1 * GST_USECOND;
 }
 
 /* synchronously wait on the given GstClockEntry.

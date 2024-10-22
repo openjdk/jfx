@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,16 +28,9 @@ package test.javafx.scene.shape;
 import static test.com.sun.javafx.test.TestHelper.box;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.scene.paint.Color;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import test.com.sun.javafx.test.BBoxComparator;
-import test.com.sun.javafx.test.PropertiesTestBase;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
@@ -46,12 +39,14 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.params.provider.Arguments;
+import test.com.sun.javafx.test.PropertiesTestBase;
+import test.com.sun.javafx.test.BBoxComparator;
+
 public final class Shape_properties_Test extends PropertiesTestBase {
 
-    @Parameters
-    public static Collection data() {
-        ArrayList array = new ArrayList();
+    public static Stream<Arguments> data() {
+        ArrayList<Arguments> array = new ArrayList<Arguments>();
 
         // simple property tests
         Shape testShape = createTestRectangle();
@@ -111,11 +106,7 @@ public final class Shape_properties_Test extends PropertiesTestBase {
                     box(195, 95, 10, 110),
                     new BBoxComparator(0.001)));
 
-        return array;
-    }
-
-    public Shape_properties_Test(final Configuration configuration) {
-        super(configuration);
+        return array.stream();
     }
 
     private static Rectangle createTestRectangle() {

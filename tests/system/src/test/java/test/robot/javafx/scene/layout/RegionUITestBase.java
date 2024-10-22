@@ -41,6 +41,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import org.junit.jupiter.api.BeforeEach;
 import test.robot.testharness.VisualTestBase;
 
 /**
@@ -62,6 +63,7 @@ public abstract class RegionUITestBase extends VisualTestBase {
     protected Region region;
     private volatile WritableImage screenCapture;
 
+    @BeforeEach
     @Override
     public void doSetup() {
         super.doSetup();

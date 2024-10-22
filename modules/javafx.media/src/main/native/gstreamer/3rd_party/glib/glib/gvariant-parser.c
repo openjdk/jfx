@@ -2476,7 +2476,7 @@ parse (TokenStream  *stream,
  *
  * A single #GVariant is parsed from the content of @text.
  *
- * The format is described [here][gvariant-text].
+ * The format is described [here](gvariant-text-format.html).
  *
  * The memory at @limit will never be accessed and the parser behaves as
  * if the character at @limit is the nul terminator.  This has the
@@ -2496,13 +2496,14 @@ parse (TokenStream  *stream,
  *
  * In the event that the parsing is successful, the resulting #GVariant
  * is returned. It is never floating, and must be freed with
- * g_variant_unref().
+ * [method@GLib.Variant.unref].
  *
  * In case of any error, %NULL will be returned.  If @error is non-%NULL
  * then it will be set to reflect the error that occurred.
  *
- * Officially, the language understood by the parser is "any string
- * produced by g_variant_print()".
+ * Officially, the language understood by the parser is “any string
+ * produced by [method@GLib.Variant.print]”. This explicitly includes
+ * `g_variant_print()`’s annotated types like `int64 -1000`.
  *
  * There may be implementation specific restrictions on deeply nested values,
  * which would result in a %G_VARIANT_PARSE_ERROR_RECURSION error. #GVariant is

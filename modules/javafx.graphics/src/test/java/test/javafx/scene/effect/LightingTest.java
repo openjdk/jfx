@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,6 @@ package test.javafx.scene.effect;
 
 import static test.com.sun.javafx.test.TestHelper.box;
 import com.sun.scenario.effect.Color4f;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.effect.BoxBlur;
@@ -43,13 +38,18 @@ import javafx.scene.effect.Lighting;
 import javafx.scene.effect.Shadow;
 import javafx.scene.paint.Color;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class LightingTest extends EffectsTestBase {
     private Lighting effect;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         effect = new Lighting();
         setupTest(effect);
@@ -460,7 +460,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(null, effect.getContentInput());
         assertEquals(null, effect.getBumpInput());
 
-        assertEquals("Cycle in effect chain detected, exception should occur 5 times.", 5, countIllegalArgumentException);
+        assertEquals(5, countIllegalArgumentException, "Cycle in effect chain detected, exception should occur 5 times.");
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 

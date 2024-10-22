@@ -106,6 +106,7 @@
 #include <wtf/DataLog.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
+#include <wtf/StackCheck.h>
 #include <wtf/Vector.h>
 #include <wtf/threads/BinarySemaphore.h>
 
@@ -944,6 +945,10 @@ protected:
 #else
     ALWAYS_INLINE void appendObjectPoolTag(SerializationTag) { }
 #endif
+    bool isSafeToRecurse()
+    {
+        return m_stackCheck.isSafeToRecurse();
+    }
 
     JSGlobalObject* const m_lexicalGlobalObject;
     bool m_failed;
@@ -952,6 +957,7 @@ protected:
 #if ASSERT_ENABLED
     Vector<SerializationTag> m_objectPoolTags;
 #endif
+    StackCheck m_stackCheck;
 };
 
 #if ENABLE(WEB_CRYPTO)
@@ -3650,6 +3656,8 @@ private:
     template <typename LengthType>
     bool readArrayBufferViewImpl(VM& vm, JSValue& arrayBufferView)
     {
+        if (!isSafeToRecurse())
+            return false;
         ArrayBufferViewSubtag arrayBufferViewSubtag;
         if (!readArrayBufferViewSubtag(arrayBufferViewSubtag))
             return false;
@@ -3729,6 +3737,8 @@ private:
 
     bool readArrayBufferView(VM& vm, JSValue& arrayBufferView)
     {
+        if (!isSafeToRecurse())
+            return false;
         if (m_majorVersion < 10)
             return readArrayBufferViewImpl<uint32_t>(vm, arrayBufferView);
         return readArrayBufferViewImpl<uint64_t>(vm, arrayBufferView);
@@ -4476,7 +4486,8 @@ private:
             return JSValue();
 
         Vector<RTCCertificate::DtlsFingerprint> fingerprints;
-        fingerprints.reserveInitialCapacity(size);
+        if (!fingerprints.tryReserveInitialCapacity(size))
+            return JSValue();
         for (unsigned i = 0; i < size; i++) {
             CachedStringRef algorithm;
             if (!readStringData(algorithm))
@@ -4752,6 +4763,8 @@ private:
 
     JSValue readTerminal()
     {
+        if (!isSafeToRecurse())
+            return JSValue();
         SerializationTag tag = readTag();
         if (!isTypeExposedToGlobalObject(*m_globalObject, tag)) {
             SERIALIZE_TRACE("FAIL deserialize");
@@ -4878,10 +4891,13 @@ private:
                     return JSValue();
             }
 
-            if (length && (IntSize(width, height).area() * 4) != length) {
+            if (length) {
+                auto area = IntSize(width, height).area<RecordOverflow>() * 4;
+                if (area.hasOverflowed() || area.value() != length) {
                 SERIALIZE_TRACE("FAIL deserialize");
                 fail();
                 return JSValue();
+            }
             }
 
             if (!m_isDOMGlobalObject)
@@ -4947,7 +4963,8 @@ private:
             if (!readStringData(flags))
                 return JSValue();
             auto reFlags = Yarr::parseFlags(flags->string());
-            ASSERT(reFlags.has_value());
+            if (!reFlags.has_value())
+                return JSValue();
             VM& vm = m_lexicalGlobalObject->vm();
             RegExp* regExp = RegExp::create(vm, pattern->string(), reFlags.value());
             return RegExpObject::create(vm, m_globalObject->regExpStructure(), regExp);

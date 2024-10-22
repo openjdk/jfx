@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import java.io.StringWriter;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -42,12 +41,10 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class MakeResizableAndResizeTest {
@@ -65,20 +62,20 @@ public class MakeResizableAndResizeTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void shutdown() {
         Util.shutdown();
     }
 
     @Test
     public void testSize() {
-        Assert.assertTrue("Wrong window width", alert.getWidth() >= alert.getDialogPane().getWidth());
-        Assert.assertTrue("Wrong window height", alert.getHeight() >= alert.getDialogPane().getHeight());
+        Assertions.assertTrue(alert.getWidth() >= alert.getDialogPane().getWidth(), "Wrong window width");
+        Assertions.assertTrue(alert.getHeight() >= alert.getDialogPane().getHeight(), "Wrong window height");
     }
 
     public static class TestApp extends Application implements ChangeListener {

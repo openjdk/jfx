@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,11 @@
 
 package test.com.sun.javafx.application;
 
-import static org.junit.Assert.assertEquals;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Platform;
-
-import org.junit.BeforeClass;
-
+import org.junit.jupiter.api.BeforeAll;
 import com.sun.javafx.application.PlatformImplShim;
-
 import test.util.Util;
 
 /**
@@ -49,7 +44,7 @@ public class PlatformExitCommon {
     // Short delay to allow runtime thread to execute
     private static final int DELAY = 200;
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.startup(startupLatch, startupLatch::countDown);
     }
