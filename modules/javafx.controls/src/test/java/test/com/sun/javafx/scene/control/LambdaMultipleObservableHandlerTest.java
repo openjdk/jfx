@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,26 @@
 
 package test.com.sun.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
 import java.lang.ref.WeakReference;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Consumer;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
-
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.NumberBinding;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ObservableValue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
 
 /**
  * Test LambdaMultiplePropertyChangeListenerHandler.
@@ -53,11 +52,9 @@ import javafx.beans.value.ObservableValue;
  *
  * This test is parameterized in testing change- or invalidationListener api.
  */
-@RunWith(Parameterized.class)
 public class LambdaMultipleObservableHandlerTest {
 
     private LambdaMultiplePropertyChangeListenerHandler handler;
-    private boolean useChangeListener;
 
 // -------------- unregister
 
@@ -65,15 +62,16 @@ public class LambdaMultipleObservableHandlerTest {
      * Single consumer for multiple observables: test that
      * removing from one observable doesn't effect listening to other observable
      */
-    @Test
-    public void testUnregistersSingleConsumerMultipleObservables() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUnregistersSingleConsumerMultipleObservables(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
         IntegerProperty other = new SimpleIntegerProperty();
         int[] count = new int[] {0};
         Consumer<ObservableValue<?>> consumer = c -> count[0]++;
-        registerListener(p, consumer);
-        registerListener(other, consumer);
-        unregisterListeners(other);
+        registerListener(useChangeListener, p, consumer);
+        registerListener(useChangeListener, other, consumer);
+        unregisterListeners(useChangeListener, other);
         p.set(100);
         other.set(100);
         assertEquals(1, count[0]);
@@ -84,65 +82,70 @@ public class LambdaMultipleObservableHandlerTest {
      * and manually adding the removed consumer chain as listener
      * has the same effect as when invoked via handler.
      */
-    @Test
-    public void testUnregistersMultipleConsumers() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUnregistersMultipleConsumers(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] action = new int[] {0};
         int actionValue = 10;
         int[] secondAction = new int[] {0};
         // register multiple consumers
-        registerListener(p, c -> action[0] = actionValue);
-        registerListener(p, c -> secondAction[0] = action[0]);
+        registerListener(useChangeListener, p, c -> action[0] = actionValue);
+        registerListener(useChangeListener, p, c -> secondAction[0] = action[0]);
         // remove all
-        Consumer removedChain = unregisterListeners(p);
+        Consumer removedChain = unregisterListeners(useChangeListener, p);
         p.set(100);
-        assertEquals("none of the removed listeners must be notified", 0, action[0] + secondAction[0]);
+        assertEquals(0, action[0] + secondAction[0], "none of the removed listeners must be notified");
 
         // manually add the chained consumers
-        addListener(p, removedChain);
+        addListener(useChangeListener, p, removedChain);
         p.set(200);
         // assert effect of manually added chain is same
-        assertEquals("effect of removed consumer chain", actionValue, action[0]);
-        assertEquals("effect of removed consumer chain", action[0], secondAction[0]);
+        assertEquals(actionValue, action[0], "effect of removed consumer chain");
+        assertEquals(action[0], secondAction[0], "effect of removed consumer chain");
     }
 
-    @Test
-    public void testUnregistersSingleConsumer() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUnregistersSingleConsumer(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] count = new int[] {0};
         Consumer<Observable> consumer = c -> count[0]++;
-        registerListener(p, consumer);
-        Consumer<Observable> removed = unregisterListeners(p);
+        registerListener(useChangeListener, p, consumer);
+        Consumer<Observable> removed = unregisterListeners(useChangeListener, p);
         p.set(100);
         assertEquals(0, count[0]);
-        assertSame("single registered listener must be returned", consumer, removed);
+        assertSame(consumer, removed, "single registered listener must be returned");
     }
 
     /**
      * Test unregisters not registered observable.
      */
-    @Test
-    public void testUnregistersNotRegistered() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUnregistersNotRegistered(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
-        assertNull(unregisterListeners(p));
+        assertNull(unregisterListeners(useChangeListener, p));
     }
 
-    @Test
-    public void testUnregistersNull() {
-        assertNull(unregisterListeners(null));
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUnregistersNull(boolean useChangeListener) {
+        assertNull(unregisterListeners(useChangeListener, null));
     }
 
 
 //------------ register
 
-    @Test
-    public void testRegisterConsumerToMultipleObservables() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testRegisterConsumerToMultipleObservables(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
         IntegerProperty other = new SimpleIntegerProperty();
         int[] count = new int[] {0};
         Consumer<Observable> consumer = c -> count[0]++;
-        registerListener(p, consumer);
-        registerListener(other, consumer);
+        registerListener(useChangeListener, p, consumer);
+        registerListener(useChangeListener, other, consumer);
         p.set(100);
         other.set(100);
         assertEquals(2, count[0]);
@@ -152,53 +155,58 @@ public class LambdaMultipleObservableHandlerTest {
      * Test that multiple consumers to same observable are invoked in order
      * of registration.
      */
-    @Test
-    public void testRegisterMultipleConsumerToSingleObservable() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testRegisterMultipleConsumerToSingleObservable(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] action = new int[] {0};
         int actionValue = 10;
         int[] secondAction = new int[] {0};
-        registerListener(p, c -> action[0] = actionValue);
-        registerListener(p, c -> secondAction[0] = action[0]);
+        registerListener(useChangeListener, p, c -> action[0] = actionValue);
+        registerListener(useChangeListener, p, c -> secondAction[0] = action[0]);
         p.set(100);
         assertEquals(actionValue, action[0]);
         assertEquals(action[0], secondAction[0]);
     }
 
-    @Test
-    public void testRegister() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testRegister(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] count = new int[] {0};
-        registerListener(p, c -> count[0]++);
+        registerListener(useChangeListener, p, c -> count[0]++);
         p.set(100);
         assertEquals(1, count[0]);
     }
 
-    @Test
-    public void testRegisterNullConsumer() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testRegisterNullConsumer(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
-        registerListener(p, null);
+        registerListener(useChangeListener, p, null);
     }
 
-    @Test
-    public void testRegisterNullObservable() {
-        registerListener(null, c -> {});
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testRegisterNullObservable(boolean useChangeListener) {
+        registerListener(useChangeListener, null, c -> {});
     }
 
 //--------- dispose
 
-    @Test
-    public void testDispose() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testDispose(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] count = new int[] {0};
-        registerListener(p, c -> count[0]++);
+        registerListener(useChangeListener, p, c -> count[0]++);
         handler.dispose();
         p.set(100);
-        assertEquals("listener must not be invoked after dispose", 0, count[0]);
+        assertEquals(0, count[0], "listener must not be invoked after dispose");
         // re-register
-        registerListener(p, c -> count[0]++);
+        registerListener(useChangeListener, p, c -> count[0]++);
         p.set(200);
-        assertEquals("listener must be invoked when re-registered after dispose", 1, count[0]);
+        assertEquals(1, count[0], "listener must be invoked when re-registered after dispose");
     }
 
 
@@ -207,24 +215,25 @@ public class LambdaMultipleObservableHandlerTest {
     /**
      * Test that handler is gc'ed and listener no longer notified.
      */
-    @Test
-    public void testRegisterMemoryLeak() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testRegisterMemoryLeak(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] count = new int[] {0};
         Consumer<ObservableValue<?>> consumer = c -> count[0]++;
         LambdaMultiplePropertyChangeListenerHandler handler = new LambdaMultiplePropertyChangeListenerHandler();
         WeakReference<LambdaMultiplePropertyChangeListenerHandler> ref =
                 new WeakReference<>(handler);
-        registerListener(handler, p, consumer);
+        registerListener(useChangeListener, handler, p, consumer);
         p.setValue(100);
         int notified = count[0];
-        assertEquals("sanity: listener invoked", notified, count[0]);
+        assertEquals(notified, count[0], "sanity: listener invoked");
         assertNotNull(ref.get());
         handler = null;
         attemptGC(ref);
-        assertNull("handler must be gc'ed", ref.get());
+        assertNull(ref.get(), "handler must be gc'ed");
         p.setValue(200);
-        assertEquals("listener must not be invoked after gc", notified, count[0]);
+        assertEquals(notified, count[0], "listener must not be invoked after gc");
     }
 
 
@@ -234,20 +243,22 @@ public class LambdaMultipleObservableHandlerTest {
     /**
      * Register both invalidation/change listener on same property.
      */
-    @Test
+    @ParameterizedTest
+    @MethodSource("data")
     public void testRegisterBoth() {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] count = new int[] {0};
         handler.registerChangeListener(p, c -> count[0]++);
         handler.registerInvalidationListener(p, c -> count[0]++);
         p.set(100);
-        assertEquals("both listener types must be invoked", 2, count[0]);
+        assertEquals(2, count[0], "both listener types must be invoked");
     }
 
     /**
      * Register both invalidation/change listener, remove change listener
      */
-    @Test
+    @ParameterizedTest
+    @MethodSource("data")
     public void testRegisterBothRemoveChangeListener() {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] count = new int[] {0};
@@ -255,13 +266,14 @@ public class LambdaMultipleObservableHandlerTest {
         handler.registerInvalidationListener(p, c -> count[0]++);
         handler.unregisterChangeListeners(p);
         p.set(200);
-        assertEquals("", 1, count[0]);
+        assertEquals(1, count[0]);
     }
 
     /**
      * Register both invalidation/change listener, remove invalidationListener.
      */
-    @Test
+    @ParameterizedTest
+    @MethodSource("data")
     public void testRegisterBothRemoveInvalidationListener() {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] count = new int[] {0};
@@ -269,13 +281,14 @@ public class LambdaMultipleObservableHandlerTest {
         handler.registerInvalidationListener(p, c -> count[0]++);
         handler.unregisterInvalidationListeners(p);
         p.set(200);
-        assertEquals("", 1, count[0]);
+        assertEquals(1, count[0]);
     }
 
     /**
      * Test that binding is invalid.
      */
-    @Test
+    @ParameterizedTest
+    @MethodSource("data")
     public void testBindingInvalid() {
         IntegerProperty num1 = new SimpleIntegerProperty(1);
         IntegerProperty num2 = new SimpleIntegerProperty(2);
@@ -285,8 +298,8 @@ public class LambdaMultipleObservableHandlerTest {
         handler.registerInvalidationListener(p, c -> count[0]++);
         handler.unregisterChangeListeners(p);
         num1.set(200);
-        assertEquals("sanity: received invalidation", 1, count[0]);
-        assertFalse("binding must not be valid", p.isValid());
+        assertEquals(1, count[0], "sanity: received invalidation");
+        assertFalse(p.isValid(), "binding must not be valid");
     }
 
 
@@ -297,15 +310,20 @@ public class LambdaMultipleObservableHandlerTest {
      * using the default handler.
      *
      */
-    protected void registerListener(Observable p, Consumer consumer) {
-        registerListener(handler, p, consumer);
+    protected void registerListener(boolean useChangeListener, Observable p, Consumer consumer) {
+        registerListener(useChangeListener, handler, p, consumer);
     }
 
     /**
      * Registers the consumer for notification from the observable,
      * using the given handler.
      */
-    protected void registerListener(LambdaMultiplePropertyChangeListenerHandler handler, Observable p, Consumer consumer) {
+    protected void registerListener(
+        boolean useChangeListener,
+        LambdaMultiplePropertyChangeListenerHandler handler,
+        Observable p,
+        Consumer consumer
+    ) {
         if (useChangeListener) {
             handler.registerChangeListener((ObservableValue<?>) p, consumer);
         } else {
@@ -316,21 +334,21 @@ public class LambdaMultipleObservableHandlerTest {
     /**
      * Unregisters listeners from observable, using default handler
      */
-    protected Consumer unregisterListeners(Observable p) {
-        return unregisterListeners(handler, p);
+    protected Consumer unregisterListeners(boolean useChangeListener, Observable p) {
+        return unregisterListeners(useChangeListener, handler, p);
     }
 
     /**
      * Unregisters listeners from observable, using default handler
      */
-    protected Consumer unregisterListeners(LambdaMultiplePropertyChangeListenerHandler handler, Observable p) {
+    protected Consumer unregisterListeners(boolean useChangeListener, LambdaMultiplePropertyChangeListenerHandler handler, Observable p) {
         if (useChangeListener) {
             return handler.unregisterChangeListeners((ObservableValue<?>) p);
         }
         return handler.unregisterInvalidationListeners(p);
     }
 
-    protected void addListener(ObservableValue<?> p, Consumer<Observable> consumer) {
+    protected void addListener(boolean useChangeListener, ObservableValue<?> p, Consumer<Observable> consumer) {
         if (useChangeListener) {
            p.addListener((obs, ov, nv) -> consumer.accept(obs));
         } else {
@@ -339,28 +357,19 @@ public class LambdaMultipleObservableHandlerTest {
     }
 
 
-//-------------- parameters
-
-    // Note: name property not supported before junit 4.11
-    @Parameterized.Parameters //(name = "{index}: changeListener {0} ")
-    public static Collection<Object[]> data() {
-        Object[][] data = new Object[][] {
-                {true}, // test changeListener api
-                {false} // test invalidationListener api
-        };
-        return Arrays.asList(data);
-    }
-
-    public LambdaMultipleObservableHandlerTest(boolean useChangeListener) {
-        this.useChangeListener = useChangeListener;
+    /** parameters */
+    private static Collection<Boolean> data() {
+        return List.of(
+            true, // test changeListener api
+            false // test invalidationListener api
+        );
     }
 
 
 //------------ setup and initial
 
-    @Before
+    @BeforeEach
     public void setup() {
         this.handler = new LambdaMultiplePropertyChangeListenerHandler();
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,12 +69,19 @@ void tryInitializeRoActivationSupport()
     wchar_t path[MAX_PATH];
     wchar_t file[MAX_PATH];
 
-    if (GetSystemDirectory(path, sizeof(path) / sizeof(wchar_t)) == 0) {
+    UINT pathSize = sizeof(path) / sizeof(wchar_t);
+    UINT rval = GetSystemDirectoryW(path, pathSize);
+    if (rval == 0 || rval >= pathSize) {
+        fprintf(stderr, "WinRT: Failed to fetch system directory");
         return;
     }
 
     memcpy_s(file, sizeof(file), path, sizeof(path));
-    wcscat_s(file, MAX_PATH-1, L"\\combase.dll");
+    if (wcscat_s(file, MAX_PATH-1, L"\\combase.dll") != 0) {
+        fprintf(stderr, "WinRT: Failed to form path to combase.dll");
+        return;
+    }
+
     hLibComBase = LoadLibraryW(file);
     if (!hLibComBase) {
         fprintf(stderr, moduleNotFoundMessage, "combase.dll");

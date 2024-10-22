@@ -39,6 +39,7 @@ import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -59,6 +60,7 @@ import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.PseudoClass;
 import javafx.css.StyleConverter;
+import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
@@ -104,6 +106,7 @@ import javafx.util.Callback;
 import java.security.AccessControlContext;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -122,6 +125,10 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.PseudoClassState;
+import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionDefinitionConverter;
+import com.sun.javafx.css.TransitionDefinitionCssMetaData;
+import com.sun.javafx.css.TransitionTimer;
 import javafx.css.Selector;
 import javafx.css.Style;
 import javafx.css.converter.BooleanConverter;
@@ -624,6 +631,46 @@ public abstract class Node implements EventTarget, Styleable {
             public void requestFocusVisible(Node node) {
                 node.requestFocusVisible();
             }
+
+            @Override
+            public StyleableProperty<TransitionDefinition[]> getTransitionProperty(Node node) {
+                var definitions = node.miscProperties != null ? node.miscProperties.transitionDefinitions : null;
+                if (definitions == null) {
+                    definitions = new TransitionDefinitionCollection();
+                    node.getMiscProperties().transitionDefinitions = definitions;
+                }
+
+                return definitions;
+            }
+
+            @Override
+            public TransitionDefinition findTransitionDefinition(
+                    Node node, CssMetaData<? extends Styleable, ?> metadata) {
+                var definitions = node.miscProperties != null ? node.miscProperties.transitionDefinitions : null;
+                return definitions == null ? null : definitions.find(metadata);
+            }
+
+            @Override
+            public Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findTransitionDefinitions(
+                    Node node, CssMetaData<? extends Styleable, ?> metadata) {
+                var definitions = node.miscProperties != null ? node.miscProperties.transitionDefinitions : null;
+                return definitions == null ? null : definitions.findAll(metadata);
+            }
+
+            @Override
+            public void addTransitionTimer(Node node, String propertyName, TransitionTimer timer) {
+                node.addTransitionTimer(propertyName, timer);
+            }
+
+            @Override
+            public void removeTransitionTimer(Node node, String propertyName) {
+                node.removeTransitionTimer(propertyName);
+            }
+
+            @Override
+            public TransitionTimer findTransitionTimer(Node node, String propertyName) {
+                return node.findTransitionTimer(propertyName);
+            }
         });
     }
 
@@ -1057,6 +1104,9 @@ public abstract class Node implements EventTarget, Styleable {
             getClip().setScenes(newScene, newSubScene);
         }
         if (sceneChanged) {
+            if (newScene == null) {
+                completeTransitionTimers();
+            }
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
                 if (newScene != null) {
@@ -2536,9 +2586,9 @@ public abstract class Node implements EventTarget, Styleable {
                 + "that is not in scene");
     }
 
-    ////////////////////////////
+    //--------------------------
     //  Private Implementation
-    ////////////////////////////
+    //--------------------------
 
     /**
      * If this Node is being used as the clip of another Node, that other node
@@ -6404,9 +6454,9 @@ public abstract class Node implements EventTarget, Styleable {
 
     }
 
-    ////////////////////////////
+    //--------------------------
     //  Private Implementation
-    ////////////////////////////
+    //--------------------------
 
     /* *************************************************************************
      *                                                                         *
@@ -6744,6 +6794,8 @@ public abstract class Node implements EventTarget, Styleable {
         private ObjectProperty<InputMethodRequests> inputMethodRequests;
         private BooleanProperty mouseTransparent;
         private DoubleProperty viewOrder;
+        private TransitionTimerCollection transitionTimers;
+        private TransitionDefinitionCollection transitionDefinitions;
 
         public double getViewOrder() {
             return (viewOrder == null) ? DEFAULT_VIEW_ORDER : viewOrder.get();
@@ -8479,9 +8531,9 @@ public abstract class Node implements EventTarget, Styleable {
         return getScene().traverse(this, dir, method);
     }
 
-    ////////////////////////////
+    //--------------------------
     //  Private Implementation
-    ////////////////////////////
+    //--------------------------
 
      /**
       * Returns a string representation for the object.
@@ -8597,6 +8649,12 @@ public abstract class Node implements EventTarget, Styleable {
     final void setTreeVisible(boolean value) {
         if (treeVisible != value) {
             treeVisible = value;
+            if (!value) {
+                // When this node is removed from the scene graph or becomes invisible, we complete
+                // all running transitions for this node. This ensures that a node is not affected
+                // by a transition when it is no longer useful.
+                completeTransitionTimers();
+            }
             updateCanReceiveFocus();
             focusSetDirty(getScene());
             if (getClip() != null) {
@@ -8916,6 +8974,298 @@ public abstract class Node implements EventTarget, Styleable {
 
         Event.fireEvent(this, event);
     }
+
+
+    /* *************************************************************************
+     *                                                                         *
+     *                           CSS Transitions                               *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * The list of running transition timers for this node, implemented as a mapping of
+     * CSS property names to {@link TransitionTimer} instances.
+     */
+    private static class TransitionTimerCollection extends HashMap<String, TransitionTimer> {
+        TransitionTimerCollection() {
+            super(4);
+        }
+
+        /**
+         * Returns all transition timers for the specified {@code StyleableProperty},
+         * including all of its sub-properties.
+         *
+         * @param property the {@code StyleableProperty}
+         * @return a mapping of CSS property names to {@code TransitionTimer} instances
+         */
+        public Map<String, TransitionTimer> getAll(StyleableProperty<?> property) {
+            if (isEmpty()) {
+                return Map.of();
+            }
+
+            var result = collectTransitionTimers(property, null);
+            return result != null ? result : Map.of();
+        }
+
+        /**
+         * Finds all transition timers for the specified {@code StyleableProperty}, including all
+         * of its sub-properties. This method does not allocate a new {@code Map} for the common
+         * case where no transitions are found.
+         *
+         * @param property the {@code StyleableProperty}
+         * @param result this argument is an implementation detail, callers must specify {@code null}
+         * @return a mapping of CSS property names to {@code TransitionTimer} instances
+         */
+        private Map<String, TransitionTimer> collectTransitionTimers(
+                StyleableProperty<?> property, Map<String, TransitionTimer> result) {
+            CssMetaData<? extends Styleable, ?> metadata = property.getCssMetaData();
+            String propertyName = metadata.getProperty();
+            TransitionTimer timer = get(propertyName);
+            if (timer != null) {
+                if (result == null) {
+                    // We expect the number of concurrent transitions for any given node to be
+                    // quite small in most cases, six mappings should be enough.
+                    result = HashMap.newHashMap(6);
+                }
+
+                result.put(propertyName, timer);
+            }
+
+            List<CssMetaData<? extends Styleable, ?>> subMetadata = metadata.getSubProperties();
+            if (subMetadata == null) {
+                return result;
+            }
+
+            for (int i = 0, max = subMetadata.size(); i < max; ++i) {
+                result = collectTransitionTimers(property, result);
+            }
+
+            return result;
+        }
+    }
+
+    /**
+     * Called by animatable {@link StyleableProperty} implementations in order to register
+     * a running {@link TransitionTimer} with this {@code Node}. This allows the node
+     * to keep track of running timers that are targeting its properties.
+     *
+     * @param timer the transition timer
+     */
+    private void addTransitionTimer(String propertyName, TransitionTimer timer) {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
+        if (transitionTimers == null) {
+            transitionTimers = new TransitionTimerCollection();
+            getMiscProperties().transitionTimers = transitionTimers;
+        }
+
+        transitionTimers.put(propertyName, timer);
+    }
+
+    /**
+     * Removes a timer that was previously registered with {@link #addTransitionTimer}.
+     * This method is called by animatable {@link StyleableProperty} implementations
+     * when their {@link TransitionTimer} has completed.
+     *
+     * @param timer the transition timer
+     */
+    private void removeTransitionTimer(String propertyName) {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
+        if (transitionTimers != null) {
+            transitionTimers.remove(propertyName);
+
+            if (transitionTimers.isEmpty()) {
+                miscProperties.transitionTimers = null;
+            }
+        }
+    }
+
+    /**
+     * Finds the transition timer that targets the specified {@code propertyName}.
+     *
+     * @param propertyName the CSS name of the targeted property
+     * @return the transition timer, or {@code null} if the property is not
+     *         targeted by a transition timer
+     */
+    private TransitionTimer findTransitionTimer(String propertyName) {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
+        return transitionTimers != null ? transitionTimers.get(propertyName) : null;
+    }
+
+    /**
+     * Finds all transition timers that target the specified {@code property}.
+     *
+     * @param property the targeted property
+     * @return a mapping of property names to transition timers, or an empty map if the
+     *         property is not targeted by any transition timers
+     */
+    private Map<String, TransitionTimer> findTransitionTimers(StyleableProperty<?> property) {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
+        return transitionTimers != null ? transitionTimers.getAll(property) : Map.of();
+    }
+
+    /**
+     * Completes all running timers, which skips the rest of their animation and sets
+     * the property to the target value.
+     */
+    // package-private for testing
+    void completeTransitionTimers() {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
+        if (transitionTimers == null || transitionTimers.isEmpty()) {
+            return;
+        }
+
+        // Make a copy of the timers, because completing the timers causes them to be removed
+        // from the map, which would result in a ConcurrentModificationException.
+        for (TransitionTimer timer : List.copyOf(transitionTimers.values())) {
+            timer.complete();
+        }
+    }
+
+    // package-private for testing
+    Map<String, TransitionTimer> getTransitionTimers() {
+        return miscProperties != null ? miscProperties.transitionTimers : null;
+    }
+
+    /**
+     * Contains descriptions of the animated transitions that are currently defined for
+     * properties of this {@code Node}.
+     * <p>
+     * All property transitions are implicit, which means they are started automatically by
+     * the CSS subsystem when a property value is changed. Explicit property changes, such as
+     * by calling {@link Property#setValue(Object)}, do not trigger an animated transition.
+     */
+    private static class TransitionDefinitionCollection
+            extends ArrayList<TransitionDefinition>
+            implements StyleableProperty<TransitionDefinition[]> {
+        private StyleOrigin origin;
+
+        /**
+         * Returns the transition for the property referenced by the specified CSS metadata,
+         * or {@code null} if no transition was found. This method does not account for
+         * sub-properties of the specified property.
+         *
+         * @param metadata the CSS metadata of the property
+         * @return the {@code TransitionDefinition} specified for the property referenced by the
+         *         CSS metadata, {@code null} otherwise
+         */
+        public TransitionDefinition find(CssMetaData<? extends Styleable, ?> metadata) {
+            int size = size();
+            if (size == 0) {
+                return null;
+            }
+
+            // We look for a matching transition in reverse, since multiple transitions might be specified
+            // for the same property. In this case, the last transition takes precedence.
+            for (int i = size - 1; i >= 0; --i) {
+                TransitionDefinition transition = get(i);
+
+                boolean selected = TransitionDefinitionConverter.PROPERTY_ALL.equals(transition.propertyName())
+                    || metadata.getProperty().equals(transition.propertyName());
+
+                if (selected) {
+                    return transition;
+                }
+            }
+
+            return null;
+        }
+
+        /**
+         * Returns all transitions for the property referenced by the specified CSS metadata,
+         * including all of its sub-properties.
+         *
+         * @param metadata the CSS metadata of the property
+         * @return a mapping of CSS metadata instances to {@code TransitionDefinition} instances
+         */
+        public Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findAll(
+                CssMetaData<? extends Styleable, ?> metadata) {
+            if (isEmpty()) {
+                return Map.of();
+            }
+
+            var result = collectTransitions(metadata, null);
+            return result != null ? result : Map.of();
+        }
+
+        /**
+         * Finds all transition definitions for the property referenced by the specified CSS metadata,
+         * including all of its sub-properties. This method does not allocate a new {@code Map} for the
+         * common case where no transitions are found.
+         *
+         * @param metadata the CSS metadata of the property
+         * @param result this argument is an implementation detail, callers must specify {@code null}
+         * @return a mapping of CSS metadata instances to {@code TransitionDefinition} instances
+         */
+        private Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> collectTransitions(
+                CssMetaData<? extends Styleable, ?> metadata,
+                Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> result) {
+            // We look for a matching transition in reverse, since multiple transitions might be specified
+            // for the same property. In this case, the last transition takes precedence.
+            for (int max = size(), i = max - 1; i >= 0; --i) {
+                TransitionDefinition transition = get(i);
+
+                boolean selected = TransitionDefinitionConverter.PROPERTY_ALL.equals(transition.propertyName())
+                        || metadata.getProperty().equals(transition.propertyName());
+
+                if (selected) {
+                    if (result == null) {
+                        // We expect the number of concurrent transitions for any given node to be
+                        // quite small in most cases, six mappings should be enough.
+                        result = HashMap.newHashMap(6);
+                    }
+
+                    result.put(metadata, transition);
+                    break;
+                }
+            }
+
+            List<CssMetaData<? extends Styleable, ?>> subMetadata = metadata.getSubProperties();
+            if (subMetadata == null) {
+                return result;
+            }
+
+            // We also need to search for transitions defined on all sub-properties of the current property.
+            for (int i = 0, max = subMetadata.size(); i < max; ++i) {
+                result = collectTransitions(subMetadata.get(i), result);
+            }
+
+            return result;
+        }
+
+        @Override
+        public TransitionDefinition[] getValue() {
+            return toArray(TransitionDefinition[]::new);
+        }
+
+        @Override
+        public void setValue(TransitionDefinition[] value) {
+            clear();
+            addAll(Arrays.asList(value));
+            this.origin = StyleOrigin.USER;
+        }
+
+        @Override
+        public void applyStyle(StyleOrigin origin, TransitionDefinition[] value) {
+            setValue(value);
+            this.origin = origin;
+        }
+
+        @Override
+        public StyleOrigin getStyleOrigin() {
+            return origin;
+        }
+
+        @Override
+        public CssMetaData<? extends Styleable, TransitionDefinition[]> getCssMetaData() {
+            return TransitionDefinitionCssMetaData.getInstance();
+        }
+    }
+
+    // package-private for testing
+    List<TransitionDefinition> getTransitionDefinitions() {
+        return miscProperties != null ? miscProperties.transitionDefinitions : null;
+    }
+
 
     /* *************************************************************************
      *                                                                         *

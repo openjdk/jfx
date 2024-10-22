@@ -94,6 +94,8 @@ public:
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final;
     void suspend() final;
     void resume() final;
+    GraphicsClient* graphicsClient() final;
+
 
     using EventTarget::weakPtrFactory;
     using EventTarget::WeakValueType;
@@ -105,10 +107,8 @@ public:
     WorkerCacheStorageConnection& cacheStorageConnection();
     MessagePortChannelProvider& messagePortChannelProvider();
 
-#if ENABLE(SERVICE_WORKER)
     WorkerSWClientConnection& swClientConnection();
     void updateServiceWorkerClientData() final;
-#endif
 
     WorkerThread& thread() const;
 
@@ -141,6 +141,7 @@ public:
 
     Crypto& crypto();
     Performance& performance() const;
+    Ref<Performance> protectedPerformance() const;
     ReportingScope& reportingScope() const { return m_reportingScope.get(); }
 
     void prepareForDestruction() override;
@@ -169,6 +170,8 @@ public:
     ClientOrigin clientOrigin() const { return { topOrigin().data(), securityOrigin()->data() }; }
 
     WorkerClient* workerClient() { return m_workerClient.get(); }
+
+    void reportErrorToWorkerObject(const String&);
 
 protected:
     WorkerGlobalScope(WorkerThreadType, const WorkerParameters&, Ref<SecurityOrigin>&&, WorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<WorkerClient>&&);
@@ -239,9 +242,7 @@ private:
 
     RefPtr<WorkerCacheStorageConnection> m_cacheStorageConnection;
     std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
-#if ENABLE(SERVICE_WORKER)
     RefPtr<WorkerSWClientConnection> m_swClientConnection;
-#endif
     std::unique_ptr<CSSValuePool> m_cssValuePool;
     std::unique_ptr<WorkerClient> m_workerClient;
     RefPtr<CSSFontSelector> m_cssFontSelector;

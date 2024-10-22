@@ -25,6 +25,7 @@ set(JavaScriptCore_PRIVATE_INCLUDE_DIRECTORIES
     "${JAVASCRIPTCORE_DIR}/disassembler/zydis/Zydis"
     "${JAVASCRIPTCORE_DIR}/domjit"
     "${JAVASCRIPTCORE_DIR}/ftl"
+    "${JAVASCRIPTCORE_DIR}/fuzzilli"
     "${JAVASCRIPTCORE_DIR}/heap"
     "${JAVASCRIPTCORE_DIR}/debugger"
     "${JAVASCRIPTCORE_DIR}/inspector"
@@ -268,7 +269,6 @@ set(OFFLINE_ASM
     offlineasm/cloop.rb
     offlineasm/config.rb
     offlineasm/instructions.rb
-    offlineasm/mips.rb
     offlineasm/offsets.rb
     offlineasm/opt.rb
     offlineasm/parser.rb
@@ -315,7 +315,17 @@ list(APPEND JavaScriptCore_HEADERS
 )
 
 if (WIN32)
-    set(OFFLINE_ASM_BACKEND "X86_WIN, X86_64_WIN, C_LOOP_WIN")
+    if (WTF_CPU_X86)
+        set(OFFLINE_ASM_BACKEND "X86_WIN")
+    elseif (WTF_CPU_X86_64)
+        set(OFFLINE_ASM_BACKEND "X86_64_WIN")
+    endif ()
+
+    if (NOT ENABLE_JIT)
+        if (ENABLE_C_LOOP)
+            set(OFFLINE_ASM_BACKEND "C_LOOP_WIN")
+        endif ()
+    endif ()
 else ()
     if (WTF_CPU_X86)
         set(OFFLINE_ASM_BACKEND "X86")
@@ -325,8 +335,6 @@ else ()
         set(OFFLINE_ASM_BACKEND "ARM64")
     elseif (ARM_THUMB2_DETECTED)
         set(OFFLINE_ASM_BACKEND "ARMv7")
-    elseif (WTF_CPU_MIPS)
-        set(OFFLINE_ASM_BACKEND "MIPS")
     elseif (WTF_CPU_RISCV64)
         set(OFFLINE_ASM_BACKEND "RISCV64")
     endif ()
@@ -392,7 +400,6 @@ set(JavaScriptCore_BUILTINS_SOURCES
     ${JAVASCRIPTCORE_DIR}/builtins/AsyncFunctionPrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/AsyncIteratorPrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/AsyncGeneratorPrototype.js
-    ${JAVASCRIPTCORE_DIR}/builtins/DatePrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/FunctionPrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/GeneratorPrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/GlobalObject.js
@@ -508,22 +515,8 @@ add_custom_command(
 # the .cpp files below is similar to the one in the previous comment. However, since these .cpp
 # files are used to build JavaScriptCore itself, we can just add LLIntAssembly.h to JSC_HEADERS
 # since it is used in the add_library() call at the end of this file.
-if (MSVC AND NOT ENABLE_C_LOOP)
-    enable_language(ASM_MASM)
-    if (CMAKE_SIZEOF_VOID_P EQUAL 4)
-        # Win32 needs /safeseh with assembly, but Win64 does not.
-        set(MASM_EXECUTABLE ml)
-        set(LLINT_MASM_FLAGS /safeseh /c /Fo)
-    else ()
-        set(MASM_EXECUTABLE ml64)
-        set(LLINT_MASM_FLAGS /c /Fo)
-    endif ()
-    add_custom_command(
-        OUTPUT ${JavaScriptCore_DERIVED_SOURCES_DIR}/LowLevelInterpreterWin.obj
-        DEPENDS ${JavaScriptCore_DERIVED_SOURCES_DIR}/LowLevelInterpreterWin.asm
-        COMMAND ${MASM_EXECUTABLE} ${LLINT_MASM_FLAGS} ${JavaScriptCore_DERIVED_SOURCES_DIR}/LowLevelInterpreterWin.obj ${JavaScriptCore_DERIVED_SOURCES_DIR}/LowLevelInterpreterWin.asm
-        VERBATIM)
-    list(APPEND JavaScriptCore_SOURCES ${JavaScriptCore_DERIVED_SOURCES_DIR}/LowLevelInterpreterWin.obj)
+if (MSVC AND WTF_CPU_X86_64 AND NOT ENABLE_C_LOOP)
+    list(APPEND JavaScriptCore_SOURCES ${JavaScriptCore_DERIVED_SOURCES_DIR}/LowLevelInterpreterWin.asm)
     add_library(LowLevelInterpreterLib OBJECT llint/LowLevelInterpreter.cpp)
 else ()
     # As there's poor toolchain support for using `.file` directives in
@@ -639,22 +632,21 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     assembler/AssemblerCommon.h
     assembler/AssemblyComments.h
     assembler/CPU.h
+    assembler/CPUInlines.h
     assembler/CodeLocation.h
     assembler/FastJITPermissions.h
     assembler/JITOperationList.h
     assembler/JITOperationValidation.h
     assembler/LinkBuffer.h
-    assembler/MIPSAssembler.h
-    assembler/MIPSRegisters.h
     assembler/MacroAssembler.h
     assembler/MacroAssemblerARM64.h
     assembler/MacroAssemblerARMv7.h
     assembler/MacroAssemblerCodeRef.h
     assembler/MacroAssemblerHelpers.h
-    assembler/MacroAssemblerMIPS.h
     assembler/MacroAssemblerRISCV64.h
     assembler/MacroAssemblerX86Common.h
     assembler/MacroAssemblerX86_64.h
+    assembler/OSCheck.h
     assembler/Printer.h
     assembler/RISCV64Assembler.h
     assembler/RISCV64Registers.h
@@ -680,8 +672,10 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     bytecode/BytecodeIntrinsicRegistry.h
     bytecode/CallEdge.h
     bytecode/CallLinkInfo.h
+    bytecode/CallLinkInfoBase.h
     bytecode/CallMode.h
     bytecode/CallVariant.h
+    bytecode/CallVariantInlines.h
     bytecode/ChainedWatchpoint.h
     bytecode/CheckPrivateBrandStatus.h
     bytecode/CheckPrivateBrandVariant.h
@@ -697,7 +691,8 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     bytecode/ExitKind.h
     bytecode/ExitingInlineKind.h
     bytecode/ExitingJITType.h
-    bytecode/ExpressionRangeInfo.h
+    bytecode/ExpressionInfo.h
+    bytecode/ExpressionInfoInlines.h
     bytecode/HandlerInfo.h
     bytecode/ICStatusMap.h
     bytecode/InlineCallFrame.h
@@ -708,6 +703,8 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     bytecode/JumpTable.h
     bytecode/LLIntPrototypeLoadAdaptiveStructureWatchpoint.h
     bytecode/LazyOperandValueProfile.h
+    bytecode/LazyValueProfile.h
+    bytecode/LineColumn.h
     bytecode/LinkTimeConstant.h
     bytecode/MetadataTable.h
     bytecode/ObjectAllocationProfile.h
@@ -779,9 +776,11 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     heap/DeferGCInlines.h
     heap/DeleteAllCodeEffort.h
     heap/DestructionMode.h
+    heap/EdenGCActivityCallback.h
     heap/FastMallocAlignedMemoryAllocator.h
     heap/FreeList.h
     heap/FreeListInlines.h
+    heap/FullGCActivityCallback.h
     heap/GCActivityCallback.h
     heap/GCAssertions.h
     heap/GCConductor.h
@@ -961,6 +960,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     parser/SourceProvider.h
     parser/SourceProviderCache.h
     parser/SourceProviderCacheItem.h
+    parser/SourceTaintedOrigin.h
     parser/UnlinkedSourceCode.h
     parser/VariableEnvironment.h
 
@@ -1098,6 +1098,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/IndexingType.h
     runtime/InferredValue.h
     runtime/InitializeThreading.h
+    runtime/InlineAttribute.h
     runtime/Int16Array.h
     runtime/Int32Array.h
     runtime/Int8Array.h
@@ -1121,6 +1122,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/JSCJSValueInlines.h
     runtime/JSCPtrTag.h
     runtime/JSCallee.h
+    runtime/JSCalleeInlines.h
     runtime/JSCast.h
     runtime/JSCell.h
     runtime/JSCellInlines.h
@@ -1143,6 +1145,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/JSGlobalObjectFunctions.h
     runtime/JSGlobalObjectInlines.h
     runtime/JSGlobalProxy.h
+    runtime/JSGlobalProxyInlines.h
     runtime/JSImmutableButterfly.h
     runtime/JSInternalFieldObjectImpl.h
     runtime/JSInternalPromise.h
@@ -1196,6 +1199,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/MemoryStatistics.h
     runtime/Microtask.h
     runtime/ModuleProgramExecutable.h
+    runtime/NativeCallee.h
     runtime/NativeExecutable.h
     runtime/NativeFunction.h
     runtime/NullGetterFunction.h
@@ -1246,6 +1250,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/ScriptFetchParameters.h
     runtime/ScriptFetcher.h
     runtime/ShadowRealmObject.h
+    runtime/SideDataRepository.h
     runtime/SlowPathFunction.h
     runtime/SmallStrings.h
     runtime/SourceOrigin.h
@@ -1317,6 +1322,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     wasm/WasmCalleeGroup.h
     wasm/WasmCallsiteCollection.h
     wasm/WasmCapabilities.h
+    wasm/WasmCompilationContext.h
     wasm/WasmCompilationMode.h
     wasm/WasmContext.h
     wasm/WasmCreationMode.h
@@ -1326,6 +1332,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     wasm/WasmFunctionCodeBlockGenerator.h
     wasm/WasmFunctionIPIntMetadataGenerator.h
     wasm/WasmHandlerInfo.h
+    wasm/WasmIPIntTierUpCounter.h
     wasm/WasmIPIntGenerator.h
     wasm/WasmIndexOrName.h
     wasm/WasmJS.h

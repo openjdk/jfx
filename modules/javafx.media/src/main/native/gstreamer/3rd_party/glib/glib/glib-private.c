@@ -23,6 +23,8 @@
 
 #include "glib-private.h"
 #include "glib-init.h"
+#include "gutilsprivate.h"
+#include "gdatasetprivate.h"
 
 #ifdef USE_INVALID_PARAMETER_HANDLER
 #include <crtdbg.h>
@@ -35,10 +37,10 @@
  * Do not call this function; it is used to share private
  * API between glib, gobject, and gio.
  */
-GLibPrivateVTable *
+const GLibPrivateVTable *
 glib__private__ (void)
 {
-  static GLibPrivateVTable table = {
+  static const GLibPrivateVTable table = {
     g_wakeup_new,
     g_wakeup_free,
     g_wakeup_get_pollfd,
@@ -71,6 +73,10 @@ glib__private__ (void)
     g_find_program_for_path,
 
     g_uri_get_default_scheme_port,
+
+    g_set_prgname_once,
+
+    g_datalist_id_update_atomic,
   };
 
   return &table;

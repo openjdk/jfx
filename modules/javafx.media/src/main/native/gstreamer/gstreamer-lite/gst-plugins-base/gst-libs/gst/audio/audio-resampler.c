@@ -257,7 +257,7 @@ convert_taps_##type##_c (gdouble *tmp_taps, gpointer taps,              \
   for (j = 0; j < n_taps; j++)                                          \
     t[j] = floor (offset + tmp_taps[j] * multiplier / weight);          \
   if (!exact)                                                           \
-    GST_WARNING ("can't find exact taps");                              \
+    GST_DEBUG ("can't find exact taps");                                \
 }
 
 #define MAKE_CONVERT_TAPS_FLOAT_FUNC(type)                              \
@@ -1366,7 +1366,7 @@ gst_audio_resampler_new (GstAudioResamplerMethod method,
 
   audio_resampler_init ();
 
-  resampler = g_slice_new0 (GstAudioResampler);
+  resampler = g_new0 (GstAudioResampler, 1);
   resampler->method = method;
   resampler->flags = flags;
   resampler->format = format;
@@ -1634,7 +1634,7 @@ gst_audio_resampler_free (GstAudioResampler * resampler)
   g_free (resampler->sbuf);
   if (resampler->options)
     gst_structure_free (resampler->options);
-  g_slice_free (GstAudioResampler, resampler);
+  g_free (resampler);
 }
 
 /**

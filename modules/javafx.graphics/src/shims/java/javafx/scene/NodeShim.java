@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,16 @@
 
 package javafx.scene;
 
+import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGNode;
 
 import javafx.collections.ObservableSet;
 import javafx.css.PseudoClass;
 import javafx.scene.transform.Transform;
+import java.util.List;
+import java.util.Map;
 
 public class NodeShim {
 
@@ -84,5 +88,17 @@ public class NodeShim {
 
     public static void setTreeVisible(Node n, boolean visible) {
         n.setTreeVisible(visible);
+    }
+
+    public static List<TransitionDefinition> getTransitionDefinitions(Node n) {
+        return n.getTransitionDefinitions();
+    }
+
+    public static Map<String, TransitionTimer> getTransitionTimers(Node n) {
+        return n.getTransitionTimers();
+    }
+
+    public static void completeTransitionTimers(Node n) {
+        n.completeTransitionTimers();
     }
 }

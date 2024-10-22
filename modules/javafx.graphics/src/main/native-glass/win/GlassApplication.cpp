@@ -168,11 +168,10 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_SETTINGCHANGE:
-            if (((UINT)wParam == SPI_GETHIGHCONTRAST ||
-                    lParam != NULL && wcscmp(LPCWSTR(lParam), L"ImmersiveColorSet") == 0) &&
-                    m_platformSupport.updatePreferences(m_grefThis)) {
+            if (m_platformSupport.onSettingChanged(m_grefThis, wParam, lParam)) {
                 return 0;
             }
+
             if ((UINT)wParam != SPI_SETWORKAREA) {
                 break;
             }

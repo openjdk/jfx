@@ -55,9 +55,9 @@ static UnlinkedFunctionCodeBlock* generateUnlinkedFunctionCodeBlock(
     JSParserStrictMode strictMode = executable->isInStrictContext() ? JSParserStrictMode::Strict : JSParserStrictMode::NotStrict;
     JSParserScriptMode scriptMode = executable->scriptMode();
     ASSERT(isFunctionParseMode(executable->parseMode()));
-    auto* classFieldLocations = executable->classFieldLocations();
+    auto* classElementDefinitions = executable->classElementDefinitions();
     std::unique_ptr<FunctionNode> function = parse<FunctionNode>(
-        vm, source, executable->name(), executable->implementationVisibility(), builtinMode, strictMode, scriptMode, executable->parseMode(), executable->superBinding(), error, nullptr, ConstructorKind::None, DerivedContextType::None, EvalContextType::None, nullptr, nullptr, classFieldLocations);
+        vm, source, executable->name(), executable->implementationVisibility(), builtinMode, strictMode, scriptMode, executable->parseMode(), executable->functionMode(), executable->superBinding(), error, nullptr, ConstructorKind::None, DerivedContextType::None, EvalContextType::None, nullptr, nullptr, classElementDefinitions);
 
     if (!function) {
         ASSERT(error.isValid());
@@ -72,8 +72,9 @@ static UnlinkedFunctionCodeBlock* generateUnlinkedFunctionCodeBlock(
     UnlinkedFunctionCodeBlock* result = UnlinkedFunctionCodeBlock::create(vm, FunctionCode, ExecutableInfo(kind == CodeForConstruct, executable->privateBrandRequirement(), functionKind == UnlinkedBuiltinFunction, executable->constructorKind(), scriptMode, executable->superBinding(), parseMode, executable->derivedContextType(), executable->needsClassFieldInitializer(), false, isClassContext, EvalContextType::FunctionEvalContext), codeGenerationMode);
 
     auto parentScopeTDZVariables = executable->parentScopeTDZVariables();
+    const FixedVector<Identifier>* generatorOrAsyncWrapperFunctionParameterNames = executable->generatorOrAsyncWrapperFunctionParameterNames();
     const PrivateNameEnvironment* parentPrivateNameEnvironment = executable->parentPrivateNameEnvironment();
-    error = BytecodeGenerator::generate(vm, function.get(), source, result, codeGenerationMode, parentScopeTDZVariables, parentPrivateNameEnvironment);
+    error = BytecodeGenerator::generate(vm, function.get(), source, result, codeGenerationMode, parentScopeTDZVariables, generatorOrAsyncWrapperFunctionParameterNames, parentPrivateNameEnvironment);
 
     if (error.isValid())
         return nullptr;
@@ -81,7 +82,7 @@ static UnlinkedFunctionCodeBlock* generateUnlinkedFunctionCodeBlock(
     return result;
 }
 
-UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* structure, const SourceCode& parentSource, FunctionMetadataNode* node, UnlinkedFunctionKind kind, ConstructAbility constructAbility, JSParserScriptMode scriptMode, RefPtr<TDZEnvironmentLink> parentScopeTDZVariables, std::optional<PrivateNameEnvironment> parentPrivateNameEnvironment, DerivedContextType derivedContextType, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement, bool isBuiltinDefaultClassConstructor)
+UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* structure, const SourceCode& parentSource, FunctionMetadataNode* node, UnlinkedFunctionKind kind, ConstructAbility constructAbility, InlineAttribute inlineAttribute, JSParserScriptMode scriptMode, RefPtr<TDZEnvironmentLink> parentScopeTDZVariables, std::optional<Vector<Identifier>>&& generatorOrAsyncWrapperFunctionParameterNames, std::optional<PrivateNameEnvironment> parentPrivateNameEnvironment, DerivedContextType derivedContextType, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement, bool isBuiltinDefaultClassConstructor)
     : Base(vm, structure)
     , m_firstLineOffset(node->firstLine() - parentSource.firstLine().oneBasedInt())
     , m_isGeneratedFromCache(false)
@@ -110,6 +111,7 @@ UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* struct
     , m_lexicalScopeFeatures(node->lexicalScopeFeatures())
     , m_functionMode(static_cast<unsigned>(node->functionMode()))
     , m_derivedContextType(static_cast<unsigned>(derivedContextType))
+    , m_inlineAttribute(static_cast<unsigned>(inlineAttribute))
     , m_unlinkedCodeBlockForCall()
     , m_unlinkedCodeBlockForConstruct()
     , m_name(node->ident())
@@ -123,6 +125,7 @@ UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* struct
     ASSERT(m_scriptMode == static_cast<unsigned>(scriptMode));
     ASSERT(m_superBinding == static_cast<unsigned>(node->superBinding()));
     ASSERT(m_derivedContextType == static_cast<unsigned>(derivedContextType));
+    ASSERT(m_inlineAttribute == static_cast<unsigned>(inlineAttribute));
     ASSERT(m_privateBrandRequirement == static_cast<unsigned>(privateBrandRequirement));
     ASSERT(!(m_isBuiltinDefaultClassConstructor && constructorKind() == ConstructorKind::None));
     ASSERT(!m_needsClassFieldInitializer || (isClassConstructorFunction() || derivedContextType == DerivedContextType::DerivedConstructorContext));
@@ -130,6 +133,8 @@ UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* struct
         setClassSource(node->classSource());
     if (parentScopeTDZVariables)
         ensureRareData().m_parentScopeTDZVariables = WTFMove(parentScopeTDZVariables);
+    if (generatorOrAsyncWrapperFunctionParameterNames)
+        ensureRareData().m_generatorOrAsyncWrapperFunctionParameterNames = FixedVector<Identifier>(WTFMove(generatorOrAsyncWrapperFunctionParameterNames.value()));
     if (parentPrivateNameEnvironment)
         ensureRareData().m_parentPrivateNameEnvironment = WTFMove(*parentPrivateNameEnvironment);
 }

@@ -26,7 +26,7 @@
 #pragma once
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-#include "AccessibilityObjectInterface.h"
+#include "AXCoreObject.h"
 #include "IntRectHash.h"
 #include <wtf/Lock.h>
 #include <wtf/RefCounted.h>
@@ -35,9 +35,10 @@ namespace WebCore {
 
 class AXObjectCache;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXGeometryManager);
 class AXGeometryManager : public ThreadSafeRefCounted<AXGeometryManager> {
     WTF_MAKE_NONCOPYABLE(AXGeometryManager);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXGeometryManager);
 public:
     explicit AXGeometryManager(AXObjectCache&);
     AXGeometryManager();

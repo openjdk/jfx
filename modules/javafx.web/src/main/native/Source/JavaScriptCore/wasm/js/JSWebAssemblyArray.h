@@ -51,10 +51,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info());
-    }
+    static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     template <typename ElementType>
     static JSWebAssemblyArray* create(VM& vm, Structure* structure, Wasm::FieldType elementType, size_t size, FixedVector<ElementType>&& payload, RefPtr<const Wasm::RTT> rtt)
@@ -70,14 +67,45 @@ public:
     Wasm::FieldType elementType() const { return m_elementType; }
     size_t size() const { return m_size; }
 
-    EncodedJSValue get(uint32_t index)
+    uint8_t* data()
     {
         if (m_elementType.type.is<Wasm::PackedType>()) {
             switch (m_elementType.type.as<Wasm::PackedType>()) {
             case Wasm::PackedType::I8:
-                return static_cast<EncodedJSValue>(m_payload8[index]);
+                return reinterpret_cast<uint8_t*>(m_payload8.data());
             case Wasm::PackedType::I16:
-                return static_cast<EncodedJSValue>(m_payload16[index]);
+                return reinterpret_cast<uint8_t*>(m_payload16.data());
+            }
+        }
+        ASSERT(m_elementType.type.is<Wasm::Type>());
+        switch (m_elementType.type.as<Wasm::Type>().kind) {
+        case Wasm::TypeKind::I32:
+        case Wasm::TypeKind::F32:
+            return reinterpret_cast<uint8_t*>(m_payload32.data());
+        case Wasm::TypeKind::V128:
+            return reinterpret_cast<uint8_t*>(m_payload128.data());
+        default:
+            return reinterpret_cast<uint8_t*>(m_payload64.data());
+        }
+
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    };
+
+    uint64_t* reftypeData()
+    {
+        RELEASE_ASSERT(m_elementType.type.unpacked().isRef() || m_elementType.type.unpacked().isRefNull());
+        return m_payload64.data();
+    }
+
+    uint64_t get(uint32_t index)
+    {
+        if (m_elementType.type.is<Wasm::PackedType>()) {
+            switch (m_elementType.type.as<Wasm::PackedType>()) {
+            case Wasm::PackedType::I8:
+                return static_cast<uint64_t>(m_payload8[index]);
+            case Wasm::PackedType::I16:
+                return static_cast<uint64_t>(m_payload16[index]);
             }
         }
         // m_element_type must be a type, so we can get its kind
@@ -85,17 +113,18 @@ public:
         switch (m_elementType.type.as<Wasm::Type>().kind) {
         case Wasm::TypeKind::I32:
         case Wasm::TypeKind::F32:
-            return static_cast<EncodedJSValue>(m_payload32[index]);
+            return static_cast<uint64_t>(m_payload32[index]);
+        case Wasm::TypeKind::V128:
+            // V128 is not supported in LLInt.
+            RELEASE_ASSERT_NOT_REACHED();
         default:
-            return static_cast<EncodedJSValue>(m_payload64[index]);
+            return static_cast<uint64_t>(m_payload64[index]);
         }
     }
 
-    void set(VM& vm, uint32_t index, EncodedJSValue value)
+    void set(uint32_t index, uint64_t value)
     {
         if (m_elementType.type.is<Wasm::PackedType>()) {
-            // `value` is assumed to be an unboxed int32; truncate it to either 8 or 16 bits
-            ASSERT(value <= UINT32_MAX);
             switch (m_elementType.type.as<Wasm::PackedType>()) {
             case Wasm::PackedType::I8:
                 m_payload8[index] = static_cast<uint8_t>(value);
@@ -124,7 +153,7 @@ public:
         case Wasm::TypeKind::RefNull: {
             WriteBarrier<Unknown>* pointer = bitwise_cast<WriteBarrier<Unknown>*>(m_payload64.data());
             pointer += index;
-            pointer->set(vm, this, JSValue::decode(value));
+            pointer->set(vm(), this, JSValue::decode(static_cast<EncodedJSValue>(value)));
             break;
         }
         case Wasm::TypeKind::V128:
@@ -134,11 +163,49 @@ public:
         }
     }
 
-    static ptrdiff_t offsetOfSize() { return OBJECT_OFFSETOF(JSWebAssemblyArray, m_size); }
-    static ptrdiff_t offsetOfPayload()
+    void set(uint32_t index, v128_t value)
     {
-        ASSERT(OBJECT_OFFSETOF(JSWebAssemblyArray, m_payload32) == OBJECT_OFFSETOF(JSWebAssemblyArray, m_payload64));
-        return OBJECT_OFFSETOF(JSWebAssemblyArray, m_payload32);
+        ASSERT(m_elementType.type.is<Wasm::Type>());
+        ASSERT(m_elementType.type.as<Wasm::Type>().kind == Wasm::TypeKind::V128);
+        m_payload128[index] = value;
+    }
+
+    void fill(uint32_t, uint64_t, uint32_t);
+    void fill(uint32_t, v128_t, uint32_t);
+    void copy(JSWebAssemblyArray&, uint32_t, uint32_t, uint32_t);
+
+    static ptrdiff_t offsetOfSize() { return OBJECT_OFFSETOF(JSWebAssemblyArray, m_size); }
+    static ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSWebAssemblyArray, m_payload8) + FixedVector<uint8_t>::offsetOfStorage(); }
+    static ptrdiff_t offsetOfElements(Wasm::StorageType type)
+    {
+        if (type.is<Wasm::PackedType>()) {
+            switch (type.as<Wasm::PackedType>()) {
+            case Wasm::PackedType::I8:
+                return FixedVector<uint8_t>::Storage::offsetOfData();
+            case Wasm::PackedType::I16:
+                return FixedVector<uint16_t>::Storage::offsetOfData();
+    }
+        }
+
+        ASSERT(type.is<Wasm::Type>());
+
+        switch (type.as<Wasm::Type>().kind) {
+        case Wasm::TypeKind::I32:
+        case Wasm::TypeKind::F32:
+            return FixedVector<uint32_t>::Storage::offsetOfData();
+        case Wasm::TypeKind::I64:
+        case Wasm::TypeKind::F64:
+        case Wasm::TypeKind::Ref:
+        case Wasm::TypeKind::RefNull:
+            return FixedVector<uint64_t>::Storage::offsetOfData();
+        case Wasm::TypeKind::V128:
+            return FixedVector<v128_t>::Storage::offsetOfData();
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+        }
+
+        return 0;
     }
 
 protected:
@@ -146,6 +213,7 @@ protected:
     JSWebAssemblyArray(VM&, Structure*, Wasm::FieldType, size_t, FixedVector<uint16_t>&&, RefPtr<const Wasm::RTT>);
     JSWebAssemblyArray(VM&, Structure*, Wasm::FieldType, size_t, FixedVector<uint32_t>&&, RefPtr<const Wasm::RTT>);
     JSWebAssemblyArray(VM&, Structure*, Wasm::FieldType, size_t, FixedVector<uint64_t>&&, RefPtr<const Wasm::RTT>);
+    JSWebAssemblyArray(VM&, Structure*, Wasm::FieldType, size_t, FixedVector<v128_t>&&, RefPtr<const Wasm::RTT>);
     ~JSWebAssemblyArray();
 
     DECLARE_DEFAULT_FINISH_CREATION;
@@ -160,6 +228,7 @@ protected:
         FixedVector<uint16_t> m_payload16;
         FixedVector<uint32_t> m_payload32;
         FixedVector<uint64_t> m_payload64;
+        FixedVector<v128_t>   m_payload128;
     };
 };
 

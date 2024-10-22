@@ -26,7 +26,6 @@
 #include "config.h"
 #include "BackgroundPainter.h"
 
-#include "BitmapImage.h"
 #include "BorderPainter.h"
 #include "CachedImage.h"
 #include "ColorBlending.h"
@@ -254,7 +253,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
                     context.setCompositeOperation(previousOperator);
             } else {
                 context.save();
-                clipRoundedInnerRect(context, pixelSnappedRect, pixelSnappedBorder);
+                clipRoundedInnerRect(context, pixelSnappedBorder);
                 context.fillRect(pixelSnappedBorder.rect(), bgColor, op);
                 context.restore();
             }
@@ -279,7 +278,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
         } else if (bgLayer.clip() == FillBox::Padding)
             border = style.getRoundedInnerBorderFor(border.rect(), includeLeftEdge, includeRightEdge);
 
-        clipRoundedInnerRect(context, pixelSnappedRect, border.pixelSnappedRoundedRectForPainting(deviceScaleFactor));
+        clipRoundedInnerRect(context, border.pixelSnappedRoundedRectForPainting(deviceScaleFactor));
     }
 
     LayoutUnit bLeft = includeLeftEdge ? m_renderer.borderLeft() : 0_lu;
@@ -339,7 +338,11 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
 
     auto isOpaqueRoot = false;
     if (isRoot) {
-        isOpaqueRoot = bgLayer.next() || bgColor.isOpaque() || view().shouldPaintBaseBackground();
+        bool shouldPaintBaseBackground = view().rootElementShouldPaintBaseBackground();
+        isOpaqueRoot = bgLayer.next() || bgColor.isOpaque() || shouldPaintBaseBackground;
+        if (!shouldPaintBaseBackground)
+            baseBgColorUsage = BaseBackgroundColorSkip;
+
         view().frameView().setContentIsOpaque(isOpaqueRoot);
     }
 
@@ -397,18 +400,18 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
 
         geometry.clip(LayoutRect(pixelSnappedRect));
         RefPtr<Image> image;
-        if (!geometry.destinationRect.isEmpty() && (image = bgImage->image(backgroundObject ? backgroundObject : &m_renderer, geometry.tileSize))) {
+        bool isFirstLine = box && box->lineBox()->isFirst();
+        if (!geometry.destinationRect.isEmpty() && (image = bgImage->image(backgroundObject ? backgroundObject : &m_renderer, geometry.tileSize, isFirstLine))) {
             context.setDrawLuminanceMask(bgLayer.maskMode() == MaskMode::Luminance);
-
-            if (is<BitmapImage>(image))
-                downcast<BitmapImage>(*image).updateFromSettings(document().settings());
 
             ImagePaintingOptions options = {
                 op == CompositeOperator::SourceOver ? bgLayer.compositeForPainting() : op,
                 bgLayer.blendMode(),
                 m_renderer.decodingModeForImageDraw(*image, m_paintInfo),
                 ImageOrientation::Orientation::FromImage,
-                m_renderer.chooseInterpolationQuality(context, *image, &bgLayer, geometry.tileSize)
+                m_renderer.chooseInterpolationQuality(context, *image, &bgLayer, geometry.tileSize),
+                document().settings().imageSubsamplingEnabled() ? AllowImageSubsampling::Yes : AllowImageSubsampling::No,
+                document().settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No
             };
 
             auto drawResult = context.drawTiledImage(*image, geometry.destinationRect, toLayoutPoint(geometry.relativePhase()), geometry.tileSize, geometry.spaceSize, options);
@@ -423,42 +426,21 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
     }
 
     if (maskImage && bgLayer.clip() == FillBox::Text) {
-        context.drawConsumingImageBuffer(WTFMove(maskImage), maskRect, CompositeOperator::DestinationIn);
+        context.drawConsumingImageBuffer(WTFMove(maskImage), maskRect, { CompositeOperator::DestinationIn });
         context.endTransparencyLayer();
     }
 }
 
-void BackgroundPainter::clipRoundedInnerRect(GraphicsContext& context, const FloatRect& rect, const FloatRoundedRect& clipRect)
+void BackgroundPainter::clipRoundedInnerRect(GraphicsContext& context, const FloatRoundedRect& clipRect)
 {
-    if (clipRect.isRenderable()) {
-        context.clipRoundedRect(clipRect);
+    if (UNLIKELY(!clipRect.isRenderable())) {
+        auto adjustedClipRect = clipRect;
+        adjustedClipRect.adjustRadii();
+        context.clipRoundedRect(adjustedClipRect);
         return;
     }
 
-    // We create a rounded rect for each of the corners and clip it, while making sure we clip opposing corners together.
-    if (!clipRect.radii().topLeft().isEmpty() || !clipRect.radii().bottomRight().isEmpty()) {
-        FloatRect topCorner(clipRect.rect().x(), clipRect.rect().y(), rect.maxX() - clipRect.rect().x(), rect.maxY() - clipRect.rect().y());
-        FloatRoundedRect::Radii topCornerRadii;
-        topCornerRadii.setTopLeft(clipRect.radii().topLeft());
-        context.clipRoundedRect(FloatRoundedRect(topCorner, topCornerRadii));
-
-        FloatRect bottomCorner(rect.x(), rect.y(), clipRect.rect().maxX() - rect.x(), clipRect.rect().maxY() - rect.y());
-        FloatRoundedRect::Radii bottomCornerRadii;
-        bottomCornerRadii.setBottomRight(clipRect.radii().bottomRight());
-        context.clipRoundedRect(FloatRoundedRect(bottomCorner, bottomCornerRadii));
-    }
-
-    if (!clipRect.radii().topRight().isEmpty() || !clipRect.radii().bottomLeft().isEmpty()) {
-        FloatRect topCorner(rect.x(), clipRect.rect().y(), clipRect.rect().maxX() - rect.x(), rect.maxY() - clipRect.rect().y());
-        FloatRoundedRect::Radii topCornerRadii;
-        topCornerRadii.setTopRight(clipRect.radii().topRight());
-        context.clipRoundedRect(FloatRoundedRect(topCorner, topCornerRadii));
-
-        FloatRect bottomCorner(clipRect.rect().x(), rect.y(), rect.maxX() - clipRect.rect().x(), clipRect.rect().maxY() - rect.y());
-        FloatRoundedRect::Radii bottomCornerRadii;
-        bottomCornerRadii.setBottomLeft(clipRect.radii().bottomLeft());
-        context.clipRoundedRect(FloatRoundedRect(bottomCorner, bottomCornerRadii));
-    }
+    context.clipRoundedRect(clipRect);
 }
 
 RoundedRect BackgroundPainter::backgroundRoundedRectAdjustedForBleedAvoidance(const LayoutRect& borderRect, BackgroundBleedAvoidance bleedAvoidance, const InlineIterator::InlineBoxIterator& box, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const

@@ -27,13 +27,12 @@ package com.oracle.tools.fx.monkey.util;
 
 import java.util.function.Consumer;
 import javafx.beans.property.Property;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -43,6 +42,7 @@ import javafx.stage.Stage;
 
 public class EnterTextDialog extends Stage {
     private final TextArea textField;
+    private final BorderPane content;
 
     public EnterTextDialog(Object owner, String initialText, Consumer<String> onEdit) {
         initOwner(FX.getParentWindow(owner));
@@ -60,9 +60,9 @@ public class EnterTextDialog extends Stage {
         bp.setPadding(new Insets(5, 10, 5, 10));
         bp.getButtons().add(ok);
 
-        BorderPane p = new BorderPane(textField);
-        p.setBottom(bp);
-        setScene(new Scene(p));
+        content = new BorderPane(textField);
+        content.setBottom(bp);
+        setScene(new Scene(content));
 
         addEventHandler(KeyEvent.KEY_PRESSED, (ev) -> {
             if (ev.getCode() == KeyCode.ESCAPE) {
@@ -85,5 +85,11 @@ public class EnterTextDialog extends Stage {
                 p.setValue(v);
             }).show();
         };
+    }
+
+    public void setInstructions(String text) {
+        Label t = new Label(text);
+        t.setPadding(new Insets(2, 10, 2, 10));
+        content.setTop(t);
     }
 }

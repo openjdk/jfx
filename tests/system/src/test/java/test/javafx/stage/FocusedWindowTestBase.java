@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,14 +28,11 @@ package test.javafx.stage;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
-
-import org.junit.Assert;
-
+import org.junit.jupiter.api.Assertions;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
@@ -64,16 +61,14 @@ public abstract class FocusedWindowTestBase {
             });
             closedFocusedStage.show();
         });
-        Assert.assertTrue("Timeout waiting for closedFocusedStage to show`",
-                latch.await(15, TimeUnit.MILLISECONDS));
+        Assertions.assertTrue(latch.await(15, TimeUnit.MILLISECONDS), "Timeout waiting for closedFocusedStage to show`");
 
         CountDownLatch hideLatch = new CountDownLatch(1);
         closedFocusedStage.setOnHidden(a -> {
             hideLatch.countDown();
         });
         Util.runAndWait(() -> closedFocusedStage.close());
-        Assert.assertTrue("Timeout waiting for closedFocusedStage to hide`",
-                hideLatch.await(15, TimeUnit.MILLISECONDS));
+        Assertions.assertTrue(hideLatch.await(15, TimeUnit.MILLISECONDS), "Timeout waiting for closedFocusedStage to hide`");
 
         closedFocusedStage.requestFocus();
         closedFocusedStage = null;

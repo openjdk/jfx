@@ -127,7 +127,7 @@
  * ```
  *
  * > *note*: gst_structure_to_string() won't use that syntax for backward
- * > compatibility reason, gst_structure_serialize() has been added for
+ * > compatibility reason, gst_structure_serialize_full() has been added for
  * > that purpose.
  */
 
@@ -2035,6 +2035,7 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
   guint i, len;
   gboolean nested_structs_brackets =
       !(flags & GST_SERIALIZE_FLAG_BACKWARD_COMPAT);
+  gboolean strict = (flags & GST_SERIALIZE_FLAG_STRICT) != 0;
 
   g_return_val_if_fail (s != NULL, FALSE);
 
@@ -2071,7 +2072,8 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
 
       g_string_append_c (s, '[');
       g_string_append (s, g_quark_to_string (substruct->name));
-      priv_gst_structure_append_to_gstring (substruct, s, flags);
+      if (!priv_gst_structure_append_to_gstring (substruct, s, flags))
+        return FALSE;
       g_string_append_c (s, ']');
     } else if (nested_structs_brackets
         && G_VALUE_TYPE (&field->value) == GST_TYPE_CAPS) {
@@ -2083,9 +2085,13 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
     } else if (t) {
       g_string_append (s, t);
       g_free (t);
+      if (strict && G_VALUE_HOLDS_OBJECT (&field->value))
+        return FALSE;
     } else if (G_TYPE_CHECK_VALUE_TYPE (&field->value, G_TYPE_POINTER)) {
       gpointer ptr = g_value_get_pointer (&field->value);
 
+      if (strict)
+        return FALSE;
       if (!ptr)
         g_string_append (s, "NULL");
       else
@@ -2095,6 +2101,8 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
         GST_WARNING ("No value transform to serialize field '%s' of type '%s'",
             g_quark_to_string (field->name),
             _priv_gst_value_gtype_to_abbr (type));
+      if (strict)
+        return FALSE;
       /* TODO(ensonic): don't print NULL if field->value is not empty */
       g_string_append (s, "NULL");
     }
@@ -2170,7 +2178,10 @@ structure_serialize (const GstStructure * structure, GstSerializeFlags flags)
    * avoid unnecessary reallocs within GString */
   s = g_string_sized_new (STRUCTURE_ESTIMATED_STRING_LEN (structure));
   g_string_append (s, g_quark_to_string (structure->name));
-  priv_gst_structure_append_to_gstring (structure, s, flags);
+  if (!priv_gst_structure_append_to_gstring (structure, s, flags)) {
+    g_string_free (s, TRUE);
+    return NULL;
+  }
   return g_string_free (s, FALSE);
 
 }
@@ -2188,7 +2199,7 @@ structure_serialize (const GstStructure * structure, GstSerializeFlags flags)
  *
  * This function will lead to unexpected results when there are nested #GstCaps
  * / #GstStructure deeper than one level, you should user
- * gst_structure_serialize() instead for those cases.
+ * gst_structure_serialize_full() instead for those cases.
  *
  * Free-function: g_free
  *
@@ -2213,15 +2224,41 @@ gst_structure_to_string (const GstStructure * structure)
  * GStreamer prior to 1.20 unless #GST_SERIALIZE_FLAG_BACKWARD_COMPAT is passed
  * as @flag.
  *
+ * %GST_SERIALIZE_FLAG_STRICT flags is not allowed because it would make this
+ * function nullable which is an API break for bindings.
+ * Use gst_structure_serialize_full() instead.
+ *
  * Free-function: g_free
  *
  * Returns: (transfer full): a pointer to string allocated by g_malloc().
  *     g_free() after usage.
  *
  * Since: 1.20
+ * Deprecated: Use gst_structure_serialize_full() instead.
  */
 gchar *
 gst_structure_serialize (const GstStructure * structure,
+    GstSerializeFlags flags)
+{
+  g_return_val_if_fail ((flags & GST_SERIALIZE_FLAG_STRICT) == 0, NULL);
+  return structure_serialize (structure, flags);
+}
+
+/**
+ * gst_structure_serialize_full:
+ * @structure: a #GstStructure
+ * @flags: The flags to use to serialize structure
+ *
+ * Alias for gst_structure_serialize() but with nullable annotation because it
+ * can return %NULL when %GST_SERIALIZE_FLAG_STRICT flag is set.
+ *
+ * Returns: (transfer full) (nullable): a pointer to string allocated by g_malloc().
+ *     g_free() after usage.
+ *
+ * Since: 1.24
+ */
+gchar *
+gst_structure_serialize_full (const GstStructure * structure,
     GstSerializeFlags flags)
 {
   return structure_serialize (structure, flags);

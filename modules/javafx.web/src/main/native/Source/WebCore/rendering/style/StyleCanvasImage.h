@@ -54,7 +54,7 @@ private:
     Ref<CSSValue> computedStyleValue(const RenderStyle&) const final;
     bool isPending() const final;
     void load(CachedResourceLoader&, const ResourceLoaderOptions&) final;
-    RefPtr<Image> image(const RenderElement*, const FloatSize&) const final;
+    RefPtr<Image> image(const RenderElement*, const FloatSize&, bool isForFirstLine) const final;
     bool knownToBeOpaque(const RenderElement&) const final;
     FloatSize fixedSize(const RenderElement&) const final;
     void didAddClient(RenderElement&) final;
@@ -62,7 +62,7 @@ private:
 
     // CanvasObserver.
     bool isStyleCanvasImage() const final { return true; }
-    void canvasChanged(CanvasBase&, const std::optional<FloatRect>& changedRect) final;
+    void canvasChanged(CanvasBase&, const FloatRect&) final;
     void canvasResized(CanvasBase&) final;
     void canvasDestroyed(CanvasBase&) final;
 

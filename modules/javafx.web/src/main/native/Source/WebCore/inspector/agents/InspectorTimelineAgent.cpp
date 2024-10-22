@@ -171,7 +171,7 @@ Protocol::ErrorStringOr<void> InspectorTimelineAgent::setInstruments(Ref<JSON::A
         if (!instrument)
             return makeUnexpected(makeString("Unknown instrument: ", instrumentString));
 
-        newInstruments.uncheckedAppend(*instrument);
+        newInstruments.append(*instrument);
     }
 
     m_instruments.swap(newInstruments);
@@ -224,6 +224,8 @@ void InspectorTimelineAgent::internalStart(std::optional<int>&& maxCallStackDept
             pushCurrentRecord(TimelineRecordFactory::createRenderingFrameData(name), TimelineRecordType::RenderingFrame, false, nullptr);
             break;
         case RunLoop::Event::DidDispatch:
+            if (m_startedComposite)
+                didComposite();
             didCompleteCurrentRecord(TimelineRecordType::RenderingFrame);
             break;
         }
@@ -284,8 +286,8 @@ std::optional<double> InspectorTimelineAgent::timestampFromMonotonicTime(Monoton
 
 static LocalFrame* frame(JSC::JSGlobalObject* globalObject)
 {
-    auto context = executionContext(globalObject);
-    return is<Document>(context) ? downcast<Document>(*context).frame() : nullptr;
+    RefPtr document = dynamicDowncast<Document>(executionContext(globalObject));
+    return document ? document->frame() : nullptr;
 }
 
 void InspectorTimelineAgent::startFromConsole(JSC::JSGlobalObject* globalObject, const String& title)

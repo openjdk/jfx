@@ -35,19 +35,20 @@
 
 namespace WebCore {
 
-Ref<ScrollingStateFixedNode> ScrollingStateFixedNode::create(ScrollingStateTree& stateTree, ScrollingNodeID nodeID)
-{
-    return adoptRef(*new ScrollingStateFixedNode(stateTree, nodeID));
-}
-
-ScrollingStateFixedNode::ScrollingStateFixedNode(ScrollingStateTree& tree, ScrollingNodeID nodeID)
-    : ScrollingStateNode(ScrollingNodeType::Fixed, tree, nodeID)
+ScrollingStateFixedNode::ScrollingStateFixedNode(ScrollingNodeID nodeID, Vector<Ref<ScrollingStateNode>>&& children, OptionSet<ScrollingStateNodeProperty> changedProperties, std::optional<PlatformLayerIdentifier> layerID, FixedPositionViewportConstraints&& constraints)
+    : ScrollingStateNode(ScrollingNodeType::Fixed, nodeID, WTFMove(children), changedProperties, layerID)
+    , m_constraints(WTFMove(constraints))
 {
 }
 
 ScrollingStateFixedNode::ScrollingStateFixedNode(const ScrollingStateFixedNode& node, ScrollingStateTree& adoptiveTree)
     : ScrollingStateNode(node, adoptiveTree)
     , m_constraints(FixedPositionViewportConstraints(node.viewportConstraints()))
+{
+}
+
+ScrollingStateFixedNode::ScrollingStateFixedNode(ScrollingStateTree& tree, ScrollingNodeID nodeID)
+    : ScrollingStateNode(ScrollingNodeType::Fixed, tree, nodeID)
 {
 }
 
@@ -83,6 +84,10 @@ void ScrollingStateFixedNode::reconcileLayerPositionForViewportRect(const Layout
     FloatPoint position = m_constraints.layerPositionForViewportRect(viewportRect);
     if (layer().representsGraphicsLayer()) {
         auto* graphicsLayer = static_cast<GraphicsLayer*>(layer());
+        ASSERT(graphicsLayer);
+        // Crash data suggest that graphicsLayer can be null: rdar://105887621.
+        if (!graphicsLayer)
+            return;
 
         LOG_WITH_STREAM(Scrolling, stream << "ScrollingStateFixedNode " << scrollingNodeID() <<" reconcileLayerPositionForViewportRect " << action << " position of layer " << graphicsLayer->primaryLayerID() << " to " << position);
 

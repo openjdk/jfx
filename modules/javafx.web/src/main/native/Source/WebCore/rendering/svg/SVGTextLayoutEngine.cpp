@@ -44,7 +44,7 @@ SVGTextLayoutEngine::SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>& layou
     ASSERT(!m_layoutAttributes.isEmpty());
 }
 
-void SVGTextLayoutEngine::updateCharacerPositionIfNeeded(float& x, float& y)
+void SVGTextLayoutEngine::updateCharacterPositionIfNeeded(float& x, float& y)
 {
     if (m_inPathLayout)
         return;
@@ -141,7 +141,7 @@ bool SVGTextLayoutEngine::parentDefinesTextLength(RenderObject* parent) const
                 return true;
         }
 
-        if (currentParent->isSVGText())
+        if (currentParent->isRenderSVGText())
             return false;
 
         currentParent = currentParent->parent();
@@ -166,9 +166,9 @@ void SVGTextLayoutEngine::beginTextPathLayout(RenderSVGTextPath& textPath, SVGTe
         m_textPathStartOffset = startOffset.valueAsPercentage() * m_textPathLength;
     else {
         m_textPathStartOffset = startOffset.valueInSpecifiedUnits();
-        if (auto* tragetElement = textPath.targetElement()) {
+        if (auto* targetElement = textPath.targetElement()) {
             // FIXME: A value of zero is valid. Need to differentiate this case from being unspecified.
-            if (float pathLength = tragetElement->pathLength())
+            if (float pathLength = targetElement->pathLength())
                 m_textPathStartOffset *= m_textPathLength / pathLength;
         }
     }
@@ -524,7 +524,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
         float glyphAdvance = baselineLayout.calculateGlyphAdvanceAndOrientation(m_isVerticalText, visualMetrics, orientationAngle, xOrientationShift, yOrientationShift);
 
         // Assign current text position to x/y values, if needed.
-        updateCharacerPositionIfNeeded(x, y);
+        updateCharacterPositionIfNeeded(x, y);
 
         // Apply dx/dy value adjustments to current text position, if needed.
         updateRelativePositionAdjustmentsIfNeeded(data.dx, data.dy);

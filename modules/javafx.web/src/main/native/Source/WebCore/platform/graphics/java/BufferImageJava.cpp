@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,7 @@ void BufferImage::flushImageRQ(GraphicsContext& gc)
 }
 
 ImageDrawResult BufferImage::draw(GraphicsContext& gc, const FloatRect& dstRect,
-                       const FloatRect& srcRect, const ImagePaintingOptions& options)
+        const FloatRect& srcRect, ImagePaintingOptions options)
 {
     flushImageRQ(gc);
     Image::drawImage(gc, dstRect, srcRect, options.compositeOperator(), options.blendMode());
@@ -79,7 +79,7 @@ ImageDrawResult BufferImage::draw(GraphicsContext& gc, const FloatRect& dstRect,
 }
 
 void BufferImage::drawPattern(GraphicsContext& gc, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
-        const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+        const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
     flushImageRQ(gc);
     Image::drawPattern(gc, destRect, srcRect, patternTransform,

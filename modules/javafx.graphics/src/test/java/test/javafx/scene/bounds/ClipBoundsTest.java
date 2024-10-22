@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,12 @@
 package test.javafx.scene.bounds;
 
 import static test.com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.assertEquals;
 import javafx.scene.Group;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ClipBoundsTest {
 
@@ -47,7 +47,8 @@ public class ClipBoundsTest {
 
     // a simple test that clipping a rectangle with another rectangle gives
     // the appropriate boundsInLocal
-    public @Test void testClippingWithRectangle() {
+    @Test
+    public void testClippingWithRectangle() {
         // the intersection of the clip & rect will be 10, 10, 90, 90
         Rectangle rect = new Rectangle(100, 100);
         Rectangle clip = new Rectangle(10, 10, 100, 100);
@@ -58,7 +59,8 @@ public class ClipBoundsTest {
     }
 
     // test clipping with a group clips according to the groups bounds
-    public @Test void testClippingWithGroup() {
+    @Test
+    public void testClippingWithGroup() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group group = new Group(r1, r2);
@@ -70,7 +72,8 @@ public class ClipBoundsTest {
     }
 
     // test clipping with a node that is also clipped yields the correct bounds
-    public @Test void testClippingWithClippedRectangle() {
+    @Test
+    public void testClippingWithClippedRectangle() {
         // clip's bounds should be 20, 20, 50, 50
         Rectangle clip = new Rectangle(10, 10, 100, 100);
         Rectangle clipClip = new Rectangle(20, 20, 50, 50);
@@ -83,7 +86,8 @@ public class ClipBoundsTest {
     }
 
     // test clipping with a clipped node where the subclip changes
-    public @Test void testSwappingSubClipOnClippingRectangle() {
+    @Test
+    public void testSwappingSubClipOnClippingRectangle() {
         // clip's bounds should be 20, 20, 50, 50
         Rectangle clip = new Rectangle(10, 10, 100, 100);
         Rectangle clipClip = new Rectangle(20, 20, 50, 50);
@@ -103,7 +107,8 @@ public class ClipBoundsTest {
     }
 
     // test clipping with a node with a complex clip yields the correct bounds
-    public @Test void testClippingWithComplexClippedRectangle() {
+    @Test
+    public void testClippingWithComplexClippedRectangle() {
         // clip's bounds should be 20, 20, 50, 50
         Rectangle clip = new Rectangle(10, 10, 100, 100);
         Polygon polyClip = new Polygon(new double[] {
@@ -121,7 +126,8 @@ public class ClipBoundsTest {
     // test clipping with text results in the right bounds
 
     // test changing the clips bounds also changes the bounds of the clip parent
-    public @Test void testChangingClipBounds() {
+    @Test
+    public void testChangingClipBounds() {
         Rectangle clip = new Rectangle(50, 50);
         Rectangle rect = new Rectangle(100, 100);
         rect.setClip(clip);
@@ -136,7 +142,8 @@ public class ClipBoundsTest {
     }
 
     // test setting a clip changes the bounds
-    public @Test void testSettingClip() {
+    @Test
+    public void testSettingClip() {
         Rectangle rect = new Rectangle(100, 100);
 
         assertEquals(box(0, 0, 100, 100), rect.getBoundsInLocal());
@@ -149,7 +156,8 @@ public class ClipBoundsTest {
     }
 
     // test swapping clips changes the bounds
-    public @Test void testSwappingClip() {
+    @Test
+    public void testSwappingClip() {
         Rectangle clip = new Rectangle(50, 50);
         Rectangle rect = new Rectangle(100, 100);
         rect.setClip(clip);
@@ -163,7 +171,8 @@ public class ClipBoundsTest {
     }
 
     // test removing the clip changes the bounds
-    public @Test void testRemovingClip() {
+    @Test
+    public void testRemovingClip() {
         Rectangle clip = new Rectangle(50, 50);
         Rectangle rect = new Rectangle(100, 100);
         rect.setClip(clip);
@@ -176,7 +185,8 @@ public class ClipBoundsTest {
     }
 
     // test setting the clip and changing the geom of the Node give right bounds
-    public @Test void testClippingAndChangingGeometry() {
+    @Test
+    public void testClippingAndChangingGeometry() {
         Rectangle clip = new Rectangle(50, 50);
         Rectangle rect = new Rectangle(100, 100);
         rect.setClip(clip);

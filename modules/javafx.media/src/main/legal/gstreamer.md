@@ -1,11 +1,11 @@
-## GStreamer v1.22.6
+## GStreamer v1.24.6
 
 ### GStreamer Notice
 ```
 
-You are receiving a copy of GStreamer, Version: 1.22.6 in either source or
+You are receiving a copy of GStreamer, Version: 1.24.6 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GStreamer, Version: 1.22.6; it is
+Oracle license do NOT apply to the GStreamer, Version: 1.24.6; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:
@@ -63,9 +63,7 @@ Copyright (C) 2010 Collabora Multimedia
 Copyright (C) 2009-2010 Edward Hervey <edward.hervey@collabora.co.uk>
 Copyright (C) 2005-2007 Jan Schmidt <thaytan@mad.scientist.com>
 Copyright (C) 2010 Thiago Santos <thiago.sousa.santos@collabora.co.uk>
-Copyright 2005 Jan Schmidt <thaytan@mad.scientist.com>
-Copyright 2002-2003 Scott Wheeler <wheeler@kde.org> (portions from taglib)
-Copyright 2006-2008 Tim-Philipp Müller <tim centricular net>
+Copyright (C) 2002-2003 Scott Wheeler <wheeler@kde.org> (portions from taglib)
 Copyright (C) 2005 Ross Burton <ross@burtonini.com>
 Copyright (C) 2010 Brandon Lewis <brandon.lewis@collabora.co.uk>
 Copyright (C) <2003> Julien Moutte <julien@moutte.net>
@@ -97,14 +95,13 @@ Copyright (C) <2006> Nokia Corporation, Stefan Kost <stefan.kost@nokia.com>.
 Copyright (C) 2005 Sebastien Moutte <sebastien@moutte.net>
 Copyright (C) 2010-2013 Fluendo S.A. <support@fluendo.com>
 Copyright (C) 2005-2006 Zaheer Abbas Merali <zaheerabbas at merali dot org>
-Copyright 2005 David Schleef <ds@schleef.org>
 Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
 Copyright (C) 2009-2011 Wim Taymans <wim.taymans@gmail.be>
 Copyright (C) 2009-2010 Edward Hervey <bilboed@bilboed.com>
 Copyright (C) 2009 Axis Communications <dev-gstreamer at axis dot com>
 Copyright (C) 2014 Tim-Philipp Müller <tim at centricular dot com>
+Copyright (C) 2023 Netflix Inc.
 Copyright (C) 2011-2016 Stefan Sauer <ensonic@users.sf.net>
-Copyright (C) 2008 Jan Schmidt <jan.schmidt@sun.com>
 Copyright (C) 2007 Peter Kjellerstedt <pkj@axis.com>
 Copyright (C) 2008 Ole André Vadla Ravnås <ole.andre.ravnas@tandberg.com>
 Copyright (C) 2006 Josep Torra <josep@fluendo.com>
@@ -668,7 +665,7 @@ Sebastian Dröge <slomo@coaxion.net>
 #### BSD License
 ```
 ---------------------------------
-The below license applies to the following files:
+The below applies to the following file(s):
 gstreamer-lite/gst-plugins-base/gst-libs/gst/fft/_kiss_fft_guts_f32.h
 gstreamer-lite/gst-plugins-base/gst-libs/gst/fft/kiss_fft_f32.c
 gstreamer-lite/gst-plugins-base/gst-libs/gst/fft/kiss_fft_f32.h
@@ -711,7 +708,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #### Permissive License
 ```
 ---------------------------------
-The below license applies to the following files:
+The below applies to the following file(s):
 gstreamer-lite/gst-plugins-base/gst-libs/gst/audio/dbesi0.c
 
 Copyright (C) 1996 Takuya OOURA
@@ -722,7 +719,7 @@ without fee.
 Package home:  http://www.kurims.kyoto-u.ac.jp/~ooura/bessel.html
 
 ---------------------------------
-The below license applies to the following files:
+The below applies to the following file(s):
 gstreamer-lite/gstreamer/gst/gsturi.c
 
 Copyright (C) 1990-1993

@@ -73,8 +73,6 @@ private:
 
     void element() const = delete;
 
-    bool isMenuList() const override { return true; }
-
     bool createsAnonymousWrapper() const override { return true; }
 
     void updateFromElement() override;
@@ -113,7 +111,6 @@ private:
     bool itemIsLabel(unsigned listIndex) const override;
     bool itemIsSelected(unsigned listIndex) const override;
     bool shouldPopOver() const override { return !POPUP_MENU_PULLS_DOWN; }
-    bool valueShouldChangeOnHotTrack() const override { return true; }
     void setTextFromItem(unsigned listIndex) override;
     void listBoxSelectItem(int listIndex, bool allowMultiplySelections, bool shift, bool fireOnChangeNow = true) override;
     bool multiple() const override;
@@ -143,8 +140,8 @@ private:
 
     bool isFlexibleBoxImpl() const override { return true; }
 
-    WeakPtr<RenderText> m_buttonText;
-    WeakPtr<RenderBlock> m_innerBlock;
+    SingleThreadWeakPtr<RenderText> m_buttonText;
+    SingleThreadWeakPtr<RenderBlock> m_innerBlock;
 
     bool m_needsOptionsWidthUpdate;
     int m_optionsWidth;
@@ -161,4 +158,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMenuList, isMenuList())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMenuList, isRenderMenuList())

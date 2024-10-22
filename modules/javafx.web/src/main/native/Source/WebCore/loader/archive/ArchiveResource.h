@@ -28,30 +28,33 @@
 
 #pragma once
 
+#include "ArchiveError.h"
 #include "SubstituteResource.h"
 
 namespace WebCore {
-
+using namespace WTF::FileSystemImpl;
 class ArchiveResource : public SubstituteResource {
 public:
     static RefPtr<ArchiveResource> create(RefPtr<FragmentedSharedBuffer>&&, const URL&, const ResourceResponse&);
-    WEBCORE_EXPORT static RefPtr<ArchiveResource> create(RefPtr<FragmentedSharedBuffer>&&, const URL&,
-        const String& mimeType, const String& textEncoding, const String& frameName,
-        const ResourceResponse& = ResourceResponse());
+    WEBCORE_EXPORT static RefPtr<ArchiveResource> create(RefPtr<FragmentedSharedBuffer>&&, const URL&, const String& mimeType, const String& textEncoding, const String& frameName, const ResourceResponse& = ResourceResponse(), const String& fileName = { });
 
     const String& mimeType() const { return m_mimeType; }
     const String& textEncoding() const { return m_textEncoding; }
     const String& frameName() const { return m_frameName; }
+    const String& relativeFilePath() const { return m_relativeFilePath; }
 
     void ignoreWhenUnarchiving() { m_shouldIgnoreWhenUnarchiving = true; }
     bool shouldIgnoreWhenUnarchiving() const { return m_shouldIgnoreWhenUnarchiving; }
+    void setRelativeFilePath(const String& relativeFilePath) { m_relativeFilePath = relativeFilePath; }
+    Expected<String, ArchiveError> saveToDisk(const String& directory);
 
 private:
-    ArchiveResource(Ref<FragmentedSharedBuffer>&&, const URL&, const String& mimeType, const String& textEncoding, const String& frameName, const ResourceResponse&);
+    ArchiveResource(Ref<FragmentedSharedBuffer>&&, const URL&, const String& mimeType, const String& textEncoding, const String& frameName, const ResourceResponse&, const String& fileName = { });
 
     String m_mimeType;
     String m_textEncoding;
     String m_frameName;
+    String m_relativeFilePath;
 
     bool m_shouldIgnoreWhenUnarchiving;
 };

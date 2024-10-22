@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,22 +26,17 @@
 package test.javafx.scene;
 
 import test.com.sun.javafx.test.NodeOrientationTestBase;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.scene.Node;
 import javafx.scene.NodeShim;
 import javafx.scene.Scene;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public final class Node_hasMirroring_Test extends NodeOrientationTestBase {
-    private final Scene testScene;
-    private final String orientationUpdate;
-    private final String expectedMirroring;
 
     private static Scene lriiliScene() {
         return ltrScene(
@@ -92,42 +87,34 @@ public final class Node_hasMirroring_Test extends NodeOrientationTestBase {
     /*
      * Parameters: [testScene], [orientationUpdate], [expectedMirroring]
      */
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(
-                new Object[][] {
-                        { lriiliScene(), "......", ".M..M." }, // LRRRLL
-                        { lriiliScene(), ".I....", "......" }, // LLLLLL
-                        { lriiliScene(), "...L..", ".M.M.." }, // LRRLLL
-                        { lriiliScene(), "....I.", ".M...." }, // LRRRRR
-                        { lriiliScene(), "RIIIII", ".M...." }, // RRRRRR
+    public static Stream<Arguments> data() {
+        return Stream.of(
+            Arguments.of( lriiliScene(), "......", ".M..M." ), // LRRRLL
+            Arguments.of( lriiliScene(), ".I....", "......" ), // LLLLLL
+            Arguments.of( lriiliScene(), "...L..", ".M.M.." ), // LRRLLL
+            Arguments.of( lriiliScene(), "....I.", ".M...." ), // LRRRRR
+            Arguments.of( lriiliScene(), "RIIIII", ".M...." ), // RRRRRR
 
-                        {
-                            lriiliWithSubSceneScene(),
-                            "......", ".M..M."
-                        },
+            Arguments.of(
+                lriiliWithSubSceneScene(),
+                "......", ".M..M."
+            ),
 
-                        /* effective: LRRRLL, automatic: LRLLLL */
-                        { lrIiliScene(), "......", ".MMMM." },
-                        /* effective: LRLRLR, automatic: LRLLLR */
-                        { lrLRlrScene(), "......", ".MM..M" },
+            /* effective: LRRRLL, automatic: LRLLLL */
+            Arguments.of( lrIiliScene(), "......", ".MMMM." ),
+            /* effective: LRLRLR, automatic: LRLLLR */
+            Arguments.of( lrLRlrScene(), "......", ".MM..M" ),
 
-                        /* effective: LRRRRL, automatic: LRLRRL */
-                        { lrIiilScene(), "...R..", ".MMM.M" },
-                    });
+            /* effective: LRRRRL, automatic: LRLRRL */
+            Arguments.of( lrIiilScene(), "...R..", ".MMM.M" )
+        );
     }
 
-    public Node_hasMirroring_Test(
-            final Scene testScene,
-            final String orientationUpdate,
-            final String expectedMirroring) {
-        this.testScene = testScene;
-        this.orientationUpdate = orientationUpdate;
-        this.expectedMirroring = expectedMirroring;
-    }
-
-    @Test
-    public void hasMirroringTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void hasMirroringTest(Scene testScene,
+                                 String orientationUpdate,
+                                 String expectedMirroring) {
         updateOrientation(testScene, orientationUpdate);
         assertMirroring(testScene, expectedMirroring);
     }
@@ -136,8 +123,8 @@ public final class Node_hasMirroring_Test extends NodeOrientationTestBase {
             final Scene scene,
             final String expectedMirroring) {
         final String actualMirroring = collectMirroring(scene);
-        Assert.assertEquals("Mirroring mismatch",
-                            expectedMirroring, actualMirroring);
+        assertEquals(expectedMirroring, actualMirroring,
+                     "Mirroring mismatch");
     }
 
     private static final StateEncoder HAS_MIRRORING_ENCODER =

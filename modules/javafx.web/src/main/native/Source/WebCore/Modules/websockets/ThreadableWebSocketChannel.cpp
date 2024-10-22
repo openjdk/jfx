@@ -33,6 +33,7 @@
 
 #include "ContentRuleListResults.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "HTTPHeaderValues.h"
@@ -42,6 +43,9 @@
 #include "SocketProvider.h"
 #include "ThreadableWebSocketChannelClientWrapper.h"
 #include "UserContentProvider.h"
+#if PLATFORM(JAVA)
+#include "WebSocketChannel.h"
+#endif
 #include "WebSocketChannelClient.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerRunLoop.h"
@@ -52,15 +56,17 @@ namespace WebCore {
 
 RefPtr<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(Document& document, WebSocketChannelClient& client, SocketProvider& provider)
 {
+#if !PLATFORM(JAVA)
     return provider.createWebSocketChannel(document, client);
+#endif
+    return WebSocketChannel::create(document, client, provider);
 }
 
 RefPtr<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(ScriptExecutionContext& context, WebSocketChannelClient& client, SocketProvider& provider)
 {
-    if (is<WorkerGlobalScope>(context)) {
-        WorkerGlobalScope& workerGlobalScope = downcast<WorkerGlobalScope>(context);
-        WorkerRunLoop& runLoop = workerGlobalScope.thread().runLoop();
-        return WorkerThreadableWebSocketChannel::create(workerGlobalScope, client, makeString("webSocketChannelMode", runLoop.createUniqueId()), provider);
+    if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(context)) {
+        WorkerRunLoop& runLoop = workerGlobalScope->thread().runLoop();
+        return WorkerThreadableWebSocketChannel::create(*workerGlobalScope, client, makeString("webSocketChannelMode", runLoop.createUniqueId()), provider);
     }
 
     return create(downcast<Document>(context), client, provider);
@@ -78,7 +84,7 @@ std::optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChann
         if (!page->allowsLoadFromURL(requestedURL, MainFrameMainResource::No))
             return { };
 #if ENABLE(CONTENT_EXTENSIONS)
-        if (auto* documentLoader = document.loader()) {
+        if (RefPtr documentLoader = document.loader()) {
             auto results = page->userContentProvider().processContentRuleListsForLoad(*page, validatedURL.url, ContentExtensions::ResourceType::WebSocket, *documentLoader);
             if (results.summary.blockedLoad)
                 return { };
@@ -108,7 +114,7 @@ std::optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectReque
     request.setFirstPartyForCookies(document.firstPartyForCookies());
     request.setHTTPHeaderField(HTTPHeaderName::Origin, document.securityOrigin().toString());
 
-    if (auto* documentLoader = document.loader())
+    if (RefPtr documentLoader = document.loader())
         request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
 
     FrameLoader::addSameSiteInfoToRequestIfNeeded(request, &document);

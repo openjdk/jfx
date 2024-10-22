@@ -50,9 +50,10 @@ public:
 
     virtual ~WorkerModuleScriptLoader();
 
-    bool load(ScriptExecutionContext&, URL&& sourceURL);
+    void load(ScriptExecutionContext&, URL&& sourceURL);
 
     WorkerScriptLoader& scriptLoader() { return m_scriptLoader.get(); }
+    Ref<WorkerScriptLoader> protectedScriptLoader();
 
     static String taskMode();
     ReferrerPolicy referrerPolicy();

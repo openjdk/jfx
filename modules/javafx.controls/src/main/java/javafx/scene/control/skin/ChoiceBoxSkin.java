@@ -324,8 +324,8 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 //        popup.visibleProperty().addListener(new InvalidationListener() {
 //            @Override public void invalidated(ObservableValue valueModel) {
 //                if (popup.isVisible() {
-////                    RadioMenuItem selected = (RadioMenuItem) toggleGroup.getSelectedToggle();
-////                    if (selected != null) selected.requestFocus();
+//--                    RadioMenuItem selected = (RadioMenuItem) toggleGroup.getSelectedToggle();
+//--                    if (selected != null) selected.requestFocus();
 //                } else {
 //                    getBehavior().close();
 //                }

@@ -52,6 +52,12 @@ function from(items /*, mapFn, thisArg */)
 
     var arrayLike = @toObject(items, "Array.from requires an array-like object - not null or undefined");
 
+    if (!mapFn) {
+        var fastResult = @arrayFromFast(this, arrayLike);
+        if (fastResult)
+            return fastResult;
+    }
+
     var iteratorMethod = items.@@iterator;
     if (!@isUndefinedOrNull(iteratorMethod)) {
         if (!@isCallable(iteratorMethod))
@@ -114,9 +120,11 @@ function isArray(array)
 
 @linkTimeConstant
 @visibility=PrivateRecursive
-async function defaultAsyncFromAsyncIterator(result, iterator, mapFn, thisArg)
+async function defaultAsyncFromAsyncIterator(iterator, mapFn, thisArg)
 {
     "use strict";
+
+    var result = this !== @Array && @isConstructor(this) ? new this() : [];
 
     var k = 0;
 
@@ -196,14 +204,12 @@ function fromAsync(asyncItems  /*, mapFn, thisArg */)
             }
         }
 
-        var result = this !== @Array && @isConstructor(this) ? new this() : [];
-
         if (!@isUndefinedOrNull(usingAsyncIterator))
-            return @defaultAsyncFromAsyncIterator(result, usingAsyncIterator.@call(asyncItems), mapFn, thisArg);
+            return @defaultAsyncFromAsyncIterator.@call(this, usingAsyncIterator.@call(asyncItems), mapFn, thisArg);
 
         if (!@isUndefinedOrNull(usingSyncIterator)) {
             var iterator = usingSyncIterator.@call(asyncItems);
-            return @defaultAsyncFromAsyncIterator(result, @createAsyncFromSyncIterator(iterator, iterator.next), mapFn, thisArg);
+            return @defaultAsyncFromAsyncIterator.@call(this, @createAsyncFromSyncIterator(iterator, iterator.next), mapFn, thisArg);
         }
 
         return @defaultAsyncFromAsyncArrayLike.@call(this, asyncItems, mapFn, thisArg);

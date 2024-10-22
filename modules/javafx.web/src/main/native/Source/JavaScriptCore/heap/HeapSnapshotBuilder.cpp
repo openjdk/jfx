@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,9 +35,12 @@
 #include "PreventCollectionScope.h"
 #include "VM.h"
 #include <wtf/HexNumber.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HeapSnapshotBuilder);
 
 NodeIdentifier HeapSnapshotBuilder::nextAvailableObjectIdentifier = 1;
 NodeIdentifier HeapSnapshotBuilder::getNextObjectIdentifier() { return nextAvailableObjectIdentifier++; }
@@ -109,8 +112,10 @@ void HeapSnapshotBuilder::analyzeEdge(JSCell* from, JSCell* to, RootMarkReason r
     Locker locker { m_buildingEdgeMutex };
 
     if (m_snapshotType == SnapshotType::GCDebuggingSnapshot && !from) {
-        if (rootMarkReason == RootMarkReason::None && m_snapshotType == SnapshotType::GCDebuggingSnapshot)
+        if (rootMarkReason == RootMarkReason::None && m_snapshotType == SnapshotType::GCDebuggingSnapshot) {
+            if (Options::verboseHeapSnapshotLogging())
             WTFLogAlways("Cell %p is a root but no root marking reason was supplied", to);
+        }
 
         m_rootData.ensure(to, [] () -> RootData {
             return { };
@@ -499,8 +504,10 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
         else {
             auto fromLookup = allowedNodeIdentifiers.find(edge.from.cell);
             if (fromLookup == allowedNodeIdentifiers.end()) {
-                if (m_snapshotType == SnapshotType::GCDebuggingSnapshot)
+                if (m_snapshotType == SnapshotType::GCDebuggingSnapshot) {
+                    if (Options::verboseHeapSnapshotLogging())
                     WTFLogAlways("Failed to find node for from-edge cell %p", edge.from.cell);
+                }
                 return true;
             }
             edge.from.identifier = fromLookup->value;
@@ -511,8 +518,10 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
         else {
             auto toLookup = allowedNodeIdentifiers.find(edge.to.cell);
             if (toLookup == allowedNodeIdentifiers.end()) {
-                if (m_snapshotType == SnapshotType::GCDebuggingSnapshot)
+                if (m_snapshotType == SnapshotType::GCDebuggingSnapshot) {
+                    if (Options::verboseHeapSnapshotLogging())
                     WTFLogAlways("Failed to find node for to-edge cell %p", edge.to.cell);
+                }
                 return true;
             }
             edge.to.identifier = toLookup->value;
@@ -563,6 +572,7 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
         for (auto it : m_rootData) {
             auto snapshotNode = snapshot->nodeForCell(it.key);
             if (!snapshotNode) {
+                if (Options::verboseHeapSnapshotLogging())
                 WTFLogAlways("Failed to find snapshot node for cell %p", it.key);
                 continue;
             }

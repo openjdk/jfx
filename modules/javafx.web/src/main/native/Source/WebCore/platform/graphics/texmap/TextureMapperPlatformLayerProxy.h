@@ -33,7 +33,9 @@
 namespace WebCore {
 
 class IntSize;
+#if PLATFORM(JAVA)
 class TextureMapperGL;
+#endif
 class TextureMapperLayer;
 class TextureMapperPlatformLayerBuffer;
 

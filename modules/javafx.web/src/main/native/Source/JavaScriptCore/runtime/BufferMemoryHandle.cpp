@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include <wtf/Platform.h>
 #include <wtf/PrintStream.h>
 #include <wtf/SafeStrerror.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -47,6 +48,9 @@ namespace JSC {
 // FIXME: We could be smarter about memset / mmap / madvise. https://bugs.webkit.org/show_bug.cgi?id=170343
 // FIXME: Give up some of the cached fast memories if the GC determines it's easy to get them back, and they haven't been used in a while. https://bugs.webkit.org/show_bug.cgi?id=170773
 // FIXME: Limit slow memory size. https://bugs.webkit.org/show_bug.cgi?id=170825
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BufferMemoryHandle);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BufferMemoryManager);
 
 size_t BufferMemoryHandle::fastMappedRedzoneBytes()
 {
@@ -215,7 +219,7 @@ BufferMemoryManager& BufferMemoryManager::singleton()
 BufferMemoryHandle::BufferMemoryHandle(void* memory, size_t size, size_t mappedCapacity, PageCount initial, PageCount maximum, MemorySharingMode sharingMode, MemoryMode mode)
     : m_sharingMode(sharingMode)
     , m_mode(mode)
-    , m_memory(memory, mappedCapacity)
+    , m_memory(memory)
     , m_size(size)
     , m_mappedCapacity(mappedCapacity)
     , m_initial(initial)
@@ -305,8 +309,8 @@ BufferMemoryHandle::~BufferMemoryHandle()
 // For now, putting NEVER_INLINE to suppress inlining of this.
 NEVER_INLINE void* BufferMemoryHandle::memory() const
 {
-    ASSERT(m_memory.getMayBeNull(m_mappedCapacity) == m_memory.getUnsafe());
-    return m_memory.getMayBeNull(m_mappedCapacity);
+    ASSERT(m_memory.getMayBeNull() == m_memory.getUnsafe());
+    return m_memory.getMayBeNull();
 }
 
 } // namespace JSC
