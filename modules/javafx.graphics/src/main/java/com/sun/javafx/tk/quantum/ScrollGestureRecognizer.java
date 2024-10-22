@@ -32,6 +32,8 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.sun.glass.ui.Window;
 import javafx.util.Duration;
 import javafx.scene.input.ScrollEvent;
 import javafx.animation.Interpolator;
@@ -334,7 +336,16 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     public void touchPressed(long id, long nanos, int x, int y, int xAbs, int yAbs) {
         currentTouchCount++;
         TouchPointTracker tracker = new TouchPointTracker();
-        tracker.update(nanos, x, y, xAbs, yAbs);
+
+        double scaleX = 1.0;
+        double scaleY = 1.0;
+        Window w = scene.getPlatformView().getWindow();
+        if (w != null) {
+            scaleX = w.getPlatformScaleX();
+            scaleY = w.getPlatformScaleY();
+        }
+
+        tracker.update(nanos, x / scaleX, y / scaleY, xAbs / scaleX, yAbs / scaleY);
         trackers.put(id, tracker);
     }
 
@@ -364,7 +375,15 @@ class ScrollGestureRecognizer implements GestureRecognizer {
             throw new RuntimeException("Error in scroll gesture "
                     + "recognition: reported unknown touch point");
         }
-        tracker.update(nanos, x, y, xAbs, yAbs);
+
+        double scaleX = 1.0;
+        double scaleY = 1.0;
+        Window w = scene.getPlatformView().getWindow();
+        if (w != null) {
+            scaleX = w.getPlatformScaleX();
+            scaleY = w.getPlatformScaleY();
+        }
+        tracker.update(nanos, x / scaleX, y / scaleY, xAbs / scaleX, yAbs / scaleY);
     }
 
     void reset() {
