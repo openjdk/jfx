@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,75 +25,77 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.control.inputmap.InputMap;
+import java.util.List;
 import javafx.event.Event;
+import javafx.geometry.NodeOrientation;
+import javafx.scene.Node;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
-import javafx.scene.input.*;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import javafx.scene.control.input.KeyBinding;
+import javafx.scene.control.input.SkinInputMap;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
 
-import java.util.List;
+/**
+ * The TabPaneBehavior is stateless.
+ */
+// The amount of memory saved with stateless (static) behaviors would likely not justify
+// more extensive changes that are required to convert the legacy behavior to a stateless one:
+// now we have to manually drag the control instance everywhere.
+// I don't think this is worth it.
+public class TabPaneBehavior {
+    private static final SkinInputMap.Stateless<TabPane> inputMap = createInputMap();
 
-import static javafx.scene.input.KeyCode.*;
-import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-import static com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
+    // stateless behavior: one SkinInputMap for all TabPanes
+    private TabPaneBehavior() { }
 
-public class TabPaneBehavior extends BehaviorBase<TabPane> {
+    private static SkinInputMap.Stateless<TabPane> createInputMap() {
+        SkinInputMap.Stateless<TabPane> m = SkinInputMap.createStateless();
 
-    private final InputMap<TabPane> tabPaneInputMap;
+        m.registerFunction(TabPane.Tag.SELECT_FIRST_TAB, TabPaneBehavior::selectFirstTab);
+        m.registerFunction(TabPane.Tag.SELECT_LAST_TAB, TabPaneBehavior::selectLastTab);
+        m.registerFunction(TabPane.Tag.SELECT_LEFT_TAB, TabPaneBehavior::selectLeftTab);
+        m.registerFunction(TabPane.Tag.SELECT_NEXT_TAB, TabPaneBehavior::selectNextTab);
+        m.registerFunction(TabPane.Tag.SELECT_PREV_TAB, TabPaneBehavior::selectPreviousTab);
+        m.registerFunction(TabPane.Tag.SELECT_RIGHT_TAB, TabPaneBehavior::selectRightTab);
 
-    public TabPaneBehavior(TabPane tabPane) {
-        super(tabPane);
+        m.registerKey(KeyBinding.of(KeyCode.DOWN), TabPane.Tag.SELECT_NEXT_TAB);
+        m.registerKey(KeyBinding.of(KeyCode.HOME), TabPane.Tag.SELECT_FIRST_TAB);
+        m.registerKey(KeyBinding.of(KeyCode.END), TabPane.Tag.SELECT_LAST_TAB);
+        m.registerKey(KeyBinding.of(KeyCode.LEFT), TabPane.Tag.SELECT_LEFT_TAB);
+        m.registerKey(KeyBinding.of(KeyCode.RIGHT), TabPane.Tag.SELECT_RIGHT_TAB);
+        m.registerKey(KeyBinding.of(KeyCode.UP), TabPane.Tag.SELECT_PREV_TAB);
 
-        // create a map for TabPane-specific mappings (this reuses the default
-        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
-        tabPaneInputMap = createInputMap();
+        m.registerKey(KeyBinding.ctrl(KeyCode.PAGE_DOWN), TabPane.Tag.SELECT_NEXT_TAB);
+        m.registerKey(KeyBinding.ctrl(KeyCode.PAGE_UP), TabPane.Tag.SELECT_PREV_TAB);
+        m.registerKey(KeyBinding.ctrl(KeyCode.TAB), TabPane.Tag.SELECT_NEXT_TAB);
+        m.registerKey(KeyBinding.ctrlShift(KeyCode.TAB), TabPane.Tag.SELECT_PREV_TAB);
 
-        // TabPane-specific mappings for key and mouse input
-        addDefaultMapping(tabPaneInputMap,
-            new KeyMapping(UP, e -> selectPreviousTab()),
-            new KeyMapping(DOWN, e -> selectNextTab()),
-            new KeyMapping(LEFT, e -> rtl(tabPane, this::selectNextTab, this::selectPreviousTab)),
-            new KeyMapping(RIGHT, e -> rtl(tabPane, this::selectPreviousTab, this::selectNextTab)),
-            new KeyMapping(HOME, e -> {
-                if (getNode().isFocused()) {
-                    moveSelection(-1, 1);
-                }
-            }),
-            new KeyMapping(END, e -> {
-                if (getNode().isFocused()) {
-                    moveSelection(getNode().getTabs().size(), -1);
-                }
-            }),
-            new KeyMapping(new KeyBinding(PAGE_UP).ctrl(), e -> selectPreviousTab()),
-            new KeyMapping(new KeyBinding(PAGE_DOWN).ctrl(), e -> selectNextTab()),
-            new KeyMapping(new KeyBinding(TAB).ctrl(), e -> selectNextTab()),
-            new KeyMapping(new KeyBinding(TAB).ctrl().shift(), e -> selectPreviousTab()),
-            new MouseMapping(MouseEvent.MOUSE_PRESSED, e -> getNode().requestFocus())
-        );
+        m.addHandler(MouseEvent.MOUSE_PRESSED, true, TabPaneBehavior::requestFocus);
+
+        return m;
     }
 
-    @Override public InputMap<TabPane> getInputMap() {
-        return tabPaneInputMap;
+    public static void install(TabPane control) {
+        control.getInputMap().setSkinInputMap(inputMap);
     }
 
-    public void selectTab(Tab tab) {
-        getNode().getSelectionModel().select(tab);
+    public static void selectTab(TabPane c, Tab tab) {
+        c.getSelectionModel().select(tab);
     }
 
-    public boolean canCloseTab(Tab tab) {
-        Event event = new Event(tab,tab,Tab.TAB_CLOSE_REQUEST_EVENT);
-        Event.fireEvent(tab, event);
-        return ! event.isConsumed();
+    public static boolean canCloseTab(Tab tab) {
+        Event ev = new Event(tab, tab, Tab.TAB_CLOSE_REQUEST_EVENT);
+        Event.fireEvent(tab, ev);
+        return !ev.isConsumed();
     }
 
-    public void closeTab(Tab tab) {
-        TabPane tabPane = getNode();
+    public static void closeTab(TabPane c, Tab tab) {
         // only switch to another tab if the selected tab is the one we're closing
-        int index = tabPane.getTabs().indexOf(tab);
+        int index = c.getTabs().indexOf(tab);
         if (index != -1) {
-            tabPane.getTabs().remove(index);
+            c.getTabs().remove(index);
         }
         if (tab.getOnClosed() != null) {
             Event.fireEvent(tab, new Event(Tab.CLOSED_EVENT));
@@ -102,34 +104,72 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
 
     // Find a tab after the currently selected that is not disabled. Loop around
     // if no tabs are found after currently selected tab.
-    public void selectNextTab() {
-        moveSelection(1);
+    public static void selectNextTab(TabPane c) {
+        moveSelection(c, 1);
     }
 
     // Find a tab before the currently selected that is not disabled.
-    public void selectPreviousTab() {
-        moveSelection(-1);
+    public static void selectPreviousTab(TabPane c) {
+        moveSelection(c, -1);
     }
 
-    private void moveSelection(int delta) {
-        moveSelection(getNode().getSelectionModel().getSelectedIndex(), delta);
+    private static void selectLeftTab(TabPane c) {
+        if (isRTL(c)) {
+            selectNextTab(c);
+        } else {
+            selectPreviousTab(c);
+        }
     }
 
-    private void moveSelection(int startIndex, int delta) {
-        final TabPane tabPane = getNode();
-        if (tabPane.getTabs().isEmpty()) return;
+    private static void selectRightTab(TabPane c) {
+        if (isRTL(c)) {
+            selectPreviousTab(c);
+        } else {
+            selectNextTab(c);
+        }
+    }
 
-        int tabIndex = findValidTab(startIndex, delta);
+    private static boolean isRTL(TabPane c) {
+        return c.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+    }
+
+    // TODO a bit of controversy: should this method return boolean to avoid consuming the key event
+    // when the control is not focused?
+    private static void selectFirstTab(TabPane c) {
+        if (c.isFocused()) {
+            moveSelection(c, -1, 1);
+        }
+    }
+
+    // TODO a bit of controversy: should this method return boolean to avoid consuming the key event
+    // when the control is not focused?
+    private static void selectLastTab(TabPane c) {
+        if (c.isFocused()) {
+            int sz = c.getTabs().size();
+            moveSelection(c, sz, -1);
+        }
+    }
+
+    private static void moveSelection(TabPane c, int delta) {
+        int ix = c.getSelectionModel().getSelectedIndex();
+        moveSelection(c, ix, delta);
+    }
+
+    private static void moveSelection(TabPane c, int startIndex, int delta) {
+        if (c.getTabs().isEmpty()) {
+            return;
+        }
+
+        int tabIndex = findValidTab(c, startIndex, delta);
         if (tabIndex > -1) {
-            final SelectionModel<Tab> selectionModel = tabPane.getSelectionModel();
+            final SelectionModel<Tab> selectionModel = c.getSelectionModel();
             selectionModel.select(tabIndex);
         }
-        tabPane.requestFocus();
+        c.requestFocus();
     }
 
-    private int findValidTab(int startIndex, int delta) {
-        final TabPane tabPane = getNode();
-        final List<Tab> tabs = tabPane.getTabs();
+    private static int findValidTab(TabPane c, int startIndex, int delta) {
+        final List<Tab> tabs = c.getTabs();
         final int max = tabs.size();
 
         int index = startIndex;
@@ -144,7 +184,7 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         return -1;
     }
 
-    private int nextIndex(int value, int max) {
+    private static int nextIndex(int value, int max) {
         final int min = 0;
         int r = value % max;
         if (r > min && max < min) {
@@ -153,5 +193,9 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
             r = r + max - min;
         }
         return r;
+    }
+
+    private static void requestFocus(MouseEvent ev) {
+        ((Node)ev.getSource()).requestFocus();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,56 +22,47 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.javafx.scene.control.input;
 
-package com.sun.javafx.scene.control.behavior;
-
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
-import javafx.scene.control.skin.TextFieldSkin;
-import javafx.scene.text.HitInfo;
+import javafx.event.EventType;
+import javafx.scene.control.input.KeyBinding;
+import javafx.scene.input.KeyEvent;
 
 /**
- * Password field behavior.
+ * Contains logic for mapping KeyBinding to a specific KeyEvent.
  */
-public class PasswordFieldBehavior extends TextFieldBehavior {
+public class KeyEventMapper {
+    private static final int PRESSED = 0x01;
+    private static final int RELEASED = 0x02;
+    private static final int TYPED = 0x04;
 
-    public PasswordFieldBehavior(PasswordField c, TextFieldSkin skin) {
-        super(c, skin);
+    private int types;
+
+    public KeyEventMapper() {
     }
 
-    // RT-18711 & RT-18854: Stub out word based navigation and editing
-    // for security reasons.
-    @Override
-    protected void deletePreviousWord() {
+    public EventType<KeyEvent> addType(KeyBinding k) {
+        if (k.isKeyPressed()) {
+            types |= PRESSED;
+            return KeyEvent.KEY_PRESSED;
+        } else if (k.isKeyReleased()) {
+            types |= RELEASED;
+            return KeyEvent.KEY_RELEASED;
+        } else {
+            types |= TYPED;
+            return KeyEvent.KEY_TYPED;
+        }
     }
 
-    @Override
-    protected void deleteNextWord() {
+    public boolean hasKeyPressed() {
+        return (types & PRESSED) != 0;
     }
 
-    @Override
-    protected void selectPreviousWord() {
+    public boolean hasKeyReleased() {
+        return (types & RELEASED) != 0;
     }
 
-    @Override
-    public void selectNextWord() {
-    }
-
-    @Override
-    protected void previousWord() {
-    }
-
-    @Override
-    protected void nextWord() {
-    }
-
-    @Override
-    protected void selectWord() {
-        selectAll();
-    }
-
-    @Override
-    protected void mouseDoubleClick(HitInfo hit) {
-        getControl().selectAll();
+    public boolean hasKeyTyped() {
+        return (types & TYPED) != 0;
     }
 }

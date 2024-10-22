@@ -25,8 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
 import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -60,6 +58,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
 /**
@@ -159,9 +158,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         super(control);
 
         this.textArea = control;
-        // install default input map for the text area control
-        this.behavior = new TextAreaBehavior(control);
-        this.behavior.setTextAreaSkin(this);
 
         caretPosition = new IntegerBinding() {
             { bind(control.caretPositionProperty()); }
@@ -221,6 +217,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             }
         });
         contentView.getChildren().add(caretPath);
+
+        // instantiate, but not install, the behavior
+        behavior = new TextAreaBehavior(control, this);
 
         if (SHOW_HANDLES) {
             contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
@@ -502,10 +501,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                         nextLine(select);
                         break;
                     case BEGINNING:
-                        lineStart(select, select && isMac());
+                        lineStart(select, select && PlatformUtil.isMac());
                         break;
                     case END:
-                        lineEnd(select, select && isMac());
+                        lineEnd(select, select && PlatformUtil.isMac());
                         break;
                     default:
                         throw new IllegalArgumentException(""+dir);
@@ -695,7 +694,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         int pos = textArea.getCaretPosition();
         int len = text.length();
         boolean wentPastInitialNewline = false;
-        boolean goPastTrailingNewline = isWindows();
+        boolean goPastTrailingNewline = PlatformUtil.isWindows();
 
         if (pos < len) {
             if (goPastInitialNewline && text.codePointAt(pos) == 0x0a) {
@@ -785,15 +784,23 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        if (getSkinnable() == null) return;
-        getSkinnable().removeEventFilter(ScrollEvent.ANY, scrollEventFilter);
-        getChildren().remove(scrollPane);
-        super.dispose();
+    @Override
+    public void install() {
+        super.install();
+        setSkinInputMap(behavior.getSkinInputMap());
+    }
 
-        if (behavior != null) {
-            behavior.dispose();
+    @Override
+    public void dispose() {
+        if (getSkinnable() != null) {
+            getSkinnable().removeEventFilter(ScrollEvent.ANY, scrollEventFilter);
+            getChildren().remove(scrollPane);
+
+            if (behavior != null) {
+                behavior.dispose();
+            }
+
+            super.dispose();
         }
     }
 
@@ -926,11 +933,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
      * Private implementation
      *
      **************************************************************************/
-
-    @Override
-    TextAreaBehavior getBehavior() {
-        return behavior;
-    }
 
     private void createPromptNode() {
         if (promptNode == null && usePromptText.get()) {
