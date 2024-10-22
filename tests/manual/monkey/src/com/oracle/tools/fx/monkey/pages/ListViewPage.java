@@ -32,6 +32,7 @@ import java.util.function.Supplier;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
@@ -46,6 +47,7 @@ import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
@@ -69,7 +71,14 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
     public ListViewPage() {
         super("ListViewPage");
 
-        control = new ListView<>();
+        control = new ListView<>() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
         control.setTooltip(new Tooltip("edit to 'update' to commit the change"));
         control.setOnEditCommit((ev) -> {
             int ix = ev.getIndex();
@@ -226,6 +235,14 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
 
     private String newVariableItem(Object n) {
         int rows = 1 << new Random().nextInt(5);
+        return newItem(n, rows);
+    }
+
+    private String newLargeItem(Object n) {
+        return newItem(n, 200);
+    }
+
+    private String newItem(Object n, int rows) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < rows; i++) {
             if (i > 0) {
@@ -236,13 +253,26 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
         return n + "." + SequenceNumber.next() + "." + sb;
     }
 
-    private Supplier<List<Object>> createItems(int count, Function<Integer, Object> gen) {
+    private Supplier<List<Object>> createItems(int count) {
         return () -> {
             ArrayList<Object> rv = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                Object v = gen.apply(i);
+                Object v = newItem(i);
                 rv.add(v);
             }
+            return rv;
+        };
+    }
+
+    private Supplier<List<Object>> createVariableItems(int count) {
+        return () -> {
+            ArrayList<Object> rv = new ArrayList<>(count);
+            int i = 0;
+            for ( ; i < count; i++) {
+                Object v = newVariableItem(i);
+                rv.add(v);
+            }
+            rv.add(newLargeItem(i));
             return rv;
         };
     }
@@ -251,12 +281,13 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
         ObjectSelector<List<Object>> s = new ObjectSelector<>(name, (v) -> {
             items.setAll(v);
         });
-        s.addChoiceSupplier("1 Row", createItems(1, this::newItem));
-        s.addChoiceSupplier("10 Rows", createItems(10, this::newItem));
-        s.addChoiceSupplier("200 Rows", createItems(200, this::newItem));
-        s.addChoiceSupplier("10,000 Rows", createItems(10_000, this::newItem));
-        s.addChoiceSupplier("10 Variable Height Rows", createItems(10, this::newVariableItem));
-        s.addChoiceSupplier("200 Variable HeightRows", createItems(200, this::newVariableItem));
+        s.addChoiceSupplier("1 Row", createItems(1));
+        s.addChoiceSupplier("10 Rows", createItems(10));
+        s.addChoiceSupplier("200 Rows", createItems(200));
+        s.addChoiceSupplier("10,000 Rows", createItems(10_000));
+        s.addChoiceSupplier("10 Variable Height Rows", createVariableItems(10));
+        s.addChoiceSupplier("200 Variable HeightRows", createVariableItems(200));
+        s.addChoiceSupplier("2,000 Variable HeightRows", createVariableItems(2000));
         s.addChoice("<empty>", List.of());
         s.selectFirst();
         return s;

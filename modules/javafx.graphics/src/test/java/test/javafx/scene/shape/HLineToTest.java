@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,13 +38,16 @@ import javafx.scene.Scene;
 import javafx.scene.shape.HLineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class HLineToTest {
 
-     @Test public void testAddTo() throws Exception {
+    @Test
+    public void testAddTo() throws Exception {
         Path2D path = new Path2D();
         path.moveTo(0f, 0f);
         final HLineTo hLineTo = new HLineTo(1f);
@@ -53,7 +56,8 @@ public class HLineToTest {
         assertEquals(0.0, path.getCurrentPoint().y, 0.0001f);
     }
 
-    @Test public void testDoublePropertySynced_X() {
+    @Test
+    public void testDoublePropertySynced_X() {
         double expected = 123.4;
         HLineTo hlineTo = new HLineTo(100.0);
         DoubleProperty v = new SimpleDoubleProperty(100.0);
@@ -76,7 +80,8 @@ public class HLineToTest {
         assertEquals(expected, coords[0], 0.001);
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new HLineTo().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

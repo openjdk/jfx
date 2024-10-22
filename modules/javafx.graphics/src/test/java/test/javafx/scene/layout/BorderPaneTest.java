@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,24 +26,29 @@
 package test.javafx.scene.layout;
 
 import javafx.geometry.Insets;
-import static org.junit.Assert.*;
 import javafx.geometry.Orientation;
 import javafx.scene.ParentShim;
 import javafx.scene.layout.BorderPane;
-import org.junit.Before;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class BorderPaneTest {
 
     BorderPane borderpane;
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         this.borderpane = new BorderPane();
     }
 
-    @Test public void testEmptyBorderPane() {
+    @Test
+    public void testEmptyBorderPane() {
         assertNull(borderpane.getTop());
         assertNull(borderpane.getCenter());
         assertNull(borderpane.getBottom());
@@ -51,7 +56,8 @@ public class BorderPaneTest {
         assertNull(borderpane.getRight());
     }
 
-    @Test public void testChildrenRemovedDirectly() {
+    @Test
+    public void testChildrenRemovedDirectly() {
         MockResizable node = new MockResizable(10,20, 100,200, 700,800);
 
         borderpane.setCenter(node);
@@ -141,7 +147,8 @@ public class BorderPaneTest {
 
     }
 
-    @Test public void testCenterChildOnly() {
+    @Test
+    public void testCenterChildOnly() {
         MockResizable center = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setCenter(center);
 
@@ -164,7 +171,8 @@ public class BorderPaneTest {
 
     }
 
-    @Test public void testTopChildOnly() {
+    @Test
+    public void testTopChildOnly() {
         MockResizable top = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setTop(top);
 
@@ -186,7 +194,8 @@ public class BorderPaneTest {
         assertEquals(200, top.getHeight(), 1e-100);
     }
 
-    @Test public void testBottomChildOnly() {
+    @Test
+    public void testBottomChildOnly() {
         MockResizable bottom = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setBottom(bottom);
 
@@ -208,7 +217,8 @@ public class BorderPaneTest {
         assertEquals(200, bottom.getHeight(), 1e-100);
     }
 
-    @Test public void testRightChildOnly() {
+    @Test
+    public void testRightChildOnly() {
         MockResizable right = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setRight(right);
 
@@ -230,7 +240,8 @@ public class BorderPaneTest {
         assertEquals(200, right.getHeight(), 1e-100);
     }
 
-    @Test public void testLeftChildOnly() {
+    @Test
+    public void testLeftChildOnly() {
         MockResizable left = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setLeft(left);
 
@@ -252,7 +263,8 @@ public class BorderPaneTest {
         assertEquals(200, left.getHeight(), 1e-100);
     }
 
-    @Test public void testChildrenInAllPositions() {
+    @Test
+    public void testChildrenInAllPositions() {
         MockResizable center = new MockResizable(10,20, 100,200, 1000,1000);
         borderpane.setCenter(center);
         MockResizable top = new MockResizable(100,10, 200, 20, 1000,1000);
@@ -314,7 +326,8 @@ public class BorderPaneTest {
 
     }
 
-    @Test public void testWithBiasedChildren() {
+    @Test
+    public void testWithBiasedChildren() {
         MockBiased top = new MockBiased(Orientation.HORIZONTAL, 100, 20); // 300 x 6.666
         borderpane.setTop(top);
 
@@ -374,7 +387,8 @@ public class BorderPaneTest {
 
     }
 
-    @Test public void testWithHorizontalBiasedChildrenAtPrefSize() {
+    @Test
+    public void testWithHorizontalBiasedChildrenAtPrefSize() {
         MockResizable top = new MockResizable(400, 100);
         borderpane.setTop(top);
 
@@ -423,7 +437,8 @@ public class BorderPaneTest {
         assertEquals(100, bottom.getLayoutBounds().getHeight(), 1e-200);
     }
 
-    @Test public void testWithHorizontalBiasedChildrenGrowing() {
+    @Test
+    public void testWithHorizontalBiasedChildrenGrowing() {
         MockBiased top = new MockBiased(Orientation.HORIZONTAL, 200, 100);
         borderpane.setTop(top);
 
@@ -470,7 +485,8 @@ public class BorderPaneTest {
         assertEquals(100, bottom.getLayoutBounds().getHeight(), 1e-200);
     }
 
-    @Test public void testWithHorizontalBiasedChildrenShrinking() {
+    @Test
+    public void testWithHorizontalBiasedChildrenShrinking() {
         MockBiased top = new MockBiased(Orientation.HORIZONTAL, 200, 100);
         borderpane.setTop(top);
 
@@ -516,7 +532,8 @@ public class BorderPaneTest {
         assertEquals(100, bottom.getLayoutBounds().getHeight(), 1e-200);
     }
 
-    @Test public void testWithVerticalBiasedChildrenAtPrefSize() {
+    @Test
+    public void testWithVerticalBiasedChildrenAtPrefSize() {
         MockResizable top = new MockResizable(400, 100);
         borderpane.setTop(top);
 
@@ -565,7 +582,8 @@ public class BorderPaneTest {
         assertEquals(100, bottom.getLayoutBounds().getHeight(), 1e-200);
     }
 
-    @Test public void testWithVerticalBiasedChildrenGrowing() {
+    @Test
+    public void testWithVerticalBiasedChildrenGrowing() {
         MockBiased top = new MockBiased(Orientation.VERTICAL, 200, 100);
         borderpane.setTop(top);
 
@@ -615,7 +633,8 @@ public class BorderPaneTest {
         assertEquals(100, bottom.getLayoutBounds().getHeight(), 1e-200);
     }
 
-    @Test public void testWithVerticalBiasedChildrenShrinking() {
+    @Test
+    public void testWithVerticalBiasedChildrenShrinking() {
         MockBiased top = new MockBiased(Orientation.VERTICAL, 200, 100);
         borderpane.setTop(top);
 
@@ -696,7 +715,8 @@ public class BorderPaneTest {
         assertEquals(100, bottom.getLayoutBounds().getHeight(), 1e-200);
     }
 
-    @Test public void testFitsTopChildWithinBounds() {
+    @Test
+    public void testFitsTopChildWithinBounds() {
         MockResizable child = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setTop(child);
 
@@ -707,7 +727,8 @@ public class BorderPaneTest {
         assertEquals(200, child.getHeight(), 1e-100); //Top always at it's pref height
     }
 
-    @Test public void testFitsBottomChildWithinBounds() {
+    @Test
+    public void testFitsBottomChildWithinBounds() {
         MockResizable child = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setBottom(child);
 
@@ -718,7 +739,8 @@ public class BorderPaneTest {
         assertEquals(200, child.getHeight(), 1e-100); //Bottom always at it's pref height
     }
 
-    @Test public void testFitsLeftChildWithinBounds() {
+    @Test
+    public void testFitsLeftChildWithinBounds() {
         MockResizable child = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setLeft(child);
 
@@ -729,7 +751,8 @@ public class BorderPaneTest {
         assertEquals(50, child.getHeight(), 1e-100);
     }
 
-    @Test public void testFitsRightChildWithinBounds() {
+    @Test
+    public void testFitsRightChildWithinBounds() {
         MockResizable child = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setRight(child);
 
@@ -740,7 +763,8 @@ public class BorderPaneTest {
         assertEquals(50, child.getHeight(), 1e-100);
     }
 
-    @Test public void testFitsCenterChildWithinBounds() {
+    @Test
+    public void testFitsCenterChildWithinBounds() {
         MockResizable child = new MockResizable(10,20, 100,200, 700,800);
         borderpane.setCenter(child);
 
@@ -751,7 +775,8 @@ public class BorderPaneTest {
         assertEquals(50, child.getHeight(), 1e-100);
     }
 
-    @Test public void testFitsAllChildrenWithinBounds() {
+    @Test
+    public void testFitsAllChildrenWithinBounds() {
         MockResizable top = new MockResizable(10,20, 200,100, 700,800);
         MockResizable bottom = new MockResizable(10,20, 200,100, 700,800);
         MockResizable left = new MockResizable(10,20, 100,200, 700,800);
@@ -789,7 +814,8 @@ public class BorderPaneTest {
         assertEquals(100, center.getLayoutY(), 1e-100);
     }
 
-    @Test public void testTopChildWithMargin() {
+    @Test
+    public void testTopChildWithMargin() {
         MockResizable top = new MockResizable(10,10,130,30,150,50);
         MockResizable center = new MockResizable(10,10,100,100,200,200);
         Insets insets = new Insets(10, 5, 20, 30);
@@ -817,7 +843,8 @@ public class BorderPaneTest {
         assertEquals(60, center.getLayoutY(), 1e-100);
     }
 
-    @Test public void testBottomChildWithMargin() {
+    @Test
+    public void testBottomChildWithMargin() {
         MockResizable bottom = new MockResizable(10,10,130,30,150,50);
         MockResizable center = new MockResizable(10,10,100,100,200,200);
         Insets insets = new Insets(10, 5, 20, 30);
@@ -843,7 +870,8 @@ public class BorderPaneTest {
         assertEquals(0, center.getLayoutY(), 1e-100);
     }
 
-    @Test public void testLeftChildWithMargin() {
+    @Test
+    public void testLeftChildWithMargin() {
         MockResizable left = new MockResizable(10,10,130,130,150,150);
         MockResizable center = new MockResizable(10,10,100,100,200,200);
         Insets insets = new Insets(5, 10, 30, 20);
@@ -869,7 +897,8 @@ public class BorderPaneTest {
         assertEquals(0, center.getLayoutY(), 1e-100);
     }
 
-    @Test public void testRightChildWithMargin() {
+    @Test
+    public void testRightChildWithMargin() {
         MockResizable right = new MockResizable(10,10,130,130,150,150);
         MockResizable center = new MockResizable(10,10,100,100,200,200);
         Insets insets = new Insets(5, 10, 30, 20);
@@ -895,7 +924,8 @@ public class BorderPaneTest {
         assertEquals(0, center.getLayoutY(), 1e-100);
     }
 
-    @Test public void testCenterChildWithMargin() {
+    @Test
+    public void testCenterChildWithMargin() {
         MockResizable center = new MockResizable(10,10,100,100,200,200);
         Insets insets = new Insets(5, 10, 30, 20);
         BorderPane.setMargin(center, insets);

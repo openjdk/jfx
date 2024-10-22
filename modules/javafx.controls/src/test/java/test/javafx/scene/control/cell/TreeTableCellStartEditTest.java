@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,12 @@
 
 package test.javafx.scene.control.cell;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Supplier;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
@@ -35,55 +41,37 @@ import javafx.scene.control.cell.ChoiceBoxTreeTableCell;
 import javafx.scene.control.cell.ComboBoxTreeTableCell;
 import javafx.scene.control.cell.ProgressBarTreeTableCell;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.function.Supplier;
-
-import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Parameterized tests for the {@link TreeTableCell#startEdit()} method of {@link TreeTableCell} and all sub
  * implementations. The {@link CheckBoxTreeTableCell} is special as in there the checkbox will be disabled based of the
  * editability.
  */
-@RunWith(Parameterized.class)
 public class TreeTableCellStartEditTest {
 
     private static final boolean[] EDITABLE_STATES = { true, false };
-
-    private final Supplier<TreeTableCell<String, ?>> treeTableCellSupplier;
 
     private TreeTableView<String> treeTable;
     private TreeTableRow<String> treeTableRow;
     private TreeTableColumn<String, ?> treeTableColumn;
     private TreeTableCell<String, ?> treeTableCell;
 
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        return wrapAsObjectArray(
-                List.of(TreeTableCell::new , ComboBoxTreeTableCell::new, TextFieldTreeTableCell::new,
-                        ChoiceBoxTreeTableCell::new, CheckBoxTreeTableCell::new, ProgressBarTreeTableCell::new));
+    private static Collection<Supplier<TreeTableCell<String, ?>>> parameters() {
+        return List.of(
+            TreeTableCell::new,
+            ComboBoxTreeTableCell::new,
+            TextFieldTreeTableCell::new,
+            ChoiceBoxTreeTableCell::new,
+            CheckBoxTreeTableCell::new,
+            ProgressBarTreeTableCell::new
+        );
     }
 
-    private static Collection<Object[]> wrapAsObjectArray(List<Supplier<TreeTableCell<Object, ?>>> treeTableCells) {
-        return treeTableCells.stream().map(cell -> new Object[] { cell }).collect(toList());
-    }
-
-    public TreeTableCellStartEditTest(Supplier<TreeTableCell<String, ?>> treeTableCellSupplier) {
-        this.treeTableCellSupplier = treeTableCellSupplier;
-    }
-
-    @Before
-    public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Supplier<TreeTableCell<String, ?>> treeTableCellSupplier) {
         TreeItem<String> root = new TreeItem<>("1");
         root.getChildren().addAll(List.of(new TreeItem<>("2"), new TreeItem<>("3")));
         treeTable = new TreeTableView<>(root);
@@ -96,14 +84,18 @@ public class TreeTableCellStartEditTest {
         treeTableCell = treeTableCellSupplier.get();
     }
 
-    @Test
-    public void testStartEditMustNotThrowNPE() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testStartEditMustNotThrowNPE(Supplier<TreeTableCell<String, ?>> treeTableCellSupplier) {
+        setup(treeTableCellSupplier);
         // A tree table cell without anything attached should not throw a NPE.
         treeTableCell.startEdit();
     }
 
-    @Test
-    public void testStartEditRespectsEditable() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testStartEditRespectsEditable(Supplier<TreeTableCell<String, ?>> treeTableCellSupplier) {
+        setup(treeTableCellSupplier);
         treeTableCell.updateIndex(0);
 
         treeTableCell.updateTableColumn((TreeTableColumn) treeTableColumn);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,20 +23,18 @@
  * questions.
  */
 
-package com.sun.scenario.animation;
+package javafx.scene.layout;
 
-public class AbstractPrimaryTimerShim {
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.Node;
 
-    public static boolean isPaused(AbstractPrimaryTimer amt) {
-        return amt.isPaused();
+public class BorderShim {
+
+    public static final CssMetaData<Node, String[]> BORDER_IMAGE_SOURCE = Border.BORDER_IMAGE_SOURCE;
+
+    public static StyleConverter<ParsedValue[], Border> getConverter() {
+        return BorderConverter.getInstance();
     }
-
-    public static long getTotalPausedTime(AbstractPrimaryTimer amt) {
-        return amt.getTotalPausedTime();
-    }
-
-    public static long getStartPauseTime(AbstractPrimaryTimer amt) {
-        return amt.getStartPauseTime();
-    }
-
 }

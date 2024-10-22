@@ -26,10 +26,10 @@
 package test.javafx.util.converter;
 
 import javafx.util.converter.ShortStringConverter;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -38,7 +38,7 @@ public class ShortStringConverterTest {
 
     private final short shortValue_10 = 10;
 
-    @Before public void setup() {
+    @BeforeEach public void setup() {
         converter = new ShortStringConverter();
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,32 +31,36 @@ import com.sun.scenario.effect.compiler.model.Qualifier;
 import com.sun.scenario.effect.compiler.model.Type;
 import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class FullySpecifiedTypeTest extends ParserBase {
 
     @Test
-    public void unqualified() throws Exception {
+    public void unqualified() {
         JSLVisitor.FullySpecifiedTypeExpr ret = parseTreeFor("float");
         assertNull(ret.getQual());
         assertEquals(Type.FLOAT, ret.getType());
     }
 
     @Test
-    public void qualified() throws Exception {
+    public void qualified() {
         JSLVisitor.FullySpecifiedTypeExpr ret = parseTreeFor("param bool3");
         assertEquals(Qualifier.PARAM, ret.getQual());
         assertEquals(Type.BOOL3, ret.getType());
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAFullySpecifiedType() throws Exception {
-        parseTreeFor("double");
+    @Test
+    public void notAFullySpecifiedType() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("double");
+        });
     }
 
-    private fully_specified_type_return parseTreeFor(String text) throws Exception {
+    private fully_specified_type_return parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         return (JSLVisitor.FullySpecifiedTypeExpr) visitor.visit(parser.fully_specified_type());

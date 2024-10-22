@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,17 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
-import java.util.List;
-
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-
+import java.util.List;
 import javafx.scene.control.Control;
 import javafx.scene.control.ControlShim;
 import javafx.scene.control.Skin;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests on ControlSkinFactory.
@@ -111,6 +112,5 @@ public class ControlSkinFactoryTest {
             Class<Control> controlClass = (Class<Control>) controlClasses[i][0];
             assertTrue(alternativeSkinClassMap.containsKey(controlClass));
         }
-
     }
 }

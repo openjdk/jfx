@@ -92,6 +92,7 @@ public class Util {
             try {
                 Thread.sleep(TIMEOUT);
             } catch (InterruptedException ex) {
+                System.exit(ERROR_UNEXPECTED_EXCEPTION);
             }
             System.exit(ERROR_TIMEOUT);
         });

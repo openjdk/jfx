@@ -28,13 +28,13 @@ package test.javafx.scene.web;
 import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
 import javafx.scene.web.WebEngineShim;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ShadowTest extends TestBase {
     /**
@@ -46,34 +46,34 @@ public class ShadowTest extends TestBase {
      */
     @Test public void testShadow() {
         loadContent("<html>\n" +
-                    "<body style='margin: 0px;'>\n" +
-                    "<p style='text-shadow:5px 5px 0 #FF0000;height: 100px;'>text</p>\n" +
-                    "<p style='height: 100px'>text</p>\n" +
-                    "</body>\n" +
-                    "</html>");
+                "<body style='margin: 0px;'>\n" +
+                "<p style='text-shadow:5px 5px 0 #FF0000;height: 100px;'>text</p>\n" +
+                "<p style='height: 100px'>text</p>\n" +
+                "</body>\n" +
+                "</html>");
         submit(() -> {
-                final WebPage webPage = WebEngineShim.getPage(getEngine());
-                assertNotNull(webPage);
-                final BufferedImage img = WebPageShim.paint(webPage, 0, 0, 800, 600);
-                assertNotNull(img);
+            final WebPage webPage = WebEngineShim.getPage(getEngine());
+            assertNotNull(webPage);
+            final BufferedImage img = WebPageShim.paint(webPage, 0, 0, 800, 600);
+            assertNotNull(img);
 
-                int redShadowCnt = 0;
-                int noShadowCnt = 0;
-                for (int x = 0; x < 100; x++) {
-                    for (int y = 0; y < 200; y++) {
-                        Color pixelColor = new Color(img.getRGB(x, y), true);
-                        if (isColorsSimilar(Color.RED, pixelColor, 1)) {
-                            if (y < 100) {
-                                redShadowCnt++;
-                            } else {
-                                noShadowCnt++;
-                            }
+            int redShadowCnt = 0;
+            int noShadowCnt = 0;
+            for (int x = 0; x < 100; x++) {
+                for (int y = 0; y < 200; y++) {
+                    Color pixelColor = new Color(img.getRGB(x, y), true);
+                    if (isColorsSimilar(Color.RED, pixelColor, 1)) {
+                        if (y < 100) {
+                            redShadowCnt++;
+                        } else {
+                            noShadowCnt++;
                         }
                     }
                 }
+            }
 
-                assertTrue("no shadow found", redShadowCnt > 0);
-                assertTrue("wrong shadow found", noShadowCnt == 0);
+            assertTrue(redShadowCnt > 0, () -> "no shadow found");
+            assertTrue(noShadowCnt == 0, () -> "wrong shadow found");
         });
     }
 }
