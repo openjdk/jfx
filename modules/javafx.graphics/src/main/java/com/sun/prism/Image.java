@@ -232,7 +232,10 @@ public class Image implements PlatformImage {
             case GRAY -> fromByteGrayData((ByteBuffer)frame.getImageData(), w, h, stride, ps);
             case RGB -> fromByteRgbData((ByteBuffer)frame.getImageData(), w, h, stride, ps);
             case BGRA_PRE -> fromByteBgraPreData((ByteBuffer)frame.getImageData(), w, h, stride, ps);
-            case INT_ARGB_PRE -> fromIntArgbPreData((IntBuffer)frame.getImageData(), w, h, stride, ps);
+
+            case INT_ARGB_PRE ->
+                // Note: from here on, stride is measured in bytes.
+                fromIntArgbPreData((IntBuffer)frame.getImageData(), w, h, stride * 4, ps);
 
             case GRAY_ALPHA -> {
                 byte[] buffer = new byte[w * h * 4];
@@ -289,20 +292,20 @@ public class Image implements PlatformImage {
 
             case INT_RGB -> {
                 IntBuffer imageData = (IntBuffer)frame.getImageData();
-                IntRgb.ToIntArgbPreConverter().convert(imageData, 0, stride / 4, imageData, 0, stride / 4, w, h);
-                yield fromIntArgbPreData(imageData, w, h, stride, ps);
+                IntRgb.ToIntArgbPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromIntArgbPreData(imageData, w, h, stride * 4, ps); // Note: from here on, stride is measured in bytes.
             }
 
             case INT_BGR -> {
                 IntBuffer imageData = (IntBuffer)frame.getImageData();
-                IntBgr.ToIntArgbPreConverter().convert(imageData, 0, stride / 4, imageData, 0, stride / 4, w, h);
-                yield fromIntArgbPreData(imageData, w, h, stride, ps);
+                IntBgr.ToIntArgbPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromIntArgbPreData(imageData, w, h, stride * 4, ps); // Note: from here on, stride is measured in bytes.
             }
 
             case INT_ARGB -> {
                 IntBuffer imageData = (IntBuffer)frame.getImageData();
-                IntArgb.ToIntArgbPreConverter().convert(imageData, 0, stride / 4, imageData, 0, stride / 4, w, h);
-                yield fromIntArgbPreData(imageData, w, h, stride, ps);
+                IntArgb.ToIntArgbPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromIntArgbPreData(imageData, w, h, stride * 4, ps); // Note: from here on, stride is measured in bytes.
             }
 
             case PALETTE, PALETTE_ALPHA, PALETTE_ALPHA_PRE -> {
@@ -312,7 +315,7 @@ public class Image implements PlatformImage {
                     default -> AlphaType.OPAQUE; // PALETTE
                 };
 
-                var converter = switch (frame.getPaletteIndexBits()) {
+                ByteToBytePixelConverter converter = switch (frame.getPaletteIndexBits()) {
                     case 1 -> {
                         var getter = OneBitIndexed.createGetter(frame.getPalette(), alphaType);
                         yield alphaType == AlphaType.OPAQUE

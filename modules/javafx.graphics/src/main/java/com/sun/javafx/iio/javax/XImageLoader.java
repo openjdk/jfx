@@ -30,7 +30,7 @@ import com.sun.javafx.iio.ImageFrame;
 import com.sun.javafx.iio.ImageLoadListener;
 import com.sun.javafx.iio.ImageLoader;
 import com.sun.javafx.iio.ImageMetadata;
-import com.sun.javafx.iio.ImageStorage;
+import com.sun.javafx.iio.ImageStorage.ImageType;
 import com.sun.javafx.iio.ImageStorageException;
 import com.sun.javafx.iio.common.ImageDescriptor;
 import com.sun.javafx.iio.common.ImageTools;
@@ -154,64 +154,65 @@ public class XImageLoader implements ImageLoader {
             null, null, image.getWidth(), image.getHeight(), null,
             null, null);
 
+        // Scanline stride is measured in elements of the underlying buffer, which can be bytes or ints.
+        int scanlineStride = switch(image.getSampleModel()) {
+            case ComponentSampleModel m -> m.getScanlineStride();
+            case MultiPixelPackedSampleModel m -> m.getScanlineStride();
+            case SinglePixelPackedSampleModel m -> m.getScanlineStride();
+            default -> throw new IllegalStateException("Unsupported sample model: " + image.getSampleModel());
+        };
+
         return switch (image.getType()) {
-            case TYPE_BYTE_GRAY -> new ImageFrame(ImageStorage.ImageType.GRAY,
+            case TYPE_BYTE_GRAY -> new ImageFrame(ImageType.GRAY,
                     getByteBuffer(image.getRaster().getDataBuffer()),
-                    image.getWidth(), image.getHeight(), image.getWidth(),
+                    image.getWidth(), image.getHeight(), scanlineStride,
                     pixelScale, metadata);
 
-            case TYPE_3BYTE_BGR -> new ImageFrame(ImageStorage.ImageType.BGR,
+            case TYPE_3BYTE_BGR -> new ImageFrame(ImageType.BGR,
                     getByteBuffer(image.getRaster().getDataBuffer()),
-                    image.getWidth(), image.getHeight(), image.getWidth() * 3,
+                    image.getWidth(), image.getHeight(), scanlineStride,
                     pixelScale, metadata);
 
-            case TYPE_4BYTE_ABGR -> new ImageFrame(ImageStorage.ImageType.ABGR,
+            case TYPE_4BYTE_ABGR -> new ImageFrame(ImageType.ABGR,
                     getByteBuffer(image.getRaster().getDataBuffer()),
-                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    image.getWidth(), image.getHeight(), scanlineStride,
                     pixelScale, metadata);
 
-            case TYPE_4BYTE_ABGR_PRE -> new ImageFrame(ImageStorage.ImageType.ABGR_PRE,
+            case TYPE_4BYTE_ABGR_PRE -> new ImageFrame(ImageType.ABGR_PRE,
                     getByteBuffer(image.getRaster().getDataBuffer()),
-                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    image.getWidth(), image.getHeight(), scanlineStride,
                     pixelScale, metadata);
 
-            case TYPE_INT_RGB -> new ImageFrame(ImageStorage.ImageType.INT_RGB,
+            case TYPE_INT_RGB -> new ImageFrame(ImageType.INT_RGB,
                     getIntBuffer(image.getRaster().getDataBuffer()),
-                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    image.getWidth(), image.getHeight(), scanlineStride,
                     pixelScale, metadata);
 
-            case TYPE_INT_BGR -> new ImageFrame(ImageStorage.ImageType.INT_BGR,
+            case TYPE_INT_BGR -> new ImageFrame(ImageType.INT_BGR,
                     getIntBuffer(image.getRaster().getDataBuffer()),
-                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    image.getWidth(), image.getHeight(), scanlineStride,
                     pixelScale, metadata);
 
-            case TYPE_INT_ARGB -> new ImageFrame(ImageStorage.ImageType.INT_ARGB,
+            case TYPE_INT_ARGB -> new ImageFrame(ImageType.INT_ARGB,
                     getIntBuffer(image.getRaster().getDataBuffer()),
-                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    image.getWidth(), image.getHeight(), scanlineStride,
                     pixelScale, metadata);
 
-            case TYPE_INT_ARGB_PRE -> new ImageFrame(ImageStorage.ImageType.INT_ARGB_PRE,
+            case TYPE_INT_ARGB_PRE -> new ImageFrame(ImageType.INT_ARGB_PRE,
                     getIntBuffer(image.getRaster().getDataBuffer()),
-                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    image.getWidth(), image.getHeight(), scanlineStride,
                     pixelScale, metadata);
 
             case TYPE_BYTE_BINARY, TYPE_BYTE_INDEXED -> {
-                var colorModel = (IndexColorModel)image.getColorModel();
-                var palette = new int[colorModel.getMapSize()];
+                IndexColorModel colorModel = (IndexColorModel)image.getColorModel();
+                int[] palette = new int[colorModel.getMapSize()];
                 colorModel.getRGBs(palette);
 
-                var imageType = colorModel.hasAlpha()
+                ImageType imageType = colorModel.hasAlpha()
                     ? colorModel.isAlphaPremultiplied()
-                        ? ImageStorage.ImageType.PALETTE_ALPHA_PRE
-                        : ImageStorage.ImageType.PALETTE_ALPHA
-                    : ImageStorage.ImageType.PALETTE;
-
-                var scanlineStride = switch(image.getSampleModel()) {
-                    case ComponentSampleModel m -> m.getScanlineStride();
-                    case MultiPixelPackedSampleModel m -> m.getScanlineStride();
-                    case SinglePixelPackedSampleModel m -> m.getScanlineStride();
-                    default -> throw new IllegalStateException("Unsupported sample model: " + image.getSampleModel());
-                };
+                        ? ImageType.PALETTE_ALPHA_PRE
+                        : ImageType.PALETTE_ALPHA
+                    : ImageType.PALETTE;
 
                 yield new ImageFrame(
                     imageType, getByteBuffer(image.getRaster().getDataBuffer()),

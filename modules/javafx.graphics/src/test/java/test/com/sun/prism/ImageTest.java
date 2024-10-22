@@ -154,7 +154,7 @@ public class ImageTest {
                 255, 127, 0, 127, 50, 50, 50, 0
             )),
 
-        INT_RGB(ImageType.INT_RGB, PixelFormat.INT_ARGB_PRE, 8,
+        INT_RGB(ImageType.INT_RGB, PixelFormat.INT_ARGB_PRE, 2,
             new int[] {
                 rgb(50, 100, 150), rgb(10, 20, 30),
                 rgb(40, 50, 60), rgb(255, 255, 255)
@@ -164,7 +164,7 @@ public class ImageTest {
                 argb(255, 40, 50, 60), argb(255, 255, 255, 255)
             }),
 
-        INT_BGR(ImageType.INT_BGR, PixelFormat.INT_ARGB_PRE, 8,
+        INT_BGR(ImageType.INT_BGR, PixelFormat.INT_ARGB_PRE, 2,
             new int[] {
                 rgb(50, 100, 150), rgb(10, 20, 30),
                 rgb(40, 50, 60), rgb(255, 255, 255)
@@ -174,7 +174,7 @@ public class ImageTest {
                 argb(255, 60, 50, 40), argb(255, 255, 255, 255)
             }),
 
-        INT_ARGB(ImageType.INT_ARGB, PixelFormat.INT_ARGB_PRE, 8,
+        INT_ARGB(ImageType.INT_ARGB, PixelFormat.INT_ARGB_PRE, 2,
             new int[] {
                 argb(127, 50, 100, 150), argb(127, 10, 20, 30),
                 argb(255, 40, 50, 60), argb(0, 255, 255, 255)
@@ -184,7 +184,7 @@ public class ImageTest {
                 argb(255, 40, 50, 60), argb(0, 0, 0, 0)
             }),
 
-        INT_ARGB_PRE(ImageType.INT_ARGB_PRE, PixelFormat.INT_ARGB_PRE, 8,
+        INT_ARGB_PRE(ImageType.INT_ARGB_PRE, PixelFormat.INT_ARGB_PRE, 2,
             new int[] {
                 argb(127, 50, 100, 150), argb(127, 10, 20, 30),
                 argb(255, 0, 0, 0), argb(0, 255, 255, 255)

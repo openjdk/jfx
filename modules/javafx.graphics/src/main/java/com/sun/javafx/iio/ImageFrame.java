@@ -50,8 +50,8 @@ public final class ImageFrame {
      * @param imageData The image data.
      * @param width The image width.
      * @param height The image height.
-     * @param stride The stride from a pixel position in one row to the same
-     * horizontal position in the next row.
+     * @param stride The stride from a pixel position in one row to the same horizontal position in the next row,
+     *               in data elements (not necessarily bytes).
      * @param metadata The image metadata.
      */
     public ImageFrame(ImageType imageType, Buffer imageData,
@@ -67,7 +67,8 @@ public final class ImageFrame {
      * @param imageData The image data.
      * @param width The image width.
      * @param height The image height.
-     * @param stride The stride from a pixel position in one row to the same horizontal position in the next row.
+     * @param stride The stride from a pixel position in one row to the same horizontal position in the next row,
+     *               in data elements (not necessarily bytes).
      * @param pixelScale The scale of a 72DPI virtual pixel in the resolution of the image
      *                   (1.0f for 72DPI images, 2.0f for 144DPI images, etc.).
      * @param metadata The image metadata.
@@ -86,7 +87,8 @@ public final class ImageFrame {
      * @param imageData The image data.
      * @param width The image width.
      * @param height The image height.
-     * @param stride The stride from a pixel position in one row to the same horizontal position in the next row.
+     * @param stride The stride from a pixel position in one row to the same horizontal position in the next row,
+     *               in data elements (not necessarily bytes).
      * @param palette The image palette. This is ignored unless the type is one of the palette types.
      * @param paletteIndexBits The size of a palette index, in bits.
      * @param pixelScale The scale of a 72DPI virtual pixel in the resolution
