@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,17 @@ namespace
         env->CallObjectMethod(preferences, jMapPut, prefKey, prefValue);
         CHECK_JNI_EXCEPTION(env);
     }
+
+    void putBoolean(JNIEnv* env, jobject preferences, const char* name, bool value) {
+        jobject prefKey = env->NewStringUTF(name);
+        if (EXCEPTION_OCCURED(env) || prefKey == NULL) return;
+
+        jobject prefValue = env->GetStaticObjectField(jBooleanCls, value ? jBooleanTRUE : jBooleanFALSE);
+        if (EXCEPTION_OCCURED(env) || prefValue == NULL) return;
+
+        env->CallObjectMethod(preferences, jMapPut, prefKey, prefValue);
+        CHECK_JNI_EXCEPTION(env);
+    }
 }
 
 PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
@@ -105,6 +116,11 @@ jobject PlatformSupport::collectPreferences() const {
         gchar* themeName;
         g_object_get(settings, "gtk-theme-name", &themeName, NULL);
         putString(env, prefs, "GTK.theme_name", themeName);
+        g_free(themeName);
+
+        gboolean enableAnimations = true;
+        g_object_get(settings, "gtk-enable-animations", &enableAnimations, NULL);
+        putBoolean(env, prefs, "GTK.enable_animations", enableAnimations);
     }
 
     return prefs;
