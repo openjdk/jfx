@@ -29,7 +29,8 @@ include "base",
         "controls",
 
         // RFE: incubator dependency
-        // TODO: incubator: Add entry for each incubator module here
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
         // BEGIN: incubator placeholder
         //"incubator.mymod",
         // END: incubator placeholder
@@ -50,7 +51,8 @@ project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
 
 // RFE: incubator dependency
-// TODO: incubator: Add entry for each incubator module here
+// Add an entry for each incubator module here, leaving the incubator
+// placeholder lines as an example.
 // BEGIN: incubator placeholder
 //project(":incubator.mymod").projectDir = file("modules/jfx.incubator.mymod")
 // END: incubator placeholder

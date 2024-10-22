@@ -2875,7 +2875,8 @@ project(":controls") {
 }
 
 // RFE: incubator dependency
-// TODO: incubator: Add a project declaration for each incubator module here
+// Add a project declaration for each incubator module here, leaving the
+// incubator placeholder lines as an example.
 // BEGIN: incubator placeholder
 //project(":incubator.mymod") {
 //    project.ext.buildModule = true
@@ -4144,7 +4145,8 @@ project(":systemTests") {
         'controls',
 
         // RFE: incubator dependency
-        // TODO: incubator: Add entry for each incubator module here
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
         // BEGIN: incubator placeholder
         //'incubator.mymod',
         // END: incubator placeholder
@@ -4609,7 +4611,8 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         project(":controls"),
 
         // RFE: incubator dependency
-        // TODO: incubator: Add entry for each incubator module here
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
         // BEGIN: incubator placeholder
         //project(":incubator.mymod"),
         // END: incubator placeholder

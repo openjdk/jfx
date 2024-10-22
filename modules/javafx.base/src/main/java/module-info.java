@@ -49,7 +49,8 @@ module javafx.base {
         javafx.controls,
 
         // RFE: incubator dependency
-        // TODO: incubator: Add entry for each incubator module here
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
         // BEGIN: incubator placeholder
         //jfx.incubator.mymod,
         // END: incubator placeholder
