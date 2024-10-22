@@ -12,7 +12,7 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ * accompanied this code).<
  *
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
@@ -53,7 +53,6 @@
 //#define VERBOSE_LOAD
 
 static BOOL shouldKeepRunningNestedLoop = YES;
-static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
@@ -774,9 +773,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return self->started;
 }
 
-+ (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env
++ (void)enterNestedEventLoopWithEnv:(JNIEnv*)env
 {
-    jobject ret = NULL;
 
     NSRunLoop *theRL = [NSRunLoop currentRunLoop];
     NSApplication * app = [NSApplication sharedApplication];
@@ -793,22 +791,11 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         }
     }
 
-    if (nestedLoopReturnValue != NULL) {
-        ret = (*env)->NewLocalRef(env, nestedLoopReturnValue);
-        (*env)->DeleteGlobalRef(env, nestedLoopReturnValue);
-        nestedLoopReturnValue = NULL;
-    }
-
     shouldKeepRunningNestedLoop = YES;
-
-    return ret;
 }
 
-+ (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env retValue:(jobject)retValue
++ (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env
 {
-    if (retValue != NULL) {
-        nestedLoopReturnValue = (*env)->NewGlobalRef(env, retValue);
-    }
     shouldKeepRunningNestedLoop = NO;
 }
 
@@ -951,11 +938,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
     if ((*env)->ExceptionCheck(env)) return;
 
     javaIDs.Application.enterNestedEventLoop = (*env)->GetStaticMethodID(
-            env, jClass, "enterNestedEventLoop", "()Ljava/lang/Object;");
+            env, jClass, "enterNestedEventLoop", "()V");
     if ((*env)->ExceptionCheck(env)) return;
 
     javaIDs.Application.leaveNestedEventLoop = (*env)->GetStaticMethodID(
-            env, jClass, "leaveNestedEventLoop", "(Ljava/lang/Object;)V");
+            env, jClass, "leaveNestedEventLoop", "()V");
     if ((*env)->ExceptionCheck(env)) return;
 
     javaIDs.MacApplication.notifyApplicationDidTerminate = (*env)->GetMethodID(
@@ -1062,38 +1049,34 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1finishTerminat
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _enterNestedEventLoopImpl
- * Signature: ()Ljava/lang/Object;
+ * Signature: ()V
  */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1enterNestedEventLoopImpl
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1enterNestedEventLoopImpl
 (JNIEnv *env, jobject japplication)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1enterNestedEventLoopImpl");
 
-    jobject ret;
-
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        ret = [GlassApplication enterNestedEventLoopWithEnv:env];
+        [GlassApplication enterNestedEventLoopWithEnv:env];
     }
     [glasspool drain]; glasspool=nil;
     GLASS_CHECK_EXCEPTION(env);
-
-    return ret;
 }
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _leaveNestedEventLoopImpl
- * Signature: (Ljava/lang/Object;)V
+ * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1leaveNestedEventLoopImpl
-(JNIEnv *env, jobject japplication, jobject retValue)
+(JNIEnv *env, jobject japplication)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1leaveNestedEventLoopImpl");
 
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        [GlassApplication leaveNestedEventLoopWithEnv:env retValue:retValue];
+        [GlassApplication leaveNestedEventLoopWithEnv:env];
     }
     [glasspool drain]; glasspool=nil;
     GLASS_CHECK_EXCEPTION(env);

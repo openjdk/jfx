@@ -62,8 +62,8 @@
 - (void)runLoop:(id)selector;
 - (BOOL)started;
 
-+ (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env;
-+ (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env retValue:(jobject)retValue;
++ (void)enterNestedEventLoopWithEnv:(JNIEnv*)env;
++ (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env;
 
 + (void)enterFullScreenExitingLoop;
 + (void)leaveFullScreenExitingLoopIfNeeded;

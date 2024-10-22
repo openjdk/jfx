@@ -29,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -118,6 +120,70 @@ public class NestedEventLoopTest {
                 () -> {
                     assertFalse(Platform.isNestedLoopRunning());
                     assertEquals(result, returnedValue.get());
+                }
+        );
+    }
+
+    /**
+     * Tests that we can enter and exit two nested event loops in a row.
+     * We expect that the nested first event loop will wait until the second nested event loop is done
+     * when entering a second event loop while we requested the first event loop to leave.
+     * <p>
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8285893">JDK-8285893</a>
+     */
+    @Test
+    public void testCanEnterAndExitTwoNestedEventLoop() {
+        final long key1 = 1;
+        final long result1 = 10;
+        final long key2 = 2;
+        final long result2 = 20;
+        final AtomicLong returnedValue1 = new AtomicLong();
+        final AtomicLong returnedValue2 = new AtomicLong();
+        final List<Long> callOrder = new ArrayList<>();
+
+        Util.runAndWait(
+                () -> {
+                    assertFalse(Platform.isNestedLoopRunning());
+                    Long actual1 = (Long) Platform.enterNestedEventLoop(key1);
+                    callOrder.add(key1);
+                    returnedValue1.set(actual1);
+
+                    // Inner loop as well as the outer loop returned, all loops should be done.
+                    assertFalse(Platform.isNestedLoopRunning());
+                },
+                () -> {
+                    assertTrue(Platform.isNestedLoopRunning());
+                    Platform.exitNestedEventLoop(key1, result1);
+
+                    // Not stopping immediately.
+                    assertTrue(Platform.isNestedLoopRunning());
+
+                    Long actual2 = (Long) Platform.enterNestedEventLoop(key2);
+                    callOrder.add(key2);
+                    returnedValue2.set(actual2);
+
+                    // Returned from inner loop, we are still in the outer loop.
+                    assertTrue(Platform.isNestedLoopRunning());
+                },
+                () -> {
+                    assertTrue(Platform.isNestedLoopRunning());
+
+                    Platform.exitNestedEventLoop(key2, result2);
+
+                    // Not stopping immediately.
+                    assertTrue(Platform.isNestedLoopRunning());
+                },
+                () -> {
+                    assertFalse(Platform.isNestedLoopRunning());
+
+                    assertEquals(result1, returnedValue1.get());
+                    assertEquals(result2, returnedValue2.get());
+
+                    long key = callOrder.get(0);
+                    assertEquals(key2, key);
+
+                    key = callOrder.get(1);
+                    assertEquals(key1, key);
                 }
         );
     }
