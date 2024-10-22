@@ -27,10 +27,10 @@
 #include "ElementRareData.h"
 #include "EventListener.h"
 #include "EventNames.h"
+#include "LegacyRenderSVGResource.h"
 #include "MutationEvent.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGInlineText.h"
-#include "RenderSVGResource.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
@@ -191,7 +191,7 @@ void SVGTRefElement::svgAttributeChanged(const QualifiedName& attrName)
 
 RenderPtr<RenderElement> SVGTRefElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGInline>(*this, WTFMove(style));
+    return createRenderer<RenderSVGInline>(RenderObject::Type::SVGInline, *this, WTFMove(style));
 }
 
 bool SVGTRefElement::childShouldCreateRenderer(const Node& child) const

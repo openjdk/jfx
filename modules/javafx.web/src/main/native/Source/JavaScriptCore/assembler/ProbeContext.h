@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "MacroAssembler.h"
 #include "ProbeStack.h"
+#include <wtf/TZoneMalloc.h>
 
 #if ENABLE(ASSEMBLER)
 
@@ -136,8 +137,6 @@ inline void*& CPUState::pc()
     return *reinterpret_cast<void**>(&spr(ARM64Registers::pc));
 #elif CPU(ARM_THUMB2)
     return *reinterpret_cast<void**>(&gpr(ARMRegisters::pc));
-#elif CPU(MIPS)
-    return *reinterpret_cast<void**>(&spr(MIPSRegisters::pc));
 #elif CPU(RISCV64)
     return *reinterpret_cast<void**>(&spr(RISCV64Registers::pc));
 #else
@@ -153,8 +152,6 @@ inline void*& CPUState::fp()
     return *reinterpret_cast<void**>(&gpr(ARM64Registers::fp));
 #elif CPU(ARM_THUMB2)
     return *reinterpret_cast<void**>(&gpr(ARMRegisters::fp));
-#elif CPU(MIPS)
-    return *reinterpret_cast<void**>(&gpr(MIPSRegisters::fp));
 #elif CPU(RISCV64)
     return *reinterpret_cast<void**>(&gpr(RISCV64Registers::fp));
 #else
@@ -170,8 +167,6 @@ inline void*& CPUState::sp()
     return *reinterpret_cast<void**>(&gpr(ARM64Registers::sp));
 #elif CPU(ARM_THUMB2)
     return *reinterpret_cast<void**>(&gpr(ARMRegisters::sp));
-#elif CPU(MIPS)
-    return *reinterpret_cast<void**>(&gpr(MIPSRegisters::sp));
 #elif CPU(RISCV64)
     return *reinterpret_cast<void**>(&gpr(RISCV64Registers::sp));
 #else
@@ -220,7 +215,7 @@ struct State {
 };
 
 class Context {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Context);
 public:
     using RegisterID = MacroAssembler::RegisterID;
     using SPRegisterID = MacroAssembler::SPRegisterID;

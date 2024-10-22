@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,15 +29,17 @@ import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.model.BinaryOpType;
 import com.sun.scenario.effect.compiler.tree.BinaryExpr;
 import com.sun.scenario.effect.compiler.tree.JSLVisitor;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AddExprTest extends MultExprTest {
 
     private String mult;
 
-    @Before
+    @BeforeEach
     @Override
     public void setUp() {
         super.setUp();
@@ -45,29 +47,31 @@ public class AddExprTest extends MultExprTest {
     }
 
     @Test
-    public void oneAddition() throws Exception {
+    public void oneAddition() {
         BinaryExpr tree = parseTreeFor(mult + " + " + mult);
         assertEquals(BinaryOpType.ADD, tree.getOp());
     }
 
     @Test
-    public void oneSubtraction() throws Exception {
+    public void oneSubtraction() {
         BinaryExpr tree = parseTreeFor(mult + "   - " + mult);
         assertEquals(BinaryOpType.SUB, tree.getOp());
     }
 
     @Test
-    public void additiveCombination() throws Exception {
+    public void additiveCombination() {
         BinaryExpr tree = parseTreeFor(mult + " + " + mult + '-' + mult + '-' + mult + "   +" + mult);
         assertEquals(BinaryOpType.ADD, tree.getOp());
     }
 
-    @Test(expected = ClassCastException.class)
-    public void notAnAdditiveExpression() throws Exception {
-        parseTreeFor(mult + "!" + mult);
+    @Test
+    public void notAnAdditiveExpression() {
+        assertThrows(ClassCastException.class, () -> {
+            parseTreeFor(mult + "!" + mult);
+        });
     }
 
-    private BinaryExpr parseTreeFor(String text) throws Exception {
+    private BinaryExpr parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         return (BinaryExpr) visitor.visit(parser.additive_expression());

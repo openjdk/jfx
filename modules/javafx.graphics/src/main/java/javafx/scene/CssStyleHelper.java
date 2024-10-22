@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,6 +65,7 @@ import com.sun.javafx.css.StyleCache;
 import com.sun.javafx.css.StyleCacheEntry;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleMap;
+import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import javafx.css.converter.FontConverter;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
@@ -637,11 +638,13 @@ final class CssStyleHelper {
         final List<CssMetaData<? extends Styleable,  ?>> styleables = node.getCssMetaData();
         final int numStyleables = styleables.size();
 
-        for (int n = 0; n < numStyleables; n++) {
-
-            @SuppressWarnings("unchecked") // this is a widening conversion
-            final CssMetaData<Styleable,Object> cssMetaData =
-                    (CssMetaData<Styleable,Object>)styleables.get(n);
+        for (int n = -1; n < numStyleables; n++) {
+            // The 'transition' property is a special pseudo-property that is always processed
+            // before other CSS properties, as its value might affect the transitions that are
+            // applied to other properties.
+            final CssMetaData<Styleable, ?> cssMetaData = n < 0 ?
+                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
+                    (CssMetaData<Styleable, ?>)styleables.get(n);
 
             // Don't bother looking up styles that don't inherit.
             if (inheritOnly && cssMetaData.isInherits() == false) {
@@ -665,8 +668,7 @@ final class CssStyleHelper {
             CascadingStyle style = getStyle(node, property, styleMap, transitionStates[0]);
             if (style != null) {
                 final ParsedValue cssValue = style.getParsedValue();
-                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
-                ParsedValue resolved = resolveLookups(node, cssValue, styleMap, transitionStates[0], whence, new HashSet<>());
+                ParsedValue resolved = resolveLookups(node, cssValue, styleMap, transitionStates[0], new HashSet<>());
                 boolean isRelative = ParsedValueImpl.containsFontRelativeSize(resolved, false);
                 if (!isRelative) {
                     continue;
@@ -750,10 +752,7 @@ final class CssStyleHelper {
      * Called by the Node whenever it has transitioned from one set of
      * pseudo-class states to another. This function will then lookup the
      * new values for each of the styleable variables on the Node, and
-     * then either set the value directly or start an animation based on
-     * how things are specified in the CSS file. Currently animation support
-     * is disabled until the new parser comes online with support for
-     * animations and that support is detectable via the API.
+     * then set the new value via {@link StyleableProperty#applyStyle}.
      */
     void transitionToState(final Node node) {
 
@@ -829,11 +828,14 @@ final class CssStyleHelper {
         // For each property that is settable, we need to do a lookup and
         // transition to that value.
         transitionStateInProgress = true;
-        for(int n=0; n<max; n++) {
 
-            @SuppressWarnings("unchecked") // this is a widening conversion
-            final CssMetaData<Styleable,Object> cssMetaData =
-                    (CssMetaData<Styleable,Object>)styleables.get(n);
+        for (int n = -1; n < max; n++) {
+            // The 'transition' property is a special pseudo-property that is always processed
+            // before other CSS properties, as its value might affect the transitions that are
+            // applied to other properties.
+            final CssMetaData<Styleable, ?> cssMetaData = n < 0 ?
+                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
+                    (CssMetaData<Styleable, ?>)styleables.get(n);
 
             // Don't bother looking up styles that don't inherit.
             if (inheritOnly && cssMetaData.isInherits() == false) {
@@ -1316,7 +1318,6 @@ final class CssStyleHelper {
             final Styleable styleable,
             final ParsedValue parsedValue,
             final StyleMap styleMap, Set<PseudoClass> states,
-            final ObjectProperty<StyleOrigin> whence,
             Set<ParsedValue> resolves) {
 
         //
@@ -1335,38 +1336,22 @@ final class CssStyleHelper {
                     resolveRef(styleable, sval, styleMap, states);
 
                 if (resolved != null) {
+                    ParsedValue<?, ?> resolvedParsedValue = resolved.getParsedValue();
 
-                    if (resolves.contains(resolved.getParsedValue())) {
-
+                    if (!resolves.add(resolvedParsedValue)) {
                         if (LOGGER.isLoggable(Level.WARNING)) {
                             LOGGER.warning("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
                         }
+
                         throw new IllegalArgumentException("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
-
-                    } else {
-                        resolves.add(parsedValue);
-                    }
-
-                    // The origin of this parsed value is the greatest of
-                    // any of the resolved reference. If a resolved reference
-                    // comes from an inline style, for example, then the value
-                    // calculated from the resolved lookup should have inline
-                    // as its origin. Otherwise, an inline style could be
-                    // stored in shared cache.
-                    final StyleOrigin wOrigin = whence.get();
-                    final StyleOrigin rOrigin = resolved.getOrigin();
-                    if (rOrigin != null && (wOrigin == null ||  wOrigin.compareTo(rOrigin) < 0)) {
-                        whence.set(rOrigin);
                     }
 
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    ParsedValue pv = resolveLookups(styleable, resolved.getParsedValue(), styleMap, states, whence, resolves);
+                    ParsedValue<?, ?> pv = resolveLookups(styleable, resolvedParsedValue, styleMap, states, resolves);
 
-                    if (resolves != null) {
-                        resolves.remove(parsedValue);
-                    }
+                    resolves.remove(resolvedParsedValue);
 
                     return pv;
 
@@ -1391,11 +1376,9 @@ final class CssStyleHelper {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
                     resolved[l][ll] =
-                        resolveLookups(styleable, layers[l][ll], styleMap, states, whence, resolves);
+                        resolveLookups(styleable, layers[l][ll], styleMap, states, resolves);
                 }
             }
-
-            resolves.clear();
 
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 
@@ -1407,10 +1390,8 @@ final class CssStyleHelper {
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 resolved[l] =
-                    resolveLookups(styleable, layer[l], styleMap, states, whence, resolves);
+                    resolveLookups(styleable, layer[l], styleMap, states, resolves);
             }
-
-            resolves.clear();
 
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 
@@ -1542,8 +1523,7 @@ final class CssStyleHelper {
             ParsedValue resolved = null;
             try {
 
-                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
-                resolved = resolveLookups(styleable, cssValue, styleMap, states, whence, new HashSet<>());
+                resolved = resolveLookups(styleable, cssValue, styleMap, states, new HashSet<>());
 
                 final String property = cssMetaData.getProperty();
 
@@ -1635,8 +1615,7 @@ final class CssStyleHelper {
                 else
                     val = cssMetaData.getConverter().convert(resolved, fontForFontRelativeSizes);
 
-                final StyleOrigin origin = whence.get();
-                return new CalculatedValue(val, origin, isRelative);
+                return new CalculatedValue(val, style.getOrigin(), isRelative);
 
             } catch (ClassCastException cce) {
                 final String msg = formatUnresolvedLookupMessage(styleable, cssMetaData, style.getStyle(),resolved, cce);

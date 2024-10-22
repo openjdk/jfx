@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,19 +26,19 @@
 package test.javafx.scene;
 
 import static test.javafx.scene.image.TestImages.TEST_ERROR_IMAGE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
 import javafx.scene.image.Image;
 import test.javafx.scene.image.TestImages;
-
-import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.Cursor;
 import javafx.scene.CursorShim;
 import javafx.scene.ImageCursor;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public final class ImageCursor_getCurrentFrame_Test {
     private final StubToolkit toolkit;

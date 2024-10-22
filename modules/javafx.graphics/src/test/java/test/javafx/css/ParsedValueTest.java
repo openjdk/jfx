@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,12 @@
 
 package test.javafx.css;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import com.sun.javafx.css.ParsedValueImpl;
 import javafx.css.StylesheetShim;
 import javafx.css.StyleConverter.StringStore;
 import javafx.css.converter.SizeConverter;
 
 import javafx.scene.text.Font;
-
-import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -46,6 +40,12 @@ import java.io.IOException;
 import javafx.css.ParsedValue;
 import javafx.css.Size;
 import javafx.css.SizeUnits;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ParsedValueTest {
 
@@ -70,7 +70,7 @@ public class ParsedValueTest {
      */
     @Test
     public void testConvert() {
-        ///System.out.println("convert");
+        //System.out.println("convert");
         Font font = Font.getDefault();
         Size size = new Size(1.0, SizeUnits.EM);
         ParsedValue<ParsedValue<?,Size>,Number> value =
@@ -406,7 +406,7 @@ public class ParsedValueTest {
             parsedValue.writeBinary(dos, stringStore);
             dos.close();
         } catch (IOException ioe) {
-            org.junit.Assert.fail(parsedValue.toString());
+            fail(parsedValue.toString());
         }
 
     }
@@ -495,10 +495,10 @@ public class ParsedValueTest {
             ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
             DataInputStream dis = new DataInputStream(bais);
             ParsedValue<?,?> pv = ParsedValueImpl.readBinary(StylesheetShim.BINARY_CSS_VERSION, dis, strings);
-            org.junit.Assert.assertEquals(parsedValue, pv);
+            assertEquals(parsedValue, pv);
         } catch (IOException ioe) {
             System.err.println(ioe);
-            org.junit.Assert.fail(parsedValue.toString());
+            fail(parsedValue.toString());
         }
 
     }

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006, 2009, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2019 Google Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  *
@@ -68,157 +68,157 @@ private:
 
 class FunLast final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NumberValue; }
+    Value::Type resultType() const override { return Value::Type::Number; }
 public:
     FunLast() { setIsContextSizeSensitive(true); }
 };
 
 class FunPosition final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NumberValue; }
+    Value::Type resultType() const override { return Value::Type::Number; }
 public:
     FunPosition() { setIsContextPositionSensitive(true); }
 };
 
 class FunCount final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NumberValue; }
+    Value::Type resultType() const override { return Value::Type::Number; }
 };
 
 class FunId final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NodeSetValue; }
+    Value::Type resultType() const override { return Value::Type::NodeSet; }
 };
 
 class FunLocalName final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 public:
     FunLocalName() { setIsContextNodeSensitive(true); } // local-name() with no arguments uses context node.
 };
 
 class FunNamespaceURI final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 public:
     FunNamespaceURI() { setIsContextNodeSensitive(true); } // namespace-uri() with no arguments uses context node.
 };
 
 class FunName final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 public:
     FunName() { setIsContextNodeSensitive(true); } // name() with no arguments uses context node.
 };
 
 class FunString final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 public:
     FunString() { setIsContextNodeSensitive(true); } // string() with no arguments uses context node.
 };
 
 class FunConcat final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 };
 
 class FunStartsWith final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::BooleanValue; }
+    Value::Type resultType() const override { return Value::Type::Boolean; }
 };
 
 class FunContains final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::BooleanValue; }
+    Value::Type resultType() const override { return Value::Type::Boolean; }
 };
 
 class FunSubstringBefore final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 };
 
 class FunSubstringAfter final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 };
 
 class FunSubstring final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 };
 
 class FunStringLength final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NumberValue; }
+    Value::Type resultType() const override { return Value::Type::Number; }
 public:
     FunStringLength() { setIsContextNodeSensitive(true); } // string-length() with no arguments uses context node.
 };
 
 class FunNormalizeSpace final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 public:
     FunNormalizeSpace() { setIsContextNodeSensitive(true); } // normalize-space() with no arguments uses context node.
 };
 
 class FunTranslate final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::StringValue; }
+    Value::Type resultType() const override { return Value::Type::String; }
 };
 
 class FunBoolean final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::BooleanValue; }
+    Value::Type resultType() const override { return Value::Type::Boolean; }
 };
 
 class FunNot : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::BooleanValue; }
+    Value::Type resultType() const override { return Value::Type::Boolean; }
 };
 
 class FunTrue final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::BooleanValue; }
+    Value::Type resultType() const override { return Value::Type::Boolean; }
 };
 
 class FunFalse final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::BooleanValue; }
+    Value::Type resultType() const override { return Value::Type::Boolean; }
 };
 
 class FunLang final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::BooleanValue; }
+    Value::Type resultType() const override { return Value::Type::Boolean; }
 public:
     FunLang() { setIsContextNodeSensitive(true); } // lang() always works on context node.
 };
 
 class FunNumber final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NumberValue; }
+    Value::Type resultType() const override { return Value::Type::Number; }
 public:
     FunNumber() { setIsContextNodeSensitive(true); } // number() with no arguments uses context node.
 };
 
 class FunSum final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NumberValue; }
+    Value::Type resultType() const override { return Value::Type::Number; }
 };
 
 class FunFloor final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NumberValue; }
+    Value::Type resultType() const override { return Value::Type::Number; }
 };
 
 class FunCeiling final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NumberValue; }
+    Value::Type resultType() const override { return Value::Type::Number; }
 };
 
 class FunRound final : public Function {
     Value evaluate() const override;
-    Value::Type resultType() const override { return Value::NumberValue; }
+    Value::Type resultType() const override { return Value::Type::Number; }
 public:
     static double round(double);
 };
@@ -341,9 +341,9 @@ Value FunId::evaluate() const
 
         // If there are several nodes with the same id, id() should return the first one.
         // In WebKit, getElementById behaves so, too, although its behavior in this case is formally undefined.
-        Node* node = contextScope.getElementById(StringView(idList).substring(startPos, endPos - startPos));
+        RefPtr node = contextScope.getElementById(StringView(idList).substring(startPos, endPos - startPos));
         if (node && resultSet.add(*node).isNewEntry)
-            result.append(node);
+            result.append(WTFMove(node));
 
         startPos = endPos;
     }
@@ -353,16 +353,16 @@ Value FunId::evaluate() const
     return Value(WTFMove(result));
 }
 
-static inline String expandedNameLocalPart(Node* node)
+static inline String expandedNameLocalPart(Node& node)
 {
-    if (is<ProcessingInstruction>(*node))
-        return downcast<ProcessingInstruction>(*node).target();
-    return node->localName().string();
+    if (auto* pi = dynamicDowncast<ProcessingInstruction>(node))
+        return pi->target();
+    return node.localName().string();
 }
 
-static inline String expandedName(Node* node)
+static inline String expandedName(Node& node)
 {
-    const AtomString& prefix = node->prefix();
+    auto& prefix = node.prefix();
     return prefix.isEmpty() ? expandedNameLocalPart(node) : prefix + ":" + expandedNameLocalPart(node);
 }
 
@@ -373,11 +373,11 @@ Value FunLocalName::evaluate() const
         if (!a.isNodeSet())
             return emptyString();
 
-        Node* node = a.toNodeSet().firstNode();
-        return node ? expandedNameLocalPart(node) : emptyString();
+        auto* node = a.toNodeSet().firstNode();
+        return node ? expandedNameLocalPart(*node) : emptyString();
     }
 
-    return expandedNameLocalPart(evaluationContext().node.get());
+    return expandedNameLocalPart(*evaluationContext().node);
 }
 
 Value FunNamespaceURI::evaluate() const
@@ -401,11 +401,11 @@ Value FunName::evaluate() const
         if (!a.isNodeSet())
             return emptyString();
 
-        Node* node = a.toNodeSet().firstNode();
-        return node ? expandedName(node) : emptyString();
+        auto* node = a.toNodeSet().firstNode();
+        return node ? expandedName(*node) : emptyString();
     }
 
-    return expandedName(evaluationContext().node.get());
+    return expandedName(*evaluationContext().node);
 }
 
 Value FunCount::evaluate() const
@@ -627,10 +627,9 @@ Value FunLang::evaluate() const
     const Attribute* languageAttribute = nullptr;
     Node* node = evaluationContext().node.get();
     while (node) {
-        if (is<Element>(*node)) {
-            Element& element = downcast<Element>(*node);
-            if (element.hasAttributes())
-                languageAttribute = element.findAttributeByName(XMLNames::langAttr);
+        if (RefPtr element = dynamicDowncast<Element>(*node)) {
+            if (element->hasAttributes())
+                languageAttribute = element->findAttributeByName(XMLNames::langAttr);
         }
         if (languageAttribute)
             break;
@@ -785,5 +784,5 @@ std::unique_ptr<Function> Function::create(const String& name, Vector<std::uniqu
     return function;
 }
 
-}
-}
+} // namespace XPath
+} // namespace WebCore

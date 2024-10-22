@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -403,8 +403,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
         contentTypeString = "text/html"_s;
     }
     if (!contentTypeString.isEmpty()) {
-        response.setMimeType(
-               AtomString{extractMIMETypeFromMediaType(contentTypeString).convertToLowercaseWithoutLocale()});
+        response.setMimeType(extractMIMETypeFromMediaType(contentTypeString).convertToASCIILowercase());
     }
 
     String contentEncodingString(env, contentEncoding);
@@ -412,7 +411,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
         contentEncodingString = extractCharsetFromMediaType(contentTypeString).toString();
     }
     if (!contentEncodingString.isEmpty()) {
-        response.setTextEncodingName(AtomString{contentEncodingString});
+        response.setTextEncodingName(WTFMove(contentEncodingString));
     }
 
     if (contentLength > 0) {
@@ -439,7 +438,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
 
     // Setup mime type for local resources
     if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file"_s)) {
-        response.setMimeType(AtomString{MIMETypeRegistry::mimeTypeForPath(kurl.path().toString())});
+        response.setMimeType(MIMETypeRegistry::mimeTypeForPath(kurl.path().toString()));
     }
     return response;
 }

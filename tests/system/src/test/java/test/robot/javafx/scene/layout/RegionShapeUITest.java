@@ -24,7 +24,7 @@
 
 package test.robot.javafx.scene.layout;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -245,86 +245,86 @@ public class RegionShapeUITest extends RegionUITestBase {
 //    }
 //
 //    // TODO These should work, but presently the parser doesn't support thin, medium, and thick, I think.
-////    public void solidStroke_Thin(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: lightgray;" +
-////                        "-fx-border-color: red;" +
-////                        "-fx-border-width: thin;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
-////
-////    public void solidStroke_Thin_NotScaled(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: lightgray;" +
-////                        "-fx-border-color: red;" +
-////                        "-fx-border-width: thin;" +
-////                        "-fx-scale-shape: false;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
-////
-////    public void solidStroke_Thin_NotScaledAndNotCentered(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: lightgray;" +
-////                        "-fx-border-color: red;" +
-////                        "-fx-border-width: thin;" +
-////                        "-fx-position-shape: false;" +
-////                        "-fx-scale-shape: false;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
-////
-////    public void solidStroke_Medium(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: lightgray;" +
-////                        "-fx-border-color: red;" +
-////                        "-fx-border-width: medium;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
-////
-////    public void solidStroke_Medium_NotScaled(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: lightgray;" +
-////                        "-fx-border-color: red;" +
-////                        "-fx-border-width: medium;" +
-////                        "-fx-scale-shape: false;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
-////
-////    public void solidStroke_Medium_NotScaledAndNotCentered(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: lightgray;" +
-////                        "-fx-border-color: red;" +
-////                        "-fx-border-width: medium;" +
-////                        "-fx-position-shape: false;" +
-////                        "-fx-scale-shape: false;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
-////
-////    public void solidStroke_Thick(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: lightgray;" +
-////                        "-fx-border-color: red;" +
-////                        "-fx-border-width: thick;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
-////
-////    public void solidStroke_Thick_NotScaled(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: lightgray;" +
-////                        "-fx-border-color: red;" +
-////                        "-fx-border-width: thick;" +
-////                        "-fx-scale-shape: false;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
-////
-////    public void solidStroke_Thick_NotScaledAndNotCentered(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: lightgray;" +
-////                        "-fx-border-color: red;" +
-////                        "-fx-border-width: thick;" +
-////                        "-fx-position-shape: false;" +
-////                        "-fx-scale-shape: false;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
+//--    public void solidStroke_Thin(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: lightgray;" +
+//--                        "-fx-border-color: red;" +
+//--                        "-fx-border-width: thin;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
+//--
+//--    public void solidStroke_Thin_NotScaled(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: lightgray;" +
+//--                        "-fx-border-color: red;" +
+//--                        "-fx-border-width: thin;" +
+//--                        "-fx-scale-shape: false;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
+//--
+//--    public void solidStroke_Thin_NotScaledAndNotCentered(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: lightgray;" +
+//--                        "-fx-border-color: red;" +
+//--                        "-fx-border-width: thin;" +
+//--                        "-fx-position-shape: false;" +
+//--                        "-fx-scale-shape: false;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
+//--
+//--    public void solidStroke_Medium(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: lightgray;" +
+//--                        "-fx-border-color: red;" +
+//--                        "-fx-border-width: medium;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
+//--
+//--    public void solidStroke_Medium_NotScaled(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: lightgray;" +
+//--                        "-fx-border-color: red;" +
+//--                        "-fx-border-width: medium;" +
+//--                        "-fx-scale-shape: false;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
+//--
+//--    public void solidStroke_Medium_NotScaledAndNotCentered(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: lightgray;" +
+//--                        "-fx-border-color: red;" +
+//--                        "-fx-border-width: medium;" +
+//--                        "-fx-position-shape: false;" +
+//--                        "-fx-scale-shape: false;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
+//--
+//--    public void solidStroke_Thick(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: lightgray;" +
+//--                        "-fx-border-color: red;" +
+//--                        "-fx-border-width: thick;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
+//--
+//--    public void solidStroke_Thick_NotScaled(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: lightgray;" +
+//--                        "-fx-border-color: red;" +
+//--                        "-fx-border-width: thick;" +
+//--                        "-fx-scale-shape: false;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
+//--
+//--    public void solidStroke_Thick_NotScaledAndNotCentered(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: lightgray;" +
+//--                        "-fx-border-color: red;" +
+//--                        "-fx-border-width: thick;" +
+//--                        "-fx-position-shape: false;" +
+//--                        "-fx-scale-shape: false;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
 //
 //    public void solidStroke_1(Region region) {
 //        region.setStyle("-fx-border-style: solid;" +
@@ -814,13 +814,13 @@ public class RegionShapeUITest extends RegionUITestBase {
 //
 //    // TODO need to do more complete testing which includes the full range of available
 //    // properties for a border stroke
-////    public void shape_arrow_stroke(Region region) {
-////        region.setStyle("-fx-border-style: solid;" +
-////                        "-fx-background-color: grey;" +
-////                        "-fx-border-color: rgba(255, 0, 0, .2);" +
-////                        "-fx-border-width: 5;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
+//--    public void shape_arrow_stroke(Region region) {
+//--        region.setStyle("-fx-border-style: solid;" +
+//--                        "-fx-background-color: grey;" +
+//--                        "-fx-border-color: rgba(255, 0, 0, .2);" +
+//--                        "-fx-border-width: 5;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
 //
 //    /**************************************************************************
 //     *                                                                        *
@@ -831,17 +831,17 @@ public class RegionShapeUITest extends RegionUITestBase {
 //     *************************************************************************/
 //
 //    // This is a test case that should have no effect
-////    public void shape_arrow_imageFill_repeatX(Region region) {
-////        region.setStyle("-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
-////                        "-fx-background-repeat: repeat-x;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
+//--    public void shape_arrow_imageFill_repeatX(Region region) {
+//--        region.setStyle("-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
+//--                        "-fx-background-repeat: repeat-x;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
 //
-////    public void shape_arrow_RadiusIgnored(Region region) {
-////        region.setStyle("-fx-background-color: red;" +
-////                        "-fx-background-radius: 300;" +
-////                        "-fx-shape: " + ARROW + ";");
-////    }
+//--    public void shape_arrow_RadiusIgnored(Region region) {
+//--        region.setStyle("-fx-background-color: red;" +
+//--                        "-fx-background-radius: 300;" +
+//--                        "-fx-shape: " + ARROW + ";");
+//--    }
 //
 //    /**************************************************************************
 //     *                                                                        *

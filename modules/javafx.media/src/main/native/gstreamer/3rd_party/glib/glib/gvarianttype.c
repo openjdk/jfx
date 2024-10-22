@@ -32,158 +32,161 @@
 
 
 /**
- * SECTION:gvarianttype
- * @title: GVariantType
- * @short_description: introduction to the GVariant type system
- * @see_also: #GVariantType, #GVariant
+ * GVariantType:
  *
- * This section introduces the GVariant type system. It is based, in
+ * A type in the [type@GLib.Variant] type system.
+ *
+ * This section introduces the [type@GLib.Variant] type system. It is based, in
  * large part, on the D-Bus type system, with two major changes and
  * some minor lifting of restrictions. The
  * [D-Bus specification](http://dbus.freedesktop.org/doc/dbus-specification.html),
  * therefore, provides a significant amount of
- * information that is useful when working with GVariant.
+ * information that is useful when working with [type@GLib.Variant].
  *
  * The first major change with respect to the D-Bus type system is the
- * introduction of maybe (or "nullable") types.  Any type in GVariant can be
- * converted to a maybe type, in which case, "nothing" (or "null") becomes a
- * valid value.  Maybe types have been added by introducing the
- * character "m" to type strings.
+ * introduction of maybe (or ‘nullable’) types.  Any type in [type@GLib.Variant]
+ * can be converted to a maybe type, in which case, `nothing` (or `null`)
+ * becomes a valid value.  Maybe types have been added by introducing the
+ * character `m` to type strings.
  *
- * The second major change is that the GVariant type system supports the
- * concept of "indefinite types" -- types that are less specific than
+ * The second major change is that the [type@GLib.Variant] type system supports
+ * the concept of ‘indefinite types’ — types that are less specific than
  * the normal types found in D-Bus.  For example, it is possible to speak
- * of "an array of any type" in GVariant, where the D-Bus type system
- * would require you to speak of "an array of integers" or "an array of
- * strings".  Indefinite types have been added by introducing the
- * characters "*", "?" and "r" to type strings.
+ * of ‘an array of any type’ in [type@GLib.Variant], where the D-Bus type system
+ * would require you to speak of ‘an array of integers’ or ‘an array of
+ * strings’.  Indefinite types have been added by introducing the
+ * characters `*`, `?` and `r` to type strings.
  *
  * Finally, all arbitrary restrictions relating to the complexity of
  * types are lifted along with the restriction that dictionary entries
  * may only appear nested inside of arrays.
  *
- * Just as in D-Bus, GVariant types are described with strings ("type
- * strings").  Subject to the differences mentioned above, these strings
+ * Just as in D-Bus, [type@GLib.Variant] types are described with strings (‘type
+ * strings’).  Subject to the differences mentioned above, these strings
  * are of the same form as those found in D-Bus.  Note, however: D-Bus
  * always works in terms of messages and therefore individual type
- * strings appear nowhere in its interface.  Instead, "signatures"
+ * strings appear nowhere in its interface.  Instead, ‘signatures’
  * are a concatenation of the strings of the type of each argument in a
- * message.  GVariant deals with single values directly so GVariant type
- * strings always describe the type of exactly one value.  This means
- * that a D-Bus signature string is generally not a valid GVariant type
- * string -- except in the case that it is the signature of a message
- * containing exactly one argument.
+ * message.  [type@GLib.Variant] deals with single values directly so
+ * [type@GLib.Variant] type strings always describe the type of exactly one
+ * value.  This means that a D-Bus signature string is generally not a valid
+ * [type@GLib.Variant] type string — except in the case that it is the signature
+ * of a message containing exactly one argument.
  *
  * An indefinite type is similar in spirit to what may be called an
  * abstract type in other type systems.  No value can exist that has an
  * indefinite type as its type, but values can exist that have types
  * that are subtypes of indefinite types.  That is to say,
- * g_variant_get_type() will never return an indefinite type, but
- * calling g_variant_is_of_type() with an indefinite type may return
- * %TRUE.  For example, you cannot have a value that represents "an
- * array of no particular type", but you can have an "array of integers"
- * which certainly matches the type of "an array of no particular type",
- * since "array of integers" is a subtype of "array of no particular
- * type".
+ * [method@GLib.Variant.get_type] will never return an indefinite type, but
+ * calling [method@GLib.Variant.is_of_type] with an indefinite type may return
+ * true.  For example, you cannot have a value that represents ‘an
+ * array of no particular type’, but you can have an ‘array of integers’
+ * which certainly matches the type of ‘an array of no particular type’,
+ * since ‘array of integers’ is a subtype of ‘array of no particular
+ * type’.
  *
  * This is similar to how instances of abstract classes may not
  * directly exist in other type systems, but instances of their
  * non-abstract subtypes may.  For example, in GTK, no object that has
- * the type of #GtkBin can exist (since #GtkBin is an abstract class),
- * but a #GtkWindow can certainly be instantiated, and you would say
- * that the #GtkWindow is a #GtkBin (since #GtkWindow is a subclass of
- * #GtkBin).
+ * the type of [`GtkWidget`](https://docs.gtk.org/gtk4/class.Widget.html) can
+ * exist (since `GtkWidget` is an abstract class), but a [`GtkWindow`](https://docs.gtk.org/gtk4/class.Window.html)
+ * can certainly be instantiated, and you would say that a `GtkWindow` is a
+ * `GtkWidget` (since `GtkWindow` is a subclass of `GtkWidget`).
+ *
+ * Two types may not be compared by value; use [method@GLib.VariantType.equal]
+ * or [method@GLib.VariantType.is_subtype_of]  May be copied using
+ * [method@GLib.VariantType.copy] and freed using [method@GLib.VariantType.free].
  *
  * ## GVariant Type Strings
  *
- * A GVariant type string can be any of the following:
+ * A [type@GLib.Variant] type string can be any of the following:
  *
  * - any basic type string (listed below)
- *
- * - "v", "r" or "*"
- *
- * - one of the characters 'a' or 'm', followed by another type string
- *
- * - the character '(', followed by a concatenation of zero or more other
- *   type strings, followed by the character ')'
- *
- * - the character '{', followed by a basic type string (see below),
- *   followed by another type string, followed by the character '}'
+ * - `v`, `r` or `*`
+ * - one of the characters `a` or `m`, followed by another type string
+ * - the character `(`, followed by a concatenation of zero or more other
+ *   type strings, followed by the character `)`
+ * - the character `{`, followed by a basic type string (see below),
+ *   followed by another type string, followed by the character `}`
  *
  * A basic type string describes a basic type (as per
- * g_variant_type_is_basic()) and is always a single character in length.
- * The valid basic type strings are "b", "y", "n", "q", "i", "u", "x", "t",
- * "h", "d", "s", "o", "g" and "?".
+ * [method@GLib.VariantType.is_basic]) and is always a single character in
+ * length. The valid basic type strings are `b`, `y`, `n`, `q`, `i`, `u`, `x`,
+ * `t`, `h`, `d`, `s`, `o`, `g` and `?`.
  *
- * The above definition is recursive to arbitrary depth. "aaaaai" and
- * "(ui(nq((y)))s)" are both valid type strings, as is
- * "a(aa(ui)(qna{ya(yd)}))". In order to not hit memory limits, #GVariant
- * imposes a limit on recursion depth of 65 nested containers. This is the
- * limit in the D-Bus specification (64) plus one to allow a #GDBusMessage to
- * be nested in a top-level tuple.
+ * The above definition is recursive to arbitrary depth. `aaaaai` and
+ * `(ui(nq((y)))s)` are both valid type strings, as is
+ * `a(aa(ui)(qna{ya(yd)}))`. In order to not hit memory limits,
+ * [type@GLib.Variant] imposes a limit on recursion depth of 65 nested
+ * containers. This is the limit in the D-Bus specification (64) plus one to
+ * allow a [`GDBusMessage`](../gio/class.DBusMessage.html) to be nested in
+ * a top-level tuple.
  *
  * The meaning of each of the characters is as follows:
- * - `b`: the type string of %G_VARIANT_TYPE_BOOLEAN; a boolean value.
- * - `y`: the type string of %G_VARIANT_TYPE_BYTE; a byte.
- * - `n`: the type string of %G_VARIANT_TYPE_INT16; a signed 16 bit integer.
- * - `q`: the type string of %G_VARIANT_TYPE_UINT16; an unsigned 16 bit integer.
- * - `i`: the type string of %G_VARIANT_TYPE_INT32; a signed 32 bit integer.
- * - `u`: the type string of %G_VARIANT_TYPE_UINT32; an unsigned 32 bit integer.
- * - `x`: the type string of %G_VARIANT_TYPE_INT64; a signed 64 bit integer.
- * - `t`: the type string of %G_VARIANT_TYPE_UINT64; an unsigned 64 bit integer.
- * - `h`: the type string of %G_VARIANT_TYPE_HANDLE; a signed 32 bit value
+ *
+ * - `b`: the type string of `G_VARIANT_TYPE_BOOLEAN`; a boolean value.
+ * - `y`: the type string of `G_VARIANT_TYPE_BYTE`; a byte.
+ * - `n`: the type string of `G_VARIANT_TYPE_INT16`; a signed 16 bit integer.
+ * - `q`: the type string of `G_VARIANT_TYPE_UINT16`; an unsigned 16 bit integer.
+ * - `i`: the type string of `G_VARIANT_TYPE_INT32`; a signed 32 bit integer.
+ * - `u`: the type string of `G_VARIANT_TYPE_UINT32`; an unsigned 32 bit integer.
+ * - `x`: the type string of `G_VARIANT_TYPE_INT64`; a signed 64 bit integer.
+ * - `t`: the type string of `G_VARIANT_TYPE_UINT64`; an unsigned 64 bit integer.
+ * - `h`: the type string of `G_VARIANT_TYPE_HANDLE`; a signed 32 bit value
  *   that, by convention, is used as an index into an array of file
  *   descriptors that are sent alongside a D-Bus message.
- * - `d`: the type string of %G_VARIANT_TYPE_DOUBLE; a double precision
+ * - `d`: the type string of `G_VARIANT_TYPE_DOUBLE`; a double precision
  *   floating point value.
- * - `s`: the type string of %G_VARIANT_TYPE_STRING; a string.
- * - `o`: the type string of %G_VARIANT_TYPE_OBJECT_PATH; a string in the form
+ * - `s`: the type string of `G_VARIANT_TYPE_STRING`; a string.
+ * - `o`: the type string of `G_VARIANT_TYPE_OBJECT_PATH`; a string in the form
  *   of a D-Bus object path.
- * - `g`: the type string of %G_VARIANT_TYPE_SIGNATURE; a string in the form of
+ * - `g`: the type string of `G_VARIANT_TYPE_SIGNATURE`; a string in the form of
  *   a D-Bus type signature.
- * - `?`: the type string of %G_VARIANT_TYPE_BASIC; an indefinite type that
+ * - `?`: the type string of `G_VARIANT_TYPE_BASIC`; an indefinite type that
  *   is a supertype of any of the basic types.
- * - `v`: the type string of %G_VARIANT_TYPE_VARIANT; a container type that
+ * - `v`: the type string of `G_VARIANT_TYPE_VARIANT`; a container type that
  *   contain any other type of value.
  * - `a`: used as a prefix on another type string to mean an array of that
- *   type; the type string "ai", for example, is the type of an array of
+ *   type; the type string `ai`, for example, is the type of an array of
  *   signed 32-bit integers.
- * - `m`: used as a prefix on another type string to mean a "maybe", or
- *   "nullable", version of that type; the type string "ms", for example,
+ * - `m`: used as a prefix on another type string to mean a ‘maybe’, or
+ *   ‘nullable’, version of that type; the type string `ms`, for example,
  *   is the type of a value that maybe contains a string, or maybe contains
  *   nothing.
  * - `()`: used to enclose zero or more other concatenated type strings to
- *   create a tuple type; the type string "(is)", for example, is the type of
+ *   create a tuple type; the type string `(is)`, for example, is the type of
  *   a pair of an integer and a string.
- * - `r`: the type string of %G_VARIANT_TYPE_TUPLE; an indefinite type that is
+ * - `r`: the type string of `G_VARIANT_TYPE_TUPLE`; an indefinite type that is
  *   a supertype of any tuple type, regardless of the number of items.
  * - `{}`: used to enclose a basic type string concatenated with another type
  *   string to create a dictionary entry type, which usually appears inside of
- *   an array to form a dictionary; the type string "a{sd}", for example, is
+ *   an array to form a dictionary; the type string `a{sd}`, for example, is
  *   the type of a dictionary that maps strings to double precision floating
  *   point values.
  *
  *   The first type (the basic type) is the key type and the second type is
  *   the value type. The reason that the first type is restricted to being a
  *   basic type is so that it can easily be hashed.
- * - `*`: the type string of %G_VARIANT_TYPE_ANY; the indefinite type that is
+ * - `*`: the type string of `G_VARIANT_TYPE_ANY`; the indefinite type that is
  *   a supertype of all types.  Note that, as with all type strings, this
  *   character represents exactly one type. It cannot be used inside of tuples
- *   to mean "any number of items".
+ *   to mean ‘any number of items’.
  *
  * Any type string of a container that contains an indefinite type is,
- * itself, an indefinite type. For example, the type string "a*"
- * (corresponding to %G_VARIANT_TYPE_ARRAY) is an indefinite type
- * that is a supertype of every array type. "(*s)" is a supertype
+ * itself, an indefinite type. For example, the type string `a*`
+ * (corresponding to `G_VARIANT_TYPE_ARRAY`) is an indefinite type
+ * that is a supertype of every array type. `(*s)` is a supertype
  * of all tuples that contain exactly two items where the second
  * item is a string.
  *
- * "a{?*}" is an indefinite type that is a supertype of all arrays
+ * `a{?*}` is an indefinite type that is a supertype of all arrays
  * containing dictionary entries where the key is any basic type and
  * the value is any type at all.  This is, by definition, a dictionary,
- * so this type string corresponds to %G_VARIANT_TYPE_DICTIONARY. Note
+ * so this type string corresponds to `G_VARIANT_TYPE_DICTIONARY`. Note
  * that, due to the restriction that the key of a dictionary entry must
- * be a basic type, "{**}" is not a valid type string.
+ * be a basic type, `{**}` is not a valid type string.
+ *
+ * Since: 2.24
  */
 
 

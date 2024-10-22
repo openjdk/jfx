@@ -38,10 +38,10 @@
 #include "RenderLayerModelObject.h"
 #include "RenderStyleConstants.h"
 #include "Styleable.h"
-#include "WebAnimation.h"
 #include <wtf/MonotonicTime.h>
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AcceleratedTimeline);
 
 AcceleratedTimeline::AcceleratedTimeline(Document& document)
 {
@@ -62,11 +62,11 @@ void AcceleratedTimeline::updateEffectStacks()
         auto pseudoId = static_cast<PseudoId>(hashedStyleable.second);
         Styleable target { *element, pseudoId };
 
-        auto* renderer = target.renderer();
-        if (!renderer || !renderer->isComposited() || !is<RenderLayerModelObject>(renderer))
+        auto* renderer = dynamicDowncast<RenderLayerModelObject>(target.renderer());
+        if (!renderer || !renderer->isComposited())
             continue;
 
-        auto* renderLayer = downcast<RenderLayerModelObject>(*renderer).layer();
+        auto* renderLayer = renderer->layer();
         ASSERT(renderLayer && renderLayer->backing());
         renderLayer->backing()->updateAcceleratedEffectsAndBaseValues();
     }
@@ -74,7 +74,7 @@ void AcceleratedTimeline::updateEffectStacks()
 
 void AcceleratedTimeline::updateEffectStackForTarget(const Styleable& target)
 {
-    m_targetsPendingUpdate.add({ &target.element, static_cast<unsigned>(target.pseudoId) });
+    m_targetsPendingUpdate.add({ &target.element, enumToUnderlyingType(target.pseudoId) });
 }
 
 } // namespace WebCore

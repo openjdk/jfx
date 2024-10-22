@@ -47,7 +47,7 @@ public:
     virtual void extractLine() = 0;
     virtual void attachLine() = 0;
 
-    virtual bool isLineBreak() const { return renderer().isLineBreak(); }
+    virtual bool isLineBreak() const { return renderer().isRenderLineBreak(); }
 
     WEBCORE_EXPORT virtual void adjustPosition(float dx, float dy);
     void adjustLogicalPosition(float deltaLogicalLeft, float deltaLogicalTop)
@@ -278,7 +278,7 @@ private:
 
     LegacyInlineFlowBox* m_parent { nullptr }; // The box that contains us.
 
-    WeakPtr<RenderObject> m_renderer;
+    SingleThreadWeakPtr<RenderObject> m_renderer;
 
 private:
     float m_logicalWidth { 0 };
@@ -342,6 +342,7 @@ private:
         ADD_BOOLEAN_BITFIELD(behavesLikeText, BehavesLikeText); // Whether or not this object represents text with a non-zero height. Includes non-image list markers, text boxes, br.
         ADD_BOOLEAN_BITFIELD(forceRightExpansion, ForceRightExpansion);
         ADD_BOOLEAN_BITFIELD(forceLeftExpansion, ForceLeftExpansion);
+        ADD_BOOLEAN_BITFIELD(isInGlyphDisplayListCache, IsInGlyphDisplayListCache);
 
     private:
         mutable unsigned m_determinedIfNextOnLineExists : 1;
@@ -390,6 +391,8 @@ protected:
     bool canHaveRightExpansion() const { return m_bitfields.canHaveRightExpansion(); }
     bool forceRightExpansion() const { return m_bitfields.forceRightExpansion(); }
     bool forceLeftExpansion() const { return m_bitfields.forceLeftExpansion(); }
+    bool isInGlyphDisplayListCache() const { return m_bitfields.isInGlyphDisplayListCache(); }
+    void setIsInGlyphDisplayListCache(bool inCache = true) { m_bitfields.setIsInGlyphDisplayListCache(inCache); }
 
     // For LegacyInlineFlowBox and LegacyInlineTextBox
     bool extracted() const { return m_bitfields.extracted(); }

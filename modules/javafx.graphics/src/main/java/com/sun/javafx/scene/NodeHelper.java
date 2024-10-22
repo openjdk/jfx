@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package com.sun.javafx.scene;
 
 import com.sun.glass.ui.Accessible;
+import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -312,6 +314,31 @@ public abstract class NodeHelper {
         nodeAccessor.requestFocusVisible(node);
     }
 
+    public static StyleableProperty<TransitionDefinition[]> getTransitionProperty(Node node) {
+        return nodeAccessor.getTransitionProperty(node);
+    }
+
+    public static TransitionDefinition findTransitionDefinition(Node node, CssMetaData<? extends Styleable, ?> metadata) {
+        return nodeAccessor.findTransitionDefinition(node, metadata);
+    }
+
+    public static Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findTransitionDefinitions(
+            Node node, CssMetaData<? extends Styleable, ?> metadata) {
+        return nodeAccessor.findTransitionDefinitions(node, metadata);
+    }
+
+    public static void addTransitionTimer(Node node, String propertyName, TransitionTimer timer) {
+        nodeAccessor.addTransitionTimer(node, propertyName, timer);
+    }
+
+    public static void removeTransitionTimer(Node node, String propertyName) {
+        nodeAccessor.removeTransitionTimer(node, propertyName);
+    }
+
+    public static TransitionTimer findTransitionTimer(Node node, String propertyName) {
+        return nodeAccessor.findTransitionTimer(node, propertyName);
+    }
+
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
             throw new IllegalStateException();
@@ -372,6 +399,13 @@ public abstract class NodeHelper {
         Map<StyleableProperty<?>,List<Style>> findStyles(Node node,
                 Map<StyleableProperty<?>,List<Style>> styleMap);
         void requestFocusVisible(Node node);
+        StyleableProperty<TransitionDefinition[]> getTransitionProperty(Node node);
+        TransitionDefinition findTransitionDefinition(Node node, CssMetaData<? extends Styleable, ?> metadata);
+        Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findTransitionDefinitions(
+                Node node, CssMetaData<? extends Styleable, ?> metadata);
+        void addTransitionTimer(Node node, String propertyName, TransitionTimer timer);
+        void removeTransitionTimer(Node node, String propertyName);
+        TransitionTimer findTransitionTimer(Node node, String propertyName);
     }
 
 }

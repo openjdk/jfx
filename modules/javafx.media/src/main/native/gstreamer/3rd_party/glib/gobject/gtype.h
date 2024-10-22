@@ -421,9 +421,11 @@ G_BEGIN_DECLS
  * A numerical value which represents the unique identifier of a registered
  * type.
  */
-#if     GLIB_SIZEOF_SIZE_T != GLIB_SIZEOF_LONG || !defined (G_CXX_STD_VERSION)
+#if     GLIB_SIZEOF_VOID_P > GLIB_SIZEOF_SIZE_T
+typedef guintptr                        GType;
+#elif     GLIB_SIZEOF_SIZE_T != GLIB_SIZEOF_LONG || !defined (G_CXX_STD_VERSION)
 typedef gsize                           GType;
-#else   /* for historic reasons, C++ links against gulong GTypes */
+#else   /* for historic reasons, C++ on non-Morello/CHERI systems links against gulong GTypes */
 typedef gulong                          GType;
 #endif
 typedef struct _GValue                  GValue;
@@ -2009,8 +2011,8 @@ guint     g_type_get_type_registration_serial (void);
  * GType
  * gtk_gadget_get_type (void)
  * {
- *   static gsize static_g_define_type_id = 0;
- *   if (g_once_init_enter (&static_g_define_type_id))
+ *   static GType static_g_define_type_id = 0;
+ *   if (g_once_init_enter_pointer (&static_g_define_type_id))
  *     {
  *       GType g_define_type_id =
  *         g_type_register_static_simple (GTK_TYPE_WIDGET,
@@ -2030,7 +2032,7 @@ guint     g_type_get_type_registration_serial (void);
  *         };
  *         g_type_add_interface_static (g_define_type_id, TYPE_GIZMO, &g_implement_interface_info);
  *       }
- *       g_once_init_leave (&static_g_define_type_id, g_define_type_id);
+ *       g_once_init_leave_pointer (&static_g_define_type_id, g_define_type_id);
  *     }
  *   return static_g_define_type_id;
  * }
@@ -2265,6 +2267,16 @@ static void     type_name##_class_intern_init (gpointer klass) \
 }
 #endif /* GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_38 */
 
+#if GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_80
+#define _g_type_once_init_type GType
+#define _g_type_once_init_enter g_once_init_enter_pointer
+#define _g_type_once_init_leave g_once_init_leave_pointer
+#else  /* if GLIB_VERSION_MAX_ALLOWED < GLIB_VERSION_2_80 */
+#define _g_type_once_init_type gsize
+#define _g_type_once_init_enter g_once_init_enter
+#define _g_type_once_init_leave g_once_init_leave
+#endif  /* GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_80 */
+
 /* Added for _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE */
 #define _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name, TYPE_PARENT) \
 \
@@ -2286,16 +2298,16 @@ type_name##_get_instance_private (TypeName *self) \
 GType \
 type_name##_get_type (void) \
 { \
-  static gsize static_g_define_type_id = 0;
+  static _g_type_once_init_type static_g_define_type_id = 0;
   /* Prelude goes here */
 
 /* Added for _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE */
 #define _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER(TypeName, type_name, TYPE_PARENT, flags) \
-  if (g_once_init_enter (&static_g_define_type_id)) \
+  if (_g_type_once_init_enter (&static_g_define_type_id)) \
     { \
       GType g_define_type_id = type_name##_get_type_once (); \
-      g_once_init_leave (&static_g_define_type_id, g_define_type_id); \
-    }                                   \
+      _g_type_once_init_leave (&static_g_define_type_id, g_define_type_id); \
+    } \
   return static_g_define_type_id; \
 } /* closes type_name##_get_type() */ \
 \
@@ -2334,8 +2346,8 @@ static void     type_name##_default_init        (TypeName##Interface *klass); \
 GType \
 type_name##_get_type (void) \
 { \
-  static gsize static_g_define_type_id = 0; \
-  if (g_once_init_enter (&static_g_define_type_id)) \
+  static _g_type_once_init_type static_g_define_type_id = 0; \
+  if (_g_type_once_init_enter (&static_g_define_type_id)) \
     { \
       GType g_define_type_id = \
         g_type_register_static_simple (G_TYPE_INTERFACE, \
@@ -2460,11 +2472,11 @@ static GType type_name##_get_type_once (void); \
 GType \
 type_name##_get_type (void) \
 { \
-  static gsize static_g_define_type_id = 0; \
-  if (g_once_init_enter (&static_g_define_type_id)) \
+  static _g_type_once_init_type static_g_define_type_id = 0; \
+  if (_g_type_once_init_enter (&static_g_define_type_id)) \
     { \
       GType g_define_type_id = type_name##_get_type_once (); \
-      g_once_init_leave (&static_g_define_type_id, g_define_type_id); \
+      _g_type_once_init_leave (&static_g_define_type_id, g_define_type_id); \
     } \
   return static_g_define_type_id; \
 } \
@@ -2497,11 +2509,11 @@ static GType type_name##_get_type_once (void); \
 GType \
 type_name##_get_type (void) \
 { \
-  static gsize static_g_define_type_id = 0; \
-  if (g_once_init_enter (&static_g_define_type_id)) \
+  static _g_type_once_init_type static_g_define_type_id = 0; \
+  if (_g_type_once_init_enter (&static_g_define_type_id)) \
     { \
       GType g_define_type_id = type_name##_get_type_once (); \
-      g_once_init_leave (&static_g_define_type_id, g_define_type_id); \
+      _g_type_once_init_leave (&static_g_define_type_id, g_define_type_id); \
     } \
   return static_g_define_type_id; \
 } \
@@ -2550,11 +2562,11 @@ static GType type_name##_get_type_once (void); \
 GType \
 type_name##_get_type (void) \
 { \
-  static gsize static_g_define_type_id = 0; \
-  if (g_once_init_enter (&static_g_define_type_id)) \
+  static _g_type_once_init_type static_g_define_type_id = 0; \
+  if (_g_type_once_init_enter (&static_g_define_type_id)) \
     { \
       GType g_define_type_id = type_name##_get_type_once (); \
-      g_once_init_leave (&static_g_define_type_id, g_define_type_id); \
+      _g_type_once_init_leave (&static_g_define_type_id, g_define_type_id); \
     } \
   return static_g_define_type_id; \
 } \
@@ -2697,6 +2709,27 @@ const gchar *    g_type_name_from_class         (GTypeClass     *g_class);
  * A bit in the type number that's supposed to be left untouched.
  */
 #define G_TYPE_FLAG_RESERVED_ID_BIT     ((GType) (1 << 0))
+
+/**
+ * GPOINTER_TO_TYPE:
+ * @p: The pointer to convert to a #GType
+ *
+ * This macro should be used instead of GPOINTER_TO_SIZE() to ensure
+ * portability since #GType is not guaranteed to be the same as #gsize.
+ *
+ * Since: 2.80
+ */
+#define GPOINTER_TO_TYPE(p) ((GType) (guintptr) (p)) GOBJECT_AVAILABLE_MACRO_IN_2_80
+/**
+ * GTYPE_TO_POINTER:
+ * @t: The #GType to convert to a pointer
+ *
+ * This macro should be used instead of GSIZE_TO_POINTER() to ensure
+ * portability since #GType is not guaranteed to be the same as #gsize.
+ *
+ * Since: 2.80
+ */
+#define GTYPE_TO_POINTER(t) ((gpointer) (guintptr) (t)) GOBJECT_AVAILABLE_MACRO_IN_2_80
 
 G_END_DECLS
 

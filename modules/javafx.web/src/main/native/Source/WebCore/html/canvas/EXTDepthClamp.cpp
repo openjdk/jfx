@@ -35,17 +35,12 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(EXTDepthClamp);
 
 EXTDepthClamp::EXTDepthClamp(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTDepthClamp)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_depth_clamp"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_depth_clamp"_s);
 }
 
 EXTDepthClamp::~EXTDepthClamp() = default;
-
-WebGLExtension::ExtensionName EXTDepthClamp::getName() const
-{
-    return EXTDepthClampName;
-}
 
 bool EXTDepthClamp::supported(GraphicsContextGL& context)
 {

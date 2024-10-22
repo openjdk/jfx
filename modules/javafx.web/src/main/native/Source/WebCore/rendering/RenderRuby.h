@@ -59,7 +59,6 @@ public:
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-    bool isRubyInline() const final { return true; }
     ASCIILiteral renderName() const override { return "RenderRuby (inline)"_s; }
     bool createsAnonymousWrapper() const override { return true; }
 };
@@ -76,7 +75,6 @@ public:
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-    bool isRubyBlock() const final { return true; }
     ASCIILiteral renderName() const override { return "RenderRuby (block)"_s; }
     bool createsAnonymousWrapper() const override { return true; }
 };
@@ -87,5 +85,5 @@ inline bool isRuby(const RenderObject* renderer) { return (renderer && isRuby(*r
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyAsInline, isRubyInline())
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyAsBlock, isRubyBlock())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyAsInline, isRenderRubyAsInline())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyAsBlock, isRenderRubyAsBlock())

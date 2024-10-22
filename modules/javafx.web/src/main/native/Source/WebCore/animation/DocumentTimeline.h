@@ -53,6 +53,8 @@ public:
     static Ref<DocumentTimeline> create(Document&);
     static Ref<DocumentTimeline> create(Document&, DocumentTimelineOptions&&);
 
+    virtual ~DocumentTimeline();
+
     Document* document() const { return m_document.get(); }
 
     std::optional<Seconds> currentTime() override;
@@ -87,6 +89,8 @@ public:
 
 private:
     DocumentTimeline(Document&, Seconds);
+
+    bool isDocumentTimeline() const final { return true; }
 
     DocumentTimelinesController* controller() const;
     void applyPendingAcceleratedAnimations();

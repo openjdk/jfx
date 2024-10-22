@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.javafx.scene.shape;
 
-import static org.junit.Assert.*;
 
 import javafx.scene.shape.Box;
 import javafx.scene.shape.Cylinder;
@@ -33,14 +32,15 @@ import javafx.scene.shape.PredefinedMeshManagerShim;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.sun.javafx.scene.NodeHelper;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PredefinedMeshManagerTest {
 
-    @Before
+    @BeforeEach
     public void clearCaches() {
         PredefinedMeshManagerShim.clearCaches();
     }
@@ -61,7 +61,7 @@ public class PredefinedMeshManagerTest {
             size = PredefinedMeshManagerShim.getCylinderCacheSize();
             name = "cylinder";
         }
-        assertEquals("Added a " + name + " - cache should contain " + correctSize + " mesh.", correctSize, size);
+        assertEquals(correctSize, size, "Added a " + name + " - cache should contain " + correctSize + " mesh.");
     }
 
     @Test

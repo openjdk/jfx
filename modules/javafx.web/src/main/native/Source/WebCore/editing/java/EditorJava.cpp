@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ void Editor::pasteWithPasteboard(Pasteboard* pasteboard, OptionSet<PasteOption> 
         return;
 
     bool chosePlainText;
-    auto fragment = pasteboard->documentFragment(*m_document.frame(), *range, options.contains(PasteOption::AllowPlainText), chosePlainText);
+    auto fragment = pasteboard->documentFragment(*m_document->frame(), *range, options.contains(PasteOption::AllowPlainText), chosePlainText);
 
     if (fragment && options.contains(PasteOption::AsQuotation))
         quoteFragmentForPasting(*fragment);
@@ -75,7 +75,7 @@ void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& element, co
 
 void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
-    pasteboard.writeSelection(*selectedRange(), canSmartCopyOrDelete(), *m_document.frame(), DefaultSelectedTextType);
+    pasteboard.writeSelection(*selectedRange(), canSmartCopyOrDelete(), *m_document->frame(), DefaultSelectedTextType);
 }
 
 void Editor::platformCopyFont()

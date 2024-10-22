@@ -37,56 +37,6 @@
 #include "gthread.h"
 #include "deprecated/gthread.h"
 
-
-/**
- * SECTION:async_queues
- * @title: Asynchronous Queues
- * @short_description: asynchronous communication between threads
- * @see_also: #GThreadPool
- *
- * Often you need to communicate between different threads. In general
- * it's safer not to do this by shared memory, but by explicit message
- * passing. These messages only make sense asynchronously for
- * multi-threaded applications though, as a synchronous operation could
- * as well be done in the same thread.
- *
- * Asynchronous queues are an exception from most other GLib data
- * structures, as they can be used simultaneously from multiple threads
- * without explicit locking and they bring their own builtin reference
- * counting. This is because the nature of an asynchronous queue is that
- * it will always be used by at least 2 concurrent threads.
- *
- * For using an asynchronous queue you first have to create one with
- * g_async_queue_new(). #GAsyncQueue structs are reference counted,
- * use g_async_queue_ref() and g_async_queue_unref() to manage your
- * references.
- *
- * A thread which wants to send a message to that queue simply calls
- * g_async_queue_push() to push the message to the queue.
- *
- * A thread which is expecting messages from an asynchronous queue
- * simply calls g_async_queue_pop() for that queue. If no message is
- * available in the queue at that point, the thread is now put to sleep
- * until a message arrives. The message will be removed from the queue
- * and returned. The functions g_async_queue_try_pop() and
- * g_async_queue_timeout_pop() can be used to only check for the presence
- * of messages or to only wait a certain time for messages respectively.
- *
- * For almost every function there exist two variants, one that locks
- * the queue and one that doesn't. That way you can hold the queue lock
- * (acquire it with g_async_queue_lock() and release it with
- * g_async_queue_unlock()) over multiple queue accessing instructions.
- * This can be necessary to ensure the integrity of the queue, but should
- * only be used when really necessary, as it can make your life harder
- * if used unwisely. Normally you should only use the locking function
- * variants (those without the _unlocked suffix).
- *
- * In many cases, it may be more convenient to use #GThreadPool when
- * you need to distribute work to a set of worker threads instead of
- * using #GAsyncQueue manually. #GThreadPool uses a GAsyncQueue
- * internally.
- */
-
 /**
  * GAsyncQueue:
  *
@@ -111,11 +61,11 @@ typedef struct
 } SortData;
 
 /**
- * g_async_queue_new:
+ * g_async_queue_new: (constructor)
  *
  * Creates a new asynchronous queue.
  *
- * Returns: a new #GAsyncQueue. Free with g_async_queue_unref()
+ * Returns: (transfer full): a new #GAsyncQueue. Free with g_async_queue_unref()
  */
 GAsyncQueue *
 g_async_queue_new (void)
@@ -124,14 +74,14 @@ g_async_queue_new (void)
 }
 
 /**
- * g_async_queue_new_full:
+ * g_async_queue_new_full: (constructor)
  * @item_free_func: (nullable): function to free queue elements
  *
  * Creates a new asynchronous queue and sets up a destroy notify
  * function that is used to free any remaining queue items when
  * the queue is destroyed after the final unref.
  *
- * Returns: a new #GAsyncQueue. Free with g_async_queue_unref()
+ * Returns: (transfer full): a new #GAsyncQueue. Free with g_async_queue_unref()
  *
  * Since: 2.16
  */
@@ -158,7 +108,7 @@ g_async_queue_new_full (GDestroyNotify item_free_func)
  * Increases the reference count of the asynchronous @queue by 1.
  * You do not need to hold the lock to call this function.
  *
- * Returns: the @queue that was passed in (since 2.6)
+ * Returns: (transfer full): the @queue that was passed in (since 2.6)
  */
 GAsyncQueue *
 g_async_queue_ref (GAsyncQueue *queue)
@@ -212,7 +162,7 @@ g_async_queue_unref_and_unlock (GAsyncQueue *queue)
 
 /**
  * g_async_queue_unref:
- * @queue: a #GAsyncQueue.
+ * @queue: (transfer full): a #GAsyncQueue.
  *
  * Decreases the reference count of the asynchronous @queue by 1.
  *
@@ -326,7 +276,7 @@ g_async_queue_push_unlocked (GAsyncQueue *queue,
  * g_async_queue_push_sorted:
  * @queue: a #GAsyncQueue
  * @data: (not nullable): the @data to push into the @queue
- * @func: the #GCompareDataFunc is used to sort @queue
+ * @func: (scope call): the #GCompareDataFunc is used to sort @queue
  * @user_data: user data passed to @func.
  *
  * Inserts @data into @queue using @func to determine the new
@@ -367,7 +317,7 @@ g_async_queue_invert_compare (gpointer  v1,
  * g_async_queue_push_sorted_unlocked:
  * @queue: a #GAsyncQueue
  * @data: the data to push into the @queue
- * @func: the #GCompareDataFunc is used to sort @queue
+ * @func: (scope call): the #GCompareDataFunc is used to sort @queue
  * @user_data: user data passed to @func.
  *
  * Inserts @data into @queue using @func to determine the new
@@ -722,7 +672,7 @@ g_async_queue_length_unlocked (GAsyncQueue *queue)
 /**
  * g_async_queue_sort:
  * @queue: a #GAsyncQueue
- * @func: the #GCompareDataFunc is used to sort @queue
+ * @func: (scope call): the #GCompareDataFunc is used to sort @queue
  * @user_data: user data passed to @func
  *
  * Sorts @queue using @func.
@@ -766,7 +716,7 @@ g_async_queue_sort (GAsyncQueue      *queue,
 /**
  * g_async_queue_sort_unlocked:
  * @queue: a #GAsyncQueue
- * @func: the #GCompareDataFunc is used to sort @queue
+ * @func: (scope call): the #GCompareDataFunc is used to sort @queue
  * @user_data: user data passed to @func
  *
  * Sorts @queue using @func.

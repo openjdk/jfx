@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,40 +24,30 @@
  */
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.util.Collection;
-import java.util.List;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 
 /**
  * Tests whether queryAccessibleAttribute() in every Control handles all of the
  * AccessibleAttribute values without throwing an exception.
  */
-@RunWith(Parameterized.class)
 public class QueryAccessibleAttributeTest {
-    private Class<Node> nodeClass;
     private Node node;
 
-    @Parameterized.Parameters
-    public static Collection<Object[]> nodesUnderTest() {
-        List<Class<Control>> cs = ControlSkinFactory.getControlClasses();
-        return ControlSkinFactory.asArrays(cs);
+    private static Collection<Class<Control>> parameters() {
+        return ControlSkinFactory.getControlClasses();
     }
 
-    public QueryAccessibleAttributeTest(Class<Node> nodeClass) {
-        this.nodeClass = nodeClass;
-    }
-
-    @Before
-    public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Class<Node> nodeClass) {
         Thread.currentThread().setUncaughtExceptionHandler((thread, err) -> {
             if (err instanceof RuntimeException) {
                 throw (RuntimeException)err;
@@ -70,7 +60,7 @@ public class QueryAccessibleAttributeTest {
         assertNotNull(node);
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
@@ -83,8 +73,10 @@ public class QueryAccessibleAttributeTest {
         }
     }
 
-    @Test
-    public void queryAllAttributes() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void queryAllAttributes(Class<Node> nodeClass) {
+        setup(nodeClass);
         for (AccessibleAttribute a: AccessibleAttribute.values()) {
             // should throw no exceptions
             Object val = node.queryAccessibleAttribute(a);

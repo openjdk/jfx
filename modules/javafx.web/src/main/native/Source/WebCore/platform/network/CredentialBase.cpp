@@ -36,7 +36,7 @@ namespace WebCore {
 CredentialBase::CredentialBase()
     : m_user(emptyString())
     , m_password(emptyString())
-    , m_persistence(CredentialPersistenceNone)
+    , m_persistence(CredentialPersistence::None)
 {
 }
 
@@ -101,4 +101,13 @@ String CredentialBase::serializationForBasicAuthorizationHeader() const
     return makeString("Basic ", base64Encoded(credentialStringData));
 }
 
+auto CredentialBase::nonPlatformData() const -> NonPlatformData
+{
+    return {
+        user(),
+        password(),
+        persistence()
+    };
 }
+
+} // namespace WebCore
