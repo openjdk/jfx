@@ -463,7 +463,8 @@ public class Util {
      * Returns the tolerance which should be used when comparing values,
      * when {@link Region#isSnapToPixel()} returns true and the scale can
      * be determined from the region's parent {@code Window}.
-     * When scale cannot be determined it is assumed to be 1.0.
+     * This amount equals to half of screen pixel converted to logical coordinates.
+     * When scale cannot be determined it is assumed to be 0.5.
      * Otherwise, returns 0.0.
      *
      * @param r the region in question
@@ -478,11 +479,11 @@ public class Util {
                     // x and y usually have the same scale, so we'll use x
                     double scale = win.getRenderScaleX();
                     // distance between pixels in the local (unscaled) coordinates is (1 / scale)
-                    return 1.0 / scale;
+                    return 0.5 / scale;
                 }
             }
-            // default to 1 when the scale cannot be determited
-            return 1.0;
+            // when the scale cannot be determited
+            return 0.5;
         }
         return 0.0;
     }
