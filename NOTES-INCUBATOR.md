@@ -28,10 +28,11 @@ Some of the incubator dependency changes include comments about where to add bui
 
 ```
         // RFE: incubator dependency
-        // TODO: incubator: Add entry for each incubator module here
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
         // BEGIN: incubator placeholder
         //'incubator.mymod',
         // END: incubator placeholder
 ```
 
-When proposing the incubator dependency PR, the `// RFE: incubator dependency` line will be removed (since it only exists to help identify the needed dependency), but the rest of the comment block (starting with `TODO: incubator: ...`) will be part of the PR.
+When proposing the incubator dependency PR, the `// RFE: incubator dependency` line will be removed (since it only exists to help identify the needed dependency), but the rest of the comment block (e.g., starting with `Add an entry for each incubator ...`) will be part of the PR.
