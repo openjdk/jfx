@@ -28,10 +28,12 @@ package test.com.sun.javafx.css;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleableProperty;
 import javafx.css.TransitionEvent;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.NodeShim;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
@@ -60,10 +62,10 @@ public class TransitionTimerTest {
             this.mediator = mediator;
         }
 
-        void run(TransitionDefinition definition) {
-            mediator.run(definition);
-            timer = mediator.getTimer();
+        void run(TransitionDefinition definition, Node node) {
             now = Toolkit.getToolkit().getPrimaryTimer().nanos();
+            mediator.run(definition, definition.propertyName(), now);
+            timer = NodeHelper.findTransitionTimer(node, definition.propertyName());
         }
 
         void fire(Duration elapsedTime) {
@@ -82,6 +84,11 @@ public class TransitionTimerTest {
         @Override
         public StyleableProperty<?> getStyleableProperty() {
             return (StyleableProperty<?>)node.opacityProperty();
+        }
+
+        @Override
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            return true;
         }
     }
 
@@ -109,7 +116,7 @@ public class TransitionTimerTest {
             }
         });
 
-        timer.run(transition);
+        timer.run(transition, node);
         timer.fire(seconds(0.4));
         assertEquals(1, trace.size());
         assertTrue(trace.get(0) > 0.3 && trace.get(0) < 0.5);
@@ -129,7 +136,7 @@ public class TransitionTimerTest {
             }
         });
 
-        timer.run(transition);
+        timer.run(transition, node);
         timer.fire(seconds(0.9));
         assertFalse(flag[0]);
         timer.fire(seconds(0.2));
@@ -141,26 +148,11 @@ public class TransitionTimerTest {
         var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, LINEAR);
         var timer = new TimerWrapper(new TestTransitionMediator());
 
-        timer.run(transition);
+        timer.run(transition, node);
         timer.fire(seconds(0.2));
         assertEquals(1, NodeShim.getTransitionTimers(node).size());
-        assertTrue(timer.mediator.cancel(false));
-        assertEquals(0, NodeShim.getTransitionTimers(node).size());
-    }
-
-    @Test
-    public void testTimerDoesNotStopItselfWhenSettingValue() {
-        var flag = new boolean[1];
-        var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, LINEAR);
-        var timer = new TimerWrapper(new TestTransitionMediator() {
-            @Override public void onUpdate(double progress) {
-                flag[0] = cancel(false);
-            }
-        });
-
-        timer.run(transition);
-        timer.fire(seconds(0.2));
-        assertFalse(flag[0]);
+        timer.mediator.cancel();
+        assertNull(NodeShim.getTransitionTimers(node));
     }
 
     @Test
@@ -175,7 +167,7 @@ public class TransitionTimerTest {
             }
         });
 
-        timer.run(transition);
+        timer.run(transition, node);
 
         for (int i = 0; i < steps; ++i) {
             double elapsed = 1D / (double)steps;
@@ -197,7 +189,7 @@ public class TransitionTimerTest {
         node.addEventHandler(TransitionEvent.ANY, trace::add);
 
         // Start timer1 and advance 0.25s into the first transition.
-        timer1.run(transition);
+        timer1.run(transition, node);
         timer1.fire(seconds(0.25));
         assertEquals(2, trace.size());
         assertSame(TransitionEvent.RUN, trace.get(0).getEventType());
@@ -205,7 +197,7 @@ public class TransitionTimerTest {
 
         // Now we start timer2. This immediately cancels timer1 and adjusts the duration
         // of timer2 so that it completes in less time than specified.
-        timer2.run(transition);
+        timer2.run(transition, node);
         assertEquals(4, trace.size());
         assertSame(TransitionEvent.CANCEL, trace.get(2).getEventType());
         assertSame(TransitionEvent.RUN, trace.get(3).getEventType());

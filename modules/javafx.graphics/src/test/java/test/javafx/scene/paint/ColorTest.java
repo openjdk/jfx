@@ -31,13 +31,11 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import com.sun.javafx.util.Utils;
 import javafx.scene.paint.Color;
-
+import javafx.scene.paint.Paint;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ColorTest {
 
@@ -130,9 +128,9 @@ public class ColorTest {
 
     @Test
     public void testOfTheWayIndirect() {
-        Interpolatable<Color> start = new Color(0, 0, 0, 0);
+        Interpolatable<Paint> start = new Color(0, 0, 0, 0);
         Color end = new Color(1, 1, 1, 1);
-        Color mid = start.interpolate(end, .5);
+        Color mid = (Color)start.interpolate(end, .5);
         assertEquals(mid.getRed(), .5, 0.0001);
         assertEquals(mid.getGreen(),.5, 0.0001);
         assertEquals(mid.getBlue(), .5, 0.0001);
@@ -1002,6 +1000,39 @@ public class ColorTest {
         assertEquals(color, Color.valueOf(color.toString()));
         color = Color.web("aBc9");
         assertEquals(color, Color.valueOf(color.toString()));
+    }
+
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenTwoDifferentValuesReturnsNewInstance() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertEquals(new Color(0.25, 0.45, 0.65, 0.85), startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenTwoEqualValuesReturnsSameInstance() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.2, 0.4, 0.6, 0.8);
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
     }
 
     //function testOfTheWayHandlesNegatives() {
