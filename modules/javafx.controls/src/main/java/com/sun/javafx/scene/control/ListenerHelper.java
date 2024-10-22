@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,10 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 
 /**
@@ -443,5 +447,61 @@ public class ListenerHelper implements IDisconnectable {
                 handler.handle(ev);
             }
         }
+    }
+
+    /**
+     * Adds a disonnectable machinery to listen to {@code control}'s Scene and Scene.focusOwner properties,
+     * for the purpose of invoking the supplied callback when focused node is in the {@code control}'s hierarchy
+     * or is the control itself.
+     *
+     * @param control the control
+     * @param callback the callback
+     */
+    public void addSceneFocusOwnerListener(Control control, Consumer<Node> callback) {
+        items.add(new ChLi<Scene>() {
+            private ChangeListener<Node> focusListener = (s, p, n) -> {
+                if (isParent(control, n)) {
+                    callback.accept(n);
+                }
+            };
+
+            {
+                control.sceneProperty().addListener(this);
+                Scene scene = control.getScene();
+                if (scene != null) {
+                    scene.focusOwnerProperty().addListener(focusListener);
+                }
+            }
+
+            private static boolean isParent(Node parent, Node n) {
+                while (n != null) {
+                    if (parent == n) {
+                        return true;
+                    }
+                    n = n.getParent();
+                }
+                return false;
+            }
+
+            @Override
+            public void disconnect() {
+                control.sceneProperty().removeListener(this);
+                Scene scene = control.getScene();
+                if (scene != null) {
+                    scene.focusOwnerProperty().removeListener(focusListener);
+                }
+                focusListener = null;
+            }
+
+            @Override
+            public void changed(ObservableValue<? extends Scene> p, Scene old, Scene scene) {
+                if (old != null) {
+                    old.focusOwnerProperty().removeListener(focusListener);
+                }
+                if (scene != null) {
+                    scene.focusOwnerProperty().addListener(focusListener);
+                }
+            }
+        });
     }
 }

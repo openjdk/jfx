@@ -25,15 +25,10 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.ParentHelper;
-import com.sun.javafx.scene.control.Logging;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.VirtualScrollBar;
-import com.sun.javafx.scene.control.skin.Utils;
-import com.sun.javafx.scene.traversal.Algorithm;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalContext;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
@@ -65,14 +60,15 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.traversal.TraversalDirection;
+import javafx.scene.traversal.TraversalPolicy;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import com.sun.javafx.logging.PlatformLogger;
-
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.List;
+import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.VirtualScrollBar;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Implementation of a virtualized container using a cell based mechanism. This
@@ -630,15 +626,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             startSBReleasedAnimation();
         });
 
-        ParentHelper.setTraversalEngine(this, new ParentTraversalEngine(this, new Algorithm() {
-
-            Node selectNextAfterIndex(int index, TraversalContext context) {
+        setTraversalPolicy(new TraversalPolicy() {
+            Node selectNextAfterIndex(int index, Parent root) {
                 T nextCell;
                 while ((nextCell = getVisibleCell(++index)) != null) {
                     if (nextCell.isFocusTraversable()) {
                         return nextCell;
                     }
-                    Node n = context.selectFirstInParent(nextCell);
+                    Node n = TraversalPolicy.getDefault().selectFirst(nextCell);
                     if (n != null) {
                         return n;
                     }
@@ -646,10 +641,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 return null;
             }
 
-            Node selectPreviousBeforeIndex(int index, TraversalContext context) {
+            Node selectPreviousBeforeIndex(int index, Parent root) {
                 T prevCell;
                 while ((prevCell = getVisibleCell(--index)) != null) {
-                    Node prev = context.selectLastInParent(prevCell);
+                    Node prev = TraversalPolicy.getDefault().selectLast(prevCell);
                     if (prev != null) {
                         return prev;
                     }
@@ -661,31 +656,31 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
 
             @Override
-            public Node select(Node owner, Direction dir, TraversalContext context) {
+            public Node select(Parent root, Node owner, TraversalDirection dir) {
                 T cell;
                 if (cells.isEmpty()) return null;
                 if (cells.contains(owner)) {
                     cell = (T) owner;
                 } else {
                     cell = findOwnerCell(owner);
-                    Node next = context.selectInSubtree(cell, owner, dir);
+                    Node next = TraversalPolicy.getDefault().select(cell, owner, dir);
                     if (next != null) {
                         return next;
                     }
-                    if (dir == Direction.NEXT) dir = Direction.NEXT_IN_LINE;
+                    if (dir == TraversalDirection.NEXT) dir = TraversalDirection.NEXT_IN_LINE;
                 }
                 int cellIndex = cell.getIndex();
                 switch(dir) {
                     case PREVIOUS:
-                        return selectPreviousBeforeIndex(cellIndex, context);
+                        return selectPreviousBeforeIndex(cellIndex, root);
                     case NEXT:
-                        Node n = context.selectFirstInParent(cell);
+                        Node n = TraversalPolicy.getDefault().selectFirst(cell);
                         if (n != null) {
                             return n;
                         }
                         // Intentional fall-through
                     case NEXT_IN_LINE:
-                        return selectNextAfterIndex(cellIndex, context);
+                        return selectNextAfterIndex(cellIndex, root);
                 }
                 return null;
             }
@@ -699,29 +694,29 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
 
             @Override
-            public Node selectFirst(TraversalContext context) {
+            public Node selectFirst(Parent root) {
                 T firstCell = cells.getFirst();
                 if (firstCell == null) return null;
                 if (firstCell.isFocusTraversable()) return firstCell;
-                Node n = context.selectFirstInParent(firstCell);
+                Node n = TraversalPolicy.getDefault().selectFirst(firstCell);
                 if (n != null) {
                     return n;
                 }
-                return selectNextAfterIndex(firstCell.getIndex(), context);
+                return selectNextAfterIndex(firstCell.getIndex(), root);
             }
 
             @Override
-            public Node selectLast(TraversalContext context) {
+            public Node selectLast(Parent root) {
                 T lastCell = cells.getLast();
                 if (lastCell == null) return null;
-                Node p = context.selectLastInParent(lastCell);
+                Node p = TraversalPolicy.getDefault().selectLast(lastCell);
                 if (p != null) {
                     return p;
                 }
                 if (lastCell.isFocusTraversable()) return lastCell;
-                return selectPreviousBeforeIndex(lastCell.getIndex(), context);
+                return selectPreviousBeforeIndex(lastCell.getIndex(), root);
             }
-        }));
+        });
     }
 
 
