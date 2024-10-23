@@ -47,6 +47,17 @@ module javafx.base {
 
     exports com.sun.javafx to
         javafx.controls,
+
+        // RFE: incubator dependency
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //jfx.incubator.mymod,
+        // END: incubator placeholder
+
+        // TODO: incubator template -- rename module, then remove this TODO comment
+        jfx.incubator.myfeature,
+
         javafx.graphics,
         javafx.fxml,
         javafx.media,
