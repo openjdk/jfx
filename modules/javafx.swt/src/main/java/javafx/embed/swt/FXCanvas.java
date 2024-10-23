@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -258,8 +256,7 @@ public class FXCanvas extends Canvas {
             }
         } else if (SWT.getPlatform().equals("win32")) {
             try {
-                @SuppressWarnings("removal")
-                String autoScale = AccessController.doPrivileged((PrivilegedAction<String>)() -> System.getProperty("swt.autoScale"));
+                String autoScale = System.getProperty("swt.autoScale");
                 if (autoScale == null || ! "false".equalsIgnoreCase(autoScale)) {
                     Class dpiUtilClass = Class.forName("org.eclipse.swt.internal.DPIUtil");
                     swtDPIUtilMethod = dpiUtilClass.getMethod("getDeviceZoom");
@@ -330,33 +327,27 @@ public class FXCanvas extends Canvas {
         }
         final String eventProcStr = String.valueOf(eventProc);
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            System.setProperty("com.sun.javafx.application.type", "FXCanvas");
-            System.setProperty("javafx.embed.isEventThread", "true");
-            if (swtDPIUtilMethod == null) {
-                System.setProperty("glass.win.uiScale", "100%");
-                System.setProperty("glass.win.renderScale", "100%");
-            } else {
-                Integer scale = 100;
-                try {
-                    scale = (Integer) swtDPIUtilMethod.invoke(null);
-                } catch (Exception e) {
-                    //Fail silently
-                }
-                System.setProperty("glass.win.uiScale", scale + "%");
-                System.setProperty("glass.win.renderScale", scale + "%");
+        System.setProperty("com.sun.javafx.application.type", "FXCanvas");
+        System.setProperty("javafx.embed.isEventThread", "true");
+        if (swtDPIUtilMethod == null) {
+            System.setProperty("glass.win.uiScale", "100%");
+            System.setProperty("glass.win.renderScale", "100%");
+        } else {
+            Integer scale = 100;
+            try {
+                scale = (Integer) swtDPIUtilMethod.invoke(null);
+            } catch (Exception e) {
+                //Fail silently
             }
-            System.setProperty("javafx.embed.eventProc", eventProcStr);
-            return null;
-        });
+            System.setProperty("glass.win.uiScale", scale + "%");
+            System.setProperty("glass.win.renderScale", scale + "%");
+        }
+        System.setProperty("javafx.embed.eventProc", eventProcStr);
 
         final CountDownLatch startupLatch = new CountDownLatch(1);
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            Platform.startup(() -> {
-                startupLatch.countDown();
-            });
-            return null;
-        }, null, FXCANVAS_PERMISSION);
+        Platform.startup(() -> {
+            startupLatch.countDown();
+        });
 
         try {
             startupLatch.await();
