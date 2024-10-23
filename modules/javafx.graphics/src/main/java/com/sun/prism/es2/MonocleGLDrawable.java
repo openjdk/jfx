@@ -67,4 +67,9 @@ class MonocleGLDrawable extends GLDrawable {
         return retval;
 
     }
+
+    @Override
+    public void dispose() {
+        //empty
+    }
 }
