@@ -107,11 +107,12 @@ abstract class GlassStage implements TKStage {
     static AccessControlContext doIntersectionPrivilege(PrivilegedAction<AccessControlContext> action,
                                                        AccessControlContext stack,
                                                        AccessControlContext context) {
-        return AccessController.doPrivileged((PrivilegedAction<AccessControlContext>) () -> {
-            return AccessController.doPrivilegedWithCombiner((PrivilegedAction<AccessControlContext>) () -> {
-                return AccessController.getContext();
-            }, stack);
-        },  context);
+        // As part of the security manager removal, this entire method will be eliminated.
+        // This method used to compute the intersection of two access control contexts using
+        // a custom doPrivilegedWithCombiner method. This was only used in other calls to
+        // doPrivilieged, so there is no harm in skipping the intersection and just
+        // returning the context.
+        return context;
     }
 
     @SuppressWarnings("removal")
@@ -189,7 +190,6 @@ abstract class GlassStage implements TKStage {
     }
 
     // Cmd+Q action
-    @SuppressWarnings("removal")
     static void requestClosingAllWindows() {
         GlassStage fsWindow = activeFSWindow.get();
         if (fsWindow != null) {
@@ -200,10 +200,7 @@ abstract class GlassStage implements TKStage {
             // In case of child windows some of them could already be closed
             // so check if list still contains an object
             if (windows.contains(window) && window.isVisible() && window.stageListener != null) {
-                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                    window.stageListener.closing();
-                    return null;
-                }, window.getAccessControlContext());
+                window.stageListener.closing();
             }
         }
     }
