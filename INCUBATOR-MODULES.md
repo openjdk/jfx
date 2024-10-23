@@ -1,10 +1,16 @@
 # JavaFX Incubator Modules
 
-## Overview
+## Summary
 
-In [JEP 11](https://openjdk.org/jeps/11), the JDK provides incubator modules as a means of putting non-final API in the hands of developers, while the API progresses towards either finalization or removal in a future release.
+JavaFX incubator modules are a means of putting non-final APIs in the hands of developers, while the APIs progress towards either finalization or removal in a future release. This JEP builds on [JEP 11](https://openjdk.org/jeps/11), which defines JDK incubator modules.
 
-Similarly, some JavaFX APIs would benefit from spending a period of time in a JavaFX release prior to being deemed stable. Being in the mainline `jfx` repository, and thus in downstream binaries such as those at jdk.java.net, makes it easier for interested parties outside of the immediate OpenJDK Community to use the new feature. Experience gained and fed back through the usual channels such as blogs, mailing lists, outreach programs, and conferences can then be acted upon before finalizing, or else removing, the feature in a future release.
+## Goals
+
+Extends the benefits of [JEP 11](https://openjdk.org/jeps/11) to the JavaFX API.
+
+## Motivation
+
+Some JavaFX APIs would benefit from spending a period of time in a JavaFX release prior to being deemed stable. Being in the mainline `jfx` repository, and thus in downstream binaries such as those at jdk.java.net, makes it easier for interested parties outside of the immediate OpenJDK Community to use the new feature. Experience gained and fed back through the usual channels such as blogs, mailing lists, outreach programs, and conferences can then be acted upon before finalizing, or else removing, the feature in a future release.
 
 This is especially useful for complex features with a large API surface. Such features are nearly impossible to get right the first time, even after an extensive review. Using an incubator module will allow the API to evolve in future releases without the strict compatibility constraints that core JavaFX modules have.
 
@@ -29,7 +35,7 @@ JavaFX incubator modules have a few differences from JDK incubator modules:
     - An incubating API that spans beyond a 24-month period (4 feature releases), and is not yet ready to be finalized, will need explicit approval from a Project Lead to remain incubating for some additional period at the discretion of a Project Lead. Otherwise, a Project Lead will submit a removal JEP.
     - The submitter of the original JEP can propose to remove it at any time.
 
-## How to add a new incubator module
+### How to add a new incubator module
 
 Use [this patch](https://github.com/openjdk/jfx/pull/1375.diff) as a starting point for your incubator module. Then do the following:
 - Rename `modules/jfx.incubator.myfeature` to the desired name of your module, keeping the `jfx.incubator.` prefix.
