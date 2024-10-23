@@ -837,14 +837,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         } else {
             Bounds bounds = paragraphNode.getBoundsInLocal();
             double paragraphViewY = paragraphNode.getLayoutY() + bounds.getMinY();
-            if (y >= paragraphViewY
-                    && y < paragraphViewY + paragraphNode.getBoundsInLocal().getHeight()) {
-                return getInsertionPoint(paragraphNode,
-                        x - paragraphNode.getLayoutX(),
-                        y - paragraphNode.getLayoutY());
+            if (
+                (y >= paragraphViewY) &&
+                (y < paragraphViewY + paragraphNode.getBoundsInLocal().getHeight())
+            ) {
+                Point2D p = new Point2D(x - paragraphNode.getLayoutX(), y - paragraphNode.getLayoutY());
+                return hitTest(p).getInsertionIndex();
             }
         }
-
         return -1;
     }
 
@@ -965,12 +965,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
     private double getScrollLeftMax() {
         return Math.max(0, contentView.getWidth() - scrollPane.getViewportBounds().getWidth());
-    }
-
-    private int getInsertionPoint(Text paragraphNode, double x, double y) {
-        // TODO paragraphNode is not used (there is only one, needs )
-        HitInfo hitInfo = hitTest(new Point2D(x, y));
-        return hitInfo.getInsertionIndex();
     }
 
     private void scrollCaretToVisible() {
