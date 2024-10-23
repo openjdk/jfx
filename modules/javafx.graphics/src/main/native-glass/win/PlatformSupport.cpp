@@ -87,9 +87,9 @@ jobject PlatformSupport::collectPreferences() const
     jobject prefs = env->NewObject(javaClasses.HashMap, javaIDs.HashMap.init);
     if (CheckAndClearException(env)) return NULL;
 
-    queryHighContrastScheme(prefs);
+    querySystemParameters(prefs);
     querySystemColors(prefs);
-    queryUIColors(prefs);
+    queryUISettings(prefs);
     return prefs;
 }
 
@@ -124,7 +124,22 @@ bool PlatformSupport::updatePreferences(jobject application) const
     return false;
 }
 
-void PlatformSupport::queryHighContrastScheme(jobject properties) const
+bool PlatformSupport::onSettingChanged(jobject application, WPARAM wParam, LPARAM lParam) const
+{
+    switch ((UINT)wParam) {
+        case SPI_SETHIGHCONTRAST:
+        case SPI_SETCLIENTAREAANIMATION:
+            return updatePreferences(application);
+    }
+
+    if (lParam != NULL && wcscmp(LPCWSTR(lParam), L"ImmersiveColorSet") == 0) {
+        return updatePreferences(application);
+    }
+
+    return false;
+}
+
+void PlatformSupport::querySystemParameters(jobject properties) const
 {
     HIGHCONTRAST contrastInfo;
     contrastInfo.cbSize = sizeof(HIGHCONTRAST);
@@ -138,6 +153,10 @@ void PlatformSupport::queryHighContrastScheme(jobject properties) const
         putBoolean(properties, "Windows.SPI.HighContrast", false);
         putString(properties, "Windows.SPI.HighContrastColorScheme", (const char*)NULL);
     }
+
+    BOOL value;
+    ::SystemParametersInfo(SPI_GETCLIENTAREAANIMATION, 0, &value, 0);
+    putBoolean(properties, "Windows.SPI.ClientAreaAnimation", value);
 }
 
 void PlatformSupport::querySystemColors(jobject properties) const
@@ -153,17 +172,25 @@ void PlatformSupport::querySystemColors(jobject properties) const
     putColor(properties, "Windows.SysColor.COLOR_WINDOWTEXT", GetSysColor(COLOR_WINDOWTEXT));
 }
 
-void PlatformSupport::queryUIColors(jobject properties) const
+void PlatformSupport::queryUISettings(jobject properties) const
 {
     if (!isRoActivationSupported()) {
         return;
     }
 
+    ComPtr<IUISettings> settings;
+
     try {
-        ComPtr<IUISettings> settings;
         RO_CHECKED("RoActivateInstance",
                    RoActivateInstance(hstring("Windows.UI.ViewManagement.UISettings"), (IInspectable**)&settings));
+    } catch (RoException const&) {
+        // If an activation exception occurs, it probably means that we're on a Windows system
+        // that doesn't support the UISettings API. This is not a problem, it simply means that
+        // we don't report the UISettings properties back to the JavaFX application.
+        return;
+    }
 
+    try {
         ComPtr<IUISettings3> settings3;
         RO_CHECKED("IUISettings::QueryInterface<IUISettings3>",
                    settings->QueryInterface<IUISettings3>(&settings3));
@@ -192,9 +219,18 @@ void PlatformSupport::queryUIColors(jobject properties) const
         putColor(properties, "Windows.UIColor.AccentLight2", accentLight2);
         putColor(properties, "Windows.UIColor.AccentLight3", accentLight3);
     } catch (RoException const&) {
-        // If an activation exception occurs, it probably means that we're on a Windows system
-        // that doesn't support the UISettings API. This is not a problem, it simply means that
-        // we don't report the UISettings properties back to the JavaFX application.
+        return;
+    }
+
+    try {
+        ComPtr<IUISettings4> settings4;
+        RO_CHECKED("IUISettings::QueryInterface<IUISettings4>",
+                   settings->QueryInterface<IUISettings4>(&settings4));
+
+        unsigned char value;
+        settings4->get_AdvancedEffectsEnabled(&value);
+        putBoolean(properties, "Windows.UISettings.AdvancedEffectsEnabled", value);
+    } catch (RoException const&) {
         return;
     }
 }

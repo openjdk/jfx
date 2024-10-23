@@ -28,6 +28,7 @@ package com.sun.javafx.application;
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.preferences.PlatformPreferences;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
@@ -1022,7 +1023,7 @@ public class PlatformImpl {
      * @param preferences the initial set of platform preferences
      */
     public static void initPreferences(Map<String, Class<?>> platformKeys,
-                                       Map<String, String> platformKeyMappings,
+                                       Map<String, PreferenceMapping<?>> platformKeyMappings,
                                        Map<String, Object> preferences) {
         platformPreferences = new PlatformPreferences(platformKeys, platformKeyMappings);
         platformPreferences.update(preferences);
