@@ -25,8 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.beans.InvalidationListener;
@@ -79,11 +77,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     // is set to true. This is done in order to make ListView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
-    @SuppressWarnings("removal")
-    private static final boolean IS_PANNABLE =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.ListViewSkin.pannable"));
-
-
+    private static final boolean IS_PANNABLE = Boolean.getBoolean("javafx.scene.control.skin.ListViewSkin.pannable");
 
     /* *************************************************************************
      *                                                                         *

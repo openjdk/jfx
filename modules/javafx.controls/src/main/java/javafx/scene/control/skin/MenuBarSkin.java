@@ -27,8 +27,6 @@ package javafx.scene.control.skin;
 
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -81,7 +79,6 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Pair;
 
-import com.sun.javafx.FXPermissions;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
@@ -108,10 +105,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     static {
         final Predicate<Window> findStage = (w) -> w instanceof Stage;
         @SuppressWarnings("removal")
-        ObservableList<Window> windows = AccessController.doPrivileged(
-            (PrivilegedAction<ObservableList<Window>>) () -> Window.getWindows(),
-            null,
-            FXPermissions.ACCESS_WINDOW_LIST_PERMISSION);
+        ObservableList<Window> windows = Window.getWindows();
         stages = windows.filtered(findStage);
     }
 
