@@ -44,7 +44,7 @@ import com.sun.javafx.embed.EmbeddedSceneDTInterface;
 import com.sun.javafx.embed.EmbeddedSceneInterface;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.scene.input.KeyCodeMap;
-import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.TraversalDirectionInternal;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
@@ -196,10 +196,10 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     @Override
-    public boolean traverseOut(Direction dir) {
-        if (dir == Direction.NEXT) {
+    public boolean traverseOut(TraversalDirectionInternal dir) {
+        if (dir == TraversalDirectionInternal.NEXT) {
             return host.traverseFocusOut(true);
-        } else if (dir == Direction.PREVIOUS) {
+        } else if (dir == TraversalDirectionInternal.PREVIOUS) {
             return host.traverseFocusOut(false);
         }
         return false;
