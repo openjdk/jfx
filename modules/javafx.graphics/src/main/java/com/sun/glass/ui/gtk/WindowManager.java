@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,47 +23,54 @@
  * questions.
  */
 
-#ifndef _GLASS_COMMON_
-#define _GLASS_COMMON_
+package com.sun.glass.ui.gtk;
 
-#ifndef _WIN32_WINNT
-    #define _WIN32_WINNT 0x0601
-#endif
-#ifndef _WIN32_IE
-    #define _WIN32_IE 0x0500
-#endif
+import java.util.Locale;
 
-#ifndef _WIN32_WINNT_
-    #define _WIN32_WINNT_ _WIN32_WINNT
-#endif
+/**
+ * The window manager of the current desktop environment.
+ */
+enum WindowManager {
+    UNKNOWN,
+    GNOME,
+    KDE;
 
-#pragma warning(disable : 4675)
+    /**
+     * Returns the window manager of the current desktop environment.
+     */
+    public static WindowManager current() {
+        var result = parse(System.getenv("XDG_CURRENT_DESKTOP"));
+        if (result != UNKNOWN) {
+            return result;
+        }
 
-#include <assert.h>
-#include <comdef.h>
-#include <comutil.h>
-#include <imm.h>
-#include <jni.h>
-#include <malloc.h>
-#include <manipulations.h>
-#include <memory>
-#include <mmsystem.h>
-#include <new>
-#include <ole2.h>
-#include <shlobj.h>
-#include <stdio.h>
-#include <string.h>
-#include <Tpcshrd.h>
-#include <tchar.h>
-#include <vector>
-#include <wchar.h>
-#include <windows.h>
-#include <windowsx.h>
-#include <shellapi.h>
-#include <versionhelpers.h>
+        result = parse(System.getenv("GDMSESSION"));
+        if (result != UNKNOWN) {
+            return result;
+        }
 
-#include "Utils.h"
-#include "OleUtils.h"
-#include "Dwmapi.h"
+        if (System.getenv("KDE_FULL_SESSION") != null) {
+            return KDE;
+        }
 
-#endif /* #ifndef _GLASS_COMMON_ */
+        return UNKNOWN;
+    }
+
+    private static WindowManager parse(String value) {
+        if (value == null) {
+            return UNKNOWN;
+        }
+
+        String v = value.toLowerCase(Locale.ROOT);
+
+        if (v.contains("gnome")) {
+            return GNOME;
+        }
+
+        if (v.contains("kde")) {
+            return KDE;
+        }
+
+        return UNKNOWN;
+    }
+}

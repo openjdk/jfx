@@ -46,6 +46,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.SubScene;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.Shape3D;
@@ -206,6 +207,14 @@ public abstract class NodeHelper {
 
     public static boolean isDirtyEmpty(Node node) {
         return nodeAccessor.isDirtyEmpty(node);
+    }
+
+    public static void setScenes(Node node, Scene newScene, SubScene newSubScene) {
+        nodeAccessor.setScenes(node, newScene, newSubScene);
+    }
+
+    public static void updateBounds(Node node) {
+        nodeAccessor.updateBounds(node);
     }
 
     public static void syncPeer(Node node) {
@@ -372,6 +381,8 @@ public abstract class NodeHelper {
         void doProcessCSS(Node node);
         boolean isDirty(Node node, DirtyBits dirtyBit);
         boolean isDirtyEmpty(Node node);
+        void setScenes(Node node, Scene newScene, SubScene newSubScene);
+        void updateBounds(Node node);
         void syncPeer(Node node);
         <P extends NGNode> P getPeer(Node node);
         void layoutBoundsChanged(Node node);

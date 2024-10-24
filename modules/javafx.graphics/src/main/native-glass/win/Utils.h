@@ -491,6 +491,9 @@ typedef struct _tagJavaIDs {
         jmethodID notifyDelegatePtr;
     } Window;
     struct {
+        jmethodID nonClientHitTest;
+    } WinWindow;
+    struct {
         jmethodID notifyResize;
         jmethodID notifyRepaint;
         jmethodID notifyKey;

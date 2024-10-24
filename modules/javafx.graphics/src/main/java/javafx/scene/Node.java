@@ -499,6 +499,16 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
+            public void setScenes(Node node, Scene newScene, SubScene newSubScene) {
+                node.setScenes(newScene, newSubScene);
+            }
+
+            @Override
+            public void updateBounds(Node node) {
+                node.updateBounds();
+            }
+
+            @Override
             public void syncPeer(Node node) {
                 node.syncPeer();
             }

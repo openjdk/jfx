@@ -1333,4 +1333,9 @@ static jstring convertNSStringToJString(id aString, int length)
     return (GlassAccessible*)jlong_to_ptr(accessible);
 }
 
+- (NSEvent*)lastEvent
+{
+    return lastEvent;
+}
+
 @end

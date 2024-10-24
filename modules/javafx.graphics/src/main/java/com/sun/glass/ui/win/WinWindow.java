@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,15 @@
 package com.sun.glass.ui.win;
 
 import com.sun.glass.ui.Cursor;
+import com.sun.glass.ui.WindowControlsOverlay;
+import com.sun.glass.ui.NonClientHandler;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.glass.ui.WindowOverlayMetrics;
+import com.sun.javafx.binding.StringConstant;
+import javafx.beans.value.ObservableValue;
 
 /**
  * MS Windows platform implementation class for Window.
@@ -40,10 +45,12 @@ class WinWindow extends Window {
 
     public static final long ANCHOR_NO_CAPTURE = (1L << 63);
 
-    float fxReqWidth;
-    float fxReqHeight;
-    int pfReqWidth;
-    int pfReqHeight;
+    private static final String WINDOW_DECORATION_STYLESHEET = "WindowDecoration.css";
+
+    private float fxReqWidth;
+    private float fxReqHeight;
+    private int pfReqWidth;
+    private int pfReqHeight;
 
     private native static void _initIDs();
     static {
@@ -114,6 +121,10 @@ class WinWindow extends Window {
                 ph = iTop + iBot + (int) Math.ceil(fx_ch * platformScaleY);
             }
             fxReqHeight = fx_ch;
+
+            int maxW = getMaximumWidth(), maxH = getMaximumHeight();
+            pw = Math.max(Math.min(pw, maxW > 0 ? maxW : Integer.MAX_VALUE), getMinimumWidth());
+            ph = Math.max(Math.min(ph, maxH > 0 ? maxH : Integer.MAX_VALUE), getMinimumHeight());
 
             long anchor = _getAnchor(getRawHandle());
             int resizeMode = (anchor == ANCHOR_NO_CAPTURE)
@@ -315,10 +326,93 @@ class WinWindow extends Window {
 
     @Override public void close() {
         if (!deferredClosing) {
+            if (windowControlsOverlay != null) {
+                windowControlsOverlay.dispose();
+            }
+
             super.close();
         } else {
             closingRequested = true;
             setVisible(false);
         }
+    }
+
+    private WindowControlsOverlay windowControlsOverlay;
+
+    @Override
+    public ObservableValue<WindowOverlayMetrics> windowOverlayMetrics() {
+        var overlay = getWindowOverlay();
+        return overlay != null ? overlay.metricsProperty() : null;
+    }
+
+    @Override
+    public WindowControlsOverlay getWindowOverlay() {
+        if (windowControlsOverlay == null && isExtendedWindow()) {
+            var url = getClass().getResource(WINDOW_DECORATION_STYLESHEET);
+            if (url == null) {
+                throw new RuntimeException("Resource not found: " + WINDOW_DECORATION_STYLESHEET);
+            }
+
+            windowControlsOverlay = new WindowControlsOverlay(StringConstant.valueOf(url.toExternalForm()));
+        }
+
+        return windowControlsOverlay;
+    }
+
+    @Override
+    public NonClientHandler getNonClientHandler() {
+        var overlay = getWindowOverlay();
+        if (overlay == null) {
+            return null;
+        }
+
+        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
+            double wx = x / platformScaleX;
+            double wy = y / platformScaleY;
+            return overlay.handleMouseEvent(type, button, wx, wy);
+        };
+    }
+
+    /**
+     * Classifies the window region at the specified physical coordinate.
+     * <p>
+     * This method is called from native code.
+     *
+     * @param x the X coordinate in physical pixels
+     * @param y the Y coordinate in physical pixels
+     */
+    @SuppressWarnings("unused")
+    private int nonClientHitTest(int x, int y) {
+        // https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest
+        enum HT {
+            CLIENT(1), CAPTION(2), MINBUTTON(8), MAXBUTTON(9), CLOSE(20);
+            HT(int value) { this.value = value; }
+            final int value;
+        }
+
+        // A full-screen window has no non-client area.
+        if (view == null || view.isInFullscreen() || !isExtendedWindow()) {
+            return HT.CLIENT.value;
+        }
+
+        double wx = x / platformScaleX;
+        double wy = y / platformScaleY;
+
+        // If the cursor is over one of the window buttons (minimize, maximize, close), we need to
+        // report the value of HTMINBUTTON, HTMAXBUTTON, or HTCLOSE back to the native layer.
+        switch (windowControlsOverlay != null ? windowControlsOverlay.buttonAt(wx, wy) : null) {
+            case MINIMIZE: return HT.MINBUTTON.value;
+            case MAXIMIZE: return HT.MAXBUTTON.value;
+            case CLOSE: return HT.CLOSE.value;
+            case null: break;
+        }
+
+        // Otherwise, test if the cursor is over a draggable area and return HTCAPTION.
+        View.EventHandler eventHandler = view.getEventHandler();
+        if (eventHandler != null && eventHandler.handleDragAreaHitTestEvent(wx, wy)) {
+            return HT.CAPTION.value;
+        }
+
+        return HT.CLIENT.value;
     }
 }

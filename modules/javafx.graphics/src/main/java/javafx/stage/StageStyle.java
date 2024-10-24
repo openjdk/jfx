@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,12 @@
  */
 
 package javafx.stage;
+
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HeaderBar;
 
 /**
  * This enum defines the possible styles for a {@code Stage}.
@@ -66,5 +72,40 @@ public enum StageStyle {
      * NOTE: To see the effect, the {@code Scene} covering the {@code Stage} should have {@code Color.TRANSPARENT}
      * @since JavaFX 8.0
      */
-    UNIFIED
+    UNIFIED,
+
+    /**
+     * Defines a {@code Stage} style in which the client area is extended into the header bar area, removing
+     * the separation between the two areas and allowing applications to place scene graph nodes in the header
+     * bar area of the stage.
+     * <p>
+     * An extended window has the default window buttons (minimize, maximize, close), but no system-provided
+     * draggable header bar. Applications need to provide their own header bar by placing the {@link HeaderBar}
+     * control in the scene graph. Usually, this is combined with a {@link BorderPane} root container:
+     * <pre>{@code
+     * public class MyApp extends Application {
+     *     @Override
+     *     public void start(Stage stage) {
+     *         var headerBar = new HeaderBar();
+     *         var root = new BorderPane();
+     *         root.setTop(headerBar);
+     *
+     *         stage.setScene(new Scene(root));
+     *         stage.initStyle(StageStyle.EXTENDED);
+     *         stage.show();
+     *     }
+     * }
+     * }</pre>
+     * <p>
+     * The color scheme of the default window buttons is adjusted to the {@link Scene#fillProperty() fill}
+     * of the {@code Scene} to remain easily recognizable. Applications should set the scene fill to a color
+     * that matches the brightness of the user interface, even if the scene fill is not visible because it
+     * is obscured by other controls.
+     * <p>
+     * This is a conditional feature, to check if it is supported see {@link Platform#isSupported(ConditionalFeature)}.
+     * If the feature is not supported by the platform, this style downgrades to {@link StageStyle#DECORATED}.
+     *
+     * @since 24
+     */
+    EXTENDED
 }

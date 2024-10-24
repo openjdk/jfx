@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,12 +24,19 @@
  */
 package com.sun.glass.ui.mac;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Cursor;
+import com.sun.glass.ui.NonClientHandler;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.glass.ui.WindowOverlayMetrics;
+import com.sun.javafx.binding.ObjectConstant;
+import javafx.beans.value.ObservableValue;
+import javafx.geometry.Dimension2D;
+import javafx.geometry.HorizontalDirection;
 import java.nio.ByteBuffer;
 
 /**
@@ -149,6 +156,47 @@ final class MacWindow extends Window {
     @Override
     protected void _releaseInput(long ptr) {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    private native void _performWindowDrag(long ptr);
+
+    @Override
+    public NonClientHandler getNonClientHandler() {
+        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
+            if (type == MouseEvent.DOWN) {
+                double wx = x / platformScaleX;
+                double wy = y / platformScaleY;
+
+                View.EventHandler eventHandler = view != null ? view.getEventHandler() : null;
+                if (eventHandler != null && eventHandler.handleDragAreaHitTestEvent(wx, wy)) {
+                    if (clickCount == 2) {
+                        maximize(!isMaximized());
+                    } else if (clickCount == 1) {
+                        _performWindowDrag(getRawHandle());
+                    }
+                }
+            }
+
+            return false;
+        };
+    }
+
+    private native boolean _isRightToLeftLayoutDirection();
+
+    private ObservableValue<WindowOverlayMetrics> windowOverlayMetrics;
+
+    @Override
+    public ObservableValue<WindowOverlayMetrics> windowOverlayMetrics() {
+        if (windowOverlayMetrics == null) {
+            HorizontalDirection direction = _isRightToLeftLayoutDirection()
+                ? HorizontalDirection.RIGHT
+                : HorizontalDirection.LEFT;
+
+            windowOverlayMetrics = ObjectConstant.valueOf(
+                new WindowOverlayMetrics(direction, new Dimension2D(78, 38)));
+        }
+
+        return windowOverlayMetrics;
     }
 }
 

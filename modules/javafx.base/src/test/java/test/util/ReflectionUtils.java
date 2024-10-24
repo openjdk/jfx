@@ -26,9 +26,13 @@
 package test.util;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.function.Function;
 
 public final class ReflectionUtils {
+
+    private ReflectionUtils() {}
 
     /**
      * Returns the value of a potentially private field of the specified object.
@@ -60,5 +64,42 @@ public final class ReflectionUtils {
         }
 
         throw new AssertionError("Field not found: " + fieldName);
+    }
+
+    /**
+     * Invokes the specified method on the object, and returns a value.
+     * The method can be declared on any of the object's inherited classes.
+     *
+     * @param object the object on which the method will be invoked
+     * @param methodName the method name
+     * @param args the arguments
+     * @return the return value
+     */
+    public static Object invokeMethod(Object object, String methodName, Class<?>[] parameterTypes, Object... args) {
+        Function<Class<?>, Method> getMethod = cls -> {
+            try {
+                var method = cls.getDeclaredMethod(methodName, parameterTypes);
+                method.setAccessible(true);
+                return method;
+            } catch (NoSuchMethodException e) {
+                return null;
+            }
+        };
+
+        Class<?> cls = object.getClass();
+        while (cls != null) {
+            Method method = getMethod.apply(cls);
+            if (method != null) {
+                try {
+                    return method.invoke(object, args);
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    throw new AssertionError(e);
+                }
+            }
+
+            cls = cls.getSuperclass();
+        }
+
+        throw new AssertionError("Method not found: " + methodName);
     }
 }
