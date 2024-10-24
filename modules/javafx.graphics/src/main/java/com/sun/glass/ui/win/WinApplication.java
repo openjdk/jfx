@@ -27,6 +27,7 @@ package com.sun.glass.ui.win;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.paint.Color;
@@ -374,11 +375,13 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for Windows.
     @Override
-    public Map<String, String> getPlatformKeyMappings() {
+    public Map<String, PreferenceMapping<?>> getPlatformKeyMappings() {
         return Map.of(
-            "Windows.UIColor.Foreground", "foregroundColor",
-            "Windows.UIColor.Background", "backgroundColor",
-            "Windows.UIColor.Accent", "accentColor"
+            "Windows.UIColor.Foreground", new PreferenceMapping<>("foregroundColor", Color.class),
+            "Windows.UIColor.Background", new PreferenceMapping<>("backgroundColor", Color.class),
+            "Windows.UIColor.Accent", new PreferenceMapping<>("accentColor", Color.class),
+            "Windows.UISettings.AdvancedEffectsEnabled", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b),
+            "Windows.SPI.ClientAreaAnimation", new PreferenceMapping<>("reducedMotion", Boolean.class, b -> !b)
         );
     }
 
@@ -388,6 +391,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return Map.ofEntries(
             Map.entry("Windows.SPI.HighContrast", Boolean.class),
             Map.entry("Windows.SPI.HighContrastColorScheme", String.class),
+            Map.entry("Windows.SPI.ClientAreaAnimation", Boolean.class),
             Map.entry("Windows.SysColor.COLOR_3DFACE", Color.class),
             Map.entry("Windows.SysColor.COLOR_BTNTEXT", Color.class),
             Map.entry("Windows.SysColor.COLOR_GRAYTEXT", Color.class),
@@ -404,7 +408,8 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("Windows.UIColor.Accent", Color.class),
             Map.entry("Windows.UIColor.AccentLight1", Color.class),
             Map.entry("Windows.UIColor.AccentLight2", Color.class),
-            Map.entry("Windows.UIColor.AccentLight3", Color.class)
+            Map.entry("Windows.UIColor.AccentLight3", Color.class),
+            Map.entry("Windows.UISettings.AdvancedEffectsEnabled", Boolean.class)
         );
     }
 }

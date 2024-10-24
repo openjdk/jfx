@@ -36,7 +36,7 @@ import test.util.Util;
 public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
 
     @Test
-    @Disabled("JDK-8190329")
+    @Disabled("JDK-8340849")
     public void testPlatformExitBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
         myApp.createAndShowStage();
         CountDownLatch latch = new CountDownLatch(1);

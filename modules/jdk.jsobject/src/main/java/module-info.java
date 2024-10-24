@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,36 +23,12 @@
  * questions.
  */
 
-#pragma once
-
-#include <jni.h>
-
-class PlatformSupport final
-{
-public:
-    static constexpr const char* observedSettings[] = {
-        "notify::gtk-theme-name",
-        "notify::gtk-enable-animations"
-    };
-
-    PlatformSupport(JNIEnv*, jobject);
-    ~PlatformSupport();
-    PlatformSupport(PlatformSupport const&) = delete;
-    PlatformSupport& operator=(PlatformSupport const&) = delete;
-
-    /**
-     * Collect all platform preferences and return them as a new java/util/Map.
-     */
-    jobject collectPreferences() const;
-
-    /**
-     * Collect all platform preferences and notify the JavaFX application when a preference has changed.
-     * The change notification includes all preferences, not only the changed preferences.
-     */
-    void updatePreferences() const;
-
-private:
-    JNIEnv* env;
-    jobject application;
-    mutable jobject preferences;
-};
+/**
+ * Defines the API for the JavaScript Object.
+ *
+ * @moduleGraph
+ * @since 9
+ */
+module jdk.jsobject {
+    exports netscape.javascript;
+}

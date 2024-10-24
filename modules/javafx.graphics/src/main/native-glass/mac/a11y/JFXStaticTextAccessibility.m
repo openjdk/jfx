@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,36 +23,33 @@
  * questions.
  */
 
-#pragma once
+#import "JFXStaticTextAccessibility.h"
+#import "GlassMacros.h"
+#import "GlassAccessible.h"
+#import "com_sun_glass_ui_mac_MacAccessible.h"
+#import "com_sun_glass_ui_mac_MacVariant.h"
+#import "common.h"
 
-#include <jni.h>
-
-class PlatformSupport final
+@implementation JFXStaticTextAccessibility
+- (NSAccessibilityRole)accessibilityRole
 {
-public:
-    static constexpr const char* observedSettings[] = {
-        "notify::gtk-theme-name",
-        "notify::gtk-enable-animations"
-    };
+    return NSAccessibilityStaticTextRole;
+}
 
-    PlatformSupport(JNIEnv*, jobject);
-    ~PlatformSupport();
-    PlatformSupport(PlatformSupport const&) = delete;
-    PlatformSupport& operator=(PlatformSupport const&) = delete;
+- (id)accessibilityParent
+{
+    return [super accessibilityParent];
+}
 
-    /**
-     * Collect all platform preferences and return them as a new java/util/Map.
-     */
-    jobject collectPreferences() const;
+- (NSRect)accessibilityFrame
+{
+    return [super accessibilityFrame];
+}
 
-    /**
-     * Collect all platform preferences and notify the JavaFX application when a preference has changed.
-     * The change notification includes all preferences, not only the changed preferences.
-     */
-    void updatePreferences() const;
+- (NSString *)accessibilityValue
+{
+    return [super accessibilityValue];
+}
 
-private:
-    JNIEnv* env;
-    jobject application;
-    mutable jobject preferences;
-};
+@end
+

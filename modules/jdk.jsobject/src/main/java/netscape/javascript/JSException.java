@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,36 +23,39 @@
  * questions.
  */
 
-#pragma once
+package netscape.javascript;
 
-#include <jni.h>
-
-class PlatformSupport final
-{
-public:
-    static constexpr const char* observedSettings[] = {
-        "notify::gtk-theme-name",
-        "notify::gtk-enable-animations"
-    };
-
-    PlatformSupport(JNIEnv*, jobject);
-    ~PlatformSupport();
-    PlatformSupport(PlatformSupport const&) = delete;
-    PlatformSupport& operator=(PlatformSupport const&) = delete;
+/**
+ * Thrown when an exception is raised in the JavaScript engine. This is merely
+ * a marker class to indicate an exception relating to the JavaScript
+ * interface.
+ * @since 1.5
+ */
+public class JSException extends RuntimeException {
+    private static final long serialVersionUID = 2778103758223661489L;
 
     /**
-     * Collect all platform preferences and return them as a new java/util/Map.
+     * Constructs a new JavaScript exception with null as it's detail message.
      */
-    jobject collectPreferences() const;
+    public JSException() {
+        super();
+    }
 
     /**
-     * Collect all platform preferences and notify the JavaFX application when a preference has changed.
-     * The change notification includes all preferences, not only the changed preferences.
+     * Construct a new JavaScript exception with the specified detail message.
+     *
+     * @param s The detail message
      */
-    void updatePreferences() const;
+    public JSException(String s) {
+        super(s);
+    }
 
-private:
-    JNIEnv* env;
-    jobject application;
-    mutable jobject preferences;
-};
+    /**
+     * Construct a new JavaScript exception with the specified cause.
+     *
+     * @param t Throwable cause
+     */
+    public JSException(Throwable t) {
+        super(t);
+    }
+}
