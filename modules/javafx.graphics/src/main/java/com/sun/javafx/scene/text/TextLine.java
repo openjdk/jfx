@@ -37,11 +37,11 @@ public interface TextLine {
     public GlyphList[] getRuns();
 
     /**
-     * Returns metrics information about the line as follow:
+     * Returns metrics information about the line as follows:
      *
      * bounds().getWidth() - the width of the line.
      * The width for the line is sum of all run's width in the line, it is not
-     * affect by any wrapping width but it will include any changes caused by
+     * affected by any wrapping width but it will include any changes caused by
      * justification.
      *
      * bounds().getHeight() - the height of the line.
@@ -73,7 +73,7 @@ public interface TextLine {
     public int getStart();
 
     /**
-     * Returns the line length in character.
+     * Returns the line length in characters.
      */
     public int getLength();
 }
