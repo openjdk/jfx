@@ -76,12 +76,34 @@ import javafx.stage.StageStyle;
  * </table>
  *
  * <h2>Example</h2>
+ * Usually, {@code HeaderBar} is placed in a root container like {@code BorderPane} to align it
+ * with the top of the scene:
  * <pre>{@code
- *     var button = new Button("My button");
- *     HeaderBar.setAlignment(button, Pos.CENTER_LEFT);
- *     HeaderBar.setMargin(button, new Insets(5));
- *     myHeaderBar.setCenter(button);
+ * public class MyApp extends Application {
+ *     @Override
+ *     public void start(Stage stage) {
+ *         var button = new Button("My button");
+ *         HeaderBar.setAlignment(button, Pos.CENTER_LEFT);
+ *         HeaderBar.setMargin(button, new Insets(5));
+ *
+ *         var headerBar = new HeaderBar();
+ *         headerBar.setCenter(button);
+ *
+ *         var root = new BorderPane();
+ *         root.setTop(headerBar);
+ *
+ *         stage.setScene(new Scene(root));
+ *         stage.initStyle(StageStyle.EXTENDED);
+ *         stage.show();
+ *     }
+ * }
  * }</pre>
+ *
+ * @apiNote An application should only add a single {@code HeaderBar} to the scene graph, and it should
+ *          be located at the top of the scene. While it is technically possible to add multiple header
+ *          bars to the scene graph, or place a header bar in another area of the scene, the resulting
+ *          user experience is not what users typically expect from JavaFX applications and should
+ *          therefore be avoided.
  *
  * @see HeaderBarBase
  * @since 24
