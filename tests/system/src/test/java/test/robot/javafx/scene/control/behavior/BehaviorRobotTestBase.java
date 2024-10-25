@@ -233,7 +233,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
     }
 
     /**
-     * Returns the Runnable argument.  This method simplifies construction of execute() vararg. 
+     * Returns the Runnable argument.  This method simplifies construction of execute() vararg.
      * @param r the runnable to return
      * @return the runnable
      */

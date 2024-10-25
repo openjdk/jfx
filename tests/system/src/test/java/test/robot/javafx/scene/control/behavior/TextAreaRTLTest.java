@@ -98,7 +98,7 @@ public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
         // class for ease of accessing variables passed between individual Runnables in execute()
         new Runnable() {
             volatile double x;
-            
+
             @Override
             public void run() {
                 execute(
@@ -188,7 +188,7 @@ public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
             pp.setManaged(false);
 
             content.getChildren().add(pp);
-            
+
             pp.layout();
             t.applyCss();
             pp.applyCss();
@@ -233,7 +233,7 @@ public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
             double xmax = Double.NaN;
             double ymin = Double.NaN;
             double ymax = Double.NaN;
-            
+
             for (PathElement em: pe) {
                 if (em instanceof MoveTo t) {
                     if (Double.isNaN(xmin)) {
