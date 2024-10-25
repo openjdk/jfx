@@ -1218,6 +1218,48 @@ void GlassWindow::SetIcon(HICON hIcon)
     m_hIcon = hIcon;
 }
 
+void GlassWindow::ShowSystemMenu(int x, int y)
+{
+    WINDOWPLACEMENT placement;
+    if (!::GetWindowPlacement(GetHWND(), &placement)) {
+        return;
+    }
+
+    HMENU systemMenu = GetSystemMenu(GetHWND(), FALSE);
+    bool maximized = placement.showCmd == SW_SHOWMAXIMIZED;
+
+    MENUITEMINFO menuItemInfo { sizeof(MENUITEMINFO) };
+    menuItemInfo.fMask = MIIM_STATE;
+    menuItemInfo.fType = MFT_STRING;
+
+    menuItemInfo.fState = maximized ? MF_ENABLED : MF_DISABLED;
+    SetMenuItemInfo(systemMenu, SC_RESTORE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = maximized ? MF_DISABLED : MF_ENABLED;
+    SetMenuItemInfo(systemMenu, SC_MOVE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = maximized ? MF_DISABLED : MF_ENABLED;
+    SetMenuItemInfo(systemMenu, SC_SIZE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = MF_ENABLED;
+    SetMenuItemInfo(systemMenu, SC_MINIMIZE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = maximized ? MF_DISABLED : MF_ENABLED;
+    SetMenuItemInfo(systemMenu, SC_MAXIMIZE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = MF_ENABLED;
+    SetMenuItemInfo(systemMenu, SC_CLOSE, FALSE, &menuItemInfo);
+    SetMenuDefaultItem(systemMenu, UINT_MAX, FALSE);
+
+    POINT ptAbs = { x, y };
+    ::ClientToScreen(GetHWND(), &ptAbs);
+
+    BOOL menuItem = TrackPopupMenu(systemMenu, TPM_RETURNCMD, ptAbs.x, ptAbs.y, 0, GetHWND(), NULL);
+    if (menuItem != 0) {
+        PostMessage(GetHWND(), WM_SYSCOMMAND, menuItem, 0);
+    }
+}
+
 /*
  * JNI methods section
  *
@@ -2045,6 +2087,29 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setCursor
     LEAVE_MAIN_THREAD_WITH_hWnd;
 
     ARG(jCursor) = jCursor;
+    PERFORM();
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinWindow
+ * Method:    _showSystemMenu
+ * Signature: (JII)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1showSystemMenu
+    (JNIEnv *env, jobject jThis, jlong ptr, jint x, jint y)
+{
+    ENTER_MAIN_THREAD()
+    {
+        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+        if (pWindow) {
+            pWindow->ShowSystemMenu(x, y);
+        }
+    }
+    jint x, y;
+    LEAVE_MAIN_THREAD_WITH_hWnd;
+
+    ARG(x) = x;
+    ARG(y) = y;
     PERFORM();
 }
 

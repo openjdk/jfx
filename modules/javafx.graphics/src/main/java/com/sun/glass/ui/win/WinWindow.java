@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.win;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.WindowControlsOverlay;
 import com.sun.glass.ui.NonClientHandler;
@@ -268,6 +269,7 @@ class WinWindow extends Window {
 
     native private long _getInsets(long ptr);
     native private long _getAnchor(long ptr);
+    native private void _showSystemMenu(long ptr, int x, int y);
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
     @Override native protected boolean _close(long ptr);
     @Override native protected boolean _setView(long ptr, View view);
@@ -369,7 +371,17 @@ class WinWindow extends Window {
         return (type, button, x, y, xAbs, yAbs, clickCount) -> {
             double wx = x / platformScaleX;
             double wy = y / platformScaleY;
-            return overlay.handleMouseEvent(type, button, wx, wy);
+            boolean handled = overlay.handleMouseEvent(type, button, wx, wy);
+
+            // A right click on a non-client header bar area opens the system menu.
+            if (!handled && type == MouseEvent.NC_UP && button == MouseEvent.BUTTON_RIGHT) {
+                View.EventHandler eventHandler = view != null ? view.getEventHandler() : null;
+                if (eventHandler != null && eventHandler.handleDragAreaHitTestEvent(wx, wy)) {
+                    _showSystemMenu(getRawHandle(), x, y);
+                }
+            }
+
+            return handled;
         };
     }
 

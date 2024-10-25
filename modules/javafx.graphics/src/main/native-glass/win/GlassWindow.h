@@ -103,6 +103,7 @@ public:
 
     void SetIcon(HICON hIcon);
     void HandleWindowPosChangedEvent();
+    void ShowSystemMenu(int x, int y);
 
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam);
