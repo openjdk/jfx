@@ -46,10 +46,9 @@ import javafx.util.Subscription;
  * and <em>double-click to maximize</em> behaviors that are usually afforded by system-provided header bars.
  * The entire {@code HeaderBarBase} background is draggable by default, but its content is not. Applications
  * can specify draggable content nodes of the {@code HeaderBarBase} with the {@link #setDraggable} method.
- * <p>
- * Most application developers should use the {@link HeaderBar} implementation instead of
- * creating a custom header bar.
  *
+ * @apiNote Most application developers should use the {@link HeaderBar} implementation instead of
+ *          creating a custom header bar.
  * @see HeaderBar
  * @since 24
  */
@@ -150,7 +149,10 @@ public abstract class HeaderBarBase extends Region {
     /**
      * Describes the size of the left system inset, which is an area reserved for the
      * minimize, maximize, and close window buttons. If there are no window buttons on
-     * the left side of the window, the returned area is empty.
+     * the left side of the window, the returned area is an empty {@code Dimension2D}.
+     * <p>
+     * Note that the left system inset refers to the physical left side of the window,
+     * independent of layout orientation.
      */
     private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset =
         new ReadOnlyObjectWrapper<>(this, "leftInset", new Dimension2D(0, 0)) {
@@ -171,7 +173,10 @@ public abstract class HeaderBarBase extends Region {
     /**
      * Describes the size of the right system inset, which is an area reserved for the
      * minimize, maximize, and close window buttons. If there are no window buttons on
-     * the right side of the window, the returned area is empty.
+     * the right side of the window, the returned area is an empty {@code Dimension2D}.
+     * <p>
+     * Note that the right system inset refers to the physical right side of the window,
+     * independent of layout orientation.
      */
     private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset =
         new ReadOnlyObjectWrapper<>(this, "rightInset", new Dimension2D(0, 0)) {
