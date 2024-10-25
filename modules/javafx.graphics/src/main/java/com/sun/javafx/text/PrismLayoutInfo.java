@@ -25,6 +25,7 @@
 package com.sun.javafx.text;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.text.CaretInfo;
@@ -61,7 +62,7 @@ public final class PrismLayoutInfo extends LayoutInfo {
         for (int i = 0; i < sz; i++) {
             rv.add(TextUtils.toLineInfo(lines[i]));
         }
-        return rv;
+        return Collections.unmodifiableList(rv);
     }
 
     @Override
@@ -94,7 +95,7 @@ public final class PrismLayoutInfo extends LayoutInfo {
                 rv.add(new Rectangle2D(right, top, left - right, bottom - top));
             }
         });
-        return rv;
+        return Collections.unmodifiableList(rv);
     }
 
     private TextLine line(int ix) {

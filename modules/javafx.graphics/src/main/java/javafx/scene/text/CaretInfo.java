@@ -39,14 +39,14 @@ public sealed abstract class CaretInfo permits PrismCaretInfo {
     }
 
     /**
-     * Returns the number of lines representing the caret.
+     * Returns the number of parts representing the caret.
      *
      * @return the number of parts representing the caret
      */
     public abstract int getLineCount();
 
     /**
-     * Returns the geometry of the line at the specified index.
+     * Returns the geometry of the part at the specified index.
      * <p>
      * The geometry is encoded in an array of [x, ymin, ymax] values which
      * represent a line drawn from (x, ymin) to (x, ymax).
@@ -54,5 +54,6 @@ public sealed abstract class CaretInfo permits PrismCaretInfo {
      * @param index the line index
      * @return the array of [x, ymin, ymax] values
      */
+    // TODO or use Rectangle2D instead?
     public abstract double[] getLineAt(int index);
 }

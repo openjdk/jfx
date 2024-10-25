@@ -56,6 +56,8 @@ public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutI
      *
      * @return the layout bounds
      */
+    // TODO maybe add a boolean flag to control whether the last line's lineSpacing is included or not,
+    // see JDK-8317120 and JDK-8317122
     public abstract Rectangle2D getBounds();
 
     /**
@@ -65,9 +67,9 @@ public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutI
     public abstract int getTextLineCount();
 
     /**
-     * Returns the list of text lines in the layout.
+     * Returns the immutable list of text lines in the layout.
      *
-     * @return the list of {@code TextLineInfo} objects
+     * @return the immutable list of {@code TextLineInfo} objects
      */
     public abstract List<TextLineInfo> getTextLines();
 
@@ -81,32 +83,33 @@ public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutI
     public abstract TextLineInfo getTextLine(int index);
 
     /**
-     * Returns the geometry of the text selection, as an array of {@code Rectangle2D} objects,
+     * Returns the geometry of the text selection, as an immutable list of {@code Rectangle2D} objects,
      * for the given start and end offsets.
      *
      * @param start the start offset
      * @param end the end offset
-     * @return the array of {@code Rectangle2D} objects
+     * @return the immutable list of {@code Rectangle2D} objects
      */
+    // TODO this method should include last line spacing JDK-8317120
     public abstract List<Rectangle2D> selectionShape(int start, int end);
 
     /**
-     * Returns the geometry of the strike-through shape, as an array of {@code Rectangle2D} objects,
+     * Returns the geometry of the strike-through shape, as an immutable list of {@code Rectangle2D} objects,
      * for the given start and end offsets.
      *
      * @param start the start offset
      * @param end the end offset
-     * @return the array of {@code Rectangle2D} objects
+     * @return the immutable list of {@code Rectangle2D} objects
      */
     public abstract List<Rectangle2D> strikeThroughShape(int start, int end);
 
     /**
-     * Returns the geometry of the underline shape, as an array of {@code Rectangle2D} objects,
+     * Returns the geometry of the underline shape, as an immutable list of {@code Rectangle2D} objects,
      * for the given start and end offsets.
      *
      * @param start the start offset
      * @param end the end offset
-     * @return the array of {@code Rectangle2D} objects
+     * @return the immutable list of {@code Rectangle2D} objects
      */
     public abstract List<Rectangle2D> underlineShape(int start, int end);
 
