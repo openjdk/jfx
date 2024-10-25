@@ -96,6 +96,8 @@ public abstract class Parent extends Node {
      */
     private boolean removedChildrenOptimizationDisabled = false;
 
+    private TraversalPolicy traversalPolicy;
+
     static {
         // This is used by classes in different packages to get access to
         // private and package private methods.
@@ -854,32 +856,6 @@ public abstract class Parent extends Node {
         }
         return results;
     }
-
-    private TraversalPolicy traversalPolicy;
-//    /**
-//     * The {@link TraversalPolicy} allows for customizing focus traversal within this
-//     * {@code Parent}'s children as well as traversal outside of this {@code Parent}.
-//     *
-//     * @defaultValue null
-//     * @see javafx.scene.traversal.FocusTraversal
-//     * @since 24
-//     */
-//    private ObjectProperty<TraversalPolicy> traversalPolicy;
-//
-//    public final ObjectProperty<TraversalPolicy> traversalPolicyProperty() {
-//        if (this.traversalPolicy == null) {
-//            this.traversalPolicy = new SimpleObjectProperty<>(this, "traversalPolicy", null);
-//        }
-//        return this.traversalPolicy;
-//    }
-//
-//    public final void setTraversalPolicy(TraversalPolicy p) {
-//        traversalPolicyProperty().set(p);
-//    }
-//
-//    public final TraversalPolicy getTraversalPolicy() {
-//        return traversalPolicy == null ? null : traversalPolicy.get();
-//    }
 
     /* *********************************************************************
      *                               Layout                                *
