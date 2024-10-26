@@ -188,6 +188,7 @@ private:
     bool HandleCommand(WORD cmdID);
     void HandleFocusDisabledEvent();
     bool HandleMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam);
+    void HandleNonClientMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam);
     LRESULT HandleNCCalcSizeEvent(UINT msg, WPARAM wParam, LPARAM lParam);
     BOOL HandleNCHitTestEvent(SHORT, SHORT, LRESULT&);
 };

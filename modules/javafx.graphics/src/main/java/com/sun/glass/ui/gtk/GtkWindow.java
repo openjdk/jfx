@@ -264,6 +264,6 @@ class GtkWindow extends Window {
             return false;
         }
 
-        return eventHandler.handleDragAreaHitTestEvent(wx, wy);
+        return eventHandler.pickDragAreaNode(wx, wy) != null;
     }
 }

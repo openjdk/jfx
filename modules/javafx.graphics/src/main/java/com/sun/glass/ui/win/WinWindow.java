@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.WindowControlsOverlay;
 import com.sun.glass.ui.NonClientHandler;
@@ -371,18 +370,20 @@ class WinWindow extends Window {
         return (type, button, x, y, xAbs, yAbs, clickCount) -> {
             double wx = x / platformScaleX;
             double wy = y / platformScaleY;
-            boolean handled = overlay.handleMouseEvent(type, button, wx, wy);
 
-            // A right click on a non-client header bar area opens the system menu.
-            if (!handled && type == MouseEvent.NC_UP && button == MouseEvent.BUTTON_RIGHT) {
-                View.EventHandler eventHandler = view != null ? view.getEventHandler() : null;
-                if (eventHandler != null && eventHandler.handleDragAreaHitTestEvent(wx, wy)) {
-                    _showSystemMenu(getRawHandle(), x, y);
-                }
-            }
-
-            return handled;
+            // Give the window button overlay the first chance to handle the event.
+            return overlay.handleMouseEvent(type, button, wx, wy);
         };
+    }
+
+    /**
+     * Opens a system menu at the specified coordinates.
+     *
+     * @param x the X coordinate in physical pixels
+     * @param y the Y coordinate in physical pixels
+     */
+    public void showSystemMenu(int x, int y) {
+        _showSystemMenu(getRawHandle(), x, y);
     }
 
     /**
@@ -421,7 +422,7 @@ class WinWindow extends Window {
 
         // Otherwise, test if the cursor is over a draggable area and return HTCAPTION.
         View.EventHandler eventHandler = view.getEventHandler();
-        if (eventHandler != null && eventHandler.handleDragAreaHitTestEvent(wx, wy)) {
+        if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
             return HT.CAPTION.value;
         }
 

@@ -548,7 +548,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             CheckUngrab(); // check if other owned windows hierarchy holds the grab
 
             if (m_isExtended) {
-                HandleViewNonClientMouseEvent(GetHWND(), msg, wParam, lParam);
+                HandleNonClientMouseEvents(msg, wParam, lParam);
 
                 // We need to handle clicks on the min/max/close regions, as otherwise Windows will
                 // draw very ugly buttons on top of our window.
@@ -570,7 +570,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_NCMOUSELEAVE:
         case WM_NCMOUSEMOVE:
             if (m_isExtended) {
-                HandleViewNonClientMouseEvent(GetHWND(), msg, wParam, lParam);
+                HandleNonClientMouseEvents(msg, wParam, lParam);
 
                 if (wParam == HTMINBUTTON || wParam == HTMAXBUTTON || wParam == HTCLOSE) {
                     return 0;
@@ -623,6 +623,20 @@ bool GlassWindow::HandleMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
     }
 
     return false;
+}
+
+void GlassWindow::HandleNonClientMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    HandleViewNonClientMouseEvent(GetHWND(), msg, wParam, lParam);
+    LRESULT result;
+
+    // If the right mouse button was released on a HTCAPTION area, we synthesize a WM_CONTEXTMENU event.
+    // This allows JavaFX applications to respond to context menu events in the non-client header bar area.
+    if (msg == WM_NCRBUTTONUP
+            && HandleNCHitTestEvent(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), result)
+            && result == HTCAPTION) {
+        HandleViewMenuEvent(GetHWND(), WM_CONTEXTMENU, (WPARAM)GetHWND(), ::GetMessagePos());
+    }
 }
 
 void GlassWindow::HandleCloseEvent()

@@ -28,6 +28,7 @@ package com.sun.javafx.tk;
 import com.sun.glass.ui.Accessible;
 import javafx.collections.ObservableList;
 import javafx.event.EventType;
+import javafx.scene.Node;
 import javafx.scene.input.*;
 
 /**
@@ -84,7 +85,7 @@ public interface TKSceneListener {
             boolean _altDown, boolean _metaDown,
             boolean _direct, boolean _inertia);
 
-    public void menuEvent(double x, double y, double xAbs, double yAbs,
+    public boolean menuEvent(double x, double y, double xAbs, double yAbs,
             boolean isKeyboardTrigger);
 
     public void zoomEvent(
@@ -122,11 +123,12 @@ public interface TKSceneListener {
     public Accessible getSceneAccessible();
 
     /**
-     * Tests whether the specified coordinate identifies a draggable area.
+     * Returns the draggable area node at the specified coordinates, or {@code null}
+     * if the specified coordinates do not intersect with a draggable area.
      *
      * @param x the X coordinate relative to the scene
      * @param y the Y coordinate relative to the scene
-     * @return {@code true} if the area is draggable, {@code false} otherwise
+     * @return the draggable area node, or {@code null}
      */
-    public boolean dragAreaHitTest(double x, double y);
+    public Node pickDragAreaNode(double x, double y);
 }

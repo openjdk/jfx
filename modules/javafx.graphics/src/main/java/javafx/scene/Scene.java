@@ -1903,7 +1903,7 @@ public class Scene implements EventTarget {
         mouseHandler.process(e, false);
     }
 
-    private void processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
+    private boolean processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
         EventTarget eventTarget = null;
         Scene.inMousePick = true;
         if (isKeyboardTrigger) {
@@ -1937,12 +1937,16 @@ public class Scene implements EventTarget {
             }
         }
 
+        boolean handled = false;
+
         if (eventTarget != null) {
             ContextMenuEvent context = new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
                     x2, y2, xAbs, yAbs, isKeyboardTrigger, res);
-            Event.fireEvent(eventTarget, context);
+            handled = EventUtil.fireEvent(eventTarget, context) == null;
         }
         Scene.inMousePick = false;
+
+        return handled;
     }
 
     private void processGestureEvent(GestureEvent e, TouchGesture gesture) {
@@ -2742,9 +2746,9 @@ public class Scene implements EventTarget {
         }
 
         @Override
-        public void menuEvent(double x, double y, double xAbs, double yAbs,
+        public boolean menuEvent(double x, double y, double xAbs, double yAbs,
                 boolean isKeyboardTrigger) {
-            Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
+            return Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
         }
 
         @Override
@@ -3002,30 +3006,31 @@ public class Scene implements EventTarget {
         private final PickRay pickRay = new PickRay();
 
         @Override
-        public boolean dragAreaHitTest(double x, double y) {
+        public Node pickDragAreaNode(double x, double y) {
             Node root = Scene.this.getRoot();
-            if (root != null) {
-                pickRay.set(x, y, 1, 0, Double.POSITIVE_INFINITY);
-                var pickResultChooser = new PickResultChooser();
-                root.pickNode(pickRay, pickResultChooser);
-                var intersectedNode = pickResultChooser.getIntersectedNode();
-
-                if (intersectedNode instanceof HeaderBarBase) {
-                    return true;
-                }
-
-                while (intersectedNode != null) {
-                    if (HeaderBarBase.isDraggable(intersectedNode) instanceof Boolean value) {
-                        return value;
-                    }
-
-                    intersectedNode = intersectedNode.getParent();
-                }
-
-                return false;
+            if (root == null) {
+                return null;
             }
 
-            return false;
+            pickRay.set(x, y, 1, 0, Double.POSITIVE_INFINITY);
+            var pickResultChooser = new PickResultChooser();
+            root.pickNode(pickRay, pickResultChooser);
+            Node intersectedNode = pickResultChooser.getIntersectedNode();
+            Boolean draggable = intersectedNode instanceof HeaderBarBase ? true : null;
+
+            while (intersectedNode != null) {
+                if (intersectedNode instanceof HeaderBarBase) {
+                    return draggable == Boolean.TRUE ? intersectedNode : null;
+                }
+
+                if (draggable == null && HeaderBarBase.isDraggable(intersectedNode) instanceof Boolean value) {
+                    draggable = value;
+                }
+
+                intersectedNode = intersectedNode.getParent();
+            }
+
+            return null;
         }
 
         @Override

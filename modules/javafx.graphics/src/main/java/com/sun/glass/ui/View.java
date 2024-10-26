@@ -26,7 +26,7 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
-
+import javafx.scene.Node;
 import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
@@ -69,8 +69,9 @@ public abstract class View {
                 int keyCode, char[] keyChars, int modifiers) {
             return false;
         }
-        public void handleMenuEvent(View view, int x, int y, int xAbs,
+        public boolean handleMenuEvent(View view, int x, int y, int xAbs,
                 int yAbs, boolean isKeyboardTrigger) {
+            return false;
         }
         public void handleMouseEvent(View view, long time, int type, int button,
                                      int x, int y, int xAbs, int yAbs,
@@ -365,8 +366,16 @@ public abstract class View {
                                             int yAbs) {
         }
 
-        public boolean handleDragAreaHitTestEvent(double x, double y) {
-            return false;
+        /**
+         * Returns the draggable area node at the specified coordinates, or {@code null}
+         * if the specified coordinates do not intersect with a draggable area.
+         *
+         * @param x the X coordinate
+         * @param y the Y coordinate
+         * @return the draggable area node, or {@code null}
+         */
+        public Node pickDragAreaNode(double x, double y) {
+            return null;
         }
 
         public Accessible getSceneAccessible() {
@@ -576,10 +585,11 @@ public abstract class View {
         }
     }
 
-    private void handleMenuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
+    protected boolean handleMenuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
         if (shouldHandleEvent()) {
-            this.eventHandler.handleMenuEvent(this, x, y, xAbs, yAbs, isKeyboardTrigger);
+            return this.eventHandler.handleMenuEvent(this, x, y, xAbs, yAbs, isKeyboardTrigger);
         }
+        return false;
     }
 
     public void handleBeginTouchEvent(View view, long time, int modifiers,
@@ -950,14 +960,11 @@ public abstract class View {
         // If we have a non-client handler, we give it the first chance to handle the event.
         // Note that a full-screen window has no non-client area, and thus the non-client handler
         // is not notified.
-        if (!inFullscreen
-                && nonClientHandler != null
-                && nonClientHandler.handleMouseEvent(type, button, x, y, xAbs, yAbs, clickCount)) {
-            return;
-        }
+        boolean handled = !inFullscreen && nonClientHandler != null
+            && nonClientHandler.handleMouseEvent(type, button, x, y, xAbs, yAbs, clickCount);
 
         // We never send non-client events to the application.
-        if (MouseEvent.isNonClientEvent(type)) {
+        if (handled || MouseEvent.isNonClientEvent(type)) {
             return;
         }
 
