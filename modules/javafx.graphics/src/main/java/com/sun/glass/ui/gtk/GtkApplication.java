@@ -36,6 +36,7 @@ import com.sun.glass.ui.Size;
 import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.util.Logging;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
@@ -472,10 +473,12 @@ final class GtkApplication extends Application implements
     public native Map<String, Object> getPlatformPreferences();
 
     @Override
-    public Map<String, String> getPlatformKeyMappings() {
+    public Map<String, PreferenceMapping<?>> getPlatformKeyMappings() {
         return Map.of(
-            "GTK.theme_fg_color", "foregroundColor",
-            "GTK.theme_bg_color", "backgroundColor"
+            "GTK.theme_fg_color", new PreferenceMapping<>("foregroundColor", Color.class),
+            "GTK.theme_bg_color", new PreferenceMapping<>("backgroundColor", Color.class),
+            "GTK.theme_selected_bg_color", new PreferenceMapping<>("accentColor", Color.class),
+            "GTK.enable_animations", new PreferenceMapping<>("reducedMotion", Boolean.class, b -> !b)
         );
     }
 
@@ -501,7 +504,8 @@ final class GtkApplication extends Application implements
             Map.entry("GTK.unfocused_borders", Color.class),
             Map.entry("GTK.warning_color", Color.class),
             Map.entry("GTK.error_color", Color.class),
-            Map.entry("GTK.success_color", Color.class)
+            Map.entry("GTK.success_color", Color.class),
+            Map.entry("GTK.enable_animations", Boolean.class)
         );
     }
 }
