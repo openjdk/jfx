@@ -2885,6 +2885,100 @@ project(":controls") {
 //}
 // END: incubator placeholder
 
+// TODO: incubator template -- follow instruction below, then remove this comment
+// To create an incubator module:
+// 1) apply the changes from this patch
+// 2) Look for "TODO: incubator template" comments, and replace "myfeature"
+//    with the name of your feature
+// 3) Refactor / rename the files under "modules/javafx.incubator.myfeature"
+//    to match the name of your feature.
+// 4) Remove this comment block
+project(":incubator.myfeature") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jfx.incubator.myfeature"
+    project.ext.incubating = true
+
+    sourceSets {
+        main
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'incubator.myfeature' ])
+
+    dependencies {
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+    }
+
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
+// TODO: incubator template -- follow instruction below, then remove this comment block
+// The following block is used if and only if you have .css resource files
+// in your incubator module. If you do, uncomment the block and make the
+// appropriate changes for the location of your resource files. Otherwise,
+// delete the block.
+
+//    processResources {
+//      doLast {
+//        def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
+//        cssFiles.include "**/*.css"
+//        cssFiles.each { css ->
+//            logger.info("converting CSS to BSS ${css}");
+//
+//            javaexec {
+//                executable = JAVA
+//                workingDir = project.projectDir
+//                jvmArgs += patchModuleArgs
+//                jvmArgs += "--module-path=$modulePath"
+//                jvmArgs += "--add-modules=javafx.graphics"
+//                mainClass = "com.sun.javafx.css.parser.Css2Bin"
+//                args css
+//            }
+//        }
+//      }
+//    }
+//
+//    def copyShimBssTask = project.task("copyShimBss", type: Copy,
+//                            dependsOn: [project.tasks.getByName("compileJava"),
+//                                        project.tasks.getByName("processResources")]) {
+//        from project.moduleDir
+//        into project.moduleShimsDir
+//        include "**/*.bss"
+//    }
+//    processShimsResources.dependsOn(copyShimBssTask)
+
+    addMavenPublication(project, [ 'graphics' , 'controls'])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
 project(":swing") {
 
     // We need to skip setting compiler.options.release for this module,
@@ -4051,6 +4145,9 @@ project(":systemTests") {
         //'incubator.mymod',
         // END: incubator placeholder
 
+        // TODO: incubator template -- rename module, then remove this TODO comment
+        'incubator.myfeature',
+
         'media',
         'jsobject',
         'web',
@@ -4507,6 +4604,9 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         // BEGIN: incubator placeholder
         //project(":incubator.mymod"),
         // END: incubator placeholder
+
+        // TODO: incubator template -- rename module, then remove this TODO comment
+        project(":incubator.myfeature"),
 
         project(":media"),
         project(":swing"),

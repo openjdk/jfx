@@ -54,6 +54,9 @@ module javafx.base {
         //jfx.incubator.mymod,
         // END: incubator placeholder
 
+        // TODO: incubator template -- rename module, then remove this TODO comment
+        jfx.incubator.myfeature,
+
         javafx.graphics,
         javafx.fxml,
         javafx.media,

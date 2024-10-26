@@ -33,6 +33,9 @@ include "base",
         //"incubator.mymod",
         // END: incubator placeholder
 
+        // TODO: incubator template -- rename module, then remove this TODO comment
+        "incubator.myfeature",
+
         "swing",
         "swt",
         "fxml",
@@ -50,6 +53,9 @@ project(":controls").projectDir = file("modules/javafx.controls")
 // BEGIN: incubator placeholder
 //project(":incubator.mymod").projectDir = file("modules/jfx.incubator.mymod")
 // END: incubator placeholder
+
+// TODO: incubator template -- rename module, then remove this TODO comment
+project(":incubator.myfeature").projectDir = file("modules/jfx.incubator.myfeature")
 
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
