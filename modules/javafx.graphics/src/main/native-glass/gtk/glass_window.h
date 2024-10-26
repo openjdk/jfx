@@ -105,6 +105,7 @@ public:
     virtual void paint(void* data, jint width, jint height) = 0;
     virtual WindowFrameExtents get_frame_extents() = 0;
 
+    virtual void show_system_menu(int x, int y) = 0;
     virtual void enter_fullscreen() = 0;
     virtual void exit_fullscreen() = 0;
     virtual void set_visible(bool) = 0;
@@ -320,6 +321,7 @@ public:
     void update_view_size();
     void notify_view_resize();
 
+    void show_system_menu(int x, int y);
     void enter_fullscreen();
     void exit_fullscreen();
 

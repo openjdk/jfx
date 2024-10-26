@@ -215,4 +215,26 @@ final class GtkView extends View {
         }
         notifyInputMethod(preedit.toString(), null, null, null, 0, lastCaret, 0);
     }
+
+    @Override
+    protected void notifyMenu(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
+        // If all of the following conditions are satisfied, we open a system menu at the specified coordinates:
+        // 1. The application didn't consume the menu event.
+        // 2. The window is an EXTENDED window.
+        // 3. The menu event occurred on a draggable area.
+        if (!handleMenuEvent(x, y, xAbs, yAbs, isKeyboardTrigger)) {
+            var window = (GtkWindow)getWindow();
+            if (!window.isExtendedWindow()) {
+                return;
+            }
+
+            double wx = x / window.getPlatformScaleX();
+            double wy = y / window.getPlatformScaleY();
+
+            EventHandler eventHandler = getEventHandler();
+            if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
+                window.showSystemMenu(x, y);
+            }
+        }
+    }
 }

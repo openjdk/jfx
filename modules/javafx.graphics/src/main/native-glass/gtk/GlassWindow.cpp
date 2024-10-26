@@ -546,6 +546,21 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setCustomCursor
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    _showSystemMenu
+ * Signature: (JII)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1showSystemMenu
+    (JNIEnv * env, jobject obj, jlong ptr, jint x, jint y)
+{
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+    ctx->show_system_menu(x, y);
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
  * Method:    isVisible
  * Signature: (J)Z
  */

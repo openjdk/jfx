@@ -1404,6 +1404,32 @@ void WindowContextTop::notify_window_move() {
     }
 }
 
+void WindowContextTop::show_system_menu(int x, int y) {
+    GdkDisplay* display = gdk_display_get_default();
+    if (!display) {
+        return;
+    }
+
+    GdkSeat* seat = gdk_display_get_default_seat(display);
+    GdkDevice* device = gdk_seat_get_pointer(seat);
+    if (!device) {
+        return;
+    }
+
+    gint rx = 0, ry = 0;
+    gdk_window_get_root_coords(gdk_window, x, y, &rx, &ry);
+
+    GdkEvent* event = (GdkEvent*)gdk_event_new(GDK_BUTTON_PRESS);
+    GdkEventButton* buttonEvent = (GdkEventButton*)event;
+    buttonEvent->x_root = rx;
+    buttonEvent->y_root = ry;
+    buttonEvent->window = g_object_ref(gdk_window);
+    buttonEvent->device = g_object_ref(device);
+
+    gdk_window_show_window_menu(gdk_window, event);
+    gdk_event_free(event);
+}
+
 /*
  * Handles mouse button events of EXTENDED windows and adds the window behaviors for non-client
  * regions that are usually provided by the window manager. Note that a full-screen window has

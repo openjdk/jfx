@@ -124,6 +124,8 @@ class GtkWindow extends Window {
 
     protected native long _getNativeWindowImpl(long ptr);
 
+    private native void _showSystemMenu(long ptr, int x, int y);
+
     private native boolean isVisible(long ptr);
 
     @Override
@@ -245,6 +247,16 @@ class GtkWindow extends Window {
             return overlay.handleMouseEvent(
                 MouseEvent.toNonClientEvent(type), button, x / platformScaleX, y / platformScaleY);
         };
+    }
+
+    /**
+     * Opens a system menu at the specified coordinates.
+     *
+     * @param x the X coordinate in physical pixels
+     * @param y the Y coordinate in physical pixels
+     */
+    public void showSystemMenu(int x, int y) {
+        _showSystemMenu(super.getRawHandle(), x, y);
     }
 
     /**
