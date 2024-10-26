@@ -960,7 +960,12 @@ public abstract class View {
         // If we have a non-client handler, we give it the first chance to handle the event.
         // Note that a full-screen window has no non-client area, and thus the non-client handler
         // is not notified.
-        boolean handled = !inFullscreen && nonClientHandler != null
+        // Some implementations (like GTK) can fire synthesized events when they receive a mouse
+        // button event on the resize border. These events, even though happening on non-client
+        // regions, must not be processed by the non-client handler. For example, if a mouse click
+        // happens on the resize border that straddles the window close button, we don't want the
+        // close button to act on this click, because we just started a resize-drag operation.
+        boolean handled = !isSynthesized && !inFullscreen && nonClientHandler != null
             && nonClientHandler.handleMouseEvent(type, button, x, y, xAbs, yAbs, clickCount);
 
         // We never send non-client events to the application.

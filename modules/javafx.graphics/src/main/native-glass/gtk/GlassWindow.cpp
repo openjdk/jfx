@@ -380,6 +380,23 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setMinimumSize
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    _setSystemMinimumSize
+ * Signature: (JII)Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setSystemMinimumSize
+  (JNIEnv * env, jobject obj, jlong ptr, jint w, jint h)
+{
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+    if (w < 0 || h < 0) return JNI_FALSE;
+    ctx->set_system_minimum_size(w, h);
+    return JNI_TRUE;
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
  * Method:    _setMaximumSize
  * Signature: (JII)Z
  */

@@ -262,7 +262,7 @@ static inline jint gtk_button_number_to_mouse_button(guint button) {
     }
 }
 
-void WindowContextBase::process_mouse_button(GdkEventButton* event) {
+void WindowContextBase::process_mouse_button(GdkEventButton* event, bool synthesized) {
     // We only handle single press/release events here.
     if (event->type != GDK_BUTTON_PRESS && event->type != GDK_BUTTON_RELEASE) {
         return;
@@ -332,7 +332,7 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
                 (jint) event->x_root, (jint) event->y_root,
                 gdk_modifier_mask_to_glass(state),
                 (event->button == 3 && press) ? JNI_TRUE : JNI_FALSE,
-                JNI_FALSE);
+                synthesized);
         CHECK_JNI_EXCEPTION(mainEnv)
 
         if (jview && event->button == 3 && press) {
@@ -1068,10 +1068,11 @@ void WindowContextTop::update_window_constraints() {
     GdkGeometry hints;
 
     if (resizable.value && !is_disabled) {
-        int min_w = (resizable.minw == -1) ? 1
-                      : resizable.minw - geometry.extents.left - geometry.extents.right;
-        int min_h =  (resizable.minh == -1) ? 1
-                      : resizable.minh - geometry.extents.top - geometry.extents.bottom;
+        int w = std::max(resizable.sysminw, resizable.minw);
+        int h = std::max(resizable.sysminh, resizable.minh);
+
+        int min_w = (w == -1) ? 1 : w - geometry.extents.left - geometry.extents.right;
+        int min_h =  (h == -1) ? 1 : h - geometry.extents.top - geometry.extents.bottom;
 
         hints.min_width = (min_w < 1) ? 1 : min_w;
         hints.min_height = (min_h < 1) ? 1 : min_h;
@@ -1247,6 +1248,12 @@ void WindowContextTop::set_enabled(bool enabled) {
     update_window_constraints();
 }
 
+void WindowContextTop::set_system_minimum_size(int w, int h) {
+    resizable.sysminw = w;
+    resizable.sysminh = h;
+    update_window_constraints();
+}
+
 void WindowContextTop::set_minimum_size(int w, int h) {
     resizable.minw = (w <= 0) ? 1 : w;
     resizable.minh = (h <= 0) ? 1 : h;
@@ -1402,7 +1409,7 @@ void WindowContextTop::notify_window_move() {
  * regions that are usually provided by the window manager. Note that a full-screen window has
  * no non-client regions.
  */
-void WindowContextTop::process_mouse_button(GdkEventButton* event) {
+void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesized) {
     // Non-EXTENDED or full-screen windows don't have additional behaviors, so we delegate
     // directly to the base implementation.
     if (is_fullscreen || frame_type != EXTENDED || jwindow == NULL) {
@@ -1433,9 +1440,9 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event) {
             // Send a synthetic PRESS + RELEASE to FX. This allows FX to do things that need to be done
             // prior to resizing the window, like closing a popup menu. We do this because we won't be
             // sending events to FX once the resize operation has started.
-            WindowContextBase::process_mouse_button(event);
+            WindowContextBase::process_mouse_button(event, true);
             event->type = GDK_BUTTON_RELEASE;
-            WindowContextBase::process_mouse_button(event);
+            WindowContextBase::process_mouse_button(event, true);
 
             gint rx = 0, ry = 0;
             gdk_window_get_root_coords(get_gdk_window(), event->x, event->y, &rx, &ry);
@@ -1450,9 +1457,9 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event) {
         // Clicking on a draggable area starts a move-drag operation.
         if (shouldStartMoveDrag) {
             // Send a synthetic PRESS + RELEASE to FX.
-            WindowContextBase::process_mouse_button(event);
+            WindowContextBase::process_mouse_button(event, true);
             event->type = GDK_BUTTON_RELEASE;
-            WindowContextBase::process_mouse_button(event);
+            WindowContextBase::process_mouse_button(event, true);
 
             gint rx = 0, ry = 0;
             gdk_window_get_root_coords(get_gdk_window(), event->x, event->y, &rx, &ry);

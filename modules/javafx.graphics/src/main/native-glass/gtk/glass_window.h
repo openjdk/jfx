@@ -120,6 +120,7 @@ public:
     virtual void set_title(const char*) = 0;
     virtual void set_alpha(double) = 0;
     virtual void set_enabled(bool) = 0;
+    virtual void set_system_minimum_size(int, int) = 0;
     virtual void set_minimum_size(int, int) = 0;
     virtual void set_maximum_size(int, int) = 0;
     virtual void set_minimized(bool) = 0;
@@ -139,7 +140,7 @@ public:
     virtual void process_destroy() = 0;
     virtual void process_delete() = 0;
     virtual void process_expose(GdkEventExpose*) = 0;
-    virtual void process_mouse_button(GdkEventButton*) = 0;
+    virtual void process_mouse_button(GdkEventButton*, bool synthesized = false) = 0;
     virtual void process_mouse_motion(GdkEventMotion*) = 0;
     virtual void process_mouse_scroll(GdkEventScroll*) = 0;
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
@@ -240,7 +241,7 @@ public:
     void process_destroy();
     void process_delete();
     void process_expose(GdkEventExpose*);
-    void process_mouse_button(GdkEventButton*);
+    void process_mouse_button(GdkEventButton*, bool synthesized = false);
     void process_mouse_motion(GdkEventMotion*);
     void process_mouse_scroll(GdkEventScroll*);
     void process_mouse_cross(GdkEventCrossing*);
@@ -270,9 +271,10 @@ class WindowContextTop: public WindowContextBase {
     WindowGeometry geometry;
     struct _Resizable {// we can't use set/get gtk_window_resizable function
         _Resizable(): value(true),
-                minw(-1), minh(-1), maxw(-1), maxh(-1) {}
+                minw(-1), minh(-1), maxw(-1), maxh(-1), sysminw(-1), sysminh(-1) {}
         bool value; //actual value of resizable for a window
         int minw, minh, maxw, maxh; //minimum and maximum window width/height;
+        int sysminw, sysminh; // size of window button area of EXTENDED windows
     } resizable;
 
     bool on_top;
@@ -291,7 +293,7 @@ public:
     void process_configure(GdkEventConfigure*);
     void process_destroy();
     void process_mouse_motion(GdkEventMotion*);
-    void process_mouse_button(GdkEventButton*);
+    void process_mouse_button(GdkEventButton*, bool synthesized = false);
     void work_around_compiz_state();
 
     WindowFrameExtents get_frame_extents();
@@ -305,6 +307,7 @@ public:
     void set_title(const char*);
     void set_alpha(double);
     void set_enabled(bool);
+    void set_system_minimum_size(int, int);
     void set_minimum_size(int, int);
     void set_maximum_size(int, int);
     void set_icon(GdkPixbuf*);

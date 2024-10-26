@@ -96,6 +96,8 @@ class GtkWindow extends Window {
     @Override
     protected native void _setEnabled(long ptr, boolean enabled);
 
+    private native boolean _setSystemMinimumSize(long ptr, int width, int height);
+
     @Override
     protected native boolean _setMinimumSize(long ptr, int width, int height);
 
@@ -217,6 +219,14 @@ class GtkWindow extends Window {
         if (windowControlsOverlay == null && isExtendedWindow()) {
             windowControlsOverlay = new WindowControlsOverlay(
                 PlatformThemeObserver.getInstance().stylesheetProperty());
+
+            // Set the system-defined absolute minimum size to the size of the window buttons area,
+            // regardless of whether the application has specified a smaller minimum size.
+            windowControlsOverlay.metricsProperty().addListener((_, _, metrics) -> {
+                int width = (int)(metrics.size().getWidth() * platformScaleX);
+                int height = (int)(metrics.size().getHeight() * platformScaleY);
+                _setSystemMinimumSize(super.getRawHandle(), width, height);
+            });
         }
 
         return windowControlsOverlay;
