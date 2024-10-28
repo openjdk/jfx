@@ -2485,7 +2485,9 @@ public class Scene implements EventTarget {
 
             Scene.inSynchronizer = true;
 
-            peer.synchronizeOverlay();
+            if (peer != null) {
+                peer.synchronizeOverlay();
+            }
 
             // if dirtyNodes is null then that means this Scene has not yet been
             // synchronized, and so we will simply synchronize every node in the
