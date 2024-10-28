@@ -25,7 +25,6 @@
 package com.sun.glass.ui;
 
 import com.sun.glass.events.WindowEvent;
-import com.sun.javafx.binding.ObjectConstant;
 import com.sun.prism.impl.PrismSettings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -33,7 +32,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Parent;
-import javafx.scene.layout.Region;
 import java.lang.annotation.Native;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -237,7 +235,6 @@ public abstract class Window {
     private int maximumWidth = Integer.MAX_VALUE, maximumHeight = Integer.MAX_VALUE;
 
     private EventHandler eventHandler;
-    private ObservableList<Region> nonClientAreas;
 
     protected final ObjectProperty<WindowOverlayMetrics> windowOverlayMetrics =
             new SimpleObjectProperty<>(this, "windowOverlayMetrics");
