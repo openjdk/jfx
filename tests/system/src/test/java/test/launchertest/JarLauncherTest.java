@@ -49,9 +49,7 @@ public class JarLauncherTest {
         final ArrayList<String> cmd =
                 test.util.Util.createApplicationLaunchCommand(
                         testAppName,
-                        null,
-                        null
-                        );
+                        null);
 
         final ProcessBuilder builder = new ProcessBuilder(cmd);
 
