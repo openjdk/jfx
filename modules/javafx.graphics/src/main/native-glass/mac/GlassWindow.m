@@ -459,6 +459,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow];
 
         if ((jStyleMask & com_sun_glass_ui_Window_EXTENDED) != 0) {
+            [window->nsWindow setTitleVisibility:NSWindowTitleHidden];
             [window->nsWindow setTitlebarAppearsTransparent:YES];
             [window->nsWindow setToolbar:[NSToolbar new]];
             [window->nsWindow setToolbarStyle:NSWindowToolbarStyleUnifiedCompact];
