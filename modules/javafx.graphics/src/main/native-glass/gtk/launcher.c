@@ -199,6 +199,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1queryLibrary
     //Set the gtk backend to x11 on all the systems
     putenv("GDK_BACKEND=x11");
 
+    // Set ibus to sync mode
+    putenv("IBUS_ENABLE_SYNC_MODE=1");
+
     // Before doing anything with GTK we validate that the DISPLAY can be opened
     Display *display = XOpenDisplay(NULL);
     if (display == NULL) {
