@@ -28,7 +28,7 @@ package javafx.scene;
  * Specifies the direction of focus traversal.
  *
  * @since 24
- * @see Node#requestFocusTraversal(TraversalDirection)
+ * @see Node#requestFocusTraversal(TraversalDirection, boolean)
  */
 public enum TraversalDirection {
     /** Indicates a focus change to the node below the currently focused node. */
