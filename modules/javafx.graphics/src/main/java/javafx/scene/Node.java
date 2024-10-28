@@ -10439,37 +10439,24 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Requests focus traversal from this {@code Node} in the specified direction.
-     * A successful traversal results in the newly focused {@code Node} visibly indicating its focused state.
+     * Tries to move the focus from this {@code Node} in the specified direction.
+     * A successful traversal results in a new {@code Node} being focused.
+     * A focused node is the target of key events and has a visual indicator.
      *
      * @param direction the direction of focus traversal
-     * @return true if traversal was successful
+     * @return {@code true} if traversal was successful
      * @since 24
      */
     public final boolean requestFocusTraversal(TraversalDirection direction) {
-        TraversalDirectionInternal d;
-        switch (direction) {
-        case DOWN:
-            d = TraversalDirectionInternal.DOWN;
-            break;
-        case LEFT:
-            d = TraversalDirectionInternal.LEFT;
-            break;
-        case NEXT:
-            d = TraversalDirectionInternal.NEXT;
-            break;
-        case PREVIOUS:
-            d = TraversalDirectionInternal.PREVIOUS;
-            break;
-        case RIGHT:
-            d = TraversalDirectionInternal.RIGHT;
-            break;
-        case UP:
-            d = TraversalDirectionInternal.UP;
-            break;
-        default:
-            return false;
-        }
-        return TraversalUtils.traverse(this, d, true);
+        TraversalDirectionInternal d = switch(direction) {
+        case DOWN -> TraversalDirectionInternal.DOWN;
+        case LEFT -> TraversalDirectionInternal.LEFT;
+        case NEXT -> TraversalDirectionInternal.NEXT;
+        case PREVIOUS -> TraversalDirectionInternal.PREVIOUS;
+        case RIGHT -> TraversalDirectionInternal.RIGHT;
+        case UP -> TraversalDirectionInternal.UP;
+        default -> null;
+        };
+        return d == null ? false : TraversalUtils.traverse(this, d, true);
     }
 }

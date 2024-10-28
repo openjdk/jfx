@@ -28,18 +28,19 @@ package javafx.scene;
  * Specifies the direction of focus traversal.
  *
  * @since 24
+ * @see {@link Node#requestFocusTraversal(TraversalDirection)}
  */
 public enum TraversalDirection {
-    /** Moves focus downward. */
+    /** Indicates a focus change to the node below the currently focused node. */
     DOWN,
-    /** Moves focus left. */
+    /** Indicates a focus change to the node to the left of the currently focused node. */
     LEFT,
-    /** Moves focus to the next focusable Node, possibly traversing into the children of the current parent. */
+    /** Indicates a focus change to the next focusable Node, possibly traversing into the children of the current parent. */
     NEXT,
-    /** Moves focus to the previous focusable Node. */
+    /** Indicates a focus change to the previous focusable node. */
     PREVIOUS,
-    /** Moves focus right. */
+    /** Indicates a focus change to the node to the right of the currently focused node. */
     RIGHT,
-    /** Moves focus upward. */
+    /** Indicates a focus change to the node above the currently focused node. */
     UP;
 }
