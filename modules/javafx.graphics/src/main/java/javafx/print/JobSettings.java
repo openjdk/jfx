@@ -492,8 +492,6 @@ public final class JobSettings {
      * a user writable file, when printing the results are platform-dependent.
      * Possible behaviours might include replacement with a default output file location,
      * printing to the printer instead, or a platform printing error.
-     * If a {@code SecurityManager} is installed and it denies access to the
-     * specified file a {@code SecurityException} may be thrown.
      *
      * @defaultValue an empty string
      *
