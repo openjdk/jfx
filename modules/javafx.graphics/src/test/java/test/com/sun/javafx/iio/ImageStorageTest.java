@@ -59,8 +59,40 @@ public class ImageStorageTest {
         assertNotNull(new ImageStorage().loadAll(path, null, 0, 0, true, 2.0f, true));
     }
 
+    @Test
+    public void testImageNameFallbackTo1X() throws ImageStorageException {
+        // with "checkers.png" not available we should successfully load "checkers@1x.png" as a fallback
+        String path = getResourcePath("checkers@1x.png");
+        path = path.replace("checkers@1x.png", "checkers.png");
+        assertNotNull(new ImageStorage().loadAll(path, null, 0, 0, true, 1.0f, true));
+    }
+
+    @Test
+    public void testImageLoadNoFallbackWith1xPresent() throws ImageStorageException {
+        // lightblue.png is 40x40, but lightblue@1x.png is 50x50
+        // we want to make sure we load the 40x40 version unless explicitly stated
+        String path = getResourcePath("lightblue.png");
+        ImageStorage img = new ImageStorage();
+        ImageFrame[] frames = img.loadAll(path, null, 0, 0, true, 1.0f, true);
+        assertNotNull(frames);
+        assertEquals(1, frames.length);
+
+        assertEquals(40, frames[0].getWidth());
+        assertEquals(40, frames[0].getHeight());
+
+        // confidence check - load lightblue@1x.png and make sure it's different
+        String path1x = getResourcePath("lightblue@1x.png");
+        ImageStorage img1x = new ImageStorage();
+        ImageFrame[] frames1x = img1x.loadAll(path1x, null, 0, 0, true, 1.0f, true);
+        assertNotNull(frames1x);
+        assertEquals(1, frames1x.length);
+
+        assertEquals(50, frames1x[0].getWidth());
+        assertEquals(50, frames1x[0].getHeight());
+    }
+
     @ParameterizedTest
-    @ValueSource(ints = {2, 3, 4})
+    @ValueSource(ints = {1, 2, 3, 4})
     public void testImageNames(int scale) {
         String [][]imageNames = new String[][] {
             { "image", "image@" + scale + "x" },
@@ -74,6 +106,7 @@ public class ImageStorageTest {
             { "http://test.com/image.ext", "http://test.com/image@" + scale + "x.ext" },
             { "http://test.com/dir.ext/image.ext", "http://test.com/dir.ext/image@" + scale + "x.ext" },
         };
+
         for (String[] names : imageNames) {
             String nameScaled = ImageTools.getScaledImageName(names[0], scale);
             if (nameScaled.equals(names[1])) continue;
