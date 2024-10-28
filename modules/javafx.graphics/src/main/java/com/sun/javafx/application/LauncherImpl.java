@@ -57,6 +57,16 @@ import com.sun.javafx.stage.StageHelper;
 
 
 public class LauncherImpl {
+
+    static {
+        @SuppressWarnings("removal")
+        var sm = System.getSecurityManager();
+        if (sm != null) {
+            throw new UnsupportedOperationException("JavaFX does not support running with the Security Manager");
+        }
+
+    }
+
     /**
      * When passed as launchMode to launchApplication, tells the method that
      * launchName is the name of the JavaFX application class to launch.
