@@ -336,11 +336,9 @@ ext.BUILD_CLOSED = buildClosed
 
 ext.RUNARGSFILE = "run.args"
 ext.COMPILEARGSFILE = "compile.args"
-ext.RUNJAVAPOLICYFILE = 'run.java.policy'
 
 ext.TESTCOMPILEARGSFILE = "testcompile.args"
 ext.TESTRUNARGSFILE = "testrun.args"
-ext.TESTJAVAPOLICYFILE = 'test.java.policy'
 
 // the file containing "extra" --add-exports
 ext.EXTRAADDEXPORTS = 'buildSrc/addExports'
@@ -3791,7 +3789,6 @@ project(":web") {
         dependsOn testWebArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
-        systemProperty 'java.security.manager', 'allow'
     }
 
     task compileJavaDOMBinding()
@@ -4033,7 +4030,6 @@ project(":systemTests") {
     def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web', 'swing', 'fxml' ]
     commonModuleSetup(project, dependentProjects)
 
-    File testJavaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE);
     File testRunArgsFile = new File(rootProject.buildDir,TESTRUNARGSFILE);
 
     File stRunArgsFile = new File(project.buildDir,"st.run.args");
@@ -4184,14 +4180,11 @@ project(":systemTests") {
         if (project.hasProperty("launcherModulePath")) {
             systemProperties 'worker.module.path': launcherModulePath
         }
-        systemProperties 'worker.patch.policy': cygpath(testJavaPolicyFile.path)
         systemProperties 'worker.java.cmd': JAVA
 
         if (rootProject.hasProperty("ClipShapeTest.numTests")) {
             systemProperty "ClipShapeTest.numTests", rootProject.getProperty("ClipShapeTest.numTests")
         }
-
-        systemProperty 'java.security.manager', 'allow'
 
         if (!IS_USE_ROBOT) {
             // Disable all robot-based visual tests
@@ -4976,18 +4969,6 @@ compileTargets { t ->
                 outputs.file(f)
         }
 
-        def outputPolicyDir = "${modulesConfDir}/java.base/security"
-        def outputPolicyFile = file("${outputPolicyDir}/java.policy.extra")
-
-        outputs.file(outputPolicyFile)
-        moduleProjList.each { project ->
-            def policyDir = "${project.projectDir}/src/main/conf/security"
-            def policyFile = file("${policyDir}/java.policy")
-            if (policyFile.exists()) {
-                inputs.file(policyFile)
-            }
-        }
-
         doLast {
             Map extras = [:]
 
@@ -5030,16 +5011,6 @@ compileTargets { t ->
                     f << l
                     f << "\n"
                 }
-            }
-
-            // concatecate java.policy files into a single file
-            //
-            mkdir outputPolicyDir
-            outputPolicyFile.delete()
-            moduleProjList.each { project ->
-                def policyDir = "${project.projectDir}/src/main/conf/security"
-                def policyFile = file("${policyDir}/java.policy")
-                if (policyFile.exists()) outputPolicyFile << policyFile.text
             }
         }
     }
@@ -5777,15 +5748,9 @@ compileTargets { t ->
         File testRunArgsFile = new File(rootProject.buildDir, TESTRUNARGSFILE)
         //test (shimed) version
         File testCompileArgsFile = new File(rootProject.buildDir, TESTCOMPILEARGSFILE)
-        // And a test java.policy file
-        File testJavaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE)
-        // and the non-test version to go with run.args
-        File runJavaPolicyFile = new File(rootProject.buildDir, RUNJAVAPOLICYFILE);
 
         outputs.file(testRunArgsFile)
         outputs.file(testCompileArgsFile)
-        outputs.file(testJavaPolicyFile)
-        outputs.file(runJavaPolicyFile)
         inputs.file(EXTRAADDEXPORTS);
 
         doLast() {
@@ -5800,9 +5765,6 @@ compileTargets { t ->
 
             testRunArgsFile.delete()
             testCompileArgsFile.delete()
-
-            testJavaPolicyFile.delete()
-            runJavaPolicyFile.delete()
 
             List<String> modpath = []
 
@@ -5819,16 +5781,6 @@ compileTargets { t ->
                         def dstModuleDir = cygpath(dir.path)
                         modpath << "${project.ext.moduleName}=${dstModuleDir}"
 
-                        String themod = dir.toURI()
-                        testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
-
-                        dir = new File(rootProject.buildDir, "modular-sdk/modules/${project.ext.moduleName}")
-                        themod = dir.toURI()
-                        runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
                     }
                 }
 
@@ -5853,17 +5805,6 @@ compileTargets { t ->
 
                         def dstModuleDir = cygpath(dir.path)
                         modpath << "${dstModuleDir}"
-
-                        String themod = dir.toURI()
-                        testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
-
-                        dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
-                        themod = dir.toURI()
-                        runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
                     }
                 }
 
