@@ -28,6 +28,7 @@ package javafx.scene.layout;
 import com.sun.javafx.geom.Vec2d;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.css.StyleableDoubleProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
@@ -157,15 +158,16 @@ public class HeaderBar extends HeaderBarBase {
         return (Insets)Pane.getConstraint(child, MARGIN);
     }
 
-    private static Insets getNodeMargin(Node child) {
-        Insets margin = getMargin(child);
-        return margin != null ? margin : Insets.EMPTY;
-    }
-
     /**
      * Creates a new {@code HeaderBar}.
      */
     public HeaderBar() {
+        // Inflate the minHeight property. This is important so that we can track whether a stylesheet or
+        // user code changes the property value before we set it to the height of the native title bar.
+        minHeightProperty();
+
+        leftSystemInsetProperty().subscribe(this::updateDefaultMinHeight);
+        rightSystemInsetProperty().subscribe(this::updateDefaultMinHeight);
     }
 
     /**
@@ -176,6 +178,7 @@ public class HeaderBar extends HeaderBarBase {
      * @param trailing the trailing node
      */
     public HeaderBar(Node leading, Node center, Node trailing) {
+        this();
         setLeading(leading);
         setCenter(center);
         setTrailing(trailing);
@@ -479,6 +482,21 @@ public class HeaderBar extends HeaderBarBase {
         }
 
         return 0;
+    }
+
+    private Insets getNodeMargin(Node child) {
+        Insets margin = getMargin(child);
+        return margin != null ? margin : Insets.EMPTY;
+    }
+
+    private void updateDefaultMinHeight() {
+        var minHeight = (StyleableDoubleProperty)minHeightProperty();
+
+        // Only change the default minHeight if it was not set by a stylesheet or application code.
+        if (minHeight.getStyleOrigin() == null) {
+            double height = Math.max(getLeftSystemInset().getHeight(), getRightSystemInset().getHeight());
+            ((StyleableDoubleProperty)minHeightProperty()).applyStyle(null, height);
+        }
     }
 
     private abstract class NodeProperty extends ObjectPropertyBase<Node> {
