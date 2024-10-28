@@ -33,7 +33,6 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.glass.ui.WindowOverlayMetrics;
-import com.sun.javafx.binding.ObjectConstant;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HorizontalDirection;
@@ -183,18 +182,13 @@ final class MacWindow extends Window {
 
     private native boolean _isRightToLeftLayoutDirection();
 
-    private ObservableValue<WindowOverlayMetrics> windowOverlayMetrics;
-
     @Override
-    public ObservableValue<WindowOverlayMetrics> windowOverlayMetrics() {
-        if (windowOverlayMetrics == null) {
-            HorizontalDirection direction = _isRightToLeftLayoutDirection()
-                ? HorizontalDirection.RIGHT
-                : HorizontalDirection.LEFT;
+    public ObservableValue<WindowOverlayMetrics> getWindowOverlayMetrics() {
+        HorizontalDirection direction = _isRightToLeftLayoutDirection()
+            ? HorizontalDirection.RIGHT
+            : HorizontalDirection.LEFT;
 
-            windowOverlayMetrics = ObjectConstant.valueOf(
-                new WindowOverlayMetrics(direction, new Dimension2D(78, 38)));
-        }
+        windowOverlayMetrics.set(new WindowOverlayMetrics(direction, new Dimension2D(78, 38)));
 
         return windowOverlayMetrics;
     }

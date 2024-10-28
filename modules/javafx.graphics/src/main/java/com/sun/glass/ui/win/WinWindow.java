@@ -31,9 +31,7 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.WindowOverlayMetrics;
 import com.sun.javafx.binding.StringConstant;
-import javafx.beans.value.ObservableValue;
 
 /**
  * MS Windows platform implementation class for Window.
@@ -341,12 +339,6 @@ class WinWindow extends Window {
     private WindowControlsOverlay windowControlsOverlay;
 
     @Override
-    public ObservableValue<WindowOverlayMetrics> windowOverlayMetrics() {
-        var overlay = getWindowOverlay();
-        return overlay != null ? overlay.metricsProperty() : null;
-    }
-
-    @Override
     public WindowControlsOverlay getWindowOverlay() {
         if (windowControlsOverlay == null && isExtendedWindow()) {
             var url = getClass().getResource(WINDOW_DECORATION_STYLESHEET);
@@ -355,6 +347,7 @@ class WinWindow extends Window {
             }
 
             windowControlsOverlay = new WindowControlsOverlay(StringConstant.valueOf(url.toExternalForm()));
+            windowOverlayMetrics.bind(windowControlsOverlay.metricsProperty());
         }
 
         return windowControlsOverlay;

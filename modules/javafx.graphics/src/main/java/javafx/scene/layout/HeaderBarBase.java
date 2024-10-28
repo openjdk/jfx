@@ -29,7 +29,6 @@ import com.sun.glass.ui.WindowOverlayMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.quantum.WindowStage;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HorizontalDirection;
 import javafx.scene.Node;
@@ -82,7 +81,7 @@ public abstract class HeaderBarBase extends Region {
         return (Boolean)Pane.getConstraint(child, DRAGGABLE);
     }
 
-    private Subscription metricsSubscription;
+    private Subscription subscription;
     private WindowOverlayMetrics currentMetrics;
     private boolean currentFullScreen;
 
@@ -105,18 +104,16 @@ public abstract class HeaderBarBase extends Region {
 
     private void onShowingChanged(boolean showing) {
         if (!showing) {
-            if (metricsSubscription != null) {
-                metricsSubscription.unsubscribe();
-                metricsSubscription = null;
+            if (subscription != null) {
+                subscription.unsubscribe();
+                subscription = null;
             }
         } else if (getScene().getWindow() instanceof Stage stage
                    && StageHelper.getPeer(stage) instanceof WindowStage windowStage) {
-            ObservableValue<WindowOverlayMetrics> metrics =
-                windowStage.getPlatformWindow().windowOverlayMetrics();
-
-            if (metrics != null) {
-                metricsSubscription = metrics.subscribe(this::onMetricsChanged);
-            }
+            subscription = windowStage
+                .getPlatformWindow()
+                .getWindowOverlayMetrics()
+                .subscribe(this::onMetricsChanged);
         }
     }
 
