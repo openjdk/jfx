@@ -205,6 +205,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
                                    G_CALLBACK(call_update_preferences), NULL);
         }
     }
+
+    // Set ibus to sync mode
+    setenv("IBUS_ENABLE_SYNC_MODE", "1", 1);
 }
 
 /*
