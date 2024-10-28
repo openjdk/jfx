@@ -63,7 +63,6 @@ public class ShutdownHookTest {
         final ArrayList<String> cmd
                 = test.util.Util.createApplicationLaunchCommand(
                         testAppName,
-                        null,
                         null
                 );
         // and add our argument
