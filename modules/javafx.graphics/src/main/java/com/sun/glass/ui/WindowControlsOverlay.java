@@ -27,7 +27,6 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.javafx.util.Utils;
-import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -430,8 +429,7 @@ public final class WindowControlsOverlay extends Region {
                 left ? HorizontalDirection.LEFT : HorizontalDirection.RIGHT,
                 new Dimension2D(totalWidth, totalHeight));
 
-            // Don't change the metrics during layout, since we don't know who might be listening.
-            Platform.runLater(() -> metrics.set(newMetrics));
+            metrics.set(newMetrics);
         }
 
         layoutInArea(button1, button1X, 0, button1Width, button1Height,
