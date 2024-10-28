@@ -10448,7 +10448,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @since 24
      */
     public final boolean requestFocusTraversal(TraversalDirection direction) {
-        TraversalDirectionInternal d = switch(direction) {
+        TraversalDirectionInternal d = switch (direction) {
         case DOWN -> TraversalDirectionInternal.DOWN;
         case LEFT -> TraversalDirectionInternal.LEFT;
         case NEXT -> TraversalDirectionInternal.NEXT;
