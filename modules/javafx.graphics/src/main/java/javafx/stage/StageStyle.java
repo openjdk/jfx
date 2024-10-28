@@ -105,6 +105,11 @@ public enum StageStyle {
      * that matches the brightness of the user interface, even if the scene fill is not visible because it
      * is obscured by other controls.
      * <p>
+     * An extended stage has no title text. Applications that require title text need to provide their own
+     * implementation by placing a {@code Label} or a similar control in the custom header bar.
+     * Note that the value of {@link Stage#titleProperty()} may still be used by the platform, one example
+     * may be the title of miniaturized preview windows.
+     * <p>
      * This is a conditional feature, to check if it is supported see {@link Platform#isSupported(ConditionalFeature)}.
      * If the feature is not supported by the platform, this style downgrades to {@link StageStyle#DECORATED}.
      *
