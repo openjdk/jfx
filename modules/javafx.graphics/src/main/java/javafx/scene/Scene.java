@@ -2485,6 +2485,8 @@ public class Scene implements EventTarget {
 
             Scene.inSynchronizer = true;
 
+            peer.synchronizeOverlay();
+
             // if dirtyNodes is null then that means this Scene has not yet been
             // synchronized, and so we will simply synchronize every node in the
             // scene and then create the dirty nodes array list
@@ -2643,7 +2645,6 @@ public class Scene implements EventTarget {
                         if (PULSE_LOGGING_ENABLED) {
                             PulseLogger.newPhase("Copy state to render graph");
                         }
-                        peer.synchronizeOverlay();
                         syncLights();
                         synchronizeSceneProperties();
                         // Run the synchronizer

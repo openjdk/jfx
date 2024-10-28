@@ -76,13 +76,14 @@ final class ViewSceneOverlay {
             return;
         }
 
+        if (this.root != null) {
+            NodeHelper.setScenes(this.root, null, null);
+        }
+
         this.root = root;
 
         if (root != null) {
             NodeHelper.setScenes(root, fxScene, null);
-            painter.setOverlayRoot(NodeHelper.getPeer(root));
-        } else {
-            painter.setOverlayRoot(null);
         }
     }
 
@@ -93,6 +94,12 @@ final class ViewSceneOverlay {
     }
 
     private void syncPeer(Node node) {
+        if (root != null) {
+            painter.setOverlayRoot(NodeHelper.getPeer(root));
+        } else {
+            painter.setOverlayRoot(null);
+        }
+
         NodeHelper.syncPeer(node);
 
         if (node instanceof Parent parent) {
