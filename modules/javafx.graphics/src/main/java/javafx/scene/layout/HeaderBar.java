@@ -57,6 +57,9 @@ import javafx.stage.StageStyle;
  * {@code HeaderBar} honors the minimum, preferred, and maximum sizes of its children. If the child's
  * resizable range prevents it from be resized to fit within its position, it will be vertically centered
  * relative to the available space; this alignment can be customized with a layout constraint.
+ * <p>
+ * The default {@link #minHeightProperty() minHeight} of the {@code HeaderBar} is set to match the height
+ * of the platform-specific default window buttons.
  *
  * <h2>Layout constraints</h2>
  * An application may set constraints on individual children to customize their layout.
