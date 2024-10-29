@@ -1505,6 +1505,29 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1performWindowDrag
 
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setToolbarStyle
+ * Signature: (JI)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setToolbarStyle
+(JNIEnv *env, jobject jWindow, jlong jPtr, jint style)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setToolbarStyle");
+    if (!jPtr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        if (window && window->nsWindow) {
+            [window->nsWindow setToolbarStyle:style];
+        }
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
  * Method:    _isRightToLeftLayoutDirection
  * Signature: ()Z;
  */

@@ -168,9 +168,7 @@ public class HeaderBar extends HeaderBarBase {
         // Inflate the minHeight property. This is important so that we can track whether a stylesheet or
         // user code changes the property value before we set it to the height of the native title bar.
         minHeightProperty();
-
-        leftSystemInsetProperty().subscribe(this::updateDefaultMinHeight);
-        rightSystemInsetProperty().subscribe(this::updateDefaultMinHeight);
+        minSystemHeightProperty().subscribe(this::updateMinHeight);
     }
 
     /**
@@ -492,13 +490,12 @@ public class HeaderBar extends HeaderBarBase {
         return margin != null ? margin : Insets.EMPTY;
     }
 
-    private void updateDefaultMinHeight() {
+    private void updateMinHeight() {
         var minHeight = (StyleableDoubleProperty)minHeightProperty();
 
-        // Only change the default minHeight if it was not set by a stylesheet or application code.
+        // Only change minHeight if it was not set by a stylesheet or application code.
         if (minHeight.getStyleOrigin() == null) {
-            double height = Math.max(getLeftSystemInset().getHeight(), getRightSystemInset().getHeight());
-            ((StyleableDoubleProperty)minHeightProperty()).applyStyle(null, height);
+            ((StyleableDoubleProperty)minHeightProperty()).applyStyle(null, getMinSystemHeight());
         }
     }
 

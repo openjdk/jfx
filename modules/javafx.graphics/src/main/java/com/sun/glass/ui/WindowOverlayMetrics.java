@@ -35,8 +35,9 @@ import java.util.Objects;
  *
  * @param placement the placement of the window buttons
  * @param size the size of the window buttons
+ * @param minHeight the minimum height of the window buttons
  */
-public record WindowOverlayMetrics(HorizontalDirection placement, Dimension2D size) {
+public record WindowOverlayMetrics(HorizontalDirection placement, Dimension2D size, double minHeight) {
 
     public WindowOverlayMetrics {
         Objects.requireNonNull(placement, "placement cannot be null");

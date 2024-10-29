@@ -33,7 +33,6 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.glass.ui.WindowOverlayMetrics;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HorizontalDirection;
 import java.nio.ByteBuffer;
@@ -50,6 +49,11 @@ final class MacWindow extends Window {
 
     protected MacWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
+
+        if (isExtendedWindow()) {
+            // The default window metrics correspond to a small toolbar style.
+            updateWindowOverlayMetrics(NSWindowToolbarStyle.SMALL);
+        }
     }
 
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
@@ -182,15 +186,42 @@ final class MacWindow extends Window {
 
     private native boolean _isRightToLeftLayoutDirection();
 
+    private native void _setToolbarStyle(long ptr, int style);
+
     @Override
-    public ObservableValue<WindowOverlayMetrics> getWindowOverlayMetrics() {
-        HorizontalDirection direction = _isRightToLeftLayoutDirection()
-            ? HorizontalDirection.RIGHT
-            : HorizontalDirection.LEFT;
+    protected void onHeaderBarHeightChanged(double height) {
+        var toolbarStyle = NSWindowToolbarStyle.ofHeight(height);
+        _setToolbarStyle(getRawHandle(), toolbarStyle.style);
+        updateWindowOverlayMetrics(toolbarStyle);
+    }
 
-        windowOverlayMetrics.set(new WindowOverlayMetrics(direction, new Dimension2D(78, 38)));
+    private void updateWindowOverlayMetrics(NSWindowToolbarStyle toolbarStyle) {
+        windowOverlayMetrics.set(new WindowOverlayMetrics(
+            _isRightToLeftLayoutDirection()
+                ? HorizontalDirection.RIGHT
+                : HorizontalDirection.LEFT,
+            toolbarStyle.size,
+            NSWindowToolbarStyle.SMALL.size.getHeight()));
+    }
 
-        return windowOverlayMetrics;
+    private enum NSWindowToolbarStyle {
+        SMALL(68, 28, 1), // NSWindowToolbarStyleExpanded
+        MEDIUM(78, 38, 4), // NSWindowToolbarStyleUnifiedCompact
+        LARGE(90, 52, 3); // NSWindowToolbarStyleUnified
+
+        NSWindowToolbarStyle(double width, double height, int style) {
+            this.size = new Dimension2D(width, height);
+            this.style = style;
+        }
+
+        final Dimension2D size;
+        final int style;
+
+        static NSWindowToolbarStyle ofHeight(double height) {
+            if (height >= LARGE.size.getHeight()) return LARGE;
+            if (height >= MEDIUM.size.getHeight()) return MEDIUM;
+            return SMALL;
+        }
     }
 }
 

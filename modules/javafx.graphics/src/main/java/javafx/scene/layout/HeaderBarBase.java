@@ -28,6 +28,8 @@ package javafx.scene.layout;
 import com.sun.glass.ui.WindowOverlayMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.quantum.WindowStage;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HorizontalDirection;
@@ -110,10 +112,14 @@ public abstract class HeaderBarBase extends Region {
             }
         } else if (getScene().getWindow() instanceof Stage stage
                    && StageHelper.getPeer(stage) instanceof WindowStage windowStage) {
-            subscription = windowStage
-                .getPlatformWindow()
-                .getWindowOverlayMetrics()
-                .subscribe(this::onMetricsChanged);
+            subscription = Subscription.combine(
+                windowStage
+                    .getPlatformWindow()
+                    .getWindowOverlayMetrics()
+                    .subscribe(this::onMetricsChanged),
+                windowStage
+                    .getPlatformWindow()
+                    .registerHeaderBar(this));
         }
     }
 
@@ -131,7 +137,11 @@ public abstract class HeaderBarBase extends Region {
         if (currentFullScreen || currentMetrics == null) {
             leftSystemInset.set(new Dimension2D(0, 0));
             rightSystemInset.set(new Dimension2D(0, 0));
-        } else if (currentMetrics.placement() == HorizontalDirection.LEFT) {
+            minSystemHeight.set(0);
+            return;
+        }
+
+        if (currentMetrics.placement() == HorizontalDirection.LEFT) {
             leftSystemInset.set(currentMetrics.size());
             rightSystemInset.set(new Dimension2D(0, 0));
         } else if (currentMetrics.placement() == HorizontalDirection.RIGHT) {
@@ -141,6 +151,8 @@ public abstract class HeaderBarBase extends Region {
             leftSystemInset.set(new Dimension2D(0, 0));
             rightSystemInset.set(new Dimension2D(0, 0));
         }
+
+        minSystemHeight.set(currentMetrics.minHeight());
     }
 
     /**
@@ -189,5 +201,27 @@ public abstract class HeaderBarBase extends Region {
 
     public final Dimension2D getRightSystemInset() {
         return rightSystemInset.get();
+    }
+
+    /**
+     * The absolute minimum height of {@link #leftSystemInsetProperty() leftSystemInset} and
+     * {@link #rightSystemInsetProperty() rightSystemInset}. This is a platform-dependent value
+     * that a {@code HeaderBarBase} implementation can use to define a reasonable minimum height
+     * for the header bar area.
+     */
+    private final ReadOnlyDoubleWrapper minSystemHeight =
+        new ReadOnlyDoubleWrapper(this, "minSystemHeight") {
+            @Override
+            protected void invalidated() {
+                requestLayout();
+            }
+        };
+
+    public final ReadOnlyDoubleProperty minSystemHeightProperty() {
+        return minSystemHeight.getReadOnlyProperty();
+    }
+
+    public final double getMinSystemHeight() {
+        return minSystemHeight.get();
     }
 }

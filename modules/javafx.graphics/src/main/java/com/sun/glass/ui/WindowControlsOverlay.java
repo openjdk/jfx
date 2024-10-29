@@ -171,7 +171,7 @@ public final class WindowControlsOverlay extends Region {
      * The metrics (placement and size) of the window buttons.
      */
     private final ObjectProperty<WindowOverlayMetrics> metrics = new SimpleObjectProperty<>(
-        this, "metrics", new WindowOverlayMetrics(HorizontalDirection.RIGHT, new Dimension2D(0, 0)));
+        this, "metrics", new WindowOverlayMetrics(HorizontalDirection.RIGHT, new Dimension2D(0, 0), 0));
 
     /**
      * Specifies the placement of the window buttons on the left or the right side of the window.
@@ -424,10 +424,11 @@ public final class WindowControlsOverlay extends Region {
         double totalHeight = Math.max(button1Height, Math.max(button2Height, button3Height));
         Dimension2D currentSize = metrics.get().size();
 
+        // Update the overlay metrics if they have changed.
         if (currentSize.getWidth() != totalWidth || currentSize.getHeight() != totalHeight) {
             var newMetrics = new WindowOverlayMetrics(
                 left ? HorizontalDirection.LEFT : HorizontalDirection.RIGHT,
-                new Dimension2D(totalWidth, totalHeight));
+                new Dimension2D(totalWidth, totalHeight), totalHeight);
 
             metrics.set(newMetrics);
         }

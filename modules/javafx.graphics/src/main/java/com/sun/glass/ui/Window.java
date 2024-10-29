@@ -29,13 +29,14 @@ import com.sun.prism.impl.PrismSettings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.Parent;
+import javafx.scene.layout.Region;
+import javafx.util.Subscription;
 import java.lang.annotation.Native;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class Window {
 
@@ -235,6 +236,7 @@ public abstract class Window {
     private int maximumWidth = Integer.MAX_VALUE, maximumHeight = Integer.MAX_VALUE;
 
     private EventHandler eventHandler;
+    private Region headerBar;
 
     protected final ObjectProperty<WindowOverlayMetrics> windowOverlayMetrics =
             new SimpleObjectProperty<>(this, "windowOverlayMetrics");
@@ -454,6 +456,40 @@ public abstract class Window {
     public NonClientHandler getNonClientHandler() {
         return null;
     }
+
+    /**
+     * Registers a user-provided header bar with this window.
+     * <p>
+     * The registration will be accepted, but ignored if the window is not an extended
+     * window, or if another header bar is already registered.
+     *
+     * @param headerBar the header bar
+     * @return a {@code Subscription} to unregister
+     */
+    public final Subscription registerHeaderBar(Region headerBar) {
+        Objects.requireNonNull(headerBar);
+
+        if (!isExtendedWindow() || this.headerBar != null) {
+            return Subscription.EMPTY;
+        }
+
+        this.headerBar = headerBar;
+
+        Subscription subscription = headerBar.heightProperty().subscribe(
+            value -> onHeaderBarHeightChanged(value.doubleValue()));
+
+        return () -> {
+            this.headerBar = null;
+            subscription.unsubscribe();
+        };
+    }
+
+    /**
+     * Called when the height of a registered user-provided header bar has changed.
+     *
+     * @param height the height of the header bar
+     */
+    protected void onHeaderBarHeightChanged(double height) {}
 
     public boolean isDecorated() {
         Application.checkEventThread();
