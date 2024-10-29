@@ -64,7 +64,7 @@ public class JsonContentWithAsyncUpdate implements BasicTextModel.Content {
     }
 
     @Override
-    public boolean isUserEditable() {
+    public boolean isWritable() {
         return true;
     }
 

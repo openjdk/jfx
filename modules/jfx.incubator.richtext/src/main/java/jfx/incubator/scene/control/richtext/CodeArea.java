@@ -52,7 +52,7 @@ import jfx.incubator.scene.control.richtext.skin.CodeAreaSkin;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 
 /**
- * CodeArea is an editable text component which supports styling (syntax highlighting) of plain text.
+ * CodeArea is an editable text component which supports styling (for example, syntax highlighting) of plain text.
  * <p>
  * Unlike its base class {@link RichTextArea}, the {@code CodeArea} requires a special kind of model to be used,
  * a {@link CodeTextModel}.

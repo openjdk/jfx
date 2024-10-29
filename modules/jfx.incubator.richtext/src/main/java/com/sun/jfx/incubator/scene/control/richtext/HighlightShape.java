@@ -43,7 +43,6 @@ import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
  * <ol>
  * <li>text highlight</li>
  * <li>squiggly line</li>
- * <li>underline</li>
  * </ol>
  */
 public class HighlightShape extends Path {
@@ -70,7 +69,8 @@ public class HighlightShape extends Path {
             PathElement[] pe = f.underlineShape(start, end);
             return generateSquiggly(pe);
         default:
-            return f.underlineShape(start, end);
+            // never happens
+            return new PathElement[0];
         }
     }
 

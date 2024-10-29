@@ -48,7 +48,7 @@ public class RTAccessibilityHelper {
         this.control = t;
     }
 
-    // FIX remove
+    // FIX to be removed later
     private void p(String fmt, Object... args) {
         if (false) {
             System.out.println(String.format(fmt, args));

@@ -259,7 +259,7 @@ public class CellArrangement {
     public double averageHeight() {
         int sz = cells.size();
         if (sz == 0) {
-            return 20;
+            return 20; // any reasonable non-zero number would work
         }
         return (topHeight + bottomHeight) / sz;
     }

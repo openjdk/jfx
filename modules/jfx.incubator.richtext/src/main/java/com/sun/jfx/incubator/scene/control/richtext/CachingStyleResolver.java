@@ -32,7 +32,8 @@ import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
- * Caching StyleResolver caches conversion results to avoid re-querying for the same information.
+ * Caching StyleResolver caches CSSStyle to StyleAttribute conversion results
+ * to avoid re-querying for the same information.
  */
 public class CachingStyleResolver implements StyleResolver {
     private final StyleResolver resolver;

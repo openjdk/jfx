@@ -41,10 +41,11 @@ public final class TextPos implements Comparable<TextPos> {
 
     /**
      * Creates a new text position.
+     *
      * @param index the paragraph index
-     * @param offset the text offset
+     * @param offset the offset in the text
      * @param charIndex the character index
-     * @param leading true if leading
+     * @param leading the bias relative to the character at charIndex
      */
     public TextPos(int index, int offset, int charIndex, boolean leading) {
         if (index < 0) {
@@ -61,7 +62,8 @@ public final class TextPos implements Comparable<TextPos> {
     }
 
     /**
-     * Constructs a new text position.
+     * Creates a new text position.
+     *
      * @param index the paragraph index
      * @param offset the text offset
      */

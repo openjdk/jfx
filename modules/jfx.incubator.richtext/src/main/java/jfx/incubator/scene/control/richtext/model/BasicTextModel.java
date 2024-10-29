@@ -49,7 +49,7 @@ public class BasicTextModel extends StyledTextModel {
     public interface Content {
         /**
          * Returns the number of paragraphs in this content.
-         * @return number of text lines
+         * @return the number paragraphs
          */
         public int size();
 
@@ -65,6 +65,7 @@ public class BasicTextModel extends StyledTextModel {
 
         /**
          * This method is called to insert a single text segment at the given position.
+         * The caller guarantees that this method is only called when the content is writable.
          *
          * @param index the paragraph index
          * @param offset the insertion offset within the paragraph
@@ -76,6 +77,7 @@ public class BasicTextModel extends StyledTextModel {
 
         /**
          * Inserts a line break.
+         * The caller guarantees that this method is only called when the content is writable.
          *
          * @param index the model index
          * @param offset the text offset
@@ -83,8 +85,9 @@ public class BasicTextModel extends StyledTextModel {
         public void insertLineBreak(int index, int offset);
 
         /**
-         * This method gets called only if the model is editable.
-         * The caller guarantees that {@code start} precedes {@code end}.
+         * Removes the specified range.
+         * The caller guarantees that this method is only called when the content is writable,
+         * and that {@code start} precedes {@code end}.
          *
          * @param start the start of the region to be removed
          * @param end the end of the region to be removed, expected to be greater than the start position
@@ -92,10 +95,10 @@ public class BasicTextModel extends StyledTextModel {
         public void removeRange(TextPos start, TextPos end);
 
         /**
-         * Determines whether this content supports modification by the user.
-         * @return true if editable
+         * Determines whether this content is writable (i.e. supports modification).
+         * @return true if writable
          */
-        public boolean isUserEditable();
+        public boolean isWritable();
     }
 
     private final Content content;
@@ -148,15 +151,15 @@ public class BasicTextModel extends StyledTextModel {
     }
 
     /**
-     * Determines whether the model is user-editable.
+     * Determines whether the model is writable.
      * <p>
-     * This method calls {@link BasicTextModel.Content#isUserEditable()}.
+     * This method calls {@link BasicTextModel.Content#isWritable()}.
      *
-     * @return true if the model is user-editable
+     * @return true if the model is writable
      */
     @Override
     public final boolean isWritable() {
-        return content.isUserEditable();
+        return content.isWritable();
     }
 
     @Override
@@ -286,7 +289,7 @@ public class BasicTextModel extends StyledTextModel {
         }
 
         @Override
-        public boolean isUserEditable() {
+        public boolean isWritable() {
             return true;
         }
     }
