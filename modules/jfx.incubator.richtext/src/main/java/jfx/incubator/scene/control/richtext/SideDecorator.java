@@ -36,32 +36,40 @@ import javafx.scene.Node;
  * layout process, would be determined by the following process:
  * <ul>
  * <li>if {@link #getPrefWidth} method returns a value greater than 0, that will be the width of all the side nodes.
- * <li>otherwise, the {@link #getNode(int, boolean)} method is called with {@code forMeasurement} argument set to
- * {@code true}.  The value returned will be used to size all other nodes for that side.
+ * <li>otherwise, the {@link #getMeasurementNode(int)} method is called.
+ * The preferred width of the {@code Node} returned will be used to size all other nodes for that side.
  * </ul>
  */
 public interface SideDecorator {
     /**
-     * Returns the width for all the side Nodes, or 0 if a measurer Node needs to be obtained via
-     * {@link #getNode(int, boolean)}.
+     * Returns the width to size the pane which hosts the side decoration {@code Node}s.
+     * <p>
+     * When return value is 0 or negative, an alternative method to size the side pane hosting the decoration
+     * will be used: a special measurement {@code Node} will be obtained via
+     * {@link #getMeasurementNode(int)},
+     * whose preferred width will be used instead.
+     *
      * @param viewWidth width of the view
-     * @return preferred width
+     * @return the preferred width
      */
     public double getPrefWidth(double viewWidth);
 
     /**
-     * Creates a Node to be added to the layout to the right or to the left of the given paragraph.
-     * <p>
-     * When {@code forMeasurement} is true, this method is expected to create a special non-null
-     * measurement Node, whose preferred width will be used to size all the side Nodes (and must, therefore,
-     * be wider than any side node in the view).  The {@code modelIndex} is this case is the index of
-     * the first paragraph in the view.
-     * <p>
+     * Returns the special measurement node to use for sizing the pane that holds the side decorations.
+     * This method will only be called if {@link #getPrefWidth(double)} returns 0 or negative value.
      * The measurement node will not be displayed and will be discarded.
      *
-     * @param modelIndex model index
-     * @param forMeasurement when true, specifies that a measurement Node must be created
-     * @return new instance of the Node, or null
+     * @param index the paragraph index at the top of the viewable area
+     * @return the measurement {@code Node}
      */
-    public Node getNode(int modelIndex, boolean forMeasurement);
+    public Node getMeasurementNode(int index);
+
+    /**
+     * Creates a Node to be added to the layout to the right or to the left of the given paragraph.
+     * This method may return {@code null}.
+     *
+     * @param index the paragraph index
+     * @return new instance {@code Node} 
+     */
+    public Node getNode(int index);
 }

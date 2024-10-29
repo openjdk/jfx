@@ -26,6 +26,7 @@
 package jfx.incubator.scene.control.richtext;
 
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -38,40 +39,45 @@ public class LineNumberDecorator implements SideDecorator {
     private final DecimalFormat format;
 
     /**
-     * Creates an instance using Western-style group separator (comma).
+     * Creates an instance with the Western-style group separator (comma).
      */
     public LineNumberDecorator() {
-        this("#,##0");
+        this(new DecimalFormat("#,##0"));
     }
 
     /**
-     * Creates an instance using the specified pattern for {@link DecimalFormat}.
-     * @param pattern the DecimalFormat pattern to use
+     * Creates an instance using the specified {@link DecimalFormat}.
+     *
+     * @param format the {@code DecimalFormat} to use
      */
-    public LineNumberDecorator(String pattern) {
-        format = new DecimalFormat(pattern);
+    public LineNumberDecorator(DecimalFormat format) {
+        this.format = format;
     }
 
     @Override
     public double getPrefWidth(double viewWidth) {
-        // no set width, must request a measurer Node
+        // no set width, must request a measurement Node
         return 0;
     }
 
     @Override
-    public Node getNode(int ix, boolean forMeasurement) {
-        if (forMeasurement) {
-            // for measurer node only: allow for extra digit(s) in the bottom rows
-            ix += 300;
-        }
+    public Node getMeasurementNode(int index) {
+        // make sure the size is sufficient to display all the numbers in the view
+        String s = format.format(index + 300);
+        char[] cs = new char[s.length()];
+        // what's wider, 0 or 8 ?
+        Arrays.fill(cs, '8');
+        return createNode(new String(cs));
+    }
 
-        String s = format.format(ix + 1);
-        if (forMeasurement) {
-            // account for some variability with proportional font
-            s += " ";
-        }
+    @Override
+    public Node getNode(int index) {
+        String s = format.format(index + 1);
+        return createNode(s);
+    }
 
-        Label t = new Label(s);
+    private Node createNode(String text) {
+        Label t = new Label(text);
         t.getStyleClass().add("line-number-decorator");
         // label needs to fill all available space
         t.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);

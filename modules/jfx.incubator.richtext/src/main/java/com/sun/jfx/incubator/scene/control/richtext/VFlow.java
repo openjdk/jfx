@@ -873,7 +873,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             double w = d.getPrefWidth(getWidth());
             if (w <= 0.0) {
                 int top = topCellIndex();
-                Node n = d.getNode(top, true);
+                Node n = d.getMeasurementNode(top);
                 n.setManaged(false);
 
                 content.getChildren().add(n);
@@ -887,8 +887,8 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                     content.getChildren().remove(n);
                 }
             }
-            // introducing some granularity in order to avoid left boundary moving back and forth when scrolling
-            double granularity = 15;
+            // apply some granularity in order to avoid left boundary jittering back and forth when scrolling
+            double granularity = 10;
             w = (Math.round((w + 1.0) / granularity) + 1.0) * granularity;
             return snapSizeX(w);
         }
@@ -1449,7 +1449,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 int ix = cell.getIndex();
                 Node n = leftCache.get(ix);
                 if (n == null) {
-                    n = leftDecorator.getNode(ix, false);
+                    n = leftDecorator.getNode(ix);
                     if (n != null) {
                         n.setManaged(false);
                         leftCache.add(ix, n);
@@ -1471,7 +1471,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 int ix = cell.getIndex();
                 Node n = rightCache.get(ix);
                 if (n == null) {
-                    n = rightDecorator.getNode(cell.getIndex(), false);
+                    n = rightDecorator.getNode(cell.getIndex());
                     if (n != null) {
                         n.setManaged(false);
                         rightCache.add(ix, n);

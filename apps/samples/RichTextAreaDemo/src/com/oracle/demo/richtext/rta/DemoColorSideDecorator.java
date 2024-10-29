@@ -54,14 +54,19 @@ public class DemoColorSideDecorator implements SideDecorator {
     }
 
     @Override
-    public Node getNode(int modelIndex, boolean forMeasurement) {
+    public Node getNode(int index) {
         int num = 36;
-        double a = 360.0 * (modelIndex % num) / num;
+        double a = 360.0 * (index % num) / num;
         Color c = Color.hsb(a, 0.5, 1.0);
 
         Region r = new Region();
         r.setOpacity(1.0);
         r.setBackground(new Background(new BackgroundFill(c, null, null)));
         return r;
+    }
+
+    @Override
+    public Node getMeasurementNode(int index) {
+        return null;
     }
 }

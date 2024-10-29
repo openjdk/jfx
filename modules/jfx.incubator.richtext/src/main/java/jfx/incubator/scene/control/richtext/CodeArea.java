@@ -151,8 +151,16 @@ public class CodeArea extends RichTextArea {
                         // TODO create line number decorator method?
                         d = new LineNumberDecorator() {
                             @Override
-                            public Node getNode(int ix, boolean forMeasurement) {
-                                Node n = super.getNode(ix, forMeasurement);
+                            public Node getMeasurementNode(int ix) {
+                                return bindFont(super.getMeasurementNode(ix));
+                            }
+
+                            @Override
+                            public Node getNode(int ix) {
+                                return bindFont(super.getNode(ix));
+                            }
+
+                            private Node bindFont(Node n) {
                                 if (n instanceof Labeled t) {
                                     t.fontProperty().bind(fontProperty());
                                 }
@@ -216,7 +224,8 @@ public class CodeArea extends RichTextArea {
     /**
      * The font to use for text in the {@code CodeArea}.
      * @return the font property
-     * @defaultValue the Monospaced font with size 12.0 px
+     * @defaultValue the Monospaced font with the default size
+     * @see Font#font(String, double)
      */
     public final ObjectProperty<Font> fontProperty() {
         if (font == null) {
@@ -278,7 +287,7 @@ public class CodeArea extends RichTextArea {
     }
 
     private static Font defaultFont() {
-        return Font.font("Monospaced", 12.0);
+        return Font.font("Monospaced", -1);
     }
 
     /**
