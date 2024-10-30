@@ -138,8 +138,7 @@ public final class QuantumToolkit extends Toolkit {
 
     public static final boolean pulseDebug = Boolean.getBoolean("quantum.pulse");
 
-    private static final boolean multithreaded = initMultithreaded();
-    private static boolean initMultithreaded() {
+    private static final boolean multithreaded = ((Supplier<Boolean>) () -> {
         // If it is not specified, or it is true, then it should
         // be true. Otherwise it should be false.
         String value = System.getProperty("quantum.multithreaded");
@@ -149,43 +148,39 @@ public final class QuantumToolkit extends Toolkit {
             System.out.println(result ? "Multi-Threading Enabled" : "Multi-Threading Disabled");
         }
         return result;
-    }
+    }).get();
 
     private static boolean debug = Boolean.getBoolean("quantum.debug");
 
     private static Integer pulseHZ = Integer.getInteger("javafx.animation.pulse");
 
-    static final boolean liveResize = initLiveResize();
-    private static final boolean initLiveResize() {
+    static final boolean liveResize = ((Supplier<Boolean>) () -> {
         boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
         String result = (PlatformUtil.isMac() || PlatformUtil.isWindows()) && !isSWT ? "true" : "false";
         return "true".equals(System.getProperty("javafx.live.resize", result));
-    }
+    }).get();
 
-    static final boolean drawInPaint = initDrawInPaint();
-    static final boolean initDrawInPaint() {
+    static final boolean drawInPaint = ((Supplier<Boolean>) () -> {
         boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
         String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
         return "true".equals(System.getProperty("javafx.draw.in.paint", result));
-    }
+    }).get();
 
-    private static final boolean singleThreaded = initSingleThreaded();
-    private static boolean initSingleThreaded() {
+    private static final boolean singleThreaded = ((Supplier<Boolean>) () -> {
         Boolean result = Boolean.getBoolean("quantum.singlethreaded");
         if (/*verbose &&*/ result) {
             System.out.println("Warning: Single GUI Threadiong is enabled, FPS should be slower");
         }
         return result;
-    }
+    }).get();
 
-    private static final boolean noRenderJobs = initNoRenderJobs();
-    private static boolean initNoRenderJobs() {
+    private static final boolean noRenderJobs = ((Supplier<Boolean>) () -> {
         Boolean result = Boolean.getBoolean("quantum.norenderjobs");
         if (/*verbose &&*/ result) {
             System.out.println("Warning: Quantum will not submit render jobs, nothing should draw");
         }
         return result;
-    }
+    }).get();
 
     private class PulseTask {
         private volatile boolean isRunning;
