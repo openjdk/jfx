@@ -10444,7 +10444,7 @@ public abstract class Node implements EventTarget, Styleable {
      * A successful traversal results in a new {@code Node} being focused.
      * <p>
      * This method is expected to be called in response to a {@code KeyEvent}, since the {@code Node}
-     * receiving focus will have {@link #focusVisibleProperty() focusVisible} property set.
+     * receiving focus will have the {@link #focusVisibleProperty() focusVisible} property set.
      *
      * @param direction the direction of focus traversal
      * @return {@code true} if traversal was successful
