@@ -54,7 +54,6 @@ import com.sun.javafx.logging.PlatformLogger.Level;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
-import java.io.FilePermission;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.Reference;
@@ -69,16 +68,9 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.PermissionCollection;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -987,7 +979,7 @@ final public class StyleManager {
                     ** let's check that the css file is being requested from our
                     ** runtime jar
                     */
-                    URI styleManagerJarURI = AccessController.doPrivileged((PrivilegedExceptionAction<URI>) () -> StyleManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                    URI styleManagerJarURI = StyleManager.class.getProtectionDomain().getCodeSource().getLocation().toURI();
 
                     final String styleManagerJarPath = styleManagerJarURI.getSchemeSpecificPart();
                     String requestedFilePath = requestedFileUrI.getSchemeSpecificPart();
@@ -1007,28 +999,17 @@ final public class StyleManager {
                         */
                         if (fname.endsWith(".css") || fname.endsWith(".bss")) {
                             /*
-                            ** set up a read permission for the jar
-                            */
-                            FilePermission perm = new FilePermission(styleManagerJarPath, "read");
-
-                            PermissionCollection perms = perm.newPermissionCollection();
-                            perms.add(perm);
-                            AccessControlContext permsAcc = new AccessControlContext(
-                                new ProtectionDomain[] {
-                                    new ProtectionDomain(null, perms)
-                                });
-                            /*
                             ** check that the jar file exists, and that we're allowed to
                             ** read it.
                             */
                             JarFile jar = null;
                             try {
-                                jar = AccessController.doPrivileged((PrivilegedExceptionAction<JarFile>) () -> new JarFile(styleManagerJarPath), permsAcc);
-                            } catch (PrivilegedActionException pae) {
+                                jar = new JarFile(styleManagerJarPath);
+                            } catch (IOException ioe) {
                                 /*
                                 ** we got either a FileNotFoundException or an IOException
-                                ** in the privileged read. Return the same error as we
-                                ** would have returned if the css file hadn't of existed.
+                                ** in the read. Return the same error as we would have
+                                ** returned if the css file hadn't of existed.
                                 */
                                 return null;
                             }
@@ -1041,8 +1022,7 @@ final public class StyleManager {
                                     /*
                                     ** allow read access to the jar
                                     */
-                                    return AccessController.doPrivileged(
-                                            (PrivilegedAction<Stylesheet>) () -> loadStylesheetUnPrivileged(fname), permsAcc);
+                                    return loadStylesheetUnPrivileged(fname);
                                 }
                             }
                         }
@@ -1063,9 +1043,6 @@ final public class StyleManager {
             catch (java.net.URISyntaxException e) {
                 return null;
             }
-            catch (java.security.PrivilegedActionException e) {
-                return null;
-            }
        }
     }
 
@@ -1073,16 +1050,12 @@ final public class StyleManager {
     private static Stylesheet loadStylesheetUnPrivileged(final String fname) {
 
         synchronized (styleLock) {
-            @SuppressWarnings("removal")
-            Boolean parse = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-
-                final String bss = System.getProperty("binary.css");
-                // binary.css is true by default.
-                // parse only if the file is not a .bss
-                // and binary.css is set to false
-                return (!fname.endsWith(".bss") && bss != null) ?
+            final String bss = System.getProperty("binary.css");
+            // binary.css is true by default.
+            // parse only if the file is not a .bss
+            // and binary.css is set to false
+            Boolean parse = (!fname.endsWith(".bss") && bss != null) ?
                     !Boolean.valueOf(bss) : Boolean.FALSE;
-            });
 
             try {
                 final String ext = (parse) ? (".css") : (".bss");

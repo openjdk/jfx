@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 package com.sun.prism.es2;
 
 import java.lang.annotation.Native;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 class GLPixelFormat {
     final private Attributes attributes;
@@ -37,12 +35,8 @@ class GLPixelFormat {
     private static int defaultBufferSize;
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-           defaultDepthSize = Integer.getInteger("prism.glDepthSize", 24);
-           defaultBufferSize = Integer.getInteger("prism.glBufferSize", 32);
-            return null;
-        });
+        defaultDepthSize = Integer.getInteger("prism.glDepthSize", 24);
+        defaultBufferSize = Integer.getInteger("prism.glBufferSize", 32);
     }
 
     GLPixelFormat(long nativeScreen, Attributes attributes) {
