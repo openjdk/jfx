@@ -10440,29 +10440,40 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Tries to move the focus from this {@code Node} in the specified direction.
+     * The {@code Node} serves as a reference point and does not have to be focused or focusable.
      * A successful traversal results in a new {@code Node} being focused.
      * <p>
-     * The {@code visible} parameter specifies whether the {@link #focusVisibleProperty() focusVisible}
-     * flag will be set on the node that receives focus.
-     * Callers must specify {@code true} if this method is called as a result of keyboard navigation,
-     * or if the current node visibly indicates focus;
-     * in all other cases, callers must specify {@code false}.
+     * This method is expected to be called in response to a {@code KeyEvent}, since the {@code Node}
+     * receiving focus will have {@link #focusVisibleProperty() focusVisible} property set.
      *
      * @param direction the direction of focus traversal
-     * @param visible whether to set {@link #focusVisibleProperty() focusVisible} flag
      * @return {@code true} if traversal was successful
      * @since 24
      */
-    public final boolean requestFocusTraversal(TraversalDirection direction, boolean visible) {
-        TraversalDirectionInternal d = switch (direction) {
-        case DOWN -> TraversalDirectionInternal.DOWN;
-        case LEFT -> TraversalDirectionInternal.LEFT;
-        case NEXT -> TraversalDirectionInternal.NEXT;
-        case PREVIOUS -> TraversalDirectionInternal.PREVIOUS;
-        case RIGHT -> TraversalDirectionInternal.RIGHT;
-        case UP -> TraversalDirectionInternal.UP;
-        default -> null;
-        };
-        return d == null ? false : TraversalUtils.traverse(this, d, visible);
+    public final boolean requestFocusTraversal(TraversalDirection direction) {
+        TraversalDirectionInternal d;
+        switch (direction) {
+        case DOWN:
+            d = TraversalDirectionInternal.DOWN;
+            break;
+        case LEFT:
+            d = TraversalDirectionInternal.LEFT;
+            break;
+        case NEXT:
+            d = TraversalDirectionInternal.NEXT;
+            break;
+        case PREVIOUS:
+            d = TraversalDirectionInternal.PREVIOUS;
+            break;
+        case RIGHT:
+            d = TraversalDirectionInternal.RIGHT;
+            break;
+        case UP:
+            d = TraversalDirectionInternal.UP;
+            break;
+        default:
+            return false;
+        }
+        return TraversalUtils.traverse(this, d, true);
     }
 }
