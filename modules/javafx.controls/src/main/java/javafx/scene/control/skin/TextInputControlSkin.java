@@ -146,7 +146,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     private static final boolean preload = initPreload();
 
     private static boolean initPreload() {
-        // TODO only used when IS_FXVK_SUPPORTED is true, optimize?
         String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
         if (s != null) {
             if (s.equalsIgnoreCase("PRERENDER")) {

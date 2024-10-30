@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javafx.beans.InvalidationListener;
@@ -100,14 +99,9 @@ import com.sun.javafx.tk.Toolkit;
  */
 public class MenuBarSkin extends SkinBase<MenuBar> {
 
-    private static final ObservableList<Window> stages;
-
-    static {
-        final Predicate<Window> findStage = (w) -> w instanceof Stage;
-        @SuppressWarnings("removal")
-        ObservableList<Window> windows = Window.getWindows();
-        stages = windows.filtered(findStage);
-    }
+    private static final ObservableList<Window> stages = Window.getWindows().filtered((w) -> {
+        return w instanceof Stage;
+    });
 
     /* *************************************************************************
      *                                                                         *
