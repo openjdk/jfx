@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,25 +47,9 @@ public class ES2Pipeline extends GraphicsPipeline {
     private static boolean es2Enabled;
     private static boolean isEglfb = false;
 
-    static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            String libName = "prism_es2";
 
-            String eglType = PlatformUtil.getEmbeddedType();
-            if ("monocle".equals(eglType)) {
-                isEglfb = true;
-                libName = "prism_es2_monocle";
-            }
-            if (PrismSettings.verbose) {
-                System.out.println("Loading ES2 native library ... " + libName);
-            }
-            NativeLibLoader.loadLibrary(libName);
-            if (PrismSettings.verbose) {
-                System.out.println("\tsucceeded.");
-            }
-            return null;
-        });
+    static {
+        loadNativeLib();
 
         // Initialize the prism-es2 pipe and a handler of it
         glFactory = GLFactory.getFactory();
@@ -102,6 +86,22 @@ public class ES2Pipeline extends GraphicsPipeline {
     private static Thread creator;
     private static final ES2Pipeline theInstance;
     private static ES2ResourceFactory factories[];
+
+    private static void loadNativeLib() {
+        if (PlatformUtil.isLinux()) {
+            //Linux will have to decide between EGL and GLX
+            return;
+        }
+        String libName = "prism_es2";
+
+        String eglType = PlatformUtil.getEmbeddedType();
+        if ("monocle".equals(eglType)) {
+            isEglfb = true;
+            libName = "prism_es2_monocle";
+        }
+
+        GLFactory.loadNativeLib(libName);
+    }
 
     public static ES2Pipeline getInstance() {
         return theInstance;
