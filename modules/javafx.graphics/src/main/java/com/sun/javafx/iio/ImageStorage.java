@@ -192,7 +192,6 @@ public class ImageStorage {
         return InstanceHolder.INSTANCE;
     }
 
-
     public ImageStorage() {
         if (isIOS) {
             //On iOS we have single factory/ native loader
@@ -339,6 +338,8 @@ public class ImageStorage {
             loader = findImageLoader(input, listener);
 
             if (loader != null) {
+                // Images loaded from an InputStream always have an image pixel scale of 1, since we
+                // don't have a file name to infer a different intrinsic scale (with the @Nx convention).
                 images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, 1, smooth);
             } else {
                 throw new ImageStorageException("No loader for image data");

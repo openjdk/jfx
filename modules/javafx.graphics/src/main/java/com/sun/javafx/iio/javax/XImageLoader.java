@@ -296,5 +296,4 @@ public class XImageLoader implements ImageLoader {
             return listener.hashCode();
         }
     }
-
 }
