@@ -93,7 +93,6 @@ public class NativeMediaManager {
     /**
      * Create a <code>NativeMediaManager</code>.
      */
-    @SuppressWarnings("removal")
     protected NativeMediaManager() {
         /*
          * Load native libraries. This must be done early as platforms may need
