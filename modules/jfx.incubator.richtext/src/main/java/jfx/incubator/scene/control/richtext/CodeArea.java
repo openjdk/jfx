@@ -56,6 +56,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * <p>
  * Unlike its base class {@link RichTextArea}, the {@code CodeArea} requires a special kind of model to be used,
  * a {@link CodeTextModel}.
+ *
  * <h2>Creating a CodeArea</h2>
  * <p>
  * The following example creates an editable control with the default {@link CodeArea}:

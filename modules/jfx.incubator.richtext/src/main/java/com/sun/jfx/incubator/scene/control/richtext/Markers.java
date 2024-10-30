@@ -135,7 +135,7 @@ public class Markers {
                 }
 
                 ix += (linesAdded - end.index() + start.index());
-                p = new TextPos(ix, off);
+                p = TextPos.ofLeading(ix, off);
             }
 
             // update markers with the new position, removing gc'ed

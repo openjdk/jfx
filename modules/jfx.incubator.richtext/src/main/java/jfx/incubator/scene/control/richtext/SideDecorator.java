@@ -69,7 +69,7 @@ public interface SideDecorator {
      * This method may return {@code null}.
      *
      * @param index the paragraph index
-     * @return new instance {@code Node} 
+     * @return new instance {@code Node}
      */
     public Node getNode(int index);
 }

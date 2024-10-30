@@ -550,14 +550,14 @@ public abstract class StyledTextModel {
             if (p.offset() < len) {
                 return p;
             }
-            return new TextPos(ix, len);
+            return TextPos.ofLeading(ix, len);
         } else {
             if (ct == 0) {
                 return TextPos.ZERO;
             } else {
                 ix = ct - 1;
                 int len = getParagraphLength(ix);
-                return new TextPos(ct - 1, len);
+                return TextPos.ofLeading(ct - 1, len);
             }
         }
     }
@@ -588,7 +588,7 @@ public abstract class StyledTextModel {
         int off = getParagraphLength(index);
         int cix = off - 1;
         if (cix < 0) {
-            return new TextPos(index, off);
+            return TextPos.ofLeading(index, off);
         } else {
             return new TextPos(index, off, cix, false);
         }
@@ -701,7 +701,7 @@ public abstract class StyledTextModel {
 
         fireChangeEvent(start, end, top, lines, btm);
 
-        TextPos newEnd = new TextPos(index, offset);
+        TextPos newEnd = TextPos.ofLeading(index, offset);
         if (allowUndo) {
             add(ch, newEnd);
         }

@@ -85,7 +85,7 @@ public class DemoScriptEngine {
             {
                 {
                     content.setUpdater((ix) -> {
-                        TextPos p = new TextPos(ix, 0);
+                        TextPos p = TextPos.ofLeading(ix, 0);
                         int len = getPlainText(ix).length();
                         fireChangeEvent(p, p, len, 0, 0);
                     });

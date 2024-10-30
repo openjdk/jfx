@@ -2240,7 +2240,7 @@ public class RichTextArea extends Control {
                         // FIX find previous symbol
                         ix = 0;
                     }
-                    pos = new TextPos(pos.index(), ix);
+                    pos = TextPos.ofLeading(pos.index(), ix);
                 }
                 return m.getStyleAttributeMap(r, pos);
             }

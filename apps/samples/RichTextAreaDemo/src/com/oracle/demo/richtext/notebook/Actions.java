@@ -726,7 +726,7 @@ public class Actions {
             } else if (start.equals(end)) {
                 // apply to the whole paragraph
                 int ix = start.index();
-                start = new TextPos(ix, 0);
+                start = TextPos.ofLeading(ix, 0);
                 end = c.getParagraphEnd(ix);
             }
 
@@ -751,7 +751,7 @@ public class Actions {
                 }
                 // apply to the whole paragraph
                 int ix = start.index();
-                start = new TextPos(ix, 0);
+                start = TextPos.ofLeading(ix, 0);
                 end = c.getParagraphEnd(ix);
             }
 

@@ -76,7 +76,7 @@ public class TestRichTextModelAttributes {
         t(
             "{b}{i}0123{!}",
             (m) -> {
-                m.replace(null, new TextPos(0, 2), new TextPos(0, 2), "\n", false);
+                m.replace(null, TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 2), "\n", false);
             },
             "{b}{i}01{!}\n{0}23{!}"
         );
@@ -85,7 +85,7 @@ public class TestRichTextModelAttributes {
         t(
             "{b}{i}0123{!}",
             (m) -> {
-                m.replace(null, new TextPos(0, 4), new TextPos(0, 4), "\n", false);
+                m.replace(null, TextPos.ofLeading(0, 4), TextPos.ofLeading(0, 4), "\n", false);
             },
             "{b}{i}0123{!}\n{!}"
         );
@@ -114,7 +114,7 @@ public class TestRichTextModelAttributes {
     }
 
     private static TextPos p(int index, int offset) {
-        return new TextPos(index, offset);
+        return TextPos.ofLeading(index, offset);
     }
 
     private void t(String initial, Consumer<RichTextModel> op, String expected) {

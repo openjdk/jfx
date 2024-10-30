@@ -135,7 +135,7 @@ public class TestRichTextModel {
     }
 
     private static TextPos t(int index, int offset) {
-        return new TextPos(index, offset);
+        return TextPos.ofLeading(index, offset);
     }
 
     protected void test(List<RichParagraph> initial, List<RichParagraph> expected, Consumer<StyledTextModel> op) {

@@ -110,7 +110,7 @@ public class RTAccessibilityHelper {
         int ix0 = Math.max(0, cp.index() - (Params.ACCESSIBILITY_WINDOW_SIZE / 2));
         int ix1 = Math.min(control.getParagraphCount() - 1, ix0 + Params.ACCESSIBILITY_WINDOW_SIZE);
 
-        start = new TextPos(ix0, 0);
+        start = TextPos.ofLeading(ix0, 0);
         end = control.getParagraphEnd(ix1);
     }
 

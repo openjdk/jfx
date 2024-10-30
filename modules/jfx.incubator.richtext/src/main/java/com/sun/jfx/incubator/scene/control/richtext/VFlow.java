@@ -1132,7 +1132,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         if (off == null) {
             return null;
         } else if(start || off == 0) {
-            return new TextPos(caretIndex, off);
+            return TextPos.ofLeading(caretIndex, off);
         } else {
             return new TextPos(caretIndex, off, off - 1, false);
         }

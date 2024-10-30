@@ -43,9 +43,9 @@ public final class TextPos implements Comparable<TextPos> {
      * Creates a new text position.
      *
      * @param index the paragraph index
-     * @param offset the offset in the text
+     * @param offset the offset in the text which corresponds to the insertion position
      * @param charIndex the character index
-     * @param leading the bias relative to the character at charIndex
+     * @param leading indicates whether the position is at the leading edge of the character at {@code charIndex}
      */
     public TextPos(int index, int offset, int charIndex, boolean leading) {
         if (index < 0) {
@@ -62,17 +62,17 @@ public final class TextPos implements Comparable<TextPos> {
     }
 
     /**
-     * Creates a new text position.
+     * Creates a new text position at the leading edge of the character at the specified text offset.
      *
      * @param index the paragraph index
      * @param offset the text offset
      */
-    public TextPos(int index, int offset) {
-        this(index, offset, offset, true);
+    public static TextPos ofLeading(int index, int offset) {
+        return new TextPos(index, offset, offset, true);
     }
 
     /**
-     * Returns the model paragraph index.
+     * Returns the paragraph index.
      * @return the paragraph index
      */
     public int index() {
@@ -150,10 +150,10 @@ public final class TextPos implements Comparable<TextPos> {
     public String toString() {
         return
             "TextPos{" +
-            "ix=" + index +
-            ", off=" + offset +
-            ", cix=" + charIndex +
-            (leading ? ", leading" : ", trailing") +
+            "index=" + index +
+            ", offset=" + offset +
+            ", charIndex=" + charIndex +
+            ", leading=" + leading +
             "}";
     }
 

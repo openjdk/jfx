@@ -59,7 +59,7 @@ public final class Marker implements Comparable<Marker> {
 
     @Override
     public String toString() {
-        return "Marker{" + getIndex() + "," + getOffset() + "}";
+        return "Marker{index=" + getIndex() + ", offset=" + getOffset() + "}";
     }
 
     /**
@@ -101,16 +101,16 @@ public final class Marker implements Comparable<Marker> {
     }
 
     /**
-     * Returns the model paragraph index.
-     * @return paragraph index
+     * Returns the paragraph index.
+     * @return the paragraph index
      */
     public final int getIndex() {
         return getTextPos().index();
     }
 
     /**
-     * Returns the insert offset within the paragraph.
-     * @return offset value
+     * Returns the text offset within the paragraph.
+     * @return the offset value
      */
     public final int getOffset() {
         return getTextPos().offset();

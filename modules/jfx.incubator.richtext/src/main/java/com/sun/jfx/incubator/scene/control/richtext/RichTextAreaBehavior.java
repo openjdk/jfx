@@ -593,13 +593,13 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
     public TextPos paragraphUp(RichTextArea control, TextPos caret) {
         int ix = caret.index();
-        TextPos p = new TextPos(ix, 0);
+        TextPos p = TextPos.ofLeading(ix, 0);
         if (caret.isSameInsertionIndex(p)) {
             --ix;
             if (ix < 0) {
                 return null;
             }
-            p = new TextPos(ix, 0);
+            p = TextPos.ofLeading(ix, 0);
         }
         return p;
     }
@@ -622,7 +622,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     private TextPos paragraphStart(RichTextArea control, TextPos caret) {
-        return new TextPos(caret.index(), 0);
+        return TextPos.ofLeading(caret.index(), 0);
     }
 
     public void moveUp() {
@@ -761,10 +761,10 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 TextPos p;
                 if (ix < control.getParagraphCount()) {
                     // next line
-                    p = new TextPos(ix, 0);
+                    p = TextPos.ofLeading(ix, 0);
                 } else {
                     // end of last paragraph w/o newline
-                    p = new TextPos(cell.getIndex(), cell.getTextLength());
+                    p = TextPos.ofLeading(cell.getIndex(), cell.getTextLength());
                 }
                 return p;
             }
@@ -790,7 +790,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 System.err.println(" --- SHOULD NOT HAPPEN: BreakIterator.DONE off=" + off); // FIX
                 return null;
             }
-            return new TextPos(start.index(), ix);
+            return TextPos.ofLeading(start.index(), ix);
         } catch(Exception e) {
             // TODO need to use a logger!
             System.err.println("offset=" + off + " text=[" + text + "]"); // FIX
@@ -896,8 +896,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 return;
             }
 
-            TextPos p0 = new TextPos(index, off0);
-            TextPos p1 = new TextPos(index, off1);
+            TextPos p0 = TextPos.ofLeading(index, off0);
+            TextPos p1 = TextPos.ofLeading(index, off1);
             control.select(p0, p1);
         } catch (Exception e) {
             // TODO need to use a logger!
@@ -911,7 +911,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         TextPos p = control.getCaretPosition();
         if (p != null) {
             int ix = p.index();
-            TextPos an = new TextPos(ix, 0);
+            TextPos an = TextPos.ofLeading(ix, 0);
             TextPos ca = control.getParagraphEnd(ix);
             control.select(an, ca);
         }
@@ -936,13 +936,13 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                         return;
                     }
                     int off = getPlainText(ix - 1).length();
-                    start = new TextPos(ix - 1, off);
+                    start = TextPos.ofLeading(ix - 1, off);
                 } else {
                     String text = getPlainText(p.index());
                     // Do not use charIterator here, because we do want to
                     // break up clusters when deleting backwards.
                     int off = Character.offsetByCodePoints(text, p.offset(), -1);
-                    start = new TextPos(ix, off);
+                    start = TextPos.ofLeading(ix, off);
                 }
 
                 control.getModel().replace(vflow, start, p, StyledInput.EMPTY, true);
@@ -984,8 +984,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 int ix0 = sel.getMin().index();
                 int ix1 = sel.getMax().index();
 
-                TextPos p0 = new TextPos(ix0, 0);
-                TextPos p1 = clamp(new TextPos(ix1 + 1, 0));
+                TextPos p0 = TextPos.ofLeading(ix0, 0);
+                TextPos p1 = clamp(TextPos.ofLeading(ix1 + 1, 0));
                 RichTextArea control = getControl();
                 control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
                 clearPhantomX();
@@ -1402,7 +1402,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 offset = Integer.MAX_VALUE;
                 continue;
             }
-            return new TextPos(index, off);
+            return TextPos.ofLeading(index, off);
         }
     }
 
@@ -1427,7 +1427,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 if (skipEmpty) {
                     index++;
                 }
-                return new TextPos(index, 0);
+                return TextPos.ofLeading(index, 0);
             }
 
             if (br == null) {
@@ -1437,17 +1437,17 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
             int len = text.length();
             if (offset == len) {
-                return new TextPos(++index, 0);
+                return TextPos.ofLeading(++index, 0);
             }
 
             int next = br.following(Utils.clamp(0, offset, len));
             if ((next == BreakIterator.DONE) || (next == len)) {
-                return new TextPos(index, len);
+                return TextPos.ofLeading(index, len);
             } else {
                 while (next != BreakIterator.DONE) {
                     boolean inWord = RichUtils.isLetterOrDigit(text, next);
                     if (inWord) {
-                        return new TextPos(index, next);
+                        return TextPos.ofLeading(index, next);
                     }
                     next = br.next();
                 }
@@ -1480,7 +1480,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 if (skipEmpty) {
                     index++;
                 }
-                return new TextPos(index, 0);
+                return TextPos.ofLeading(index, 0);
             }
 
             if (br == null) {
@@ -1494,11 +1494,11 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             if (next == BreakIterator.DONE) {
                 if (inWord) {
                     // when starting in the middle of a word
-                    return new TextPos(index, len);
+                    return TextPos.ofLeading(index, len);
                 }
             } else {
                 if (inWord) {
-                    return new TextPos(index, next);
+                    return TextPos.ofLeading(index, next);
                 }
 
                 while (next != BreakIterator.DONE) {
@@ -1506,7 +1506,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                     next = br.next();
                     inWord = RichUtils.isLetterOrDigit(text, offset);
                     if (inWord) {
-                        return new TextPos(index, next);
+                        return TextPos.ofLeading(index, next);
                     }
                 }
             }
