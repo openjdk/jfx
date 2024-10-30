@@ -203,7 +203,7 @@ public class SWTFXUtils {
     }
 
     private static Method blitDirect;
-    @SuppressWarnings("removal")
+
     private static void blit(int op,
             byte[] srcData, int srcDepth, int srcStride, int srcOrder,
             int srcX, int srcY, int srcWidth, int srcHeight,
@@ -241,7 +241,7 @@ public class SWTFXUtils {
     }
 
     private static Method blitPalette;
-    @SuppressWarnings("removal")
+
     private static void blit(int op,
         byte[] srcData, int srcDepth, int srcStride, int srcOrder,
         int srcX, int srcY, int srcWidth, int srcHeight,
@@ -279,7 +279,7 @@ public class SWTFXUtils {
     }
 
     private static Method getByteOrderMethod;
-    @SuppressWarnings("removal")
+
     private static int getByteOrder(ImageData image) throws Exception {
         final Class<?> clazz = ImageData.class;
         if (getByteOrderMethod != null) {

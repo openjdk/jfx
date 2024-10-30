@@ -25,18 +25,6 @@
 
 package javafx.embed.swt;
 
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Pixels;
-import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.cursor.CursorType;
-import com.sun.javafx.embed.AbstractEvents;
-import com.sun.javafx.embed.EmbeddedSceneDSInterface;
-import com.sun.javafx.embed.EmbeddedSceneDTInterface;
-import com.sun.javafx.embed.EmbeddedSceneInterface;
-import com.sun.javafx.embed.EmbeddedStageInterface;
-import com.sun.javafx.embed.HostInterface;
-import com.sun.javafx.stage.EmbeddedWindow;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -47,14 +35,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.scene.Scene;
 import javafx.scene.input.TransferMode;
 import javafx.stage.Window;
-import javafx.util.FXPermission;
-
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
@@ -96,6 +81,17 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Pixels;
+import com.sun.javafx.cursor.CursorFrame;
+import com.sun.javafx.cursor.CursorType;
+import com.sun.javafx.embed.AbstractEvents;
+import com.sun.javafx.embed.EmbeddedSceneDSInterface;
+import com.sun.javafx.embed.EmbeddedSceneDTInterface;
+import com.sun.javafx.embed.EmbeddedSceneInterface;
+import com.sun.javafx.embed.EmbeddedStageInterface;
+import com.sun.javafx.embed.HostInterface;
+import com.sun.javafx.stage.EmbeddedWindow;
 
 /**
  * {@code FXCanvas} is a component to embed JavaFX content into
@@ -136,10 +132,6 @@ import org.eclipse.swt.widgets.Shell;
  * @since JavaFX 2.0
  */
 public class FXCanvas extends Canvas {
-
-    // Internal permission used by FXCanvas (SWT interop)
-    private static final FXPermission FXCANVAS_PERMISSION =
-            new FXPermission("accessFXCanvasInternals");
 
     private HostContainer hostContainer;
     private volatile EmbeddedWindow stage;
@@ -306,7 +298,6 @@ public class FXCanvas extends Canvas {
         return null;
     }
 
-    @SuppressWarnings("removal")
     private static void initFx() {
         // NOTE: no internal "com.sun.*" packages can be accessed until after
         // the JavaFX platform is initialized. The list of needed internal
