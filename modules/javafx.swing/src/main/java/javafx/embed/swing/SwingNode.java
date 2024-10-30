@@ -549,7 +549,6 @@ public class SwingNode extends Node {
         locateLwFrame();
     };
 
-    @SuppressWarnings("removal")
     private final EventHandler<FocusUngrabEvent> ungrabHandler = event -> {
         if (!skipBackwardUnrgabNotification) {
             if (lwFrame != null) {
