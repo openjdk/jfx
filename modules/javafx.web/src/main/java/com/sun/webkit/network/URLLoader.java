@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,9 +51,6 @@ import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.security.AccessControlException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -122,20 +119,8 @@ final class URLLoader extends URLLoaderBase implements Runnable {
     /**
      * {@inheritDoc}
      */
-    @SuppressWarnings("removal")
     @Override
     public void run() {
-        // Run the loader in the page's access control context
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            doRun();
-            return null;
-        }, webPage.getAccessControlContext());
-    }
-
-    /**
-     * Executes this loader.
-     */
-    private void doRun() {
         Throwable error = null;
         int errorCode = 0;
         try {
@@ -186,9 +171,6 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         } catch (MalformedURLException ex) {
             error = ex;
             errorCode = LoadListenerClient.MALFORMED_URL;
-        } catch (@SuppressWarnings("removal") AccessControlException ex) {
-            error = ex;
-            errorCode = LoadListenerClient.PERMISSION_DENIED;
         } catch (UnknownHostException ex) {
             error = ex;
             errorCode = LoadListenerClient.UNKNOWN_HOST;
