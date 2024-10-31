@@ -26,9 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
-import java.security.AccessController;
 import java.security.Permission;
-import java.security.PrivilegedAction;
 import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -740,7 +738,6 @@ public class WindowStage extends GlassStage {
         }
     }
 
-    @SuppressWarnings("removal")
     void fullscreenChanged(final boolean fs) {
         if (!fs) {
             if (activeFSWindow.compareAndSet(this, null)) {
@@ -750,12 +747,9 @@ public class WindowStage extends GlassStage {
             isInFullScreen = true;
             activeFSWindow.set(this);
         }
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            if (stageListener != null) {
-                stageListener.changedFullscreen(fs);
-            }
-            return null;
-        }, getAccessControlContext());
+        if (stageListener != null) {
+            stageListener.changedFullscreen(fs);
+        }
     }
 
     @Override public void toBack() {
