@@ -42,8 +42,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
@@ -167,14 +165,12 @@ public class Locator {
     }
 
     private static long getContentLengthLong(URLConnection connection) {
-        @SuppressWarnings("removal")
-        Method method = AccessController.doPrivileged((PrivilegedAction<Method>) () -> {
-            try {
-                return URLConnection.class.getMethod("getContentLengthLong");
-            } catch (NoSuchMethodException ex) {
-                return null;
-            }
-        });
+        Method method;
+        try {
+            method = URLConnection.class.getMethod("getContentLengthLong");
+        } catch (NoSuchMethodException ex) {
+            method = null;
+        }
 
         try {
             if (method != null) {
