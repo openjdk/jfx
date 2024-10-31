@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,8 +36,6 @@ import java.math.BigInteger;
 import java.util.*;
 
 import java.lang.reflect.*;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import javafx.beans.value.ObservableValue;
 import com.sun.javafx.reflect.FieldUtil;
@@ -119,15 +117,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             if (Modifier.isPublic(type.getModifiers())) {
                 // only interested in public methods in public classes in
                 // non-restricted packages
-                @SuppressWarnings("removal")
-                final Method[] declaredMethods =
-                        AccessController.doPrivileged(
-                                new PrivilegedAction<Method[]>() {
-                                    @Override
-                                    public Method[] run() {
-                                        return type.getDeclaredMethods();
-                                    }
-                                });
+                final Method[] declaredMethods = type.getDeclaredMethods();
                 for (int i = 0; i < declaredMethods.length; i++) {
                     Method method = declaredMethods[i];
                     int modifiers = method.getModifiers();
