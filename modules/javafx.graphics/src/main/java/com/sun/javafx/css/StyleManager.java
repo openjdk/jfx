@@ -81,8 +81,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 /**
  * Contains the stylesheet state for a single scene. This includes both the
@@ -938,117 +936,7 @@ final public class StyleManager {
         return new byte[0];
     }
 
-    @SuppressWarnings("removal")
     public static Stylesheet loadStylesheet(final String fname) {
-        try {
-            return loadStylesheetUnPrivileged(fname);
-        } catch (java.security.AccessControlException ace) {
-
-            // FIXME: JIGSAW -- we no longer are in a jar file, so this code path
-            // is obsolete and needs to be redone or eliminated. Fortunately, I
-            // don't think it is actually needed.
-            System.err.println("WARNING: security exception trying to load: " + fname);
-
-            /*
-            ** we got an access control exception, so
-            ** we could be running with a security manager.
-            ** we'll allow the app to read a css file from our runtime jar,
-            ** and give it one more chance.
-            */
-
-            /*
-            ** check that there are enough chars after the !/ to have a valid .css or .bss file name
-            */
-            if ((fname.length() < 7) && (fname.indexOf("!/") < fname.length()-7)) {
-                return null;
-            }
-
-            /*
-            **
-            ** first check that it's actually looking for the same runtime jar
-            ** that we're running from, and not some other file.
-            */
-            try {
-                URI requestedFileUrI = new URI(fname);
-
-                /*
-                ** is the requested file in a jar
-                */
-                if ("jar".equals(requestedFileUrI.getScheme())) {
-                    /*
-                    ** let's check that the css file is being requested from our
-                    ** runtime jar
-                    */
-                    URI styleManagerJarURI = StyleManager.class.getProtectionDomain().getCodeSource().getLocation().toURI();
-
-                    final String styleManagerJarPath = styleManagerJarURI.getSchemeSpecificPart();
-                    String requestedFilePath = requestedFileUrI.getSchemeSpecificPart();
-                    String requestedFileJarPart = requestedFilePath.substring(requestedFilePath.indexOf('/'), requestedFilePath.indexOf("!/"));
-                    /*
-                    ** it's the correct jar, check it's a file access
-                    ** strip off the leading jar
-                    */
-                    if (styleManagerJarPath.equals(requestedFileJarPart)) {
-                        /*
-                        ** strip off the leading "jar",
-                        ** the css file name is past the last '!'
-                        */
-                        String requestedFileJarPathNoLeadingSlash = fname.substring(fname.indexOf("!/")+2);
-                        /*
-                        ** check that it's looking for a css file in the runtime jar
-                        */
-                        if (fname.endsWith(".css") || fname.endsWith(".bss")) {
-                            /*
-                            ** check that the jar file exists, and that we're allowed to
-                            ** read it.
-                            */
-                            JarFile jar = null;
-                            try {
-                                jar = new JarFile(styleManagerJarPath);
-                            } catch (IOException ioe) {
-                                /*
-                                ** we got either a FileNotFoundException or an IOException
-                                ** in the read. Return the same error as we would have
-                                ** returned if the css file hadn't of existed.
-                                */
-                                return null;
-                            }
-                            if (jar != null) {
-                                /*
-                                ** check that the file is in the jar
-                                */
-                                JarEntry entry = jar.getJarEntry(requestedFileJarPathNoLeadingSlash);
-                                if (entry != null) {
-                                    /*
-                                    ** allow read access to the jar
-                                    */
-                                    return loadStylesheetUnPrivileged(fname);
-                                }
-                            }
-                        }
-                    }
-                }
-                /*
-                ** no matter what happen, we return the same error that would
-                ** be returned if the css file hadn't of existed.
-                ** That way there in no information leaked.
-                */
-                return null;
-            }
-            /*
-            ** no matter what happen, we return the same error that would
-            ** be returned if the css file hadn't of existed.
-            ** That way there in no information leaked.
-            */
-            catch (java.net.URISyntaxException e) {
-                return null;
-            }
-       }
-    }
-
-
-    private static Stylesheet loadStylesheetUnPrivileged(final String fname) {
-
         synchronized (styleLock) {
             final String bss = System.getProperty("binary.css");
             // binary.css is true by default.
