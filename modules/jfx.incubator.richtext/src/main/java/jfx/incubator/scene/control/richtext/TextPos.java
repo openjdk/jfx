@@ -66,6 +66,7 @@ public final class TextPos implements Comparable<TextPos> {
      *
      * @param index the paragraph index
      * @param offset the text offset
+     * @return the instance of {@code TextPos}
      */
     public static TextPos ofLeading(int index, int offset) {
         return new TextPos(index, offset, offset, true);
