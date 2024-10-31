@@ -51,8 +51,10 @@ final class PreferenceProperties {
     private final ColorSchemeProperty colorScheme = new ColorSchemeProperty();
     private final DeferredProperty<Boolean> reducedMotion = new DeferredProperty<>("reducedMotion", false);
     private final DeferredProperty<Boolean> reducedTransparency = new DeferredProperty<>("reducedTransparency", false);
+    private final DeferredProperty<Boolean> reducedScrollBars = new DeferredProperty<>("reducedScrollBars", false);
     private final ReadOnlyBooleanWrapper reducedMotionFlag;
     private final ReadOnlyBooleanWrapper reducedTransparencyFlag;
+    private final ReadOnlyBooleanWrapper reducedScrollBarsFlag;
     private final Object bean;
 
     PreferenceProperties(Object bean) {
@@ -63,6 +65,9 @@ final class PreferenceProperties {
 
         reducedTransparencyFlag = new ReadOnlyBooleanWrapper(bean, reducedTransparency.getName());
         reducedTransparencyFlag.bind(reducedTransparency);
+
+        reducedScrollBarsFlag = new ReadOnlyBooleanWrapper(bean, reducedScrollBars.getName());
+        reducedScrollBarsFlag.bind(reducedScrollBars);
     }
 
     public ReadOnlyBooleanProperty reducedMotionProperty() {
@@ -87,6 +92,18 @@ final class PreferenceProperties {
 
     public void setReducedTransparency(boolean value) {
         reducedTransparency.setValueOverride(value);
+    }
+
+    public ReadOnlyBooleanProperty reducedScrollBarsProperty() {
+        return reducedScrollBarsFlag.getReadOnlyProperty();
+    }
+
+    public boolean isReducedScrollBars() {
+        return reducedScrollBars.get();
+    }
+
+    public void setReducedScrollBars(boolean value) {
+        reducedScrollBars.setValueOverride(value);
     }
 
     public ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty() {
@@ -138,9 +155,9 @@ final class PreferenceProperties {
     }
 
     public void update(Map<String, ChangedValue> changedPreferences,
-                       Map<String, PreferenceMapping<?>> platformKeyMappings) {
+                       Map<String, PreferenceMapping<?, ?>> platformKeyMappings) {
         for (Map.Entry<String, ChangedValue> entry : changedPreferences.entrySet()) {
-            if (platformKeyMappings.get(entry.getKey()) instanceof PreferenceMapping<?> mapping
+            if (platformKeyMappings.get(entry.getKey()) instanceof PreferenceMapping<?, ?> mapping
                     && deferredProperties.get(mapping.keyName()) instanceof DeferredProperty<?> property) {
                 property.setPlatformValue(mapping.map(entry.getValue().newValue()));
             }

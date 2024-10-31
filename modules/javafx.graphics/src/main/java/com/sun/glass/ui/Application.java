@@ -786,11 +786,12 @@ public abstract class Application {
      *     <li>accentColor
      *     <li>reducedMotion
      *     <li>reducedTransparency
+     *     <li>reducedScrollBars
      * </ul>
      *
      * @return a map of platform-specific keys to well-known keys
      */
-    public Map<String, PreferenceMapping<?>> getPlatformKeyMappings() {
+    public Map<String, PreferenceMapping<?, ?>> getPlatformKeyMappings() {
         return Map.of();
     }
 

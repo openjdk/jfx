@@ -70,7 +70,8 @@ public class PlatformPreferencesTest {
                 "test.backgroundColor", new PreferenceMapping<>("backgroundColor", Color.class),
                 "test.accentColor", new PreferenceMapping<>("accentColor", Color.class),
                 "test.reducedMotion", new PreferenceMapping<>("reducedMotion", Boolean.class),
-                "test.enableTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b)
+                "test.enableTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b),
+                "test.reducedScrollBars", new PreferenceMapping<>("reducedScrollBars", String.class, "yes"::equals)
             ));
     }
 
@@ -364,5 +365,23 @@ public class PlatformPreferencesTest {
         assertEquals(2, trace.size());
         assertEquals(Boolean.FALSE, trace.get(1));
         assertFalse(prefs.isReducedTransparency());
+    }
+
+    @Test
+    void testReducedScrollBarsProperty() {
+        var trace = new ArrayList<Boolean>();
+        prefs.reducedScrollBarsProperty().addListener((observable, ov, nv) -> trace.add(nv));
+
+        assertFalse(prefs.isReducedScrollBars());
+        prefs.update(Map.of("test.reducedScrollBars", "yes"));
+
+        assertEquals(1, trace.size());
+        assertEquals(Boolean.TRUE, trace.get(0));
+        assertTrue(prefs.isReducedScrollBars());
+
+        prefs.update(new HashMap<>() {{ put("test.reducedScrollBars", "no"); }});
+        assertEquals(2, trace.size());
+        assertEquals(Boolean.FALSE, trace.get(1));
+        assertFalse(prefs.isReducedScrollBars());
     }
 }

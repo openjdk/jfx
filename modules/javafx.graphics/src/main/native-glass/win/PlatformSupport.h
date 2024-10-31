@@ -25,15 +25,21 @@
 
 #pragma once
 
-#include <common.h>
+/*
+ * This flag gives us function prototypes without the __declspec(dllimport) storage class specifier.
+ * RoActivationSupport defines symbols locally, and having the dllimport specifier would trigger LNK4217.
+ */
+#define _ROAPI_
 
-namespace ABI { namespace Windows { namespace UI { struct Color; } } }
+#include <common.h>
+#include <wrl.h>
+#include <windows.ui.viewmanagement.h>
 
 class PlatformSupport final
 {
 public:
-    PlatformSupport(JNIEnv*);
-    ~PlatformSupport() = default;
+    PlatformSupport(JNIEnv*, jobject application);
+    ~PlatformSupport();
     PlatformSupport(PlatformSupport const&) = delete;
     PlatformSupport& operator=(PlatformSupport const&) = delete;
 
@@ -46,16 +52,18 @@ public:
      * Collect all platform preferences and notify the JavaFX application when a preference has changed.
      * The change notification includes all preferences, not only the changed preferences.
      */
-    bool updatePreferences(jobject application) const;
+    bool updatePreferences() const;
 
     /**
      * Handles the WM_SETTINGCHANGE message.
     */
-    bool onSettingChanged(jobject application, WPARAM, LPARAM) const;
+    bool onSettingChanged(WPARAM, LPARAM) const;
 
 private:
     JNIEnv* env;
+    jobject application;
     bool initialized;
+    Microsoft::WRL::ComPtr<ABI::Windows::UI::ViewManagement::IUISettings> settings;
     mutable JGlobalRef<jobject> preferences;
 
     struct {

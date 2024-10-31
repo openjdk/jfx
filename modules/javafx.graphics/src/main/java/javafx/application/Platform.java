@@ -587,6 +587,20 @@ public final class Platform {
             permits com.sun.javafx.application.preferences.PlatformPreferences {
 
         /**
+         * Specifies whether applications should reduce the space taken up by scroll bars that are not
+         * actively used, either by hiding the scroll bars or by making them smaller or less noticeable.
+         * <p>
+         * If the platform does not report this preference, this property defaults to {@code false}.
+         *
+         * @return the {@code reducedScrollBars} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty reducedScrollBarsProperty();
+
+        boolean isReducedScrollBars();
+
+        /**
          * Specifies whether applications should minimize the amount of non-essential animations,
          * reducing discomfort for users who experience motion sickness or vertigo.
          * <p>
