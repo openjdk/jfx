@@ -2098,6 +2098,6 @@ public class Text extends Shape {
      * @since 24
      */
     public final LayoutInfo getLayoutInfo() {
-        return new PrismLayoutInfo(getTextLayout());
+        return new PrismLayoutInfo(getTextLayout(), null);
     }
 }

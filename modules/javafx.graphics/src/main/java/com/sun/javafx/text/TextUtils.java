@@ -71,15 +71,15 @@ public final class TextUtils {
         return a.toArray(PathElement[]::new);
     }
 
-    public static TextLineInfo toLineInfo(TextLine line) {
+    public static TextLineInfo toLineInfo(TextLine line, double lineSpacing) {
         int start = line.getStart();
         int end = line.getStart() + line.getLength();
-        Rectangle2D bounds = toRectangle2D(line.getBounds());
+        Rectangle2D bounds = toRectangle2D(line.getBounds(), lineSpacing);
         return new TextLineInfo(start, end, bounds);
     }
 
-    public static Rectangle2D toRectangle2D(BaseBounds b) {
-        return new Rectangle2D(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight());
+    public static Rectangle2D toRectangle2D(BaseBounds b, double lineSpacing) {
+        return new Rectangle2D(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight() + lineSpacing);
     }
 
     public static PathElement[] getCaretShape(float[] c, double dx, double dy) {

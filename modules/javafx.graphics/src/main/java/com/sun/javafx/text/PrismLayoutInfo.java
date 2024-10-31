@@ -27,6 +27,7 @@ package com.sun.javafx.text;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.text.CaretInfo;
 import javafx.scene.text.LayoutInfo;
@@ -38,15 +39,33 @@ import com.sun.javafx.scene.text.TextLine;
  * Layout information as reported by PrismLayout.
  */
 public final class PrismLayoutInfo extends LayoutInfo {
-    private final TextLayout layout;
 
-    public PrismLayoutInfo(TextLayout layout) {
+    /** Provides additional information if needed */
+    public static interface Helper {
+        public double lineSpacing();
+        public Insets insets();
+    }
+
+    private final TextLayout layout;
+    private final Helper helper;
+
+    public PrismLayoutInfo(TextLayout layout, Helper h) {
         this.layout = layout;
+        this.helper = h;
+    }
+
+    private double lineSpacing() {
+        return helper == null ? 0.0 : helper.lineSpacing();
+    }
+
+    private Insets insets() {
+        return helper == null ? Insets.EMPTY : helper.insets();
     }
 
     @Override
-    public Rectangle2D getBounds() {
-        return TextUtils.toRectangle2D(layout.getBounds());
+    public Rectangle2D getBounds(boolean includeLineSpacing) {
+        double sp = includeLineSpacing ? lineSpacing() : 0.0;
+        return TextUtils.toRectangle2D(layout.getBounds(), sp);
     }
 
     @Override
@@ -55,44 +74,49 @@ public final class PrismLayoutInfo extends LayoutInfo {
     }
 
     @Override
-    public List<TextLineInfo> getTextLines() {
+    public List<TextLineInfo> getTextLines(boolean includeLineSpacing) {
         TextLine[] lines = layout.getLines();
+        double sp = includeLineSpacing ? lineSpacing() : 0.0;
         int sz = lines.length;
         ArrayList<TextLineInfo> rv = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
-            rv.add(TextUtils.toLineInfo(lines[i]));
+            rv.add(TextUtils.toLineInfo(lines[i], sp));
         }
         return Collections.unmodifiableList(rv);
     }
 
     @Override
-    public TextLineInfo getTextLine(int index) {
-        return TextUtils.toLineInfo(layout.getLines()[index]);
+    public TextLineInfo getTextLine(int index, boolean includeLineSpacing) {
+        double sp = includeLineSpacing ? lineSpacing() : 0.0;
+        return TextUtils.toLineInfo(layout.getLines()[index], sp);
     }
 
     @Override
-    public List<Rectangle2D> selectionShape(int start, int end) {
-        return getGeometry(start, end, TextLayout.TYPE_TEXT);
+    public List<Rectangle2D> selectionShape(int start, int end, boolean includeLineSpacing) {
+        return getGeometry(start, end, TextLayout.TYPE_TEXT, lineSpacing());
     }
 
     @Override
     public List<Rectangle2D> strikeThroughShape(int start, int end) {
-        return getGeometry(start, end, TextLayout.TYPE_STRIKETHROUGH);
+        return getGeometry(start, end, TextLayout.TYPE_STRIKETHROUGH, 0.0);
     }
 
     @Override
     public List<Rectangle2D> underlineShape(int start, int end) {
-        return getGeometry(start, end, TextLayout.TYPE_UNDERLINE);
+        return getGeometry(start, end, TextLayout.TYPE_UNDERLINE, 0.0);
     }
 
-    private List<Rectangle2D> getGeometry(int start, int end, int type) {
+    private List<Rectangle2D> getGeometry(int start, int end, int type, double lineSpacing) {
+        Insets m = insets();
+        double dx = m.getLeft(); // TODO RTL?
+        double dy = m.getTop();
+
         ArrayList<Rectangle2D> rv = new ArrayList<>();
-        // TODO padding/border JDK-8341438?
         layout.getRange(start, end, type, (left, top, right, bottom) -> {
             if (left < right) {
-                rv.add(new Rectangle2D(left, top, right - left, bottom - top));
+                rv.add(new Rectangle2D(left + dx, top + dy, right - left, bottom - top + lineSpacing));
             } else {
-                rv.add(new Rectangle2D(right, top, left - right, bottom - top));
+                rv.add(new Rectangle2D(right + dx, top + dy, left - right, bottom - top + lineSpacing));
             }
         });
         return Collections.unmodifiableList(rv);
@@ -104,30 +128,33 @@ public final class PrismLayoutInfo extends LayoutInfo {
 
     @Override
     public CaretInfo caretInfo(int charIndex, boolean leading) {
+        Insets m = insets();
+        double dx = m.getLeft(); // TODO RTL?
+        double dy = m.getTop();
         float[] c = layout.getCaretInf(charIndex, leading);
 
-        // TODO padding/border JDK-8341438?
-        double[][] lines;
+        Rectangle2D[] parts;
         if (c.length == 3) {
             // {x, ymin, ymax} - corresponds to a single line from (x, ymin) tp (x, ymax)
-            lines = new double[][] {
-                new double[] {
-                    c[0], c[1], c[2]
-                }
+            double x = c[0];
+            double ymin = c[1];
+            double ymax = c[2];
+            parts = new Rectangle2D[] {
+                new Rectangle2D(x + dx, ymin + dy, 0.0, ymax - ymin)
             };
         } else {
             // {x, y, y2, x2, ymax} - corresponds to a split caret drawn as two lines, the first line
             // drawn from (x,y) to (x, y2), the second line drawn from (x2, y2) to (x2, ymax).
+            double x = c[0];
+            double y = c[1];
             double y2 = c[2];
-            lines = new double[][] {
-                new double[] {
-                    c[0], c[1], y2
-                },
-                new double[] {
-                    c[3], y2, c[4]
-                }
+            double x2 = c[3];
+            double ymax = c[4];
+            parts = new Rectangle2D[] {
+                new Rectangle2D(x + dx, y + dy, 0.0, y2 - y),
+                new Rectangle2D(x2 + dx, y2 + dy, 0.0, ymax - y2)
             };
         }
-        return new PrismCaretInfo(lines);
+        return new PrismCaretInfo(parts);
     }
 }

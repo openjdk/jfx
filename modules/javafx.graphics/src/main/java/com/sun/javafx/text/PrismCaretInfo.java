@@ -24,25 +24,27 @@
  */
 package com.sun.javafx.text;
 
+import javafx.geometry.Rectangle2D;
 import javafx.scene.text.CaretInfo;
 
 /**
  * CaretInfo as reported by the PrismTextLayout.
  */
 public final class PrismCaretInfo extends CaretInfo {
-    private final double[][] lines;
 
-    public PrismCaretInfo(double[][] lines) {
-        this.lines = lines;
+    private final Rectangle2D[] parts;
+
+    public PrismCaretInfo(Rectangle2D[] parts) {
+        this.parts = parts;
     }
 
     @Override
-    public int getLineCount() {
-        return lines.length;
+    public int getPartCount() {
+        return parts.length;
     }
 
     @Override
-    public double[] getLineAt(int index) {
-        return lines[index];
+    public Rectangle2D getPartAt(int index) {
+        return parts[index];
     }
 }

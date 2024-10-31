@@ -24,6 +24,7 @@
  */
 package javafx.scene.text;
 
+import javafx.geometry.Rectangle2D;
 import com.sun.javafx.text.PrismCaretInfo;
 
 /**
@@ -43,17 +44,13 @@ public sealed abstract class CaretInfo permits PrismCaretInfo {
      *
      * @return the number of parts representing the caret
      */
-    public abstract int getLineCount();
+    public abstract int getPartCount();
 
     /**
      * Returns the geometry of the part at the specified index.
-     * <p>
-     * The geometry is encoded in an array of [x, ymin, ymax] values which
-     * represent a line drawn from (x, ymin) to (x, ymax).
      *
      * @param index the line index
-     * @return the array of [x, ymin, ymax] values
+     * @return the bounds of the caret part
      */
-    // TODO or use Rectangle2D instead?
-    public abstract double[] getLineAt(int index);
+    public abstract Rectangle2D getPartAt(int index);
 }

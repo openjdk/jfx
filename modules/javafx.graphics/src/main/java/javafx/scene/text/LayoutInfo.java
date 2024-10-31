@@ -46,19 +46,14 @@ public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutI
     }
 
     /**
-     * Returns the logical bounds of the layout:
-     * <ul>
-     * <li>{@code minX} is always zero
-     * <li>{@code minY} is the ascent of the first line (negative)
-     * <li>{@code width} the width of the widest line
-     * <li>{@code height} the sum of all lines height
-     * </ul>
+     * Returns the logical bounds of the layout.
+     * Depending on {@code includeLineSpacing}, the return value may include the line spacing after the
+     * last line of text.
      *
+     * @param includeLineSpacing determines whether the line spacing after last text line should be included
      * @return the layout bounds
      */
-    // TODO maybe add a boolean flag to control whether the last line's lineSpacing is included or not,
-    // see JDK-8317120 and JDK-8317122
-    public abstract Rectangle2D getBounds();
+    public abstract Rectangle2D getBounds(boolean includeLineSpacing);
 
     /**
      * Returns the number of text lines in the layout.
@@ -69,18 +64,20 @@ public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutI
     /**
      * Returns the immutable list of text lines in the layout.
      *
+     * @param includeLineSpacing determines whether the result includes the line spacing
      * @return the immutable list of {@code TextLineInfo} objects
      */
-    public abstract List<TextLineInfo> getTextLines();
+    public abstract List<TextLineInfo> getTextLines(boolean includeLineSpacing);
 
     /**
      * Returns the {@code TextLineInfo} object which contains information about
      * the text line at index {@code index}.
      *
      * @param index the line index
+     * @param includeLineSpacing determines whether the result includes the line spacing
      * @return the {@code TextLineInfo} object
      */
-    public abstract TextLineInfo getTextLine(int index);
+    public abstract TextLineInfo getTextLine(int index, boolean includeLineSpacing);
 
     /**
      * Returns the geometry of the text selection, as an immutable list of {@code Rectangle2D} objects,
@@ -88,10 +85,10 @@ public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutI
      *
      * @param start the start offset
      * @param end the end offset
+     * @param includeLineSpacing determines whether the result includes the line spacing
      * @return the immutable list of {@code Rectangle2D} objects
      */
-    // TODO this method should include last line spacing JDK-8317120
-    public abstract List<Rectangle2D> selectionShape(int start, int end);
+    public abstract List<Rectangle2D> selectionShape(int start, int end, boolean includeLineSpacing);
 
     /**
      * Returns the geometry of the strike-through shape, as an immutable list of {@code Rectangle2D} objects,
