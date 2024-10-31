@@ -587,18 +587,18 @@ public final class Platform {
             permits com.sun.javafx.application.preferences.PlatformPreferences {
 
         /**
-         * Specifies whether applications should reduce the space taken up by scroll bars that are not
-         * actively used, either by hiding the scroll bars or by making them smaller or less noticeable.
+         * Specifies whether applications should always show scroll bars. If not set, an application may
+         * choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
          * <p>
          * If the platform does not report this preference, this property defaults to {@code false}.
          *
-         * @return the {@code reducedScrollBars} property
+         * @return the {@code persistentScrollBars} property
          * @defaultValue {@code false}
          * @since 24
          */
-        ReadOnlyBooleanProperty reducedScrollBarsProperty();
+        ReadOnlyBooleanProperty persistentScrollBarsProperty();
 
-        boolean isReducedScrollBars();
+        boolean isPersistentScrollBars();
 
         /**
          * Specifies whether applications should minimize the amount of non-essential animations,

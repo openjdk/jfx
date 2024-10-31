@@ -447,7 +447,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             "macOS.NSColor.controlAccentColor", new PreferenceMapping<>("accentColor", Color.class),
             "macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", new PreferenceMapping<>("reducedMotion", Boolean.class),
             "macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class),
-            "macOS.NSScroller.preferredScrollerStyle", new PreferenceMapping<>("reducedScrollBars", String.class, "NSScrollerStyleOverlay"::equals)
+            "macOS.NSScroller.preferredScrollerStyle", new PreferenceMapping<>("persistentScrollBars", String.class, "NSScrollerStyleLegacy"::equals)
         );
     }
 

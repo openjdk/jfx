@@ -381,7 +381,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             "Windows.UIColor.Background", new PreferenceMapping<>("backgroundColor", Color.class),
             "Windows.UIColor.Accent", new PreferenceMapping<>("accentColor", Color.class),
             "Windows.UISettings.AdvancedEffectsEnabled", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b),
-            "Windows.UISettings.AutoHideScrollBars", new PreferenceMapping<>("reducedScrollBars", Boolean.class),
+            "Windows.UISettings.AutoHideScrollBars", new PreferenceMapping<>("persistentScrollBars", Boolean.class, b -> !b),
             "Windows.SPI.ClientAreaAnimation", new PreferenceMapping<>("reducedMotion", Boolean.class, b -> !b)
         );
     }

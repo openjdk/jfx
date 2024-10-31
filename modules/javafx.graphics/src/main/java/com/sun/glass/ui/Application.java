@@ -786,7 +786,7 @@ public abstract class Application {
      *     <li>accentColor
      *     <li>reducedMotion
      *     <li>reducedTransparency
-     *     <li>reducedScrollBars
+     *     <li>persistentScrollBars
      * </ul>
      *
      * @return a map of platform-specific keys to well-known keys

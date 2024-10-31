@@ -51,10 +51,10 @@ final class PreferenceProperties {
     private final ColorSchemeProperty colorScheme = new ColorSchemeProperty();
     private final DeferredProperty<Boolean> reducedMotion = new DeferredProperty<>("reducedMotion", false);
     private final DeferredProperty<Boolean> reducedTransparency = new DeferredProperty<>("reducedTransparency", false);
-    private final DeferredProperty<Boolean> reducedScrollBars = new DeferredProperty<>("reducedScrollBars", false);
+    private final DeferredProperty<Boolean> persistentScrollBars = new DeferredProperty<>("persistentScrollBars", false);
     private final ReadOnlyBooleanWrapper reducedMotionFlag;
     private final ReadOnlyBooleanWrapper reducedTransparencyFlag;
-    private final ReadOnlyBooleanWrapper reducedScrollBarsFlag;
+    private final ReadOnlyBooleanWrapper persistentScrollBarsFlag;
     private final Object bean;
 
     PreferenceProperties(Object bean) {
@@ -66,8 +66,8 @@ final class PreferenceProperties {
         reducedTransparencyFlag = new ReadOnlyBooleanWrapper(bean, reducedTransparency.getName());
         reducedTransparencyFlag.bind(reducedTransparency);
 
-        reducedScrollBarsFlag = new ReadOnlyBooleanWrapper(bean, reducedScrollBars.getName());
-        reducedScrollBarsFlag.bind(reducedScrollBars);
+        persistentScrollBarsFlag = new ReadOnlyBooleanWrapper(bean, persistentScrollBars.getName());
+        persistentScrollBarsFlag.bind(persistentScrollBars);
     }
 
     public ReadOnlyBooleanProperty reducedMotionProperty() {
@@ -94,16 +94,16 @@ final class PreferenceProperties {
         reducedTransparency.setValueOverride(value);
     }
 
-    public ReadOnlyBooleanProperty reducedScrollBarsProperty() {
-        return reducedScrollBarsFlag.getReadOnlyProperty();
+    public ReadOnlyBooleanProperty persistentScrollBarsProperty() {
+        return persistentScrollBarsFlag.getReadOnlyProperty();
     }
 
-    public boolean isReducedScrollBars() {
-        return reducedScrollBars.get();
+    public boolean isPersistentScrollBars() {
+        return persistentScrollBars.get();
     }
 
-    public void setReducedScrollBars(boolean value) {
-        reducedScrollBars.setValueOverride(value);
+    public void setPersistentScrollBars(boolean value) {
+        persistentScrollBars.setValueOverride(value);
     }
 
     public ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty() {
