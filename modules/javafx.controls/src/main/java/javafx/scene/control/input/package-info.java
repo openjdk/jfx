@@ -25,7 +25,7 @@
 
 /**
  * <p>Incubates a customization mechanism for the JavaFX Controls utilizing the
- * {@link jfx.incubator.scene.control.input.InputMap InputMap}.
+ * {@link javafx.scene.control.input.InputMap InputMap}.
  * <p>
  * The {@code InputMap}
  * <ul>
