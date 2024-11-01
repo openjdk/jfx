@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,8 +36,6 @@ import com.sun.javafx.iio.common.ImageTools;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import java.util.Map;
 
@@ -109,11 +107,7 @@ public class IosImageLoader extends ImageLoaderImpl {
 
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            NativeLibLoader.loadLibrary("nativeiio");
-            return null;
-        });
+        NativeLibLoader.loadLibrary("nativeiio");
 
         COLOR_SPACE_MAPPING = Map.of(
             GRAY,              ImageType.GRAY,
