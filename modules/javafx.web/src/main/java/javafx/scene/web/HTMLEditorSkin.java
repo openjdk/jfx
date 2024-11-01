@@ -828,6 +828,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
         Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
         ((StyleableProperty)button.graphicProperty()).applyStyle(null, new ImageView(icon));
+//      button.setGraphic(new ImageView(icon));
         button.setTooltip(new Tooltip(tooltipText));
 
         button.setOnAction(event -> {
@@ -851,6 +852,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
         Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
         ((StyleableProperty)toggleButton.graphicProperty()).applyStyle(null, new ImageView(icon));
+//      toggleButton.setGraphic(new ImageView(icon));
 
         toggleButton.setTooltip(new Tooltip(tooltipText));
 

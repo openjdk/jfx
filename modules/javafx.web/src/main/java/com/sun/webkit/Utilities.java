@@ -116,6 +116,11 @@ public abstract class Utilities {
             });
         }
 
-        return MethodHelper.invoke(method, instance, args);
+        try {
+            return MethodHelper.invoke(method, instance, args);
+        } catch (InvocationTargetException ex) {
+            Throwable cause = ex.getCause();
+            throw cause != null ? cause : ex;
+        }
     }
 }
