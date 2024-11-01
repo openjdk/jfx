@@ -134,10 +134,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                     */
                 isCopy = isDecoded = false;
             } catch (Exception e) {
-            } finally {
-                if (PrismFontFactory.debugFonts) {
-                    System.err.println("Temp file deleted: " + filename);
-                }
+            }
+
+            // TODO: In case of failure this will print "temp file not deleted" and then
+            // "temp file deleted" right after, might be worth ironing out.
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("Temp file deleted: " + filename);
             }
         }
     }
@@ -245,9 +247,9 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                     if (PrismFontFactory.debugFonts) {
                         e.printStackTrace();
                     }
-                } finally {
-                    fileName = null;
                 }
+
+                fileName = null;
             }
         }
     }

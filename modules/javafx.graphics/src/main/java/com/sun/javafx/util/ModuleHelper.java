@@ -33,11 +33,9 @@ public class ModuleHelper {
     private static final Method addReadsMethod;
     private static final Method addExportsMethod;
 
-    private static final boolean verbose;
+    private static final boolean verbose = Boolean.getBoolean("javafx.verbose");
 
     static {
-        verbose = Boolean.getBoolean("javafx.verbose");
-
         if (verbose) {
             System.err.println("" + ModuleHelper.class.getName() + " : <clinit>");
         }

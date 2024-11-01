@@ -59,6 +59,7 @@ public class Disposer implements Runnable {
         for (ThreadGroup tgn = tg;
             tgn != null;
             tg = tgn, tgn = tg.getParent());
+
         Thread t = new Thread(tg, disposerInstance, "Prism Font Disposer");
         t.setContextClassLoader(null);
         t.setDaemon(true);

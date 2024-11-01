@@ -31,13 +31,8 @@ class GLPixelFormat {
     final private Attributes attributes;
     final private long nativeScreen;
     private long nativePFInfo;
-    private static int defaultDepthSize;
-    private static int defaultBufferSize;
-
-    static {
-        defaultDepthSize = Integer.getInteger("prism.glDepthSize", 24);
-        defaultBufferSize = Integer.getInteger("prism.glBufferSize", 32);
-    }
+    final private static int defaultDepthSize = Integer.getInteger("prism.glDepthSize", 24);
+    final private static int defaultBufferSize = Integer.getInteger("prism.glBufferSize", 32);
 
     GLPixelFormat(long nativeScreen, Attributes attributes) {
         this.nativeScreen = nativeScreen;

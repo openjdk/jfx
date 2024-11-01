@@ -103,13 +103,7 @@ package javafx.application;
  */
 public abstract class Preloader extends Application {
 
-    // Too bad this isn't already available in a Java core class
-    private static final String lineSeparator;
-
-    static {
-        String prop = System.getProperty("line.separator");
-        lineSeparator = prop != null ? prop : "\n";
-    }
+    private static final String lineSeparator = System.lineSeparator();
 
     /**
      * Constructor for subclasses to call.

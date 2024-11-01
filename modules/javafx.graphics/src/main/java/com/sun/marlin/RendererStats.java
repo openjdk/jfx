@@ -25,8 +25,6 @@
 
 package com.sun.marlin;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;

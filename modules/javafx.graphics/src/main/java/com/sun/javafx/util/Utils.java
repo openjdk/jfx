@@ -25,8 +25,6 @@
 
 package com.sun.javafx.util;
 
-import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
-
 import javafx.application.Platform;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -680,7 +678,6 @@ public class Utils {
     }
 
     public static boolean hasFullScreenStage(final Screen screen) {
-        @SuppressWarnings("removal")
         final List<Window> allWindows = Window.getWindows();
 
         for (final Window window : allWindows) {

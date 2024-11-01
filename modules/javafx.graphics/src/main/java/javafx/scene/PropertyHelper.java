@@ -27,8 +27,7 @@ package javafx.scene;
 
 class PropertyHelper {
 
-    // Function to return whether a system property is set to true. Note that
-    // this runs within a doPrivilege block so this function must be package-private.
+    // Function to return whether a system property is set to true.
     static boolean getBooleanProperty(final String propName) {
         try {
             String propVal = System.getProperty(propName);

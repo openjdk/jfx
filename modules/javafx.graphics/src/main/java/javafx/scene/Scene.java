@@ -1408,7 +1408,6 @@ public class Scene implements EventTarget {
     private static List<Runnable> snapshotRunnableListB;
     private static List<Runnable> snapshotRunnableList;
 
-    @SuppressWarnings("removal")
     static void addSnapshotRunnable(final Runnable runnable) {
         Toolkit.getToolkit().checkFxUserThread();
 
@@ -1442,9 +1441,7 @@ public class Scene implements EventTarget {
             Toolkit.getToolkit().addPostSceneTkPulseListener(snapshotPulseListener);
         }
 
-        snapshotRunnableList.add(() -> {
-            runnable.run();
-        });
+        snapshotRunnableList.add(runnable);
         Toolkit.getToolkit().requestNextPulse();
     }
 
