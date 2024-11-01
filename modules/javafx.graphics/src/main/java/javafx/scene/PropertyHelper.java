@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,13 @@
 
 package javafx.scene;
 
-import java.security.AccessController;
-
 class PropertyHelper {
 
-    // Function to return whether a system property is set to true. Note that
-    // this runs within a doPrivilege block so this function must be package-private.
+    // Function to return whether a system property is set to true.
     static boolean getBooleanProperty(final String propName) {
         try {
-            @SuppressWarnings("removal")
-            boolean answer =
-                AccessController.doPrivileged((java.security.PrivilegedAction<Boolean>) () -> {
-                        String propVal = System.getProperty(propName);
-                        return "true".equals(propVal.toLowerCase());
-                    });
-            return answer;
+            String propVal = System.getProperty(propName);
+            return "true".equals(propVal.toLowerCase());
         } catch (Exception any) {
         }
         return false;
