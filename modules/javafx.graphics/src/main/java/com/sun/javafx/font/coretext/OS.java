@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,19 +26,13 @@
 package com.sun.javafx.font.coretext;
 
 import java.nio.ByteOrder;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.geom.Path2D;
 
 class OS {
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            NativeLibLoader.loadLibrary("javafx_font");
-            return null;
-        });
+        NativeLibLoader.loadLibrary("javafx_font");
     }
 
     static final int kCFURLPOSIXPathStyle = 0;

@@ -245,6 +245,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                                                                          name:@"AppleColorPreferencesChangedNotification"
                                                                          object:nil];
 
+                        [[[NSWorkspace sharedWorkspace] notificationCenter]
+                            addObserver:self
+                            selector:@selector(platformPreferencesDidChange)
+                            name:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
+                            object:nil];
+
                         // localMonitor = [NSEvent addLocalMonitorForEventsMatchingMask: NSRightMouseDownMask
                         //                                                      handler:^(NSEvent *incomingEvent) {
                         //                                                          NSEvent *result = incomingEvent;
