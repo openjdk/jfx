@@ -34,7 +34,6 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
-import javafx.scene.control.Skinnable;
 import javafx.scene.input.KeyEvent;
 import com.sun.javafx.ModuleUtil;
 import com.sun.jfx.incubator.scene.control.input.EventHandlerPriority;
