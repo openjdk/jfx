@@ -638,9 +638,19 @@ public class RichTextArea extends Control {
 
                 @Override
                 protected void invalidated() {
+                    StyledTextModel m = get();
+                    try {
+                        validateModel(m);
+                    } catch(IllegalArgumentException e) {
+                        if (isBound()) {
+                            unbind();
+                        }
+                        set(old);
+                        throw e;
+                    }
+
                     if (undoable != null) {
                         undoable.unbind();
-                        StyledTextModel m = get();
                         if (m != null) {
                             undoable.bind(m.undoableProperty());
                         }
@@ -648,7 +658,6 @@ public class RichTextArea extends Control {
 
                     if(redoable != null) {
                         redoable.unbind();
-                        StyledTextModel m = get();
                         if (m != null) {
                             redoable.bind(m.redoableProperty());
                         }
@@ -657,7 +666,6 @@ public class RichTextArea extends Control {
                     if (old != null) {
                         old.removeListener(li);
                     }
-                    StyledTextModel m = get();
                     if (m != null) {
                         m.addListener(li);
                     }
@@ -680,6 +688,16 @@ public class RichTextArea extends Control {
 
     public final StyledTextModel getModel() {
         return model == null ? null : model.get();
+    }
+
+    /**
+     * Validates the model property value.
+     * The subclass should override this method to check if the model type is supported and throw a TBD if not.
+     * A {@code null} value should never generate the exception.
+     *
+     * @param m the model (can be null)
+     */
+    protected void validateModel(StyledTextModel m) {
     }
 
     /**

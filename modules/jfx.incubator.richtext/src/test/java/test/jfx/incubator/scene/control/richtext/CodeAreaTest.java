@@ -77,5 +77,16 @@ public class CodeAreaTest {
         Assertions.assertThrows(IllegalArgumentException.class, () -> {
             t.setModel(new RichTextModel());
         });
+        Assertions.assertTrue(t.getModel() instanceof CodeTextModel);
+    }
+
+    /** acceptable custom model */
+    @Test
+    public void acceptableModel() {
+        class M extends CodeTextModel { }
+        M custom = new M();
+        CodeArea t = new CodeArea();
+        t.setModel(custom);
+        Assertions.assertTrue(t.getModel() instanceof M);
     }
 }

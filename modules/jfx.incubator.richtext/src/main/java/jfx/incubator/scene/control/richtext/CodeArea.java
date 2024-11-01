@@ -58,7 +58,6 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * a {@link CodeTextModel}.
  *
  * <h2>Creating a CodeArea</h2>
- * <p>
  * The following example creates an editable control with the default {@link CodeArea}:
  * <pre>{@code    CodeArea codeArea = new CodeArea();
  *   codeArea.setWrapText(true);
@@ -68,7 +67,16 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * Which results in the following visual representation:
  * <p>
  * <img src="doc-files/CodeArea.png" alt="Image of the CodeArea control">
- * </p>
+ *
+ * <h2>Usage Considerations</h2>
+ * {@code CodeArea} extends the {@link RichTextArea} class, meaning most of the functionality is expected to continue
+ * working.  There are some differences that should be mentioned:
+ * <ul>
+ * <li>Model behavior: any direct changes to the styling, such as
+ * {@link #applyStyle(TextPos, TextPos, jfx.incubator.scene.control.richtext.model.StyleAttributeMap) applyStyle()},
+ * will be ignored
+ * <li>Line numbers: the line numbers are provided by setting the {@link #leftDecoratorProperty()}
+ * </ul>
  */
 public class CodeArea extends RichTextArea {
     private BooleanProperty lineNumbers;
@@ -86,17 +94,6 @@ public class CodeArea extends RichTextArea {
 
         getStyleClass().add("code-area");
         setAccessibleRoleDescription("Code Area");
-
-        modelProperty().addListener((s, prev, newValue) -> {
-            // TODO is there a better way?
-            // perhaps even block any change of (already set CodeModel)
-            if (newValue != null) {
-                if (!(newValue instanceof CodeTextModel)) {
-                    setModel(prev);
-                    throw new IllegalArgumentException("model must be of type " + CodeTextModel.class);
-                }
-            }
-        });
     }
 
     /**
@@ -104,6 +101,13 @@ public class CodeArea extends RichTextArea {
      */
     public CodeArea() {
         this(new CodeTextModel());
+    }
+
+    @Override
+    protected void validateModel(StyledTextModel m) {
+        if ((m != null) && (!(m instanceof CodeTextModel))) {
+            throw new IllegalArgumentException("CodeArea accepts models that extend CodeTextModel");
+        }
     }
 
     @Override
@@ -137,6 +141,9 @@ public class CodeArea extends RichTextArea {
 
     /**
      * Determines whether to show line numbers.
+     * Toggling this property results in changes made to the {@link RichTextArea#leftDecoratorProperty() leftDecorator}
+     * property, so the application code should not bind or modify that property.
+     *
      * @return the line numbers enabled property
      * @defaultValue false
      */
