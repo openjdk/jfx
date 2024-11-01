@@ -34,8 +34,6 @@ import com.sun.javafx.iio.common.ImageTools;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 public class JPEGImageLoader extends ImageLoaderImpl {
 
@@ -103,11 +101,8 @@ public class JPEGImageLoader extends ImageLoaderImpl {
     private native boolean decompressIndirect(long structPointer, boolean reportProgress, byte[] array) throws IOException;
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            NativeLibLoader.loadLibrary("javafx_iio");
-            return null;
-        });
+        NativeLibLoader.loadLibrary("javafx_iio");
+
         initJPEGMethodIDs(InputStream.class);
     }
 

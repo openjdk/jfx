@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,8 +39,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -91,9 +89,7 @@ public class LauncherImpl {
     private static final boolean trace = false;
 
     // set system property javafx.verbose to true to make the launcher noisy
-    @SuppressWarnings("removal")
-    private static final boolean verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
-        Boolean.getBoolean("javafx.verbose"));
+    private static final boolean verbose = Boolean.getBoolean("javafx.verbose");
 
     private static final String MF_MAIN_CLASS = "Main-Class";
     private static final String MF_JAVAFX_MAIN = "JavaFX-Application-Class";
@@ -146,9 +142,7 @@ public class LauncherImpl {
         Class<? extends Preloader> preloaderClass = savedPreloaderClass;
 
         if (preloaderClass == null) {
-            @SuppressWarnings("removal")
-            String preloaderByProperty = AccessController.doPrivileged((PrivilegedAction<String>) () ->
-                    System.getProperty("javafx.preloader"));
+            String preloaderByProperty = System.getProperty("javafx.preloader");
             if (preloaderByProperty != null) {
                 try {
                     preloaderClass = (Class<? extends Preloader>) Class.forName(preloaderByProperty,

@@ -36,8 +36,6 @@ import com.sun.javafx.iio.common.ImageTools;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import java.util.Map;
 
@@ -109,11 +107,7 @@ public class IosImageLoader extends ImageLoaderImpl {
 
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            NativeLibLoader.loadLibrary("nativeiio");
-            return null;
-        });
+        NativeLibLoader.loadLibrary("nativeiio");
 
         COLOR_SPACE_MAPPING = Map.of(
             GRAY,              ImageType.GRAY,
