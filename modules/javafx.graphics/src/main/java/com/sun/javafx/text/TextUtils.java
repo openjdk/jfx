@@ -31,6 +31,8 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.TextLineInfo;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.Point2D;
+import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
 
@@ -71,15 +73,26 @@ public final class TextUtils {
         return a.toArray(PathElement[]::new);
     }
 
-    public static TextLineInfo toLineInfo(TextLine line, double lineSpacing) {
+    public static TextLineInfo toLineInfo(TextLine line, double dx, double dy, double lineSpacing) {
         int start = line.getStart();
         int end = line.getStart() + line.getLength();
-        Rectangle2D bounds = toRectangle2D(line.getBounds(), lineSpacing);
+
+        // all the runs on the same line have the same y coordinate
+        for (GlyphList g : line.getRuns()) {
+            Point2D p = g.getLocation();
+            dx += p.x;
+            dy += p.y;
+            break;
+        }
+
+        Rectangle2D bounds = toRectangle2D(line.getBounds(), dx, dy, lineSpacing);
         return new TextLineInfo(start, end, bounds);
     }
 
-    public static Rectangle2D toRectangle2D(BaseBounds b, double lineSpacing) {
-        return new Rectangle2D(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight() + lineSpacing);
+    public static Rectangle2D toRectangle2D(BaseBounds b, double dx, double dy, double lineSpacing) {
+        // you wouldn't believe it, but width can be negative in BaseBounds
+        double w = Math.abs(b.getWidth());
+        return new Rectangle2D(b.getMinX() + dx, dy, w, b.getHeight() + lineSpacing);
     }
 
     public static PathElement[] getCaretShape(float[] c, double dx, double dy) {

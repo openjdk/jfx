@@ -32,6 +32,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.text.CaretInfo;
 import javafx.scene.text.LayoutInfo;
 import javafx.scene.text.TextLineInfo;
+import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
 
@@ -64,8 +65,12 @@ public final class PrismLayoutInfo extends LayoutInfo {
 
     @Override
     public Rectangle2D getBounds(boolean includeLineSpacing) {
+        BaseBounds b = layout.getBounds();
+        Insets m = insets();
+        double dx = m.getLeft(); // TODO rtl?
+        double dy = m.getTop();
         double sp = includeLineSpacing ? lineSpacing() : 0.0;
-        return TextUtils.toRectangle2D(layout.getBounds(), sp);
+        return TextUtils.toRectangle2D(b, dx, dy, sp);
     }
 
     @Override
@@ -76,19 +81,26 @@ public final class PrismLayoutInfo extends LayoutInfo {
     @Override
     public List<TextLineInfo> getTextLines(boolean includeLineSpacing) {
         TextLine[] lines = layout.getLines();
+        Insets m = insets();
+        double dx = m.getLeft(); // TODO rtl?
+        double dy = m.getTop();
         double sp = includeLineSpacing ? lineSpacing() : 0.0;
         int sz = lines.length;
+
         ArrayList<TextLineInfo> rv = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
-            rv.add(TextUtils.toLineInfo(lines[i], sp));
+            rv.add(TextUtils.toLineInfo(lines[i], dx, dy, sp));
         }
         return Collections.unmodifiableList(rv);
     }
 
     @Override
     public TextLineInfo getTextLine(int index, boolean includeLineSpacing) {
+        Insets m = insets();
+        double dx = m.getLeft(); // TODO rtl?
+        double dy = m.getTop();
         double sp = includeLineSpacing ? lineSpacing() : 0.0;
-        return TextUtils.toLineInfo(layout.getLines()[index], sp);
+        return TextUtils.toLineInfo(layout.getLines()[index], dx, dy, sp);
     }
 
     @Override
