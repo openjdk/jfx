@@ -112,6 +112,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     private Menu appleMenu;
+    private Runnable aboutHandler;
+    private Runnable settingsHandler;
 
     native void _runLoop(ClassLoader classLoader, Runnable launchable,
                          boolean isTaskbarApplication);
@@ -230,8 +232,46 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     native private void _hideOtherApplications();
     native private void _unhideAllApplications();
 
-    public void installAppleMenu(MenuBar menubar) {
-        this.appleMenu = createMenu("Apple");
+    @Override
+    public void setAboutHandler(Runnable handler) {
+      aboutHandler = handler;
+      rebuildAppleMenu();
+    }
+
+    @Override
+    public void setSettingsHandler(Runnable handler) {
+      settingsHandler = handler;
+      rebuildAppleMenu();
+    }
+
+    private void rebuildAppleMenu() {
+        for (int index = this.appleMenu.getItems().size() - 1; index >= 0; index--) {
+            this.appleMenu.remove(index);
+        }
+
+        if (null != aboutHandler) {
+            MenuItem aboutMenu = createMenuItem("About " + getName(), new MenuItem.Callback() {
+                @Override public void action() {
+                    aboutHandler.run();
+                }
+                @Override public void validate() {
+                }
+            });
+            this.appleMenu.add(aboutMenu);
+            this.appleMenu.add(MenuItem.Separator);
+        }
+
+        if (null != settingsHandler) {
+            MenuItem aboutMenu = createMenuItem("Settings...", new MenuItem.Callback() {
+                @Override public void action() {
+                    settingsHandler.run();
+                }
+                @Override public void validate() {
+                }
+            }, ',', KeyEvent.MODIFIER_COMMAND);
+            this.appleMenu.add(aboutMenu);
+            this.appleMenu.add(MenuItem.Separator);
+        }
 
         MenuItem hideMenu = createMenuItem("Hide " + getName(), new MenuItem.Callback() {
             @Override public void action() {
@@ -273,6 +313,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             }
         }, 'q', KeyEvent.MODIFIER_COMMAND);
         this.appleMenu.add(quitMenu);
+    }
+
+    public void installAppleMenu(MenuBar menubar) {
+        this.appleMenu = createMenu("Apple");
+
+        rebuildAppleMenu();
 
         menubar.add(this.appleMenu);
     }

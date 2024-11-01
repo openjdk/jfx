@@ -170,6 +170,24 @@ public abstract class Application {
     }
 
     /**
+     * Installs a handler to show a custom About window for the application. The default
+     * implementation does nothing.
+     *
+     * @param handler - the handler to respond to the About menu item being selected
+     */
+    public void setAboutHandler(Runnable handler) {
+    }
+
+    /**
+     * Installs a handler to show a custom Settings window for the application. The default
+     * implementation does nothing.
+     *
+     * @param handler - the handler to respond to the Settings menu item being selected
+     */
+    public void setSettingsHandler(Runnable handler) {
+    }
+
+    /**
      * Gets the name for the application.  The application name may
      * be used to identify the application in the user interface or
      * as part of the platform specific path used to store application

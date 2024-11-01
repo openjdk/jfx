@@ -372,6 +372,32 @@ public abstract class Application {
     public void stop() throws Exception {
     }
 
+    private ApplicationMenu applicationMenu = null;
+
+    /**
+     * Gets the ApplicationMenu for this application. This provides
+     * the ability to interact with the platform provided application menu.
+     *
+     * @return the ApplicationMenu
+     *
+     * @throws java.lang.UnsupportedOperationException if
+     * javafx.application.ConditionalFeature.APPLICATION_MENU is not supported on this platform
+     *
+     * @since JavaFX 24.0
+     */
+    public final ApplicationMenu getApplicationMenu() {
+        if (!PlatformImpl.isSupported(ConditionalFeature.APPLICATION_MENU)) {
+            throw new UnsupportedOperationException("ConditionalFeature.APPLICATION_MENU is not"
+                    + " supported on this platform");
+        }
+        synchronized (this) {
+            if (applicationMenu == null) {
+                applicationMenu = new ApplicationMenu();
+            }
+            return applicationMenu;
+        }
+    }
+
     private HostServices hostServices = null;
 
     /**

@@ -216,6 +216,14 @@ public enum ConditionalFeature {
      * true.
      * @since JavaFX 8.0
      */
-    INPUT_POINTER
+    INPUT_POINTER,
+
+    /**
+     * Indicates whether or this platform supports the concept of an application menu.
+     * <p>
+     * This is currently only supported on macOS.
+     * @since JavaFX 24.0
+     */
+    APPLICATION_MENU
 
 }

@@ -139,6 +139,28 @@ public class PlatformImpl {
     }
 
     /**
+     * Installs a handler to show a custom About window for your application.
+     * <p>
+     * Setting the handler to null reverts it to the default behavior.
+     *
+     * @param handler - the handler to respond to the About menu item being selected
+     */
+    public static void setAboutHandler(Runnable handler) {
+        com.sun.glass.ui.Application.GetApplication().setAboutHandler(handler);
+    }
+
+    /**
+     * Installs a handler to show a custom Settings window for your application.
+     * <p>
+     * Setting the handler to null reverts it to the default behavior.
+     *
+     * @param handler - the handler to respond to the Settings menu item being selected
+     */
+    public static void setSettingsHandler(Runnable handler) {
+        com.sun.glass.ui.Application.GetApplication().setSettingsHandler(handler);
+    }
+
+    /**
      * Sets the name of the this application based on the Application class.
      * This method is called by the launcher, and is not
      * called from the FX Application Thread, so we need to do it in a runLater.
@@ -1001,6 +1023,8 @@ public class PlatformImpl {
                     return Toolkit.getToolkit().isSupported(feature);
                 }
                 return hasPointer;
+            case APPLICATION_MENU:
+                return PlatformUtil.isMac();
             default:
                 return Toolkit.getToolkit().isSupported(feature);
         }
