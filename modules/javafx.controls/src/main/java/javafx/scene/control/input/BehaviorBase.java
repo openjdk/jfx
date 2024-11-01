@@ -113,6 +113,18 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
+     * Maps a function to the specified function tag.
+     * <p>
+     * This method allows for conditional consumption of the {@code KeyEvents}.
+     *
+     * @param tag the function tag
+     * @param function the function
+     */
+    protected final void registerFunction(FunctionTag tag, FunctionHandler function) {
+        getSkinInputMap().registerFunction(tag, function);
+    }
+
+    /**
      * Maps a key binding to the specified function tag.
      * A null key binding will result in no change to this input map.
      * This method will not override a user mapping.
@@ -143,6 +155,21 @@ public abstract class BehaviorBase<C extends Control> {
      * @param func the function
      */
     protected final void register(FunctionTag tag, KeyBinding k, Runnable func) {
+        getSkinInputMap().registerFunction(tag, func);
+        getSkinInputMap().registerKey(k, tag);
+    }
+
+    /**
+     * This convenience method maps the function tag to the specified function, and at the same time
+     * maps the specified key binding to that function tag.
+     * <p>
+     * This method allows for conditional consumption of the {@code KeyEvents}.
+     *
+     * @param tag the function tag
+     * @param k the key binding
+     * @param func the function
+     */
+    protected final void register(FunctionTag tag, KeyBinding k, FunctionHandler func) {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(k, tag);
     }
@@ -261,7 +288,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node above the current one.
      */
-    protected final void traverseUp() {
+    public final void traverseUp() {
         traverse(Direction.UP);
     }
 
@@ -269,7 +296,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node below the current one.
      */
-    protected final void traverseDown() {
+    public final void traverseDown() {
         traverse(Direction.DOWN);
     }
 
@@ -277,7 +304,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node left of the current one.
      */
-    protected final void traverseLeft() {
+    public final void traverseLeft() {
         traverse(Direction.LEFT);
     }
 
@@ -285,7 +312,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node right of the current one.
      */
-    protected final void traverseRight() {
+    public final void traverseRight() {
         traverse(Direction.RIGHT);
     }
 
@@ -293,7 +320,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node in the focus traversal cycle.
      */
-    protected final void traverseNext() {
+    public final void traverseNext() {
         traverse(Direction.NEXT);
     }
 
@@ -301,7 +328,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Calls the focus traversal engine and indicates that traversal should
      * go the previous focusTraversable Node in the focus traversal cycle.
      */
-    protected final void traversePrevious() {
+    public final void traversePrevious() {
         traverse(Direction.PREVIOUS);
     }
 }

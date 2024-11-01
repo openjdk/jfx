@@ -24,14 +24,24 @@
  */
 
 /**
- * <p>The <code>javafx.scene.control.input</code> package contains classes related
- * to the handling of the input events by the Control: input maps, key bindings, and related classes.
- * </p>
+ * <p>Incubates a customization mechanism for the JavaFX Controls utilizing the
+ * {@link jfx.incubator.scene.control.input.InputMap InputMap}.
+ * <p>
+ * The {@code InputMap}
+ * <ul>
+ * <li>allows for customization of a control behavior by changing the existing or adding new key mappings
+ * <li>supports dynamic modification of the key mappings
+ * <li>allows for accessing the default functionality even when it was overwritten by the application
+ * <li>allows for reverting customization to the default implementation
+ * <li>guarantees priorities between the application and the skin event handlers and key mappings
+ * <li>allows for gradual migration of the existing controls to use the InputMap
+ * <li>supports stateful and stateless (fully static) behavior implementations
+ * </ul>
  * See
- * <a href="https://github.com/andy-goryachev-oracle/Test/blob/main/doc/InputMap/InputMapV3.md">Public InputMap Proposal</a>
+ * <a href="https://github.com/andy-goryachev-oracle/Test/blob/main/doc/InputMap/InputMapV3.md">Public InputMap Proposal (v3)</a>
  * for more info.
  * <p>
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
  * @since 999 TODO
  */
