@@ -134,7 +134,7 @@ public class CellArrangement {
             Region r = cell.getContent();
             double y = cellY - cell.getY() - r.snappedTopInset();
             if (y < 0) {
-                return new TextPos(cell.getIndex(), 0, 0, true);
+                return TextPos.ofLeading(cell.getIndex(), 0);
             } else if (y < cell.getCellHeight()) {
                 if (r instanceof TextFlow f) {
                     double x = cellX - f.snappedLeftInset();
@@ -145,7 +145,7 @@ public class CellArrangement {
                     boolean leading = h.isLeading();
                     return new TextPos(cell.getIndex(), ii, ci, leading);
                 } else {
-                    return new TextPos(cell.getIndex(), 0, 0, true);
+                    return TextPos.ofLeading(cell.getIndex(), 0);
                 }
             }
 
@@ -153,7 +153,7 @@ public class CellArrangement {
             if (r instanceof TextFlow f) {
                 cix = RichUtils.getTextLength(f);
             }
-            return new TextPos(cell.getIndex(), cix, cix, true);
+            return TextPos.ofLeading(cell.getIndex(), cix);
         }
 
         return TextPos.ZERO;

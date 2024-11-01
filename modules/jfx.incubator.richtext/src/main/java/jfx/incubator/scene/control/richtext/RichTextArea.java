@@ -692,8 +692,9 @@ public class RichTextArea extends Control {
 
     /**
      * Validates the model property value.
-     * The subclass should override this method to check if the model type is supported and throw a TBD if not.
-     * A {@code null} value should never generate the exception.
+     * The subclass should override this method if it restricts the type of model that is supported,
+     * and throw an {@code IllegalArgumentException} if the model is not supported.
+     * A {@code null} value should always be acceptable and never generate an exception.
      *
      * @param m the model (can be null)
      */

@@ -65,7 +65,7 @@ public class BasicTextModel extends StyledTextModel {
 
         /**
          * This method is called to insert a single text segment at the given position.
-         * The caller guarantees that this method is only called when the content is writable.
+         * The {@code BasicTextModel} guarantees that this method is only called when the content is writable.
          *
          * @param index the paragraph index
          * @param offset the insertion offset within the paragraph
@@ -77,7 +77,7 @@ public class BasicTextModel extends StyledTextModel {
 
         /**
          * Inserts a line break.
-         * The caller guarantees that this method is only called when the content is writable.
+         * The {@code BasicTextModel} guarantees that this method is only called when the content is writable.
          *
          * @param index the model index
          * @param offset the text offset
@@ -86,7 +86,7 @@ public class BasicTextModel extends StyledTextModel {
 
         /**
          * Removes the specified range.
-         * The caller guarantees that this method is only called when the content is writable,
+         * The {@code BasicTextModel} guarantees that this method is only called when the content is writable,
          * and that {@code start} precedes {@code end}.
          *
          * @param start the start of the region to be removed

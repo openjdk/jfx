@@ -69,13 +69,15 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * <img src="doc-files/CodeArea.png" alt="Image of the CodeArea control">
  *
  * <h2>Usage Considerations</h2>
- * {@code CodeArea} extends the {@link RichTextArea} class, meaning most of the functionality is expected to continue
- * working.  There are some differences that should be mentioned:
+ * {@code CodeArea} extends the {@link RichTextArea} class, meaning most of the functionality works as it does
+ * in the base class.
+ * There are some differences that should be mentioned:
  * <ul>
  * <li>Model behavior: any direct changes to the styling, such as
  * {@link #applyStyle(TextPos, TextPos, jfx.incubator.scene.control.richtext.model.StyleAttributeMap) applyStyle()},
  * will be ignored
- * <li>Line numbers: the line numbers are provided by setting the {@link #leftDecoratorProperty()}
+ * <li>Line numbers: the {@code CodeArea} sets the {@link #leftDecoratorProperty()} to support the line numbers,
+ * so applications should not set or bind that property.
  * </ul>
  */
 public class CodeArea extends RichTextArea {

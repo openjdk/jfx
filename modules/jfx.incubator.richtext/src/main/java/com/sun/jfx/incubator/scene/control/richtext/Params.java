@@ -99,10 +99,10 @@ public class Params {
     public static final double MIN_VIEWPORT_WIDTH = 10;
 
     /** default preferred height */
-    public static final double PREF_HEIGHT = 176; // matches TextArea
+    public static final double PREF_HEIGHT = 176;
 
     /** default preferred width */
-    public static final double PREF_WIDTH = 176; // matches TextArea
+    public static final double PREF_WIDTH = 176;
 
     /** scroll bars block increment, fraction of view width/height (between 0.0 and 1.0). */
     public static final double SCROLL_BARS_BLOCK_INCREMENT = 0.05;

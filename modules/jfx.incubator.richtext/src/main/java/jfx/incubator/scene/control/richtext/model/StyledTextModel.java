@@ -743,7 +743,7 @@ public abstract class StyledTextModel {
             evEnd = end;
             changed = false;
         } else {
-            evStart = new TextPos(start.index(), 0, 0, true);
+            evStart = TextPos.ofLeading(start.index(), 0);
             evEnd = getEndOfParagraphTextPos(end.index());
             changed = true;
         }
