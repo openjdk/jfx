@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,10 +36,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.security.AccessController;
 import java.security.CodeSource;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.security.ProtectionDomain;
 
 /**
@@ -196,15 +193,12 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
 
             // check whether the path is file from our runtime jar
             try {
-                @SuppressWarnings("removal")
-                final URL rtJarURL = AccessController.doPrivileged((PrivilegedExceptionAction<URL>) () -> {
-                    // getProtectionDomain either throws a SecurityException or returns a non-null value
-                    final ProtectionDomain protectionDomain = Application.class.getProtectionDomain();
-                    // If we're running with a SecurityManager, then the ProtectionDomain will have a CodeSource
-                    final CodeSource codeSource = protectionDomain.getCodeSource();
-                    // The CodeSource location will be our runtime jar
-                    return codeSource.getLocation();
-                });
+                // getProtectionDomain either throws a SecurityException or returns a non-null value
+                final ProtectionDomain protectionDomain = Application.class.getProtectionDomain();
+                // If we're running with a SecurityManager, then the ProtectionDomain will have a CodeSource
+                final CodeSource codeSource = protectionDomain.getCodeSource();
+                // The CodeSource location will be our runtime jar
+                final URL rtJarURL = codeSource.getLocation();
 
                 final URI rtJarURI = rtJarURL.toURI();
 
@@ -237,7 +231,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
                 URI resolved = new URI(scheme, rtJarUserInfo, rtJarHost, rtJarPort, rtJarPath, null, null);
                 return resolved.toURL();
 
-            } catch (URISyntaxException | MalformedURLException | PrivilegedActionException ignored) {
+            } catch (URISyntaxException | MalformedURLException ignored) {
                 // Allow this method to return null so the caller will try to further resolve the path.
                 // If nothing else, an error message will result when the converted URL is consumed.
             }

@@ -27,8 +27,6 @@ package com.sun.marlin;
 
 import static com.sun.marlin.MarlinConst.LOG_UNSAFE_MALLOC;
 import java.lang.reflect.Field;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import sun.misc.Unsafe;
 
 /**
@@ -45,22 +43,13 @@ final class OffHeapArray  {
     static final int SIZE_INT;
 
     static {
-        @SuppressWarnings("removal")
-        Unsafe tmp = AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
-            @Override
-            public Unsafe run() {
-                Unsafe ref = null;
-                try {
-                    final Field field = Unsafe.class.getDeclaredField("theUnsafe");
-                    field.setAccessible(true);
-                    ref = (Unsafe) field.get(null);
-                } catch (Exception e) {
-                    throw new InternalError("Unable to get sun.misc.Unsafe instance", e);
-                }
-                return ref;
-            }
-        });
-        UNSAFE = tmp;
+        try {
+            final Field field = Unsafe.class.getDeclaredField("theUnsafe");
+            field.setAccessible(true);
+            UNSAFE = (Unsafe) field.get(null);
+        } catch (Exception e) {
+            throw new InternalError("Unable to get sun.misc.Unsafe instance", e);
+        }
 
         SIZE_INT = Unsafe.ARRAY_INT_INDEX_SCALE;
     }
