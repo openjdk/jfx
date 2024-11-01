@@ -720,7 +720,7 @@ public class TextFlow extends Pane {
      * @since 24
      */
     public final LayoutInfo getLayoutInfo() {
-        return new PrismLayoutInfo(getTextLayout(), new PrismLayoutInfo.Helper() {
+        return new PrismLayoutInfo(getTextLayout()) {
             @Override
             public double lineSpacing() {
                 return getLineSpacing();
@@ -730,6 +730,6 @@ public class TextFlow extends Pane {
             public Insets insets() {
                 return getInsets();
             }
-        });
+        };
     }
 }

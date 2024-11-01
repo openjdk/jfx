@@ -38,7 +38,7 @@ import javafx.geometry.Rectangle2D;
  *
  * @since 24
  */
-public sealed abstract class LayoutInfo permits com.sun.javafx.text.PrismLayoutInfo {
+public abstract class LayoutInfo {
     /**
      * Constructor for subclasses to call.
      */

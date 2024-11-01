@@ -90,6 +90,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
@@ -2098,6 +2099,16 @@ public class Text extends Shape {
      * @since 24
      */
     public final LayoutInfo getLayoutInfo() {
-        return new PrismLayoutInfo(getTextLayout(), null);
+        return new PrismLayoutInfo(getTextLayout()) {
+            @Override
+            public double lineSpacing() {
+                return getLineSpacing();
+            }
+
+            @Override
+            public Insets insets() {
+                return Insets.EMPTY;
+            }
+        };
     }
 }

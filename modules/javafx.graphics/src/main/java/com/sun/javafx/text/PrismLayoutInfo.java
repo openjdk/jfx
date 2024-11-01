@@ -39,28 +39,16 @@ import com.sun.javafx.scene.text.TextLine;
 /**
  * Layout information as reported by PrismLayout.
  */
-public final class PrismLayoutInfo extends LayoutInfo {
+public abstract class PrismLayoutInfo extends LayoutInfo {
 
-    /** Provides additional information if needed */
-    public static interface Helper {
-        public double lineSpacing();
-        public Insets insets();
-    }
+    protected abstract double lineSpacing();
+    
+    protected abstract Insets insets();
 
     private final TextLayout layout;
-    private final Helper helper;
 
-    public PrismLayoutInfo(TextLayout layout, Helper h) {
+    public PrismLayoutInfo(TextLayout layout) {
         this.layout = layout;
-        this.helper = h;
-    }
-
-    private double lineSpacing() {
-        return helper == null ? 0.0 : helper.lineSpacing();
-    }
-
-    private Insets insets() {
-        return helper == null ? Insets.EMPTY : helper.insets();
     }
 
     @Override
