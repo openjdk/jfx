@@ -630,7 +630,7 @@ public class ImageStorage {
             try {
                 Class<?> factoryClass = Class.forName("com.sun.javafx.iio.javax.XImageLoaderFactory");
                 xImageLoaderFactory = Optional.of((ImageLoaderFactory)factoryClass.getMethod("getInstance").invoke(null));
-            } catch (ReflectiveOperationException e) {
+            } catch (NoClassDefFoundError | ReflectiveOperationException e) {
                 xImageLoaderFactory = Optional.empty();
             }
         }
