@@ -122,6 +122,9 @@ public class XImageLoader implements ImageLoader {
         if (param.canSetSourceRenderSize()) {
             int imageWidth = reader.getWidth(imageIndex);
             int imageHeight = reader.getHeight(imageIndex);
+            ImageTools.validateMaxDimensions(imageWidth, imageHeight, screenPixelScale);
+            ImageTools.validateMaxDimensions(w, h, screenPixelScale);
+
             int[] widthHeight = ImageTools.computeDimensions(
                 (int)(imageWidth * screenPixelScale), (int)(imageHeight * screenPixelScale),
                 (int)(w * screenPixelScale), (int)(h * screenPixelScale),
@@ -132,6 +135,8 @@ public class XImageLoader implements ImageLoader {
             pixelScale = screenPixelScale;
             param.setSourceRenderSize(new Dimension(width, height));
         } else {
+            ImageTools.validateMaxDimensions(w, h, imagePixelScale);
+
             int[] widthHeight = ImageTools.computeDimensions(
                 reader.getWidth(imageIndex), reader.getHeight(imageIndex),
                 (int)(w * imagePixelScale), (int)(h * imagePixelScale),

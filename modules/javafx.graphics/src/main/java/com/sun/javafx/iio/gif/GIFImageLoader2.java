@@ -200,6 +200,8 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
     // loads next image frame or null if no more
     public ImageFrame load(int imageIndex, double imgw, double imgh, boolean preserveAspectRatio, boolean smooth,
                            float screenPixelScale, float imagePixelScale) throws IOException {
+        ImageTools.validateMaxDimensions(imgw, imgh, imagePixelScale);
+
         int imageControlCode = waitForImageFrame();
 
         if (imageControlCode < 0) {

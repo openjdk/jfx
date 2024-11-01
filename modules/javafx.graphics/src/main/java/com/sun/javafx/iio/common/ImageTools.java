@@ -211,6 +211,21 @@ public class ImageTools {
         return new int[]{finalWidth, finalHeight};
     }
 
+    public static void validateMaxDimensions(double width, double height, double scaleFactor) {
+        if (width * scaleFactor > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Image width exceeds maximum value");
+        }
+
+        if (height * scaleFactor > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Image height exceeds maximum value");
+        }
+
+        // Use a long multiplication to prevent int overflow.
+        if ((long)(width * scaleFactor) * (long)(height * scaleFactor) > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Image size exceeds maximum value");
+        }
+    }
+
     public static ImageFrame scaleImageFrame(ImageFrame src,
             int destWidth, int destHeight, boolean isSmooth)
     {

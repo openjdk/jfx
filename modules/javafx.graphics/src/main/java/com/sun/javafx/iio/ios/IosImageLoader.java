@@ -220,6 +220,8 @@ public class IosImageLoader extends ImageLoaderImpl {
     @Override
     public ImageFrame load(int imageIndex, double w, double h, boolean preserveAspectRatio, boolean smooth,
                            float screenPixelScale, float imagePixelScale) throws IOException {
+        ImageTools.validateMaxDimensions(w, h, imagePixelScale);
+
         if (imageIndex >= nImages) {
             dispose();
             return null;
