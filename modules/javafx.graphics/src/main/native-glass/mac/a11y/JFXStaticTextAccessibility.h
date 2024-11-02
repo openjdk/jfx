@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,13 @@
  * questions.
  */
 
-.label {
-    -fx-font-size: 35;
-    -fx-text-fill: green;
-}
+#import "AccessibleBase.h"
+#import <AppKit/NSAccessibility.h>
+
+@interface JFXStaticTextAccessibility : AccessibleBase<NSAccessibilityStaticText> {
+
+};
+- (NSAccessibilityRole)accessibilityRole;
+- (NSString *)accessibilityValue;
+@end
+

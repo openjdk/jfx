@@ -26,9 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
-import java.security.AccessController;
 import java.security.Permission;
-import java.security.PrivilegedAction;
 import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -287,9 +285,13 @@ public class WindowStage extends GlassStage {
             });
         }
         if (oldScene != null) {
-            ViewPainter painter = ((ViewScene)oldScene).getPainter();
-            QuantumRenderer.getInstance().disposePresentable(painter.presentable);   // latched on RT
+            disposeScenePainter((ViewScene) oldScene);
         }
+    }
+
+    private static void disposeScenePainter(ViewScene oldScene) {
+        ViewPainter painter = oldScene.getPainter();
+        QuantumRenderer.getInstance().disposePresentable(painter.presentable);   // latched on RT
     }
 
     @Override public void setBounds(float x, float y, boolean xSet, boolean ySet,
@@ -736,7 +738,6 @@ public class WindowStage extends GlassStage {
         }
     }
 
-    @SuppressWarnings("removal")
     void fullscreenChanged(final boolean fs) {
         if (!fs) {
             if (activeFSWindow.compareAndSet(this, null)) {
@@ -746,12 +747,9 @@ public class WindowStage extends GlassStage {
             isInFullScreen = true;
             activeFSWindow.set(this);
         }
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            if (stageListener != null) {
-                stageListener.changedFullscreen(fs);
-            }
-            return null;
-        }, getAccessControlContext());
+        if (stageListener != null) {
+            stageListener.changedFullscreen(fs);
+        }
     }
 
     @Override public void toBack() {
@@ -792,9 +790,10 @@ public class WindowStage extends GlassStage {
                 }
                 platformWindow = null;
             }
-            GlassScene oldScene = getViewScene();
+            ViewScene oldScene = getViewScene();
             if (oldScene != null) {
                 oldScene.updateSceneState();
+                disposeScenePainter(oldScene);
             }
             return null;
         });

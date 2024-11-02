@@ -1,8 +1,5 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-
-<!--
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +22,19 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
--->
 
-<html>
-  <head>
-    <title></title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  </head>
-  <body>
-    <P style="font-size: 40; color: blue">WebView Text</P>
-  </body>
-</html>
+/**
+ * <p>
+ * Provides Java code the ability to access the JavaScript engine and the
+ * HTML DOM in the web browser.
+ * </p>
+ *
+ * <p>
+ * The classes in this package were initially specified by Netscape, and are the
+ * de facto standard mechanism for calling JavaScript from the Java runtime.
+ * </p>
+ *
+ * @since 1.5
+ */
+
+package netscape.javascript;
