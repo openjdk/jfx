@@ -28,8 +28,6 @@ package com.sun.javafx.tk.quantum;
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.events.TouchEvent;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.event.EventType;
@@ -148,7 +146,6 @@ class SwipeGestureRecognizer implements GestureRecognizer {
         }
     }
 
-    @SuppressWarnings("removal")
     private void handleSwipeType(final EventType<SwipeEvent> swipeType,
             final CenterComputer cc, final int touchCount, final int modifiers, final boolean isDirect)
     {
@@ -159,19 +156,16 @@ class SwipeGestureRecognizer implements GestureRecognizer {
             System.err.println("handleSwipeType swipeType=" + swipeType);
         }
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            if (scene.sceneListener != null) {
-                scene.sceneListener.swipeEvent(swipeType, touchCount,
-                    cc.getX(), cc.getY(),
-                    cc.getAbsX(), cc.getAbsY(),
-                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                    isDirect);
-            }
-            return null;
-        }, scene.getAccessControlContext());
+        if (scene.sceneListener != null) {
+            scene.sceneListener.swipeEvent(swipeType, touchCount,
+                cc.getX(), cc.getY(),
+                cc.getAbsX(), cc.getAbsY(),
+                (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                isDirect);
+        }
     }
 
     private static class CenterComputer {

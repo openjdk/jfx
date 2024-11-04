@@ -29,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
 import javax.swing.SwingUtilities;
 import javafx.application.Platform;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
@@ -36,7 +37,6 @@ import test.util.Util;
 public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
 
     @Test
-    @Disabled("JDK-8340849")
     public void testPlatformExitBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
         myApp.createAndShowStage();
         CountDownLatch latch = new CountDownLatch(1);
@@ -50,5 +50,11 @@ public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
         testAbove(false);
         runWaitSleep(()-> Platform.exit());
         myApp.disposeDialog();
+    }
+
+    @AfterAll
+    public static void teardownOnce() {
+        // No-op as Toolkit shutdown is already done in Platform.exit
+        // and calling superclass teardownOnce will cause hang
     }
 }
