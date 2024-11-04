@@ -73,25 +73,8 @@ final class TokenStorage {
     private static final Path PROPS_PATH;
     private static final Path PROP_FILENAME;
 
-    @SuppressWarnings("removal")
-    private static void doPrivilegedRunnable(Runnable runnable) {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                runnable.run();
-                return null;
-            }
-        });
-    }
-
     static {
-         @SuppressWarnings("removal")
-         Path propsPath = AccessController.doPrivileged(new PrivilegedAction<Path>() {
-            @Override
-            public Path run() {
-                return setupPath();
-            }
-        });
+        Path propsPath = setupPath();
 
         PROPS_PATH = propsPath;
 
@@ -223,9 +206,9 @@ final class TokenStorage {
                     }
 
                     if (kind == ENTRY_CREATE) {
-                        doPrivilegedRunnable(() -> setFilePermission(PROPS_PATH));
+                        setFilePermission(PROPS_PATH);
                     } else if (kind == ENTRY_MODIFY) {
-                        doPrivilegedRunnable(() -> readTokens(PROPS_PATH));
+                        readTokens(PROPS_PATH);
                     } else if (kind == ENTRY_DELETE) {
                         synchronized (PROPS) {
                             PROPS.clear();
@@ -241,25 +224,23 @@ final class TokenStorage {
     private static WatchService watchService;
 
     private static void setupWatch() {
-        doPrivilegedRunnable(() -> {
-            try {
-                watchService =
-                        FileSystems.getDefault().newWatchService();
+        try {
+            watchService =
+                    FileSystems.getDefault().newWatchService();
 
-                PROPS_PATH
-                        .getParent()
-                        .register(watchService,
-                                ENTRY_CREATE,
-                                ENTRY_DELETE,
-                                ENTRY_MODIFY);
+            PROPS_PATH
+                    .getParent()
+                    .register(watchService,
+                            ENTRY_CREATE,
+                            ENTRY_DELETE,
+                            ENTRY_MODIFY);
 
-            } catch (Exception e) {
-                if (SCREENCAST_DEBUG) {
-                    System.err.printf("Token storage: failed to setup " +
-                            "file watch %s\n", e);
-                }
+        } catch (Exception e) {
+            if (SCREENCAST_DEBUG) {
+                System.err.printf("Token storage: failed to setup " +
+                        "file watch %s\n", e);
             }
-        });
+        }
 
         if (watchService != null) {
             new WatcherThread(watchService).start();
@@ -314,7 +295,7 @@ final class TokenStorage {
             }
 
             if (changed) {
-                doPrivilegedRunnable(() -> store("save tokens"));
+                store("save tokens");
             }
         }
     }
@@ -369,7 +350,7 @@ final class TokenStorage {
                     .toList();
         }
 
-        doPrivilegedRunnable(() -> removeMalformedRecords(malformed));
+        removeMalformedRecords(malformed);
 
         // 1. Try to find exact matches
         for (TokenItem tokenItem : allTokenItems) {

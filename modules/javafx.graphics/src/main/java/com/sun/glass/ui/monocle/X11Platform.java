@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,11 +35,9 @@ class X11Platform extends NativePlatform {
 
     private final boolean x11Input;
 
-    @SuppressWarnings("removal")
     X11Platform() {
         LinuxSystem.getLinuxSystem().loadLibrary();
-        x11Input = AccessController.doPrivileged((PrivilegedAction<Boolean>)
-                () -> Boolean.getBoolean("x11.input"));
+        x11Input = Boolean.getBoolean("x11.input");
     }
 
     /** Create the appropriate input device registry - if the system property

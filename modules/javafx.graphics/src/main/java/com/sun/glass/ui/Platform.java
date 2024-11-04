@@ -42,9 +42,7 @@ final class Platform {
         if (type == null) {
 
             // Provide for a runtime override, allowing EGL for example
-            @SuppressWarnings("removal")
-            String userPlatform =
-                AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("glass.platform"));
+            String userPlatform = System.getProperty("glass.platform");
 
             if (userPlatform != null) {
                 if (userPlatform.equals("macosx"))

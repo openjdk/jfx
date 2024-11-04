@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,11 +46,8 @@ class TouchInput {
      * events with a delta smaller then the value of this property will be
      * filtered out.The value of the property is in pixels.
      */
-    @SuppressWarnings("removal")
-    private final int touchRadius = AccessController.doPrivileged(
-            (PrivilegedAction<Integer>) () -> Integer.getInteger(
-                    "monocle.input.touchRadius", 20)
-    );
+    private final int touchRadius = Integer.getInteger(
+                    "monocle.input.touchRadius", 20);
 
     private static TouchInput instance = new TouchInput();
     private TouchPipeline basePipeline;
@@ -71,12 +68,9 @@ class TouchInput {
     TouchPipeline getBasePipeline() {
         if (basePipeline == null) {
             basePipeline = new TouchPipeline();
-            @SuppressWarnings("removal")
-            String[] touchFilterNames = AccessController.doPrivileged(
-                    (PrivilegedAction<String>) () -> System.getProperty(
+            String[] touchFilterNames = System.getProperty(
                             "monocle.input.touchFilters",
-                            "SmallMove")
-            ).split(",");
+                            "SmallMove").split(",");
             if (touchFilterNames != null) {
                 for (String touchFilterName : touchFilterNames) {
                     basePipeline.addNamedFilter(touchFilterName.trim());

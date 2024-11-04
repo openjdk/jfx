@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public abstract class Application {
 
@@ -96,13 +97,11 @@ public abstract class Application {
     private static boolean loaded = false;
     private static Application application;
     private static Thread eventThread;
-    @SuppressWarnings("removal")
-    private static final boolean disableThreadChecks =
-        AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            final String str =
+    private static final boolean disableThreadChecks = ((Supplier<Boolean>) () -> {
+        final String str =
                     System.getProperty("glass.disableThreadChecks", "false");
             return "true".equalsIgnoreCase(str);
-        });
+    }).get();
 
     // May be called on any thread.
     protected static synchronized void loadNativeLibrary(final String libname) {
@@ -215,8 +214,7 @@ public abstract class Application {
      */
     public String getDataDirectory() {
         checkEventThread();
-        @SuppressWarnings("removal")
-        String userHome = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("user.home"));
+        String userHome = System.getProperty("user.home");
         return userHome + File.separator + "." + name + File.separator;
     }
 

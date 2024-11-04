@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.text.MessageFormat;
+
+import java.util.function.Supplier;
 
 /**
  * A factory object for creating the native platform on a Linux system with an
@@ -72,8 +74,7 @@ class EPDPlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
-        @SuppressWarnings("removal")
-        String fbinfo = AccessController.doPrivileged((PrivilegedAction<String>) () -> {
+        String fbinfo = ((Supplier<String>) () -> {
             String line = null;
             try (var reader = new BufferedReader(new FileReader(FB_FILE))) {
                 line = reader.readLine();
@@ -81,7 +82,7 @@ class EPDPlatformFactory extends NativePlatformFactory {
                 logger.severe("Failed reading " + FB_FILE, e);
             }
             return line;
-        });
+        }).get();
         return fbinfo != null && fbinfo.contains(FB_NAME);
     }
 
