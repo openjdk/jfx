@@ -26,8 +26,6 @@
 package javafx.scene.control.skin;
 
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 
 import javafx.application.Platform;
@@ -102,11 +100,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     // is set to true. This is done in order to make TableView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
-    @SuppressWarnings("removal")
-    private static final boolean IS_PANNABLE =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.TableViewSkin.pannable"));
-
-
+    private static final boolean IS_PANNABLE = Boolean.getBoolean("javafx.scene.control.skin.TableViewSkin.pannable");
 
     /* *************************************************************************
      *                                                                         *
