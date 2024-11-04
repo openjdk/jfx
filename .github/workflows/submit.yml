@@ -121,6 +121,7 @@ jobs:
           # export ANT_HOME="${HOME}/build-tools/${ANT_DIR}"
           # echo "ANT_HOME=${ANT_HOME}" >> "${GITHUB_ENV}"
           # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
           env | sort
           which java
           java -version
