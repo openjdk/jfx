@@ -900,6 +900,14 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
         return FALSE;
     }
 
+    // Unmirror the X coordinate we send to JavaFX if this is a RTL window.
+    LONG style = ::GetWindowLong(GetHWND(), GWL_EXSTYLE);
+    if (style & WS_EX_LAYOUTRTL) {
+        RECT rect = {0};
+        ::GetClientRect(GetHWND(), &rect);
+        pt.x = max(0, rect.right - rect.left) - pt.x;
+    }
+
     JNIEnv* env = GetEnv();
     jint res = env->CallIntMethod(m_grefThis, javaIDs.WinWindow.nonClientHitTest, pt.x, pt.y);
     CheckAndClearException(env);
@@ -1237,6 +1245,14 @@ void GlassWindow::ShowSystemMenu(int x, int y)
     WINDOWPLACEMENT placement;
     if (!::GetWindowPlacement(GetHWND(), &placement)) {
         return;
+    }
+
+    // Mirror the X coordinate we get from JavaFX if this is a RTL window.
+    LONG style = ::GetWindowLong(GetHWND(), GWL_EXSTYLE);
+    if (style & WS_EX_LAYOUTRTL) {
+        RECT rect = {0};
+        ::GetClientRect(GetHWND(), &rect);
+        x = max(0, rect.right - rect.left) - x;
     }
 
     HMENU systemMenu = GetSystemMenu(GetHWND(), FALSE);
