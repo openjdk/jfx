@@ -1569,8 +1569,6 @@ final public class WebEngine {
             this.engine = new WeakReference<>(engine);
         }
 
-
-        @SuppressWarnings("removal")
         @Override
         public boolean sendMessageToFrontend(final String message) {
             boolean result = false;
