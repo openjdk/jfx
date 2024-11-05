@@ -336,7 +336,7 @@ public final class WindowControlsOverlay extends Region {
     }
 
     private void handleMouseUp(Node node, ButtonType buttonType) {
-        boolean releasedOnButton = buttonAtMouseDown == node;
+        boolean releasedOnButton = (buttonAtMouseDown == node);
         buttonAtMouseDown = null;
         Scene scene = getScene();
 
@@ -357,9 +357,9 @@ public final class WindowControlsOverlay extends Region {
     }
 
     private void onFocusedChanged(boolean focused) {
-        for (var node : new Node[] {minimizeButton, maximizeButton, closeButton}) {
-            node.pseudoClassStateChanged(ACTIVE_PSEUDOCLASS, focused);
-        }
+        minimizeButton.pseudoClassStateChanged(ACTIVE_PSEUDOCLASS, focused);
+        maximizeButton.pseudoClassStateChanged(ACTIVE_PSEUDOCLASS, focused);
+        closeButton.pseudoClassStateChanged(ACTIVE_PSEUDOCLASS, focused);
     }
 
     private void onResizableChanged(boolean resizable) {
