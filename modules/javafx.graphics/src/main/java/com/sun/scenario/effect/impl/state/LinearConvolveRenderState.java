@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,6 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
 import java.nio.FloatBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * The {@code LinearConvolveRenderState} object manages the strategies of
@@ -71,10 +69,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
          * The default value is set to 64 if platform is an embedded system and 128 otherwise.
          */
         final int defSize = PlatformUtil.isEmbedded() ? 64 : MAX_COMPILED_KERNEL_SIZE;
-        @SuppressWarnings("removal")
-        int size = AccessController.doPrivileged(
-                (PrivilegedAction<Integer>) () -> Integer.getInteger(
-                        "decora.maxLinearConvolveKernelSize", defSize));
+        int size = Integer.getInteger("decora.maxLinearConvolveKernelSize", defSize);
         if (size > MAX_COMPILED_KERNEL_SIZE) {
             System.out.println("Clamping maxLinearConvolveKernelSize to "
                     + MAX_COMPILED_KERNEL_SIZE);

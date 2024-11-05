@@ -33,9 +33,6 @@ import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.platform.PlatformManager;
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -96,7 +93,6 @@ public class NativeMediaManager {
     /**
      * Create a <code>NativeMediaManager</code>.
      */
-    @SuppressWarnings("removal")
     protected NativeMediaManager() {
         /*
          * Load native libraries. This must be done early as platforms may need
@@ -105,43 +101,40 @@ public class NativeMediaManager {
          * erroneously report content types for platforms that cannot be loaded
          */
         try {
-            AccessController.doPrivileged((PrivilegedExceptionAction) () -> {
-                ArrayList<String> dependencies = new ArrayList<>();
-                if (PlatformUtil.isWindows() || PlatformUtil.isMac()) {
-                    NativeLibLoader.loadLibrary("glib-lite");
-                }
+            ArrayList<String> dependencies = new ArrayList<>();
+            if (PlatformUtil.isWindows() || PlatformUtil.isMac()) {
+                NativeLibLoader.loadLibrary("glib-lite");
+            }
 
-                if (!PlatformUtil.isLinux() && !PlatformUtil.isIOS()) {
-                    NativeLibLoader.loadLibrary("gstreamer-lite");
-                } else {
-                    dependencies.add("gstreamer-lite");
-                }
-                if (PlatformUtil.isLinux()) {
-                    dependencies.add("fxplugins");
-                    dependencies.add("avplugin");
-                    dependencies.add("avplugin-54");
-                    dependencies.add("avplugin-56");
-                    dependencies.add("avplugin-57");
-                    dependencies.add("avplugin-ffmpeg-56");
-                    dependencies.add("avplugin-ffmpeg-57");
-                    dependencies.add("avplugin-ffmpeg-58");
-                    dependencies.add("avplugin-ffmpeg-59");
-                    dependencies.add("avplugin-ffmpeg-60");
-                    dependencies.add("avplugin-ffmpeg-61");
-                }
-                if (PlatformUtil.isMac()) {
-                    dependencies.add("fxplugins");
-                    dependencies.add("glib-lite");
-                    dependencies.add("jfxmedia_avf");
-                }
-                if (PlatformUtil.isWindows()) {
-                    dependencies.add("fxplugins");
-                    dependencies.add("glib-lite");
-                }
-                NativeLibLoader.loadLibrary("jfxmedia", dependencies);
-                return null;
-            });
-        } catch (PrivilegedActionException pae) {
+            if (!PlatformUtil.isLinux() && !PlatformUtil.isIOS()) {
+                NativeLibLoader.loadLibrary("gstreamer-lite");
+            } else {
+                dependencies.add("gstreamer-lite");
+            }
+            if (PlatformUtil.isLinux()) {
+                dependencies.add("fxplugins");
+                dependencies.add("avplugin");
+                dependencies.add("avplugin-54");
+                dependencies.add("avplugin-56");
+                dependencies.add("avplugin-57");
+                dependencies.add("avplugin-ffmpeg-56");
+                dependencies.add("avplugin-ffmpeg-57");
+                dependencies.add("avplugin-ffmpeg-58");
+                dependencies.add("avplugin-ffmpeg-59");
+                dependencies.add("avplugin-ffmpeg-60");
+                dependencies.add("avplugin-ffmpeg-61");
+            }
+            if (PlatformUtil.isMac()) {
+                dependencies.add("fxplugins");
+                dependencies.add("glib-lite");
+                dependencies.add("jfxmedia_avf");
+            }
+            if (PlatformUtil.isWindows()) {
+                dependencies.add("fxplugins");
+                dependencies.add("glib-lite");
+            }
+            NativeLibLoader.loadLibrary("jfxmedia", dependencies);
+        } catch (Exception pae) {
             MediaUtils.error(null, MediaError.ERROR_MANAGER_ENGINEINIT_FAIL.code(),
                     "Unable to load one or more dependent libraries.", pae);
         }

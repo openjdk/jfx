@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,16 +23,33 @@
  * questions.
  */
 
-package test.sandbox.app;
+#import "JFXStaticTextAccessibility.h"
+#import "GlassMacros.h"
+#import "GlassAccessible.h"
+#import "com_sun_glass_ui_mac_MacAccessible.h"
+#import "com_sun_glass_ui_mac_MacVariant.h"
+#import "common.h"
 
-/**
- * JFXPanel application to test running with a security manager installed.
- * The main program in this class will run the test such that the application
- * will implicitly exit when the JFrame is disposed.
- */
-public class JFXPanelImplicitExitApp {
-
-    public static void main(String[] args) {
-        JFXPanelApp.runTest(true);
-    }
+@implementation JFXStaticTextAccessibility
+- (NSAccessibilityRole)accessibilityRole
+{
+    return NSAccessibilityStaticTextRole;
 }
+
+- (id)accessibilityParent
+{
+    return [super accessibilityParent];
+}
+
+- (NSRect)accessibilityFrame
+{
+    return [super accessibilityFrame];
+}
+
+- (NSString *)accessibilityValue
+{
+    return [super accessibilityValue];
+}
+
+@end
+

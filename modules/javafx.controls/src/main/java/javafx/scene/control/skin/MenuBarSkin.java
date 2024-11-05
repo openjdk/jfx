@@ -27,8 +27,6 @@ package javafx.scene.control.skin;
 
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -36,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javafx.beans.InvalidationListener;
@@ -81,7 +78,6 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Pair;
 
-import com.sun.javafx.FXPermissions;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
@@ -103,17 +99,9 @@ import com.sun.javafx.tk.Toolkit;
  */
 public class MenuBarSkin extends SkinBase<MenuBar> {
 
-    private static final ObservableList<Window> stages;
-
-    static {
-        final Predicate<Window> findStage = (w) -> w instanceof Stage;
-        @SuppressWarnings("removal")
-        ObservableList<Window> windows = AccessController.doPrivileged(
-            (PrivilegedAction<ObservableList<Window>>) () -> Window.getWindows(),
-            null,
-            FXPermissions.ACCESS_WINDOW_LIST_PERMISSION);
-        stages = windows.filtered(findStage);
-    }
+    private static final ObservableList<Window> stages = Window.getWindows().filtered((w) -> {
+        return w instanceof Stage;
+    });
 
     /* *************************************************************************
      *                                                                         *
