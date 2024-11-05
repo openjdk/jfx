@@ -55,6 +55,7 @@ import javafx.util.Subscription;
  */
 public abstract class HeaderBarBase extends Region {
 
+    private static final Dimension2D EMPTY = new Dimension2D(0, 0);
     private static final String DRAGGABLE = "headerbar-draggable";
 
     /**
@@ -135,21 +136,21 @@ public abstract class HeaderBarBase extends Region {
 
     private void updateInsets() {
         if (currentFullScreen || currentMetrics == null) {
-            leftSystemInset.set(new Dimension2D(0, 0));
-            rightSystemInset.set(new Dimension2D(0, 0));
+            leftSystemInset.set(EMPTY);
+            rightSystemInset.set(EMPTY);
             minSystemHeight.set(0);
             return;
         }
 
         if (currentMetrics.placement() == HorizontalDirection.LEFT) {
             leftSystemInset.set(currentMetrics.size());
-            rightSystemInset.set(new Dimension2D(0, 0));
+            rightSystemInset.set(EMPTY);
         } else if (currentMetrics.placement() == HorizontalDirection.RIGHT) {
-            leftSystemInset.set(new Dimension2D(0, 0));
+            leftSystemInset.set(EMPTY);
             rightSystemInset.set(currentMetrics.size());
         } else {
-            leftSystemInset.set(new Dimension2D(0, 0));
-            rightSystemInset.set(new Dimension2D(0, 0));
+            leftSystemInset.set(EMPTY);
+            rightSystemInset.set(EMPTY);
         }
 
         minSystemHeight.set(currentMetrics.minHeight());
@@ -188,7 +189,7 @@ public abstract class HeaderBarBase extends Region {
      * independent of layout orientation.
      */
     private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset =
-        new ReadOnlyObjectWrapper<>(this, "rightInset", new Dimension2D(0, 0)) {
+        new ReadOnlyObjectWrapper<>(this, "rightInset", EMPTY) {
             @Override
             protected void invalidated() {
                 requestLayout();
