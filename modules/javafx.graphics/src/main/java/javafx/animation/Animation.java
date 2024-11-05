@@ -52,10 +52,6 @@ import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.ClipEnvelope;
 import com.sun.scenario.animation.shared.PulseReceiver;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /**
  * The class {@code Animation} provides the core functionality of all animations
  * used in the JavaFX runtime.
@@ -152,20 +148,11 @@ public abstract class Animation {
     private boolean paused = false;
     private final AbstractPrimaryTimer timer;
 
-    // Access control context, captured whenever we add this pulse receiver to
-    // the PrimaryTimer (which is called when an animation is played or resumed)
-    @SuppressWarnings("removal")
-    private AccessControlContext accessCtrlCtx = null;
-
     private long now() {
         return TickCalculation.fromNano(timer.nanos());
     }
 
-    @SuppressWarnings("removal")
     private void addPulseReceiver() {
-        // Capture the Access Control Context to be used during the animation pulse
-        accessCtrlCtx = AccessController.getContext();
-
         timer.addPulseReceiver(pulseReceiver);
     }
 
@@ -194,20 +181,13 @@ public abstract class Animation {
 
     // package private only for the sake of testing
     final PulseReceiver pulseReceiver = new PulseReceiver() {
-        @SuppressWarnings("removal")
         @Override public void timePulse(long now) {
             final long elapsedTime = now - startTime;
             if (elapsedTime < 0) {
                 return;
             }
-            if (accessCtrlCtx == null) {
-                throw new IllegalStateException("Error: AccessControlContext not captured");
-            }
 
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                doTimePulse(elapsedTime);
-                return null;
-            }, accessCtrlCtx);
+            doTimePulse(elapsedTime);
         }
     };
 
