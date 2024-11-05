@@ -32,8 +32,6 @@ import com.sun.javafx.application.preferences.PreferenceMapping;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;

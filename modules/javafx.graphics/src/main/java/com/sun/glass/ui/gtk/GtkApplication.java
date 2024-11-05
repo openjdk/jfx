@@ -46,8 +46,6 @@ import javafx.scene.paint.Color;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Supplier;

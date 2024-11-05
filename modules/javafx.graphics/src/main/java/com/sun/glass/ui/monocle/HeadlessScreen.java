@@ -30,8 +30,6 @@ import com.sun.glass.ui.Pixels;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 class HeadlessScreen implements NativeScreen {
 

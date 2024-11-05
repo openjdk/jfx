@@ -33,9 +33,6 @@ import com.sun.glass.ui.Application;
 import com.sun.glass.ui.GlassRobot;
 import com.sun.glass.ui.Screen;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 import java.util.function.Supplier;
 
 final class GtkRobot extends GlassRobot {

@@ -28,8 +28,6 @@ package com.sun.glass.ui;
 import static javafx.scene.AccessibleAttribute.PARENT;
 import static javafx.scene.AccessibleAttribute.ROLE;
 import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.quantum.QuantumToolkit;
@@ -38,6 +36,8 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+
+import java.util.function.Supplier;
 
 public abstract class Accessible {
 
@@ -137,10 +137,10 @@ public abstract class Accessible {
         return acc;
     }
 
-    private class GetAttribute implements PrivilegedAction<Object> {
+    private class GetAttribute implements Supplier<Object> {
         AccessibleAttribute attribute;
         Object[] parameters;
-        @Override public Object run() {
+        @Override public Object get() {
             Object result = eventHandler.getAttribute(attribute, parameters);
             if (result != null) {
                 Class<?> clazz = attribute.getReturnType();
@@ -170,10 +170,10 @@ public abstract class Accessible {
         });
     }
 
-    private class ExecuteAction implements PrivilegedAction<Void> {
+    private class ExecuteAction implements Supplier<Void> {
         AccessibleAction action;
         Object[] parameters;
-        @Override public Void run() {
+        @Override public Void get() {
             eventHandler.executeAction(action, parameters);
             return null;
         }

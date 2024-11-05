@@ -40,8 +40,6 @@ import javafx.collections.SetChangeListener;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 
 public final class MonocleApplication extends Application {

@@ -29,8 +29,6 @@ import com.sun.glass.events.ViewEvent;
 
 import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.function.Supplier;
 

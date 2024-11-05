@@ -38,8 +38,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.function.IntConsumer;
 
 class FBDevScreen implements NativeScreen {

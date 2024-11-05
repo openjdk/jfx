@@ -29,8 +29,6 @@ import com.sun.javafx.util.Logging;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.text.MessageFormat;
 
 import java.util.function.Supplier;

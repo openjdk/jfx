@@ -32,8 +32,6 @@ import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 public final class IosApplication extends Application {
 

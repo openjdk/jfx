@@ -24,8 +24,6 @@
  */
 package com.sun.glass.ui;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.javafx.PlatformUtil;
 
 final class Platform {

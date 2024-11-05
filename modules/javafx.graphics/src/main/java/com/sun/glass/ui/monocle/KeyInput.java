@@ -27,9 +27,6 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.events.KeyEvent;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /**
  * Processes key input events based on changes to key state. Not
  * thread-safe.

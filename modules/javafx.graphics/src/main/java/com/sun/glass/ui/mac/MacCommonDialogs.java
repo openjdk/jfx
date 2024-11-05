@@ -28,8 +28,6 @@ import com.sun.glass.ui.CommonDialogs.Type;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.Window;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import java.io.File;
 

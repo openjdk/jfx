@@ -29,8 +29,6 @@ import com.sun.glass.ui.Pixels;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /** Native screen implementation for the X11 platform
  *

@@ -31,9 +31,6 @@ import com.sun.glass.ui.TouchInputSupport;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /**
  * Processes touch input events based on changes to touch state. Not
  * thread-safe.

@@ -25,9 +25,6 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /** Abstract factory class to instantiate a NativePlatform */
 public abstract class NativePlatformFactory {
 

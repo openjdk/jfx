@@ -28,8 +28,6 @@ package com.sun.glass.ui.gtk.screencast;
 import com.sun.glass.ui.Screen;
 
 import com.sun.javafx.geom.Rectangle;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Set;
 import java.util.Timer;

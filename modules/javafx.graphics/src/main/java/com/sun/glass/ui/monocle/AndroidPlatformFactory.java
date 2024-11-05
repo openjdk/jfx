@@ -25,10 +25,6 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
-
 class AndroidPlatformFactory extends NativePlatformFactory {
 
     @Override
