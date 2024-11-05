@@ -29,7 +29,6 @@ import java.security.AllPermission;
 import java.security.AccessController;
 import java.security.PermissionCollection;
 import java.security.SecureClassLoader;
-import java.security.PrivilegedExceptionAction;
 import java.security.CodeSource;
 import java.io.InputStream;
 import java.io.IOException;
@@ -288,22 +287,15 @@ public final class MethodUtil extends SecureClassLoader {
         }
     }
 
-    @SuppressWarnings("removal")
     private static Method getTrampoline() {
         try {
-            return AccessController.doPrivileged(
-                new PrivilegedExceptionAction<Method>() {
-                    @Override
-                    public Method run() throws Exception {
-                        Class<?> t = getTrampolineClass();
-                        Class<?>[] types = {
-                            Method.class, Object.class, Object[].class
-                        };
-                        Method b = t.getDeclaredMethod("invoke", types);
-                        b.setAccessible(true);
-                        return b;
-                    }
-                });
+            Class<?> t = getTrampolineClass();
+            Class<?>[] types = {
+                Method.class, Object.class, Object[].class
+            };
+            Method b = t.getDeclaredMethod("invoke", types);
+            b.setAccessible(true);
+            return b;
         } catch (Exception e) {
             throw new InternalError("bouncer cannot be found", e);
         }

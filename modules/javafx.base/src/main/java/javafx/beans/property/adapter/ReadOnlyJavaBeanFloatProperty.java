@@ -35,7 +35,6 @@ import java.lang.reflect.UndeclaredThrowableException;
 
 import java.security.AccessController;
 import java.security.AccessControlContext;
-import java.security.PrivilegedAction;
 
 /**
  * A {@code ReadOnlyJavaBeanFloatProperty} provides an adapter between a regular
@@ -102,19 +101,16 @@ public final class ReadOnlyJavaBeanFloatProperty extends ReadOnlyFloatPropertyBa
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public float get() {
-        return AccessController.doPrivileged((PrivilegedAction<Float>) () -> {
-            try {
-                return ((Number)MethodHelper.invoke(
-                    descriptor.getGetter(), getBean(), (Object[])null)).floatValue();
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }, acc);
+        try {
+            return ((Number)MethodHelper.invoke(
+                descriptor.getGetter(), getBean(), (Object[])null)).floatValue();
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**

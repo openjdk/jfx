@@ -35,7 +35,6 @@ import java.lang.reflect.UndeclaredThrowableException;
 
 import java.security.AccessController;
 import java.security.AccessControlContext;
-import java.security.PrivilegedAction;
 
 /**
  * A {@code ReadOnlyJavaBeanLongProperty} provides an adapter between a regular
@@ -102,19 +101,16 @@ public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public long get() {
-        return AccessController.doPrivileged((PrivilegedAction<Long>) () -> {
-            try {
-                return ((Number)MethodHelper.invoke(
-                    descriptor.getGetter(), getBean(), (Object[])null)).longValue();
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }, acc);
+        try {
+            return ((Number)MethodHelper.invoke(
+                descriptor.getGetter(), getBean(), (Object[])null)).longValue();
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**

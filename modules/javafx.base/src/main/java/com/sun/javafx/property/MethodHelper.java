@@ -28,18 +28,14 @@ package com.sun.javafx.property;
 import com.sun.javafx.reflect.MethodUtil;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.javafx.reflect.ReflectUtil;
 
 /**
  * Utility class to wrap method invocation.
  */
 public class MethodHelper {
-    @SuppressWarnings("removal")
     private static final boolean logAccessErrors
-            = AccessController.doPrivileged((PrivilegedAction<Boolean>) ()
-                    -> Boolean.getBoolean("sun.reflect.debugModuleAccessChecks"));
+            = Boolean.getBoolean("sun.reflect.debugModuleAccessChecks");
 
     private static final Module trampolineModule = MethodUtil.getTrampolineModule();
 

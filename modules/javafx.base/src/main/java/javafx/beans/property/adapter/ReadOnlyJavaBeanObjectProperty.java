@@ -35,7 +35,6 @@ import java.lang.reflect.UndeclaredThrowableException;
 
 import java.security.AccessController;
 import java.security.AccessControlContext;
-import java.security.PrivilegedAction;
 
 /**
  * A {@code ReadOnlyJavaBeanObjectProperty} provides an adapter between a regular
@@ -104,18 +103,15 @@ public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPrope
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public T get() {
-        return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
-            try {
-                return (T)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }, acc);
+        try {
+            return (T)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**

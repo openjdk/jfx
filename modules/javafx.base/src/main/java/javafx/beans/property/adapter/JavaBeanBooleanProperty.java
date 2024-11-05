@@ -39,7 +39,6 @@ import java.lang.reflect.UndeclaredThrowableException;
 
 import java.security.AccessControlContext;
 import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * A {@code JavaBeanBooleanProperty} provides an adapter between a regular
@@ -113,18 +112,15 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public boolean get() {
-        return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            try {
-                return (Boolean)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }, acc);
+        try {
+            return (Boolean)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**
@@ -134,24 +130,19 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public void set(final boolean value) {
         if (isBound()) {
             throw new RuntimeException("A bound value cannot be set.");
         }
-
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            try {
-                MethodHelper.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
-                ExpressionHelper.fireValueChangedEvent(helper);
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-            return null;
-        }, acc);
+        try {
+            MethodHelper.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
+            ExpressionHelper.fireValueChangedEvent(helper);
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**
