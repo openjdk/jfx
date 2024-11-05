@@ -54,9 +54,10 @@ import javafx.stage.StageStyle;
  * of leading or trailing children or the platform-specific placement of default window buttons.
  * <p>
  * All children will be resized to their preferred widths and extend the height of the {@code HeaderBar}.
- * {@code HeaderBar} honors the minimum, preferred, and maximum sizes of its children. If the child's
- * resizable range prevents it from be resized to fit within its position, it will be vertically centered
- * relative to the available space; this alignment can be customized with a layout constraint.
+ * {@code HeaderBar} honors the minimum, preferred, and maximum sizes of its children. As a consequence,
+ * its computed minimum width is sufficient to accommodate all of its children. If a child's resizable
+ * range prevents it from be resized to fit within its position, it will be vertically centered relative
+ * to the available space; this alignment can be customized with a layout constraint.
  * <p>
  * The default {@link #minHeightProperty() minHeight} of the {@code HeaderBar} is set to match the height
  * of the platform-specific default window buttons.
@@ -259,7 +260,9 @@ public class HeaderBar extends HeaderBarBase {
 
     @Override
     protected double computeMinWidth(double height) {
-        Node leading = getLeading(), center = getCenter(), trailing = getTrailing();
+        Node leading = getLeading();
+        Node center = getCenter();
+        Node trailing = getTrailing();
         Insets insets = getInsets();
         double leftPrefWidth;
         double rightPrefWidth;
@@ -290,7 +293,9 @@ public class HeaderBar extends HeaderBarBase {
 
     @Override
     protected double computeMinHeight(double width) {
-        Node leading = getLeading(), center = getCenter(), trailing = getTrailing();
+        Node leading = getLeading();
+        Node center = getCenter();
+        Node trailing = getTrailing();
         Insets insets = getInsets();
         double leadingMinHeight = getAreaHeight(leading, -1, true);
         double trailingMinHeight = getAreaHeight(trailing, -1, true);
@@ -311,7 +316,9 @@ public class HeaderBar extends HeaderBarBase {
 
     @Override
     protected double computePrefHeight(double width) {
-        Node leading = getLeading(), center = getCenter(), trailing = getTrailing();
+        Node leading = getLeading();
+        Node center = getCenter();
+        Node trailing = getTrailing();
         Insets insets = getInsets();
         double leadingPrefHeight = getAreaHeight(leading, -1, false);
         double trailingPrefHeight = getAreaHeight(trailing, -1, false);
