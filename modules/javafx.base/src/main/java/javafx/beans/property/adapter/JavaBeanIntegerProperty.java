@@ -37,9 +37,6 @@ import javafx.beans.value.ObservableValue;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-
 /**
  * A {@code JavaBeanIntegerProperty} provides an adapter between a regular
  * Java Bean property of type {@code int} or {@code Integer} and a JavaFX
@@ -94,9 +91,6 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
 
     private ObservableValue<? extends Number> observable = null;
     private ExpressionHelper<Number> helper = null;
-
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanIntegerProperty(PropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;

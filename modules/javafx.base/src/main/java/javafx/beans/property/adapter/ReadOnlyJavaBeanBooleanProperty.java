@@ -33,9 +33,6 @@ import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessController;
-import java.security.AccessControlContext;
-
 /**
  * A {@code ReadOnlyJavaBeanBooleanProperty} provides an adapter between a regular
  * read only Java Bean property of type {@code boolean} or {@code Boolean} and a JavaFX
@@ -83,9 +80,6 @@ public final class ReadOnlyJavaBeanBooleanProperty extends ReadOnlyBooleanProper
 
     private final ReadOnlyPropertyDescriptor<Boolean> descriptor;
     private final ReadOnlyPropertyDescriptor<Boolean>.ReadOnlyListener listener;
-
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
 
     ReadOnlyJavaBeanBooleanProperty(ReadOnlyPropertyDescriptor<Boolean> descriptor, Object bean) {
         this.descriptor = descriptor;

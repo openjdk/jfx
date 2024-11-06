@@ -37,9 +37,6 @@ import javafx.beans.value.ObservableValue;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessController;
-import java.security.AccessControlContext;
-
 /**
  * A {@code JavaBeanStringProperty} provides an adapter between a regular
  * Java Bean property of type {@code String} and a JavaFX
@@ -94,9 +91,6 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
 
     private ObservableValue<? extends String> observable = null;
     private ExpressionHelper<String> helper = null;
-
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanStringProperty(PropertyDescriptor<String> descriptor, Object bean) {
         this.descriptor = descriptor;

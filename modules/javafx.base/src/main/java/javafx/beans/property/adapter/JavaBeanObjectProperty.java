@@ -37,9 +37,6 @@ import javafx.beans.value.ObservableValue;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessController;
-import java.security.AccessControlContext;
-
 /**
  * A {@code JavaBeanObjectProperty} provides an adapter between a regular
  * Java Bean property of type {@code T} and a JavaFX
@@ -96,9 +93,6 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
 
     private ObservableValue<? extends T> observable = null;
     private ExpressionHelper<T> helper = null;
-
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanObjectProperty(PropertyDescriptor<T> descriptor, Object bean) {
         this.descriptor = descriptor;

@@ -37,9 +37,6 @@ import javafx.beans.value.ObservableValue;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-
 /**
  * A {@code JavaBeanBooleanProperty} provides an adapter between a regular
  * Java Bean property of type {@code boolean} or {@code Boolean} and a JavaFX
@@ -94,9 +91,6 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
 
     private ObservableValue<? extends Boolean> observable = null;
     private ExpressionHelper<Boolean> helper = null;
-
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanBooleanProperty(PropertyDescriptor<Boolean> descriptor, Object bean) {
         this.descriptor = descriptor;

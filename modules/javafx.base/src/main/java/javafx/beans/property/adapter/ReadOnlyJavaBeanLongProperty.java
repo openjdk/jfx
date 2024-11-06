@@ -33,9 +33,6 @@ import javafx.beans.property.ReadOnlyLongPropertyBase;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessController;
-import java.security.AccessControlContext;
-
 /**
  * A {@code ReadOnlyJavaBeanLongProperty} provides an adapter between a regular
  * read only Java Bean property of type {@code long} or {@code Long} and a JavaFX
@@ -83,9 +80,6 @@ public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase
 
     private final ReadOnlyPropertyDescriptor<Number> descriptor;
     private final ReadOnlyPropertyDescriptor<Number>.ReadOnlyListener listener;
-
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
 
     ReadOnlyJavaBeanLongProperty(ReadOnlyPropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;

@@ -37,9 +37,6 @@ import javafx.beans.value.ObservableValue;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-
 /**
  * A {@code JavaBeanLongProperty} provides an adapter between a regular
  * Java Bean property of type {@code long} or {@code Long} and a JavaFX
@@ -94,9 +91,6 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
 
     private ObservableValue<? extends Number> observable = null;
     private ExpressionHelper<Number> helper = null;
-
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanLongProperty(PropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;

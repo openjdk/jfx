@@ -33,9 +33,6 @@ import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessController;
-import java.security.AccessControlContext;
-
 /**
  * A {@code ReadOnlyJavaBeanObjectProperty} provides an adapter between a regular
  * read only Java Bean property of {@code T} and a JavaFX
@@ -85,9 +82,6 @@ public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPrope
 
     private final ReadOnlyPropertyDescriptor<T> descriptor;
     private final ReadOnlyPropertyDescriptor<T>.ReadOnlyListener listener;
-
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
 
     ReadOnlyJavaBeanObjectProperty(ReadOnlyPropertyDescriptor<T> descriptor, Object bean) {
         this.descriptor = descriptor;
