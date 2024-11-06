@@ -1496,8 +1496,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1performWindowDrag
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        GlassViewDelegate* delegate = [window->view delegate];
-        [window->nsWindow performWindowDragWithEvent:[delegate lastEvent]];
+        [[window->view delegate] performWindowDrag];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

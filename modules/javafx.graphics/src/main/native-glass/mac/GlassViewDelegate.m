@@ -1143,6 +1143,13 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     return YES;
 }
 
+- (void)performWindowDrag
+{
+    if (lastEvent != nil) {
+        [[nsView window] performWindowDragWithEvent:lastEvent];
+    }
+}
+
 static jstring convertNSStringToJString(id aString, int length)
 {
     GET_MAIN_JENV;
@@ -1331,11 +1338,6 @@ static jstring convertNSStringToJString(id aString, int length)
     jlong accessible = (*env)->CallLongMethod(env, self->jView, jViewGetAccessible);
     GLASS_CHECK_EXCEPTION(env);
     return (GlassAccessible*)jlong_to_ptr(accessible);
-}
-
-- (NSEvent*)lastEvent
-{
-    return lastEvent;
 }
 
 @end
