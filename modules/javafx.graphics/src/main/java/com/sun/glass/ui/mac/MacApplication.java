@@ -39,7 +39,6 @@ import java.nio.IntBuffer;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
@@ -122,13 +121,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             launchable.run();
         };
 
-        boolean tmp =
-            ((Supplier<Boolean>) () -> {
-                String taskbarAppProp = System.getProperty("glass.taskbarApplication");
-                return  !"false".equalsIgnoreCase(taskbarAppProp);
-            }).get();
-        isTaskbarApplication = tmp;
-
+        String taskbarAppProp = System.getProperty("glass.taskbarApplication");
+        isTaskbarApplication = !"false".equalsIgnoreCase(taskbarAppProp);
         // Create a non-daemon KeepAlive thread so the FX toolkit
         // doesn't exit prematurely.
         startKeepAliveThread();

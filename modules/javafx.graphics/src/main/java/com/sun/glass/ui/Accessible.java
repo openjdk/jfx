@@ -163,11 +163,9 @@ public abstract class Accessible {
     private GetAttribute getAttribute = new GetAttribute();
 
     public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
-        return QuantumToolkit.runWithoutRenderLock(() -> {
-            getAttribute.attribute = attribute;
-            getAttribute.parameters = parameters;
-            return getAttribute;
-        });
+        getAttribute.attribute = attribute;
+        getAttribute.parameters = parameters;
+        return QuantumToolkit.runWithoutRenderLock(getAttribute);
     }
 
     private class ExecuteAction implements Supplier<Void> {
