@@ -26,7 +26,6 @@
 package com.sun.glass.ui.monocle;
 
 import java.lang.reflect.Field;
-import java.security.Permission;
 import java.util.Formatter;
 
 /** Java wrapper for the EGL API */
@@ -148,8 +147,6 @@ class EGL {
     static final int EGL_READ = 0x305A;
     static final int EGL_CORE_NATIVE_ENGINE = 0x305B;
 
-    private static Permission permission = new RuntimePermission("loadLibrary.*");
-
     private static EGL instance = new EGL();
 
     private EGL() {}
@@ -160,16 +157,7 @@ class EGL {
      *
      */
     static EGL getEGL() {
-        checkPermissions();
         return instance;
-    }
-
-    private static void checkPermissions() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPermission(permission);
-        }
     }
 
     native void loadFunctions(long dlHandle);

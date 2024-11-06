@@ -63,6 +63,7 @@ public class StageHelper extends WindowHelper {
         stageAccessor.doVisibleChanged(window, visible);
     }
 
+    // TODO: SM removal: Consider removing this in a follow-up issue (this is dead code)
     public static void initSecurityDialog(Stage stage, boolean securityDialog) {
         stageAccessor.initSecurityDialog(stage, securityDialog);
     }

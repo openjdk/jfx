@@ -26,7 +26,6 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
-import java.security.Permission;
 import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -51,7 +50,6 @@ import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
-import static com.sun.javafx.FXPermissions.*;
 
 public class WindowStage extends GlassStage {
 
@@ -572,14 +570,7 @@ public class WindowStage extends GlassStage {
         }
 
         if (alwaysOnTop) {
-            if (hasPermission(SET_WINDOW_ALWAYS_ON_TOP_PERMISSION)) {
-                platformWindow.setLevel(Level.FLOATING);
-            } else {
-                alwaysOnTop = false;
-                if (stageListener != null) {
-                    stageListener.changedAlwaysOnTop(alwaysOnTop);
-                }
-            }
+            platformWindow.setLevel(Level.FLOATING);
         } else {
             platformWindow.setLevel(Level.NORMAL);
         }
@@ -591,11 +582,10 @@ public class WindowStage extends GlassStage {
         // note: for child windows this is ignored and we fail silently
     }
 
-    // Return true if this stage is trusted for full screen - doesn't have a
-    // security manager, or a permission check doesn't result in a security
-    // exeception.
+    // Return true if this stage is trusted for full screen (it always is)
+    // TODO: SM removal: Consider removing in a follow-on issue
     boolean isTrustedFullScreen() {
-        return hasPermission(UNRESTRICTED_FULL_SCREEN_PERMISSION);
+        return true;
     }
 
     // Safely exit full screen
@@ -603,19 +593,7 @@ public class WindowStage extends GlassStage {
         setFullScreen(false);
     }
 
-    private boolean hasPermission(Permission perm) {
-        try {
-            @SuppressWarnings("removal")
-            final SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                sm.checkPermission(perm, getAccessControlContext());
-            }
-            return true;
-        } catch (SecurityException se) {
-            return false;
-        }
-    }
-
+    // TODO: SM removal: Consider removing in a follow-on issue
     private boolean fullScreenFromUserEvent = false;
 
     private KeyCombination savedFullScreenExitKey = null;

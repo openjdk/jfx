@@ -27,7 +27,6 @@ package com.sun.glass.ui.monocle;
 import com.sun.glass.utils.NativeLibLoader;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import java.security.Permission;
 import java.text.MessageFormat;
 
 /**
@@ -241,20 +240,7 @@ class EPDSystem {
      */
     static final int WAVEFORM_MODE_A2 = 4;
 
-    private static final Permission PERMISSION = new RuntimePermission("loadLibrary.*");
     private static final EPDSystem INSTANCE = new EPDSystem();
-
-    /**
-     * Checks for permission to load native libraries if running under a
-     * security manager.
-     */
-    private static void checkPermissions() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPermission(PERMISSION);
-        }
-    }
 
     /**
      * Obtains the single instance of {@code EPDSystem}. Calling this method
@@ -265,7 +251,6 @@ class EPDSystem {
      * @return the {@code EPDSystem} instance
      */
     static EPDSystem getEPDSystem() {
-        checkPermissions();
         return INSTANCE;
     }
 

@@ -228,10 +228,7 @@ final class NetworkContext {
         private final AtomicInteger index = new AtomicInteger(1);
 
         private URLLoaderThreadFactory() {
-            @SuppressWarnings("removal")
-            SecurityManager sm = System.getSecurityManager();
-            group = (sm != null) ? sm.getThreadGroup()
-                    : Thread.currentThread().getThreadGroup();
+            group = Thread.currentThread().getThreadGroup();
         }
 
         @Override

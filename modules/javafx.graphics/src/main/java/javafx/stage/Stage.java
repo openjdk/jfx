@@ -47,7 +47,6 @@ import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -284,11 +283,11 @@ public class Stage extends Window {
     // Flag indicating that this stage is being used to show a security dialog
     private boolean securityDialog = false;
 
+    // TODO: SM removal: Consider removing this in a follow-up issue (this is dead code)
     /**
      * Sets a flag indicating that this stage is used for a security dialog and
      * must always be on top. If set, this will cause the window to be always
-     * on top, regardless of the setting of the alwaysOnTop property, and
-     * whether or not permissions are granted when the dialog is shown.
+     * on top, regardless of the setting of the alwaysOnTop property.
      * NOTE: this flag must be set prior to showing the stage the first time.
      *
      * @param securityDialog flag indicating that this Stage is being used to
@@ -1126,18 +1125,6 @@ public class Stage extends Window {
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
             StageStyle stageStyle = getStyle();
-            if (stageStyle == StageStyle.TRANSPARENT) {
-                @SuppressWarnings("removal")
-                final SecurityManager securityManager =
-                        System.getSecurityManager();
-                if (securityManager != null) {
-                    try {
-                        securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
-                    } catch (final SecurityException e) {
-                        stageStyle = StageStyle.UNDECORATED;
-                    }
-                }
-            }
             setPeer(toolkit.createTKStage(this, isSecurityDialog(),
                     stageStyle, isPrimary(), getModality(), tkStage, rtl, acc));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),

@@ -52,6 +52,7 @@ public interface FontFactory {
     public String[] getFontFullNames();
     public String[] getFontFullNames(String family);
 
+    // TODO: SM removal: condider removing in a follow-up issue
     /*
      * Indicates permission to load an embedded font
      */
