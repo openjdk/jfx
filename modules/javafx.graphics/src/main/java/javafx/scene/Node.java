@@ -8531,6 +8531,45 @@ public abstract class Node implements EventTarget, Styleable {
         return getScene().traverse(this, dir, method);
     }
 
+    /**
+     * Tries to move the focus from this {@code Node} in the specified direction.
+     * The {@code Node} serves as a reference point and does not have to be focused or focusable.
+     * A successful traversal results in a new {@code Node} being focused.
+     * <p>
+     * This method is expected to be called in response to a {@code KeyEvent}, since the {@code Node}
+     * receiving focus will have the {@link #focusVisibleProperty() focusVisible} property set.
+     *
+     * @param direction the direction of focus traversal
+     * @return {@code true} if traversal was successful
+     * @since 24
+     */
+    public final boolean requestFocusTraversal(TraversalDirection direction) {
+        Direction d;
+        switch (direction) {
+        case DOWN:
+            d = Direction.DOWN;
+            break;
+        case LEFT:
+            d = Direction.LEFT;
+            break;
+        case NEXT:
+            d = Direction.NEXT;
+            break;
+        case PREVIOUS:
+            d = Direction.PREVIOUS;
+            break;
+        case RIGHT:
+            d = Direction.RIGHT;
+            break;
+        case UP:
+            d = Direction.UP;
+            break;
+        default:
+            return false;
+        }
+        return traverse(d, TraversalMethod.KEY);
+    }
+
     //--------------------------
     //  Private Implementation
     //--------------------------
