@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,6 @@ package com.sun.webkit;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Set;
 
@@ -120,16 +117,10 @@ public abstract class Utilities {
         }
 
         try {
-            return AccessController.doPrivileged((PrivilegedExceptionAction<Object>)
-                    () -> MethodHelper.invoke(method, instance, args), acc);
-        } catch (PrivilegedActionException ex) {
+            return MethodHelper.invoke(method, instance, args);
+        } catch (InvocationTargetException ex) {
             Throwable cause = ex.getCause();
-            if (cause == null)
-                cause = ex;
-            else if (cause instanceof InvocationTargetException
-                && cause.getCause() != null)
-                cause = cause.getCause();
-            throw cause;
+            throw cause != null ? cause : ex;
         }
     }
 }
