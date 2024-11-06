@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.iio.javax;
+package com.sun.javafx.iio.java2d;
 
 import com.sun.javafx.iio.ImageFormatDescription;
 import com.sun.javafx.iio.ImageFrame;
@@ -57,13 +57,13 @@ import java.util.Objects;
 
 import static java.awt.image.BufferedImage.*;
 
-public class XImageLoader implements ImageLoader {
+public class J2DImageLoader implements ImageLoader {
 
     private final ImageReader reader;
     private final ImageInputStream stream;
     private final ImageFormatDescription description;
 
-    public XImageLoader(ImageReader reader, ImageInputStream stream) throws IOException {
+    public J2DImageLoader(ImageReader reader, ImageInputStream stream) throws IOException {
         this.reader = reader;
         this.stream = stream;
         this.description = new ImageDescriptor(
@@ -262,25 +262,25 @@ public class XImageLoader implements ImageLoader {
 
         @Override
         public void warningOccurred(ImageReader source, String warning) {
-            listener.imageLoadWarning(XImageLoader.this, warning);
+            listener.imageLoadWarning(J2DImageLoader.this, warning);
         }
 
         @Override
         public void imageProgress(ImageReader source, float percentageDone) {
             if (percentageDone > lastProgress) {
                 lastProgress = percentageDone;
-                listener.imageLoadProgress(XImageLoader.this, percentageDone);
+                listener.imageLoadProgress(J2DImageLoader.this, percentageDone);
             }
         }
 
         @Override public void imageStarted(ImageReader source, int imageIndex) {
-            listener.imageLoadProgress(XImageLoader.this, 0);
+            listener.imageLoadProgress(J2DImageLoader.this, 0);
         }
 
         @Override
         public void imageComplete(ImageReader source) {
             if (lastProgress < 100) {
-                listener.imageLoadProgress(XImageLoader.this, 100);
+                listener.imageLoadProgress(J2DImageLoader.this, 100);
             }
         }
 

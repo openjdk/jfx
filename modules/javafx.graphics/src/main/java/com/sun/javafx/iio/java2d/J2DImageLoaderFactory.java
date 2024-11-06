@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.iio.javax;
+package com.sun.javafx.iio.java2d;
 
 import com.sun.javafx.iio.ImageFormatDescription;
 import com.sun.javafx.iio.ImageLoader;
@@ -35,15 +35,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 
-public class XImageLoaderFactory implements ImageLoaderFactory {
+public class J2DImageLoaderFactory implements ImageLoaderFactory {
 
-    private static XImageLoaderFactory theInstance;
+    private static J2DImageLoaderFactory theInstance;
 
-    private XImageLoaderFactory() {}
+    private J2DImageLoaderFactory() {}
 
-    public static synchronized XImageLoaderFactory getInstance() {
+    public static synchronized J2DImageLoaderFactory getInstance() {
         if (theInstance == null) {
-            theInstance = new XImageLoaderFactory();
+            theInstance = new J2DImageLoaderFactory();
         }
 
         return theInstance;
@@ -69,9 +69,9 @@ public class XImageLoaderFactory implements ImageLoaderFactory {
                     return null;
                 }
 
-                // XImageLoader is responsible for closing the ImageInputStream after
+                // J2DImageLoader is responsible for closing the ImageInputStream after
                 // it has finished reading from it.
-                return new XImageLoader(reader, stream);
+                return new J2DImageLoader(reader, stream);
             }
 
             return null;

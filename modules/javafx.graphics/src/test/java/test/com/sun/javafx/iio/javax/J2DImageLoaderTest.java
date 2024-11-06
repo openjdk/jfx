@@ -30,8 +30,8 @@ import com.sun.javafx.iio.ImageLoadListener;
 import com.sun.javafx.iio.ImageLoader;
 import com.sun.javafx.iio.ImageMetadata;
 import com.sun.javafx.iio.ImageStorage.ImageType;
-import com.sun.javafx.iio.javax.XImageLoader;
-import com.sun.javafx.iio.javax.XImageLoaderFactory;
+import com.sun.javafx.iio.java2d.J2DImageLoader;
+import com.sun.javafx.iio.java2d.J2DImageLoaderFactory;
 import com.sun.prism.Image;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
@@ -54,7 +54,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class XImageLoaderTest {
+public class J2DImageLoaderTest {
 
     private int color(int r, int g, int b) {
         return 255 << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
@@ -77,7 +77,7 @@ public class XImageLoaderTest {
     @Test
     void loadImageBGR() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.bmp")) {
-            ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
+            ImageLoader loader = J2DImageLoaderFactory.getInstance().createImageLoader(stream);
             ImageFrame frame = loader.load(0, -1, -1, true, false, 1, 1);
             Image image = Image.convertImageFrame(frame);
 
@@ -96,7 +96,7 @@ public class XImageLoaderTest {
     @Test
     void loadImageABGR() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.png")) {
-            ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
+            ImageLoader loader = J2DImageLoaderFactory.getInstance().createImageLoader(stream);
             ImageFrame frame = loader.load(0, -1, -1, true, false, 1, 1);
             Image image = Image.convertImageFrame(frame);
 
@@ -115,7 +115,7 @@ public class XImageLoaderTest {
     @Test
     void loadImageABGR2x() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker@2x.png")) {
-            ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
+            ImageLoader loader = J2DImageLoaderFactory.getInstance().createImageLoader(stream);
             ImageFrame frame = loader.load(0, -1, -1, true, false, 1, 2);
             Image image = Image.convertImageFrame(frame);
 
@@ -182,7 +182,7 @@ public class XImageLoaderTest {
             }
         }
 
-        var imageLoader = new XImageLoader(new CustomImageReader(types.awtIimageType), null);
+        var imageLoader = new J2DImageLoader(new CustomImageReader(types.awtIimageType), null);
 
         // Load an image with screenPixelScale == 1
         var imageFrame = imageLoader.load(0, -1, -1, false, false, 1, 1);
@@ -212,7 +212,7 @@ public class XImageLoaderTest {
             ImageReader pngReader = ImageIO.getImageReadersByFormatName("PNG").next();
             ImageInputStream input = ImageIO.createImageInputStream(stream);
             pngReader.setInput(input);
-            XImageLoader loader = new XImageLoader(pngReader, input);
+            J2DImageLoader loader = new J2DImageLoader(pngReader, input);
             ImageLoadListener listener = new ImageLoadListener() {
                 @Override public void imageLoadProgress(ImageLoader loader, float percentageComplete) {}
                 @Override public void imageLoadWarning(ImageLoader loader, String message) {}
@@ -240,7 +240,7 @@ public class XImageLoaderTest {
     void testProgressListener() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.png")) {
             List<Float> progress = new ArrayList<>();
-            ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
+            ImageLoader loader = J2DImageLoaderFactory.getInstance().createImageLoader(stream);
             loader.addListener(new ImageLoadListener() {
                 @Override
                 public void imageLoadProgress(ImageLoader loader, float percentageComplete) {

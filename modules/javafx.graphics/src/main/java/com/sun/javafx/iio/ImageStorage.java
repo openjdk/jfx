@@ -179,7 +179,7 @@ public class ImageStorage {
      */
     private final HashMap<String, ImageLoaderFactory> loaderFactoriesByMimeSubtype;
     private final ImageLoaderFactory[] loaderFactories;
-    private Optional<ImageLoaderFactory> xImageLoaderFactory;
+    private Optional<ImageLoaderFactory> j2dImageLoaderFactory;
     private int maxSignatureLength;
 
     private static final boolean isIOS = PlatformUtil.isIOS();
@@ -417,7 +417,7 @@ public class ImageStorage {
                     } else {
                         // If we don't have a built-in loader factory we try to find an ImageIO loader
                         // that can load the content of the data URI.
-                        ImageLoader imageLoader = tryCreateXImageLoader(new ByteArrayInputStream(dataUri.getData()));
+                        ImageLoader imageLoader = tryCreateJ2DImageLoader(new ByteArrayInputStream(dataUri.getData()));
 
                         if (imageLoader == null) {
                             throw new IllegalArgumentException(
@@ -425,7 +425,7 @@ public class ImageStorage {
                         }
 
                         // If the specified MIME type doesn't agree with any of the supported MIME types of
-                        // the XImageLoader, we log a warning but continue to load the image.
+                        // the J2DImageLoader, we log a warning but continue to load the image.
                         boolean imageTypeMismatch = imageLoader.getFormatDescription().getMIMESubtypes().stream()
                                 .noneMatch(dataUri.getMimeSubtype()::equals);
 
@@ -553,7 +553,7 @@ public class ImageStorage {
             return IosImageLoaderFactory.getInstance().createImageLoader(stream);
         }
 
-        // We need a stream that supports the mark and reset methods, since XImageLoader
+        // We need a stream that supports the mark and reset methods, since J2DImageLoader
         // is used as a fallback after our built-in loader selection has already consumed
         // part of the input stream.
         if (!stream.markSupported()) {
@@ -565,7 +565,7 @@ public class ImageStorage {
 
         if (loader == null) {
             stream.reset();
-            loader = tryCreateXImageLoader(stream);
+            loader = tryCreateJ2DImageLoader(stream);
         }
 
         return loader;
@@ -621,24 +621,24 @@ public class ImageStorage {
     }
 
     /**
-     * Tries to create an {@link com.sun.javafx.iio.javax.XImageLoader} for the specified input stream.
+     * Tries to create an {@link com.sun.javafx.iio.java2d.J2DImageLoader} for the specified input stream.
      * This might fail in the future if the {@code java.desktop} module is not present on the module path.
      * At present, this will not fail because JavaFX requires the {@code java.desktop} module.
      */
-    private synchronized ImageLoader tryCreateXImageLoader(InputStream stream) throws IOException {
-        if (xImageLoaderFactory == null) {
+    private synchronized ImageLoader tryCreateJ2DImageLoader(InputStream stream) throws IOException {
+        if (j2dImageLoaderFactory == null) {
             try {
-                Class<?> factoryClass = Class.forName("com.sun.javafx.iio.javax.XImageLoaderFactory");
-                xImageLoaderFactory = Optional.of((ImageLoaderFactory)factoryClass.getMethod("getInstance").invoke(null));
+                Class<?> factoryClass = Class.forName("com.sun.javafx.iio.java2d.J2DImageLoaderFactory");
+                j2dImageLoaderFactory = Optional.of((ImageLoaderFactory)factoryClass.getMethod("getInstance").invoke(null));
             } catch (NoClassDefFoundError | ReflectiveOperationException e) {
-                xImageLoaderFactory = Optional.empty();
+                j2dImageLoaderFactory = Optional.empty();
             }
         }
 
-        if (xImageLoaderFactory.isEmpty()) {
+        if (j2dImageLoaderFactory.isEmpty()) {
             return null;
         }
 
-        return xImageLoaderFactory.get().createImageLoader(stream);
+        return j2dImageLoaderFactory.get().createImageLoader(stream);
     }
 }
