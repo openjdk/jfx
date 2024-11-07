@@ -33,10 +33,6 @@ import javafx.beans.property.ReadOnlyStringPropertyBase;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessController;
-import java.security.AccessControlContext;
-import java.security.PrivilegedAction;
-
 /**
  * A {@code ReadOnlyJavaBeanStringProperty} provides an adapter between a regular
  * read only Java Bean property of type {@code String} and a JavaFX
@@ -85,9 +81,6 @@ public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringProperty
     private final ReadOnlyPropertyDescriptor<String> descriptor;
     private final ReadOnlyPropertyDescriptor<String>.ReadOnlyListener listener;
 
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
-
     ReadOnlyJavaBeanStringProperty(ReadOnlyPropertyDescriptor<String> descriptor, Object bean) {
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener(bean, this);
@@ -102,18 +95,15 @@ public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringProperty
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public String get() {
-        return AccessController.doPrivileged((PrivilegedAction<String>) () -> {
-            try {
-                return (String)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }, acc);
+        try {
+            return (String)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**
