@@ -47,15 +47,16 @@ import javafx.stage.StageStyle;
  * <p>
  * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes
  * in three areas: {@link #leadingProperty() leading}, {@link #centerProperty() center}, and
- * {@link #trailingProperty() trailing}. {@code HeaderBar} ensures that the leading and trailing areas
- * account for the default window buttons (minimize, maximize, close). If a child is configured to be
- * centered in the {@code center} area, it is laid out with respect to the stage, and not with respect
- * to the {@code center} area. This ensures that the child will appear centered in the stage regardless
- * of leading or trailing children or the platform-specific placement of default window buttons.
+ * {@link #trailingProperty() trailing}. All areas can be {@code null}. {@code HeaderBar} ensures that
+ * the leading and trailing areas account for the default window buttons (minimize, maximize, close).
+ * If a child is configured to be centered in the {@code center} area, it is laid out with respect to
+ * the stage, and not with respect to the {@code center} area. This ensures that the child will appear
+ * centered in the stage regardless of leading or trailing children or the platform-specific placement
+ * of default window buttons.
  * <p>
  * All children will be resized to their preferred widths and extend the height of the {@code HeaderBar}.
  * {@code HeaderBar} honors the minimum, preferred, and maximum sizes of its children. As a consequence,
- * its computed minimum width is sufficient to accommodate all of its children. If a child's resizable
+ * its computed minimum size is sufficient to accommodate all of its children. If a child's resizable
  * range prevents it from be resized to fit within its position, it will be vertically centered relative
  * to the available space; this alignment can be customized with a layout constraint.
  * <p>
