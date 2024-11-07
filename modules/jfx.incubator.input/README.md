@@ -1,6 +1,12 @@
-# Incubator
+# InputMap (Incubator)
 
-This project incubates
-[InputMap](src/main/java/javafx/incubator/scene/control/rich/RichTextArea.java)
+This project incubates the **InputMap** proposal [0] using the **RichTextArea**/**CodeArea** controls [1]
+as test subjects.
 
-Please refer to this [README](/tests/manual/RichTextAreaDemo/README.md).
+
+
+## References
+
+0. https://github.com/andy-goryachev-oracle/Test/blob/main/doc/InputMap/InputMapV3.md
+
+1. https://github.com/andy-goryachev-oracle/Test/blob/main/doc/RichTextArea/RichTextArea.md

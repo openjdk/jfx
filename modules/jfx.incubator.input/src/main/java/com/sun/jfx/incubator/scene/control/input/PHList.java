@@ -45,12 +45,9 @@ public class PHList {
      */
     private final ArrayList<Object> items = new ArrayList(4);
 
-    public PHList() {
-    }
-
     @Override
     public String toString() {
-        return "PHList" + items;
+        return "PHList{items=" + items + "}";
     }
 
     /**
@@ -103,7 +100,7 @@ public class PHList {
                 }
             }
         }
-        return items.size() == 0;
+        return items.isEmpty();
     }
 
     private boolean isNullOrPriority(int ix) {
@@ -210,7 +207,7 @@ public class PHList {
                 }
             }
         }
-        return items.size() == 0;
+        return items.isEmpty();
     }
 
     /**

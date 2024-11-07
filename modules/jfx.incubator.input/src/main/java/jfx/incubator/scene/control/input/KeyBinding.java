@@ -94,7 +94,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to a key press.
+     * Creates a {@code KeyBinding} which corresponds to the key press with the specified {@code KeyCode}.
      *
      * @param code the key code
      * @return the KeyBinding
@@ -104,17 +104,23 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to a command-code key press.
+     * This utility method creates a {@code KeyBinding} which corresponds to the key press
+     * with the specified {@code KeyCode} and the macOS {@code ⌘ command} key modifier.
+     * <p>
+     * This method returns {@code null} on non-macOS platforms.
      *
      * @param code the key code
-     * @return the KeyBinding
+     * @return the KeyBinding, or null
      */
     public static KeyBinding command(KeyCode code) {
         return create(code, KCondition.KEY_PRESSED, KCondition.COMMAND);
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to a alt-code key press.
+     * Creates a KeyBinding which corresponds to the key press with the specified {@code KeyCode}
+     * and the {@code alt} key modifier ({@code option} on macOS).
+     * <p>
+     * This method is equivalent to {@link #option(KeyCode)} on macOS.
      *
      * @param code the key code
      * @return the KeyBinding
@@ -124,7 +130,8 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to a ctrl-code key press.
+     * Creates a KeyBinding which corresponds to the key press with the specified {@code KeyCode}
+     * and the {@code ctrl} key modifier ({@code control} on macOS).
      *
      * @param code the key code
      * @return the KeyBinding
@@ -134,7 +141,8 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to a ctrl-shift-code key press.
+     * Creates a KeyBinding which corresponds to the key press with the specified {@code KeyCode}
+     * and the {@code shift} + {@code ctrl} key modifier ({@code control} on macOS).
      *
      * @param code the key code
      * @return the KeyBinding
@@ -144,17 +152,21 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to an option-code key press.
+     * Creates a KeyBinding which corresponds to the key press with the specified {@code KeyCode}
+     * and the {@code option} key modifier on macOS.
+     * <p>
+     * This method returns {@code null} on non-macOS platforms.
      *
      * @param code the key code
-     * @return the KeyBinding
+     * @return the KeyBinding, or null
      */
     public static KeyBinding option(KeyCode code) {
         return create(code, KCondition.KEY_PRESSED, KCondition.OPTION);
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to a shift-code key press.
+     * Creates a KeyBinding which corresponds to the key press with the specified {@code KeyCode}
+     * and the {@code shift} key modifier.
      *
      * @param code the key code
      * @return the KeyBinding
@@ -164,7 +176,8 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to a shortcut-code key press.
+     * Creates a KeyBinding which corresponds to the key press with the specified {@code KeyCode}
+     * and the shortcut key modifier ({@code ⌘ command} on macOS, {@code ctrl} elsewhere).
      *
      * @param code the key code
      * @return the KeyBinding
@@ -174,23 +187,40 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to a shift-option-code key press.
+     * Creates a KeyBinding which corresponds to the key press with the specified {@code KeyCode}
+     * and the {@code shift} + {@code option} key modifiers on macOS.
+     * <p>
+     * This method returns {@code null} on non-macOS platforms.
      *
      * @param code the key code
-     * @return the KeyBinding
+     * @return the KeyBinding, or null
      */
     public static KeyBinding shiftOption(KeyCode code) {
         return create(code, KCondition.KEY_PRESSED, KCondition.SHIFT, KCondition.OPTION);
     }
 
     /**
-     * Utility method creates a KeyBinding corresponding to a shift-shortcut-code key press.
+     * Creates a KeyBinding which corresponds to the key press with the specified {@code KeyCode}
+     * and the {@code shift} + shortcut key modifier ({@code ⌘ command} on macOS, {@code ctrl} elsewhere).
+     * <p>
+     * This method returns {@code null} on non-macOS platforms.
      *
      * @param code the key code
-     * @return the KeyBinding
+     * @return the KeyBinding, or null
      */
     public static KeyBinding shiftShortcut(KeyCode code) {
         return create(code, KCondition.KEY_PRESSED, KCondition.SHIFT, KCondition.SHORTCUT);
+    }
+
+    /**
+     * Creates a new instance of {@code KeyBinding} with the new {@code KeyCode}
+     * and the same set of the modifiers.
+     *
+     * @param newCode the key code
+     * @return the KeyBinding
+     */
+    public KeyBinding withNewKeyCode(KeyCode newCode) {
+        return new KeyBinding(newCode, modifiers);
     }
 
     private static KeyBinding create(Object key, KCondition... mods) {
@@ -222,7 +252,9 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Determines whether {@code shortcut} key is down in this key binding.
+     * Determines whether the shortcut key ({@code command} on macOS and {@code ctrl} elsewhere)
+     * is down in this key binding.
+     *
      * @return true if {@code shortcut} key is down in this key binding
      */
     public boolean isShortcut() {
@@ -241,17 +273,18 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Determines whether {@code control} key is down in this key binding.
-     * @return true if {@code control} key is down in this key binding
+     * Determines whether {@code ctrl} key is down in this key binding.
+     * @return true if {@code ctrl} key is down in this key binding
      */
     public boolean isCtrl() {
         return modifiers.contains(KCondition.CTRL);
     }
 
     /**
-     * Determines whether {@code control} key is down in this key binding.
+     * Determines whether {@code ⌘ command} key is down in this key binding.
      * Applies to macOS platform only.
-     * @return true if {@code control} key is down in this key binding
+     *
+     * @return true if {@code ⌘ command} key is down in this key binding
      */
     public boolean isCommand() {
         return modifiers.contains(KCondition.COMMAND);
@@ -268,6 +301,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     /**
      * Determines whether {@code option} key is down in this key binding.
      * Applies to macOS only.
+     *
      * @return true if {@code option} key is down in this key binding
      */
     public boolean isOption() {
@@ -276,6 +310,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
 
     /**
      * Determines whether {@code shift} key is down in this key binding.
+     *
      * @return true if {@code shift} key is down in this key binding
      */
     public boolean isShift() {
@@ -283,8 +318,9 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Returns a {@link KeyCode} or null if the key binding is not for a key code.
-     * @return key code
+     * Returns the {@link KeyCode}, or null if the key binding is not for a key code.
+     *
+     * @return key code, or null
      */
     public KeyCode getKeyCode() {
         if (key instanceof KeyCode c) {
@@ -708,9 +744,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
             }
 
             if (!mac) {
-                if (m.contains(KCondition.COMMAND)) {
-                    return null;
-                } else if (m.contains(KCondition.OPTION)) {
+                if (m.contains(KCondition.COMMAND) || m.contains(KCondition.OPTION)) {
                     return null;
                 }
 
