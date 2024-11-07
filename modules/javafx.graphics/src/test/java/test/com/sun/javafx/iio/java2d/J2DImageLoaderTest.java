@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.com.sun.javafx.iio.javax;
+package test.com.sun.javafx.iio.java2d;
 
 import com.sun.javafx.iio.ImageFrame;
 import com.sun.javafx.iio.ImageLoadListener;
