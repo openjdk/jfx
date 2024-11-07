@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,6 @@ import java.awt.dnd.DragGestureRecognizer;
 import java.awt.dnd.DragSource;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.InvalidDnDOperationException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javafx.embed.swing.SwingNode;
 import com.sun.javafx.embed.swing.newimpl.FXDnDInteropN;
 
@@ -42,21 +40,8 @@ import com.sun.javafx.embed.swing.newimpl.FXDnDInteropN;
  * It allows Swing content to use the FX machinery for performing DnD.
  */
 final public class FXDnD {
-    public static boolean fxAppThreadIsDispatchThread;
+    public static boolean fxAppThreadIsDispatchThread = "true".equals(System.getProperty("javafx.embed.singleThread"));
     private FXDnDInteropN fxdndiop;
-
-    static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-                fxAppThreadIsDispatchThread =
-                        "true".equals(System.getProperty("javafx.embed.singleThread"));
-                return null;
-            }
-        });
-
-    }
 
     public FXDnD(SwingNode node) {
         fxdndiop = new FXDnDInteropN();
