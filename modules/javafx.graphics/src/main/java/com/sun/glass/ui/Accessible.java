@@ -180,11 +180,9 @@ public abstract class Accessible {
     private ExecuteAction executeAction = new ExecuteAction();
 
     public void executeAction(AccessibleAction action, Object... parameters) {
-        QuantumToolkit.runWithoutRenderLock(() -> {
-            executeAction.action = action;
-            executeAction.parameters = parameters;
-            return executeAction;
-        });
+        executeAction.action = action;
+        executeAction.parameters = parameters;
+        QuantumToolkit.runWithoutRenderLock(executeAction);
     }
 
     public abstract void sendNotification(AccessibleAttribute notification);
