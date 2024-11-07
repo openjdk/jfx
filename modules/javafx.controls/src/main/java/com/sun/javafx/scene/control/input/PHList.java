@@ -51,7 +51,7 @@ public class PHList {
     }
 
     /**
-     * Adds an event handler under the given priority.
+     * Adds the specified priority (always), and the specified handler if not null.
      * A newly added handler will be inserted after previously added handlers with the same priority.
      * @param priority the priority
      * @param handler the handler to add
