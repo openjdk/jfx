@@ -35,18 +35,23 @@ import javafx.geometry.Dimension2D;
 import javafx.geometry.HorizontalDirection;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import javafx.util.Subscription;
 
 /**
- * Base class for a client-area header bar that is used as a replacement for the system-provided header bar
- * in stages with the {@link StageStyle#EXTENDED} style. This class is intended for application developers
- * to use as a starting point for custom header bar implementations, and it enables the <em>click-and-drag</em>
+ * Base class for a client-area header bar that is used as a replacement for the system-provided header bar in
+ * stages with the {@link StageStyle#EXTENDED} style. This class is intended for application developers to use
+ * as a starting point for custom header bar implementations, and it enables the <em>click-and-drag to move</em>
  * and <em>double-click to maximize</em> behaviors that are usually afforded by system-provided header bars.
  * The entire {@code HeaderBarBase} background is draggable by default, but its content is not. Applications
  * can specify draggable content nodes of the {@code HeaderBarBase} with the {@link #setDraggable} method.
+ * <p>
+ * Some platforms support a system menu that can be summoned by right-clicking the draggable area.
+ * This platform-provided menu will only be shown if the {@link ContextMenuEvent#CONTEXT_MENU_REQUESTED}
+ * event that is targeted at {@code HeaderBarBase} is not consumed by the application.
  *
  * @apiNote Most application developers should use the {@link HeaderBar} implementation instead of
  *          creating a custom header bar.

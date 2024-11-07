@@ -36,14 +36,19 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.stage.StageStyle;
 
 /**
  * A client-area header bar that is used as a replacement for the system-provided header bar in stages
- * with the {@link StageStyle#EXTENDED} style. This class enables the <em>click-and-drag</em> and
+ * with the {@link StageStyle#EXTENDED} style. This class enables the <em>click-and-drag to move</em> and
  * <em>double-click to maximize</em> behaviors that are usually afforded by system-provided header bars.
  * The entire {@code HeaderBar} background is draggable by default, but its content is not. Applications
  * can specify draggable content nodes of the {@code HeaderBar} with the {@link #setDraggable} method.
+ * <p>
+ * Some platforms support a system menu that can be summoned by right-clicking the draggable area.
+ * This platform-provided menu will only be shown if the {@link ContextMenuEvent#CONTEXT_MENU_REQUESTED}
+ * event that is targeted at {@code HeaderBarBase} is not consumed by the application.
  * <p>
  * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes
  * in three areas: {@link #leadingProperty() leading}, {@link #centerProperty() center}, and
