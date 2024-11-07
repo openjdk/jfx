@@ -278,15 +278,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 }
 
                 if (newCode != null) {
-                    KeyBinding newBinding = KeyBinding.
-                        with(newCode).
-                        alt(k.isAlt()).
-                        command(k.isCommand()).
-                        ctrl(k.isCtrl()).
-                        meta(k.isMeta()).
-                        option(k.isOption()).
-                        shift(k.isShift()).
-                        build();
+                    KeyBinding newBinding = k.withNewKeyCode(newCode);
                     duplicateMapping(k, newBinding);
                 }
             }
