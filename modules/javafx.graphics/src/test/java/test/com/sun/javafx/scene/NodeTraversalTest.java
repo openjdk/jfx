@@ -26,6 +26,7 @@
 package test.com.sun.javafx.scene;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -147,16 +148,22 @@ public final class NodeTraversalTest {
     @ParameterizedTest
     @MethodSource("data")
     public void requestFocusTraversal(int from, TraversalDirection dir, int to) {
+        // focus the start node
         nodes[from - 1].requestFocus();
-        nodes[from - 1].requestFocusTraversal(dir);
-        String msg = getFocused();
-        assertTrue(nodes[to - 1].isFocused(), msg);
+        // attempt traversal
+        boolean success = nodes[from - 1].requestFocusTraversal(dir);
+        // validate the focused node
+        assertTrue(nodes[to - 1].isFocused(), message("Focused", Node::isFocused));
+        if (success) {
+            // validate that success resulted in focus-visible node
+            assertTrue(nodes[to - 1].isFocusVisible(), message("FocusVisible", Node::isFocusVisible));
+        }
     }
 
-    private String getFocused() {
+    private String message(String prefix, Predicate<Node> func) {
         for (Node n: nodes) {
-            if (n.isFocused()) {
-                return "(Focused:" + n.getId() + ")";
+            if (func.test(n)) {
+                return "(" + prefix + ":" + n.getId() + ")";
             }
         }
         return "none";
