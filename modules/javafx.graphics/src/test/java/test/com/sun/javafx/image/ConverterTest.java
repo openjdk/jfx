@@ -50,6 +50,8 @@ import com.sun.javafx.image.impl.ByteRgb;
 import com.sun.javafx.image.impl.ByteRgba;
 import com.sun.javafx.image.impl.IntArgb;
 import com.sun.javafx.image.impl.IntArgbPre;
+import com.sun.javafx.image.impl.IntBgr;
+import com.sun.javafx.image.impl.IntRgb;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -57,8 +59,6 @@ import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritablePixelFormat;
 import javafx.scene.paint.Color;
 
-import com.sun.javafx.image.impl.IntBgr;
-import com.sun.javafx.image.impl.IntRgb;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
