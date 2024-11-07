@@ -45,6 +45,7 @@ import javafx.css.StyleableProperty;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HPos;
 import javafx.geometry.HorizontalDirection;
+import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -411,17 +412,17 @@ public final class WindowControlsOverlay extends Region {
         }
 
         double width = getWidth();
-        double button1Width = boundedWidth(button1);
-        double button2Width = boundedWidth(button2);
-        double button3Width = boundedWidth(button3);
-        double button1Height = boundedHeight(button1);
-        double button2Height = boundedHeight(button2);
-        double button3Height = boundedHeight(button3);
-        double button1X = left ? 0 : width - button1Width - button2Width - button3Width;
-        double button2X = left ? button1Width : width - button3Width - button2Width;
-        double button3X = left ? button1Width + button2Width : width - button3Width;
-        double totalWidth = button1Width + button2Width + button3Width;
-        double totalHeight = Math.max(button1Height, Math.max(button2Height, button3Height));
+        double button1Width = snapSizeX(boundedWidth(button1));
+        double button2Width = snapSizeX(boundedWidth(button2));
+        double button3Width = snapSizeX(boundedWidth(button3));
+        double button1Height = snapSizeY(boundedHeight(button1));
+        double button2Height = snapSizeY(boundedHeight(button2));
+        double button3Height = snapSizeY(boundedHeight(button3));
+        double button1X = snapPositionX(left ? 0 : width - button1Width - button2Width - button3Width);
+        double button2X = snapPositionX(left ? button1Width : width - button3Width - button2Width);
+        double button3X = snapPositionX(left ? button1Width + button2Width : width - button3Width);
+        double totalWidth = snapSizeX(button1Width + button2Width + button3Width);
+        double totalHeight = snapSizeY(Math.max(button1Height, Math.max(button2Height, button3Height)));
         Dimension2D currentSize = metrics.get().size();
 
         // Update the overlay metrics if they have changed.
@@ -433,14 +434,14 @@ public final class WindowControlsOverlay extends Region {
             metrics.set(newMetrics);
         }
 
-        layoutInArea(button1, button1X, 0, button1Width, button1Height,
-                     BASELINE_OFFSET_SAME_AS_HEIGHT, HPos.LEFT, VPos.TOP);
+        layoutInArea(button1, button1X, 0, button1Width, button1Height, BASELINE_OFFSET_SAME_AS_HEIGHT,
+                     Insets.EMPTY, true, true, HPos.LEFT, VPos.TOP, false);
 
-        layoutInArea(button2, button2X, 0, button2Width, button2Height,
-                     BASELINE_OFFSET_SAME_AS_HEIGHT, HPos.LEFT, VPos.TOP);
+        layoutInArea(button2, button2X, 0, button2Width, button2Height, BASELINE_OFFSET_SAME_AS_HEIGHT,
+                     Insets.EMPTY, true, true, HPos.LEFT, VPos.TOP, false);
 
-        layoutInArea(button3, button3X, 0, button3Width, button3Height,
-                     BASELINE_OFFSET_SAME_AS_HEIGHT, HPos.LEFT, VPos.TOP);
+        layoutInArea(button3, button3X, 0, button3Width, button3Height, BASELINE_OFFSET_SAME_AS_HEIGHT,
+                     Insets.EMPTY, true, true, HPos.LEFT, VPos.TOP, false);
     }
 
     @Override
