@@ -298,7 +298,7 @@ jobs:
           java -version
           which ant
           ant -version
-          # We want to use Xcode 14, but GHA as removed it from the macOS 14 runners
+          # We want to use Xcode 14, but GHA removed it from the macOS 14 runners
           # sudo xcode-select --switch /Applications/Xcode_14.3.1.app/Contents/Developer
           xcodebuild -version
 
