@@ -31,13 +31,11 @@ import javafx.event.EventHandler;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import com.sun.javafx.scene.control.inputmap.InputMap;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.util.Duration;
 
 import java.util.List;
-
-import static javafx.scene.input.KeyCode.*;
-import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 
 public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
 
@@ -69,7 +67,20 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
         }
     };
 
+    private final EventHandler<KeyEvent> spinnerKeyHandler = e -> {
+        boolean arrowsAreVertical = arrowsAreVertical();
+        KeyCode increment = arrowsAreVertical ? KeyCode.UP : KeyCode.RIGHT;
+        KeyCode decrement = arrowsAreVertical ? KeyCode.DOWN : KeyCode.LEFT;
 
+        if (e.getCode() == increment) {
+            increment(1);
+            e.consume();
+        }
+        else if (e.getCode() == decrement) {
+            decrement(1);
+            e.consume();
+        }
+    };
 
     /***************************************************************************
      *                                                                         *
@@ -84,24 +95,16 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
         // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
         spinnerInputMap = createInputMap();
 
-        // then spinner-specific mappings for key and mouse input
-        addDefaultMapping(spinnerInputMap,
-            new KeyMapping(UP, KeyEvent.KEY_PRESSED, e -> {
-                if (arrowsAreVertical()) increment(1); else FocusTraversalInputMap.traverseUp(e);
-            }),
-            new KeyMapping(RIGHT, KeyEvent.KEY_PRESSED, e -> {
-                if (! arrowsAreVertical()) increment(1); else FocusTraversalInputMap.traverseRight(e);
-            }),
-            new KeyMapping(LEFT, KeyEvent.KEY_PRESSED, e -> {
-                if (! arrowsAreVertical()) decrement(1); else FocusTraversalInputMap.traverseLeft(e);
-            }),
-            new KeyMapping(DOWN, KeyEvent.KEY_PRESSED, e -> {
-                if (arrowsAreVertical()) decrement(1); else FocusTraversalInputMap.traverseDown(e);
-            })
-        );
+        spinner.addEventFilter(KeyEvent.KEY_PRESSED, spinnerKeyHandler);
     }
 
 
+    @Override
+    public void dispose() {
+        getNode().removeEventFilter(KeyEvent.KEY_PRESSED, spinnerKeyHandler);
+
+        super.dispose();
+    }
 
     /***************************************************************************
      *                                                                         *

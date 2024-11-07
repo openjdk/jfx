@@ -27,6 +27,7 @@ package javafx.scene.control.skin;
 import java.util.List;
 
 import javafx.css.PseudoClass;
+import javafx.event.Event;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.AccessibleAction;
@@ -41,6 +42,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
+import com.sun.javafx.event.EventDispatchChainImpl;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
@@ -177,40 +179,22 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             ((FakeFocusTextField)textField).setFakeFocus(control.isFocused());
         });
 
-        lh.addEventFilter(control, KeyEvent.ANY, (ke) -> {
-            if (control.isEditable()) {
-                // This prevents a stack overflow from our rebroadcasting of the
-                // event to the textfield that occurs in the final else statement
-                // of the conditions below.
-                if (ke.getTarget().equals(textField)) return;
+        // Forwards all key events arriving at the control level to the internal
+        // text field, if the control is editable. This forwarding is limited to the
+        // text field only, and so the forwarded event will NOT traverse the entire
+        // scene graph. The originating event is only consumed if the forwarded
+        // event was consumed.
+        lh.addEventFilter(control, KeyEvent.ANY, e -> {
+            // Note: due to a bug, we check if the event is consumed here. The behavior
+            // will consume the appropriate arrow keys, but the event is STILL delivered to this
+            // filter at the same level. Without the consume check, the TextField will act
+            // on arrow keys, moving the cursor unexpectedly.
+            if (!e.isConsumed() && control.isEditable()) {
+                Event event = textField.getEventDispatcher().dispatchEvent(e.copyFor(textField, textField), new EventDispatchChainImpl());
 
-                // Fix for RT-38527 which led to a stack overflow
-                if (ke.getCode() == KeyCode.ESCAPE) return;
-
-                // This and the additional check of isIncDecKeyEvent in
-                // textField's event filter fix JDK-8185937.
-                if (isIncDecKeyEvent(ke)) return;
-
-                // Fix for the regression noted in a comment in RT-29885.
-                // This forwards the event down into the TextField when
-                // the key event is actually received by the Spinner.
-                textField.fireEvent(ke.copyFor(textField, textField));
-
-                if (ke.getCode() == KeyCode.ENTER) return;
-
-                ke.consume();
-            }
-        });
-
-        // This event filter is to enable keyboard events being delivered to the
-        // spinner when the user has mouse clicked into the TextField area of the
-        // Spinner control. Without this the up/down/left/right arrow keys don't
-        // work when you click inside the TextField area (but they do in the case
-        // of tabbing in).
-        lh.addEventFilter(textField, KeyEvent.ANY, (ke) -> {
-            if (! control.isEditable() || isIncDecKeyEvent(ke)) {
-                control.fireEvent(ke.copyFor(control, control));
-                ke.consume();
+                if (event == null || event.isConsumed()) {
+                    e.consume();  // consume original trigger event
+                }
             }
         });
 
