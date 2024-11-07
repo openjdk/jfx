@@ -8539,34 +8539,12 @@ public abstract class Node implements EventTarget, Styleable {
      * This method is expected to be called in response to a {@code KeyEvent}; therefore the {@code Node}
      * receiving focus will have the {@link #focusVisibleProperty() focusVisible} property set.
      *
-     * @param direction the direction of focus traversal
+     * @param direction the direction of focus traversal, non-null
      * @return {@code true} if traversal was successful
      * @since 24
      */
     public final boolean requestFocusTraversal(TraversalDirection direction) {
-        Direction d;
-        switch (direction) {
-        case DOWN:
-            d = Direction.DOWN;
-            break;
-        case LEFT:
-            d = Direction.LEFT;
-            break;
-        case NEXT:
-            d = Direction.NEXT;
-            break;
-        case PREVIOUS:
-            d = Direction.PREVIOUS;
-            break;
-        case RIGHT:
-            d = Direction.RIGHT;
-            break;
-        case UP:
-            d = Direction.UP;
-            break;
-        default:
-            return false;
-        }
+        Direction d = Direction.of(direction);
         return traverse(d, TraversalMethod.KEY);
     }
 
