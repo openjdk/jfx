@@ -57,7 +57,6 @@ import javafx.application.ConditionalFeature;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Scene;
-import javafx.util.FXPermission;
 
 public class PlatformImpl {
 
@@ -102,10 +101,6 @@ public class PlatformImpl {
     private static final boolean verbose = Boolean.getBoolean("javafx.verbose");
 
     private static final boolean DEBUG = Boolean.getBoolean("com.sun.javafx.application.debug");
-
-    // Internal permission used by FXCanvas (SWT interop)
-    private static final FXPermission FXCANVAS_PERMISSION =
-            new FXPermission("accessFXCanvasInternals");
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -336,19 +331,6 @@ public class PlatformImpl {
 
     // FXCanvas-specific initialization
     private static void initFXCanvas() {
-        // Verify that we have the appropriate permission
-        @SuppressWarnings("removal")
-        final SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            try {
-                sm.checkPermission(FXCANVAS_PERMISSION);
-            } catch (SecurityException ex) {
-                System.err.println("FXCanvas: no permission to access JavaFX internals");
-                ex.printStackTrace();
-                return;
-            }
-        }
-
         // Find the calling class, ignoring any stack frames from FX application classes
         Predicate<StackWalker.StackFrame> classFilter = f ->
                 !f.getClassName().startsWith("javafx.application.")

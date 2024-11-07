@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package com.sun.webkit.network;
 
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.logging.PlatformLogger.Level;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,13 +33,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.IDN;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 /**
  * A collection of static utility methods dealing with "public suffixes".
@@ -72,24 +70,20 @@ final class PublicSuffixes {
     /**
      * The public suffix list file.
      */
-    @SuppressWarnings("removal")
-    private static final File pslFile = AccessController.doPrivileged((PrivilegedAction<File>)
-        () -> new File(System.getProperty("java.home"), "lib/security/public_suffix_list.dat"));
+    private static final File pslFile = new File(System.getProperty("java.home"), "lib/security/public_suffix_list.dat");
 
 
     /*
      * Determines whether the public suffix list file is available.
      */
-    @SuppressWarnings("removal")
-    private static final boolean pslFileExists = AccessController.doPrivileged(
-        (PrivilegedAction<Boolean>) () -> {
-            if (!pslFile.exists()) {
-                logger.warning("Resource not found: " +
-                    "lib/security/public_suffix_list.dat");
-                return false;
-            }
-            return true;
-        });
+    private static final boolean pslFileExists = ((BooleanSupplier)() -> {
+        if (!pslFile.exists()) {
+            logger.warning("Resource not found: " +
+                "lib/security/public_suffix_list.dat");
+            return false;
+        }
+        return true;
+    }).getAsBoolean();
 
 
     /**
@@ -197,19 +191,13 @@ final class PublicSuffixes {
         }
 
         private static InputStream getPubSuffixStream() {
-            @SuppressWarnings("removal")
-            InputStream is = AccessController.doPrivileged(
-                (PrivilegedAction<InputStream>) () -> {
-                    try {
-                        return new FileInputStream(pslFile);
-                    } catch (FileNotFoundException ex) {
-                        logger.warning("Resource not found: " +
-                                "lib/security/public_suffix_list.dat");
-                        return null;
-                    }
-                }
-            );
-            return is;
+            try {
+                return new FileInputStream(pslFile);
+            } catch (FileNotFoundException ex) {
+                logger.warning("Resource not found: " +
+                    "lib/security/public_suffix_list.dat");
+                return null;
+            }
         }
 
         boolean match(String domain) {
