@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@ import com.sun.glass.ui.Pixels;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /** Native screen implementation for the X11 platform
  *
@@ -74,10 +72,7 @@ class X11Screen implements NativeScreen {
         int w = xLib.WidthOfScreen(screen);
         int h = xLib.HeightOfScreen(screen);
         boolean fullScreen = true;
-        @SuppressWarnings("removal")
-        String geometry =
-                AccessController.doPrivileged((PrivilegedAction<String>) () ->
-                        System.getProperty("x11.geometry"));
+        String geometry = System.getProperty("x11.geometry");
         if (geometry != null) {
             try {
                 String size;
