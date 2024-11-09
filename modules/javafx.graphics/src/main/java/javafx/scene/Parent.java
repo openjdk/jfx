@@ -1433,12 +1433,12 @@ public abstract class Parent extends Node {
     }
 
     @Override
-    public boolean isFocusScope() { // Overridden to make the method public
+    protected boolean isFocusScope() { // Overridden to make the method protected
         return false;
     }
 
     @Override
-    public Node getFocusDelegate() { // Overridden to make the method public
+    protected Node getFocusDelegate() { // Overridden to make the method protected
         return null;
     }
 

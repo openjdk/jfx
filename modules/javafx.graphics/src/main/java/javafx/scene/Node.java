@@ -8526,11 +8526,11 @@ public abstract class Node implements EventTarget, Styleable {
      * a focus request. A node that receives a focus hoisting request may decide to hoist the request even further
      * up the scene graph.
      * <p>
-     * Focus scoping is a technique employed by controls that need to isolate their internal scene graph substructure
-     * (for example, their skin) from their external representation. Consider a control with an internal substructure
-     * that contains an interactive and independently focusable control. When a user clicks on the contained interactive
-     * control, it is often desired that the external control representation, and not its internal components, receive
-     * the the input focus.
+     * Focus scoping is a technique employed by controls that need to isolate their internal structure (which may
+     * be defined by a skin) from their external representation. Consider a control with an internal structure
+     * that contains an interactive and independently focusable control. When a user clicks on the internal
+     * interactive control, it is often desired that the external representation receive the input focus, so
+     * that users of the control can reason about it as a monolith instead of a composite with unknown parts.
      * <p>
      * Focus scoping is often combined with {@link #getFocusDelegate() focus delegation}.
      *
@@ -8545,17 +8545,21 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Gets the focus delegate for this {@code Node}, which must be a descendant of this {@code Node}.
      * <p>
-     * Focus delegation allows nodes to delegate events targeted at them to one of their descendants. This is a
-     * technique employed by controls that need to isolate their internal scene graph substructure (for example,
-     * their skin) from their external representation. The external control representation delegates the input focus
-     * to an internal control by returning the internal control from the {@link #getFocusDelegate()} method. In this
-     * case, when the external control representation receives the input focus, the internal control is focused as
-     * well. Input events will be targeted at the external control first, and then at each consecutive focus delegate
-     * in sequence.
+     * Focus delegation allows nodes to delegate events targeted at them to one of their descendants. This is
+     * a technique employed by controls that need to isolate their internal structure (which may be defined by
+     * a skin) from their external representation. The external representation delegates the input focus to an
+     * internal control by returning the internal control from the {@link #getFocusDelegate()} method. In this
+     * case, when the external control receives the input focus, the internal control is focused as well. When
+     * an input event is sent to the focused control, the external control receives the event first. If the
+     * event is not consumed, it is dispatched to the focus delegate. A focus delegate might delegate the input
+     * focus even further, forming a chain of focus delegates.
+     * <p>
+     * If an implementation returns a node from this method that is not a descendant of this {@code Node},
+     * JavaFX ignores the returned value and treats this {@code Node} as having no focus delegate.
      * <p>
      * Focus delegation is often combined with {@link #isFocusScope() focus scoping}.
      *
-     * @return the focus delegate
+     * @return the focus delegate, which is a descendant of this {@code Node}
      * @since 24
      */
     Node getFocusDelegate() {
