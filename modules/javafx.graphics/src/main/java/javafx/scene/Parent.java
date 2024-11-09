@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1430,6 +1430,16 @@ public abstract class Parent extends Node {
         for (int i = 0, max = children.size(); i < max; ++i) {
             children.get(i).parentResolvedOrientationInvalidated();
         }
+    }
+
+    @Override
+    public boolean isFocusScope() { // Overridden to make the method public
+        return false;
+    }
+
+    @Override
+    public Node getFocusDelegate() { // Overridden to make the method public
+        return null;
     }
 
     /* *************************************************************************

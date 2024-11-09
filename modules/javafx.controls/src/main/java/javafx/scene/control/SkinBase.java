@@ -43,6 +43,7 @@ import javafx.geometry.VPos;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 
@@ -188,6 +189,16 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      */
     public final ObservableList<Node> getChildren() {
         return children;
+    }
+
+    /**
+     * Overriding this method allows skins to specify the {@link Parent#getFocusDelegate()}.
+     *
+     * @return the focus delegate
+     * @since 24
+     */
+    protected Node getFocusDelegate() {
+        return null;
     }
 
     /**

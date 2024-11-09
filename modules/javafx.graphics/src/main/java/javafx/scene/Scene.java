@@ -1896,8 +1896,11 @@ public class Scene implements EventTarget {
             final double xOffset = xAbs - x2;
             final double yOffset = yAbs - y2;
             if (sceneFocusOwner != null) {
-                final Bounds bounds = sceneFocusOwner.localToScene(
-                        sceneFocusOwner.getBoundsInLocal());
+                Node delegate = sceneFocusOwner.resolveFocusDelegate();
+                Bounds bounds = delegate != null
+                        ? delegate.localToScene(delegate.getBoundsInLocal())
+                        : sceneFocusOwner.localToScene(sceneFocusOwner.getBoundsInLocal());
+
                 x2 = bounds.getMinX() + bounds.getWidth() / 4;
                 y2 = bounds.getMinY() + bounds.getHeight() / 2;
                 eventTarget = sceneFocusOwner;
@@ -1921,9 +1924,10 @@ public class Scene implements EventTarget {
         }
 
         if (eventTarget != null) {
+            Node delegate = eventTarget instanceof Node node ? node.resolveFocusDelegate() : null;
             ContextMenuEvent context = new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
                     x2, y2, xAbs, yAbs, isKeyboardTrigger, res);
-            Event.fireEvent(eventTarget, context);
+            EventUtil.fireEvent(eventTarget, delegate, context);
         }
         Scene.inMousePick = false;
     }
@@ -2189,7 +2193,8 @@ public class Scene implements EventTarget {
 
         // send the key event to the current focus owner or to scene if
         // the focus owner is not set
-        return EventUtil.fireEvent(eventTarget, e) == null;
+        Node delegate = eventTarget instanceof Node node ? node.resolveFocusDelegate() : null;
+        return EventUtil.fireEvent(eventTarget, delegate, e) == null;
     }
 
     void requestFocus(Node node, boolean focusVisible) {
@@ -2317,7 +2322,7 @@ public class Scene implements EventTarget {
     private void processInputMethodEvent(InputMethodEvent e) {
         Node node = getFocusOwner();
         if (node != null) {
-            node.fireEvent(e);
+            EventUtil.fireEvent(node, node.resolveFocusDelegate(), e);
         }
     }
 

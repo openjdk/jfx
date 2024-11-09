@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -484,6 +484,11 @@ public abstract class Control extends Region implements Skinnable {
         return true;
     }
 
+    @Override
+    public boolean isFocusScope() {
+        return true;
+    }
+
     // Implementation of the Resizable interface.
     // Because only the skin can know the min, pref, and max sizes, these
     // functions are implemented to delegate to skin. If there is no skin then
@@ -631,6 +636,15 @@ public abstract class Control extends Region implements Skinnable {
      * @since JavaFX 8.0
      */
     protected Skin<?> createDefaultSkin() {
+        return null;
+    }
+
+    @Override
+    public Node getFocusDelegate() {
+        if (skinBase != null) {
+            return skinBase.getFocusDelegate();
+        }
+
         return null;
     }
 
