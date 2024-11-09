@@ -298,7 +298,8 @@ jobs:
           java -version
           which ant
           ant -version
-          sudo xcode-select --switch /Applications/Xcode_14.3.1.app/Contents/Developer
+          # We want to use Xcode 14, but GHA removed it from the macOS 14 runners
+          # sudo xcode-select --switch /Applications/Xcode_14.3.1.app/Contents/Developer
           xcodebuild -version
 
       - name: Build JavaFX artifacts
