@@ -484,11 +484,6 @@ public abstract class Control extends Region implements Skinnable {
         return true;
     }
 
-    @Override
-    public boolean isFocusScope() {
-        return true;
-    }
-
     // Implementation of the Resizable interface.
     // Because only the skin can know the min, pref, and max sizes, these
     // functions are implemented to delegate to skin. If there is no skin then
@@ -600,6 +595,11 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
+    @Override
+    protected boolean isFocusScope() {
+        return true;
+    }
+
     /* *************************************************************************
      * Implementation of layout bounds for the Control. We want to preserve    *
      * the lazy semantics of layout bounds. So whenever the width/height       *
@@ -640,7 +640,7 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     @Override
-    public Node getFocusDelegate() {
+    protected Node getFocusDelegate() {
         if (skinBase != null) {
             return skinBase.getFocusDelegate();
         }
