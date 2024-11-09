@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,9 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.util.Logging;
@@ -46,15 +44,12 @@ public abstract class NativePlatform {
     protected AcceleratedScreen accScreen;
 
 
-    @SuppressWarnings("removal")
     protected static final boolean useCursor =
-        AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+        ((Supplier<Boolean>) () -> {
             final String str =
                 System.getProperty("monocle.cursor.enabled", "true");
             return "true".equalsIgnoreCase(str);
-        });
-
-
+        }).get();
 
     protected NativePlatform() {
         runnableProcessor = new RunnableProcessor();
