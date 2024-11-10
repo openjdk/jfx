@@ -25,10 +25,13 @@
 
 package javafx.event;
 
-import java.util.EventObject;
-
 import com.sun.javafx.event.EventUtil;
+import com.sun.javafx.event.UnconsumedEventHandler;
+import java.util.ArrayList;
+import java.util.EventObject;
 import java.io.IOException;
+import java.io.Serial;
+import java.util.List;
 import javafx.beans.NamedArg;
 
 // PENDING_DOC_REVIEW
@@ -43,7 +46,23 @@ import javafx.beans.NamedArg;
  */
 public class Event extends EventObject implements Cloneable {
 
-    private static final long serialVersionUID = 20121107L;
+    static {
+        EventUtil.setAccessor(new EventUtil.Accessor() {
+            @Override
+            public List<UnconsumedEventHandler> getUnconsumedEventHandlers(Event event) {
+                return event.unconsumedEventHandlers;
+            }
+
+            @Override
+            public void markDeliveryCompleted(Event event) {
+                event.completed = true;
+            }
+        });
+    }
+
+    @Serial
+    private static final long serialVersionUID = 20241110L;
+
     /**
      * The constant which represents an unknown event source / target.
      */
@@ -66,9 +85,21 @@ public class Event extends EventObject implements Cloneable {
     protected transient EventTarget target;
 
     /**
+     * The list of handlers that have expressed their interest in handling the event
+     * if it is still unconsumed at the end of the bubble phase of event delivery.
+     */
+    private transient List<UnconsumedEventHandler> unconsumedEventHandlers;
+
+    /**
      * Whether this event has been consumed by any filter or handler.
      */
     protected boolean consumed;
+
+    /**
+     * Indicates whether this event has completed both delivery phases and can no
+     * longer accept registrations of unconsumed event handlers.
+     */
+    private boolean completed;
 
     /**
      * Construct a new {@code Event} with the specified event type. The source
@@ -153,6 +184,44 @@ public class Event extends EventObject implements Cloneable {
      */
     public void consume() {
         consumed = true;
+    }
+
+    /**
+     * Specifies an event handler that will handle this event if it is still unconsumed after both phases
+     * of event delivery have completed. The unconsumed event handlers are invoked in the order they were
+     * registered. As soon as an event handler consumes the event, further propagation is stopped.
+     * <p>
+     * This method can only be called from an event filter or event handler during event delivery; any
+     * attempt to call it after event delivery is complete will fail with {@link IllegalStateException}.
+     *
+     * @param handler the event handler
+     * @param <E> the type of the event
+     * @throws IllegalStateException when event delivery has already been completed
+     * @since 24
+     */
+    public final <E extends Event> void ifUnconsumed(EventHandler<E> handler) {
+        if (completed) {
+            throw new IllegalStateException("Event delivery is not in progress");
+        }
+
+        if (unconsumedEventHandlers == null) {
+            unconsumedEventHandlers = new ArrayList<>(2); // most of the time we only expect a single handler
+        }
+
+        @SuppressWarnings("unchecked")
+        EventHandler<Event> untypedHandler = (EventHandler<Event>)handler;
+        unconsumedEventHandlers.add(new UnconsumedEventHandler(this, untypedHandler));
+    }
+
+    /**
+     * Discards all event handlers that were added with {@link #ifUnconsumed(EventHandler)}.
+     *
+     * @since 24
+     */
+    public final void discardUnconsumedEventHandlers() {
+        if (!completed && unconsumedEventHandlers != null) {
+            unconsumedEventHandlers.clear();
+        }
     }
 
     /**
