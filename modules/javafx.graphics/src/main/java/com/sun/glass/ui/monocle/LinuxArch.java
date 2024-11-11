@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,14 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import java.util.function.Supplier;
 
 public class LinuxArch {
 
-    @SuppressWarnings("removal")
-    private static final int bits = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
+    private static final int bits = ((Supplier<Integer>) () -> {
         LinuxSystem system = LinuxSystem.getLinuxSystem();
         return (int) system.sysconf(LinuxSystem._SC_LONG_BIT);
-    });
+    }).get();
 
     static boolean is64Bit() {
         return bits == 64;

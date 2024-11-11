@@ -25,11 +25,11 @@
 
 package com.sun.javafx.reflect;
 
+import com.sun.javafx.SecurityUtil;
 import java.security.AllPermission;
 import java.security.AccessController;
 import java.security.PermissionCollection;
 import java.security.SecureClassLoader;
-import java.security.PrivilegedExceptionAction;
 import java.security.CodeSource;
 import java.io.InputStream;
 import java.io.IOException;
@@ -77,6 +77,12 @@ class Trampoline {
  * Create a trampoline class.
  */
 public final class MethodUtil extends SecureClassLoader {
+
+    static {
+        // Check for security manager (throws exception if enabled)
+        SecurityUtil.checkSecurityManager();
+    }
+
     private static final String MISC_PKG = "com.sun.javafx.reflect.";
     private static final String TRAMPOLINE = MISC_PKG + "Trampoline";
     private static final Method bounce = getTrampoline();
@@ -288,22 +294,15 @@ public final class MethodUtil extends SecureClassLoader {
         }
     }
 
-    @SuppressWarnings("removal")
     private static Method getTrampoline() {
         try {
-            return AccessController.doPrivileged(
-                new PrivilegedExceptionAction<Method>() {
-                    @Override
-                    public Method run() throws Exception {
-                        Class<?> t = getTrampolineClass();
-                        Class<?>[] types = {
-                            Method.class, Object.class, Object[].class
-                        };
-                        Method b = t.getDeclaredMethod("invoke", types);
-                        b.setAccessible(true);
-                        return b;
-                    }
-                });
+            Class<?> t = getTrampolineClass();
+            Class<?>[] types = {
+                Method.class, Object.class, Object[].class
+            };
+            Method b = t.getDeclaredMethod("invoke", types);
+            b.setAccessible(true);
+            return b;
         } catch (Exception e) {
             throw new InternalError("bouncer cannot be found", e);
         }

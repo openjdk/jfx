@@ -33,10 +33,6 @@ import javafx.beans.property.ReadOnlyLongPropertyBase;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessController;
-import java.security.AccessControlContext;
-import java.security.PrivilegedAction;
-
 /**
  * A {@code ReadOnlyJavaBeanLongProperty} provides an adapter between a regular
  * read only Java Bean property of type {@code long} or {@code Long} and a JavaFX
@@ -85,9 +81,6 @@ public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase
     private final ReadOnlyPropertyDescriptor<Number> descriptor;
     private final ReadOnlyPropertyDescriptor<Number>.ReadOnlyListener listener;
 
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
-
     ReadOnlyJavaBeanLongProperty(ReadOnlyPropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener(bean, this);
@@ -102,19 +95,16 @@ public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public long get() {
-        return AccessController.doPrivileged((PrivilegedAction<Long>) () -> {
-            try {
-                return ((Number)MethodHelper.invoke(
-                    descriptor.getGetter(), getBean(), (Object[])null)).longValue();
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }, acc);
+        try {
+            return ((Number)MethodHelper.invoke(
+                descriptor.getGetter(), getBean(), (Object[])null)).longValue();
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**
