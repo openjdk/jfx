@@ -2233,7 +2233,7 @@ public class Scene implements EventTarget {
      */
     private InputMethodStateManager inputMethodStateManager = null;
 
-    protected InputMethodStateManager getInputMethodStateManager() {
+    InputMethodStateManager getInputMethodStateManager() {
         if (inputMethodStateManager == null) {
             inputMethodStateManager = new InputMethodStateManager(this);
         }
