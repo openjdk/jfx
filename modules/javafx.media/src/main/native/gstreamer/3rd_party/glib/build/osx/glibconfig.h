@@ -113,8 +113,8 @@ typedef unsigned long guintptr;
 #define G_GUINTPTR_FORMAT       "lu"
 
 #define GLIB_MAJOR_VERSION 2
-#define GLIB_MINOR_VERSION 78
-#define GLIB_MICRO_VERSION 1
+#define GLIB_MINOR_VERSION 80
+#define GLIB_MICRO_VERSION 4
 
 #define G_OS_UNIX
 

@@ -313,67 +313,67 @@ static const struct ID3v2FrameIDConvert
 } frame_id_conversions[] = {
   /* 2.3.x frames */
   {
-  "TORY", "TDOR"}, {
-  "TYER", "TDRC"},
-      /* 2.2.x frames */
+      "TORY", "TDOR"}, {
+      "TYER", "TDRC"},
+  /* 2.2.x frames */
   {
-  "BUF", "RBUF"}, {
-  "CNT", "PCNT"}, {
-  "COM", "COMM"}, {
-  "CRA", "AENC"}, {
-  "ETC", "ETCO"}, {
-  "GEO", "GEOB"}, {
-  "IPL", "TIPL"}, {
-  "MCI", "MCDI"}, {
-  "MLL", "MLLT"}, {
-  "PIC", "APIC"}, {
-  "POP", "POPM"}, {
-  "REV", "RVRB"}, {
-  "SLT", "SYLT"}, {
-  "STC", "SYTC"}, {
-  "TAL", "TALB"}, {
-  "TBP", "TBPM"}, {
-  "TCM", "TCOM"}, {
-  "TCO", "TCON"}, {
-  "TCR", "TCOP"}, {
-  "TDA", "TDAT"}, {             /* obsolete, but we need to parse it anyway */
-  "TDY", "TDLY"}, {
-  "TEN", "TENC"}, {
-  "TFT", "TFLT"}, {
-  "TKE", "TKEY"}, {
-  "TLA", "TLAN"}, {
-  "TLE", "TLEN"}, {
-  "TMT", "TMED"}, {
-  "TOA", "TOAL"}, {
-  "TOF", "TOFN"}, {
-  "TOL", "TOLY"}, {
-  "TOR", "TDOR"}, {
-  "TOT", "TOAL"}, {
-  "TP1", "TPE1"}, {
-  "TP2", "TPE2"}, {
-  "TP3", "TPE3"}, {
-  "TP4", "TPE4"}, {
-  "TPA", "TPOS"}, {
-  "TPB", "TPUB"}, {
-  "TRC", "TSRC"}, {
-  "TRD", "TDRC"}, {
-  "TRK", "TRCK"}, {
-  "TSS", "TSSE"}, {
-  "TT1", "TIT1"}, {
-  "TT2", "TIT2"}, {
-  "TT3", "TIT3"}, {
-  "TXT", "TOLY"}, {
-  "TXX", "TXXX"}, {
-  "TYE", "TDRC"}, {
-  "UFI", "UFID"}, {
-  "ULT", "USLT"}, {
-  "WAF", "WOAF"}, {
-  "WAR", "WOAR"}, {
-  "WAS", "WOAS"}, {
-  "WCM", "WCOM"}, {
-  "WCP", "WCOP"}, {
-  "WPB", "WPUB"}, {
-  "WXX", "WXXX"}
+      "BUF", "RBUF"}, {
+      "CNT", "PCNT"}, {
+      "COM", "COMM"}, {
+      "CRA", "AENC"}, {
+      "ETC", "ETCO"}, {
+      "GEO", "GEOB"}, {
+      "IPL", "TIPL"}, {
+      "MCI", "MCDI"}, {
+      "MLL", "MLLT"}, {
+      "PIC", "APIC"}, {
+      "POP", "POPM"}, {
+      "REV", "RVRB"}, {
+      "SLT", "SYLT"}, {
+      "STC", "SYTC"}, {
+      "TAL", "TALB"}, {
+      "TBP", "TBPM"}, {
+      "TCM", "TCOM"}, {
+      "TCO", "TCON"}, {
+      "TCR", "TCOP"}, {
+      "TDA", "TDAT"}, {         /* obsolete, but we need to parse it anyway */
+      "TDY", "TDLY"}, {
+      "TEN", "TENC"}, {
+      "TFT", "TFLT"}, {
+      "TKE", "TKEY"}, {
+      "TLA", "TLAN"}, {
+      "TLE", "TLEN"}, {
+      "TMT", "TMED"}, {
+      "TOA", "TOAL"}, {
+      "TOF", "TOFN"}, {
+      "TOL", "TOLY"}, {
+      "TOR", "TDOR"}, {
+      "TOT", "TOAL"}, {
+      "TP1", "TPE1"}, {
+      "TP2", "TPE2"}, {
+      "TP3", "TPE3"}, {
+      "TP4", "TPE4"}, {
+      "TPA", "TPOS"}, {
+      "TPB", "TPUB"}, {
+      "TRC", "TSRC"}, {
+      "TRD", "TDRC"}, {
+      "TRK", "TRCK"}, {
+      "TSS", "TSSE"}, {
+      "TT1", "TIT1"}, {
+      "TT2", "TIT2"}, {
+      "TT3", "TIT3"}, {
+      "TXT", "TOLY"}, {
+      "TXX", "TXXX"}, {
+      "TYE", "TDRC"}, {
+      "UFI", "UFID"}, {
+      "ULT", "USLT"}, {
+      "WAF", "WOAF"}, {
+      "WAR", "WOAR"}, {
+      "WAS", "WOAS"}, {
+      "WCM", "WCOM"}, {
+      "WCP", "WCOP"}, {
+      "WPB", "WPUB"}, {
+      "WXX", "WXXX"}
 };
 
 static gboolean

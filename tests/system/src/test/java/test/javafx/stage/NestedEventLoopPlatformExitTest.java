@@ -26,17 +26,20 @@
 package test.javafx.stage;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
+@Timeout(value=20000, unit=TimeUnit.MILLISECONDS)
 public class NestedEventLoopPlatformExitTest {
 
     // Used to launch the application before running any test
@@ -57,23 +60,23 @@ public class NestedEventLoopPlatformExitTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws InterruptedException {
         Util.launch(launchLatch, TestApp.class);
     }
 
     // Verify that Platform.exit can be called while the NestedEventLoop is
     // running
-    @Test(timeout = 20000)
+    @Test
     public void testPlatformExitWithNestedEventLoop() {
         Util.runAndWait(
             () -> {
                 final long nestedLoopEventKey = 1024L;
-                Assert.assertFalse(Platform.isNestedLoopRunning());
+                Assertions.assertFalse(Platform.isNestedLoopRunning());
                 Platform.enterNestedEventLoop(nestedLoopEventKey);
             },
             () -> {
-                Assert.assertTrue(Platform.isNestedLoopRunning());
+                Assertions.assertTrue(Platform.isNestedLoopRunning());
                 Platform.exit();
             }
         );

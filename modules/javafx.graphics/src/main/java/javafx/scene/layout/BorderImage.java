@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,11 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
+import java.util.Objects;
 
 /**
  * Defines properties describing how to render an image as the border of
@@ -48,46 +50,54 @@ import javafx.scene.image.Image;
  * When applied to a Region with a defined shape, a BorderImage is ignored.
  * @since JavaFX 8.0
  */
-public class BorderImage {
+public final class BorderImage implements Interpolatable<BorderImage> {
     /**
      * The image to be used. This will never be null. If this
      * image fails to load, then the entire BorderImage will
      * be skipped at rendering time and will not contribute to
      * any bounds or other computations.
+     *
      * @return the image to be used
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final Image getImage() { return image; }
-    final Image image;
+    private final Image image;
 
     /**
      * Indicates in what manner (if at all) the border image
      * is to be repeated along the x-axis of the region. If not specified,
      * the default value is STRETCH.
+     *
      * @return the BorderRepeat that indicates if the border image
-     * is to be repeated along the x-axis of the region
+     *         is to be repeated along the x-axis of the region
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderRepeat getRepeatX() { return repeatX; }
-    final BorderRepeat repeatX;
+    private final BorderRepeat repeatX;
 
     /**
      * Indicates in what manner (if at all) the border image
      * is to be repeated along the y-axis of the region. If not specified,
      * the default value is STRETCH.
+     *
      * @return the BorderRepeat that indicates if the border image
-     * is to be repeated along the y-axis of the region
+     *         is to be repeated along the y-axis of the region
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderRepeat getRepeatY() { return repeatY; }
-    final BorderRepeat repeatY;
+    private final BorderRepeat repeatY;
 
     /**
      * The widths of the border on each side. These can be defined
      * as either to be absolute widths or percentages of the size of
      * the Region, {@link BorderWidths} for more details. If null,
      * this will default to being 1 pixel wide.
+     *
      * @return the BorderWidths of the border on each side
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final BorderWidths getWidths() { return widths; }
-    final BorderWidths widths;
+    private final BorderWidths widths;
 
     /**
      * Defines the slices of the image. JavaFX uses a 4-slice scheme where
@@ -103,27 +113,33 @@ public class BorderImage {
      * for the {@code filled} property will cause the center to be drawn. A
      * default value for this property will result in BorderImageSlices.DEFAULT, which
      * is a border-image-slice of 100%
+     *
      * @return the BorderWidths that defines the slices of the image
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      * @see <a href="http://www.w3.org/TR/css3-background/#the-border-image-slice">border-image-slice</a>
      */
     public final BorderWidths getSlices() { return slices; }
-    final BorderWidths slices;
+    private final BorderWidths slices;
 
     /**
      * Specifies whether or not the center patch (as defined by the left, right, top, and bottom slices)
      * should be drawn.
+     *
      * @return true if the center patch should be drawn
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isFilled() { return filled; }
-    final boolean filled;
+    private final boolean filled;
 
     /**
      * The insets of the BorderImage define where the border should be positioned
      * relative to the edge of the Region. This value will never be null.
+     *
      * @return the insets of the BorderImage
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final Insets getInsets() { return insets; }
-    final Insets insets;
+    private final Insets insets;
 
     // These two are used by Border to compute the insets and outsets of the border
     final Insets innerEdge;
@@ -184,6 +200,70 @@ public class BorderImage {
         result = 31 * result + this.repeatY.hashCode();
         result = 31 * result + (this.filled ? 1 : 0);
         hash = result;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public BorderImage interpolate(BorderImage endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        // BorderWidths and Insets are implemented such that interpolate() always returns the existing
+        // instance if the intermediate value is equal to the start value or the end value, which allows
+        // us to use an identity comparison in place of a value comparison to determine equality.
+        BorderWidths newWidths = widths.interpolate(endValue.widths, t);
+        BorderWidths newSlices = slices.interpolate(endValue.slices, t);
+        Insets newInsets = insets.interpolate(endValue.insets, t);
+        Image newImage;
+        BorderRepeat newRepeatX, newRepeatY;
+        boolean newFilled;
+
+        if (t < 0.5) {
+            newImage = this.image;
+            newRepeatX = this.repeatX;
+            newRepeatY = this.repeatY;
+            newFilled = this.filled;
+        } else {
+            newImage = endValue.image;
+            newRepeatX = endValue.repeatX;
+            newRepeatY = endValue.repeatY;
+            newFilled = endValue.filled;
+        }
+
+        if (isSame(newImage, newWidths, newSlices, newFilled, newRepeatX, newRepeatY)) {
+            return this;
+        }
+
+        if (endValue.isSame(newImage, newWidths, newSlices, newFilled, newRepeatX, newRepeatY)) {
+            return endValue;
+        }
+
+        return new BorderImage(endValue.image, newWidths, newInsets, newSlices,
+                               endValue.filled, endValue.repeatX, endValue.repeatY);
+    }
+
+    private boolean isSame(Image image, BorderWidths widths, BorderWidths slices, boolean filled,
+                           BorderRepeat repeatX, BorderRepeat repeatY) {
+        return this.image == image
+            && this.widths == widths
+            && this.slices == slices
+            && this.filled == filled
+            && this.repeatX == repeatX
+            && this.repeatY == repeatY;
     }
 
     /**

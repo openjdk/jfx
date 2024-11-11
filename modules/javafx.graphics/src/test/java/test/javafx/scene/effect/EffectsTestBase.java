@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene.effect;
 
-import static org.junit.Assert.assertEquals;
-
 import java.lang.reflect.Method;
 
 import javafx.beans.property.BooleanProperty;
@@ -50,6 +48,8 @@ import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.Effect;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class EffectsTestBase {
     private Scene scene;

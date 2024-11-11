@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 package test.com.sun.javafx.test;
 
 import javafx.scene.transform.Transform;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
@@ -39,6 +37,9 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Shear;
 import javafx.scene.transform.Translate;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Helper class for transform tests.
@@ -133,18 +134,18 @@ public final class TransformHelper {
      */
     public static void assertMatrix(String message, Transform matrix,
             Transform reference) {
-        assertEquals(message, reference.getMxx(), matrix.getMxx(), 0.00001);
-        assertEquals(message, reference.getMxy(), matrix.getMxy(), 0.00001);
-        assertEquals(message, reference.getMxz(), matrix.getMxz(), 0.00001);
-        assertEquals(message, reference.getTx(), matrix.getTx(), 0.00001);
-        assertEquals(message, reference.getMyx(), matrix.getMyx(), 0.00001);
-        assertEquals(message, reference.getMyy(), matrix.getMyy(), 0.00001);
-        assertEquals(message, reference.getMyz(), matrix.getMyz(), 0.00001);
-        assertEquals(message, reference.getTy(), matrix.getTy(), 0.00001);
-        assertEquals(message, reference.getMzx(), matrix.getMzx(), 0.00001);
-        assertEquals(message, reference.getMzy(), matrix.getMzy(), 0.00001);
-        assertEquals(message, reference.getMzz(), matrix.getMzz(), 0.00001);
-        assertEquals(message, reference.getTz(), matrix.getTz(), 0.00001);
+        assertEquals(reference.getMxx(), matrix.getMxx(), 0.00001, message);
+        assertEquals(reference.getMxy(), matrix.getMxy(), 0.00001, message);
+        assertEquals(reference.getMxz(), matrix.getMxz(), 0.00001, message);
+        assertEquals(reference.getTx(), matrix.getTx(), 0.00001, message);
+        assertEquals(reference.getMyx(), matrix.getMyx(), 0.00001, message);
+        assertEquals(reference.getMyy(), matrix.getMyy(), 0.00001, message);
+        assertEquals(reference.getMyz(), matrix.getMyz(), 0.00001, message);
+        assertEquals(reference.getTy(), matrix.getTy(), 0.00001, message);
+        assertEquals(reference.getMzx(), matrix.getMzx(), 0.00001, message);
+        assertEquals(reference.getMzy(), matrix.getMzy(), 0.00001, message);
+        assertEquals(reference.getMzz(), matrix.getMzz(), 0.00001, message);
+        assertEquals(reference.getTz(), matrix.getTz(), 0.00001, message);
     }
 
     /**
@@ -633,9 +634,9 @@ public final class TransformHelper {
 
     public static void assertStateOk(String message, Transform t, int state3d, int state2d) {
         TransformHelper.State3D expectedState3D = TransformHelper.getExpectedState3D(t);
-        assertEquals(message, expectedState3D.getValue(), state3d);
+        assertEquals(expectedState3D.getValue(), state3d, message);
         if (expectedState3D == TransformHelper.State3D.NON_3D) {
-            assertEquals(message, TransformHelper.getExpectedState2D(t).getValue(), state2d);
+            assertEquals(TransformHelper.getExpectedState2D(t).getValue(), state2d, message);
         }
     }
 

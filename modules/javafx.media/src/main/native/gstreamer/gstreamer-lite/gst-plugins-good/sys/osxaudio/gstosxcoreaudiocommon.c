@@ -23,6 +23,9 @@
 
 #include "gstosxcoreaudiocommon.h"
 
+GST_DEBUG_CATEGORY_EXTERN (osx_coreaudio_debug);
+#define GST_CAT_DEFAULT osx_coreaudio_debug
+
 void
 gst_core_audio_remove_render_callback (GstCoreAudio * core_audio)
 {
@@ -385,9 +388,9 @@ gst_audio_channel_position_to_core_audio (GstAudioChannelPosition
     case GST_AUDIO_CHANNEL_POSITION_REAR_CENTER:
       return kAudioChannelLabel_CenterSurround;
     case GST_AUDIO_CHANNEL_POSITION_REAR_LEFT:
-      return kAudioChannelLabel_LeftSurround;
+      return kAudioChannelLabel_RearSurroundLeft;
     case GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT:
-      return kAudioChannelLabel_RightSurround;
+      return kAudioChannelLabel_RearSurroundRight;
     case GST_AUDIO_CHANNEL_POSITION_LFE1:
       return kAudioChannelLabel_LFEScreen;
     case GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER:
@@ -418,6 +421,12 @@ gst_audio_channel_position_to_core_audio (GstAudioChannelPosition
       return kAudioChannelLabel_VerticalHeightRight;
     case GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER:
       return kAudioChannelLabel_VerticalHeightCenter;
+    case GST_AUDIO_CHANNEL_POSITION_TOP_CENTER:
+      return kAudioChannelLabel_TopCenterSurround;
+    case GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT:
+      return kAudioChannelLabel_LeftSurround;
+    case GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT:
+      return kAudioChannelLabel_RightSurround;
 
       /* Special position values */
     case GST_AUDIO_CHANNEL_POSITION_NONE:
@@ -427,14 +436,11 @@ gst_audio_channel_position_to_core_audio (GstAudioChannelPosition
 
       /* Following positions are unmapped --
        * i.e. mapped to kAudioChannelLabel_Unknown: */
-    case GST_AUDIO_CHANNEL_POSITION_TOP_CENTER:
     case GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT:
     case GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT:
     case GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER:
     case GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT:
     case GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT:
-    case GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT:
-    case GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT:
     default:
       return kAudioChannelLabel_Unknown;
   }
@@ -455,9 +461,9 @@ gst_core_audio_channel_label_to_gst (AudioChannelLabel label,
     case kAudioChannelLabel_LFEScreen:
       return GST_AUDIO_CHANNEL_POSITION_LFE1;
     case kAudioChannelLabel_LeftSurround:
-      return GST_AUDIO_CHANNEL_POSITION_REAR_LEFT;
+      return GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT;
     case kAudioChannelLabel_RightSurround:
-      return GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT;
+      return GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT;
     case kAudioChannelLabel_LeftSurroundDirect:
       return GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT;
     case kAudioChannelLabel_RightSurroundDirect:
@@ -486,6 +492,12 @@ gst_core_audio_channel_label_to_gst (AudioChannelLabel label,
       return GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT;
     case kAudioChannelLabel_VerticalHeightCenter:
       return GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER;
+    case kAudioChannelLabel_RearSurroundLeft:
+      return GST_AUDIO_CHANNEL_POSITION_REAR_LEFT;
+    case kAudioChannelLabel_RearSurroundRight:
+      return GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT;
+    case kAudioChannelLabel_TopCenterSurround:
+      return GST_AUDIO_CHANNEL_POSITION_TOP_CENTER;
 
       /* Special position values */
 
@@ -499,9 +511,6 @@ gst_core_audio_channel_label_to_gst (AudioChannelLabel label,
          Following labels are unmapped --
          i.e. mapped to GST_AUDIO_CHANNEL_POSITION_INVALID:
        */
-    case kAudioChannelLabel_RearSurroundLeft:
-    case kAudioChannelLabel_RearSurroundRight:
-    case kAudioChannelLabel_TopCenterSurround:
     case kAudioChannelLabel_LeftTotal:
     case kAudioChannelLabel_RightTotal:
     case kAudioChannelLabel_HearingImpaired:

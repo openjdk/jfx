@@ -726,7 +726,7 @@ public class Region extends Parent {
                 // we can repaint the region.
                 if (b != null) {
                     for (BackgroundImage i : b.getImages()) {
-                        final Image image = i.image;
+                        final Image image = i.getImage();
                         final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
                         if (acc.isAnimation(image) || image.getProgress() < 1) {
                             addImageListener(image);
@@ -737,7 +737,7 @@ public class Region extends Parent {
                 // And we must remove this listener from any old images
                 if (old != null) {
                     for (BackgroundImage i : old.getImages()) {
-                        removeImageListener(i.image);
+                        removeImageListener(i.getImage());
                     }
                 }
 
@@ -785,7 +785,7 @@ public class Region extends Parent {
                 // we can repaint the region.
                 if (b != null) {
                     for (BorderImage i : b.getImages()) {
-                        final Image image = i.image;
+                        final Image image = i.getImage();
                         final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
                         if (acc.isAnimation(image) || image.getProgress() < 1) {
                             addImageListener(image);
@@ -796,7 +796,7 @@ public class Region extends Parent {
                 // And we must remove this listener from any old images
                 if (old != null) {
                     for (BorderImage i : old.getImages()) {
-                        removeImageListener(i.image);
+                        removeImageListener(i.getImage());
                     }
                 }
 
@@ -3229,7 +3229,7 @@ public class Region extends Parent {
                 }
 
                 final StrokeType type = bss.getType();
-                double sw = Math.max(bs.getWidths().top, 0d);
+                double sw = Math.max(bs.getWidths().getTop(), 0d);
                 StrokeLineCap cap = bss.getLineCap();
                 StrokeLineJoin join = bss.getLineJoin();
                 float miterlimit = (float) Math.max(bss.getMiterLimit(), 1d);

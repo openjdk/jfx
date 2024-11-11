@@ -63,7 +63,7 @@
 GstBitReader *
 gst_bit_reader_new (const guint8 * data, guint size)
 {
-  GstBitReader *ret = g_slice_new0 (GstBitReader);
+  GstBitReader *ret = g_new0 (GstBitReader, 1);
 
   ret->data = data;
   ret->size = size;
@@ -83,7 +83,7 @@ gst_bit_reader_free (GstBitReader * reader)
 {
   g_return_if_fail (reader != NULL);
 
-  g_slice_free (GstBitReader, reader);
+  g_free (reader);
 }
 
 /**

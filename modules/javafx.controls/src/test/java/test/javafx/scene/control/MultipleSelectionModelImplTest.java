@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,26 @@
 
 package test.javafx.scene.control;
 
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.util.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
-
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -64,17 +67,13 @@ import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.scene.control.TreeTableViewShim;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.TreeViewShim;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.javafx.collections.MockListObserver;
 
@@ -84,13 +83,11 @@ import test.javafx.collections.MockListObserver;
  * as such contains some conditional logic to handle the various controls as
  * simply as possible.
  */
-@RunWith(Parameterized.class)
 public class MultipleSelectionModelImplTest {
 
     private MultipleSelectionModel model;
     private FocusModel focusModel;
 
-    private Class<? extends MultipleSelectionModel> modelClass;
     private Control currentControl;
 
     // ListView
@@ -117,22 +114,21 @@ public class MultipleSelectionModelImplTest {
     // TableView
     private TableView tableView;
 
-    @Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-            { ListViewShim.get_ListViewBitSetSelectionModel_class() },
-            { TreeViewShim.get_TreeViewBitSetSelectionModel_class() },
-            { TableViewShim.get_TableViewArrayListSelectionModel_class() },
-            { TreeTableViewShim.get_TreeTableViewArrayListSelectionModel_class() },
-        });
+    private static Collection<Class<? extends MultipleSelectionModel>> parameters() {
+        return List.of(
+            ListViewShim.get_ListViewBitSetSelectionModel_class(),
+            TreeViewShim.get_TreeViewBitSetSelectionModel_class(),
+            TableViewShim.get_TableViewArrayListSelectionModel_class(),
+            TreeTableViewShim.get_TreeTableViewArrayListSelectionModel_class()
+        );
     }
 
-    public MultipleSelectionModelImplTest(Class<? extends MultipleSelectionModel> modelClass) {
-        this.modelClass = modelClass;
-    }
+    @AfterAll
+    public static void tearDownClass() throws Exception {    }
 
-    @AfterClass public static void tearDownClass() throws Exception {    }
-
-    @Before public void setUp() throws Exception {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setUp(Class<? extends MultipleSelectionModel> modelClass) {
         // ListView init
         defaultData.setAll(ROW_1_VALUE, ROW_2_VALUE, ROW_3_VALUE, "Row 4", ROW_5_VALUE, "Row 6",
                 "Row 7", "Row 8", "Row 9", "Row 10", "Row 11", "Row 12", "Row 13",
@@ -211,11 +207,12 @@ public class MultipleSelectionModelImplTest {
             // ensure the selection mode is set to multiple
             model.setSelectionMode(SelectionMode.MULTIPLE);
         } catch (Exception ex) {
-            throw ex;
+            throw new RuntimeException(ex);
         }
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         model = null;
     }
 
@@ -258,7 +255,14 @@ public class MultipleSelectionModelImplTest {
         assertEquals(0, msModel().getSelectedItems().size());
     }
 
-    @Test public void ensureInDefaultState() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void ensureInDefaultState(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
+        ensureInDefaultStateImpl();
+    }
+
+    private void ensureInDefaultStateImpl() {
         assertEquals(-1, model.getSelectedIndex());
         assertNull(model.getSelectedItem());
 
@@ -273,7 +277,10 @@ public class MultipleSelectionModelImplTest {
         assertEquals(0, msModel().getSelectedItems().size());
     }
 
-    @Test public void selectValidIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectValidIndex(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         int index = 4;
         model.clearSelection();
         model.select(index);
@@ -296,13 +303,19 @@ public class MultipleSelectionModelImplTest {
         assertEquals(ROW_5_VALUE, getValue(msModel().getSelectedItems().get(0)));
     }
 
-    @Test public void testSelectAllWithSingleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectAllWithSingleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.SINGLE);
         msModel().selectAll();
-        ensureInDefaultState();
+        ensureInDefaultStateImpl();
     }
 
-    @Test public void testSelectAllWithMultipleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectAllWithMultipleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().selectAll();
 
@@ -318,13 +331,19 @@ public class MultipleSelectionModelImplTest {
         assertEquals(20, msModel().getSelectedItems().size());
     }
 
-    @Test public void clearAllSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void clearAllSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().selectAll();
         model.clearSelection();
         ensureInEmptyState();
     }
 
-    @Test public void clearPartialSelectionWithSingleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void clearPartialSelectionWithSingleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         assertFalse(model.isSelected(5));
         model.select(5);
@@ -336,7 +355,10 @@ public class MultipleSelectionModelImplTest {
         assertEquals(0, msModel().getSelectedItems().size());
     }
 
-    @Test public void clearPartialSelectionWithMultipleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void clearPartialSelectionWithMultipleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectAll();
         model.clearSelection(5);
@@ -346,7 +368,10 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isSelected(6));
     }
 
-    @Test public void selectedIndicesListenerReportsCorrectIndexOnClearSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectedIndicesListenerReportsCorrectIndexOnClearSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.select(1);
         model.select(5);
@@ -358,7 +383,10 @@ public class MultipleSelectionModelImplTest {
         observer.checkAddRemove(0, model.getSelectedIndices(), List.of(5), 1, 1);
     }
 
-    @Test public void clearAndSelectFiresDisjointRemovedChanges() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void clearAndSelectFiresDisjointRemovedChanges(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.selectAll();
 
@@ -384,7 +412,10 @@ public class MultipleSelectionModelImplTest {
         observer.checkAddRemove(1, model.getSelectedItems(), removed2, equalityComparer, 1, 1);
     }
 
-    @Test public void clearAndSelectFirstSelectedItem() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void clearAndSelectFirstSelectedItem(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.select(1);
         model.select(2);
@@ -409,7 +440,10 @@ public class MultipleSelectionModelImplTest {
         observer.checkAddRemove(0, model.getSelectedItems(), removed, equalityComparer, 1, 1);
     }
 
-    @Test public void clearAndSelectLastSelectedItem() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void clearAndSelectLastSelectedItem(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.select(1);
         model.select(2);
@@ -434,19 +468,31 @@ public class MultipleSelectionModelImplTest {
         observer.checkAddRemove(0, model.getSelectedItems(), removed, equalityComparer, 0, 0);
     }
 
-    @Test public void testSelectedIndicesObservableListIsEmpty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesObservableListIsEmpty(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         assertTrue(msModel().getSelectedIndices().isEmpty());
     }
 
-    @Test public void testSelectedIndicesIteratorIsNotNull() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesIteratorIsNotNull(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         assertNotNull(msModel().getSelectedIndices().iterator());
     }
 
-    @Test public void testSelectedIndicesIteratorHasNoNext() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesIteratorHasNoNext(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         assertFalse(msModel().getSelectedIndices().iterator().hasNext());
     }
 
-    @Test public void testSelectedIndicesIteratorWorksWithSingleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesIteratorWorksWithSingleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         model.select(5);
 
@@ -455,28 +501,40 @@ public class MultipleSelectionModelImplTest {
         assertFalse(it.hasNext());
     }
 
-    @Test public void testSelectedIndicesIteratorWorksWithMultipleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesIteratorWorksWithMultipleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectIndices(1, 2, 5);
 
         Iterator<Integer> it = msModel().getSelectedIndices().iterator();
-        assertEquals(indices(msModel()), 1, (int) it.next());
-        assertEquals(indices(msModel()), 2, (int) it.next());
-        assertEquals(indices(msModel()), 5, (int) it.next());
+        assertEquals(1, (int) it.next(), indices(msModel()));
+        assertEquals(2, (int) it.next(), indices(msModel()));
+        assertEquals(5, (int) it.next(), indices(msModel()));
         assertFalse(it.hasNext());
     }
 
-    @Test public void testSelectedIndicesContains() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesContains(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.select(5);
         assertTrue(msModel().getSelectedIndices().contains(5));
     }
 
-    @Test public void testSelectedItemsObservableListIsEmpty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedItemsObservableListIsEmpty(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         assertTrue(msModel().getSelectedItems().isEmpty());
     }
 
-    @Test public void testSelectedItemsIndexOf() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedItemsIndexOf(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         if (isTree()) {
             model.select(ROW_2_TREE_VALUE);
@@ -489,11 +547,17 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void testSelectedItemsIteratorIsNotNull() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedItemsIteratorIsNotNull(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         assertNotNull(msModel().getSelectedIndices().iterator());
     }
 
-    @Test public void testSelectedItemsLastIndexOf() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedItemsLastIndexOf(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         if (isTree()) {
             model.select(ROW_2_TREE_VALUE);
@@ -506,12 +570,18 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void testSelectedItemsContains() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedItemsContains(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.select(5);
         assertTrue(msModel().getSelectedIndices().contains(5));
     }
 
-    @Test public void testSingleSelectionMode() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSingleSelectionMode(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.SINGLE);
         assertTrue(model.isEmpty());
@@ -527,7 +597,10 @@ public class MultipleSelectionModelImplTest {
         assertEquals(1, msModel().getSelectedItems().size());
     }
 
-    @Test public void testMultipleSelectionMode() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMultipleSelectionMode(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         assertTrue(model.isEmpty());
@@ -542,11 +615,14 @@ public class MultipleSelectionModelImplTest {
         assertEquals(2, msModel().getSelectedItems().size());
     }
 
-    @Test public void testChangeSelectionMode() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeSelectionMode(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectIndices(5, 10, 15);
-        assertEquals(indices(msModel()), 3, msModel().getSelectedIndices().size());
+        assertEquals(3, msModel().getSelectedIndices().size(), indices(msModel()));
         assertEquals(3, msModel().getSelectedItems().size());
         assertTrue(model.isSelected(5));
         assertTrue(model.isSelected(10));
@@ -555,22 +631,21 @@ public class MultipleSelectionModelImplTest {
         msModel().setSelectionMode(SelectionMode.SINGLE);
         assertEquals(1, msModel().getSelectedIndices().size());
         assertEquals(1, msModel().getSelectedItems().size());
-        assertFalse(indices(msModel()), model.isSelected(5));
-        assertFalse(indices(msModel()), model.isSelected(10));
-        assertTrue(indices(msModel()), model.isSelected(15));
+        assertFalse(model.isSelected(5), indices(msModel()));
+        assertFalse(model.isSelected(10), indices(msModel()));
+        assertTrue(model.isSelected(15), indices(msModel()));
     }
 
-//    @Test public void testSelectNullObject() {
-//        model.select(null);
-//    }
-
-    @Test public void testSelectRange() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectRange(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         // should select all indices starting at 5, and finishing just before
         // the 10th item
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectRange(5, 10);
-        assertEquals(indices(msModel()), 5, msModel().getSelectedIndices().size());
+        assertEquals(5, msModel().getSelectedIndices().size(), indices(msModel()));
         assertEquals(5, msModel().getSelectedItems().size());
         assertFalse(model.isSelected(4));
         assertTrue(model.isSelected(5));
@@ -581,16 +656,22 @@ public class MultipleSelectionModelImplTest {
         assertFalse(model.isSelected(10));
     }
 
-    @Test public void testDeselectionFromASelectionRange() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testDeselectionFromASelectionRange(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectRange(2, 10);
         model.clearSelection(5);
-        assertTrue(indices(msModel()), model.isSelected(4));
-        assertFalse(indices(msModel()), model.isSelected(5));
-        assertTrue(indices(msModel()), model.isSelected(6));
+        assertTrue(model.isSelected(4), indices(msModel()));
+        assertFalse(model.isSelected(5), indices(msModel()));
+        assertTrue(model.isSelected(6), indices(msModel()));
     }
 
-    @Test public void testAccurateItemSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testAccurateItemSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectRange(2, 5);
@@ -612,7 +693,10 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void ensureSelectedIndexAndItemIsAlwaysTheLastSelectionWithSelect() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void ensureSelectedIndexAndItemIsAlwaysTheLastSelectionWithSelect(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         model.select(3);
         assertEquals(3, model.getSelectedIndex());
@@ -647,7 +731,10 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void ensureSelectedIndexAndItemIsAlwaysTheLastSelectionWithMultipleSelect() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void ensureSelectedIndexAndItemIsAlwaysTheLastSelectionWithMultipleSelect(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectIndices(3,4,5);
         assertEquals(5, model.getSelectedIndex());
@@ -676,7 +763,10 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void ensureSelectedIndexAndItemIsAlwaysTheLastSelectionWithSelectRange() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void ensureSelectedIndexAndItemIsAlwaysTheLastSelectionWithSelectRange(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectRange(3,10);
         assertEquals(9, model.getSelectedIndex());
@@ -703,7 +793,10 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void testMultipleSelectionWithEmptyArray() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMultipleSelectionWithEmptyArray(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectIndices(3,new int[] { });
@@ -718,7 +811,10 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void selectOnlyValidIndicesInSingleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectOnlyValidIndicesInSingleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.SINGLE);
         msModel().selectIndices(750397, 3, 709709375, 4, 8597998, 47929);
         assertEquals(4, model.getSelectedIndex());
@@ -734,7 +830,10 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void selectOnlyValidIndicesInMultipleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectOnlyValidIndicesInMultipleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         model.clearSelection();
         msModel().selectIndices(750397, 3, 709709375, 4, 8597998, 47929);
@@ -751,42 +850,54 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void testNullArrayInMultipleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testNullArrayInMultipleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectIndices(-20, null);
         assertEquals(-1, model.getSelectedIndex());
         assertNull(model.getSelectedItem());
-        assertEquals(indices(msModel()), 0, msModel().getSelectedIndices().size());
-        assertEquals(items(msModel()), 0, msModel().getSelectedItems().size());
+        assertEquals(0, msModel().getSelectedIndices().size(), indices(msModel()));
+        assertEquals(0, msModel().getSelectedItems().size(), items(msModel()));
     }
 
-    @Test public void testMultipleSelectionWithInvalidIndices() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMultipleSelectionWithInvalidIndices(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectIndices(-20, 23505, 78125);
         assertEquals(-1, model.getSelectedIndex());
         assertNull(model.getSelectedItem());
-        assertEquals(indices(msModel()), 0, msModel().getSelectedIndices().size());
-        assertEquals(items(msModel()), 0, msModel().getSelectedItems().size());
+        assertEquals(0, msModel().getSelectedIndices().size(), indices(msModel()));
+        assertEquals(0, msModel().getSelectedItems().size(), items(msModel()));
     }
 
-    @Test public void testInvalidSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testInvalidSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.SINGLE);
         msModel().selectIndices(-20, null);
         assertEquals(-1, model.getSelectedIndex());
         assertNull(model.getSelectedItem());
-        assertEquals(indices(msModel()), 0, msModel().getSelectedIndices().size());
-        assertEquals(items(msModel()), 0, msModel().getSelectedItems().size());
+        assertEquals(0, msModel().getSelectedIndices().size(), indices(msModel()));
+        assertEquals(0, msModel().getSelectedItems().size(), items(msModel()));
     }
 
-    @Test public void ensureSwappedSelectRangeWorks() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void ensureSwappedSelectRangeWorks(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         // first test a valid range - there should be 6 selected items
         model.clearSelection();
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.selectRange(3, 10);
-        assertEquals(indices(model), 7, model.getSelectedIndices().size());
+        assertEquals(7, model.getSelectedIndices().size(), indices(model));
         assertEquals(9, model.getSelectedIndex());
         if (isTree()) {
             assertEquals(root.getChildren().get(8), model.getSelectedItem());
@@ -799,7 +910,7 @@ public class MultipleSelectionModelImplTest {
         // we should select the range from 10 - 4 inclusive
         model.selectRange(10, 3);
         assertEquals(7, model.getSelectedIndices().size());
-        assertEquals(indices(model), 4, model.getSelectedIndex());
+        assertEquals(4, model.getSelectedIndex(), indices(model));
         if (isTree()) {
             assertEquals(root.getChildren().get(3), model.getSelectedItem());
         } else {
@@ -807,47 +918,67 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test public void testInvalidSelectRange() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testInvalidSelectRange(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectRange(200, 220);
         assertEquals(-1, model.getSelectedIndex());
         assertEquals(null, model.getSelectedItem());
-        assertEquals(indices(msModel()), 0, msModel().getSelectedIndices().size());
-        assertEquals(items(msModel()), 0, msModel().getSelectedItems().size());
+        assertEquals(0, msModel().getSelectedIndices().size(), indices(msModel()));
+        assertEquals(0, msModel().getSelectedItems().size(), items(msModel()));
     }
 
-    @Test public void testEmptySelectRange() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testEmptySelectRange(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectRange(10, 10);
         assertEquals(-1, model.getSelectedIndex());
         assertEquals(null, model.getSelectedItem());
-        assertEquals(indices(msModel()), 0, msModel().getSelectedIndices().size());
-        assertEquals(items(msModel()), 0, msModel().getSelectedItems().size());
+        assertEquals(0, msModel().getSelectedIndices().size(), indices(msModel()));
+        assertEquals(0, msModel().getSelectedItems().size(), items(msModel()));
     }
 
-    @Test public void testNegativeSelectRange() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testNegativeSelectRange(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
         msModel().selectRange(-10, -1);
         assertEquals(-1, model.getSelectedIndex());
         assertEquals(null, model.getSelectedItem());
-        assertEquals(indices(msModel()), 0, msModel().getSelectedIndices().size());
-        assertEquals(items(msModel()), 0, msModel().getSelectedItems().size());
+        assertEquals(0, msModel().getSelectedIndices().size(), indices(msModel()));
+        assertEquals(0, msModel().getSelectedItems().size(), items(msModel()));
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void testNullListViewInSelectionModel() {
-        ListViewShim.getListViewBitSetSelectionModel(null);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testNullListViewInSelectionModel(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ListViewShim.getListViewBitSetSelectionModel(null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void testNullTreeViewInSelectionModel() {
-        TreeViewShim.<String>get_TreeViewBitSetSelectionModel(null);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testNullTreeViewInSelectionModel(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
+        assertThrows(IllegalArgumentException.class, () -> {
+            TreeViewShim.<String>get_TreeViewBitSetSelectionModel(null);
+        });
     }
 
-    @Test public void selectAllInEmptySingleSelectionMode() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectAllInEmptySingleSelectionMode(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         msModel().setSelectionMode(SelectionMode.SINGLE);
         assertTrue(model.isEmpty());
@@ -855,7 +986,10 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isEmpty());
     }
 
-    @Test public void selectAllInSingleSelectionModeWithSelectedRow() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectAllInSingleSelectionModeWithSelectedRow(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.SINGLE);
         model.clearSelection();
         assertTrue(model.isEmpty());
@@ -865,16 +999,25 @@ public class MultipleSelectionModelImplTest {
         assertEquals(1, msModel().getSelectedIndices().size());
     }
 
-    @Test public void selectionModePropertyHasReferenceToBean() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectionModePropertyHasReferenceToBean(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         assertSame(model, model.selectionModeProperty().getBean());
     }
 
-    @Test public void selectionModePropertyHasName() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectionModePropertyHasName(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         assertSame("selectionMode", model.selectionModeProperty().getName());
     }
 
-    @Ignore("Not yet implemented in TreeView and TableView")
-    @Test public void testSelectionChangesWhenItemIsInsertedAtStartOfModel() {
+    @Disabled("Not yet implemented in TreeView and TableView")
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectionChangesWhenItemIsInsertedAtStartOfModel(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         /* Select the fourth item, and insert a new item at the start of the
          * data model. The end result should be that the fourth item should NOT
          * be selected, and the fifth item SHOULD be selected.
@@ -888,7 +1031,10 @@ public class MultipleSelectionModelImplTest {
 
     private int rt_28615_row_1_hit_count = 0;
     private int rt_28615_row_2_hit_count = 0;
-    @Test public void test_rt_28615() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt_28615(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -927,7 +1073,10 @@ public class MultipleSelectionModelImplTest {
     }
 
     private int rt_29860_size_count = 0;
-    @Test public void test_rt_29860_add() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt_29860_add(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -945,18 +1094,21 @@ public class MultipleSelectionModelImplTest {
         // list is wrong (it isn't - it's correct). The bug is that the addedSize
         // reported in the callback above is incorrect.
         msModel().selectIndices(0, 1, 2, 3);
-        assertEquals(msModel().getSelectedIndices().toString(), 4, rt_29860_size_count);
+        assertEquals(4, rt_29860_size_count, msModel().getSelectedIndices().toString());
         rt_29860_size_count = 0;
 
         msModel().selectIndices(0,1,2,3,4);
-        assertEquals(msModel().getSelectedIndices().toString(), 1, rt_29860_size_count);   // only 4 was selected
+        assertEquals(1, rt_29860_size_count, msModel().getSelectedIndices().toString());   // only 4 was selected
         rt_29860_size_count = 0;
 
         msModel().selectIndices(6,7,8);
         assertEquals(3, rt_29860_size_count);   // 6,7,8 was selected
     }
 
-    @Test public void test_rt_29821() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt_29821(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         IndexedCell cell_3 = VirtualFlowTestUtils.getCell(currentControl, 3);
@@ -978,7 +1130,10 @@ public class MultipleSelectionModelImplTest {
 
     private int rt_32411_add_count = 0;
     private int rt_32411_remove_count = 0;
-    @Test public void test_rt_32411_selectedItems() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt_32411_selectedItems(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
 
         model.getSelectedItems().addListener((ListChangeListener.Change change) -> {
@@ -1004,7 +1159,10 @@ public class MultipleSelectionModelImplTest {
         assertEquals(1, rt_32411_remove_count);
     }
 
-    @Test public void test_rt_32411_selectedIndices() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt_32411_selectedIndices(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
 
         model.getSelectedIndices().addListener((ListChangeListener.Change change) -> {
@@ -1031,7 +1189,10 @@ public class MultipleSelectionModelImplTest {
     }
 
     private int rt32618_count = 0;
-    @Test public void test_rt32618_multipleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt32618_multipleSelection(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.selectedItemProperty().addListener((ov, t, t1) -> rt32618_count++);
 
         assertEquals(0, rt32618_count);
@@ -1045,7 +1206,10 @@ public class MultipleSelectionModelImplTest {
         assertEquals(ROW_3_VALUE, getValue(model.getSelectedItem()));
     }
 
-    @Test public void test_rt33324_selectedIndices() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt33324_selectedIndices(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         // pre-select item 0
         model.select(0);
 
@@ -1066,7 +1230,10 @@ public class MultipleSelectionModelImplTest {
         model.clearAndSelect(1);
     }
 
-    @Test public void test_rt33324_selectedItems() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt33324_selectedItems(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         // pre-select item 0
         model.select(0);
 
@@ -1087,7 +1254,10 @@ public class MultipleSelectionModelImplTest {
         model.clearAndSelect(1);
     }
 
-    @Test public void test_rt33324_selectedCells() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt33324_selectedCells(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         if (! (msModel() instanceof TableViewSelectionModel)) {
             return;
         }
@@ -1114,7 +1284,10 @@ public class MultipleSelectionModelImplTest {
         tableSM.clearAndSelect(1);
     }
 
-    @Test public void test_rt35624_selectedIndices_downwards() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt35624_selectedIndices_downwards(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         model.select(2);
 
@@ -1122,19 +1295,22 @@ public class MultipleSelectionModelImplTest {
             while (change.next()) {
                 // we expect two items in the added list: 3 and 4, as index
                 // 2 has previously been selected
-                Assert.assertEquals(2, change.getAddedSize());
-                Assert.assertEquals(FXCollections.observableArrayList(3, 4), change.getAddedSubList());
+                assertEquals(2, change.getAddedSize());
+                assertEquals(FXCollections.observableArrayList(3, 4), change.getAddedSubList());
             }
 
             // In the actual list, we expect three items: 2, 3 and 4
-            Assert.assertEquals(3, change.getList().size());
-            Assert.assertEquals(FXCollections.observableArrayList(2, 3, 4), change.getList());
+            assertEquals(3, change.getList().size());
+            assertEquals(FXCollections.observableArrayList(2, 3, 4), change.getList());
         });
 
         model.selectIndices(2, 3, 4);
     }
 
-    @Test public void test_rt35624_selectedIndices_upwards() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt35624_selectedIndices_upwards(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         model.select(4);
 
@@ -1154,7 +1330,10 @@ public class MultipleSelectionModelImplTest {
         model.selectIndices(4, 3, 2);
     }
 
-    @Test public void test_rt35624_selectedItems_downwards() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt35624_selectedItems_downwards(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         model.select(2);
 
@@ -1199,7 +1378,10 @@ public class MultipleSelectionModelImplTest {
         model.selectIndices(2, 3, 4);
     }
 
-    @Test public void test_rt35624_selectedItems_upwards() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt35624_selectedItems_upwards(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         model.select(4);
 
@@ -1244,21 +1426,30 @@ public class MultipleSelectionModelImplTest {
         model.selectIndices(4, 3, 2);
     }
 
-    @Test public void test_rt39548_positiveValue_outOfRange() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt39548_positiveValue_outOfRange(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         // for this test we want there to be no data in the controls
         clearModelData();
 
         model.clearAndSelect(10);
     }
 
-    @Test public void test_rt39548_negativeValue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt39548_negativeValue(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         // for this test we want there to be no data in the controls
         clearModelData();
 
         model.clearAndSelect(-1);
     }
 
-    @Test public void test_rt38884_invalidChange() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt38884_invalidChange(Class<? extends MultipleSelectionModel> cls) {
+        setUp(cls);
         model.select(3);
         int removedSize = model.getSelectedItems().size();
         ListChangeListener l = (ListChangeListener.Change c) -> {
@@ -1276,7 +1467,10 @@ public class MultipleSelectionModelImplTest {
         treeTableView.setRoot(null);
     }
 
-    @Test public void test_rt40804() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt40804(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         StageLoader sl = new StageLoader(currentControl);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.select(0);
@@ -1289,7 +1483,10 @@ public class MultipleSelectionModelImplTest {
         sl.dispose();
     }
 
-    @Test public void test_jdk_8088752() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_jdk_8088752(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         // FIXME for now this test does not cover TreeView / TreeTableView
         if (isTree()) {
             return;
@@ -1300,14 +1497,14 @@ public class MultipleSelectionModelImplTest {
         model.selectRange(3, 5);
         model.select(uncontained);
 
-        assertEquals("sanity: having uncontained selectedItem", uncontained, model.getSelectedItem());
-        assertEquals("sanity: selected index removed ", -1, model.getSelectedIndex());
+        assertEquals(uncontained, model.getSelectedItem(), "sanity: having uncontained selectedItem");
+        assertEquals(-1, model.getSelectedIndex(), "sanity: selected index removed ");
 
         // insert uncontained to items
         int insertIndex = 3;
         addItem(insertIndex, uncontained);
-        assertEquals("selectedItem unchanged", uncontained, model.getSelectedItem());
-        assertEquals("selectedIndex updated", insertIndex, model.getSelectedIndex());
+        assertEquals(uncontained, model.getSelectedItem(), "selectedItem unchanged");
+        assertEquals(insertIndex, model.getSelectedIndex(), "selectedIndex updated");
     }
 
     private void addItem(int index, Object item) {
@@ -1322,8 +1519,10 @@ public class MultipleSelectionModelImplTest {
         }
     }
 
-    @Test
-    public void test_jdk_8088467_selectedIndicesReselect() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_jdk_8088467_selectedIndicesReselect(Class<? extends MultipleSelectionModel> cls) {
+        setUp(cls);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         IntegerProperty counter = new SimpleIntegerProperty();
 
@@ -1337,15 +1536,17 @@ public class MultipleSelectionModelImplTest {
 
         // add selectedIndex - changes nothing as it is already selected
         model.select(selectedIndex);
-        assertSame("sanity: state unchanged", selected, model.getSelectedItems().get(0));
-        assertEquals("sanity: state unchanged", 0, selectedIndex);
-        assertEquals("sanity: state unchanged", selectedItems, model.getSelectedItems());
-        assertEquals("sanity: state unchanged", selectedIndices, model.getSelectedIndices());
-        assertEquals("must not fire if nothing changed", 0, counter.get());
+        assertSame(selected, model.getSelectedItems().get(0), "sanity: state unchanged");
+        assertEquals(0, selectedIndex, "sanity: state unchanged");
+        assertEquals(selectedItems, model.getSelectedItems(), "sanity: state unchanged");
+        assertEquals(selectedIndices, model.getSelectedIndices(), "sanity: state unchanged");
+        assertEquals(0, counter.get(), "must not fire if nothing changed");
     }
 
-    @Test
-    public void test_jdk_8088467_selectedItemsReselect() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_jdk_8088467_selectedItemsReselect(Class<? extends MultipleSelectionModel> cls) {
+        setUp(cls);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         IntegerProperty counter = new SimpleIntegerProperty();
 
@@ -1359,15 +1560,17 @@ public class MultipleSelectionModelImplTest {
 
         // add selectedIndex - changes nothing as it is already selected
         model.select(selectedIndex);
-        assertSame("sanity: state unchanged", selected, model.getSelectedItems().get(0));
-        assertEquals("sanity: state unchanged", 0, selectedIndex);
-        assertEquals("sanity: state unchanged", selectedItems, model.getSelectedItems());
-        assertEquals("sanity: state unchanged", selectedIndices, model.getSelectedIndices());
-        assertEquals("must not fire if nothing changed", 0, counter.get());
+        assertSame(selected, model.getSelectedItems().get(0), "sanity: state unchanged");
+        assertEquals(0, selectedIndex, "sanity: state unchanged");
+        assertEquals(selectedItems, model.getSelectedItems(), "sanity: state unchanged");
+        assertEquals(selectedIndices, model.getSelectedIndices(), "sanity: state unchanged");
+        assertEquals(0, counter.get(), "must not fire if nothing changed");
     }
 
-    @Test
-    public void test_jdk_8088896() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_jdk_8088896(Class<? extends MultipleSelectionModel> cls) {
+        setUp(cls);
         model.setSelectionMode(SelectionMode.MULTIPLE);
 
         model.selectRange(2, 4);
@@ -1399,7 +1602,10 @@ public class MultipleSelectionModelImplTest {
     }
 
     // Test for MultipleSelectionModelBase.SelectedIndicesList#set(int index)
-    @Test public void testSelectedIndicesList_SetMethod() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesList_SetMethod(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.select(1);
@@ -1408,7 +1614,10 @@ public class MultipleSelectionModelImplTest {
     }
 
     // Test for MultipleSelectionModelBase.SelectedIndicesList#set(int index, int end, boolean isSet)
-    @Test public void testSelectedIndicesList_SetRangeMethod() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesList_SetRangeMethod(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.selectAll();
@@ -1417,7 +1626,10 @@ public class MultipleSelectionModelImplTest {
     }
 
     // Test for MultipleSelectionModelBase.SelectedIndicesList#set(int index, int... indices)
-    @Test public void testSelectedIndicesList_SetIndicesMethod() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesList_SetIndicesMethod(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.selectIndices(1, 2, 5);
@@ -1429,7 +1641,10 @@ public class MultipleSelectionModelImplTest {
     }
 
     // Test for MultipleSelectionModelBase.SelectedIndicesList#clear()
-    @Test public void testSelectedIndicesList_ClearMethod() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesList_ClearMethod(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.selectIndices(1, 2, 5);
         model.clearSelection();
@@ -1438,7 +1653,10 @@ public class MultipleSelectionModelImplTest {
     }
 
     // Test for MultipleSelectionModelBase.SelectedIndicesList#clear()
-    @Test public void testSelectedIndicesList_ClearIndexMethod() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesList_ClearIndexMethod(Class<? extends MultipleSelectionModel> c) {
+        setUp(c);
         model.clearSelection();
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.selectIndices(1, 2, 5);
@@ -1447,9 +1665,10 @@ public class MultipleSelectionModelImplTest {
         assertEquals(2, model.getSelectedIndices().size());
     }
 
-
-    @Test
-    public void testSelectedIndicesChangeEvents() throws InterruptedException {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectedIndicesChangeEvents(Class<? extends MultipleSelectionModel> c) throws InterruptedException {
+        setUp(c);
 
         testSelectedIndicesChangeEventsFactory(0, new int[]{2,3}, 1, new int[]{5,7},
                 new int[][]{new int[]{1}, new int[]{5,7}});
@@ -1507,6 +1726,6 @@ public class MultipleSelectionModelImplTest {
 
         selectionModel.selectIndices(selected, selectedI);
 
-        assertTrue("A ListEvent was missing: " + Arrays.deepToString(expectedEntries.toArray()), expectedEntries.isEmpty());
+        assertTrue(expectedEntries.isEmpty(), "A ListEvent was missing: " + Arrays.deepToString(expectedEntries.toArray()));
     }
 }

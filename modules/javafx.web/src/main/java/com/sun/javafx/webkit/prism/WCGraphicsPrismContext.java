@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,8 +53,6 @@ import com.sun.webkit.graphics.*;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,10 +79,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     private final static PlatformLogger log =
             PlatformLogger.getLogger(WCGraphicsPrismContext.class.getName());
-    @SuppressWarnings("removal")
-    private final static boolean DEBUG_DRAW_CLIP_SHAPE = Boolean.valueOf(
-            AccessController.doPrivileged((PrivilegedAction<String>) () ->
-            System.getProperty("com.sun.webkit.debugDrawClipShape", "false")));
+    private final static boolean DEBUG_DRAW_CLIP_SHAPE =
+        Boolean.valueOf(System.getProperty("com.sun.webkit.debugDrawClipShape", "false"));
 
     Graphics baseGraphics;
     private BaseTransform baseTransform;
@@ -145,6 +141,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             cachedGraphics = (l != null)
                     ? l.getGraphics()
                     : baseGraphics;
+
+            if (cachedGraphics == null) {
+                log.fine("getGraphics failed - couldn't acquire cachedGraphics");
+                return null;
+            }
 
             ResourceFactory rf = cachedGraphics.getResourceFactory();
             if (!rf.isDisposed()) {

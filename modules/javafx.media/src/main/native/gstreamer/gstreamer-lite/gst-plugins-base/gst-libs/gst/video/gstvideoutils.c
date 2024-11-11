@@ -58,7 +58,7 @@ _gst_video_codec_frame_free (GstVideoCodecFrame * frame)
   if (frame->user_data_destroy_notify)
     frame->user_data_destroy_notify (frame->user_data);
 
-  g_slice_free (GstVideoCodecFrame, frame);
+  g_free (frame);
 }
 
 /**
@@ -172,10 +172,10 @@ _gst_video_codec_state_free (GstVideoCodecState * state)
   if (state->codec_data)
     gst_buffer_unref (state->codec_data);
   if (state->mastering_display_info)
-    g_slice_free (GstVideoMasteringDisplayInfo, state->mastering_display_info);
+    g_free (state->mastering_display_info);
   if (state->content_light_level)
-    g_slice_free (GstVideoContentLightLevel, state->content_light_level);
-  g_slice_free (GstVideoCodecState, state);
+    g_free (state->content_light_level);
+  g_free (state);
 }
 
 /**

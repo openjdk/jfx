@@ -24,9 +24,11 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.skin.ColorPickerSkin;
 import javafx.scene.paint.Color;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.sheets.ComboBoxBasePropertySheet;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -41,7 +43,14 @@ public class ColorPickerPage extends TestPaneBase implements HasSkinnable {
     public ColorPickerPage() {
         super("ColorPickerPage");
 
-        control = new ColorPicker(Color.YELLOW);
+        control = new ColorPicker(Color.YELLOW) {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
         control.setOnAction((ev) -> {
             Object v = control.getValue();
             System.out.println(v);

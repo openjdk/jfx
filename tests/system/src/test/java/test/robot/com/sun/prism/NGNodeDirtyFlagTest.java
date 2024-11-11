@@ -42,7 +42,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.stage.Stage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 

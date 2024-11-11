@@ -27,7 +27,7 @@ package test.javafx.beans;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InvalidationListenerMock implements InvalidationListener {
 

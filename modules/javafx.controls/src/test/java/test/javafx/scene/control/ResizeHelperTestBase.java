@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,11 @@
  */
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.control.TableColumnBase;
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
@@ -49,7 +49,7 @@ public abstract class ResizeHelperTestBase {
     protected static final double EPSILON = 0.000001;
     protected StageLoader stageLoader;
 
-    @After
+    @AfterEach
     public void after() {
         if (stageLoader != null) {
             stageLoader.dispose();
@@ -58,10 +58,8 @@ public abstract class ResizeHelperTestBase {
 
     protected void checkInvariants(List<? extends TableColumnBase<?,?>> cols) {
         for (TableColumnBase<?,?> c: cols) {
-            assertTrue("violated min constraint: w=" + c.getWidth() + " min=" + c.getMinWidth(),
-                       c.getWidth() >= c.getMinWidth());
-            assertTrue("violated max constraint: w=" + c.getWidth() + " max=" + c.getMaxWidth(),
-                       c.getWidth() <= c.getMaxWidth());
+            assertTrue(c.getWidth() >= c.getMinWidth(), "violated min constraint: w=" + c.getWidth() + " min=" + c.getMinWidth());
+            assertTrue(c.getWidth() <= c.getMaxWidth(), "violated max constraint: w=" + c.getWidth() + " max=" + c.getMaxWidth());
         }
     }
 

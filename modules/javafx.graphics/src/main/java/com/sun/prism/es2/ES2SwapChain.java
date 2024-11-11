@@ -304,6 +304,11 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             stableBackbuffer.dispose();
             stableBackbuffer = null;
         }
+
+        if (drawable != null) {
+            drawable.dispose();
+            drawable = null;
+        }
     }
 
     @Override

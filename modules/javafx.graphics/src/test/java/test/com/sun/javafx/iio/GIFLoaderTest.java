@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,15 @@ import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.iio.gif.GIFImageLoader2;
 import java.awt.image.*;
 import java.io.*;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 class TestStream extends InputStream {
@@ -53,14 +60,9 @@ public class GIFLoaderTest {
 
     @Test
     public void testCtorNPE() {
-        try {
+        assertThrows(NullPointerException.class, () -> {
             new GIFImageLoader2(null);
-        } catch (NullPointerException ex) {
-           return; // PASSED
-        } catch (IOException ioEx) {
-            fail("unexpected IOException:" + ioEx.toString());
-        }
-        fail("expected NPE after constructor invocation with null");
+        });
     }
 
 
@@ -71,14 +73,9 @@ public class GIFLoaderTest {
             0,1,2,3,4
         };
 
-        try {
+        assertThrows(EOFException.class, () -> {
             new GIFImageLoader2(new TestStream(tooShortHeaderData));
-        } catch (EOFException ex) {
-            return; // PASSED
-        } catch (IOException ioEx) {
-            fail("unexpected IOException:" + ioEx.toString());
-        }
-        fail("expected EOF exception for streams lesser then 13 bytes");
+        });
     }
 
     @Test
@@ -88,14 +85,9 @@ public class GIFLoaderTest {
             0, 0, 0, 0, 0, 0
         };
 
-        try {
+        assertThrows(EOFException.class, () -> {
             new GIFImageLoader2(new TestStream(tooShortHeaderData));
-        } catch (EOFException ex) {
-            return; // PASSED
-        } catch (IOException ioEx) {
-            fail("unexpected IOException:" + ioEx.toString());
-        }
-        fail("expected EOF exception for streams lesser then 13 bytes");
+        });
     }
 
     @Test
@@ -118,7 +110,8 @@ public class GIFLoaderTest {
         }
     }
 
-    @Test (timeout=2000)
+    @Test
+    @Timeout(value=2000, unit=TimeUnit.MILLISECONDS)
     public void testCtorReadBadExtension()  {
         final byte badGifData[] = {
             'G', 'I', 'F', '8', '9', 'a',

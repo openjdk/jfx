@@ -44,65 +44,6 @@
 #define IF_DEBUG(debug_type)    if (_g_type_debug_flags & G_TYPE_DEBUG_ ## debug_type)
 #endif
 
-/**
- * SECTION:gtype
- * @short_description: The GLib Runtime type identification and
- *     management system
- * @title:Type Information
- *
- * The GType API is the foundation of the GObject system. It provides the
- * facilities for registering and managing all fundamental data types,
- * user-defined object and interface types.
- *
- * For type creation and registration purposes, all types fall into one of
- * two categories: static or dynamic.  Static types are never loaded or
- * unloaded at run-time as dynamic types may be.  Static types are created
- * with g_type_register_static() that gets type specific information passed
- * in via a #GTypeInfo structure.
- *
- * Dynamic types are created with g_type_register_dynamic() which takes a
- * #GTypePlugin structure instead. The remaining type information (the
- * #GTypeInfo structure) is retrieved during runtime through #GTypePlugin
- * and the g_type_plugin_*() API.
- *
- * These registration functions are usually called only once from a
- * function whose only purpose is to return the type identifier for a
- * specific class.  Once the type (or class or interface) is registered,
- * it may be instantiated, inherited, or implemented depending on exactly
- * what sort of type it is.
- *
- * There is also a third registration function for registering fundamental
- * types called g_type_register_fundamental() which requires both a #GTypeInfo
- * structure and a #GTypeFundamentalInfo structure but it is seldom used
- * since most fundamental types are predefined rather than user-defined.
- *
- * Type instance and class structs are limited to a total of 64 KiB,
- * including all parent types. Similarly, type instances' private data
- * (as created by G_ADD_PRIVATE()) are limited to a total of
- * 64 KiB. If a type instance needs a large static buffer, allocate it
- * separately (typically by using #GArray or #GPtrArray) and put a pointer
- * to the buffer in the structure.
- *
- * As mentioned in the [GType conventions][gtype-conventions], type names must
- * be at least three characters long. There is no upper length limit. The first
- * character must be a letter (a–z or A–Z) or an underscore (‘_’). Subsequent
- * characters can be letters, numbers or any of ‘-_+’.
- *
- * # Runtime Debugging
- *
- * When 'G_ENABLE_DEBUG' is defined during compilation, the GObject library
- * supports an environment variable 'GOBJECT_DEBUG' that can be set to a
- * combination of flags to trigger debugging messages about
- * object bookkeeping and signal emissions during runtime.
- *
- * The currently supported flags are:
- *  - 'objects': Tracks all #GObject instances in a global hash table called
- *    'debug_objects_ht', and prints the still-alive objects on exit.
- *  - 'instance-count': Tracks the number of instances of every #GType and makes
- *    it available via the g_type_get_instance_count() function.
- *  - 'signals': Currently unused.
- */
-
 
 /* NOTE: some functions (some internal variants and exported ones)
  * invalidate data portions of the TypeNodes. if external functions/callbacks
@@ -155,6 +96,9 @@
 #define g_assert_type_system_initialized() \
   g_assert (static_quark_type_flags)
 
+/* Make sure G_TYPE_IS_*() macros still end up inlined */
+#define g_type_test_flags(t,f) _g_type_test_flags(t,f)
+
 #define TYPE_FUNDAMENTAL_FLAG_MASK (G_TYPE_FLAG_CLASSED | \
             G_TYPE_FLAG_INSTANTIATABLE | \
             G_TYPE_FLAG_DERIVABLE | \
@@ -163,7 +107,9 @@
 
 /* List the flags that are directly accessible via the TypeNode struct flags */
 #define NODE_FLAG_MASK ( \
+  G_TYPE_FLAG_ABSTRACT | \
   G_TYPE_FLAG_CLASSED | \
+  G_TYPE_FLAG_DEPRECATED | \
   G_TYPE_FLAG_INSTANTIATABLE | \
   G_TYPE_FLAG_FINAL)
 
@@ -198,6 +144,8 @@ typedef struct _IFaceHolder     IFaceHolder;
 
 
 /* --- prototypes --- */
+static inline gboolean                  _g_type_test_flags              (GType                   type,
+                                                                         guint                   flags);
 static inline GTypeFundamentalInfo*     type_node_fundamental_info_I    (TypeNode               *node);
 static        void                      type_add_flags_W                (TypeNode               *node,
                                                                          GTypeFlags              flags);
@@ -252,7 +200,9 @@ struct _TypeNode
   guint        n_children; /* writable with lock */
   guint        n_supers : 8;
   guint        n_prerequisites : 9;
+  guint        is_abstract : 1;
   guint        is_classed : 1;
+  guint        is_deprecated : 1;
   guint        is_instantiatable : 1;
   guint        is_final : 1;
   guint        mutatable_check_cache : 1; /* combines some common path checks */
@@ -472,7 +422,7 @@ type_node_any_new_W (TypeNode             *pnode,
 #endif
     }
   else
-    type = (GType) node;
+    type = GPOINTER_TO_TYPE (node);
 
   g_assert ((type & TYPE_ID_MASK) == 0);
 
@@ -482,7 +432,9 @@ type_node_any_new_W (TypeNode             *pnode,
       node->supers[0] = type;
       node->supers[1] = 0;
 
+      node->is_abstract = (type_flags & G_TYPE_FLAG_ABSTRACT) != 0;
       node->is_classed = (type_flags & G_TYPE_FLAG_CLASSED) != 0;
+      node->is_deprecated = (type_flags & G_TYPE_FLAG_DEPRECATED) != 0;
       node->is_instantiatable = (type_flags & G_TYPE_FLAG_INSTANTIATABLE) != 0;
 
       if (NODE_IS_IFACE (node))
@@ -498,8 +450,12 @@ type_node_any_new_W (TypeNode             *pnode,
       node->supers[0] = type;
       memcpy (node->supers + 1, pnode->supers, sizeof (GType) * (1 + pnode->n_supers + 1));
 
+      node->is_abstract = (type_flags & G_TYPE_FLAG_ABSTRACT) != 0;
       node->is_classed = pnode->is_classed;
+      node->is_deprecated = (type_flags & G_TYPE_FLAG_DEPRECATED) != 0;
       node->is_instantiatable = pnode->is_instantiatable;
+
+      node->is_deprecated |= pnode->is_deprecated;
 
       if (NODE_IS_IFACE (node))
   {
@@ -541,7 +497,7 @@ type_node_any_new_W (TypeNode             *pnode,
   node->global_gdata = NULL;
   g_hash_table_insert (static_type_nodes_ht,
            (gpointer) g_quark_to_string (node->qname),
-           (gpointer) type);
+           GTYPE_TO_POINTER (type));
 
   g_atomic_int_inc ((gint *)&type_registration_serial);
 
@@ -573,12 +529,10 @@ type_node_fundamental_new_W (GType                 ftype,
   if (ftype >> G_TYPE_FUNDAMENTAL_SHIFT == static_fundamental_next)
     static_fundamental_next++;
 
-  type_flags &= TYPE_FUNDAMENTAL_FLAG_MASK;
-
   node = type_node_any_new_W (NULL, ftype, name, NULL, type_flags);
 
   finfo = type_node_fundamental_info_I (node);
-  finfo->type_flags = type_flags;
+  finfo->type_flags = type_flags & TYPE_FUNDAMENTAL_FLAG_MASK;
 
   return node;
 }
@@ -1863,14 +1817,14 @@ maybe_issue_deprecation_warning (GType type)
   gboolean already;
   const char *name;
 
-  if (g_once_init_enter (&enable_diagnostic))
+  if (g_once_init_enter_pointer (&enable_diagnostic))
     {
       const gchar *value = g_getenv ("G_ENABLE_DIAGNOSTIC");
 
       if (!value)
         value = "0";
 
-      g_once_init_leave (&enable_diagnostic, value);
+      g_once_init_leave_pointer (&enable_diagnostic, value);
     }
 
   if (enable_diagnostic[0] == '0')
@@ -2788,9 +2742,9 @@ g_type_register_fundamental (GType                       type_id,
   if ((type_id & TYPE_ID_MASK) ||
       type_id > G_TYPE_FUNDAMENTAL_MAX)
     {
-      g_critical ("attempt to register fundamental type '%s' with invalid type id (%" G_GSIZE_FORMAT ")",
+      g_critical ("attempt to register fundamental type '%s' with invalid type id (%" G_GUINTPTR_FORMAT ")",
       type_name,
-      type_id);
+      (guintptr) type_id);
       return 0;
     }
   if ((finfo->type_flags & G_TYPE_FLAG_INSTANTIATABLE) &&
@@ -3511,7 +3465,7 @@ g_type_from_name (const gchar *name)
   g_return_val_if_fail (name != NULL, 0);
 
   G_READ_LOCK (&type_rw_lock);
-  type = (GType) g_hash_table_lookup (static_type_nodes_ht, name);
+  type = GPOINTER_TO_TYPE (g_hash_table_lookup (static_type_nodes_ht, name));
   G_READ_UNLOCK (&type_rw_lock);
 
   return type;
@@ -3940,6 +3894,8 @@ type_add_flags_W (TypeNode  *node,
   dflags |= flags;
   type_set_qdata_W (node, static_quark_type_flags, GUINT_TO_POINTER (dflags));
 
+  node->is_abstract = (flags & G_TYPE_FLAG_ABSTRACT) != 0;
+  node->is_deprecated |= (flags & G_TYPE_FLAG_DEPRECATED) != 0;
   node->is_final = (flags & G_TYPE_FLAG_FINAL) != 0;
 }
 
@@ -4016,8 +3972,8 @@ g_type_get_instance_count (GType type)
 }
 
 /* --- implementation details --- */
-gboolean
-g_type_test_flags (GType type,
+static inline gboolean
+_g_type_test_flags (GType type,
        guint flags)
 {
   TypeNode *node;
@@ -4028,16 +3984,22 @@ g_type_test_flags (GType type,
     {
       if ((flags & ~NODE_FLAG_MASK) == 0)
         {
-          if (flags & G_TYPE_FLAG_CLASSED)
-            result |= node->is_classed;
+          if ((flags & G_TYPE_FLAG_CLASSED) && !node->is_classed)
+            return FALSE;
 
-          if (flags & G_TYPE_FLAG_INSTANTIATABLE)
-            result |= node->is_instantiatable;
+          if ((flags & G_TYPE_FLAG_INSTANTIATABLE) && !node->is_instantiatable)
+            return FALSE;
 
-          if (flags & G_TYPE_FLAG_FINAL)
-            result |= node->is_final;
+          if ((flags & G_TYPE_FLAG_FINAL) && !node->is_final)
+            return FALSE;
 
-          return result;
+          if ((flags & G_TYPE_FLAG_ABSTRACT) && !node->is_abstract)
+            return FALSE;
+
+          if ((flags & G_TYPE_FLAG_DEPRECATED) && !node->is_deprecated)
+            return FALSE;
+
+          return TRUE;
         }
 
       guint fflags = flags & TYPE_FUNDAMENTAL_FLAG_MASK;
@@ -4065,6 +4027,13 @@ g_type_test_flags (GType type,
     }
 
   return result;
+}
+
+gboolean
+(g_type_test_flags) (GType type,
+                     guint flags)
+{
+  return _g_type_test_flags (type, flags);
 }
 
 /**
@@ -4442,7 +4411,7 @@ g_type_value_table_peek (GType type)
     return vtable;
 
   if (!node)
-    g_critical (G_STRLOC ": type id '%" G_GSIZE_FORMAT "' is invalid", type);
+    g_critical (G_STRLOC ": type id '%" G_GUINTPTR_FORMAT "' is invalid", (guintptr) type);
   if (!has_refed_data)
     g_critical ("can't peek value table for type '%s' which is not currently referenced",
                type_descriptive_name_I (type));

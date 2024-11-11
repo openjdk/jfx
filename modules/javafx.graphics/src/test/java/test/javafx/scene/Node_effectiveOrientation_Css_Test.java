@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,23 +34,24 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.After;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.junit.Before;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test :dir functional pseudo-class
  */
-@Ignore("JDK-8234152")
+@Disabled("JDK-8234152")
 public class Node_effectiveOrientation_Css_Test {
 
     private Group root;
     private Scene scene;
     private Stage stage;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         root = new Group();
         scene = new Scene(root);
@@ -60,7 +61,7 @@ public class Node_effectiveOrientation_Css_Test {
         stage.requestFocus();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         resetStyleManager();
         stage.hide();

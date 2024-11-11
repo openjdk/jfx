@@ -25,33 +25,28 @@
 
 package test.robot.javafx.scene;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.MenuButton;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
-import javafx.scene.Parent;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
-
 import test.util.Util;
-
-import static org.junit.Assume.assumeTrue;
 
 /*
  * Test for verifying context menu NPE error
@@ -123,10 +118,10 @@ public class ContextMenuNPETest {
             throw exception;
         }
 
-        Assert.assertEquals(0, onHiddenLatch.getCount());
+        Assertions.assertEquals(0, onHiddenLatch.getCount());
     }
 
-    @After
+    @AfterEach
     public void resetUI() {
         Platform.runLater(() -> {
             menuButton.setOnShown(null);
@@ -134,7 +129,7 @@ public class ContextMenuNPETest {
         });
     }
 
-    @Before
+    @BeforeEach
     public void setupUI() {
         Platform.runLater(() -> {
             menuButton.setOnShown(e -> {
@@ -146,12 +141,12 @@ public class ContextMenuNPETest {
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown();
     }

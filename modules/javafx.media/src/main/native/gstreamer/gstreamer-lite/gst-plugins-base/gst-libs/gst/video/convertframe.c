@@ -28,6 +28,28 @@
 #include <gst/gl/gstglmemory.h>
 #endif
 
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT ensure_debug_category()
+static GstDebugCategory *
+ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    gsize cat_done;
+
+    cat_done = (gsize) _gst_debug_category_new ("video-frame-converter", 0,
+        "video-frame-converter object");
+
+    g_once_init_leave (&cat_gonce, cat_done);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#else
+#define ensure_debug_category() /* NOOP */
+#endif /* GST_DISABLE_GST_DEBUG */
+
 static gboolean
 caps_are_raw (const GstCaps * caps)
 {
@@ -409,7 +431,7 @@ link_failed:
  *
  * The width, height and pixel-aspect-ratio can also be specified in the output caps.
  *
- * Returns: The converted #GstSample, or %NULL if an error happened (in which case @err
+ * Returns: (nullable) (transfer full): The converted #GstSample, or %NULL if an error happened (in which case @err
  * will point to the #GError).
  */
 GstSample *
@@ -579,7 +601,7 @@ gst_video_convert_frame_context_unref (GstVideoConvertSampleContext * ctx)
    * must not end up here without finish() being called */
   g_warn_if_fail (ctx->pipeline == NULL);
 
-  g_slice_free (GstVideoConvertSampleContext, ctx);
+  g_free (ctx);
 }
 
 static gboolean
@@ -838,7 +860,7 @@ gst_video_convert_sample_async (GstSample * sample,
   /* There's a reference cycle between the context and the pipeline, which is
    * broken up once the finish() is called on the context. At latest when the
    * timeout triggers the context will be freed */
-  ctx = g_slice_new0 (GstVideoConvertSampleContext);
+  ctx = g_new0 (GstVideoConvertSampleContext, 1);
   ctx->ref_count = 1;
   g_mutex_init (&ctx->mutex);
   ctx->sample = gst_sample_ref (sample);

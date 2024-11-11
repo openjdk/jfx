@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,16 @@
 
 package test.javafx.scene.control;
 
-import javafx.scene.control.Separator;
-import org.junit.After;
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import javafx.scene.control.skin.ChoiceBoxSkin;
-import javafx.scene.control.skin.ChoiceBoxSkinNodesShim;
 import javafx.application.Platform;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -54,13 +47,18 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ChoiceBoxShim;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SelectionModelShim;
+import javafx.scene.control.Separator;
 import javafx.scene.control.SingleSelectionModel;
+import javafx.scene.control.skin.ChoiceBoxSkin;
+import javafx.scene.control.skin.ChoiceBoxSkinNodesShim;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 public class ChoiceBoxTest {
     private final ChoiceBox<String> box = new ChoiceBox<>();
@@ -68,7 +66,8 @@ public class ChoiceBoxTest {
     private Scene scene;
     private Stage stage;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException) throwable;
@@ -82,7 +81,8 @@ public class ChoiceBoxTest {
         assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
     }
 
-    @After public void cleanUp() {
+    @AfterEach
+    public void cleanUp() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
@@ -244,7 +244,7 @@ public class ChoiceBoxTest {
         assertEquals(null, box.getSelectionModel().getSelectedItem());
     }
 
-    @Ignore
+    @Disabled
     @Test public void ensureSelectionClearsWhenSettingSelectionBeforePopulatingItemsAndSelectedItemIsRemoved() {
         box.getSelectionModel().select("Banana");
         box.getItems().addAll("Apple", "Orange", "Banana");
@@ -538,10 +538,9 @@ public class ChoiceBoxTest {
 
         int index = 2;
         model.select(index);
-        assertEquals("sanity: model is selecting index and item", items.get(index),
-                model.getSelectedItem());
+        assertEquals(items.get(index), model.getSelectedItem(), "sanity: model is selecting index and item");
         box.setSelectionModel(model);
-        assertEquals("box value must be same as selected item", items.get(index), box.getValue());
+        assertEquals(items.get(index), box.getValue(), "box value must be same as selected item");
     }
 
     @Test public void test_jdk_8988261_selectNext() {
@@ -553,7 +552,7 @@ public class ChoiceBoxTest {
         assertEquals("oranges", sm.getSelectedItem());
 
         sm.selectNext();
-        assertEquals("selecting next must move over separator", 3, sm.getSelectedIndex());
+        assertEquals(3, sm.getSelectedIndex(), "selecting next must move over separator");
         assertEquals("trucks", sm.getSelectedItem());
     }
 
@@ -566,7 +565,7 @@ public class ChoiceBoxTest {
         assertEquals("trucks", sm.getSelectedItem());
 
         sm.selectPrevious();
-        assertEquals("selecting previous must move over separator", 1, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndex(), "selecting previous must move over separator");
         assertEquals("oranges", sm.getSelectedItem());
     }
 
@@ -579,32 +578,28 @@ public class ChoiceBoxTest {
         box.getItems().setAll("1");
 
         box.setOnShowing(event -> {
-            assertEquals("event is not of type ChoiceBox.ON_SHOWING",
-                event.getEventType(), ChoiceBox.ON_SHOWING);
+            assertEquals(event.getEventType(), ChoiceBox.ON_SHOWING, "event is not of type ChoiceBox.ON_SHOWING");
             onShowingPass = true;
         });
         box.setOnShown(event -> {
-            assertEquals("event is not of type ChoiceBox.ON_SHOWN",
-                event.getEventType(), ChoiceBox.ON_SHOWN);
+            assertEquals(event.getEventType(), ChoiceBox.ON_SHOWN, "event is not of type ChoiceBox.ON_SHOWN");
             onShownPass = true;
         });
         box.setOnHiding(event -> {
-            assertEquals("event is not of type ChoiceBox.ON_HIDING",
-                event.getEventType(), ChoiceBox.ON_HIDING);
+            assertEquals(event.getEventType(), ChoiceBox.ON_HIDING, "event is not of type ChoiceBox.ON_HIDING");
             onHidingPass = true;
         });
         box.setOnHidden(event -> {
-            assertEquals("event is not of type ChoiceBox.ON_HIDDEN",
-                event.getEventType(), ChoiceBox.ON_HIDDEN);
+            assertEquals(event.getEventType(), ChoiceBox.ON_HIDDEN, "event is not of type ChoiceBox.ON_HIDDEN");
             onHiddenPass = true;
         });
 
         box.show();
         box.hide();
 
-        assertTrue("OnShowing event not received", onShowingPass);
-        assertTrue("onShown event not received", onShownPass);
-        assertTrue("onHiding event not received", onHidingPass);
-        assertTrue("onHidden event not received", onHiddenPass);
+        assertTrue(onShowingPass, "OnShowing event not received");
+        assertTrue(onShownPass, "onShown event not received");
+        assertTrue(onHidingPass, "onHiding event not received");
+        assertTrue(onHiddenPass, "onHidden event not received");
     }
 }

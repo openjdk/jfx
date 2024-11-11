@@ -29,8 +29,8 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import test.com.sun.glass.ui.monocle.TestRunnable;
 
 public class TouchTestBase {
@@ -78,7 +78,7 @@ public class TouchTestBase {
         this.absYMax = (double) absYMax;
     }
 
-    @Before
+    @BeforeEach
     public void initDevice() throws Exception {
         TestApplication.getStage();
         ui = new UInput();
@@ -87,7 +87,7 @@ public class TouchTestBase {
         TestRunnable.invokeAndWait(() -> screen = Screen.getPrimary().getBounds());
     }
 
-    @After
+    @AfterEach
     public void destroyDevice() throws InterruptedException {
         try {
             ui.waitForQuiet();

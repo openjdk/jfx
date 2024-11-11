@@ -25,10 +25,10 @@
 
 package test.robot.javafx.embed.swing;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.util.Util.TIMEOUT;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -48,9 +48,9 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
@@ -69,7 +69,7 @@ public class JFXPanelHiDPITest {
     private static final int PANEL_WIDTH = 500;
     private static final int PANEL_HEIGHT = 400;
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         assumeTrue(PlatformUtil.isWindows());
         System.setProperty("sun.java2d.uiScale.enabled", "true");
@@ -80,8 +80,7 @@ public class JFXPanelHiDPITest {
         // Start the Application
         SwingUtilities.invokeAndWait(() -> myApp = new MyApp());
 
-        assertTrue("Timeout waiting for Application to launch",
-                launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS));
+        assertTrue(launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for Application to launch");
     }
 
     @Test
@@ -100,7 +99,7 @@ public class JFXPanelHiDPITest {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         if (myApp != null) {
             SwingUtilities.invokeLater(myApp::dispose);

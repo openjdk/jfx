@@ -29,16 +29,19 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class WeakChangeListenerTest {
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testConstructWithNull() {
-        new WeakChangeListener<>(null);
+        assertThrows(NullPointerException.class, () -> {
+            new WeakChangeListener<>(null);
+        });
     }
+
 
     @Test
     public void testHandle() {

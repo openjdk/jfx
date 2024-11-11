@@ -25,54 +25,6 @@
 #include "gmem.h"
 #include "gtestutils.h"
 #include "gslice.h"
-/**
- * SECTION:sequence
- * @title: Sequences
- * @short_description: scalable lists
- *
- * The #GSequence data structure has the API of a list, but is
- * implemented internally with a balanced binary tree. This means that
- * most of the operations  (access, search, insertion, deletion, ...) on
- * #GSequence are O(log(n)) in average and O(n) in worst case for time
- * complexity. But, note that maintaining a balanced sorted list of n
- * elements is done in time O(n log(n)).
- * The data contained in each element can be either integer values, by using
- * of the [Type Conversion Macros][glib-Type-Conversion-Macros], or simply
- * pointers to any type of data.
- *
- * A #GSequence is accessed through "iterators", represented by a
- * #GSequenceIter. An iterator represents a position between two
- * elements of the sequence. For example, the "begin" iterator
- * represents the gap immediately before the first element of the
- * sequence, and the "end" iterator represents the gap immediately
- * after the last element. In an empty sequence, the begin and end
- * iterators are the same.
- *
- * Some methods on #GSequence operate on ranges of items. For example
- * g_sequence_foreach_range() will call a user-specified function on
- * each element with the given range. The range is delimited by the
- * gaps represented by the passed-in iterators, so if you pass in the
- * begin and end iterators, the range in question is the entire
- * sequence.
- *
- * The function g_sequence_get() is used with an iterator to access the
- * element immediately following the gap that the iterator represents.
- * The iterator is said to "point" to that element.
- *
- * Iterators are stable across most operations on a #GSequence. For
- * example an iterator pointing to some element of a sequence will
- * continue to point to that element even after the sequence is sorted.
- * Even moving an element to another sequence using for example
- * g_sequence_move_range() will not invalidate the iterators pointing
- * to it. The only operation that will invalidate an iterator is when
- * the element it points to is removed from any sequence.
- *
- * To sort the data, either use g_sequence_insert_sorted() or
- * g_sequence_insert_sorted_iter() to add data to the #GSequence or, if
- * you want to add a large amount of data, it is more efficient to call
- * g_sequence_sort() or g_sequence_sort_iter() after doing unsorted
- * insertions.
- */
 
 /**
  * GSequenceIter:
@@ -303,7 +255,7 @@ g_sequence_free (GSequence *seq)
  * g_sequence_foreach_range:
  * @begin: a #GSequenceIter
  * @end: a #GSequenceIter
- * @func: a #GFunc
+ * @func: (scope call): a #GFunc
  * @user_data: user data passed to @func
  *
  * Calls @func for each item in the range (@begin, @end) passing
@@ -345,7 +297,7 @@ g_sequence_foreach_range (GSequenceIter *begin,
 /**
  * g_sequence_foreach:
  * @seq: a #GSequence
- * @func: the function to call for each item in @seq
+ * @func: (scope call): the function to call for each item in @seq
  * @user_data: user data passed to @func
  *
  * Calls @func for each item in the sequence passing @user_data
@@ -675,7 +627,7 @@ g_sequence_move_range (GSequenceIter *dest,
 /**
  * g_sequence_sort:
  * @seq: a #GSequence
- * @cmp_func: the function used to sort the sequence
+ * @cmp_func: (scope call): the function used to sort the sequence
  * @cmp_data: user data passed to @cmp_func
  *
  * Sorts @seq using @cmp_func.
@@ -707,7 +659,7 @@ g_sequence_sort (GSequence        *seq,
  * g_sequence_insert_sorted:
  * @seq: a #GSequence
  * @data: the data to insert
- * @cmp_func: the function used to compare items in the sequence
+ * @cmp_func: (scope call): the function used to compare items in the sequence
  * @cmp_data: user data passed to @cmp_func.
  *
  * Inserts @data into @seq using @cmp_func to determine the new
@@ -749,7 +701,7 @@ g_sequence_insert_sorted (GSequence        *seq,
 /**
  * g_sequence_sort_changed:
  * @iter: A #GSequenceIter
- * @cmp_func: the function used to compare items in the sequence
+ * @cmp_func: (scope call): the function used to compare items in the sequence
  * @cmp_data: user data passed to @cmp_func.
  *
  * Moves the data pointed to by @iter to a new position as indicated by
@@ -790,7 +742,7 @@ g_sequence_sort_changed (GSequenceIter    *iter,
  * g_sequence_search:
  * @seq: a #GSequence
  * @data: data for the new item
- * @cmp_func: the function used to compare items in the sequence
+ * @cmp_func: (scope call): the function used to compare items in the sequence
  * @cmp_data: user data passed to @cmp_func
  *
  * Returns an iterator pointing to the position where @data would
@@ -834,7 +786,7 @@ g_sequence_search (GSequence        *seq,
  * g_sequence_lookup:
  * @seq: a #GSequence
  * @data: data to look up
- * @cmp_func: the function used to compare items in the sequence
+ * @cmp_func: (scope call): the function used to compare items in the sequence
  * @cmp_data: user data passed to @cmp_func
  *
  * Returns an iterator pointing to the position of the first item found
@@ -878,7 +830,7 @@ g_sequence_lookup (GSequence        *seq,
 /**
  * g_sequence_sort_iter:
  * @seq: a #GSequence
- * @cmp_func: the function used to compare iterators in the sequence
+ * @cmp_func: (scope call): the function used to compare iterators in the sequence
  * @cmp_data: user data passed to @cmp_func
  *
  * Like g_sequence_sort(), but uses a #GSequenceIterCompareFunc instead
@@ -932,7 +884,7 @@ g_sequence_sort_iter (GSequence                *seq,
 /**
  * g_sequence_sort_changed_iter:
  * @iter: a #GSequenceIter
- * @iter_cmp: the function used to compare iterators in the sequence
+ * @iter_cmp: (scope call): the function used to compare iterators in the sequence
  * @cmp_data: user data passed to @cmp_func
  *
  * Like g_sequence_sort_changed(), but uses
@@ -997,7 +949,7 @@ g_sequence_sort_changed_iter (GSequenceIter            *iter,
  * g_sequence_insert_sorted_iter:
  * @seq: a #GSequence
  * @data: data for the new item
- * @iter_cmp: the function used to compare iterators in the sequence
+ * @iter_cmp: (scope call): the function used to compare iterators in the sequence
  * @cmp_data: user data passed to @iter_cmp
  *
  * Like g_sequence_insert_sorted(), but uses
@@ -1064,7 +1016,7 @@ g_sequence_insert_sorted_iter (GSequence                *seq,
  * g_sequence_search_iter:
  * @seq: a #GSequence
  * @data: data for the new item
- * @iter_cmp: the function used to compare iterators in the sequence
+ * @iter_cmp: (scope call): the function used to compare iterators in the sequence
  * @cmp_data: user data passed to @iter_cmp
  *
  * Like g_sequence_search(), but uses a #GSequenceIterCompareFunc
@@ -1122,7 +1074,7 @@ g_sequence_search_iter (GSequence                *seq,
  * g_sequence_lookup_iter:
  * @seq: a #GSequence
  * @data: data to look up
- * @iter_cmp: the function used to compare iterators in the sequence
+ * @iter_cmp: (scope call): the function used to compare iterators in the sequence
  * @cmp_data: user data passed to @iter_cmp
  *
  * Like g_sequence_lookup(), but uses a #GSequenceIterCompareFunc

@@ -30,35 +30,35 @@
 
 
 /**
- * SECTION:value_arrays
- * @short_description: A container structure to maintain an array of
- *     generic values
- * @see_also: #GValue, #GParamSpecValueArray, g_param_spec_value_array()
- * @title: Value arrays
+ * GValueArray:
+ * @n_values: number of values contained in the array
+ * @values: array of values
  *
- * The prime purpose of a #GValueArray is for it to be used as an
- * object property that holds an array of values. A #GValueArray wraps
- * an array of #GValue elements in order for it to be used as a boxed
- * type through %G_TYPE_VALUE_ARRAY.
+ * A `GValueArray` is a container structure to hold an array of generic values.
  *
- * #GValueArray is deprecated in favour of #GArray since GLib 2.32. It
- * is possible to create a #GArray that behaves like a #GValueArray by
- * using the size of #GValue as the element size, and by setting
- * g_value_unset() as the clear function using g_array_set_clear_func(),
- * for instance, the following code:
+ * The prime purpose of a `GValueArray` is for it to be used as an
+ * object property that holds an array of values. A `GValueArray` wraps
+ * an array of `GValue` elements in order for it to be used as a boxed
+ * type through `G_TYPE_VALUE_ARRAY`.
  *
- * |[<!-- language="C" -->
+ * `GValueArray` is deprecated in favour of `GArray` since GLib 2.32.
+ * It is possible to create a `GArray` that behaves like a `GValueArray`
+ * by using the size of `GValue` as the element size, and by setting
+ * [method@GObject.Value.unset] as the clear function using
+ * [func@GLib.Array.set_clear_func], for instance, the following code:
+ *
+ * ```c
  *   GValueArray *array = g_value_array_new (10);
- * ]|
+ * ```
  *
  * can be replaced by:
  *
- * |[<!-- language="C" -->
+ * ```c
  *   GArray *array = g_array_sized_new (FALSE, TRUE, sizeof (GValue), 10);
  *   g_array_set_clear_func (array, (GDestroyNotify) g_value_unset);
- * ]|
+ * ```
  *
- * Deprecated: 2.32: Use #GArray instead, if possible for the given use case,
+ * Deprecated: 2.32: Use `GArray` instead, if possible for the given use case,
  *    as described above.
  */
 

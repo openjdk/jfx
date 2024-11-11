@@ -127,7 +127,6 @@ SOURCES = gstreamer/gst/gst.c \
           gstreamer/gst/gstpipeline.c \
           gstreamer/gst/gstplugin.c \
           gstreamer/gst/gstpluginfeature.c \
-          gstreamer/gst/gstpluginloader.c \
           gstreamer/gst/gstpoll.c \
           gstreamer/gst/gstprotection.c \
           gstreamer/gst/gstquark.c \
@@ -172,6 +171,7 @@ SOURCES = gstreamer/gst/gst.c \
           gstreamer/libs/gst/base/gsttypefindhelper.c \
           gst-plugins-base/gst-libs/gst/app/gstapp-marshal.c \
           gst-plugins-base/gst-libs/gst/app/gstappsink.c \
+          gst-plugins-base/gst-libs/gst/app/gstapputils.c \
           gst-plugins-base/gst-libs/gst/audio/audio.c \
           gst-plugins-base/gst-libs/gst/audio/audio-channels.c \
           gst-plugins-base/gst-libs/gst/audio/audio-channel-mixer.c \

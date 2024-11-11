@@ -286,7 +286,7 @@ msort_r (void *b, size_t n, size_t s, GCompareDataFunc cmp, void *arg)
  * @pbase: (not nullable): start of array to sort
  * @total_elems: elements in the array
  * @size: size of each element
- * @compare_func: function to compare elements
+ * @compare_func: (scope call): function to compare elements
  * @user_data: data to pass to @compare_func
  *
  * This is just like the standard C qsort() function, but

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,33 +25,24 @@
 
 package test.javafx.scene.effect;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.ColorAdjust;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
+import org.junit.jupiter.params.provider.Arguments;
 import test.com.sun.javafx.test.PropertiesTestBase;
 
-@RunWith(Parameterized.class)
 public final class ColorAdjust_properties_Test extends PropertiesTestBase {
-    @Parameters
-    public static Collection data() {
+
+    public static Stream<Arguments> data() {
         final ColorAdjust testColorAdjust = new ColorAdjust();
 
-        return Arrays.asList(new Object[] {
+        return Stream.of(
             config(testColorAdjust, "input", null, new BoxBlur()),
             config(testColorAdjust, "hue", 0.0, 0.5),
             config(testColorAdjust, "saturation", 0.0, 0.5),
             config(testColorAdjust, "brightness", 0.0, 0.5),
             config(testColorAdjust, "contrast", 0.0, 0.5)
-        });
-    }
-
-    public ColorAdjust_properties_Test(final Configuration configuration) {
-        super(configuration);
+        );
     }
 }

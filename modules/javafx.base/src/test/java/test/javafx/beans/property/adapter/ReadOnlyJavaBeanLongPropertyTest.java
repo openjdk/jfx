@@ -29,7 +29,7 @@ import java.beans.PropertyVetoException;
 import javafx.beans.property.adapter.ReadOnlyJavaBeanLongPropertyBuilder;
 import javafx.beans.property.adapter.ReadOnlyJavaBeanProperty;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  */

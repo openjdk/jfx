@@ -26,10 +26,9 @@
 package javafx.css;
 
 import com.sun.javafx.css.Combinator;
+import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.SimpleSelector;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -40,16 +39,17 @@ import java.util.Set;
  *
  * @since 9
  */
-abstract public class Selector {
+public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
 
     /**
-     * Package scoped constructor.
+     * Constructor for subclasses to call.
+     *
+     * @since 24
      */
-    Selector() {
+    protected Selector() {
     }
 
     private static class UniversalSelector {
-        @SuppressWarnings("removal")
         private static final Selector INSTANCE =
             new SimpleSelector("*", null, null, null);
     }
@@ -106,7 +106,9 @@ abstract public class Selector {
      *
      * @return a match, never {@code null}
      */
-    public abstract Match createMatch();
+    public final Match createMatch() {
+        return Match.of(this);
+    }
 
     /**
      * Gets whether this {@code Selector} applies to the given {@code Styleable}.
@@ -137,48 +139,11 @@ abstract public class Selector {
      */
     public abstract boolean stateMatches(Styleable styleable, Set<PseudoClass> state);
 
-    private static final int TYPE_SIMPLE = 1;
-    private static final int TYPE_COMPOUND = 2;
-
-    /**
-     * Writes {@code Selector} data in binary form to given {@code DataOutputStream}.
-     * @param os {@code DataOutputStream} to write {@code Selector} data to
-     * @param stringStore unused
-     * @throws IOException if writing to {@code DataOutputStream} fails
-     */
-    @SuppressWarnings("removal")
-    protected void writeBinary(DataOutputStream os, StyleConverter.StringStore stringStore)
-        throws IOException {
-        if (this instanceof SimpleSelector) {
-            os.writeByte(TYPE_SIMPLE);
-        } else {
-            os.writeByte(TYPE_COMPOUND);
-        }
-    }
-
-    /**
-     * Reads binary {@code Selector} data from a given {@code DataInputStream}.
-     * @param bssVersion bss version identifier
-     * @param is {@code DataInputStream} to read {@code Selector} data from
-     * @param strings string array containing selector details
-     * @throws IOException if reading from {@code DataInputStream} fails
-     */
-    @SuppressWarnings("removal")
-    static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
-        throws IOException {
-        final int type = is.readByte();
-        if (type == TYPE_SIMPLE)
-            return SimpleSelector.readBinary(bssVersion, is,strings);
-        else
-            return CompoundSelector.readBinary(bssVersion, is,strings);
-    }
-
     /**
      * Creates a {@code Selector} object.
      * @param cssSelector CSS selector string
      * @return a {@code Selector}
      */
-    @SuppressWarnings("removal")
     public static Selector createSelector(final String cssSelector) {
         if (cssSelector == null || cssSelector.length() == 0) {
             return null; // actually return a default no-match selector

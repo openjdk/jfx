@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,27 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.application.PlatformImpl;
-import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import com.sun.javafx.tk.Toolkit;
-import javafx.scene.Scene;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Scene;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
-
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 
 /**
  */
@@ -54,7 +56,8 @@ public class AccordionTest {
     private Stage stage;
     private StackPane root;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tk = Toolkit.getToolkit();
 
         assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@ package test.javafx.scene.effect;
 import static test.com.sun.javafx.test.TestHelper.box;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.scene.Node;
 import javafx.scene.effect.BlurType;
@@ -38,19 +38,14 @@ import javafx.scene.effect.Shadow;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import test.com.sun.javafx.test.BBoxComparator;
+import org.junit.jupiter.params.provider.Arguments;
 import test.com.sun.javafx.test.PropertiesTestBase;
+import test.com.sun.javafx.test.BBoxComparator;
 
-@RunWith(Parameterized.class)
 public final class Shadow_properties_Test extends PropertiesTestBase {
 
-    @Parameters
-    public static Collection data() {
-        ArrayList array = new ArrayList();
+    public static Stream<Arguments> data() {
+        ArrayList<Arguments> array = new ArrayList<Arguments>();
 
         // simple property tests
         final Shadow testShadow = new Shadow();
@@ -173,11 +168,7 @@ public final class Shadow_properties_Test extends PropertiesTestBase {
                 box(-11.0, -11.0, 122.0, 122.0),
                 new BBoxComparator(0.01)));
 
-        return array;
-    }
-
-    public Shadow_properties_Test(final Configuration configuration) {
-        super(configuration);
+        return array.stream();
     }
 
     private static Rectangle createTestNode() {

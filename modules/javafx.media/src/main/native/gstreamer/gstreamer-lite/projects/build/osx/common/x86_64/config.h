@@ -474,7 +474,7 @@
 #define PACKAGE_NAME "GStreamer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GStreamer 1.22.6"
+#define PACKAGE_STRING "GStreamer 1.24.6"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "gstreamer"
@@ -483,7 +483,7 @@
 #undef PACKAGE_URL
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.22.6"
+#define PACKAGE_VERSION "1.24.6"
 
 /* directory where plugins are located */
 #undef PLUGINDIR
@@ -523,7 +523,7 @@
 #undef USE_POISONING
 
 /* Version number of package */
-#define VERSION "1.22.6"
+#define VERSION "1.24.6"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

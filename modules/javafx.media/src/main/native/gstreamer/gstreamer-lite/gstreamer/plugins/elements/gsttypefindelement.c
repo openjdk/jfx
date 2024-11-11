@@ -490,7 +490,7 @@ gst_type_find_element_seek (GstTypeFindElement * typefind, GstEvent * event)
   gst_segment_do_seek (&seeksegment, rate, format, flags,
       start_type, start, stop_type, stop, NULL);
 
-  flush = ! !(flags & GST_SEEK_FLAG_FLUSH);
+  flush = !!(flags & GST_SEEK_FLAG_FLUSH);
 
   GST_DEBUG_OBJECT (typefind, "New segment %" GST_SEGMENT_FORMAT, &seeksegment);
 

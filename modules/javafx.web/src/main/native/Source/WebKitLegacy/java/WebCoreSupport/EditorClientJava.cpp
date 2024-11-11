@@ -643,7 +643,7 @@ void EditorClientJava::discardedComposition(const Document&)
 {
 }
 
-DOMPasteAccessResponse EditorClientJava::requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier)
+DOMPasteAccessResponse EditorClientJava::requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const String& originIdentifier)
 {
     return DOMPasteAccessResponse::DeniedForGesture;
 }

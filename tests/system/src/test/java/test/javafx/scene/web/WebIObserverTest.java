@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,24 +26,20 @@
 package test.javafx.scene.web;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.URL;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class WebIObserverTest {
@@ -69,17 +65,17 @@ public class WebIObserverTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         Util.launch(launchLatch, WebIObserverTestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownOnce() {
         Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void setupTestObjects() {
         Platform.runLater(() -> {
             webView = new WebView();
@@ -91,7 +87,7 @@ public class WebIObserverTest {
     @Test public void testIO() {
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
         URL resource = WebIObserverTest.class.getResource("testIObserver.html");
-        assertNotNull("Resource was null", resource);
+        assertNotNull(resource, "Resource was null");
 
         Util.runAndWait(() -> {
             assertNotNull(webView);
@@ -105,22 +101,22 @@ public class WebIObserverTest {
             webView.getEngine().load(resource.toExternalForm());
         });
 
-        assertTrue("Timeout waiting for succeeded state", Util.await(webViewStateLatch));
+        assertTrue(Util.await(webViewStateLatch), "Timeout waiting for succeeded state");
         Util.sleep(500);
 
         Util.runAndWait(() ->
-                assertEquals("Unknown intersection ratio", "?", getIntersectionRatio()));
+                assertEquals("?", getIntersectionRatio(), "Unknown intersection ratio"));
 
         Util.runAndWait(() -> webView.getEngine().executeScript("testIO()"));
         Util.sleep(100);
 
         Util.runAndWait(() ->
-                assertEquals("Intersection ratio", "0.5", getIntersectionRatio()));
+                assertEquals("0.5", getIntersectionRatio(), "Intersection ratio"));
     }
 
     private String getIntersectionRatio() {
         Object object = webView.getEngine().executeScript("document.querySelector('#output pre').innerText");
-        assertNotNull("InnerText was null", object);
+        assertNotNull(object, "InnerText was null");
         return String.valueOf(object);
     }
 }

@@ -26,7 +26,6 @@ package com.oracle.tools.fx.monkey.options;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.Node;
-import javafx.scene.paint.Color;
 import com.oracle.tools.fx.monkey.util.ImageTools;
 
 /**
@@ -37,11 +36,12 @@ public class GraphicOption extends ObjectOption<Node> {
         super(name, p);
 
         addChoice("<null>", null);
-        addChoice("1x1", ImageTools.createImageView(Color.RED, 1, 1));
-        addChoice("Small", ImageTools.createImageView(Color.ORANGE, 16, 16));
-        addChoice("Wide", ImageTools.createImageView(Color.GREEN, 128, 16));
-        addChoice("Tall", ImageTools.createImageView(Color.BLUE, 16, 128));
-        addChoice("Large", ImageTools.createImageView(Color.SALMON, 256, 256));
+        addChoice("1x1", ImageTools.createImageView(1, 1));
+        addChoice("Small", ImageTools.createImageView(16, 16));
+        addChoice("Wide", ImageTools.createImageView(128, 16));
+        addChoice("Tall", ImageTools.createImageView(16, 128));
+        addChoice("Large", ImageTools.createImageView(256, 256));
+        // TODO include active content (see tooltip)
 
         selectInitialValue();
     }

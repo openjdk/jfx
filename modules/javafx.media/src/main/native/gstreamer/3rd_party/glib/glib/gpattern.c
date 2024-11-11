@@ -31,32 +31,24 @@
 #include "gutils.h"
 
 /**
- * SECTION:patterns
- * @title: Glob-style pattern matching
- * @short_description: matches strings against patterns containing '*'
- *                     (wildcard) and '?' (joker)
+ * GPatternSpec:
  *
- * The g_pattern_match* functions match a string
- * against a pattern containing '*' and '?' wildcards with similar
- * semantics as the standard glob() function: '*' matches an arbitrary,
+ * A `GPatternSpec` struct is the 'compiled' form of a glob-style pattern.
+ *
+ * The [func@GLib.pattern_match_simple] and [method@GLib.PatternSpec.match] functions
+ * match a string against a pattern containing '*' and '?' wildcards with similar
+ * semantics as the standard `glob()` function: '*' matches an arbitrary,
  * possibly empty, string, '?' matches an arbitrary character.
  *
- * Note that in contrast to glob(), the '/' character can be matched by
+ * Note that in contrast to `glob()`, the '/' character can be matched by
  * the wildcards, there are no '[...]' character ranges and '*' and '?'
  * can not be escaped to include them literally in a pattern.
  *
- * When multiple strings must be matched against the same pattern, it
- * is better to compile the pattern to a #GPatternSpec using
- * g_pattern_spec_new() and use g_pattern_match_string() instead of
- * g_pattern_match_simple(). This avoids the overhead of repeated
+ * When multiple strings must be matched against the same pattern, it is better
+ * to compile the pattern to a [struct@GLib.PatternSpec] using
+ * [ctor@GLib.PatternSpec.new] and use [method@GLib.PatternSpec.match_string]
+ * instead of [func@GLib.pattern_match_simple]. This avoids the overhead of repeated
  * pattern compilation.
- **/
-
-/**
- * GPatternSpec:
- *
- * A GPatternSpec struct is the 'compiled' form of a pattern. This
- * structure is opaque and its fields cannot be accessed directly.
  */
 
 /* keep enum and structure of gpattern.c and patterntest.c in sync */

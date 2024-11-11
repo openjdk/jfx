@@ -172,6 +172,7 @@ enum
   SIGNAL_STARTING,
   SIGNAL_DISCOVERED,
   SIGNAL_SOURCE_SETUP,
+  SIGNAL_LOAD_SERIALIZED_INFO,
   LAST_SIGNAL
 };
 
@@ -215,6 +216,23 @@ static GVariant *gst_discoverer_info_to_variant_recurse (GstDiscovererStreamInfo
     * sinfo, GstDiscovererSerializeFlags flags);
 static GstDiscovererStreamInfo *_parse_discovery (GVariant * variant,
     GstDiscovererInfo * info);
+static GstDiscovererInfo *load_serialized_info (GstDiscoverer * dc,
+    gchar * uri);
+
+static gboolean
+_gst_discoverer_info_accumulator (GSignalInvocationHint * ihint,
+    GValue * return_accu, const GValue * handler_return, gpointer dummy)
+{
+  GstDiscovererInfo *info;
+
+  info = g_value_get_object (handler_return);
+  GST_DEBUG ("got discoverer info %" GST_PTR_FORMAT, info);
+
+  g_value_set_object (return_accu, info);
+
+  /* stop emission if we have a discoverer info */
+  return (info == NULL);
+}
 
 static void
 gst_discoverer_class_init (GstDiscovererClass * klass)
@@ -226,6 +244,8 @@ gst_discoverer_class_init (GstDiscovererClass * klass)
 
   gobject_class->set_property = gst_discoverer_set_property;
   gobject_class->get_property = gst_discoverer_get_property;
+
+  klass->load_serialize_info = load_serialized_info;
 
 
   /* properties */
@@ -323,6 +343,26 @@ gst_discoverer_class_init (GstDiscovererClass * klass)
       g_signal_new ("source-setup", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (GstDiscovererClass, source_setup),
       NULL, NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_ELEMENT);
+
+  /**
+   * GstDiscoverer::load-serialized-info:
+   * @discoverer: the #GstDiscoverer
+   * @uri: THe URI to load the serialized info for
+   *
+   * Retrieves information about a URI from and external source of information,
+   * like a cache file. This is used by the discoverer to speed up the
+   * discovery.
+   *
+   * Returns: (nullable) (transfer full): The #GstDiscovererInfo representing
+   * @uri, or %NULL if no information
+   *
+   * Since: 1.24
+   */
+  gst_discoverer_signals[SIGNAL_LOAD_SERIALIZED_INFO] =
+      g_signal_new ("load-serialized-info", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (GstDiscovererClass,
+          load_serialize_info), _gst_discoverer_info_accumulator, NULL, NULL,
+      GST_TYPE_DISCOVERER_INFO, 1, G_TYPE_STRING);
 }
 
 static void
@@ -644,7 +684,7 @@ uridecodebin_pad_added_cb (GstElement * uridecodebin, GstPad * pad,
     DISCO_UNLOCK (dc);
     return;
   }
-  ps = g_slice_new0 (PrivateStream);
+  ps = g_new0 (PrivateStream, 1);
 
   ps->dc = dc;
   ps->pad = pad;
@@ -722,7 +762,7 @@ error:
     gst_object_unref (ps->queue);
   if (ps->sink)
     gst_object_unref (ps->sink);
-  g_slice_free (PrivateStream, ps);
+  g_free (ps);
   DISCO_UNLOCK (dc);
   return;
 }
@@ -788,7 +828,7 @@ uridecodebin_pad_removed_cb (GstElement * uridecodebin, GstPad * pad,
   }
   g_free (ps->stream_id);
 
-  g_slice_free (PrivateStream, ps);
+  g_free (ps);
 
   GST_DEBUG ("Done handling pad");
 }
@@ -1323,7 +1363,8 @@ setup_next_uri_locked (GstDiscoverer * dc)
 
     if (!ready) {
       /* Start timeout */
-      handle_current_async (dc);
+      if (dc->priv->processing)
+        handle_current_async (dc);
     } else {
       g_idle_add_full (G_PRIORITY_DEFAULT_IDLE,
           (GSourceFunc) emit_discovererd_and_next, gst_object_ref (dc),
@@ -1825,15 +1866,35 @@ _get_info_from_cachefile (GstDiscoverer * dc, gchar * cachefile)
     if (info) {
       info->cachefile = cachefile;
       info->from_cache = (gpointer) 0x01;
+    } else {
+      g_free (cachefile);
     }
 
     GST_INFO_OBJECT (dc, "Got info from cache: %p", info);
     g_free (data);
 
     return info;
+  } else {
+    g_free (cachefile);
   }
 
   return NULL;
+}
+
+static GstDiscovererInfo *
+load_serialized_info (GstDiscoverer * dc, gchar * uri)
+{
+  GstDiscovererInfo *res = NULL;
+
+  if (dc->priv->use_cache) {
+    gchar *cachefile = _serialized_info_get_path (dc, uri);
+
+    if (cachefile) {
+      res = _get_info_from_cachefile (dc, cachefile);
+    }
+  }
+
+  return res;
 }
 
 static gboolean
@@ -1841,35 +1902,31 @@ _setup_locked (GstDiscoverer * dc)
 {
   GstStateChangeReturn ret;
   gchar *uri = (gchar *) dc->priv->pending_uris->data;
-  gchar *cachefile = NULL;
 
   dc->priv->pending_uris =
       g_list_delete_link (dc->priv->pending_uris, dc->priv->pending_uris);
 
-  if (dc->priv->use_cache) {
-    cachefile = _serialized_info_get_path (dc, uri);
-    if (cachefile)
-      dc->priv->current_info = _get_info_from_cachefile (dc, cachefile);
-
-    if (dc->priv->current_info) {
-      /* Make sure the URI is exactly what the user passed in */
-      g_free (dc->priv->current_info->uri);
-      dc->priv->current_info->uri = uri;
-
-      dc->priv->current_info->cachefile = cachefile;
-      dc->priv->processing = FALSE;
-      dc->priv->target_state = GST_STATE_NULL;
-
-      return TRUE;
-    }
-  }
 
   GST_DEBUG ("Setting up");
+
+  g_signal_emit (dc, gst_discoverer_signals[SIGNAL_LOAD_SERIALIZED_INFO], 0,
+      uri, &dc->priv->current_info);
+  if (dc->priv->current_info) {
+    /* Make sure the URI is exactly what the user passed in */
+    g_free (dc->priv->current_info->uri);
+    dc->priv->current_info->uri = uri;
+
+    dc->priv->processing = FALSE;
+    dc->priv->target_state = GST_STATE_NULL;
+
+    return TRUE;
+  }
 
   /* Pop URI off the pending URI list */
   dc->priv->current_info =
       (GstDiscovererInfo *) g_object_new (GST_TYPE_DISCOVERER_INFO, NULL);
-  dc->priv->current_info->cachefile = cachefile;
+  if (dc->priv->use_cache)
+    dc->priv->current_info->cachefile = _serialized_info_get_path (dc, uri);
   dc->priv->current_info->uri = uri;
 
   /* set uri on uridecodebin */
@@ -2039,8 +2096,8 @@ start_discovering (GstDiscoverer * dc)
       g_source_attach (source, dc->priv->ctx);
       goto beach;
     }
-
-    handle_current_async (dc);
+    if (dc->priv->processing)
+      handle_current_async (dc);
   } else {
     if (!ready)
       handle_current_sync (dc);
@@ -2187,11 +2244,14 @@ gst_discoverer_info_to_variant_recurse (GstDiscovererStreamInfo * sinfo,
     GstDiscovererStreamInfo *ninfo =
         gst_discoverer_stream_info_get_next (sinfo);
 
-    nextv = gst_discoverer_info_to_variant_recurse (ninfo, flags);
-
-    stream_variant =
-        g_variant_new ("(yvv)", 'n', common_stream_variant,
-        g_variant_new ("v", nextv));
+    if (ninfo) {
+      nextv = gst_discoverer_info_to_variant_recurse (ninfo, flags);
+      stream_variant =
+          g_variant_new ("(yvv)", 'n', common_stream_variant,
+          g_variant_new ("v", nextv));
+    } else {
+      stream_variant = g_variant_new ("(yv)", 'n', common_stream_variant);
+    }
   }
 
   return stream_variant;
@@ -2332,8 +2392,11 @@ _parse_discovery (GVariant * variant, GstDiscovererInfo * info)
 {
   gchar type;
   GVariant *common = g_variant_get_child_value (variant, 1);
-  GVariant *specific = g_variant_get_child_value (variant, 2);
+  GVariant *specific = NULL;
   GstDiscovererStreamInfo *sinfo = NULL;
+
+  if (g_variant_n_children (variant) > 2)
+    specific = g_variant_get_child_value (variant, 2);
 
   GET_FROM_TUPLE (variant, byte, 0, &type);
   switch (type) {
@@ -2396,7 +2459,8 @@ _parse_discovery (GVariant * variant, GstDiscovererInfo * info)
 out:
 
   g_variant_unref (common);
-  g_variant_unref (specific);
+  if (specific)
+    g_variant_unref (specific);
   g_variant_unref (variant);
   return sinfo;
 }
@@ -2662,7 +2726,9 @@ gst_discoverer_info_to_variant (GstDiscovererInfo * info,
 
   g_return_val_if_fail (GST_IS_DISCOVERER_INFO (info), NULL);
   g_return_val_if_fail (gst_discoverer_info_get_result (info) ==
-      GST_DISCOVERER_OK, NULL);
+      GST_DISCOVERER_OK
+      || gst_discoverer_info_get_result (info) ==
+      GST_DISCOVERER_MISSING_PLUGINS, NULL);
 
   sinfo = gst_discoverer_info_get_stream_info (info);
   stream_variant = gst_discoverer_info_to_variant_recurse (sinfo, flags);

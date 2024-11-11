@@ -808,7 +808,7 @@ public:
     }
 private:
     String m_localStorageDatabasePath;
-        SingleThreadWeakHashMap<WebCore::Page, HashMap<WebCore::SecurityOriginData, RefPtr<WebCore::StorageNamespace>>> m_sessionStorageNamespaces;
+        WeakHashMap<WebCore::Page, HashMap<WebCore::SecurityOriginData, RefPtr<WebCore::StorageNamespace>>> m_sessionStorageNamespaces;
 
         RefPtr<StorageNamespace> sessionStorageNamespace(const SecurityOrigin& topLevelOrigin, Page& page, ShouldCreateNamespace shouldCreate) override{
             if (m_sessionStorageNamespaces.find(page) == m_sessionStorageNamespaces.end()) {
@@ -2250,8 +2250,10 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
         case com_sun_webkit_WebPage_DND_DST_EXIT:
             dc.dragExited(*localMainFrame,WTFMove(dragData));
             return 0;
+        case com_sun_webkit_WebPage_DND_DST_ENTER:
         case com_sun_webkit_WebPage_DND_DST_OVER:
-
+        case com_sun_webkit_WebPage_DND_DST_CHANGE:
+            return dragOperationToDragCursor(std::get<std::optional<WebCore::DragOperation>>(dc.dragEnteredOrUpdated(*localMainFrame, WTFMove(dragData))));
         case com_sun_webkit_WebPage_DND_DST_DROP:
             {
                 int ret = dc.performDragOperation(WTFMove(dragData)) ? 1 : 0;

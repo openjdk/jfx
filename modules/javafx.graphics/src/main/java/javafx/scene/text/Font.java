@@ -368,14 +368,6 @@ public final class Font {
      * such that the location is readable, and it represents a supported
      * font format then a <code>Font</code> object will be returned.
      * <p>
-     * If a security manager is present, the application
-     * must have both permission to read from the specified URL location
-     * and the {@link javafx.util.FXPermission} "loadFont".
-     * If the application does not have permission to read from the specified
-     * URL location, then null is returned.
-     * If the application does not have the "loadFont" permission then this method
-     * will return the default system font with the specified font size.
-     * <p>
      * Any failure such as a malformed URL being unable to locate or read
      * from the resource, or if it doesn't represent a font, will result in
      * a <code>null</code> return. It is the application's responsibility
@@ -413,15 +405,6 @@ public final class Font {
      * <p>
      * The use case for this method is for loading all fonts
      * from a TrueType Collection (TTC).
-     * <p>
-     * If a security manager is present, the application
-     * must have both permission to read from the specified URL location
-     * and the {@link javafx.util.FXPermission} "loadFont".
-     * If the application does not have permission to read from the specified
-     * URL location, then null is returned.
-     * If the application does not have the "loadFont" permission then this method
-     * will return an array of one element which is the default
-     *  system font with the specified font size.
      * <p>
      * Any failure such as a malformed URL being unable to locate or read
      * from the resource, or if it doesn't represent a font, will result in
@@ -513,11 +496,6 @@ public final class Font {
      * fully read, and it represents a supported font format then a
      * <code>Font</code> object will be returned.
      * <p>
-     * If a security manager is present, the application
-     * must have the {@link javafx.util.FXPermission} "loadFont".
-     * If the application does not have permission then this method
-     * will return the default system font with the specified font size.
-     * <p>
      * Any failure such as abbreviated input, or an unsupported font format
      * will result in a <code>null</code> return. It is the application's
      * responsibility to check this before use.
@@ -555,11 +533,6 @@ public final class Font {
      * <p>
      * The use case for this method is for loading all fonts
      * from a TrueType Collection (TTC).
-     * <p>
-     * If a security manager is present, the application
-     * must have the {@link javafx.util.FXPermission} "loadFont".
-     * If the application does not have permission then this method
-     * will return the default system font with the specified font size.
      * <p>
      * Any failure such as abbreviated input, or an unsupported font format
      * will result in a <code>null</code> return. It is the application's

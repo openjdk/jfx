@@ -25,19 +25,22 @@
 
 package test.robot.javafx.embed.swing;
 
-import static org.junit.Assume.assumeTrue;
-import org.junit.Test;
-import junit.framework.Assert;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * RT-30650: SwingNode is not Resizable
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class RT30650Test {
 
-    @Test(timeout = 15000)
+    @Test
     public void test() {
         assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8196606
-        Assert.assertTrue(RT30650GUI.test());
+        Assertions.assertTrue(RT30650GUI.test());
 
         System.out.println("Passed.");
     }

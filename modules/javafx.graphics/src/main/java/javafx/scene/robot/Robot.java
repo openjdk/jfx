@@ -56,15 +56,10 @@ public final class Robot {
 
     /**
      * Constructs a new {@code Robot} that can be used for simulating user
-     * interactions. If a security manager is present, the application must
-     * have the {@link javafx.util.FXPermission} {@code "createRobot"} permission
-     * in order to construct a {@code Robot} object.
+     * interactions.
      *
      * @throws IllegalStateException if this object is constructed on a thread
      * other than the JavaFX Application Thread.
-     * @throws SecurityException if a security manager exists and the application
-     * does not have the {@link javafx.util.FXPermission} {@code "createRobot"}
-     * permission.
      */
     public Robot() {
         Application.checkEventThread();

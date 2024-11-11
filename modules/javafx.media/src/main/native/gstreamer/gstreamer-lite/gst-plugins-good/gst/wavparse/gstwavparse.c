@@ -1607,6 +1607,7 @@ gst_wavparse_stream_headers (GstWavParse * wav)
               gst_wavparse_adtl_chunk (wav, (const guint8 *) map.data,
                   data_size);
               gst_buffer_unmap (buf, &map);
+              gst_buffer_unref (buf);
             }
             wav->offset += GST_ROUND_UP_2 (data_size);
             break;

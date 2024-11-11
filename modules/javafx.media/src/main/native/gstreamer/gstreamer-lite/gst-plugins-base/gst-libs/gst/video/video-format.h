@@ -145,6 +145,30 @@ G_BEGIN_DECLS
  * @GST_VIDEO_FORMAT_NV12_16L32S: NV12 with 16x32 Y tiles and 16x16 UV tiles. (Since: 1.22)
  * @GST_VIDEO_FORMAT_NV12_8L128 : NV12 with 8x128 tiles in linear order (Since: 1.22)
  * @GST_VIDEO_FORMAT_NV12_10BE_8L128 : NV12 10bit big endian with 8x128 tiles in linear order (Since: 1.22)
+ * @GST_VIDEO_FORMAT_NV12_10LE40_4L4: @GST_VIDEO_FORMAT_NV12_10LE40 with 4x4 pixels tiles (5 bytes per tile row) (Since: 1.24)
+ * @GST_VIDEO_FORMAT_DMA_DRM: DMA DRM special format. It's only used with
+ *                            memory:DMABuf #GstCapsFeatures, where an extra
+ *                            parameter (drm-format) is required to define the
+ *                            image format and its memory layout.
+ * @GST_VIDEO_FORMAT_MT2110T : Mediatek 10bit NV12 little endian with 16x32 tiles in linear order, tiled 2 bits (Since: 1.24)
+ * @GST_VIDEO_FORMAT_MT2110R : Mediatek 10bit NV12 little endian with 16x32 tiles in linear order, raster 2 bits (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A422: planar 4:4:2:2 YUV, 8 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A444: planar 4:4:4:4 YUV, 8 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A444_12LE: planar 4:4:4:4 YUV, 12 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A444_12BE: planar 4:4:4:4 YUV, 12 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A422_12LE: planar 4:4:2:2 YUV, 12 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A422_12BE: planar 4:4:2:2 YUV, 12 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A420_12LE: planar 4:4:2:0 YUV, 12 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A420_12BE: planar 4:4:2:0 YUV, 12 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A444_16LE: planar 4:4:4:4 YUV, 16 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A444_16BE: planar 4:4:4:4 YUV, 16 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A422_16LE: planar 4:4:2:2 YUV, 16 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A422_16BE: planar 4:4:2:2 YUV, 16 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A420_16LE: planar 4:4:2:0 YUV, 16 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_A420_16BE: planar 4:4:2:0 YUV, 16 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_GBR_16LE: planar 4:4:4 RGB, 16 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_GBR_16BE: planar 4:4:4 RGB, 16 bits per channel (Since: 1.24)
+ * @GST_VIDEO_FORMAT_RBGA: packed RGB with alpha, 8 bits per channel (Since: 1.24)
  *
  * Enum value describing the most common video formats.
  *
@@ -400,6 +424,201 @@ typedef enum {
    * Since: 1.22
    */
   GST_VIDEO_FORMAT_NV12_10BE_8L128,
+
+  /**
+   * GST_VIDEO_FORMAT_NV12_10LE40_4L4:
+   *
+   *  @GST_VIDEO_FORMAT_NV12_10LE40 with 4x4 pixels tiles (5 bytes
+   *  per tile row). This format is produced by Verisilicon/Hantro decoders.
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_NV12_10LE40_4L4,
+
+  /**
+   * GST_VIDEO_FORMAT_DMA_DRM:
+   *
+   * @GST_VIDEO_FORMAT_DMA_DRM represent the DMA DRM special format. It's
+   * only used with memory:DMABuf #GstCapsFeatures, where an extra
+   * parameter (drm-format) is required to define the image format and
+   * its memory layout.
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_DMA_DRM,
+
+  /**
+   * GST_VIDEO_FORMAT_MT2110T:
+   *
+   * Mediatek 10bit NV12 little endian with 16x32 tiles in linear order, tile 2
+   * bits.
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_MT2110T,
+
+  /**
+   * GST_VIDEO_FORMAT_MT2110R:
+   *
+   * Mediatek 10bit NV12 little endian with 16x32 tiles in linear order, raster
+   * 2 bits.
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_MT2110R,
+
+  /**
+   * GST_VIDEO_FORMAT_A422:
+   *
+   * planar 4:4:2:2 YUV, 8 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A422,
+
+  /**
+   * GST_VIDEO_FORMAT_A444:
+   *
+   * planar 4:4:4:4 YUV, 8 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A444,
+
+  /**
+   * GST_VIDEO_FORMAT_A444_12LE:
+   *
+   * planar 4:4:4:4 YUV, 12 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A444_12LE,
+
+  /**
+   * GST_VIDEO_FORMAT_A444_12BE:
+   *
+   * planar 4:4:4:4 YUV, 12 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A444_12BE,
+
+  /**
+   * GST_VIDEO_FORMAT_A422_12LE:
+   *
+   * planar 4:4:2:2 YUV, 12 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A422_12LE,
+
+  /**
+   * GST_VIDEO_FORMAT_A422_12BE:
+   *
+   * planar 4:4:2:2 YUV, 12 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A422_12BE,
+
+  /**
+   * GST_VIDEO_FORMAT_A420_12LE:
+   *
+   * planar 4:4:2:0 YUV, 12 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A420_12LE,
+
+  /**
+   * GST_VIDEO_FORMAT_A420_12BE:
+   *
+   * planar 4:4:2:0 YUV, 12 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A420_12BE,
+
+  /**
+   * GST_VIDEO_FORMAT_A444_16LE:
+   *
+   * planar 4:4:4:4 YUV, 16 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A444_16LE,
+
+  /**
+   * GST_VIDEO_FORMAT_A444_16BE:
+   *
+   * planar 4:4:4:4 YUV, 16 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A444_16BE,
+
+  /**
+   * GST_VIDEO_FORMAT_A422_16LE:
+   *
+   * planar 4:4:2:2 YUV, 16 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A422_16LE,
+
+  /**
+   * GST_VIDEO_FORMAT_A422_16BE:
+   *
+   * planar 4:4:2:2 YUV, 16 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A422_16BE,
+
+  /**
+   * GST_VIDEO_FORMAT_A420_16LE:
+   *
+   * planar 4:4:2:0 YUV, 16 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A420_16LE,
+
+  /**
+   * GST_VIDEO_FORMAT_A420_16BE:
+   *
+   * planar 4:4:2:0 YUV, 16 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_A420_16BE,
+
+  /**
+   * GST_VIDEO_FORMAT_GBR_16LE:
+   *
+   * planar 4:4:4 RGB, 16 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_GBR_16LE,
+
+  /**
+   * GST_VIDEO_FORMAT_GBR_16BE:
+   *
+   * planar 4:4:4 RGB, 16 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_GBR_16BE,
+
+  /**
+   * GST_VIDEO_FORMAT_RBGA:
+   *
+   * packed RGB with alpha, 8 bits per channel
+   *
+   * Since: 1.24
+   */
+  GST_VIDEO_FORMAT_RBGA,
 } GstVideoFormat;
 
 #define GST_VIDEO_MAX_PLANES 4
@@ -847,6 +1066,78 @@ gconstpointer  gst_video_format_get_palette          (GstVideoFormat format, gsi
 #endif
 
 /**
+ * GST_VIDEO_FORMATS_ALL_STR:
+ *
+ * Declare all video formats as a string.
+ *
+ * Formats are sorted by decreasing "quality", using these criteria by priority:
+ *   - number of components
+ *   - depth
+ *   - subsampling factor of the width
+ *   - subsampling factor of the height
+ *   - number of planes
+ *   - native endianness preferred
+ *   - pixel stride
+ *   - poffset
+ *   - prefer non-complex formats
+ *   - prefer YUV formats over RGB ones
+ *   - prefer I420 over YV12
+ *   - format name
+ *
+ * Since: 1.24
+ */
+#if G_BYTE_ORDER == G_BIG_ENDIAN
+#define GST_VIDEO_FORMATS_ALL_STR "A444_16BE, A444_16LE, AYUV64, ARGB64, " \
+    "RGBA64_BE, ARGB64_BE, BGRA64_BE, ABGR64_BE, RGBA64_LE, ARGB64_LE, " \
+    "BGRA64_LE, ABGR64_LE, A422_16BE, A422_16LE, A420_16BE, A420_16LE, " \
+    "A444_12BE, GBRA_12BE, A444_12LE, GBRA_12LE, Y412_BE, Y412_LE, A422_12BE, " \
+    "A422_12LE, A420_12BE, A420_12LE, A444_10BE, GBRA_10BE, A444_10LE, " \
+    "GBRA_10LE, A422_10BE, A422_10LE, A420_10BE, A420_10LE, Y410, BGR10A2_LE, " \
+    "RGB10A2_LE, A444, GBRA, AYUV, VUYA, RGBA, RBGA, ARGB, BGRA, ABGR, A422, " \
+    "A420, AV12, Y444_16BE, GBR_16BE, Y444_16LE, GBR_16LE, v216, P016_BE, " \
+    "P016_LE, Y444_12BE, GBR_12BE, Y444_12LE, GBR_12LE, I422_12BE, I422_12LE, " \
+    "Y212_BE, Y212_LE, I420_12BE, I420_12LE, P012_BE, P012_LE, Y444_10BE, " \
+    "GBR_10BE, Y444_10LE, GBR_10LE, r210, I422_10BE, I422_10LE, NV16_10LE32, " \
+    "Y210, UYVP, v210, I420_10BE, I420_10LE, P010_10BE, MT2110R, MT2110T, " \
+    "NV12_10BE_8L128, NV12_10LE40_4L4, P010_10LE, NV12_10LE40, NV12_10LE32, " \
+    "Y444, BGRP, GBR, RGBP, NV24, v308, IYU2, RGBx, xRGB, BGRx, xBGR, RGB, " \
+    "BGR, Y42B, NV16, NV61, YUY2, YVYU, UYVY, VYUY, I420, YV12, NV12, NV21, " \
+    "NV12_16L32S, NV12_32L32, NV12_4L4, NV12_64Z32, NV12_8L128, Y41B, IYU1, " \
+    "YUV9, YVU9, BGR16, RGB16, BGR15, RGB15, RGB8P, GRAY16_BE, GRAY16_LE, " \
+    "GRAY10_LE32, GRAY8"
+#elif G_BYTE_ORDER == G_LITTLE_ENDIAN
+#define GST_VIDEO_FORMATS_ALL_STR "A444_16LE, A444_16BE, AYUV64, RGBA64_LE, " \
+    "ARGB64, ARGB64_LE, BGRA64_LE, ABGR64_LE, RGBA64_BE, ARGB64_BE, BGRA64_BE, " \
+    "ABGR64_BE, A422_16LE, A422_16BE, A420_16LE, A420_16BE, A444_12LE, " \
+    "GBRA_12LE, A444_12BE, GBRA_12BE, Y412_LE, Y412_BE, A422_12LE, A422_12BE, " \
+    "A420_12LE, A420_12BE, A444_10LE, GBRA_10LE, A444_10BE, GBRA_10BE, " \
+    "A422_10LE, A422_10BE, A420_10LE, A420_10BE, BGR10A2_LE, RGB10A2_LE, Y410, " \
+    "A444, GBRA, AYUV, VUYA, RGBA, RBGA, ARGB, BGRA, ABGR, A422, A420, AV12, " \
+    "Y444_16LE, GBR_16LE, Y444_16BE, GBR_16BE, v216, P016_LE, P016_BE, " \
+    "Y444_12LE, GBR_12LE, Y444_12BE, GBR_12BE, I422_12LE, I422_12BE, Y212_LE, " \
+    "Y212_BE, I420_12LE, I420_12BE, P012_LE, P012_BE, Y444_10LE, GBR_10LE, " \
+    "Y444_10BE, GBR_10BE, r210, I422_10LE, I422_10BE, NV16_10LE32, Y210, UYVP, " \
+    "v210, I420_10LE, I420_10BE, P010_10LE, NV12_10LE40, NV12_10LE32, " \
+    "P010_10BE, MT2110R, MT2110T, NV12_10BE_8L128, NV12_10LE40_4L4, Y444, " \
+    "BGRP, GBR, RGBP, NV24, v308, IYU2, RGBx, xRGB, BGRx, xBGR, RGB, BGR, " \
+    "Y42B, NV16, NV61, YUY2, YVYU, UYVY, VYUY, I420, YV12, NV12, NV21, " \
+    "NV12_16L32S, NV12_32L32, NV12_4L4, NV12_64Z32, NV12_8L128, Y41B, IYU1, " \
+    "YUV9, YVU9, BGR16, RGB16, BGR15, RGB15, RGB8P, GRAY16_LE, GRAY16_BE, " \
+    "GRAY10_LE32, GRAY8"
+#endif
+
+/**
+ * GST_VIDEO_FORMATS_ANY_STR:
+ *
+ * This is similar to %GST_VIDEO_FORMATS_ALL_STR but includes formats like
+ * DMA_DRM for which no software converter exists. This should be used for
+ * passthrough template caps.
+ *
+ * Since: 1.24
+ */
+#define GST_VIDEO_FORMATS_ANY_STR "DMA_DRM, " GST_VIDEO_FORMATS_ALL_STR
+
+/**
  * GST_VIDEO_FORMATS_ALL:
  *
  * List of all video formats, for use in template caps strings.
@@ -865,36 +1156,24 @@ gconstpointer  gst_video_format_get_palette          (GstVideoFormat format, gsi
  *   - prefer I420 over YV12
  *   - format name
  */
-#if G_BYTE_ORDER == G_BIG_ENDIAN
-#define GST_VIDEO_FORMATS_ALL "{ ABGR64_BE, BGRA64_BE, AYUV64, ARGB64_BE, ARGB64, " \
-    "RGBA64_BE, ABGR64_LE, BGRA64_LE, ARGB64_LE, RGBA64_LE, GBRA_12BE, GBRA_12LE, Y412_BE, " \
-    "Y412_LE, A444_10BE, GBRA_10BE, A444_10LE, GBRA_10LE, A422_10BE, A422_10LE, " \
-    "A420_10BE, A420_10LE, Y410, RGB10A2_LE, BGR10A2_LE, GBRA, ABGR, VUYA, BGRA, " \
-    "AYUV, ARGB, RGBA, A420, AV12, Y444_16BE, Y444_16LE, v216, P016_BE, P016_LE, Y444_12BE, " \
-    "GBR_12BE, Y444_12LE, GBR_12LE, I422_12BE, I422_12LE, Y212_BE, Y212_LE, I420_12BE, " \
-    "I420_12LE, P012_BE, P012_LE, Y444_10BE, GBR_10BE, Y444_10LE, GBR_10LE, r210, " \
-    "I422_10BE, I422_10LE, NV16_10LE32, Y210, v210, UYVP, I420_10BE, I420_10LE, " \
-    "P010_10BE, P010_10LE, NV12_10LE32, NV12_10LE40, NV12_10BE_8L128, Y444, RGBP, GBR, BGRP, NV24, xBGR, BGRx, " \
-    "xRGB, RGBx, BGR, IYU2, v308, RGB, Y42B, NV61, NV16, VYUY, UYVY, YVYU, YUY2, I420, " \
-    "YV12, NV21, NV12, NV12_8L128, NV12_64Z32, NV12_4L4, NV12_32L32, NV12_16L32S, Y41B, IYU1, YVU9, YUV9, RGB16, " \
-    "BGR16, RGB15, BGR15, RGB8P, GRAY16_BE, GRAY16_LE, GRAY10_LE32, GRAY8 }"
-#elif G_BYTE_ORDER == G_LITTLE_ENDIAN
-#define GST_VIDEO_FORMATS_ALL "{ ABGR64_LE, BGRA64_LE, AYUV64, ARGB64_LE, ARGB64, " \
-    "RGBA64_LE, ABGR64_BE, BGRA64_BE, ARGB64_BE, RGBA64_BE, GBRA_12LE, GBRA_12BE, Y412_LE, " \
-    "Y412_BE, A444_10LE, GBRA_10LE, A444_10BE, GBRA_10BE, A422_10LE, A422_10BE, " \
-    "A420_10LE, A420_10BE, RGB10A2_LE, BGR10A2_LE, Y410, GBRA, ABGR, VUYA, BGRA, " \
-    "AYUV, ARGB, RGBA, A420, AV12, Y444_16LE, Y444_16BE, v216, P016_LE, P016_BE, Y444_12LE, " \
-    "GBR_12LE, Y444_12BE, GBR_12BE, I422_12LE, I422_12BE, Y212_LE, Y212_BE, I420_12LE, " \
-    "I420_12BE, P012_LE, P012_BE, Y444_10LE, GBR_10LE, Y444_10BE, GBR_10BE, r210, " \
-    "I422_10LE, I422_10BE, NV16_10LE32, Y210, v210, UYVP, I420_10LE, I420_10BE, " \
-    "P010_10LE, NV12_10LE32, NV12_10LE40, P010_10BE, NV12_10BE_8L128, Y444, RGBP, GBR, BGRP, NV24, xBGR, BGRx, " \
-    "xRGB, RGBx, BGR, IYU2, v308, RGB, Y42B, NV61, NV16, VYUY, UYVY, YVYU, YUY2, I420, " \
-    "YV12, NV21, NV12, NV12_8L128, NV12_64Z32, NV12_4L4, NV12_32L32, NV12_16L32S, Y41B, IYU1, YVU9, YUV9, RGB16, " \
-    "BGR16, RGB15, BGR15, RGB8P, GRAY16_LE, GRAY16_BE, GRAY10_LE32, GRAY8 }"
-#endif
+#define GST_VIDEO_FORMATS_ALL "{ " GST_VIDEO_FORMATS_ALL_STR " }"
+
+/**
+ * GST_VIDEO_FORMATS_ANY:
+ *
+ * This is similar to %GST_VIDEO_FORMATS_ALL but includes formats like DMA_DRM
+ * that do not have a software converter. This should be used for passthrough
+ * template caps.
+ *
+ * Since: 1.24
+ */
+#define GST_VIDEO_FORMATS_ANY "{ " GST_VIDEO_FORMATS_ANY_STR " }"
 
 GST_VIDEO_API
 const GstVideoFormat * gst_video_formats_raw (guint * len);
+
+GST_VIDEO_API
+const GstVideoFormat * gst_video_formats_any (guint * len);
 
 /**
  * GST_VIDEO_CAPS_MAKE:

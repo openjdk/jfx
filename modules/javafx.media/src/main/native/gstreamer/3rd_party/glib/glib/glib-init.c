@@ -26,6 +26,7 @@
 #include "gtypes.h"
 #include "gutils.h"     /* for GDebugKey */
 #include "gconstructor.h"
+#include "gconstructorprivate.h"
 #include "gmem.h"       /* for g_mem_gc_friendly */
 
 #include <string.h>
@@ -452,32 +453,60 @@ DllMain (HINSTANCE hinstDLL,
   return TRUE;
 }
 
-#elif defined(G_HAS_CONSTRUCTORS) /* && G_PLATFORM_WIN32 && GLIB_STATIC_COMPILATION */
-#ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
-#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(glib_init_ctor)
-#endif
-#ifdef G_DEFINE_DESTRUCTOR_NEEDS_PRAGMA
-#pragma G_DEFINE_DESTRUCTOR_PRAGMA_ARGS(glib_init_dtor)
+#else
+
+#ifndef G_HAS_CONSTRUCTORS
+#error static compilation on Windows requires constructor support
 #endif
 
-G_DEFINE_CONSTRUCTOR (glib_init_ctor)
+#ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
+#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(glib_priv_constructor)
+#endif
+
+static gboolean tls_callback_invoked;
+
+G_DEFINE_CONSTRUCTOR (glib_priv_constructor)
 
 static void
-glib_init_ctor (void)
+glib_priv_constructor (void)
 {
   glib_win32_init ();
+
+  if (!tls_callback_invoked)
+    g_critical ("TLS callback not invoked");
 }
 
-G_DEFINE_DESTRUCTOR (glib_init_dtor)
+#ifndef G_HAS_TLS_CALLBACKS
+#error static compilation on Windows requires TLS callbacks support
+#endif
 
-static void
-glib_init_dtor (void)
+G_DEFINE_TLS_CALLBACK (glib_priv_tls_callback)
+
+static void NTAPI
+glib_priv_tls_callback (LPVOID hinstance,
+                        DWORD  reason,
+                        LPVOID reserved)
 {
-  glib_win32_deinit (FALSE);
+  switch (reason)
+    {
+    case DLL_PROCESS_ATTACH:
+      glib_dll = hinstance;
+      tls_callback_invoked = TRUE;
+      break;
+    case DLL_THREAD_DETACH:
+#ifdef THREADS_WIN32
+      g_thread_win32_thread_detach ();
+#endif
+      break;
+    case DLL_PROCESS_DETACH:
+      glib_win32_deinit (reserved == NULL);
+      break;
+
+    default:
+      break;
+    }
 }
 
-#else /* G_PLATFORM_WIN32 && GLIB_STATIC_COMPILATION && !G_HAS_CONSTRUCTORS */
-#error Your platform/compiler is missing constructor support
 #endif /* GLIB_STATIC_COMPILATION */
 
 #elif defined(G_HAS_CONSTRUCTORS) /* && !G_PLATFORM_WIN32 */

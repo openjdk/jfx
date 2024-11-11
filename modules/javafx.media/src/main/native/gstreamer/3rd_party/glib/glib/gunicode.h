@@ -204,10 +204,15 @@ typedef enum
  * @G_UNICODE_BREAK_EMOJI_BASE: Emoji Base (EB). Since: 2.50
  * @G_UNICODE_BREAK_EMOJI_MODIFIER: Emoji Modifier (EM). Since: 2.50
  * @G_UNICODE_BREAK_ZERO_WIDTH_JOINER: Zero Width Joiner (ZWJ). Since: 2.50
+ * @G_UNICODE_BREAK_AKSARA: Aksara (AK). Since: 2.80
+ * @G_UNICODE_BREAK_AKSARA_PRE_BASE (AP). Since: 2.80
+ * @G_UNICODE_BREAK_AKSARA_START (AS). Since: 2.80
+ * @G_UNICODE_BREAK_VIRAMA_FINAL (VF). Since: 2.80
+ * @G_UNICODE_BREAK_VIRAMA (VI). Since: 2.80
  *
  * These are the possible line break classifications.
  *
- * Since new unicode versions may add new types here, applications should be ready
+ * Since new Unicode versions may add new types here, applications should be ready
  * to handle unknown values. They may be regarded as %G_UNICODE_BREAK_UNKNOWN.
  *
  * See [Unicode Line Breaking Algorithm](https://www.unicode.org/reports/tr14/).
@@ -257,7 +262,12 @@ typedef enum
   G_UNICODE_BREAK_REGIONAL_INDICATOR,
   G_UNICODE_BREAK_EMOJI_BASE,
   G_UNICODE_BREAK_EMOJI_MODIFIER,
-  G_UNICODE_BREAK_ZERO_WIDTH_JOINER
+  G_UNICODE_BREAK_ZERO_WIDTH_JOINER,
+  G_UNICODE_BREAK_AKSARA,
+  G_UNICODE_BREAK_AKSARA_PRE_BASE,
+  G_UNICODE_BREAK_AKSARA_START,
+  G_UNICODE_BREAK_VIRAMA_FINAL,
+  G_UNICODE_BREAK_VIRAMA
 } GUnicodeBreakType;
 
 /**

@@ -41,7 +41,7 @@ public abstract class XYChartPageBase extends TestPaneBase {
 
     public abstract XYChart<?, Number> chart();
 
-    protected static final Random rnd = new Random();
+    protected static final Random random = new Random();
     private int seq;
 
     public XYChartPageBase(String name) {
@@ -60,12 +60,16 @@ public abstract class XYChartPageBase extends TestPaneBase {
         return a;
     }
 
+    protected double randomValue() {
+        return random.nextInt(50) - 25;
+    }
+
     protected Series<Number, Number> createNumberSeries() {
         String name = "S" + (seq++);
         XYChart.Series s = new XYChart.Series();
         s.setName(name);
         for (int i = 0; i < 12; i++) {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             s.getData().add(new XYChart.Data(i, v));
         }
         return s;
@@ -76,7 +80,7 @@ public abstract class XYChartPageBase extends TestPaneBase {
         XYChart.Series s = new XYChart.Series();
         s.setName(name);
         for (int i = 0; i < 12; i++) {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             s.getData().add(new XYChart.Data("c" + i, v));
         }
         return s;
@@ -116,17 +120,17 @@ public abstract class XYChartPageBase extends TestPaneBase {
         }
         XYChart.Series s = list.get(0);
         int sz = s.getData().size();
-        boolean atIndexZero = rnd.nextBoolean();
+        boolean atIndexZero = random.nextBoolean();
 
         if (chart() instanceof BarChart b) {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             add(s.getData(), atIndexZero, new XYChart.Data("c" + sz, v));
         } else if (chart() instanceof StackedBarChart b) {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             add(s.getData(), atIndexZero, new XYChart.Data("c" + sz, v));
         } else {
-            int i = rnd.nextInt(100);
-            int v = rnd.nextInt(50);
+            int i = random.nextInt(100);
+            double v = randomValue();
             add(s.getData(), atIndexZero, new XYChart.Data(i, v));
         }
     }
@@ -137,7 +141,7 @@ public abstract class XYChartPageBase extends TestPaneBase {
             XYChart.Series s = data.get(0);
             int sz = s.getData().size();
             if (sz > 0) {
-                int ix = rnd.nextBoolean() ? 0 : sz - 1;
+                int ix = random.nextBoolean() ? 0 : sz - 1;
                 s.getData().remove(ix);
             }
         }
@@ -163,13 +167,13 @@ public abstract class XYChartPageBase extends TestPaneBase {
         }
 
         if (chart() instanceof BarChart b) {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             ((XYChart.Data)s.getData().get(1)).setXValue("c" + v);
         } else if (chart() instanceof StackedBarChart b) {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             ((XYChart.Data)s.getData().get(1)).setXValue("c" + v);
         } else {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             ((XYChart.Data)s.getData().get(1)).setXValue(v);
         }
     }
@@ -186,13 +190,13 @@ public abstract class XYChartPageBase extends TestPaneBase {
         }
 
         if (chart() instanceof BarChart b) {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             ((XYChart.Data)s.getData().get(1)).setYValue(v);
         } else if (chart() instanceof StackedBarChart b) {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             ((XYChart.Data)s.getData().get(1)).setYValue(v);
         } else {
-            int v = rnd.nextInt(50);
+            double v = randomValue();
             ((XYChart.Data)s.getData().get(1)).setYValue(v);
         }
     }

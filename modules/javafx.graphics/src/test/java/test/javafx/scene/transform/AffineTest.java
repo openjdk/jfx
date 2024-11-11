@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,10 +29,6 @@ import javafx.beans.Observable;
 import static test.javafx.scene.transform.TransformTest.assertTx;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Assert;
-import org.junit.Test;
-import static org.junit.Assert.*;
-
 import test.com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
@@ -43,6 +39,13 @@ import javafx.scene.transform.Affine;
 import javafx.scene.transform.MatrixType;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AffineTest {
 
@@ -73,9 +76,11 @@ public class AffineTest {
         TransformHelper.assertMatrix(a, r);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testTransformConstructorNull() {
-        Affine a = new Affine(null);
+        assertThrows(NullPointerException.class, () -> {
+            Affine a = new Affine(null);
+        });
     }
 
     @Test
@@ -128,69 +133,95 @@ public class AffineTest {
                10, 11, 12, 13);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testArrayConstructorNullMatrix() {
-        Affine a = new Affine(null, MatrixType.MT_2D_2x3, 6);
+        assertThrows(NullPointerException.class, () -> {
+            Affine a = new Affine(null, MatrixType.MT_2D_2x3, 6);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testArrayConstructorNullType() {
-        Affine a = new Affine(array2d, null, 6);
+        assertThrows(NullPointerException.class, () -> {
+            Affine a = new Affine(array2d, null, 6);
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
+    @Test
     public void testArrayConstructor2x3ShortArray() {
-        Affine a = new Affine(array2d, MatrixType.MT_2D_2x3, 6);
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Affine a = new Affine(array2d, MatrixType.MT_2D_2x3, 6);
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
+    @Test
     public void testArrayConstructor3x3ShortArray() {
-        Affine a = new Affine(array2d, MatrixType.MT_2D_3x3, 4);
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Affine a = new Affine(array2d, MatrixType.MT_2D_3x3, 4);
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
+    @Test
     public void testArrayConstructor3x4ShortArray() {
-        Affine a = new Affine(array3d, MatrixType.MT_3D_3x4, 7);
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Affine a = new Affine(array3d, MatrixType.MT_3D_3x4, 7);
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
+    @Test
     public void testArrayConstructor4x4ShortArray() {
-        Affine a = new Affine(array3d, MatrixType.MT_3D_4x4, 4);
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Affine a = new Affine(array3d, MatrixType.MT_3D_4x4, 4);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArrayConstructor3x3NotAffineX() {
-        Affine a = new Affine(arrayZeros, MatrixType.MT_2D_3x3, 10);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(arrayZeros, MatrixType.MT_2D_3x3, 10);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArrayConstructor3x3NotAffineY() {
-        Affine a = new Affine(arrayZeros, MatrixType.MT_2D_3x3, 9);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(arrayZeros, MatrixType.MT_2D_3x3, 9);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArrayConstructor3x3NotAffineT() {
-        Affine a = new Affine(arrayZeros, MatrixType.MT_2D_3x3, 0);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(arrayZeros, MatrixType.MT_2D_3x3, 0);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArrayConstructor4x4NotAffineX() {
-        Affine a = new Affine(arrayZeros, MatrixType.MT_3D_4x4, 4);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(arrayZeros, MatrixType.MT_3D_4x4, 4);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArrayConstructor4x4NotAffineY() {
-        Affine a = new Affine(arrayZeros, MatrixType.MT_3D_4x4, 3);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(arrayZeros, MatrixType.MT_3D_4x4, 3);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArrayConstructor4x4NotAffineZ() {
-        Affine a = new Affine(arrayZeros, MatrixType.MT_3D_4x4, 2);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(arrayZeros, MatrixType.MT_3D_4x4, 2);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArrayConstructor4x4NotAffineT() {
-        Affine a = new Affine(arrayZeros, MatrixType.MT_3D_4x4, 0);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(arrayZeros, MatrixType.MT_3D_4x4, 0);
+        });
     }
 
     @Test
@@ -202,10 +233,12 @@ public class AffineTest {
         TransformHelper.assertMatrix(a, r);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testTransformSetToTransformNull() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        a.setToTransform(null);
+        assertThrows(NullPointerException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            a.setToTransform(null);
+        });
     }
 
     @Test
@@ -264,170 +297,196 @@ public class AffineTest {
                10, 11, 12, 13);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testArraySetToTransformNullMatrix() {
-        Affine a = new Affine();
-        a.setToTransform(new double[] { 1, 2, 3 }, null, 0);
+        assertThrows(NullPointerException.class, () -> {
+            Affine a = new Affine();
+            a.setToTransform(new double[] { 1, 2, 3 }, null, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testArraySetToTransformNullType() {
-        Affine a = new Affine();
-        a.setToTransform(null, MatrixType.MT_2D_2x3, 0);
+        assertThrows(NullPointerException.class, () -> {
+            Affine a = new Affine();
+            a.setToTransform(null, MatrixType.MT_2D_2x3, 0);
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
+    @Test
     public void testArraySetToTransform2x3ShortArray() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(array2d, MatrixType.MT_2D_2x3, 6);
-        } catch(IndexOutOfBoundsException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(array2d, MatrixType.MT_2D_2x3, 6);
+            } catch(IndexOutOfBoundsException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
+    @Test
     public void testArraySetToTransform3x3ShortArray() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(array2d, MatrixType.MT_2D_3x3, 4);
-        } catch(IndexOutOfBoundsException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(array2d, MatrixType.MT_2D_3x3, 4);
+            } catch(IndexOutOfBoundsException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
+    @Test
     public void testArraySetToTransform3x4ShortArray() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(array3d, MatrixType.MT_3D_3x4, 7);
-        } catch(IndexOutOfBoundsException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(array3d, MatrixType.MT_3D_3x4, 7);
+            } catch(IndexOutOfBoundsException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
+    @Test
     public void testArraySetToTransform4x4ShortArray() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(array3d, MatrixType.MT_3D_4x4, 4);
-        } catch(IndexOutOfBoundsException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(array3d, MatrixType.MT_3D_4x4, 4);
+            } catch(IndexOutOfBoundsException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArraySetToTransform3x3NotAffineX() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(arrayZeros, MatrixType.MT_2D_3x3, 10);
-        } catch(IllegalArgumentException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(arrayZeros, MatrixType.MT_2D_3x3, 10);
+            } catch(IllegalArgumentException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArraySetToTransform3x3NotAffineY() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(arrayZeros, MatrixType.MT_2D_3x3, 9);
-        } catch(IllegalArgumentException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(arrayZeros, MatrixType.MT_2D_3x3, 9);
+            } catch(IllegalArgumentException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArraySetToTransform3x3NotAffineT() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(arrayZeros, MatrixType.MT_2D_3x3, 0);
-        } catch(IllegalArgumentException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(arrayZeros, MatrixType.MT_2D_3x3, 0);
+            } catch(IllegalArgumentException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArraySetToTransform4x4NotAffineX() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(arrayZeros, MatrixType.MT_3D_4x4, 4);
-        } catch(IllegalArgumentException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(arrayZeros, MatrixType.MT_3D_4x4, 4);
+            } catch(IllegalArgumentException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArraySetToTransform4x4NotAffineY() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(arrayZeros, MatrixType.MT_3D_4x4, 3);
-        } catch(IllegalArgumentException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(arrayZeros, MatrixType.MT_3D_4x4, 3);
+            } catch(IllegalArgumentException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArraySetToTransform4x4NotAffineZ() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(arrayZeros, MatrixType.MT_3D_4x4, 2);
-        } catch(IllegalArgumentException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(arrayZeros, MatrixType.MT_3D_4x4, 2);
+            } catch(IllegalArgumentException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testArraySetToTransform4x4NotAffineT() {
-        Affine a = new Affine(1, 2, 3, 6, 7, 128);
-        try {
-            a.setToTransform(arrayZeros, MatrixType.MT_3D_4x4, 0);
-        } catch(IllegalArgumentException e) {
-            TransformHelper.assertMatrix(a,
-                    1, 2, 0, 3,
-                    6, 7, 0, 128,
-                    0, 0, 1, 0);
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            Affine a = new Affine(1, 2, 3, 6, 7, 128);
+            try {
+                a.setToTransform(arrayZeros, MatrixType.MT_3D_4x4, 0);
+            } catch(IllegalArgumentException e) {
+                TransformHelper.assertMatrix(a,
+                        1, 2, 0, 3,
+                        6, 7, 0, 128,
+                        0, 0, 1, 0);
+                throw e;
+            }
+        });
     }
 
     private int listenerCounter;
@@ -574,15 +633,15 @@ public class AffineTest {
             setTx(55);
             setTy(66);
         }};
-        Assert.assertEquals(1.0f, trans.getMzz(), 1e-50);
+        assertEquals(1.0f, trans.getMzz(), 1e-50);
 
         final Rectangle n = new Rectangle();
         n.getTransforms().add(trans);
 
         final Affine2D affine2D = new Affine2D(11, 22, 33, 44, 55, 66);
-        Assert.assertEquals(1, affine2D.getMzz(), 1e-50);
+        assertEquals(1, affine2D.getMzz(), 1e-50);
         final Affine3D affine3D = new Affine3D(affine2D);
-        Assert.assertEquals(1, affine3D.getMzz(), 1e-50);
+        assertEquals(1, affine3D.getMzz(), 1e-50);
         assertTx(n, affine3D);
 
         trans.setMxx(10);
@@ -604,7 +663,8 @@ public class AffineTest {
         assertTx(n, new Affine2D(10, 21, 32, 43, 54, 65));
     }
 
-    @Test public void testGetters() {
+    @Test
+    public void testGetters() {
         final Affine trans = new Affine(
                 0.5,  2,  3,  4,
                 5,  6,  7,  8,
@@ -633,7 +693,8 @@ public class AffineTest {
                  4,  3,  2, 1);
     }
 
-    @Test public void testConstructingIdentityTransform() {
+    @Test
+    public void testConstructingIdentityTransform() {
         final Affine trans = new Affine(
                 1, 0, 0, 0,
                 0, 1, 0, 0,
@@ -663,7 +724,8 @@ public class AffineTest {
                  4,  3,  2, 1);
     }
 
-    @Test public void testSettingTransform() {
+    @Test
+    public void testSettingTransform() {
         final Affine trans = new Affine(
                 1,  2,  3,  4,
                 5,  6,  7,  8,
@@ -705,7 +767,8 @@ public class AffineTest {
         assertEquals(3.0, copy.getMxz(), 0.0001);
     }
 
-    @Test public void testToString() {
+    @Test
+    public void testToString() {
         final Affine trans = new Affine(
                 1,  2,  3,  4,
                 5,  6,  7,  8,
@@ -717,7 +780,8 @@ public class AffineTest {
         assertFalse(s.isEmpty());
     }
 
-    @Test public void testBoundPropertySynced() throws Exception {
+    @Test
+    public void testBoundPropertySynced() throws Exception {
 
         TransformTest.checkDoublePropertySynced(createTransform(), "mxx" , 2.0);
         TransformTest.checkDoublePropertySynced(createTransform(), "myx" , 2.0);

@@ -27,19 +27,19 @@ package test.javafx.beans.property;
 
 import javafx.beans.property.StringProperty;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.sun.javafx.property.PropertyReference;
 import javafx.beans.property.SimpleStringProperty;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  *
  */
 public class PropertyReferenceWithInterfacesTest {
 
-    @Before public void setUp() {
+    @BeforeEach public void setUp() {
 
     }
 

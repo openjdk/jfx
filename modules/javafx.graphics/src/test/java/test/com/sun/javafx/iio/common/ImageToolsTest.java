@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,10 @@
 package test.com.sun.javafx.iio.common;
 
 import com.sun.javafx.iio.common.ImageTools;
-import static org.junit.Assert.*;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 
@@ -92,19 +94,19 @@ public class ImageToolsTest {
 
         // Result should always return dimensions in the range of 0 < x <= size,
         // and one dimension must be equal to one of the target dimensions.
-        assertTrue(msg, x <= tw);
-        assertTrue(msg, y <= th);
-        assertTrue(msg, x > 0);
-        assertTrue(msg, y > 0);
-        assertTrue(msg, x == tw || y == th);
+        assertTrue(x <= tw, msg);
+        assertTrue(y <= th, msg);
+        assertTrue(x > 0, msg);
+        assertTrue(y > 0, msg);
+        assertTrue(x == tw || y == th, msg);
 
         // Check the non-maxed dimension to see if it is within 1 pixel of the expected value
         // when calculated with the original aspect ratio:
         if (x != tw) {
-            assertTrue(msg, x == Math.floor(th * originalAspect) || x == Math.ceil(th * originalAspect));
+            assertTrue(x == Math.floor(th * originalAspect) || x == Math.ceil(th * originalAspect), msg);
         }
         if (y != th) {
-            assertTrue(msg, y == Math.floor(tw / originalAspect) || y == Math.ceil(tw / originalAspect));
+            assertTrue(y == Math.floor(tw / originalAspect) || y == Math.ceil(tw / originalAspect), msg);
         }
     }
 }

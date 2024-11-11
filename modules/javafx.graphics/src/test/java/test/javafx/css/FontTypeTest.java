@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,8 +40,8 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 
-import static org.junit.Assert.*;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 public class FontTypeTest {
@@ -50,8 +50,8 @@ public class FontTypeTest {
     }
 
     void checkFont(Font expResult, Font result) {
-        assertEquals("family", expResult.getFamily(), result.getFamily());
-        assertEquals("size", expResult.getSize(), result.getSize(), 0.001);
+        assertEquals(expResult.getFamily(), result.getFamily(), "family");
+        assertEquals(expResult.getSize(), result.getSize(), 0.001, "size");
         // TODO: how to check for weight and posture?
     }
     /**

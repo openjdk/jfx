@@ -33,10 +33,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class IntegerPropertyTest {
 
@@ -47,7 +47,7 @@ public class IntegerPropertyTest {
     private static final int VALUE_2 = -13;
     private static final int DEFAULT = 0;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         ErrorLoggingUtiltity.reset();
     }

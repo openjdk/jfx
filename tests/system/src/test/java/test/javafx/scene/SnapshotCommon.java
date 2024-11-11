@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,13 @@
 
 package test.javafx.scene;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.util.Util.TIMEOUT;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -45,8 +44,6 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Callback;
-
-import junit.framework.AssertionFailedError;
 import test.util.Util;
 
 /**
@@ -146,24 +143,14 @@ public class SnapshotCommon {
 
         try {
             if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for snapshot callback");
+                fail("Timeout waiting for snapshot callback");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
 
         if (testError[0] != null) {
-            if (testError[0] instanceof Error) {
-                throw (Error)testError[0];
-            } else if (testError[0] instanceof RuntimeException) {
-                throw (RuntimeException)testError[0];
-            } else {
-                AssertionFailedError err = new AssertionFailedError("Unknown execution exception");
-                err.initCause(testError[0].getCause());
-                throw err;
-            }
+            fail(testError[0]);
         }
     }
 
@@ -198,25 +185,14 @@ public class SnapshotCommon {
 
         try {
             if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for snapshot callback");
+                fail("Timeout waiting for snapshot callback");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
 
         if (testError[0] != null) {
-            if (testError[0] instanceof Error) {
-                throw (Error)testError[0];
-            } else if (testError[0] instanceof RuntimeException) {
-                throw (RuntimeException)testError[0];
-            } else {
-                AssertionFailedError err = new AssertionFailedError("Unknown execution exception");
-                err.initCause(testError[0].getCause());
-                throw err;
-            }
+            fail(testError[0]);
         }
     }
-
 }

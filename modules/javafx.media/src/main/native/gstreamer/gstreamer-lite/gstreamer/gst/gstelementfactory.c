@@ -163,7 +163,7 @@ gst_element_factory_cleanup (GstElementFactory * factory)
     GstStaticPadTemplate *templ = item->data;
 
     gst_static_caps_cleanup (&templ->static_caps);
-    g_slice_free (GstStaticPadTemplate, templ);
+    g_free (templ);
   }
   g_list_free (factory->staticpadtemplates);
   factory->staticpadtemplates = NULL;
@@ -257,7 +257,7 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
     GstStaticPadTemplate *newt;
     gchar *caps_string = gst_caps_to_string (templ->caps);
 
-    newt = g_slice_new (GstStaticPadTemplate);
+    newt = g_new (GstStaticPadTemplate, 1);
     newt->name_template = g_intern_string (templ->name_template);
     newt->direction = templ->direction;
     newt->presence = templ->presence;
@@ -1217,6 +1217,10 @@ gst_element_factory_list_is_type (GstElementFactory * factory,
   /* FIXME : We're actually parsing two Classes here... */
   if (!res && (type & GST_ELEMENT_FACTORY_TYPE_PARSER))
     res = ((strstr (klass, "Parser") != NULL)
+        && (strstr (klass, "Codec") != NULL));
+
+  if (!res && (type & GST_ELEMENT_FACTORY_TYPE_TIMESTAMPER))
+    res = ((strstr (klass, "Timestamper") != NULL)
         && (strstr (klass, "Codec") != NULL));
 
   if (!res && (type & GST_ELEMENT_FACTORY_TYPE_DEPAYLOADER))

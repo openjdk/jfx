@@ -24,9 +24,9 @@
  */
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.scene.control.SelectionMode;
@@ -34,8 +34,8 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
@@ -45,7 +45,7 @@ public class TableViewRowTest {
 
     StageLoader stageLoader;
 
-    @After
+    @AfterEach
     public void after() {
         if (stageLoader != null) {
             stageLoader.dispose();

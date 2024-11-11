@@ -25,11 +25,11 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -41,9 +41,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 
@@ -54,7 +54,8 @@ public class ColorPickerTest {
     private Stage stage;
     private VBox root;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tk = Toolkit.getToolkit();
 
         assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
@@ -69,7 +70,7 @@ public class ColorPickerTest {
         tk.firePulse();
     }
 
-    @After
+    @AfterEach
     public void after() {
         stage.hide();
     }

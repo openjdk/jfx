@@ -73,7 +73,7 @@ public:
     void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
     void didUpdateComposition() override { }
 
-    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const String& originIdentifier) override;
     void discardedComposition(const Document&) override;
     void canceledComposition() override;
 

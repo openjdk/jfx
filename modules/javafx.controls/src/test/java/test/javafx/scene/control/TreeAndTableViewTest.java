@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,6 @@ package test.javafx.scene.control;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.junit.Test;
-import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.css.PseudoClass;
 import javafx.event.EventTarget;
@@ -44,6 +42,8 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.input.MouseEvent;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;

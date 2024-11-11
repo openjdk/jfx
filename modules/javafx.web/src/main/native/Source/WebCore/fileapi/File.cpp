@@ -135,12 +135,7 @@ void File::computeNameAndContentType(const String& path, const String& nameOverr
     }
 #endif
 
-#if !PLATFORM(JAVA)
     effectiveName = nameOverride.isEmpty() ? FileSystem::pathFileName(path) : nameOverride;
-#else
-    // Use simple path not from std::FileSystem
-    effectiveName = nameOverride.isEmpty() ? path : nameOverride;
-#endif
     size_t index = effectiveName.reverseFind('.');
     if (index != notFound) {
         callOnMainThreadAndWait([&effectiveContentType, &effectiveName, index] {

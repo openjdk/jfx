@@ -223,7 +223,7 @@ _gst_message_free (GstMessage * message)
   memset (message, 0xff, sizeof (GstMessageImpl));
 #endif
 
-  g_slice_free1 (sizeof (GstMessageImpl), message);
+  g_free (message);
 }
 
 static void
@@ -240,7 +240,7 @@ _gst_message_copy (GstMessage * message)
       GST_MESSAGE_TYPE_NAME (message),
       GST_OBJECT_NAME (GST_MESSAGE_SRC (message)));
 
-  copy = g_slice_new0 (GstMessageImpl);
+  copy = g_new0 (GstMessageImpl, 1);
 
   gst_message_init (copy, GST_MESSAGE_TYPE (message),
       GST_MESSAGE_SRC (message));
@@ -299,7 +299,7 @@ gst_message_new_custom (GstMessageType type, GstObject * src,
 {
   GstMessageImpl *message;
 
-  message = g_slice_new0 (GstMessageImpl);
+  message = g_new0 (GstMessageImpl, 1);
 
   GST_CAT_LOG (GST_CAT_MESSAGE, "source %s: creating new message %p %s",
       (src ? GST_OBJECT_NAME (src) : "NULL"), message,
@@ -320,7 +320,7 @@ gst_message_new_custom (GstMessageType type, GstObject * src,
   /* ERRORS */
 had_parent:
   {
-    g_slice_free1 (sizeof (GstMessageImpl), message);
+    g_free (message);
     g_warning ("structure is already owned by another object");
     return NULL;
   }

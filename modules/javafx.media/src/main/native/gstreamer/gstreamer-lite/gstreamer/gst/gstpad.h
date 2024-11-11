@@ -1249,6 +1249,34 @@ struct _GstPadClass {
  * when buffers or serialized downstream events are pushed on a pad.
  */
 #define GST_PAD_STREAM_LOCK(pad)        g_rec_mutex_lock(GST_PAD_GET_STREAM_LOCK(pad))
+
+/**
+ * GST_PAD_STREAM_AUTO_LOCK
+ * @pad: a #GstPad
+ * @var: a variable name to be declared
+ *
+ * Declare a #GRecMutexLocker variable with g_autoptr() and lock the pad. The
+ * recursive mutex will be unlocked automatically when leaving the scope.
+ *
+ * ``` c
+ * {
+ *   GST_PAD_STREAM_AUTO_LOCK (pad, locker);
+ *
+ *   gst_pad_push_event(pad, event1);
+ *   if (cond) {
+ *     // No need to unlock
+ *     return;
+ *   }
+ *
+ *   // Unlock before end of scope
+ *   g_clear_pointer (&locker, g_rec_mutex_locker_free);
+ *   gst_pad_push_event(pad, event2);
+ * }
+ * ```
+ * Since: 1.24.0
+ */
+#define GST_PAD_STREAM_AUTO_LOCK(pad, var) g_autoptr(GRecMutexLocker) G_GNUC_UNUSED var = g_rec_mutex_locker_new(GST_PAD_GET_STREAM_LOCK(pad))
+
 /**
  * GST_PAD_STREAM_TRYLOCK:
  * @pad: a #GstPad

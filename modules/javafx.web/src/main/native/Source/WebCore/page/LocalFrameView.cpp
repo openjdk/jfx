@@ -175,7 +175,7 @@ Pagination::Mode paginationModeForRenderStyle(const RenderStyle& style)
 
     // paged-x always corresponds to LeftToRightPaginated or RightToLeftPaginated. If the WritingMode
     // is horizontal, then we use TextDirection to choose between those options. If the WritingMode
-    // is vertical, then the direction of the verticality dictates the choice.
+    // is vertical, then the block flow direction dictates the choice.
     if (overflow == Overflow::PagedX) {
         if ((isHorizontalWritingMode && textDirection == TextDirection::LTR) || blockFlowDirection == BlockFlowDirection::LeftToRight)
             return Pagination::Mode::LeftToRightPaginated;
@@ -183,7 +183,7 @@ Pagination::Mode paginationModeForRenderStyle(const RenderStyle& style)
     }
 
     // paged-y always corresponds to TopToBottomPaginated or BottomToTopPaginated. If the WritingMode
-    // is horizontal, then the direction of the horizontality dictates the choice. If the WritingMode
+    // is horizontal, then the block flow direction dictates the choice. If the WritingMode
     // is vertical, then we use TextDirection to choose between those options.
     if (blockFlowDirection == BlockFlowDirection::TopToBottom || (!isHorizontalWritingMode && textDirection == TextDirection::RTL))
         return Pagination::Mode::TopToBottomPaginated;

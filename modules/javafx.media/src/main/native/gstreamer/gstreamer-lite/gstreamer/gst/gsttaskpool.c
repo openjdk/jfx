@@ -65,7 +65,7 @@ default_func (TaskData * tdata, GstTaskPool * pool)
 
   func = tdata->func;
   user_data = tdata->user_data;
-  g_slice_free (TaskData, tdata);
+  g_free (tdata);
 
   func (user_data);
 }
@@ -102,7 +102,7 @@ default_push (GstTaskPool * pool, GstTaskPoolFunction func,
 {
   TaskData *tdata;
 
-  tdata = g_slice_new (TaskData);
+  tdata = g_new (TaskData, 1);
   tdata->func = func;
   tdata->user_data = user_data;
 
@@ -110,10 +110,9 @@ default_push (GstTaskPool * pool, GstTaskPoolFunction func,
   if (pool->pool)
     g_thread_pool_push (pool->pool, tdata, error);
   else {
-    g_slice_free (TaskData, tdata);
+    g_free (tdata);
     g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
         "No thread pool");
-
   }
   GST_OBJECT_UNLOCK (pool);
 
@@ -349,7 +348,7 @@ shared_task_data_unref (SharedTaskData * tdata)
   if (g_atomic_int_dec_and_test (&tdata->refcount)) {
     g_mutex_clear (&tdata->done_lock);
     g_cond_clear (&tdata->done_cond);
-    g_slice_free (SharedTaskData, tdata);
+    g_free (tdata);
   }
 }
 
@@ -389,7 +388,7 @@ shared_push (GstTaskPool * pool, GstTaskPoolFunction func,
     goto done;
   }
 
-  ret = g_slice_new (SharedTaskData);
+  ret = g_new (SharedTaskData, 1);
 
   ret->done = FALSE;
   ret->func = func;

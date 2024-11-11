@@ -47,7 +47,11 @@
 
 #ifdef G_OS_UNIX
 #include <unistd.h>
+
+#if defined(THREADS_POSIX) && defined(HAVE_PTHREAD_GETAFFINITY_NP)
+#include <pthread.h>
 #endif
+#endif /* G_OS_UNIX */
 
 #ifndef G_OS_WIN32
 #include <sys/time.h>
@@ -61,104 +65,6 @@
 #include "gtestutils.h"
 #include "glib_trace.h"
 #include "gtrace-private.h"
-
-/**
- * SECTION:threads
- * @title: Threads
- * @short_description: portable support for threads, mutexes, locks,
- *     conditions and thread private data
- * @see_also: #GThreadPool, #GAsyncQueue
- *
- * Threads act almost like processes, but unlike processes all threads
- * of one process share the same memory. This is good, as it provides
- * easy communication between the involved threads via this shared
- * memory, and it is bad, because strange things (so called
- * "Heisenbugs") might happen if the program is not carefully designed.
- * In particular, due to the concurrent nature of threads, no
- * assumptions on the order of execution of code running in different
- * threads can be made, unless order is explicitly forced by the
- * programmer through synchronization primitives.
- *
- * The aim of the thread-related functions in GLib is to provide a
- * portable means for writing multi-threaded software. There are
- * primitives for mutexes to protect the access to portions of memory
- * (#GMutex, #GRecMutex and #GRWLock). There is a facility to use
- * individual bits for locks (g_bit_lock()). There are primitives
- * for condition variables to allow synchronization of threads (#GCond).
- * There are primitives for thread-private data - data that every
- * thread has a private instance of (#GPrivate). There are facilities
- * for one-time initialization (#GOnce, g_once_init_enter()). Finally,
- * there are primitives to create and manage threads (#GThread).
- *
- * The GLib threading system used to be initialized with g_thread_init().
- * This is no longer necessary. Since version 2.32, the GLib threading
- * system is automatically initialized at the start of your program,
- * and all thread-creation functions and synchronization primitives
- * are available right away.
- *
- * Note that it is not safe to assume that your program has no threads
- * even if you don't call g_thread_new() yourself. GLib and GIO can
- * and will create threads for their own purposes in some cases, such
- * as when using g_unix_signal_source_new() or when using GDBus.
- *
- * Originally, UNIX did not have threads, and therefore some traditional
- * UNIX APIs are problematic in threaded programs. Some notable examples
- * are
- *
- * - C library functions that return data in statically allocated
- *   buffers, such as strtok() or strerror(). For many of these,
- *   there are thread-safe variants with a _r suffix, or you can
- *   look at corresponding GLib APIs (like g_strsplit() or g_strerror()).
- *
- * - The functions setenv() and unsetenv() manipulate the process
- *   environment in a not thread-safe way, and may interfere with getenv()
- *   calls in other threads. Note that getenv() calls may be hidden behind
- *   other APIs. For example, GNU gettext() calls getenv() under the
- *   covers. In general, it is best to treat the environment as readonly.
- *   If you absolutely have to modify the environment, do it early in
- *   main(), when no other threads are around yet.
- *
- * - The setlocale() function changes the locale for the entire process,
- *   affecting all threads. Temporary changes to the locale are often made
- *   to change the behavior of string scanning or formatting functions
- *   like scanf() or printf(). GLib offers a number of string APIs
- *   (like g_ascii_formatd() or g_ascii_strtod()) that can often be
- *   used as an alternative. Or you can use the uselocale() function
- *   to change the locale only for the current thread.
- *
- * - The fork() function only takes the calling thread into the child's
- *   copy of the process image. If other threads were executing in critical
- *   sections they could have left mutexes locked which could easily
- *   cause deadlocks in the new child. For this reason, you should
- *   call exit() or exec() as soon as possible in the child and only
- *   make signal-safe library calls before that.
- *
- * - The daemon() function uses fork() in a way contrary to what is
- *   described above. It should not be used with GLib programs.
- *
- * GLib itself is internally completely thread-safe (all global data is
- * automatically locked), but individual data structure instances are
- * not automatically locked for performance reasons. For example,
- * you must coordinate accesses to the same #GHashTable from multiple
- * threads. The two notable exceptions from this rule are #GMainLoop
- * and #GAsyncQueue, which are thread-safe and need no further
- * application-level locking to be accessed from multiple threads.
- * Most refcounting functions such as g_object_ref() are also thread-safe.
- *
- * A common use for #GThreads is to move a long-running blocking operation out
- * of the main thread and into a worker thread. For GLib functions, such as
- * single GIO operations, this is not necessary, and complicates the code.
- * Instead, the '..._async()' version of the function should be used from the main
- * thread, eliminating the need for locking and synchronisation between multiple
- * threads. If an operation does need to be moved to a worker thread, consider
- * using g_task_run_in_thread(), or a #GThreadPool. #GThreadPool is often a
- * better choice than #GThread, as it handles thread reuse and task queueing;
- * #GTask uses this internally.
- *
- * However, if multiple blocking operations need to be performed in sequence,
- * and it is not possible to use #GTask for them, moving them to a worker thread
- * can clarify the code.
- */
 
 /* G_LOCK Documentation {{{1 ---------------------------------------------- */
 
@@ -234,6 +140,20 @@
  *
  * Works like g_mutex_unlock(), but for a lock defined with
  * %G_LOCK_DEFINE.
+ */
+
+/**
+ * G_AUTO_LOCK:
+ * @name: the name of the lock
+ *
+ * Works like [func@GLib.MUTEX_AUTO_LOCK], but for a lock defined with
+ * [func@GLib.LOCK_DEFINE].
+ *
+ * This feature is only supported on GCC and clang. This macro is not defined on
+ * other compilers and should not be used in programs that are intended to be
+ * portable to those compilers.
+ *
+ * Since: 2.80
  */
 
 /* GMutex Documentation {{{1 ------------------------------------------ */
@@ -663,7 +583,7 @@ g_once_impl (GOnce       *once,
 
 /**
  * g_once_init_enter:
- * @location: (not nullable): location of a static initializable variable
+ * @location: (inout) (not optional): location of a static initializable variable
  *    containing 0
  *
  * Function to be called when starting a critical initialization
@@ -720,8 +640,56 @@ gboolean
 }
 
 /**
- * g_once_init_leave:
+ * g_once_init_enter_pointer:
  * @location: (not nullable): location of a static initializable variable
+ *    containing `NULL`
+ *
+ * This functions behaves in the same way as g_once_init_enter(), but can
+ * can be used to initialize pointers (or #guintptr) instead of #gsize.
+ *
+ * |[<!-- language="C" -->
+ *   static MyStruct *interesting_struct = NULL;
+ *
+ *   if (g_once_init_enter_pointer (&interesting_struct))
+ *     {
+ *       MyStruct *setup_value = allocate_my_struct (); // initialization code here
+ *
+ *       g_once_init_leave_pointer (&interesting_struct, g_steal_pointer (&setup_value));
+ *     }
+ *
+ *   // use interesting_struct here
+ * ]|
+ *
+ * Returns: %TRUE if the initialization section should be entered,
+ *     %FALSE and blocks otherwise
+ *
+ * Since: 2.80
+ */
+gboolean
+(g_once_init_enter_pointer) (gpointer location)
+{
+  gpointer *value_location = (gpointer *) location;
+  gboolean need_init = FALSE;
+  g_mutex_lock (&g_once_mutex);
+  if (g_atomic_pointer_get (value_location) == 0)
+    {
+      if (!g_slist_find (g_once_init_list, (void *) value_location))
+        {
+          need_init = TRUE;
+          g_once_init_list = g_slist_prepend (g_once_init_list, (void *) value_location);
+        }
+      else
+        do
+          g_cond_wait (&g_once_cond, &g_once_mutex);
+        while (g_slist_find (g_once_init_list, (void *) value_location));
+    }
+  g_mutex_unlock (&g_once_mutex);
+  return need_init;
+}
+
+/**
+ * g_once_init_leave:
+ * @location: (inout) (not optional): location of a static initializable variable
  *    containing 0
  * @result: new non-0 value for *@value_location
  *
@@ -751,6 +719,42 @@ void
   g_mutex_lock (&g_once_mutex);
   g_return_if_fail (g_once_init_list != NULL);
   g_once_init_list = g_slist_remove (g_once_init_list, (void*) value_location);
+  g_cond_broadcast (&g_once_cond);
+  g_mutex_unlock (&g_once_mutex);
+}
+
+/**
+ * g_once_init_leave_pointer:
+ * @location: (not nullable): location of a static initializable variable
+ *    containing `NULL`
+ * @result: new non-`NULL` value for `*location`
+ *
+ * Counterpart to g_once_init_enter_pointer(). Expects a location of a static
+ * `NULL`-initialized initialization variable, and an initialization value
+ * other than `NULL`. Sets the variable to the initialization value, and
+ * releases concurrent threads blocking in g_once_init_enter_pointer() on this
+ * initialization variable.
+ *
+ * This functions behaves in the same way as g_once_init_leave(), but
+ * can be used to initialize pointers (or #guintptr) instead of #gsize.
+ *
+ * Since: 2.80
+ */
+void
+(g_once_init_leave_pointer) (gpointer location,
+                             gpointer result)
+{
+  gpointer *value_location = (gpointer *) location;
+  gpointer old_value;
+
+  g_return_if_fail (result != 0);
+
+  old_value = g_atomic_pointer_exchange (value_location, result);
+  g_return_if_fail (old_value == 0);
+
+  g_mutex_lock (&g_once_mutex);
+  g_return_if_fail (g_once_init_list != NULL);
+  g_once_init_list = g_slist_remove (g_once_init_list, (void *) value_location);
   g_cond_broadcast (&g_once_cond);
   g_mutex_unlock (&g_once_mutex);
 }
@@ -1086,6 +1090,20 @@ g_get_num_processors (void)
 
   if (count > 0)
     return count;
+#elif defined(_SC_NPROCESSORS_ONLN) && defined(THREADS_POSIX) && defined(HAVE_PTHREAD_GETAFFINITY_NP)
+  {
+    int ncores = MIN (sysconf (_SC_NPROCESSORS_ONLN), CPU_SETSIZE);
+    cpu_set_t cpu_mask;
+    CPU_ZERO (&cpu_mask);
+
+    int af_count = 0;
+    int err = pthread_getaffinity_np (pthread_self (), sizeof (cpu_mask), &cpu_mask);
+    if (!err)
+      af_count = CPU_COUNT (&cpu_mask);
+
+    int count = (af_count > 0) ? af_count : ncores;
+    return count;
+  }
 #elif defined(_SC_NPROCESSORS_ONLN)
   {
     int count;

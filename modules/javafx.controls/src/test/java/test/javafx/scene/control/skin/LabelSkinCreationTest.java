@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,120 +25,96 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-
-import java.util.Arrays;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import java.util.Collection;
-
+import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
+import javafx.scene.control.SkinBaseShim;
+import javafx.scene.control.skin.LabelSkin;
+import javafx.scene.control.skin.LabeledSkinBaseShim;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import javafx.scene.control.SkinBaseShim;
-import javafx.scene.control.skin.LabelSkin;
-import javafx.scene.control.skin.LabeledSkinBaseShim;
-
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * A parameterized test suite for testing that a LabelSkin,
  * created with various different configurations, is setup
  * correctly.
  */
-@RunWith(Parameterized.class)
 public class LabelSkinCreationTest {
-    private Paint fill;
-    private Font font;
-    private TextAlignment align;
-    private boolean underline;
-    private boolean wrapText;
-    private ContentDisplay contentDisplay;
-    private Node graphic;
 
     private Label label;
     private LabelSkin skin;
     private Text text;
 
-    @SuppressWarnings("rawtypes")
-    @Parameters public static Collection implementations() {
+    private static Collection<Parameter> parameters() {
         Rectangle rect = new Rectangle();
         rect.setWidth(25);
         rect.setHeight(25);
-        return Arrays.asList(new Object[][] {
+        return List.of(
             // standard configuration
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,   null },
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,   null),
             // specify only the fill
-            { Color.RED,   Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,   null },
+            new Parameter(Color.RED,   Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,   null),
             // specify only the font
-            { Color.BLACK, Font.font("Arial", 64), TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,   null },
+            new Parameter(Color.BLACK, Font.font("Arial", 64), TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,   null),
             // specify only the align
-            { Color.BLACK, Font.getDefault(),      TextAlignment.JUSTIFY, false, false, ContentDisplay.LEFT,   null },
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.JUSTIFY, false, false, ContentDisplay.LEFT,   null),
             // specify only the underline
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    true,  false, ContentDisplay.LEFT,   null },
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    true,  false, ContentDisplay.LEFT,   null),
             // specify only the wrapText
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, true,  ContentDisplay.LEFT,   null },
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, true,  ContentDisplay.LEFT,   null),
             // specify only the contentDisplay
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.BOTTOM, null },
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.BOTTOM, null),
             // specify only the graphic
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,   rect },
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,   rect),
             // specify every type of content display with null graphic
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.BOTTOM,       null },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.CENTER,       null },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.GRAPHIC_ONLY, null },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,         null },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.RIGHT,        null },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.TEXT_ONLY,    null },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.TOP,          null },
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.BOTTOM,       null),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.CENTER,       null),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.GRAPHIC_ONLY, null),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,         null),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.RIGHT,        null),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.TEXT_ONLY,    null),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.TOP,          null),
             // specify every type of content display with non-null graphic
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.BOTTOM,       rect },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.CENTER,       rect },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.GRAPHIC_ONLY, rect },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,         rect },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.RIGHT,        rect },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.TEXT_ONLY,    rect },
-            { Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.TOP,          rect },
-        });
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.BOTTOM,       rect),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.CENTER,       rect),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.GRAPHIC_ONLY, rect),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.LEFT,         rect),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.RIGHT,        rect),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.TEXT_ONLY,    rect),
+            new Parameter(Color.BLACK, Font.getDefault(),      TextAlignment.LEFT,    false, false, ContentDisplay.TOP,          rect)
+        );
     }
 
-    public LabelSkinCreationTest(
+    private record Parameter(
             Paint fill,
             Font font,
             TextAlignment align,
             boolean underline,
             boolean wrapText,
             ContentDisplay contentDisplay,
-            Node graphic)
-    {
-        this.fill = fill;
-        this.font = font;
-        this.align = align;
-        this.underline = underline;
-        this.wrapText = wrapText;
-        this.contentDisplay = contentDisplay;
-        this.graphic = graphic;
-    }
+            Node graphic) { }
 
-    @Before public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Parameter p) {
         label = new Label();
-        label.setTextFill(fill);
-        label.setFont(font);
-        label.setTextAlignment(align);
-        label.setUnderline(underline);
-        label.setWrapText(wrapText);
-        label.setContentDisplay(contentDisplay);
-        label.setGraphic(graphic);
+        label.setTextFill(p.fill);
+        label.setFont(p.font);
+        label.setTextAlignment(p.align);
+        label.setUnderline(p.underline);
+        label.setWrapText(p.wrapText);
+        label.setContentDisplay(p.contentDisplay);
+        label.setGraphic(p.graphic);
         label.setText("*");
         label.resize(30, 30);
         skin = new LabelSkin(label);
@@ -146,7 +122,10 @@ public class LabelSkinCreationTest {
         text = LabeledSkinBaseShim.get_text(skin);
     }
 
-    @Test public void labelWasInitializedCorrectly() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void labelWasInitializedCorrectly(Parameter p) {
+        setup(p);
         assertSame(label.getTextFill(), text.getFill());
         assertSame(label.getFont(), text.getFont());
         assertSame(label.getTextAlignment(), text.getTextAlignment());

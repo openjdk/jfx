@@ -762,7 +762,8 @@ gvs_variable_sized_array_get_child (GVariantSerialised value,
    * Don’t bother checking if the highest known-good offset is lower than the
    * highest checked offset, as that means there’s an invalid element at that
    * index, so there’s no need to check further. */
-  if (index_ > value.checked_offsets_up_to &&
+  if (offsets.array != NULL &&
+      index_ > value.checked_offsets_up_to &&
       value.ordered_offsets_up_to == value.checked_offsets_up_to)
     {
       switch (offsets.offset_size)

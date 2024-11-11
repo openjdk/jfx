@@ -167,7 +167,7 @@ _g_module_self (void)
    * NULL is given, dlsym returns an appropriate pointer.
    */
   lock_dlerror ();
-#if defined(__BIONIC__) || defined(__NetBSD__)
+#if defined(__BIONIC__) || defined(__NetBSD__) || defined(__FreeBSD__)
   handle = RTLD_DEFAULT;
 #else
   handle = dlopen (NULL, RTLD_GLOBAL | RTLD_LAZY);
@@ -182,7 +182,7 @@ _g_module_self (void)
 static void
 _g_module_close (gpointer handle)
 {
-#if defined(__BIONIC__) || defined(__NetBSD__)
+#if defined(__BIONIC__) || defined(__NetBSD__) || defined(__FreeBSD__)
   if (handle != RTLD_DEFAULT)
 #endif
     {

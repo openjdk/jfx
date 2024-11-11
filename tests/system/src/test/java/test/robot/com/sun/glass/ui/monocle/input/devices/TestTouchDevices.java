@@ -75,12 +75,9 @@ public class TestTouchDevices {
                 .collect(Collectors.toList());
     }
 
-    public static Collection<Object[]> getTouchDeviceParameters(int minPoints) {
-        Collection c = getTouchDevices().stream()
+    public static Collection<TestTouchDevice> getTouchDeviceParameters(int minPoints) {
+        return getTouchDevices().stream()
                 .filter(d -> d.points.length >= minPoints)
-                .map(d -> new Object[] { d })
                 .collect(Collectors.toList());
-        return c;
     }
-
 }

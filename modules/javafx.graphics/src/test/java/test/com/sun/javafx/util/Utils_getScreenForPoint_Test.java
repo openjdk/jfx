@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,51 +29,38 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.stage.Screen;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public final class Utils_getScreenForPoint_Test {
-    private final double x;
-    private final double y;
-    private final int expectedScreenIndex;
 
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(
-                new Object[] {
-                    config(100, 100, 0),
-                    config(2000, 200, 1),
-                    config(1920, 0, 0),
-                    config(1920, 200, 1),
-                    config(1920, 1100, 0),
-                    config(2020, 50, 0),
-                    config(2020, 70, 1),
-                    config(1970, -50, 0),
-                    config(2170, -50, 1),
-                    config(2020, 1150, 1),
-                    config(2020, 1170, 0),
-                    config(1970, 1250, 0),
-                    config(2170, 1250, 1)
-                });
+    public static Stream<Arguments> data() {
+        return Stream.of(
+            // x, y, expectedScreenIndex
+            Arguments.of(100, 100, 0),
+            Arguments.of(2000, 200, 1),
+            Arguments.of(1920, 0, 0),
+            Arguments.of(1920, 200, 1),
+            Arguments.of(1920, 1100, 0),
+            Arguments.of(2020, 50, 0),
+            Arguments.of(2020, 70, 1),
+            Arguments.of(1970, -50, 0),
+            Arguments.of(2170, -50, 1),
+            Arguments.of(2020, 1150, 1),
+            Arguments.of(2020, 1170, 0),
+            Arguments.of(1970, 1250, 0),
+            Arguments.of(2170, 1250, 1)
+        );
     }
 
-    public Utils_getScreenForPoint_Test(
-            final double x, final double y, final int expectedScreenIndex) {
-        this.x = x;
-        this.y = y;
-        this.expectedScreenIndex = expectedScreenIndex;
-    }
-
-    @Before
+    @BeforeEach
     public void setUp() {
         ((StubToolkit) Toolkit.getToolkit()).setScreens(
                 new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
@@ -81,20 +68,16 @@ public final class Utils_getScreenForPoint_Test {
                                         1920, 160, 1440, 900, 96));
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         ((StubToolkit) Toolkit.getToolkit()).resetScreens();
     }
 
-    @Test
-    public void test() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void test(double x, double y, int expectedScreenIndex) {
         final Screen selectedScreen = Utils.getScreenForPoint(x, y);
-        Assert.assertEquals(expectedScreenIndex,
-                            Screen.getScreens().indexOf(selectedScreen));
-    }
-
-    private static Object[] config(final double x, final double y,
-                                   final int expectedScreenIndex) {
-        return new Object[] { x, y, expectedScreenIndex };
+        assertEquals(expectedScreenIndex,
+                     Screen.getScreens().indexOf(selectedScreen));
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,18 @@
 
 package test.robot.javafx.embed.swing;
 
-import javafx.application.Platform;
-import org.junit.Ignore;
-import org.junit.Test;
-import test.util.Util;
-import javax.swing.SwingUtilities;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
+import javax.swing.SwingUtilities;
+import javafx.application.Platform;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import test.util.Util;
 
 public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
 
     @Test
-    @Ignore("JDK-8190329")
     public void testPlatformExitBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
         myApp.createAndShowStage();
         CountDownLatch latch = new CountDownLatch(1);
@@ -50,5 +50,11 @@ public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
         testAbove(false);
         runWaitSleep(()-> Platform.exit());
         myApp.disposeDialog();
+    }
+
+    @AfterAll
+    public static void teardownOnce() {
+        // No-op as Toolkit shutdown is already done in Platform.exit
+        // and calling superclass teardownOnce will cause hang
     }
 }

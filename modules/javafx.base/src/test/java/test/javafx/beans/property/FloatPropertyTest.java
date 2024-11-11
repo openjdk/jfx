@@ -33,10 +33,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class FloatPropertyTest {
 
@@ -48,7 +48,7 @@ public class FloatPropertyTest {
     private static final float DEFAULT = 0.0f;
     private static final float EPSILON = 1e-6f;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         ErrorLoggingUtiltity.reset();
     }

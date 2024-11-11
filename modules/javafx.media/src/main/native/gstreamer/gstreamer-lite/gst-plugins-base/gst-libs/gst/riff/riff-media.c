@@ -256,6 +256,16 @@ gst_riff_create_video_caps (guint32 codec_fcc,
         *codec_name = g_strdup ("Huffman Lossless Codec");
       break;
 
+    case GST_MAKE_FOURCC ('F', 'F', 'V', 'H'):
+      caps = gst_caps_new_empty_simple ("video/x-ffvhuff");
+      if (strf) {
+        gst_caps_set_simple (caps, "bpp",
+            G_TYPE_INT, (int) strf->bit_cnt, NULL);
+      }
+      if (codec_name)
+        *codec_name = g_strdup ("FFmpeg Huffman YUV variant");
+      break;
+
     case GST_MAKE_FOURCC ('M', 'P', 'E', 'G'):
     case GST_MAKE_FOURCC ('M', 'P', 'G', 'I'):
     case GST_MAKE_FOURCC ('m', 'p', 'g', '1'):
@@ -371,6 +381,10 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('h', '2', '6', '5'):
     case GST_MAKE_FOURCC ('h', 'v', 'c', '1'):
     case GST_MAKE_FOURCC ('H', 'V', 'C', '1'):
+    case GST_MAKE_FOURCC ('h', 'e', 'v', 'c'):
+    case GST_MAKE_FOURCC ('H', 'E', 'V', 'C'):
+    case GST_MAKE_FOURCC ('h', 'e', 'v', '1'):
+    case GST_MAKE_FOURCC ('H', 'E', 'V', '1'):
       caps = gst_caps_new_empty_simple ("video/x-h265");
       if (codec_name)
         *codec_name = g_strdup ("H.265");
@@ -1038,24 +1052,24 @@ static const struct
   const GstAudioChannelPosition gst_pos;
 } layout_mapping[] = {
   {
-  0x00001, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT}, {
-  0x00002, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT}, {
-  0x00004, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER}, {
-  0x00008, GST_AUDIO_CHANNEL_POSITION_LFE1}, {
-  0x00010, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT}, {
-  0x00020, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT}, {
-  0x00040, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER}, {
-  0x00080, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER}, {
-  0x00100, GST_AUDIO_CHANNEL_POSITION_REAR_CENTER}, {
-  0x00200, GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT}, {
-  0x00400, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT}, {
-  0x00800, GST_AUDIO_CHANNEL_POSITION_TOP_CENTER}, {
-  0x01000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT}, {
-  0x02000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER}, {
-  0x04000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT}, {
-  0x08000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT}, {
-  0x10000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER}, {
-  0x20000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT}
+      0x00001, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT}, {
+      0x00002, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT}, {
+      0x00004, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER}, {
+      0x00008, GST_AUDIO_CHANNEL_POSITION_LFE1}, {
+      0x00010, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT}, {
+      0x00020, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT}, {
+      0x00040, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER}, {
+      0x00080, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER}, {
+      0x00100, GST_AUDIO_CHANNEL_POSITION_REAR_CENTER}, {
+      0x00200, GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT}, {
+      0x00400, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT}, {
+      0x00800, GST_AUDIO_CHANNEL_POSITION_TOP_CENTER}, {
+      0x01000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT}, {
+      0x02000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER}, {
+      0x04000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT}, {
+      0x08000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT}, {
+      0x10000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER}, {
+      0x20000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT}
 };
 
 #define MAX_CHANNEL_POSITIONS G_N_ELEMENTS (layout_mapping)

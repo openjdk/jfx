@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,8 +87,6 @@ import static com.sun.javafx.FXPermissions.MODIFY_FXML_CLASS_LOADER_PERMISSION;
 import com.sun.javafx.fxml.FXMLLoaderHelper;
 import com.sun.javafx.fxml.MethodHelper;
 import java.net.MalformedURLException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.StringTokenizer;
@@ -111,10 +109,7 @@ public class FXMLLoader {
         new RuntimePermission("getClassLoader");
 
     // Instance of StackWalker used to get caller class (must be private)
-    @SuppressWarnings("removal")
-    private static final StackWalker walker =
-        AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
-            StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
+    private static final StackWalker walker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
 
     // Abstract base class for elements
     private abstract class Element {
@@ -1904,7 +1899,7 @@ public class FXMLLoader {
 
     private static BuilderFactory DEFAULT_BUILDER_FACTORY = new JavaFXBuilderFactory();
 
-    private static final Boolean ALLOW_JAVASCRIPT;
+    private static final Boolean ALLOW_JAVASCRIPT = Boolean.getBoolean("javafx.allowjs");
 
     /**
      * The character set used when character set is not explicitly specified.
@@ -2122,7 +2117,7 @@ public class FXMLLoader {
      * Contains the current javafx version.
      * @since JavaFX 8.0
      */
-    public static final String JAVAFX_VERSION;
+    public static final String JAVAFX_VERSION = System.getProperty("javafx.version");
 
     /**
      * Contains the current fx namepsace version.
@@ -2131,20 +2126,6 @@ public class FXMLLoader {
     public static final String FX_NAMESPACE_VERSION = "1";
 
     static {
-        @SuppressWarnings("removal")
-        String tmp = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override
-            public String run() {
-                return System.getProperty("javafx.version");
-            }
-        });
-        JAVAFX_VERSION = tmp;
-
-        @SuppressWarnings("removal")
-        boolean tmp2 = AccessController.doPrivileged((PrivilegedAction<Boolean>)
-                () -> Boolean.getBoolean("javafx.allowjs"));
-        ALLOW_JAVASCRIPT = tmp2;
-
         FXMLLoaderHelper.setFXMLLoaderAccessor(new FXMLLoaderHelper.FXMLLoaderAccessor() {
             @Override
             public void setStaticLoad(FXMLLoader fxmlLoader, boolean staticLoad) {
@@ -3580,23 +3561,11 @@ public class FXMLLoader {
                                  allowedMemberAccess,
                                  membersType);
 
-            final int finalAllowedMemberAccess = allowedMemberAccess;
-            @SuppressWarnings("removal")
-            var dummy = AccessController.doPrivileged(
-                    new PrivilegedAction<Void>() {
-                        @Override
-                        public Void run() {
-                            if (membersType == FIELDS) {
-                                addAccessibleFields(type,
-                                                    finalAllowedMemberAccess);
-                            } else {
-                                addAccessibleMethods(type,
-                                                     finalAllowedMemberAccess);
-                            }
-
-                            return null;
-                        }
-                    });
+            if (membersType == FIELDS) {
+                addAccessibleFields(type, allowedMemberAccess);
+            } else {
+                addAccessibleMethods(type, allowedMemberAccess);
+            }
         }
 
         private void addAccessibleFields(final Class<?> type,

@@ -4028,6 +4028,10 @@ void Document::setURL(const URL& url)
     if (newURL == m_url)
         return;
 
+    if (RefPtr page = protectedPage())
+        m_fragmentDirective = page->mainFrameURLFragment();
+
+    if (m_fragmentDirective.isEmpty())
     m_fragmentDirective = newURL.consumefragmentDirective();
 
     if (SecurityOrigin::shouldIgnoreHost(newURL))
@@ -10354,11 +10358,16 @@ void Document::resetObservationSizeForContainIntrinsicSize(Element& target)
 
 NoiseInjectionPolicy Document::noiseInjectionPolicy() const
 {
-    if (RefPtr loader = topDocument().loader()) {
-        if (loader->advancedPrivacyProtections().contains(AdvancedPrivacyProtections::FingerprintingProtections))
+    if (advancedPrivacyProtections().contains(AdvancedPrivacyProtections::FingerprintingProtections))
             return NoiseInjectionPolicy::Minimal;
-    }
     return NoiseInjectionPolicy::None;
+}
+
+OptionSet<AdvancedPrivacyProtections> Document::advancedPrivacyProtections() const
+{
+    if (RefPtr loader = topDocument().loader())
+        return loader->advancedPrivacyProtections();
+    return { };
 }
 
 std::optional<uint64_t> Document::noiseInjectionHashSalt() const

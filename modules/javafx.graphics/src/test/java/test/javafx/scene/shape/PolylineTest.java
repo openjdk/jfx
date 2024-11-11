@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,14 +33,20 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Polyline;
-import org.junit.Test;
 
-import static test.com.sun.javafx.test.TestHelper.*;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.test.TestHelper.box;
+import static test.com.sun.javafx.test.TestHelper.assertBoundsEqual;
+import static test.com.sun.javafx.test.TestHelper.assertSimilar;
 
 public final class PolylineTest {
 
-    @Test public void testVarargConstructor() {
+    @Test
+    public void testVarargConstructor() {
         final StubPolyline polyline = new StubPolyline(1, 2, 3, 4);
         assertEquals(4, polyline.getPoints().size());
         assertEquals(1, polyline.getPoints().get(0), 0.0001);
@@ -49,13 +55,15 @@ public final class PolylineTest {
         assertEquals(4, polyline.getPoints().get(3), 0.0001);
     }
 
-    @Test public void testPropertyPropagation_emptyPoints() {
+    @Test
+    public void testPropertyPropagation_emptyPoints() {
         final StubPolyline polyline = new StubPolyline();
         NodeTest.callSyncPGNode(polyline);
         assertPGPolylinePointsEquals(polyline, new double[0]);
     }
 
-    @Test public void testPropertyPropagation_pointsEvenLength() {
+    @Test
+    public void testPropertyPropagation_pointsEvenLength() {
         final double[] initialPoints = { 10, 20, 100, 200, 200, 100, 50, 10 };
 
         final StubPolyline polyline = new StubPolyline(initialPoints);
@@ -70,7 +78,8 @@ public final class PolylineTest {
         assertPGPolylinePointsEquals(polyline, 10, 100, 200, 100, 50, 10);
     }
 
-    @Test public void testPropertyPropagation_pointsOddLength() {
+    @Test
+    public void testPropertyPropagation_pointsOddLength() {
         final double[] initialPoints = { 10, 20, 100, 200, 200 };
 
         final StubPolyline polyline = new StubPolyline(initialPoints);
@@ -85,12 +94,14 @@ public final class PolylineTest {
         assertPGPolylinePointsEquals(polyline, 10, 20, 100, 200, 200, 100, 50);
     }
 
-    @Test public void testBounds_emptyPoints() {
+    @Test
+    public void testBounds_emptyPoints() {
         final StubPolyline polyline = new StubPolyline();
         assertBoundsEqual(box(0, 0, -1, -1), polyline.getBoundsInLocal());
     }
 
-    @Test public void testBounds_evenPointsLength() {
+    @Test
+    public void testBounds_evenPointsLength() {
         final double[] initialPoints = { 100, 100, 200, 100, 200, 200 };
 
         final StubPolyline polyline = new StubPolyline(initialPoints);
@@ -103,7 +114,8 @@ public final class PolylineTest {
         assertSimilar(box(100, 100, 100, 200), polyline.getBoundsInLocal());
     }
 
-    @Test public void testBounds_oddPointsLength() {
+    @Test
+    public void testBounds_oddPointsLength() {
         final double[] initialPoints = {
             100, 100, 200, 100, 200, 200, 200, 300
         };
@@ -140,7 +152,8 @@ public final class PolylineTest {
         }
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new StubPolyline().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

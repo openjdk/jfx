@@ -170,6 +170,9 @@ typedef struct _GstAudioMeta GstAudioMeta;
  * case to do so. It is, however, allowed to attach it, for some potential
  * future use case.
  *
+ * Since 1.24 it can be serialized using gst_meta_serialize() and
+ * gst_meta_deserialize().
+ *
  * Since: 1.16
  */
 struct _GstAudioMeta {

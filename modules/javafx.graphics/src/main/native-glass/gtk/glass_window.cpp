@@ -978,14 +978,6 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     int ww = event->width + geometry.extents.left + geometry.extents.right;
     int wh = event->height + geometry.extents.top + geometry.extents.bottom;
 
-    if (!is_maximized && !is_fullscreen) {
-        geometry.final_width.value = (geometry.final_width.type == BOUNDSTYPE_CONTENT)
-                ? event->width : ww;
-
-        geometry.final_height.value = (geometry.final_height.type == BOUNDSTYPE_CONTENT)
-                ? event->height : wh;
-    }
-
     // Do not report if iconified, because Java side would set the state to NORMAL
     if (jwindow && !is_iconified) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
@@ -999,6 +991,14 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
             mainEnv->CallVoidMethod(jview, jViewNotifyResize, event->width, event->height);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
+    }
+
+    if (!is_iconified && !is_fullscreen && !is_maximized) {
+        geometry.final_width.value = (geometry.final_width.type == BOUNDSTYPE_CONTENT)
+                ? event->width : ww;
+
+        geometry.final_height.value = (geometry.final_height.type == BOUNDSTYPE_CONTENT)
+                ? event->height : wh;
     }
 
     int x, y;
@@ -1027,6 +1027,13 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
 }
 
 void WindowContextTop::update_window_constraints() {
+    bool is_floating = !is_iconified && !is_fullscreen && !is_maximized;
+
+    if (!is_floating) {
+        // window is not floating on the screen
+        return;
+    }
+
     GdkGeometry hints;
 
     if (resizable.value && !is_disabled) {

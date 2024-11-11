@@ -693,7 +693,7 @@ gst_discoverer_stream_info_get_toc (GstDiscovererStreamInfo * info)
  * gst_discoverer_stream_info_get_stream_id:
  * @info: a #GstDiscovererStreamInfo
  *
- * Returns: (transfer none): the stream ID of this stream. If you wish to
+ * Returns: (transfer none) (nullable): the stream ID of this stream. If you wish to
  * use the stream ID after the life-time of @info you will need to copy it.
  */
 const gchar *

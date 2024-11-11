@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -934,17 +934,23 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             // Scrolling the mouse wheel downwards results in the tabs scrolling left (i.e. exposing the right-most tabs)
             // Scrolling the mouse wheel upwards results in the tabs scrolling right (i.e. exposing th left-most tabs)
             addEventHandler(ScrollEvent.SCROLL, (ScrollEvent e) -> {
+                double dx = e.getDeltaX();
+                double dy = e.getDeltaY();
+
                 Side side = getSkinnable().getSide();
                 side = side == null ? Side.TOP : side;
                 switch (side) {
                     default:
                     case TOP:
                     case BOTTOM:
-                        setScrollOffset(scrollOffset + e.getDeltaY());
+                        // Consider vertical scroll events (dy > dx) from mouse wheel and trackpad,
+                        // and horizontal scroll events from a trackpad (dx > dy)
+                        dx = Math.abs(dy) > Math.abs(dx) ? dy : dx;
+                        setScrollOffset(scrollOffset + dx);
                         break;
                     case LEFT:
                     case RIGHT:
-                        setScrollOffset(scrollOffset - e.getDeltaY());
+                        setScrollOffset(scrollOffset - dy);
                         break;
                 }
 

@@ -25,12 +25,12 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.function.Function;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -50,9 +50,9 @@ import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.tk.Toolkit;
@@ -80,7 +80,8 @@ public class TableViewKeyInputTest {
     private TableColumn<String, String> col3;
     private TableColumn<String, String> col4;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tableView = new TableView<>();
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
@@ -103,7 +104,8 @@ public class TableViewKeyInputTest {
         stageLoader.getStage().show();
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         tableView.getSkin().dispose();
         stageLoader.dispose();
     }
@@ -415,7 +417,7 @@ public class TableViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
-        assertTrue(debug(), sm.isSelected(0));
+        assertTrue(sm.isSelected(0), debug());
         assertTrue(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
     }
@@ -455,7 +457,7 @@ public class TableViewKeyInputTest {
         keyboard.doUpArrowPress(KeyModifier.SHIFT);     // also select 1
         keyboard.doUpArrowPress(KeyModifier.SHIFT);     // also select 0
         keyboard.doDownArrowPress(KeyModifier.SHIFT);   // deselect 0
-        assertFalse(debug(), sm.isSelected(0));
+        assertFalse(sm.isSelected(0), debug());
         assertTrue(sm.isSelected(1));
         assertTrue(sm.isSelected(2));
         assertFalse(sm.isSelected(3));
@@ -568,7 +570,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);  // select 0,1,2
         assertTrue(isSelected(0, 1, 2));
         assertTrue(isNotSelected(3));
-        assertTrue(debug(), isAnchor(2));
+        assertTrue(isAnchor(2), debug());
     }
 
     // test 33
@@ -608,7 +610,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);  // select 0,1,2
         assertTrue(isSelected(0, 1, 2));
         assertTrue(isNotSelected(3, 4));
-        assertTrue(debug(), isAnchor(2));
+        assertTrue(isAnchor(2), debug());
     }
 
     // test 35
@@ -731,7 +733,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2));
         assertTrue(isNotSelected(3,4));
-        assertTrue(debug(),isAnchor(2));
+        assertTrue(isAnchor(2), debug());
     }
 
     // test 51
@@ -751,7 +753,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
         assertTrue(isSelected(3,4,5,6,7,8,9));
         assertTrue(isNotSelected(0,1,2));
-        assertTrue(debug(),isAnchor(3));
+        assertTrue(isAnchor(3), debug());
     }
 
     // test 42
@@ -798,7 +800,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3));
         assertTrue(isNotSelected(4,5));
-        assertTrue(debug(), isAnchor(3));
+        assertTrue(isAnchor(3), debug());
     }
 
     // test 49
@@ -807,7 +809,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
         assertTrue(isSelected(3,4,5,6,7,8,9));
         assertTrue(isNotSelected(0,1,2));
-        assertTrue(debug(), isAnchor(3));
+        assertTrue(isAnchor(3), debug());
     }
 
     // test 52
@@ -836,7 +838,7 @@ public class TableViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
-        assertTrue(debug(), isSelected(0,1,2));
+        assertTrue(isSelected(0,1,2), debug());
         assertTrue(isAnchor(2));
     }
 
@@ -1110,11 +1112,11 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.SPACE,
                 KeyModifier.getShortcutKey(),
                 (Utils.isMac() ? KeyModifier.CTRL : null));
-        assertTrue(debug(), isSelected(8,10));
+        assertTrue(isSelected(8,10), debug());
         assertTrue(isAnchor(8));
 
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        assertTrue(debug(), isSelected(0,1,2,3,4,5,6,7,8,10));
+        assertTrue(isSelected(0,1,2,3,4,5,6,7,8,10), debug());
         assertTrue(isAnchor(8));
     }
 
@@ -1465,7 +1467,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         assertTrue(sm.isSelected(0,col1));
         for (int i = 2; i < tableView.getItems().size(); i++) {
-            assertTrue(debug(),sm.isSelected(i,col1));
+            assertTrue(sm.isSelected(i,col1), debug());
         }
         assertTrue(isAnchor(2,1));
     }
@@ -1498,13 +1500,13 @@ public class TableViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
         sm.select(5, col1);
-        assertTrue(debug(), isAnchor(5,1));
+        assertTrue(isAnchor(5,1), debug());
 
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         for (int i = 0; i <= 5; i++) {
             assertTrue(sm.isSelected(i,col1));
         }
-        assertTrue(debug(), isAnchor(5,1));
+        assertTrue(isAnchor(5,1), debug());
 
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         for (int i = 0; i < tableView.getItems().size() - 1; i++) {
@@ -1611,7 +1613,7 @@ public class TableViewKeyInputTest {
         assertTrue(sm.isSelected(1, col4));
         assertTrue(sm.isSelected(1, col3));
         assertTrue(sm.isSelected(1, col2));
-        assertTrue(debug(), sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col1), debug());
         assertFalse(sm.isSelected(1, col0));
     }
 
@@ -1678,7 +1680,7 @@ public class TableViewKeyInputTest {
         // press shift + space to select all cells between (1, col1) and (1, col5)
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
         assertTrue(sm.isSelected(1, col4));
-        assertTrue(debug(), sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col3), debug());
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(1, col1));
         assertTrue(sm.isSelected(1, col0));
@@ -1698,7 +1700,7 @@ public class TableViewKeyInputTest {
 
         // press shift + space to select all cells between (1, col1) and (1, col5)
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-        assertTrue(debug(), sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(1, col4), debug());
         assertTrue(sm.isSelected(1, col3));
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(1, col1));
@@ -1786,7 +1788,7 @@ public class TableViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5));
-        assertTrue(debug(), isNotSelected(6,7,8,9));
+        assertTrue(isNotSelected(6,7,8,9), debug());
     }
 
     @Test public void test_rt14451_2() {
@@ -1798,7 +1800,7 @@ public class TableViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5));
-        assertTrue(debug(), isNotSelected(6,7,8,9));
+        assertTrue(isNotSelected(6,7,8,9), debug());
 
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
         assertTrue(isNotSelected(0,1,2,3,4));
@@ -1814,13 +1816,13 @@ public class TableViewKeyInputTest {
     @Test public void test_rt26835_2() {
         sm.clearAndSelect(5);
         keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey());
-        assertTrue(debug(), fm.isFocused(tableView.getItems().size() - 1));
+        assertTrue(fm.isFocused(tableView.getItems().size() - 1), debug());
     }
 
     @Test public void test_rt27175() {
         sm.clearAndSelect(5);
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        assertTrue(debug(), fm.isFocused(0));
+        assertTrue(fm.isFocused(0), debug());
         assertTrue(isSelected(0,1,2,3,4,5));
     }
 
@@ -1854,7 +1856,7 @@ public class TableViewKeyInputTest {
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
         assertTrue(fm.isFocused(0, col0));
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
-        assertTrue(debug(), fm.isFocused(0, col0));
+        assertTrue(fm.isFocused(0, col0), debug());
 
     }
 
@@ -1871,7 +1873,7 @@ public class TableViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         assertTrue(fm.isFocused(11, col0));
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
-        assertTrue(debug(), fm.isFocused(11, col0));
+        assertTrue(fm.isFocused(11, col0), debug());
     }
 
     @Test public void test_rt27583_rowSelection_1() {
@@ -1887,7 +1889,7 @@ public class TableViewKeyInputTest {
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
         assertTrue(fm.isFocused(0));
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
-        assertTrue(debug(), fm.isFocused(0));
+        assertTrue(fm.isFocused(0), debug());
 
     }
 
@@ -1904,7 +1906,7 @@ public class TableViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         assertTrue(fm.isFocused(11));
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
-        assertTrue(debug(), fm.isFocused(11));
+        assertTrue(fm.isFocused(11), debug());
     }
 
     @Test public void test_rt29833_keyboard_select_upwards() {
@@ -2188,7 +2190,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
         final Object newSelectionOwner = sm.getSelectedItem();
-        assertNotSame(initialSelectionOwner + " == " + newSelectionOwner, initialSelectionOwner, newSelectionOwner);
+        assertNotSame(initialSelectionOwner, newSelectionOwner, initialSelectionOwner + " == " + newSelectionOwner);
 
         // selection should go all the way to the top, but this bug
         // shows that instead it seems to stop midway - where the anchor is
@@ -2464,7 +2466,7 @@ public class TableViewKeyInputTest {
         assertTrue(isNotSelected(0,1));
         assertTrue(isSelected(2,3,4));
         assertEquals(3, sm.getSelectedItems().size());
-        assertTrue("Focus index incorrectly at: " + fm.getFocusedIndex(), fm.isFocused(4));
+        assertTrue(fm.isFocused(4), "Focus index incorrectly at: " + fm.getFocusedIndex());
     }
 
     @Test public void test_rt33301_multipleSelection_up() {
@@ -2702,7 +2704,7 @@ public class TableViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.SPACE);
         Toolkit.getToolkit().firePulse();
-        assertEquals(debug(), 2, getAnchor().getRow());
+        assertEquals(2, getAnchor().getRow(), debug());
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(2, sm.getSelectedIndex());
         assertTrue(isSelected(1, 2));
@@ -4219,7 +4221,7 @@ public class TableViewKeyInputTest {
         expectedColumn = direction == KeyCode.RIGHT ? 3 : 0;
         keyboard.doKeyPress(direction, KeyModifier.SHIFT);
         assertEquals(0, sm.getSelectedIndex());
-        assertEquals(debug(), 4, sm.getSelectedCells().size());
+        assertEquals(4, sm.getSelectedCells().size(), debug());
         assertEquals(0, fm.getFocusedIndex());
         assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
 

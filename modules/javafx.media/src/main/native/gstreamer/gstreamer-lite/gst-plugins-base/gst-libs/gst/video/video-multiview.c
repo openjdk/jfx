@@ -46,19 +46,19 @@ static const struct mview_map_t
   GstVideoMultiviewMode mode;
 } gst_multiview_modes[] = {
   {
-  "mono", GST_VIDEO_MULTIVIEW_MODE_MONO}, {
-  "left", GST_VIDEO_MULTIVIEW_MODE_LEFT}, {
-  "right", GST_VIDEO_MULTIVIEW_MODE_RIGHT}, {
-  "side-by-side", GST_VIDEO_MULTIVIEW_MODE_SIDE_BY_SIDE}, {
-  "side-by-side-quincunx", GST_VIDEO_MULTIVIEW_MODE_SIDE_BY_SIDE_QUINCUNX}, {
-  "column-interleaved", GST_VIDEO_MULTIVIEW_MODE_COLUMN_INTERLEAVED}, {
-  "row-interleaved", GST_VIDEO_MULTIVIEW_MODE_ROW_INTERLEAVED}, {
-  "top-bottom", GST_VIDEO_MULTIVIEW_MODE_TOP_BOTTOM}, {
-  "checkerboard", GST_VIDEO_MULTIVIEW_MODE_CHECKERBOARD}, {
-  "frame-by-frame", GST_VIDEO_MULTIVIEW_MODE_FRAME_BY_FRAME}, {
-  "multiview-frame-by-frame",
-        GST_VIDEO_MULTIVIEW_MODE_MULTIVIEW_FRAME_BY_FRAME}, {
-  "separated", GST_VIDEO_MULTIVIEW_MODE_SEPARATED}
+      "mono", GST_VIDEO_MULTIVIEW_MODE_MONO}, {
+      "left", GST_VIDEO_MULTIVIEW_MODE_LEFT}, {
+      "right", GST_VIDEO_MULTIVIEW_MODE_RIGHT}, {
+      "side-by-side", GST_VIDEO_MULTIVIEW_MODE_SIDE_BY_SIDE}, {
+      "side-by-side-quincunx", GST_VIDEO_MULTIVIEW_MODE_SIDE_BY_SIDE_QUINCUNX}, {
+      "column-interleaved", GST_VIDEO_MULTIVIEW_MODE_COLUMN_INTERLEAVED}, {
+      "row-interleaved", GST_VIDEO_MULTIVIEW_MODE_ROW_INTERLEAVED}, {
+      "top-bottom", GST_VIDEO_MULTIVIEW_MODE_TOP_BOTTOM}, {
+      "checkerboard", GST_VIDEO_MULTIVIEW_MODE_CHECKERBOARD}, {
+      "frame-by-frame", GST_VIDEO_MULTIVIEW_MODE_FRAME_BY_FRAME}, {
+        "multiview-frame-by-frame",
+      GST_VIDEO_MULTIVIEW_MODE_MULTIVIEW_FRAME_BY_FRAME}, {
+      "separated", GST_VIDEO_MULTIVIEW_MODE_SEPARATED}
 };
 
 /**

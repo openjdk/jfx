@@ -127,134 +127,6 @@
 #include "glib-init.h"
 #include "glib-private.h"
 
-/**
- * SECTION:main
- * @title: The Main Event Loop
- * @short_description: manages all available sources of events
- *
- * The main event loop manages all the available sources of events for
- * GLib and GTK applications. These events can come from any number of
- * different types of sources such as file descriptors (plain files,
- * pipes or sockets) and timeouts. New types of event sources can also
- * be added using g_source_attach().
- *
- * To allow multiple independent sets of sources to be handled in
- * different threads, each source is associated with a #GMainContext.
- * A #GMainContext can only be running in a single thread, but
- * sources can be added to it and removed from it from other threads. All
- * functions which operate on a #GMainContext or a built-in #GSource are
- * thread-safe.
- *
- * Each event source is assigned a priority. The default priority,
- * %G_PRIORITY_DEFAULT, is 0. Values less than 0 denote higher priorities.
- * Values greater than 0 denote lower priorities. Events from high priority
- * sources are always processed before events from lower priority sources: if
- * several sources are ready to dispatch, the ones with equal-highest priority
- * will be dispatched on the current #GMainContext iteration, and the rest wait
- * until a subsequent #GMainContext iteration when they have the highest
- * priority of the sources which are ready for dispatch.
- *
- * Idle functions can also be added, and assigned a priority. These will
- * be run whenever no events with a higher priority are ready to be dispatched.
- *
- * The #GMainLoop data type represents a main event loop. A GMainLoop is
- * created with g_main_loop_new(). After adding the initial event sources,
- * g_main_loop_run() is called. This continuously checks for new events from
- * each of the event sources and dispatches them. Finally, the processing of
- * an event from one of the sources leads to a call to g_main_loop_quit() to
- * exit the main loop, and g_main_loop_run() returns.
- *
- * It is possible to create new instances of #GMainLoop recursively.
- * This is often used in GTK applications when showing modal dialog
- * boxes. Note that event sources are associated with a particular
- * #GMainContext, and will be checked and dispatched for all main
- * loops associated with that GMainContext.
- *
- * GTK contains wrappers of some of these functions, e.g. gtk_main(),
- * gtk_main_quit() and gtk_events_pending().
- *
- * ## Creating new source types
- *
- * One of the unusual features of the #GMainLoop functionality
- * is that new types of event source can be created and used in
- * addition to the builtin type of event source. A new event source
- * type is used for handling GDK events. A new source type is created
- * by "deriving" from the #GSource structure. The derived type of
- * source is represented by a structure that has the #GSource structure
- * as a first element, and other elements specific to the new source
- * type. To create an instance of the new source type, call
- * g_source_new() passing in the size of the derived structure and
- * a table of functions. These #GSourceFuncs determine the behavior of
- * the new source type.
- *
- * New source types basically interact with the main context
- * in two ways. Their prepare function in #GSourceFuncs can set a timeout
- * to determine the maximum amount of time that the main loop will sleep
- * before checking the source again. In addition, or as well, the source
- * can add file descriptors to the set that the main context checks using
- * g_source_add_poll().
- *
- * ## Customizing the main loop iteration
- *
- * Single iterations of a #GMainContext can be run with
- * g_main_context_iteration(). In some cases, more detailed control
- * of exactly how the details of the main loop work is desired, for
- * instance, when integrating the #GMainLoop with an external main loop.
- * In such cases, you can call the component functions of
- * g_main_context_iteration() directly. These functions are
- * g_main_context_prepare(), g_main_context_query(),
- * g_main_context_check() and g_main_context_dispatch().
- *
- * If the event loop thread releases #GMainContext ownership until the results
- * required by g_main_context_check() are ready you must create a context with
- * the flag %G_MAIN_CONTEXT_FLAGS_OWNERLESS_POLLING or else you'll lose
- * g_source_attach() notifications. This happens for instance when you integrate
- * the GLib event loop into implementations that follow the proactor pattern
- * (i.e. in these contexts the `poll()` implementation will reclaim the thread for
- * other tasks until the results are ready). One example of the proactor pattern
- * is the Boost.Asio library.
- *
- * ## State of a Main Context # {#mainloop-states}
- *
- * The operation of these functions can best be seen in terms
- * of a state diagram, as shown in this image.
- *
- * ![](mainloop-states.gif)
- *
- * On UNIX, the GLib mainloop is incompatible with fork(). Any program
- * using the mainloop must either exec() or exit() from the child
- * without returning to the mainloop.
- *
- * ## Memory management of sources # {#mainloop-memory-management}
- *
- * There are two options for memory management of the user data passed to a
- * #GSource to be passed to its callback on invocation. This data is provided
- * in calls to g_timeout_add(), g_timeout_add_full(), g_idle_add(), etc. and
- * more generally, using g_source_set_callback(). This data is typically an
- * object which 'owns' the timeout or idle callback, such as a widget or a
- * network protocol implementation. In many cases, it is an error for the
- * callback to be invoked after this owning object has been destroyed, as that
- * results in use of freed memory.
- *
- * The first, and preferred, option is to store the source ID returned by
- * functions such as g_timeout_add() or g_source_attach(), and explicitly
- * remove that source from the main context using g_source_remove() when the
- * owning object is finalized. This ensures that the callback can only be
- * invoked while the object is still alive.
- *
- * The second option is to hold a strong reference to the object in the
- * callback, and to release it in the callback's #GDestroyNotify. This ensures
- * that the object is kept alive until after the source is finalized, which is
- * guaranteed to be after it is invoked for the final time. The #GDestroyNotify
- * is another callback passed to the 'full' variants of #GSource functions (for
- * example, g_timeout_add_full()). It is called when the source is finalized,
- * and is designed for releasing references like this.
- *
- * One important caveat of this second approach is that it will keep the object
- * alive indefinitely if the main loop is stopped before the #GSource is
- * invoked, which may be undesirable.
- */
-
 /* Types */
 
 typedef struct _GIdleSource GIdleSource;
@@ -275,6 +147,7 @@ typedef struct _GSourceList GSourceList;
 
 struct _GSourceList
 {
+  GList link;
   GSource *head, *tail;
   gint priority;
 };
@@ -319,7 +192,7 @@ struct _GMainContext
   gint timeout;                 /* Timeout for current iteration */
 
   guint next_id;
-  GList *source_lists;
+  GQueue source_lists;
   gint in_check_or_prepare;
 
   GPollRec *poll_records;
@@ -669,12 +542,13 @@ g_main_context_unref (GMainContext *context)
       g_source_destroy_internal (source, context, TRUE);
     }
 
-  for (sl_iter = context->source_lists; sl_iter; sl_iter = sl_iter->next)
+  sl_iter = context->source_lists.head;
+  while (sl_iter != NULL)
     {
       list = sl_iter->data;
+      sl_iter = sl_iter->next;
       g_slice_free (GSourceList, list);
     }
-  g_list_free (context->source_lists);
 
   g_hash_table_destroy (context->sources);
 
@@ -763,7 +637,7 @@ g_main_context_new_with_flags (GMainContextFlags flags)
   g_mutex_init (&context->mutex);
   g_cond_init (&context->cond);
 
-  context->sources = g_hash_table_new (NULL, NULL);
+  context->sources = g_hash_table_new (g_uint_hash, g_uint_equal);
   context->owner = NULL;
   context->flags = flags;
   context->waiters = NULL;
@@ -771,8 +645,6 @@ g_main_context_new_with_flags (GMainContextFlags flags)
   context->ref_count = 1;
 
   context->next_id = 1;
-
-  context->source_lists = NULL;
 
   context->poll_func = g_poll;
 
@@ -815,7 +687,7 @@ g_main_context_default (void)
 {
   static GMainContext *default_main_context = NULL;
 
-  if (g_once_init_enter (&default_main_context))
+  if (g_once_init_enter_pointer (&default_main_context))
     {
       GMainContext *context;
 
@@ -828,7 +700,7 @@ g_main_context_default (void)
         g_print ("global-default main context=%p\n", context);
 #endif
 
-      g_once_init_leave (&default_main_context, context);
+      g_once_init_leave_pointer (&default_main_context, context);
     }
 
   return default_main_context;
@@ -1137,7 +1009,7 @@ g_source_iter_next (GSourceIter *iter, GSource **source)
       if (iter->current_list)
   iter->current_list = iter->current_list->next;
       else
-  iter->current_list = iter->context->source_lists;
+  iter->current_list = iter->context->source_lists.head;
 
       if (iter->current_list)
   {
@@ -1187,11 +1059,10 @@ find_source_list_for_priority (GMainContext *context,
              gint          priority,
              gboolean      create)
 {
-  GList *iter, *last;
+  GList *iter;
   GSourceList *source_list;
 
-  last = NULL;
-  for (iter = context->source_lists; iter != NULL; last = iter, iter = iter->next)
+  for (iter = context->source_lists.head; iter; iter = iter->next)
     {
       source_list = iter->data;
 
@@ -1204,10 +1075,11 @@ find_source_list_for_priority (GMainContext *context,
       return NULL;
 
     source_list = g_slice_new0 (GSourceList);
+          source_list->link.data = source_list;
     source_list->priority = priority;
-    context->source_lists = g_list_insert_before (context->source_lists,
-              iter,
-              source_list);
+          g_queue_insert_before_link (&context->source_lists,
+                                      iter,
+                                      &source_list->link);
     return source_list;
   }
     }
@@ -1216,18 +1088,10 @@ find_source_list_for_priority (GMainContext *context,
     return NULL;
 
   source_list = g_slice_new0 (GSourceList);
+  source_list->link.data = source_list;
   source_list->priority = priority;
+  g_queue_push_tail_link (&context->source_lists, &source_list->link);
 
-  if (!last)
-    context->source_lists = g_list_append (NULL, source_list);
-  else
-    {
-      /* This just appends source_list to the end of
-       * context->source_lists without having to walk the list again.
-       */
-      last = g_list_append (last, source_list);
-      (void) last;
-    }
   return source_list;
 }
 
@@ -1299,7 +1163,7 @@ source_remove_from_context (GSource      *source,
 
   if (source_list->head == NULL)
     {
-      context->source_lists = g_list_remove (context->source_lists, source_list);
+      g_queue_unlink (&context->source_lists, &source_list->link);
       g_slice_free (GSourceList, source_list);
     }
 }
@@ -1317,13 +1181,13 @@ g_source_attach_unlocked (GSource      *source,
    */
   do
     id = context->next_id++;
-  while (id == 0 || g_hash_table_contains (context->sources, GUINT_TO_POINTER (id)));
+  while (id == 0 || g_hash_table_contains (context->sources, &id));
 
   source->context = context;
   source->source_id = id;
   g_source_ref (source);
 
-  g_hash_table_insert (context->sources, GUINT_TO_POINTER (id), source);
+  g_hash_table_add (context->sources, &source->source_id);
 
   source_add_to_context (source, context);
 
@@ -2136,8 +2000,8 @@ g_source_set_ready_time (GSource *source,
  * Gets the "ready time" of @source, as set by
  * g_source_set_ready_time().
  *
- * Any time before the current monotonic time (including 0) is an
- * indication that the source will fire immediately.
+ * Any time before or equal to the current monotonic time (including 0)
+ * is an indication that the source will fire immediately.
  *
  * Returns: the monotonic ready time, -1 for "never"
  **/
@@ -2423,7 +2287,7 @@ g_source_unref_internal (GSource      *source,
       g_warning (G_STRLOC ": ref_count == 0, but source was still attached to a context!");
     source_remove_from_context (source, context);
 
-          g_hash_table_remove (context->sources, GUINT_TO_POINTER (source->source_id));
+    g_hash_table_remove (context->sources, &source->source_id);
   }
 
       if (source->source_funcs->finalize)
@@ -2536,7 +2400,8 @@ GSource *
 g_main_context_find_source_by_id (GMainContext *context,
                                   guint         source_id)
 {
-  GSource *source;
+  GSource *source = NULL;
+  gconstpointer ptr;
 
   g_return_val_if_fail (source_id > 0, NULL);
 
@@ -2544,11 +2409,14 @@ g_main_context_find_source_by_id (GMainContext *context,
     context = g_main_context_default ();
 
   LOCK_CONTEXT (context);
-  source = g_hash_table_lookup (context->sources, GUINT_TO_POINTER (source_id));
+  ptr = g_hash_table_lookup (context->sources, &source_id);
+  if (ptr)
+    {
+      source = G_CONTAINER_OF (ptr, GSource, source_id);
+      if (SOURCE_DESTROYED (source))
+        source = NULL;
+    }
   UNLOCK_CONTEXT (context);
-
-  if (source && SOURCE_DESTROYED (source))
-    source = NULL;
 
   return source;
 }

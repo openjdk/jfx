@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,28 +25,22 @@
 
 package test.javafx.embed.swing;
 
-import static org.junit.Assert.assertEquals;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.awt.dnd.DropTarget;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
-
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
-
-import java.lang.reflect.InvocationTargetException;
-
 import javafx.application.Application;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
@@ -57,12 +51,12 @@ public class SwingNodeDnDMemoryLeakTest {
     ArrayList<WeakReference<SwingNode>> weakRefArrSN =
                                       new ArrayList(TOTAL_SWINGNODE);
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         Util.launch(launchLatch, MyApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }

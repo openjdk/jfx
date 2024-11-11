@@ -33,10 +33,10 @@ import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ReadOnlySetPropertyBaseTest {
 
@@ -49,7 +49,7 @@ public class ReadOnlySetPropertyBaseTest {
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<Object> changeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new ReadOnlyPropertyMock();
         invalidationListener = new InvalidationListenerMock();

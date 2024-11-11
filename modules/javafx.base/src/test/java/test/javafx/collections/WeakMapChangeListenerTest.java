@@ -27,20 +27,23 @@ package test.javafx.collections;
 
 import com.sun.javafx.binding.MapExpressionHelper;
 import com.sun.javafx.collections.ObservableMapWrapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import javafx.collections.MapChangeListener;
 import javafx.collections.WeakMapChangeListener;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class WeakMapChangeListenerTest {
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testConstructWithNull() {
-        new WeakMapChangeListener<>(null);
+        assertThrows(NullPointerException.class, () -> {
+            new WeakMapChangeListener<>(null);
+        });
     }
+
 
     @Test
     public void testHandle() {

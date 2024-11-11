@@ -79,14 +79,6 @@
 #endif
 
 
-/**
- * SECTION:misc_utils
- * @title: Miscellaneous Utility Functions
- * @short_description: a selection of portable utility functions
- *
- * These are portable utility functions.
- */
-
 #ifdef G_PLATFORM_WIN32
 #  include <windows.h>
 #  ifndef GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
@@ -671,7 +663,7 @@ g_get_user_database_entry (void)
 {
   static UserDatabaseEntry *entry;
 
-  if (g_once_init_enter (&entry))
+  if (g_once_init_enter_pointer (&entry))
     {
       static UserDatabaseEntry e;
 
@@ -680,12 +672,12 @@ g_get_user_database_entry (void)
         struct passwd *pw = NULL;
         gpointer buffer = NULL;
         gint error;
-        gchar *logname;
+        const char *logname;
 
 #  if defined (HAVE_GETPWUID_R)
         struct passwd pwd;
 #    ifdef _SC_GETPW_R_SIZE_MAX
-        /* This reurns the maximum length */
+        /* This returns the maximum length */
         glong bufsize = sysconf (_SC_GETPW_R_SIZE_MAX);
 
         if (bufsize < 0)
@@ -694,7 +686,7 @@ g_get_user_database_entry (void)
         glong bufsize = 64;
 #    endif /* _SC_GETPW_R_SIZE_MAX */
 
-        logname = (gchar *) g_getenv ("LOGNAME");
+        logname = g_getenv ("LOGNAME");
 
         do
           {
@@ -795,7 +787,7 @@ g_get_user_database_entry (void)
       if (!e.real_name)
         e.real_name = g_strdup ("Unknown");
 
-      g_once_init_leave (&entry, &e);
+      g_once_init_leave_pointer (&entry, &e);
     }
 
   return entry;
@@ -1073,7 +1065,7 @@ g_get_host_name (void)
 {
   static gchar *hostname;
 
-  if (g_once_init_enter (&hostname))
+  if (g_once_init_enter_pointer (&hostname))
     {
       gboolean failed;
       gchar *utmp = NULL;
@@ -1130,13 +1122,12 @@ g_get_host_name (void)
         failed = TRUE;
 #endif
 
-      g_once_init_leave (&hostname, failed ? g_strdup ("localhost") : utmp);
+      g_once_init_leave_pointer (&hostname, failed ? g_strdup ("localhost") : utmp);
     }
 
   return hostname;
 }
 
-G_LOCK_DEFINE_STATIC (g_prgname);
 static const gchar *g_prgname = NULL; /* always a quark */
 
 /**
@@ -1158,13 +1149,7 @@ static const gchar *g_prgname = NULL; /* always a quark */
 const gchar*
 g_get_prgname (void)
 {
-  const gchar* retval;
-
-  G_LOCK (g_prgname);
-  retval = g_prgname;
-  G_UNLOCK (g_prgname);
-
-  return retval;
+  return g_atomic_pointer_get (&g_prgname);
 }
 
 /**
@@ -1187,13 +1172,29 @@ g_get_prgname (void)
 void
 g_set_prgname (const gchar *prgname)
 {
-  GQuark qprgname = g_quark_from_string (prgname);
-  G_LOCK (g_prgname);
-  g_prgname = g_quark_to_string (qprgname);
-  G_UNLOCK (g_prgname);
+  prgname = g_intern_string (prgname);
+  g_atomic_pointer_set (&g_prgname, prgname);
 }
 
-G_LOCK_DEFINE_STATIC (g_application_name);
+/**
+ * g_set_prgname_once:
+ * @prgname: the name of the program.
+ *
+ * If g_get_prgname() is not set, this is the same as setting
+ * the name via g_set_prgname() and %TRUE is returned. Otherwise,
+ * does nothing and returns %FALSE. This is thread-safe.
+ *
+ * Returns: whether g_prgname was initialized by the call.
+ */
+gboolean
+g_set_prgname_once (const gchar *prgname)
+{
+  /* if @prgname is NULL, then this has the same effect as calling
+   * (g_get_prgname()==NULL). */
+  prgname = g_intern_string (prgname);
+  return g_atomic_pointer_compare_and_exchange (&g_prgname, NULL, prgname);
+}
+
 static gchar *g_application_name = NULL;
 
 /**
@@ -1215,16 +1216,14 @@ static gchar *g_application_name = NULL;
 const gchar *
 g_get_application_name (void)
 {
-  gchar* retval;
+  const char *retval;
 
-  G_LOCK (g_application_name);
-  retval = g_application_name;
-  G_UNLOCK (g_application_name);
+  retval = g_atomic_pointer_get (&g_application_name);
 
-  if (retval == NULL)
-    return g_get_prgname ();
+  if (retval)
+    return retval;
 
-  return retval;
+  return g_get_prgname ();
 }
 
 /**
@@ -1248,17 +1247,17 @@ g_get_application_name (void)
 void
 g_set_application_name (const gchar *application_name)
 {
-  gboolean already_set = FALSE;
+  char *name;
 
-  G_LOCK (g_application_name);
-  if (g_application_name)
-    already_set = TRUE;
-  else
-    g_application_name = g_strdup (application_name);
-  G_UNLOCK (g_application_name);
+  g_return_if_fail (application_name);
 
-  if (already_set)
-    g_warning ("g_set_application_name() called multiple times");
+  name = g_strdup (application_name);
+
+  if (!g_atomic_pointer_compare_and_exchange (&g_application_name, NULL, name))
+    {
+      g_warning ("g_set_application_name() called multiple times");
+      g_free (name);
+    }
 }
 
 #ifdef G_OS_WIN32
@@ -1884,6 +1883,7 @@ g_build_user_data_dir (void)
   if (!data_dir || !data_dir[0])
     {
       gchar *home_dir = g_build_home_dir ();
+      g_free (data_dir);
       data_dir = g_build_filename (home_dir, ".local", "share", NULL);
       g_free (home_dir);
     }
@@ -3005,32 +3005,32 @@ g_format_size_full (guint64          size,
       { EXBIBYTE_FACTOR, N_("EiB") }
     },
     {
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 kb" */
-      { KILOBYTE_FACTOR, N_("kb") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Mb" */
-      { MEGABYTE_FACTOR, N_("Mb") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Gb" */
-      { GIGABYTE_FACTOR, N_("Gb") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Tb" */
-      { TERABYTE_FACTOR, N_("Tb") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Pb" */
-      { PETABYTE_FACTOR, N_("Pb") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Eb" */
-      { EXABYTE_FACTOR,  N_("Eb") }
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 kbit" */
+      { KILOBYTE_FACTOR, N_("kbit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Mbit" */
+      { MEGABYTE_FACTOR, N_("Mbit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Gbit" */
+      { GIGABYTE_FACTOR, N_("Gbit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Tbit" */
+      { TERABYTE_FACTOR, N_("Tbit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Pbit" */
+      { PETABYTE_FACTOR, N_("Pbit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Ebit" */
+      { EXABYTE_FACTOR,  N_("Ebit") }
     },
     {
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Kib" */
-      { KIBIBYTE_FACTOR, N_("Kib") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Mib" */
-      { MEBIBYTE_FACTOR, N_("Mib") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Gib" */
-      { GIBIBYTE_FACTOR, N_("Gib") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Tib" */
-      { TEBIBYTE_FACTOR, N_("Tib") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Pib" */
-      { PEBIBYTE_FACTOR, N_("Pib") },
-      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Eib" */
-      { EXBIBYTE_FACTOR, N_("Eib") }
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Kibit" */
+      { KIBIBYTE_FACTOR, N_("Kibit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Mibit" */
+      { MEBIBYTE_FACTOR, N_("Mibit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Gibit" */
+      { GIBIBYTE_FACTOR, N_("Gibit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Tibit" */
+      { TEBIBYTE_FACTOR, N_("Tibit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Pibit" */
+      { PEBIBYTE_FACTOR, N_("Pibit") },
+      /* Translators: A unit symbol for size formatting, showing for example: "13.0 Eibit" */
+      { EXBIBYTE_FACTOR, N_("Eibit") }
     }
   };
 

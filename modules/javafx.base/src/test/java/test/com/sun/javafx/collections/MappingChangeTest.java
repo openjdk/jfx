@@ -32,16 +32,16 @@ import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class MappingChangeTest {
 
     ObservableList<Integer> originalList;
     ObservableList<String> list;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         originalList = FXCollections.observableArrayList(1, 2, 3, 4, 5);
         list = FXCollections.observableArrayList("1", "2", "3", "4", "5");

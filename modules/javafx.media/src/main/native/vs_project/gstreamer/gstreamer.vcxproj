@@ -11,18 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-bad\gst\aiff\aiff.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-bad\gst\aiff\aiffparse.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappbuffer.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappsink.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-bad\gst\aiff\aiff.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-bad\gst\aiff\aiffparse.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappbuffer.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappsink.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstapputils.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-channels.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-enumtypes.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-format.c" />
@@ -331,9 +324,6 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpluginfeature.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpluginloader.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpoll.c">

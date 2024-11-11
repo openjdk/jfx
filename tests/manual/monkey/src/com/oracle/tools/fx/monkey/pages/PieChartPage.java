@@ -28,10 +28,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.PieChart.Data;
 import javafx.scene.layout.BorderPane;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.DoubleOption;
 import com.oracle.tools.fx.monkey.sheets.ChartPropertySheet;
@@ -48,7 +50,14 @@ public class PieChartPage extends TestPaneBase {
     public PieChartPage() {
         super("PieChartPage");
 
-        chart = new PieChart();
+        chart = new PieChart() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         OptionPane op = new OptionPane();
         op.section("PieChart");

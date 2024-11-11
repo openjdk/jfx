@@ -12,6 +12,7 @@
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdataset.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdate.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdatetime.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdatetime-private.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdir.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gerror.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gfileutils.c" />

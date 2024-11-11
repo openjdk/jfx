@@ -1,11 +1,11 @@
-## GNU Glib v2.78.1
+## GNU Glib v2.80.4
 
 ### Glib Notice
 ```
 
-You are receiving a copy of GNU Glib, Version: 2.78.1 in either source or
+You are receiving a copy of GNU Glib, Version: 2.80.4 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GNU Glib, Version: 2.78.1; it is
+Oracle license do NOT apply to the GNU Glib, Version: 2.80.4; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:
@@ -39,60 +39,67 @@ other parts by BSD-style licenses.
 ```
 Copyright (C) 1997-2005 Tim Janik
 Copyright (C) 1995-1998  Peter Mattis, Spencer Kimball and Josh MacDonald
-Copyright 2018  Emmanuele Bassi
-Copyright (C) 2000 Sebastian Wilhelmi; University of Karlsruhe
+Copyright (C) 2018  Emmanuele Bassi
+Copyright (C) 1998-2001 Sebastian Wilhelmi; University of Karlsruhe
 Copyright (C) 2007-2011 Ryan Lortie
 Copyright (C) 2005-2006 Alexander Larsson <alexl@redhat.com>
 Copyright (C) 2000-2003 Ximian Inc.
 Copyright (C) 2009-2010 Codethink Limited
-Copyright (C) 2011 Collabora Ltd.
-Copyright (C) 1998-2012 Red Hat, Inc.
+Copyright (C) 2009-2024 Collabora Ltd.
+Copyright (C) 1998-2022 Red Hat, Inc.
 Copyright (C) 2007  Emmanuele Bassi  <ebassi@gnome.org>
-Copyright Red Hat Inc., 2000
-Copyright 2020 Frederic Martinsons
+Copyright (C) 2023 Luca Bacci
+Copyright (C) Red Hat Inc., 2000
+Copyright (C) 2020 Frederic Martinsons
 Copyright (C) 2005  Red Hat
+Copyright (C) 2023 GNOME Foundation Inc.
 Copyright (C) 2009-2010 Christian Hergert <chris@dronelabs.com>
 Copyright (C) 2010 Thiago Santos <thiago.sousa.santos@collabora.co.uk>
 Copyright (C) 2010 Emmanuele Bassi <ebassi@linux.intel.com>
 Copyright (C) 2018 Tomasz Miasko
-Copyright 2001 Hans Breuer
-Copyright 2000-2004 Tor Lillqvist
-Copyright 2000-2005 Red Hat, Inc.
+Copyright (C) 2001 Hans Breuer
+Copyright (C) 1998-2004 Tor Lillqvist
 Copyright (C) 2011  Stef Walter  <stefw@collabora.co.uk>
 Copyright (C) 1995-2002  Peter Mattis, Red Hat, Inc.
-Copyright 1998 Owen Taylor
-Copyright 1998 Owen Taylor and Tor Lillqvist
-Copyright 1999-2000 Tor Lillqvist and Craig Setera
-Copyright 2001-2003 Andrew Lanoix
-Copyright 2009-2018  Collabora Ltd.
-Copyright 2009  Nokia Corporation
+Copyright (C) 1998 Owen Taylor
+Copyright (C) 1998 Owen Taylor and Tor Lillqvist
+Copyright (C) 1999-2000 Tor Lillqvist and Craig Setera
+Copyright (C) 2001-2003 Andrew Lanoix
+Copyright (C) 2009  Nokia Corporation
 Copyright (C) 2011-2015 Canonical Limited
 Copyright (C) 1997-2001 Tim Janik and Red Hat, Inc.
 Copyright (C) 2021  Iain Lane, Xavier Claessens
-Copyright 2005 Matthias Clasen
+Copyright (C) 2003-2007 Matthias Clasen
+Copyright (C) 2006 Padraig O'Briain
+Copyright (C) 2007 Lennart Poettering
+Copyright (C) 2018-2022 Endless OS Foundation, LLC
+Copyright (C) 2018 Peter Wu
+Copyright (C) 2019 Ting-Wei Lan
+Copyright (C) 2019 Sebastian Schwarz
+Copyright (C) 2020 Matt Rose
+Copyright (C) 2021 Casper Dik
+Copyright (C) 2022 Alexander Richardson
+Copyright (C) 2022 Ray Strode
+Copyright (C) 2022 Thomas Haller
+Copyright (C) 2003-2023 Sebastian Wilhelmi
+Copyright (C) 2023 CaiJingLong
 Copyright (C) 1991-2019 Free Software Foundation, Inc.
-Copyright (C) 2003  Matthias Clasen
 Copyright (C) 1999-2019 Free Software
 Copyright (C) 1999-2003 Red Hat Software
 Copyright (C) 2004       Anders Carlsson <andersca@gnome.org>
 Copyright (C) 2000 Eazel, Inc.
 Copyright (C) 2002-2007
- Copyright 1991, 92, 95, 96, 97, 98, 99 Free Software Foundation, Inc.
-Copyright 2017-2019 Руслан Ижбулатов
+Copyright (C) 1991, 92, 95, 96, 97, 98, 99 Free Software Foundation, Inc.
+Copyright (C) 2017-2019 Руслан Ижбулатов
 Copyright (C) 2005-2007 Imendio AB
-Copyright 1998-2001 Sebastian Wilhelmi; University of Karlsruhe
-Copyright (C) 2003 Sebastian Wilhelmi
-Copyright © 2020 Endless Mobile, Inc.
+Copyright (C) 2018-2020 Endless Mobile, Inc.
 Copyright (C) 1999-2000 Tom Tromey
 Copyright (C) 2003 Noah Levitt
-Copyright © 2020 Red Hat, Inc.
-Copyright (C) 2018 Endless Mobile, Inc.
-Copyright (C) 2022 Endless OS Foundation, LLC
 Copyright (C) 2020 William Manley
-Copyright (C) 1998-1999  Tor Lillqvist
 Copyright (C) 2009 Benjamin Otte <otte@gnome.org>
 Copyright (C) 2010  Intel Corp.
 Copyright (C) 2010 Christian Persch
+Copyright (C) 2006 Dave Benson
 
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
@@ -603,7 +610,7 @@ That's all there is to it!
 #### MIT License
 ```
 ---------------------------------
-The below license applies to the following files:
+The below applies to the following file(s):
 glib/glib/gbsearcharray.h
 
 Copyright (C) 2000-2003 Tim Janik
@@ -624,7 +631,7 @@ otherwise) arising in any way out of the use of this software, even
 if advised of the possibility of such damage.
 
 ---------------------------------
-The below license applies to the following files:
+The below applies to the following file(s):
 glib/glib/gutils.c
 
 Copyright (C) 2007 Red Hat, Inc.
@@ -654,17 +661,15 @@ SOFTWARE.
 #### Permissive License
 ```
 ---------------------------------
-The below license applies to the following files:
+The below applies to the following file(s):
 glib/glib/win_iconv.c
-
-iconv library implemented with Win32 API.
 
 This file is placed in the public domain.
 
 Maintainer: Yukihiro Nakadaira <yukihiro.nakadaira@gmail.com>
 
 ---------------------------------
-The below license applies to the following files:
+The below applies to the following file(s):
 glib/glib/gchecksum.c
 
 Copyright (C) 1995, A.M. Kuchling
@@ -672,66 +677,5 @@ Copyright (C) 1995, A.M. Kuchling
 Distribute and use freely; there are no restrictions on further
 dissemination and usage except those imposed by the laws of your
 country of residence.
-
----------------------------------
-The below license applies to the following files:
-glib/glib/gcharset.c (guess_category_value())
-
-Copyright (C) 1995, 1996, 1997, 1998 Free Software Foundation, Inc.
-
-The following is (partly) taken from the gettext package.
-
----------------------------------
-The below license applies to the following files:
-glib/glib/gchecksum.c (sha256_sum_init())
-
-Copyright (C) 2006 Dave Benson
-
-Adapted from the SHA256 implementation in gsk/src/hash/gskhash.c.
-Released under the terms of the GNU Lesser General Public License
-
----------------------------------
-The below license applies to the following files:
-glib/glib/gpoll.c (poll())
-
-Copyright (C) 1994-1997 Free Software Foundation, Inc.
-
-The following implementation of poll() comes from the GNU C Library.
-
----------------------------------
-The below license applies to the following files:
-glib/glib/gfileutils.c
-
-Copyright (C) 1991,92,93,94,95,96,97,98,99 Free Software Foundation, Inc.
-
-get_tmp_file based on the mkstemp implementation from the GNU C library.
-
----------------------------------
-The below license applies to the following files:
-glib/glib/gmarkup.c
-
-Copyright (C) 1999-2003 Free Software Foundation, Inc.
-
-Partially based on code from printf-parser.c
-
----------------------------------
-The below license applies to the following files:
-glib/glib/gstrfuncs.c (g_parse_long_long())
-
-Copyright (C) 1991-2002 Free Software Foundation, Inc.
-
-This code is based on on the strtol(3) code from GNU libc released under
-the GNU Lesser General Public License.
-
----------------------------------
-The below license applies to the following files:
-glib/glib/gunicollate.c
-
-Copyright (C) 1995-2001 Free Software Foundation, Inc.
-
-Written by Ulrich Drepper <drepper@cygnus.com>, 1995.
-
-utf8_encode() is taken (with modification) from GNU
-libc's strxfrm routine.
 
 ```
