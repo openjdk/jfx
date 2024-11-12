@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.scene.control.SelectionMode;
@@ -989,5 +991,31 @@ public class TreeTableRowTest {
         row.updateIndex(0);
 
         assertTrue(isItemChangedCalled.get());
+    }
+
+    @Test
+    void testUpdateRowIndexManually() {
+        TreeTableView<String> table = ControlUtils.createTreeTableView();
+
+        TreeTableRow<String> row = new TreeTableRow<>();
+        row.updateTreeTableView(table);
+
+        stageLoader = new StageLoader(row);
+
+        row.updateIndex(0);
+
+        List<TreeTableCell<String, String>> cells = row.getChildrenUnmodifiable().stream().
+                filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
+        for (TreeTableCell<String, String> cell : cells) {
+            assertEquals(0, cell.getIndex());
+        }
+
+        row.updateIndex(1);
+
+        cells = row.getChildrenUnmodifiable().stream().
+                filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
+        for (TreeTableCell<String, String> cell : cells) {
+            assertEquals(1, cell.getIndex());
+        }
     }
 }

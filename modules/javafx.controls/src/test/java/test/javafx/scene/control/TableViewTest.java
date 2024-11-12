@@ -6329,4 +6329,54 @@ public class TableViewTest {
 
         assertEquals(1, startEditCounter.get());
     }
+
+    @Test
+    void testReSetItemsWithSameItemShouldUpdateCellIndices() {
+        table.setFixedCellSize(24);
+
+        final TableColumn<String, String> c = new TableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+        table.getColumns().add(c);
+
+        for (int i = 0; i < 60; i++) {
+            table.getItems().add(String.valueOf(i));
+        }
+        String lastItem = "UniqueLastItem";
+        table.getItems().add(lastItem);
+
+        stageLoader = new StageLoader(table);
+        stageLoader.getStage().setWidth(300);
+        stageLoader.getStage().setHeight(300);
+
+        // Scroll to the bottom.
+        VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        scrollBar.setValue(1);
+
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<String> row = VirtualFlowTestUtils.getCell(table, 60);
+        assertEquals(lastItem, row.getItem());
+
+        List<TableCell<String, String>> cells = row.getChildrenUnmodifiable().stream().
+                filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+
+        for (TableCell<String, String> cell : cells) {
+            assertEquals(60, cell.getIndex());
+        }
+
+        // Re-set the items, but reuse one item from the previous items list.
+        table.setItems(FXCollections.observableArrayList(lastItem));
+
+        Toolkit.getToolkit().firePulse();
+
+        row = VirtualFlowTestUtils.getCell(table, 0);
+        assertEquals(lastItem, row.getItem());
+
+        cells = row.getChildrenUnmodifiable().stream().
+                filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+
+        for (TableCell<String, String> cell : cells) {
+            assertEquals(0, cell.getIndex());
+        }
+    }
 }
