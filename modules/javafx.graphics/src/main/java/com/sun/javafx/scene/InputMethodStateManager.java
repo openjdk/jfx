@@ -126,7 +126,16 @@ public class InputMethodStateManager {
      * Every Scene must call this before the focusOwner changes.
      */
     public void focusOwnerWillChangeForScene(Scene scene) {
-        if (scene == currentEventScene) {
+        /**
+         * Calling finishInputMethodComposition is only necessary if there's a
+         * node that accepts IM events. But there's a system test that
+         * expects finishInputMethodComposition to be called whenever the
+         * focusOwner changes. To satisfy this test we call
+         * finishInputMethodComposition even if no IM is enabled
+         * (so currentEventScene will be null). This will be no-op as far as
+         * the OS is concerned.
+         */
+        if (scene == currentEventScene || currentEventScene == null) {
             Scene root = rootScene.get();
             if (root != null) {
                 SceneHelper.finishInputMethodComposition(root);
