@@ -103,10 +103,6 @@ import com.sun.javafx.reflect.ReflectUtil;
  */
 public class FXMLLoader {
 
-    // Indicates permission to get the ClassLoader
-    private static final RuntimePermission GET_CLASSLOADER_PERMISSION =
-        new RuntimePermission("getClassLoader");
-
     // Abstract base class for elements
     private abstract class Element {
         public final Element parent;
@@ -3146,13 +3142,6 @@ public class FXMLLoader {
         return Class.forName(className, true, getDefaultClassLoader());
     }
 
-    private static boolean needsClassLoaderPermissionCheck(Class caller) {
-        if (caller == null) {
-            return false;
-        }
-        return !FXMLLoader.class.getModule().equals(caller.getModule());
-    }
-
     private static ClassLoader getDefaultClassLoader(Class caller) {
         if (defaultClassLoader == null) {
             return Thread.currentThread().getContextClassLoader();
@@ -3393,9 +3382,6 @@ public class FXMLLoader {
         return retVal;
     }
 
-    private static void checkClassLoaderPermission() {
-    }
-
     private final ControllerAccessor controllerAccessor =
             new ControllerAccessor();
 
@@ -3444,11 +3430,6 @@ public class FXMLLoader {
             if (controllerFields == null) {
                 controllerFields = new HashMap<>();
 
-                if (callerClassLoader == null) {
-                    // allow null class loader only with permission check
-                    checkClassLoaderPermission();
-                }
-
                 addAccessibleMembers(controller.getClass(),
                                      INITIAL_CLASS_ACCESS,
                                      INITIAL_MEMBER_ACCESS,
@@ -3463,11 +3444,6 @@ public class FXMLLoader {
                 controllerMethods = new EnumMap<>(SupportedType.class);
                 for (SupportedType t: SupportedType.values()) {
                     controllerMethods.put(t, new HashMap<String, Method>());
-                }
-
-                if (callerClassLoader == null) {
-                    // allow null class loader only with permission check
-                    checkClassLoaderPermission();
                 }
 
                 addAccessibleMembers(controller.getClass(),
