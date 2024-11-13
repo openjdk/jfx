@@ -30,6 +30,8 @@ import java.nio.ByteBuffer;
 /**
  * The C class provides ways to wrap pointers to native C structures in Java
  * objects.
+ *
+ * C is a singleton. Its instance is obtained by calling C.getC().
  */
 class C {
 
