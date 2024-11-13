@@ -351,14 +351,14 @@ public class ImageStorageTest {
         };
 
         var expectedImage = new ImageFrame(ImageStorage.ImageType.RGBA_PRE, ByteBuffer.wrap(new byte[0]),
-            0, 0, 0, null, null);
+            0, 0, 0, null);
 
         class TestFactory implements ImageLoaderFactory {
             @Override public ImageFormatDescription getFormatDescription() { return formatWithoutSignature; }
             @Override public ImageLoader createImageLoader(InputStream input) {
                 return new ImageLoaderImpl(formatWithoutSignature) {
                     @Override public void dispose() {}
-                    @Override public ImageFrame load(int i, int w, int h, boolean p, boolean s) {
+                    @Override public ImageFrame load(int i, double w, double h, boolean p, boolean s, float s0, float s1) {
                         return i == 0 ? expectedImage : null;
                     }
                 };
