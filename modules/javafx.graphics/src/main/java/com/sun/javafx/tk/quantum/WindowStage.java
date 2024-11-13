@@ -593,7 +593,7 @@ public class WindowStage extends GlassStage {
         setFullScreen(false);
     }
 
-    // TODO: JDK-8344111: Consider removing this obsolete method
+    // TODO: JDK-8344111: Consider removing this obsolete field
     private boolean fullScreenFromUserEvent = false;
 
     private KeyCombination savedFullScreenExitKey = null;
