@@ -6357,8 +6357,8 @@ public class TableViewTest {
         IndexedCell<String> row = VirtualFlowTestUtils.getCell(table, 60);
         assertEquals(lastItem, row.getItem());
 
-        List<TableCell<String, String>> cells = row.getChildrenUnmodifiable().stream().
-                filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+        List<TableCell<String, String>> cells = row.getChildrenUnmodifiable().stream()
+                .filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
 
         for (TableCell<String, String> cell : cells) {
             assertEquals(60, cell.getIndex());
@@ -6372,8 +6372,8 @@ public class TableViewTest {
         row = VirtualFlowTestUtils.getCell(table, 0);
         assertEquals(lastItem, row.getItem());
 
-        cells = row.getChildrenUnmodifiable().stream().
-                filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+        cells = row.getChildrenUnmodifiable().stream()
+                .filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
 
         for (TableCell<String, String> cell : cells) {
             assertEquals(0, cell.getIndex());

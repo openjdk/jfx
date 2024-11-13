@@ -7568,8 +7568,8 @@ public class TreeTableViewTest {
         IndexedCell<String> row = VirtualFlowTestUtils.getCell(treeTableView, 60);
         assertEquals(lastItem, row.getItem());
 
-        List<TreeTableCell<String, String>> cells = row.getChildrenUnmodifiable().stream().
-                filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
+        List<TreeTableCell<String, String>> cells = row.getChildrenUnmodifiable().stream()
+                .filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
 
         for (TreeTableCell<String, String> cell : cells) {
             assertEquals(60, cell.getIndex());
@@ -7583,8 +7583,8 @@ public class TreeTableViewTest {
         row = VirtualFlowTestUtils.getCell(treeTableView, 0);
         assertEquals(lastItem, row.getItem());
 
-        cells = row.getChildrenUnmodifiable().stream().
-                filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
+        cells = row.getChildrenUnmodifiable().stream()
+                .filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
 
         for (TreeTableCell<String, String> cell : cells) {
             assertEquals(0, cell.getIndex());

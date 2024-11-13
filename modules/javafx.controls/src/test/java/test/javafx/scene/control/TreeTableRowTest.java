@@ -1004,16 +1004,16 @@ public class TreeTableRowTest {
 
         row.updateIndex(0);
 
-        List<TreeTableCell<String, String>> cells = row.getChildrenUnmodifiable().stream().
-                filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
+        List<TreeTableCell<String, String>> cells = row.getChildrenUnmodifiable().stream()
+                .filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
         for (TreeTableCell<String, String> cell : cells) {
             assertEquals(0, cell.getIndex());
         }
 
         row.updateIndex(1);
 
-        cells = row.getChildrenUnmodifiable().stream().
-                filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
+        cells = row.getChildrenUnmodifiable().stream()
+                .filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
         for (TreeTableCell<String, String> cell : cells) {
             assertEquals(1, cell.getIndex());
         }

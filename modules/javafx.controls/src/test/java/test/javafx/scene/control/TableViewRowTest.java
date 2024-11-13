@@ -219,16 +219,16 @@ public class TableViewRowTest {
 
         row.updateIndex(0);
 
-        List<TableCell<String, String>> cells = row.getChildrenUnmodifiable().stream().
-                filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+        List<TableCell<String, String>> cells = row.getChildrenUnmodifiable().stream()
+                .filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
         for (TableCell<String, String> cell : cells) {
             assertEquals(0, cell.getIndex());
         }
 
         row.updateIndex(1);
 
-        cells = row.getChildrenUnmodifiable().stream().
-                filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+        cells = row.getChildrenUnmodifiable().stream()
+                .filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
         for (TableCell<String, String> cell : cells) {
             assertEquals(1, cell.getIndex());
         }
