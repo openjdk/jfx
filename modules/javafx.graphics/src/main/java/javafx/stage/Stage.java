@@ -283,7 +283,7 @@ public class Stage extends Window {
     // Flag indicating that this stage is being used to show a security dialog
     private boolean securityDialog = false;
 
-    // TODO: SM removal: Consider removing this in a follow-up issue (this is dead code)
+    // TODO: JDK-8344111: Consider removing this obsolete method
     /**
      * Sets a flag indicating that this stage is used for a security dialog and
      * must always be on top. If set, this will cause the window to be always

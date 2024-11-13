@@ -97,7 +97,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
-    // TODO: SM removal: Consider removing this in a follow-on
+    // TODO: JDK-8344111: Consider removing this obsolete method
     // Default fullscreen allows limited keyboard input.
     // It will only receive events from the following keys:
     // DOWN, UP, LEFT, RIGHT, SPACE, TAB, PAGE_UP, PAGE_DOWN,
@@ -120,7 +120,7 @@ class GlassViewEventHandler extends View.EventHandler {
         return false;
     }
 
-    // TODO: SM removal: Consider removing this in a follow-on
+    // TODO: JDK-8344111: Consider removing this obsolete method
     private boolean checkFullScreenKeyEvent(int type, int key, char chars[], int modifiers) {
         return scene.getWindowStage().isTrustedFullScreen() || allowableFullScreenKeys(key);
     }

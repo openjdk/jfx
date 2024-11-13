@@ -231,7 +231,7 @@ class FontFileWriter implements FontConstants {
         pos += length;
     }
 
-    // TODO: SM removal: consider removing in a follow-up issue
+    // TODO: JDK-8344114: Consider removing this obsolete method
     /**
      * Used with the byte count tracker for fonts created from streams.
      * If a thread can create temp files anyway, there is no point in counting

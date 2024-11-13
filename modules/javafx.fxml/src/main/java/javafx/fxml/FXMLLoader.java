@@ -2516,7 +2516,7 @@ public class FXMLLoader {
         return loadImpl(inputStream, null);
     }
 
-    // TODO: SM removal: Consider follow-up fix to remove this field and all
+    // TODO: JDK-8344109: Consider removing this field and all
     // occurrences of callerClass arguments from the various load* methods
     // (callerClass is always null now)
     private Class<?> callerClass;

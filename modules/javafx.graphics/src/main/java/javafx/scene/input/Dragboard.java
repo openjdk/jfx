@@ -157,7 +157,7 @@ public final class Dragboard extends Clipboard {
         // private and package private methods.
         DragboardHelper.setDragboardAccessor(new DragboardHelper.DragboardAccessor() {
 
-            // TODO: SM removal: consider removing this in a follow-up issue
+            // TODO: JDK-8344111: Consider removing this obsolete method
             @Override
             public void setDataAccessRestriction(Dragboard dragboard, boolean restricted) {
             }

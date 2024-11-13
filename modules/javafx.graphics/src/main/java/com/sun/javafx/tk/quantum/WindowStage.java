@@ -582,8 +582,8 @@ public class WindowStage extends GlassStage {
         // note: for child windows this is ignored and we fail silently
     }
 
+    // TODO: JDK-8344111: Consider removing this obsolete method
     // Return true if this stage is trusted for full screen (it always is)
-    // TODO: SM removal: Consider removing in a follow-on issue
     boolean isTrustedFullScreen() {
         return true;
     }
@@ -593,7 +593,7 @@ public class WindowStage extends GlassStage {
         setFullScreen(false);
     }
 
-    // TODO: SM removal: Consider removing in a follow-on issue
+    // TODO: JDK-8344111: Consider removing this obsolete method
     private boolean fullScreenFromUserEvent = false;
 
     private KeyCombination savedFullScreenExitKey = null;
