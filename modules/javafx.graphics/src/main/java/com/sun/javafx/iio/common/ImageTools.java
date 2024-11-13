@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.util.Locale;
 
 /**
  * A set of format-independent convenience methods useful in image loading
@@ -213,16 +214,20 @@ public class ImageTools {
 
     public static void validateMaxDimensions(double width, double height, double scaleFactor) {
         if (width * scaleFactor > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("Image width exceeds maximum value");
+            throw new IllegalArgumentException(String.format(
+                Locale.ROOT, "Image width exceeds maximum value (width = %f, scale = %f)", width, scaleFactor));
         }
 
         if (height * scaleFactor > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("Image height exceeds maximum value");
+            throw new IllegalArgumentException(String.format(
+                Locale.ROOT, "Image height exceeds maximum value (height = %f, scale = %f)", height, scaleFactor));
         }
 
         // Use a long multiplication to prevent int overflow.
         if ((long)(width * scaleFactor) * (long)(height * scaleFactor) > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("Image size exceeds maximum value");
+            throw new IllegalArgumentException(String.format(
+                Locale.ROOT, "Image size exceeds maximum value (width = %f, height = %f, scale = %f)",
+                width, height, scaleFactor));
         }
     }
 
