@@ -109,16 +109,16 @@ public final class InputMap {
 
     /**
      * Adds an event handler for the specified event type, at the control level.
-     * This event handler will get invoked after all handlers added via map() methods.
+     * This event handler will get invoked after all handlers added via {@code addHandler} methods.
      * This mapping always consumes the matching event.
      *
      * @param <T> the actual event type
      * @param type the event type
      * @param handler the event handler
      */
-    public <T extends Event> void addHandlerLast(EventType<T> type, EventHandler<T> handler) {
-        extendHandler(type, handler, EventHandlerPriority.USER_LOW);
-    }
+//    public <T extends Event> void addHandlerLast(EventType<T> type, EventHandler<T> handler) {
+//        extendHandler(type, handler, EventHandlerPriority.USER_LOW);
+//    }
 
     /**
      * Removes the specified handler.

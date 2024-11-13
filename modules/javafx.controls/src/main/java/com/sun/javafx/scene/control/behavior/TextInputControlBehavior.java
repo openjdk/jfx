@@ -203,11 +203,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // key pad mappings
         addKeyPadMappings();
 
-        addHandlerLast(KeyEvent.KEY_TYPED, true, this::defaultKeyTyped);
+        addHandler(KeyEvent.KEY_TYPED, true, this::defaultKeyTyped);
 
         // However, we want to consume other key press / release events too, for
         // things that would have been handled by the InputCharacter normally
-        addHandlerLast(
+        addHandler(
             new EventCriteria<KeyEvent>() {
                 @Override
                 public EventType<KeyEvent> getEventType() {
