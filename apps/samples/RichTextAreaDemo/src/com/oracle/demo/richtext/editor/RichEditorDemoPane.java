@@ -41,9 +41,11 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import com.oracle.demo.richtext.common.TextStyle;
+import com.oracle.demo.richtext.editor.settings.EndKey;
 import com.oracle.demo.richtext.util.FX;
 import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * Main Panel.
@@ -51,7 +53,7 @@ import jfx.incubator.scene.control.richtext.RichTextArea;
  * @author Andy Goryachev
  */
 public class RichEditorDemoPane extends BorderPane {
-    public final RichTextArea control;
+    public final RichTextArea editor;
     public final Actions actions;
     private final ComboBox<String> fontName;
     private final ComboBox<Integer> fontSize;
@@ -61,14 +63,14 @@ public class RichEditorDemoPane extends BorderPane {
     public RichEditorDemoPane() {
         FX.name(this, "RichEditorDemoPane");
 
-        control = new RichTextArea();
+        editor = new RichTextArea();
         // custom function
-        control.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
+        editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
             System.out.println("Custom function: W key is pressed");
         });
 
-        actions = new Actions(control);
-        control.setContextMenu(createContextMenu());
+        actions = new Actions(editor);
+        editor.setContextMenu(createContextMenu());
 
         fontName = new ComboBox<>();
         fontName.getItems().setAll(collectFonts());
@@ -118,15 +120,17 @@ public class RichEditorDemoPane extends BorderPane {
         textStyle.setConverter(TextStyle.converter());
         textStyle.setOnAction((ev) -> {
             updateTextStyle();
-            control.requestFocus();
+            editor.requestFocus();
         });
 
         setTop(createToolBar());
-        setCenter(control);
+        setCenter(editor);
 
         actions.textStyleProperty().addListener((s,p,c) -> {
             setTextStyle(c);
         });
+
+        Settings.endKey.subscribe(this::setEndKey);
     }
 
     private ToolBar createToolBar() {
@@ -184,5 +188,44 @@ public class RichEditorDemoPane extends BorderPane {
 
     public void setTextStyle(TextStyle v) {
         textStyle.setValue(v);
+    }
+
+    void setEndKey(EndKey v) {
+        switch(v) {
+        case END_OF_LINE:
+            editor.getInputMap().restoreDefaultFunction(RichTextArea.Tags.MOVE_TO_LINE_END);
+            break;
+        case END_OF_TEXT:
+            editor.getInputMap().registerFunction(RichTextArea.Tags.MOVE_TO_LINE_END, this::moveToEndOfText);
+            break;
+        }
+    }
+
+    // this is an illustration.  we could publish the MOVE_TO_END_OF_TEXT_ON_LINE function tag
+    void moveToEndOfText() {
+        TextPos p = editor.getCaretPosition();
+        if (p != null) {
+            editor.executeDefault(RichTextArea.Tags.MOVE_TO_LINE_END);
+            TextPos p2 = editor.getCaretPosition();
+            if (p2 != null) {
+                String text = editor.getPlainText(p2.index());
+                int ix = findLastText(text, p2.charIndex());
+                if (ix > p.charIndex()) {
+                    editor.select(TextPos.ofLeading(p2.index(), ix));
+                }
+            }
+        }
+    }
+
+    private static int findLastText(String text, int start) {
+        int i = start - 1;
+        while (i >= 0) {
+            char c = text.charAt(i);
+            if (!Character.isWhitespace(c)) {
+                return i + 1;
+            }
+            --i;
+        }
+        return i;
     }
 }

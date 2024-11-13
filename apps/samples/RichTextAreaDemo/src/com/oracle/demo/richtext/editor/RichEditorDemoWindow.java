@@ -73,7 +73,7 @@ public class RichEditorDemoWindow extends Stage {
         setWidth(1200);
         setHeight(600);
 
-        pane.control.caretPositionProperty().addListener((x) -> {
+        pane.editor.caretPositionProperty().addListener((x) -> {
             updateStatus();
         });
         pane.actions.modifiedProperty().addListener((x) -> {
@@ -128,15 +128,20 @@ public class RichEditorDemoWindow extends Stage {
         FX.checkItem(m, "Wrap Text", actions.wrapText);
         // TODO line spacing
 
+        // view
+        FX.menu(m, "Tools");
+        FX.item(m, "Settings", this::openSettings);
+
         // help
         FX.menu(m, "Help");
-        // TODO about
+        FX.item(m, "About"); // TODO
+
         return m;
     }
 
     private void updateStatus() {
-        RichTextArea t = pane.control;
-        TextPos p = t.getCaretPosition();
+        RichTextArea ed = pane.editor;
+        TextPos p = ed.getCaretPosition();
 
         StringBuilder sb = new StringBuilder();
 
@@ -162,5 +167,9 @@ public class RichEditorDemoWindow extends Stage {
             sb.append(" *");
         }
         setTitle(sb.toString());
+    }
+
+    void openSettings() {
+        new SettingsWindow(this).show();
     }
 }
