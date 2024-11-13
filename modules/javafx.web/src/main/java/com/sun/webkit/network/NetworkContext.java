@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.WebPage;
-import java.security.Permission;
 
 final class NetworkContext {
 

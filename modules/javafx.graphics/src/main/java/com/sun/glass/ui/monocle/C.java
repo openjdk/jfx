@@ -26,24 +26,17 @@
 package com.sun.glass.ui.monocle;
 
 import java.nio.ByteBuffer;
-import java.security.Permission;
 
 /**
  * The C class provides ways to wrap pointers to native C structures in Java
  * objects.
- *
- * C is a singleton. Its instance is obtained by calling C.getC(). This
- * requires the RuntimePermission "loadLibrary.*".
  */
 class C {
-
-    private static Permission permission = new RuntimePermission("loadLibrary.*");
 
     private static C instance = new C();
 
     /**
-     * Obtains the single instance of LinuxSystem. Calling this method requires
-     * the RuntimePermission "loadLibrary.*".
+     * Obtains the single instance of LinuxSystem.
      */
     static C getC() {
         return instance;

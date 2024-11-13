@@ -243,8 +243,7 @@ class EPDSystem {
     private static final EPDSystem INSTANCE = new EPDSystem();
 
     /**
-     * Obtains the single instance of {@code EPDSystem}. Calling this method
-     * requires the "loadLibrary.*" {@code RuntimePermission}. The
+     * Obtains the single instance of {@code EPDSystem}. The
      * {@link #loadLibrary} method must be called on the EPDSystem instance
      * before any system calls can be made using it.
      *

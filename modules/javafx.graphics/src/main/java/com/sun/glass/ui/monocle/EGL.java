@@ -152,8 +152,7 @@ class EGL {
     private EGL() {}
 
     /**
-     * Obtains the single instance of EGL. Calling this method requires
-     * the RuntimePermission "loadLibrary.*".
+     * Obtains the single instance of EGL.
      *
      */
     static EGL getEGL() {
