@@ -41,11 +41,6 @@ public final class Dragboard extends Clipboard {
         super(peer);
     }
 
-    @Override
-    Object getContentImpl(DataFormat dataFormat) {
-        return super.getContentImpl(dataFormat);
-    }
-
     /**
      * Gets set of transport modes supported by source of this drag opeation.
      * @return set of supported transfer modes
