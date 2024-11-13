@@ -38,9 +38,6 @@ public class KeyEventMapper {
 
     private int types;
 
-    public KeyEventMapper() {
-    }
-
     public EventType<KeyEvent> addType(KeyBinding k) {
         if (k.isKeyPressed()) {
             types |= PRESSED;

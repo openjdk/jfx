@@ -27,15 +27,13 @@ package javafx.scene.control.input;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.TraversalDirection;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalMethod;
 
 /**
- * Class provides a convenient foundation for the stateful behaviors.
+ * This convenience class provides a helpful foundation for the stateful behavior implementations.
  * <p>
  * A concrete behavior implementation should do the following:
  * <ol>
@@ -218,7 +216,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param handler the event handler
      */
     protected final <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
-        getSkinInputMap().addHandler(type, consume, handler);
+        getSkinInputMap().addHandlerLast(type, consume, handler);
     }
 
     /**
@@ -244,7 +242,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param h the event handler
      */
     protected final <T extends Event> void addHandlerLast(EventCriteria<T> criteria, boolean consume, EventHandler<T> h) {
-        getSkinInputMap().addHandler(criteria, consume, h);
+        getSkinInputMap().addHandlerLast(criteria, consume, h);
     }
 
     /**
@@ -279,9 +277,8 @@ public abstract class BehaviorBase<C extends Control> {
      *
      * @param dir The direction to traverse
      */
-    // NOTE: there should be a proper public focus management API
-    private void traverse(Direction dir) {
-        NodeHelper.traverse(control, dir, TraversalMethod.KEY);
+    private void traverse(TraversalDirection dir) {
+        control.requestFocusTraversal(dir);
     }
 
     /**
@@ -289,7 +286,7 @@ public abstract class BehaviorBase<C extends Control> {
      * go the next focusTraversable Node above the current one.
      */
     public final void traverseUp() {
-        traverse(Direction.UP);
+        traverse(TraversalDirection.UP);
     }
 
     /**
@@ -297,7 +294,7 @@ public abstract class BehaviorBase<C extends Control> {
      * go the next focusTraversable Node below the current one.
      */
     public final void traverseDown() {
-        traverse(Direction.DOWN);
+        traverse(TraversalDirection.DOWN);
     }
 
     /**
@@ -305,7 +302,7 @@ public abstract class BehaviorBase<C extends Control> {
      * go the next focusTraversable Node left of the current one.
      */
     public final void traverseLeft() {
-        traverse(Direction.LEFT);
+        traverse(TraversalDirection.LEFT);
     }
 
     /**
@@ -313,7 +310,7 @@ public abstract class BehaviorBase<C extends Control> {
      * go the next focusTraversable Node right of the current one.
      */
     public final void traverseRight() {
-        traverse(Direction.RIGHT);
+        traverse(TraversalDirection.RIGHT);
     }
 
     /**
@@ -321,7 +318,7 @@ public abstract class BehaviorBase<C extends Control> {
      * go the next focusTraversable Node in the focus traversal cycle.
      */
     public final void traverseNext() {
-        traverse(Direction.NEXT);
+        traverse(TraversalDirection.NEXT);
     }
 
     /**
@@ -329,6 +326,6 @@ public abstract class BehaviorBase<C extends Control> {
      * go the previous focusTraversable Node in the focus traversal cycle.
      */
     public final void traversePrevious() {
-        traverse(Direction.PREVIOUS);
+        traverse(TraversalDirection.PREVIOUS);
     }
 }
