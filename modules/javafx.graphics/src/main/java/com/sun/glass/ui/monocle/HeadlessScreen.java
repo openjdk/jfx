@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,6 @@ import com.sun.glass.ui.Pixels;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 class HeadlessScreen implements NativeScreen {
 
@@ -50,8 +48,7 @@ class HeadlessScreen implements NativeScreen {
         this.width = defaultWidth;
         this.height = defaultHeight;
         this.depth = defaultDepth;
-        @SuppressWarnings("removal")
-        String geometry = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("headless.geometry"));
+        String geometry = System.getProperty("headless.geometry");
         if (geometry != null && geometry.indexOf('x') > 0) {
             try {
                 int i = geometry.indexOf("x");

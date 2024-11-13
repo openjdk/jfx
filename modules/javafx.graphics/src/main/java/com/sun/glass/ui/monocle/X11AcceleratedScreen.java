@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /** Provide X11 implementation of AcceleratedScreen
  *
  */
@@ -51,12 +48,8 @@ class X11AcceleratedScreen extends AcceleratedScreen {
          * This workaround can be removed when the bug in the drivers is fixed.
          */
         if (nativeDisplay == null) {
-            @SuppressWarnings("removal")
-            boolean doMaliWorkaround =
-                    AccessController.doPrivileged(
-                            (PrivilegedAction<Boolean>) () ->
-                                    Boolean.getBoolean(
-                                            "monocle.maliSignedStruct"));
+            boolean doMaliWorkaround = Boolean.getBoolean(
+                                            "monocle.maliSignedStruct");
             X.XDisplay display = new X.XDisplay(xLib.XOpenDisplay(null));
             if (doMaliWorkaround) {
                 long address = 0x7000000;
