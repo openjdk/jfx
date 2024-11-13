@@ -77,19 +77,6 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
     }
 
     /**
-     * Adds an event handler for the specified event type, in the context of this skin.
-     * This event handler will get invoked after all handlers added via map() methods.
-     *
-     * @param <T> the actual event type
-     * @param type the event type
-     * @param consume determines whether the matching event is consumed or not
-     * @param handler the event handler
-     */
-    public final <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
-        addHandler(type, consume, EventHandlerPriority.SKIN_LOW, handler);
-    }
-
-    /**
      * Adds an event handler for the specific event criteria, in the context of this skin.
      * This is a more specific version of {@link #addHandler(EventType,boolean,EventHandler)} method.
      *
@@ -100,19 +87,6 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      */
     public final <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
         addHandler(criteria, consume, EventHandlerPriority.SKIN_HIGH, handler);
-    }
-
-    /**
-     * Adds an event handler for the specific event criteria, in the context of this skin.
-     * This event handler will get invoked after all handlers added via map() methods.
-     *
-     * @param <T> the actual event type
-     * @param criteria the matching criteria
-     * @param consume determines whether the matching event is consumed or not
-     * @param h the event handler
-     */
-    public final <T extends Event> void addHandlerLast(EventCriteria<T> criteria, boolean consume, EventHandler<T> h) {
-        addHandler(criteria, consume, EventHandlerPriority.SKIN_LOW, h);
     }
 
     private <T extends Event> void addHandler(
