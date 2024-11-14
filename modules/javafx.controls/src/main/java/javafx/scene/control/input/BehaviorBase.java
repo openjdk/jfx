@@ -209,19 +209,6 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Adds an event handler for the specified event type, in the context of this Behavior.
-     * This event handler will get invoked after all handlers added via {@code addHandler} methods.
-     *
-     * @param <T> the actual event type
-     * @param type the event type
-     * @param consume determines whether the matching event is consumed or not
-     * @param handler the event handler
-     */
-//    protected final <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
-//        getSkinInputMap().addHandlerLast(type, consume, handler);
-//    }
-
-    /**
      * Adds an event handler for the specific event criteria, in the context of this Behavior.
      * This is a more specific version of {@link #addHandler(EventType,boolean,EventHandler)} method.
      *
@@ -233,19 +220,6 @@ public abstract class BehaviorBase<C extends Control> {
     protected final <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
         getSkinInputMap().addHandler(criteria, consume, handler);
     }
-
-    /**
-     * Adds an event handler for the specific event criteria, in the context of this Behavior.
-     * This event handler will get invoked after all handlers added via {@code addHandler} methods.
-     *
-     * @param <T> the actual event type
-     * @param criteria the matching criteria
-     * @param consume determines whether the matching event is consumed or not
-     * @param h the event handler
-     */
-//    protected final <T extends Event> void addHandlerLast(EventCriteria<T> criteria, boolean consume, EventHandler<T> h) {
-//        getSkinInputMap().addHandlerLast(criteria, consume, h);
-//    }
 
     /**
      * Returns true if this method is invoked on a Linux platform.
