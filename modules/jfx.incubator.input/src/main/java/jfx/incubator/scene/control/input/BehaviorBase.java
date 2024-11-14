@@ -24,6 +24,7 @@
  */
 package jfx.incubator.scene.control.input;
 
+import java.util.function.BooleanSupplier;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -33,7 +34,8 @@ import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
 
 /**
- * This convenience class provides a helpful foundation for the stateful behavior implementations.
+ * This class provides convenient foundation for custom Control developers intended to simplify writing
+ * stateful behaviors.
  * <p>
  * A concrete behavior implementation should do the following:
  * <ol>
@@ -113,12 +115,12 @@ public abstract class BehaviorBase<C extends Control> {
     /**
      * Maps a function to the specified function tag.
      * <p>
-     * This method allows for conditional consumption of the {@code KeyEvents}.
+     * The event which triggered execution of the function will be consumed if the function returns {@code true}.
      *
      * @param tag the function tag
      * @param function the function
      */
-    protected final void registerFunction(FunctionTag tag, FunctionHandler function) {
+    protected final void registerFunction(FunctionTag tag, BooleanSupplier function) {
         getSkinInputMap().registerFunction(tag, function);
     }
 
@@ -161,13 +163,13 @@ public abstract class BehaviorBase<C extends Control> {
      * This convenience method maps the function tag to the specified function, and at the same time
      * maps the specified key binding to that function tag.
      * <p>
-     * This method allows for conditional consumption of the {@code KeyEvents}.
+     * The event which triggered execution of the function will be consumed if the function returns {@code true}.
      *
      * @param tag the function tag
      * @param k the key binding
      * @param func the function
      */
-    protected final void register(FunctionTag tag, KeyBinding k, FunctionHandler func) {
+    protected final void register(FunctionTag tag, KeyBinding k, BooleanSupplier func) {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(k, tag);
     }

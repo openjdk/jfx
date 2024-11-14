@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -190,8 +191,8 @@ public final class InputMap {
         Object x = resolve(k);
         if (x instanceof FunctionTag tag) {
             return execute(source, tag);
-        } else if (x instanceof FunctionHandler h) {
-            return h.handleFunction();
+        } else if (x instanceof BooleanSupplier h) {
+            return h.getAsBoolean();
         } else if (x instanceof Runnable r) {
             r.run();
             return true;

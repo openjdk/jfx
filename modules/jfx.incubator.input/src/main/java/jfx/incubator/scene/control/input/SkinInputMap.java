@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -217,8 +218,8 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         if (x instanceof Runnable r) {
             r.run();
             return true;
-        } else if (x instanceof FunctionHandler f) {
-            return f.handleFunction();
+        } else if (x instanceof BooleanSupplier f) {
+            return f.getAsBoolean();
         } else if (x instanceof Stateless.FHandler h) {
             h.handleFunction(source);
             return true;
@@ -290,12 +291,13 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
 
         /**
          * Maps a function to the specified function tag.
-         * This method allows for controlling whether the matching event will be consumed or not.
+         * <p>
+         * The event which triggered execution of the function will be consumed if the function returns {@code true}.
          *
          * @param tag the function tag
          * @param function the function
          */
-        public final void registerFunction(FunctionTag tag, FunctionHandler function) {
+        public final void registerFunction(FunctionTag tag, BooleanSupplier function) {
             map.put(tag, function);
         }
 
