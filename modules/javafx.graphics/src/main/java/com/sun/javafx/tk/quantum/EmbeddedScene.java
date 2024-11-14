@@ -36,8 +36,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.image.PixelFormat;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.embed.AbstractEvents;
 import com.sun.javafx.embed.EmbeddedSceneDTInterface;
@@ -205,16 +203,12 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         return false;
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void setSize(final int width, final int height) {
         Platform.runLater(() -> {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                if (sceneListener != null) {
-                    sceneListener.changedSize(width, height);
-                }
-                return null;
-            }, getAccessControlContext());
+            if (sceneListener != null) {
+                sceneListener.changedSize(width, height);
+            }
         });
     }
 
@@ -275,7 +269,6 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         return super.getClearColor();
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void mouseEvent(final int type, final int button,
                            final boolean primaryBtnDown, final boolean middleBtnDown, final boolean secondaryBtnDown,
@@ -285,10 +278,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                            final boolean popupTrigger)
     {
         Platform.runLater(() -> {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                if (sceneListener == null) {
-                    return null;
-                }
+            if (sceneListener != null) {
                 // Click events are generated in Scene, so we don't expect them here
                 assert type != AbstractEvents.MOUSEEVENT_CLICKED;
                 EventType<MouseEvent> eventType = AbstractEvents.mouseIDToFXEventID(type);
@@ -299,12 +289,10 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                             primaryBtnDown, middleBtnDown, secondaryBtnDown,
                             backBtnDown, forwardBtnDown
                         );
-                return null;
-            }, getAccessControlContext());
+            }
         });
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void scrollEvent(final int type,
                             final double scrollX, final double scrollY,
@@ -316,129 +304,98 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                             final boolean inertia) {
         {
             Platform.runLater(() -> {
-                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                    if (sceneListener == null) {
-                        return null;
-                    }
+                if (sceneListener != null) {
                     sceneListener.scrollEvent(AbstractEvents.scrollIDToFXEventType(type), scrollX, scrollY, totalScrollX, totalScrollY, xMultiplier, yMultiplier,
                             0, 0, 0, 0, 0, x, y, xAbs, yAbs, shift, ctrl, alt, meta, false, inertia);
-                    return null;
-                }, getAccessControlContext());
+                }
             });
         }
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void inputMethodEvent(final EventType<InputMethodEvent> type,
                                  final ObservableList<InputMethodTextRun> composed, final String committed,
                                  final int caretPosition) {
         Platform.runLater(() -> {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                if (sceneListener != null) {
-                    sceneListener.inputMethodEvent(type, composed, committed, caretPosition);
-                }
-                return null;
-            });
+            if (sceneListener != null) {
+                sceneListener.inputMethodEvent(type, composed, committed, caretPosition);
+            }
         });
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void menuEvent(final int x, final int y, final int xAbs, final int yAbs, final boolean isKeyboardTrigger) {
         Platform.runLater(() -> {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                if (sceneListener != null) {
-                    sceneListener.menuEvent(x, y, xAbs, yAbs, isKeyboardTrigger);
-                }
-                return null;
-            }, getAccessControlContext());
+            if (sceneListener != null) {
+                sceneListener.menuEvent(x, y, xAbs, yAbs, isKeyboardTrigger);
+            }
         });
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void keyEvent(final int type, final int key, final char[] ch, final int modifiers) {
         Platform.runLater(() -> {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                if (sceneListener != null) {
-                    boolean shiftDown = (modifiers & AbstractEvents.MODIFIER_SHIFT) != 0;
-                    boolean controlDown = (modifiers & AbstractEvents.MODIFIER_CONTROL) != 0;
-                    boolean altDown = (modifiers & AbstractEvents.MODIFIER_ALT) != 0;
-                    boolean metaDown = (modifiers & AbstractEvents.MODIFIER_META) != 0;
+            if (sceneListener != null) {
+                boolean shiftDown = (modifiers & AbstractEvents.MODIFIER_SHIFT) != 0;
+                boolean controlDown = (modifiers & AbstractEvents.MODIFIER_CONTROL) != 0;
+                boolean altDown = (modifiers & AbstractEvents.MODIFIER_ALT) != 0;
+                boolean metaDown = (modifiers & AbstractEvents.MODIFIER_META) != 0;
 
-                    String str = new String(ch);
-                    String text = str; // TODO: this must be a text like "HOME", "F1", or "A"
-                    KeyCode code = KeyCodeMap.valueOf(key);
-                    if (code == null) {
-                        code = KeyCode.UNDEFINED;
-                    }
-                    javafx.scene.input.KeyEvent keyEvent = new javafx.scene.input.KeyEvent(
-                            AbstractEvents.keyIDToFXEventType(type),
-                            str, text, code,
-                            shiftDown, controlDown, altDown, metaDown);
-                    sceneListener.keyEvent(keyEvent);
+                String str = new String(ch);
+                String text = str; // TODO: this must be a text like "HOME", "F1", or "A"
+                KeyCode code = KeyCodeMap.valueOf(key);
+                if (code == null) {
+                    code = KeyCode.UNDEFINED;
                 }
-                return null;
-            }, getAccessControlContext());
+                javafx.scene.input.KeyEvent keyEvent = new javafx.scene.input.KeyEvent(
+                        AbstractEvents.keyIDToFXEventType(type),
+                        str, text, code,
+                        shiftDown, controlDown, altDown, metaDown);
+                sceneListener.keyEvent(keyEvent);
+            }
         });
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void zoomEvent(final int type, final double zoomFactor, final double totalZoomFactor,
                           final double x, final double y, final double screenX, final double screenY,
                           boolean shift, boolean ctrl, boolean alt, boolean meta, boolean inertia)
     {
         Platform.runLater(() -> {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                if (sceneListener == null) {
-                    return null;
-                }
+            if (sceneListener != null) {
                 sceneListener.zoomEvent(AbstractEvents.zoomIDToFXEventType(type),
                         zoomFactor, totalZoomFactor,
                         x, y, screenX, screenY,
                         shift, ctrl, alt, meta, false, inertia);
-                return null;
-            }, getAccessControlContext());
+            }
         });
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void rotateEvent(final int type, final double angle, final double totalAngle,
                           final double x, final double y, final double screenX, final double screenY,
                           boolean shift, boolean ctrl, boolean alt, boolean meta, boolean inertia)
     {
         Platform.runLater(() -> {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                if (sceneListener == null) {
-                    return null;
-                }
-                sceneListener.rotateEvent(AbstractEvents.rotateIDToFXEventType(type),
-                        angle, totalAngle,
-                        x, y, screenX, screenY,
-                        shift, ctrl, alt, meta, false, inertia);
-                return null;
-            }, getAccessControlContext());
+            if (sceneListener != null) {
+            sceneListener.rotateEvent(AbstractEvents.rotateIDToFXEventType(type),
+                    angle, totalAngle,
+                    x, y, screenX, screenY,
+                    shift, ctrl, alt, meta, false, inertia);
+            }
         });
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void swipeEvent(final int type, final double x, final double y, final double screenX, final double screenY,
                             boolean shift, boolean ctrl, boolean alt, boolean meta)
     {
         Platform.runLater(() -> {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                if (sceneListener == null) {
-                    return null;
-                }
+            if (sceneListener != null) {
                 sceneListener.swipeEvent(AbstractEvents.swipeIDToFXEventType(type),
                         0, x, y, screenX, screenY,
                         shift, ctrl, alt, meta, false);
-                return null;
-            }, getAccessControlContext());
+            }
         });
     }
 
