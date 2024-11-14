@@ -28,7 +28,6 @@ package com.sun.webkit.dom;
 import com.sun.webkit.Disposer;
 import com.sun.webkit.DisposerRecord;
 import com.sun.webkit.Invoker;
-import java.security.AccessController;
 import java.util.concurrent.atomic.AtomicInteger;
 import netscape.javascript.JSException;
 
@@ -37,6 +36,9 @@ class JSObject extends netscape.javascript.JSObject {
     static final int JS_CONTEXT_OBJECT  = 0;
     static final int JS_DOM_NODE_OBJECT  = 1;
     static final int JS_DOM_WINDOW_OBJECT  = 2;
+
+    // Dummy object used as a placeholder for the former access control comnect
+    private static final Object dummyAcc = new Object();
 
     private final long peer;     // C++ peer - now it is the DOMObject instance
     private final int peer_type; // JS_XXXX const
@@ -83,12 +85,10 @@ class JSObject extends netscape.javascript.JSObject {
     private static native Object getMemberImpl(long peer, int peer_type,
                                                String name);
 
-    @SuppressWarnings("removal")
     @Override
     public void setMember(String name, Object value) throws JSException {
         Invoker.getInvoker().checkEventThread();
-        setMemberImpl(peer, peer_type, name, value,
-                      AccessController.getContext());
+        setMemberImpl(peer, peer_type, name, value, dummyAcc);
     }
     private static native void setMemberImpl(long peer, int peer_type,
                                              String name, Object value,
@@ -110,23 +110,19 @@ class JSObject extends netscape.javascript.JSObject {
     private static native Object getSlotImpl(long peer, int peer_type,
                                              int index);
 
-    @SuppressWarnings("removal")
     @Override
     public void setSlot(int index, Object value) throws JSException {
         Invoker.getInvoker().checkEventThread();
-        setSlotImpl(peer, peer_type, index, value,
-                    AccessController.getContext());
+        setSlotImpl(peer, peer_type, index, value,dummyAcc);
     }
     private static native void setSlotImpl(long peer, int peer_type,
                                            int index, Object value,
                                            Object acc);
 
-    @SuppressWarnings("removal")
     @Override
     public Object call(String methodName, Object... args) throws JSException {
         Invoker.getInvoker().checkEventThread();
-        return callImpl(peer, peer_type, methodName, args,
-                        AccessController.getContext());
+        return callImpl(peer, peer_type, methodName, args,dummyAcc);
     }
     private static native Object callImpl(long peer, int peer_type,
                                           String methodName, Object[] args,

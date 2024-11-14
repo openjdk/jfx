@@ -106,7 +106,6 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public int get() {
         try {
