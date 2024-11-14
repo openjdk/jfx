@@ -371,7 +371,7 @@ public abstract class Toolkit {
     // to allow garbage collection when the listeners are otherwise no longer
     // referenced. We use a WeakHashMap with a dummy object as a value, rather
     // than a HashSet of WeakReferences so that the entries are automatically
-    // removed when the listener goes out of reference.
+    // removed after the listener is garbage collected.
     private final Map<TKPulseListener,Object> stagePulseListeners = new WeakHashMap<>();
     private final Map<TKPulseListener,Object> scenePulseListeners = new WeakHashMap<>();
     private final Map<TKPulseListener,Object> postScenePulseListeners = new WeakHashMap<>();

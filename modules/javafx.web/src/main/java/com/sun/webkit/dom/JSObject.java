@@ -37,7 +37,11 @@ class JSObject extends netscape.javascript.JSObject {
     static final int JS_DOM_NODE_OBJECT  = 1;
     static final int JS_DOM_WINDOW_OBJECT  = 2;
 
-    // Dummy object used as a placeholder for the former access control comnect
+    // Dummy object used as a placeholder for the former access control context.
+    // This is passed to the native WebKit code where it is stored (as an opaque
+    // object) and later passed back to Java code.
+    // We do this, rather than removing the parameter, in order to keep the
+    // native WebKit code the same across different release families.
     private static final Object dummyAcc = new Object();
 
     private final long peer;     // C++ peer - now it is the DOMObject instance
