@@ -1504,6 +1504,33 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1performWindowDrag
 
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _performTitleBarDoubleClickAction
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1performTitleBarDoubleClickAction
+(JNIEnv *env, jobject jWindow, jlong jPtr)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1performTitleBarDoubleClickAction");
+    if (!jPtr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        NSString* action = [NSUserDefaults.standardUserDefaults stringForKey:@"AppleActionOnDoubleClick"];
+
+        if ([action isEqualToString:@"Minimize"]) {
+            [window->nsWindow performMiniaturize:nil];
+        } else if ([action isEqualToString:@"Maximize"]) {
+            [window->nsWindow performZoom:nil];
+        }
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
  * Method:    _setToolbarStyle
  * Signature: (JI)V
  */

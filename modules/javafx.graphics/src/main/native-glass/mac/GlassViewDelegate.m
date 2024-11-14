@@ -1145,9 +1145,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (void)performWindowDrag
 {
-    if (lastEvent != nil) {
-        [[nsView window] performWindowDragWithEvent:lastEvent];
-    }
+    [[nsView window] performWindowDragWithEvent:[NSApp currentEvent]];
 }
 
 static jstring convertNSStringToJString(id aString, int length)

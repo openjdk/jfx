@@ -163,6 +163,8 @@ final class MacWindow extends Window {
 
     private native void _performWindowDrag(long ptr);
 
+    private native void _performTitleBarDoubleClickAction(long ptr);
+
     @Override
     public NonClientHandler getNonClientHandler() {
         return (type, button, x, y, xAbs, yAbs, clickCount) -> {
@@ -173,7 +175,7 @@ final class MacWindow extends Window {
                 View.EventHandler eventHandler = view != null ? view.getEventHandler() : null;
                 if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
                     if (clickCount == 2) {
-                        maximize(!isMaximized());
+                        _performTitleBarDoubleClickAction(getRawHandle());
                     } else if (clickCount == 1) {
                         _performWindowDrag(getRawHandle());
                     }

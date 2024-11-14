@@ -204,6 +204,10 @@
     NSUInteger mask = [self->nsWindow styleMask];
     self->isWindowResizable = ((mask & NSWindowStyleMaskResizable) != 0);
     [[self->view delegate] setResizableForFullscreen:YES];
+
+    if (nsWindow.toolbar != nil) {
+        nsWindow.toolbar.visible = NO;
+    }
 }
 
 - (void)windowDidEnterFullScreen:(NSNotification *)notification
@@ -221,6 +225,10 @@
 - (void)windowDidExitFullScreen:(NSNotification *)notification
 {
     //NSLog(@"windowDidExitFullScreen");
+
+    if (nsWindow.toolbar != nil) {
+        nsWindow.toolbar.visible = YES;
+    }
 
     GlassViewDelegate* delegate = (GlassViewDelegate*)[self->view delegate];
     [delegate setResizableForFullscreen:self->isWindowResizable];
