@@ -316,7 +316,8 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
 
         /**
          * Maps a function to the specified function tag.
-         * This method allows for controlling whether the matching event will be consumed or not.
+         * <p>
+         * The event which triggered execution of the function will be consumed if the function returns {@code true}.
          *
          * @param tag the function tag
          * @param function the function

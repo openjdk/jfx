@@ -25,9 +25,9 @@
 package javafx.scene.control.input;
 
 /**
- * A functional interface which denotes code associated with a {@code FunctionTag} or a key binding.
- * This handler allows for controlling whether the matching event
- * will be consumed or not.
+ * A functional interface that allows the handler mapped via
+ * {@link SkinInputMap.Stateful#registerFunction(FunctionTag, FunctionHandler)}
+ * to indicate whether the event which triggered the handler should be consumed or not.
  *
  * @since 999 TODO
  */
