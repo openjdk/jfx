@@ -695,7 +695,15 @@ if (HUDSON_JOB_NAME == "not_hudson") {
     relSuffix = "-internal"
     relOpt = "-${buildTimestamp}"
 } else {
-    relSuffix = IS_MILESTONE_FCS ? "" : jfxReleaseSuffix
+    if (IS_MILESTONE_FCS) {
+        if (jfxExperimentalReleaseSuffix != "") {
+            fail("An experimental release branch should not be used for FCS build")
+        }
+        relSuffix = ""
+    } else {
+        relSuffix = jfxExperimentalReleaseSuffix != "" ?
+                        jfxExperimentalReleaseSuffix : jfxReleaseSuffix;
+    }
 }
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
