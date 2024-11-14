@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -243,8 +244,8 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         if (x instanceof Runnable r) {
             r.run();
             return true;
-        } else if (x instanceof FunctionHandler f) {
-            return f.handleFunction();
+        } else if (x instanceof BooleanSupplier f) {
+            return f.getAsBoolean();
         } else if (x instanceof Stateless.FHandler h) {
             h.handleFunction(source);
             return true;
@@ -322,7 +323,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
          * @param tag the function tag
          * @param function the function
          */
-        public final void registerFunction(FunctionTag tag, FunctionHandler function) {
+        public final void registerFunction(FunctionTag tag, BooleanSupplier function) {
             map.put(tag, function);
         }
 

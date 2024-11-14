@@ -24,6 +24,7 @@
  */
 package javafx.scene.control.input;
 
+import java.util.function.BooleanSupplier;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -119,7 +120,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param tag the function tag
      * @param function the function
      */
-    protected final void registerFunction(FunctionTag tag, FunctionHandler function) {
+    protected final void registerFunction(FunctionTag tag, BooleanSupplier function) {
         getSkinInputMap().registerFunction(tag, function);
     }
 
@@ -168,7 +169,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param k the key binding
      * @param func the function
      */
-    protected final void register(FunctionTag tag, KeyBinding k, FunctionHandler func) {
+    protected final void register(FunctionTag tag, KeyBinding k, BooleanSupplier func) {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(k, tag);
     }
