@@ -165,15 +165,7 @@ public abstract class TableRowSkinBase<T,
         // use invalidation listener here to update even when item equality is true
         // (e.g. see RT-22463)
         registerInvalidationListener(control.itemProperty(), o -> requestCellUpdate());
-        registerChangeListener(control.indexProperty(), e -> {
-            // Fix for RT-36661, where empty table cells were showing content, as they
-            // had incorrect table cell indices (but the table row index was correct).
-            // Note that we only do the update on empty cells to avoid the issue
-            // noted below in requestCellUpdate().
-            if (getSkinnable().isEmpty()) {
-                requestCellUpdate();
-            }
-        });
+        registerChangeListener(control.indexProperty(), e -> requestCellUpdate());
     }
 
 
