@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,8 +43,6 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
@@ -101,7 +99,6 @@ final class SocketStreamHandle {
         return ssh;
     }
 
-    @SuppressWarnings("removal")
     private void run() {
         if (webPage == null) {
             logger.finest("{0} is not associated with any web "
@@ -114,13 +111,7 @@ final class SocketStreamHandle {
             didClose();
             return;
         }
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            doRun();
-            return null;
-        }, webPage.getAccessControlContext());
-    }
 
-    private void doRun() {
         Throwable error = null;
         String errorDescription = null;
         try {
@@ -198,20 +189,12 @@ final class SocketStreamHandle {
     }
 
     private void connect() throws IOException {
-        @SuppressWarnings("removal")
-        SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkConnect(host, port);
-        }
-
         // The proxy trial logic here is meant to mimic
         // sun.net.www.protocol.http.HttpURLConnection.plainConnect
         boolean success = false;
         IOException lastException = null;
         boolean triedDirectConnection = false;
-        @SuppressWarnings("removal")
-        ProxySelector proxySelector = AccessController.doPrivileged(
-                (PrivilegedAction<ProxySelector>) () -> ProxySelector.getDefault());
+        ProxySelector proxySelector = ProxySelector.getDefault();
         if (proxySelector != null) {
             URI uri;
             try {
@@ -422,10 +405,7 @@ final class SocketStreamHandle {
         private final AtomicInteger index = new AtomicInteger(1);
 
         private CustomThreadFactory() {
-            @SuppressWarnings("removal")
-            SecurityManager sm = System.getSecurityManager();
-            group = (sm != null) ? sm.getThreadGroup()
-                    : Thread.currentThread().getThreadGroup();
+            group = Thread.currentThread().getThreadGroup();
         }
 
         @Override

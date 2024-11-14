@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,16 +26,19 @@
 package com.sun.javafx.image.impl;
 
 import com.sun.javafx.image.AlphaType;
+import com.sun.javafx.image.BytePixelAccessor;
 import com.sun.javafx.image.BytePixelGetter;
 import com.sun.javafx.image.BytePixelSetter;
 import com.sun.javafx.image.ByteToBytePixelConverter;
 import com.sun.javafx.image.ByteToIntPixelConverter;
 import com.sun.javafx.image.IntPixelSetter;
+import com.sun.javafx.image.PixelUtils;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 public class ByteRgb {
-    public static final BytePixelGetter getter = Getter.instance;
+    public static final BytePixelGetter getter = Accessor.instance;
+    public static final BytePixelSetter setter = Accessor.instance;
 
     public static ByteToBytePixelConverter ToByteBgraConverter() {
         return ByteRgb.ToByteBgrfConv.nonpremult;
@@ -57,13 +60,17 @@ public class ByteRgb {
         return ByteRgb.ToByteFrgbConv.nonpremult;
     }
 
-    public static final ByteToBytePixelConverter ToByteBgrConverter() {
-        return ByteRgb.SwapThreeByteConverter.rgbToBgrInstance;
+    private static ByteToBytePixelConverter rgbToBgrInstance;
+    public static ByteToBytePixelConverter ToByteBgrConverter() {
+        if (rgbToBgrInstance == null) {
+            rgbToBgrInstance = new BaseByteToByteConverter.SwapThreeByteConverter(ByteRgb.getter, ByteBgr.setter);
+        }
+        return rgbToBgrInstance;
     }
 
-    static class Getter implements BytePixelGetter {
-        static final BytePixelGetter instance = new Getter();
-        private Getter() {}
+    static class Accessor implements BytePixelAccessor {
+        static final BytePixelAccessor instance = new Accessor();
+        private Accessor() {}
 
         @Override
         public AlphaType getAlphaType() {
@@ -105,6 +112,30 @@ public class ByteRgb {
                     ((buffer.get(offset + 1) & 0xff) <<  8) |
                     ((buffer.get(offset    ) & 0xff) << 16) |
                     ((                         0xff) << 24));
+        }
+
+        @Override
+        public void setArgb(byte[] arr, int offset, int argb) {
+            arr[offset    ] = (byte)((argb >> 16) & 0xff);
+            arr[offset + 1] = (byte)((argb >> 8) & 0xff);
+            arr[offset + 2] = (byte)(argb & 0xff);
+        }
+
+        @Override
+        public void setArgbPre(byte[] arr, int offset, int argbpre) {
+            setArgb(arr, offset, PixelUtils.PretoNonPre(argbpre));
+        }
+
+        @Override
+        public void setArgb(ByteBuffer buf, int offset, int argb) {
+            buf.put(offset    , (byte)((argb >> 16) & 0xff));
+            buf.put(offset + 1, (byte)((argb >> 8) & 0xff));
+            buf.put(offset + 2, (byte)(argb & 0xff));
+        }
+
+        @Override
+        public void setArgbPre(ByteBuffer buf, int offset, int argbpre) {
+            setArgb(buf, offset, PixelUtils.PretoNonPre(argbpre));
         }
     }
 
@@ -248,53 +279,6 @@ public class ByteRgb {
                     dstbuf.put(dstoff++, srcbuf.get(srcoff++));
                     dstbuf.put(dstoff++, srcbuf.get(srcoff++));
                     dstbuf.put(dstoff++, srcbuf.get(srcoff++));
-                }
-                srcoff += srcscanbytes;
-                dstoff += dstscanbytes;
-            }
-        }
-    }
-
-    static class SwapThreeByteConverter extends BaseByteToByteConverter {
-        static final ByteToBytePixelConverter rgbToBgrInstance =
-            new SwapThreeByteConverter(ByteRgb.getter, ByteBgr.accessor);
-
-        public SwapThreeByteConverter(BytePixelGetter getter, BytePixelSetter setter) {
-            super(getter, setter);
-        }
-
-        @Override
-        void doConvert(byte[] srcarr, int srcoff, int srcscanbytes,
-                       byte[] dstarr, int dstoff, int dstscanbytes,
-                       int w, int h)
-        {
-            srcscanbytes -= w * 3;
-            srcscanbytes -= w * 4;
-            while (--h >= 0) {
-                for (int x = 0; x < w; x++) {
-                    dstarr[dstoff++] = srcarr[srcoff + 2];
-                    dstarr[dstoff++] = srcarr[srcoff + 1];
-                    dstarr[dstoff++] = srcarr[srcoff    ];
-                    srcoff += 3;
-                }
-                srcoff += srcscanbytes;
-                dstoff += dstscanbytes;
-            }
-        }
-
-        @Override
-        void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
-                       ByteBuffer dstbuf, int dstoff, int dstscanbytes,
-                       int w, int h)
-        {
-            srcscanbytes -= w * 3;
-            srcscanbytes -= w * 4;
-            while (--h >= 0) {
-                for (int x = 0; x < w; x++) {
-                    dstbuf.put(dstoff++, srcbuf.get(srcoff + 2));
-                    dstbuf.put(dstoff++, srcbuf.get(srcoff + 1));
-                    dstbuf.put(dstoff++, srcbuf.get(srcoff    ));
-                    srcoff += 3;
                 }
                 srcoff += srcscanbytes;
                 dstoff += dstscanbytes;

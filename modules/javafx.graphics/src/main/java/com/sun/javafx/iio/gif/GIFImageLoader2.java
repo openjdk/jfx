@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -199,7 +199,10 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
 
     // loads next image frame or null if no more
     @Override
-    public ImageFrame load(int imageIndex, int width, int height, boolean preserveAspectRatio, boolean smooth) throws IOException {
+    public ImageFrame load(int imageIndex, double imgw, double imgh, boolean preserveAspectRatio, boolean smooth,
+                           float screenPixelScale, float imagePixelScale) throws IOException {
+        ImageTools.validateMaxDimensions(imgw, imgh, imagePixelScale);
+
         int imageControlCode = waitForImageFrame();
 
         if (imageControlCode < 0) {
@@ -222,9 +225,10 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
 
         byte palette[][] = localPalette ? readPalete(2 << (imgCtrl & 7), trnsIndex) : globalPalette;
 
-        int[] outWH = ImageTools.computeDimensions(screenW, screenH, width, height, preserveAspectRatio);
-        width = outWH[0];
-        height = outWH[1];
+        int[] outWH = ImageTools.computeDimensions(
+            screenW, screenH, (int)(imgw * imagePixelScale), (int)(imgh * imagePixelScale), preserveAspectRatio);
+        int width = outWH[0];
+        int height = outWH[1];
 
         ImageMetadata metadata = updateMetadata(width, height, imageControlCode & 0xFFFF);
 
@@ -241,7 +245,7 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
         }
 
         return new ImageFrame(ImageStorage.ImageType.RGBA, img,
-                width, height, width * 4, null, metadata);
+                width, height, width * 4, imagePixelScale, metadata);
     }
 
     // IO helpers

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,6 @@ package com.sun.javafx.font;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
 
 /*
  * Utility class to read font files.
@@ -52,22 +49,15 @@ class FontFileReader implements FontConstants {
      * Opens the file.
      * @return returns true if the file opened, false if the file was opened
      *  already or if it failed to open the file.
-     * @throws PrivilegedActionException
      */
-    @SuppressWarnings("removal")
-    public synchronized boolean openFile() throws PrivilegedActionException {
+    public synchronized boolean openFile() {
         if (raFile != null) {
             return false;
         }
-        raFile = AccessController.doPrivileged(
-                (PrivilegedAction<RandomAccessFile>) () -> {
-                    try {
-                        return new RandomAccessFile(filename, "r");
-                    } catch (FileNotFoundException fnfe) {
-                        return null;
-                    }
-                }
-        );
+        try {
+            raFile = new RandomAccessFile(filename, "r");
+        } catch (FileNotFoundException fnfe) {
+        }
         if (raFile != null) {
             try {
                 filesize = raFile.length();

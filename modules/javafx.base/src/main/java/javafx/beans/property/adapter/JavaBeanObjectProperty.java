@@ -37,10 +37,6 @@ import javafx.beans.value.ObservableValue;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import java.security.AccessController;
-import java.security.AccessControlContext;
-import java.security.PrivilegedAction;
-
 /**
  * A {@code JavaBeanObjectProperty} provides an adapter between a regular
  * Java Bean property of type {@code T} and a JavaFX
@@ -98,9 +94,6 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
     private ObservableValue<? extends T> observable = null;
     private ExpressionHelper<T> helper = null;
 
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
-
     JavaBeanObjectProperty(PropertyDescriptor<T> descriptor, Object bean) {
         this.descriptor = descriptor;
         this.listener = descriptor.new Listener(bean, this);
@@ -115,18 +108,15 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings({"removal","unchecked"})
     @Override
     public T get() {
-        return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
-            try {
-                return (T)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }, acc);
+        try {
+            return (T)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**
@@ -136,24 +126,19 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public void set(final T value) {
         if (isBound()) {
             throw new RuntimeException("A bound value cannot be set.");
         }
-
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            try {
-                MethodHelper.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
-                ExpressionHelper.fireValueChangedEvent(helper);
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-            return null;
-        }, acc);
+        try {
+            MethodHelper.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
+            ExpressionHelper.fireValueChangedEvent(helper);
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
 
