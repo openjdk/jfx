@@ -44,6 +44,9 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
@@ -303,15 +306,19 @@ public class Actions {
         }
     }
 
-    void saveAs() {
+    boolean saveAs() {
         File f = chooseFileForSave();
         if (f != null) {
+            // TODO ask to overwrite if file exists
+            file.set(f);
             try {
                 writeFile(f);
+                return true;
             } catch(Exception e) {
                 new ExceptionDialog(control, e).open();
             }
         }
+        return false;
     }
 
     private File chooseFileForSave() {
@@ -330,17 +337,6 @@ public class Actions {
         );
         Window w = FX.getParentWindow(control);
         return ch.showSaveDialog(w);
-    }
-
-    /**
-     * @return true if the user chose to Cancel
-     */
-    private boolean askToSave() {
-        if (isModified()) {
-            saveAs();
-            return true;
-        }
-        return false;
     }
 
     private void readFile(File f, DataFormat fmt) throws Exception {
@@ -490,21 +486,55 @@ public class Actions {
     }
 
     public void quit() {
-        if (isModified()) {
-            if (askToSave()) {
-                return;
-            }
+        if (askToSave()) {
+            return;
         }
         Platform.exit();
     }
+    
+    enum UserChoiceToSave {
+        DISCARD_CHANGES,
+        RETURN_TO_EDITING,
+        SAVE
+    }
+
+    private UserChoiceToSave askSaveChanges() {
+        Dialog<UserChoiceToSave> d = new Dialog<>();
+        d.initOwner(FX.getParentWindow(control));
+        d.setTitle("Save Changes?");
+        d.setContentText("Do you want to save changes?");
+
+        ButtonType bSave = new ButtonType("Save", ButtonData.YES);
+        d.getDialogPane().getButtonTypes().add(bSave);
+        ButtonType bReturn = new ButtonType("Return to Editing", ButtonData.CANCEL_CLOSE);
+        d.getDialogPane().getButtonTypes().add(bReturn);
+        ButtonType bDiscard = new ButtonType("Discard Changes", ButtonData.NO);
+        d.getDialogPane().getButtonTypes().add(bDiscard);
+        d.showAndWait();
+
+        Object v = d.getResult();
+        if (v == bSave) {
+            return UserChoiceToSave.SAVE;
+        } else if (v == bDiscard) {
+            return UserChoiceToSave.DISCARD_CHANGES;
+        } else {
+            return UserChoiceToSave.RETURN_TO_EDITING;
+        }
+    }
 
     /**
-     * returns true if the user hits cancel and does not want to quit
-     * @return true if user chose to cancel
+     * Checks whether the document has been modified and if so, asks to Save, Discard or Cancel.
+     * @return true if the user chose to Cancel
      */
-    public boolean checkSaveOnHide() {
+    public boolean askToSave() {
         if (isModified()) {
-            if (askToSave()) {
+            switch(askSaveChanges()) {
+            case DISCARD_CHANGES:
+                return false;
+            case SAVE:
+                return saveAs();
+            case RETURN_TO_EDITING:
+            default:
                 return true;
             }
         }

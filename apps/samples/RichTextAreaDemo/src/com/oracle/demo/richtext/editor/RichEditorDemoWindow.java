@@ -83,7 +83,7 @@ public class RichEditorDemoWindow extends Stage {
             updateTitle();
         });
         addEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, (ev) -> {
-            if (pane.actions.checkSaveOnHide()) {
+            if (pane.actions.askToSave()) {
                 ev.consume();
             }
         });

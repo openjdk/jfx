@@ -61,6 +61,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.util.StringConverter;
 import com.oracle.demo.richtext.settings.FxSettingsSchema;
 
 /**
@@ -69,6 +70,8 @@ import com.oracle.demo.richtext.settings.FxSettingsSchema;
  * @author Andy Goryachev
  */
 public class FX {
+    private static StringConverter<Object> converter;
+
     public static Menu menu(MenuBar b, String text) {
         Menu m = new Menu(text);
         applyMnemonic(m);
@@ -447,5 +450,28 @@ public class FX {
             b.setOnAction((ev) -> r.run());
         }
         return b;
+    }
+
+    public static <T> StringConverter<T> converter() {
+        if (converter == null) {
+            converter = new StringConverter<>() {
+                @Override
+                public String toString(Object v) {
+                    if (v == null) {
+                        return null;
+                    } else if (v instanceof HasDisplayText t) {
+                        return t.toDisplayString();
+                    }
+                    return v.toString();
+                }
+
+                @Override
+                public Object fromString(String s) {
+                    // not supported
+                    return null;
+                }
+            };
+        }
+        return (StringConverter<T>)converter;
     }
 }

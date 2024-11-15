@@ -38,10 +38,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import javafx.util.StringConverter;
 import com.oracle.demo.richtext.common.OptionPane;
 import com.oracle.demo.richtext.editor.settings.EndKey;
-import com.oracle.demo.richtext.util.HasDisplayText;
+import com.oracle.demo.richtext.util.FX;
 
 /**
  * Rich Editor Demo Settings window.
@@ -74,23 +73,7 @@ public class SettingsWindow extends Stage {
 
     private static <E extends Enum> Node enumOption(Class<E> type, Property<E> p) {
         ComboBox<E> b = new ComboBox<>();
-        b.setConverter(new StringConverter<E>() {
-            @Override
-            public String toString(E v) {
-                if(v == null) {
-                    return null;
-                } else if(v instanceof HasDisplayText t) {
-                    return t.toDisplayString();
-                }
-                return v.toString();
-            }
-
-            @Override
-            public E fromString(String s) {
-                // not supported
-                return null;
-            }
-        });
+        b.setConverter(FX.converter());
         E[] values = type.getEnumConstants();
         for (E v : values) {
             b.getItems().add(v);
