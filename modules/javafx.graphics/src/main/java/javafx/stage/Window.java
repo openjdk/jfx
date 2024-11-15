@@ -67,7 +67,6 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
-import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 
@@ -225,12 +224,6 @@ public class Window implements EventTarget {
      * @since 9
      */
     public static ObservableList<Window> getWindows() {
-        @SuppressWarnings("removal")
-        final SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(ACCESS_WINDOW_LIST_PERMISSION);
-        }
-
         return unmodifiableWindows;
     }
 
