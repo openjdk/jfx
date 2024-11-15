@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene.control.skin;
 
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.FXCollections;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -40,6 +41,7 @@ import javafx.scene.layout.Pane;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.binding.ExpressionHelperUtility;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -145,6 +147,7 @@ public class TreeTableViewTableHeaderRowTest {
 
         firstColumn.setVisible(false);
 
+        firstMenuItem = (CheckMenuItem) columnPopupMenu.getItems().get(0);
         assertEquals(firstColumn.isVisible(), firstMenuItem.isSelected());
         assertFalse(firstMenuItem.isSelected());
 
@@ -224,6 +227,70 @@ public class TreeTableViewTableHeaderRowTest {
         // Since the showColumnMenu() is overridden, the column popup menu should not be created.
         columnPopupMenu = TableHeaderRowShim.getColumnPopupMenu(tableHeaderRow);
         assertNull(columnPopupMenu);
+    }
+
+    /**
+     * Tests that re-setting the same columns does not cause memory leaks.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
+     */
+    @Test
+    void testReSettingColumnsDoesNotLeakMemory() {
+        for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
+            assertEquals(2, getVisibilityListenerCount(column));
+        }
+
+        // Trigger the menu once so that it will start listening to column changes.
+        MouseEventFirer mouseEventFirer = new MouseEventFirer(cornerRegion);
+        mouseEventFirer.fireMousePressed();
+
+        // Now the table menu is listening for changes as well.
+        for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
+            assertEquals(3, getVisibilityListenerCount(column));
+        }
+
+        treeTableView.getColumns().setAll(FXCollections.observableArrayList(treeTableView.getColumns()));
+        treeTableView.getColumns().setAll(FXCollections.observableArrayList(treeTableView.getColumns()));
+
+        // The count should be the same still.
+        for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
+            assertEquals(3, getVisibilityListenerCount(column));
+        }
+    }
+
+    /**
+     * Tests that toggling the column visibility does not cause memory leaks.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
+     */
+    @Test
+    void testTogglingColumnVisibilityDoesNotLeakMemory() {
+        for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
+            assertEquals(2, getVisibilityListenerCount(column));
+        }
+
+        // Trigger the menu once so that it will start listening to column changes.
+        MouseEventFirer mouseEventFirer = new MouseEventFirer(cornerRegion);
+        mouseEventFirer.fireMousePressed();
+
+        // Now the table menu logic is listening for changes as well.
+        for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
+            assertEquals(3, getVisibilityListenerCount(column));
+        }
+
+        for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
+            column.setVisible(false);
+            column.setVisible(true);
+            column.setVisible(false);
+            column.setVisible(true);
+        }
+
+        // The count should be the same still.
+        for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
+            assertEquals(3, getVisibilityListenerCount(column));
+        }
+    }
+
+    private int getVisibilityListenerCount(TreeTableColumn<String, ?> column) {
+        return ExpressionHelperUtility.getInvalidationListeners(column.visibleProperty()).size();
     }
 
     private static class CustomTreeTableViewSkin<S> extends TreeTableViewSkin<S> {
