@@ -26,15 +26,12 @@
 package test.robot.javafx.embed.swing;
 
 import java.awt.Robot;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import javax.swing.SwingUtilities;
 
 import javafx.application.Platform;
 import javafx.scene.paint.Color;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -55,7 +52,6 @@ public class LinuxScreencastHangCrashTest {
     private static final int DELAY_KEEP_SESSION = DELAY_BEFORE_SESSION_CLOSE - 1000;
 
     private static volatile boolean isFxStarted = false;
-    private static volatile boolean isFirstRun = true;
 
     @BeforeAll
     public static void init() throws Exception {
@@ -106,14 +102,6 @@ public class LinuxScreencastHangCrashTest {
                 jfxRobot = new javafx.scene.robot.Robot();
             });
             isFxStarted = true;
-        }
-    }
-
-    private static void checkFirstRun() {
-        if (isFirstRun) {
-            isFirstRun = false;
-        } else {
-            robot.delay(DELAY_WAIT_FOR_SESSION_TO_CLOSE);
         }
     }
 
