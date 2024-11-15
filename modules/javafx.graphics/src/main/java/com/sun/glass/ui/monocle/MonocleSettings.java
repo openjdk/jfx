@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,9 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 class MonocleSettings {
 
-    @SuppressWarnings("removal")
-    static final MonocleSettings settings = AccessController.doPrivileged(
-            (PrivilegedAction<MonocleSettings>) () -> new MonocleSettings());
+    static final MonocleSettings settings = new MonocleSettings();
 
     final boolean traceEvents;
     final boolean traceEventsVerbose;

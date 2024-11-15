@@ -25,7 +25,6 @@
 package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.monocle.TouchState.Point;
-import java.security.AllPermission;
 import javafx.application.Platform;
 
 
@@ -132,11 +131,6 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
     }
 
     void removeDevice(AndroidInputDevice device) {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPermission(new AllPermission());
-        }
         devices.remove(device);
     }
 
