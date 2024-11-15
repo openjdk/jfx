@@ -812,23 +812,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
     private J2DPageable j2dPageable = null;
 
     /*
-     * Permissions were already checked when creating the job,
-     * and when setting output file, but this is a final check
-     * to be made before we start the underlying native job.
-     */
-    private void checkPermissions() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPrintJobAccess();
-            String file = settings.getOutputFile();
-            if (file != null && !file.isEmpty()) {
-                security.checkWrite(file);
-            }
-        }
-    }
-
-    /*
      * 2D uses a call back model. So the 2D PrinterJob needs to run
      * on a different thread than the one that the FX app uses.
      * This gets really interesting if the FX Node is attached to a
@@ -850,7 +833,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
         }
 
         if (!jobRunning) {
-            checkPermissions();
             syncSettingsToAttributes();
             PrintJobRunnable runnable = new PrintJobRunnable();
             Thread prtThread = new Thread(runnable, "Print Job Thread");

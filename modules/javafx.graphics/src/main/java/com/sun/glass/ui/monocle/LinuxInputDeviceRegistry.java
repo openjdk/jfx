@@ -27,7 +27,6 @@ package com.sun.glass.ui.monocle;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.AllPermission;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -84,11 +83,6 @@ class LinuxInputDeviceRegistry extends InputDeviceRegistry {
     }
 
     LinuxInputDevice addDevice(LinuxInputDevice device, String name) {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPermission(new AllPermission());
-        }
         return addDeviceInternal(device, name);
     }
 
@@ -108,11 +102,6 @@ class LinuxInputDeviceRegistry extends InputDeviceRegistry {
     }
 
     void removeDevice(LinuxInputDevice device) {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPermission(new AllPermission());
-        }
         devices.remove(device);
     }
 
