@@ -491,7 +491,7 @@ public class Actions {
         }
         Platform.exit();
     }
-    
+
     enum UserChoiceToSave {
         DISCARD_CHANGES,
         RETURN_TO_EDITING,
