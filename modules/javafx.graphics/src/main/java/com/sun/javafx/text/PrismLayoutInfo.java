@@ -93,7 +93,8 @@ public abstract class PrismLayoutInfo extends LayoutInfo {
 
     @Override
     public List<Rectangle2D> selectionShape(int start, int end, boolean includeLineSpacing) {
-        return getGeometry(start, end, TextLayout.TYPE_TEXT, lineSpacing());
+        double sp = includeLineSpacing ? lineSpacing() : 0.0;
+        return getGeometry(start, end, TextLayout.TYPE_TEXT, sp);
     }
 
     @Override
