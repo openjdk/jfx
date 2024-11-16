@@ -74,7 +74,7 @@ public class MeshManagerCacheLeakTest {
         String[] jvmArgs = {"-Xmx16m"};
         // Launch the test app
         final ArrayList<String> cmd = test.util.Util.createApplicationLaunchCommand(
-            testAppName, null, null, jvmArgs);
+            testAppName, null, jvmArgs);
         // and add our arguments
         cmd.add(String.valueOf(shape));
         cmd.add(String.valueOf(count));

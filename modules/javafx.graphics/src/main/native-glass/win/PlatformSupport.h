@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,11 @@ public:
      */
     bool updatePreferences(jobject application) const;
 
+    /**
+     * Handles the WM_SETTINGCHANGE message.
+    */
+    bool onSettingChanged(jobject application, WPARAM, LPARAM) const;
+
 private:
     JNIEnv* env;
     bool initialized;
@@ -63,8 +68,8 @@ private:
     } javaClasses;
 
     void querySystemColors(jobject properties) const;
-    void queryHighContrastScheme(jobject properties) const;
-    void queryUIColors(jobject properties) const;
+    void querySystemParameters(jobject properties) const;
+    void queryUISettings(jobject properties) const;
 
     void putString(jobject properties, const char* key, const char* value) const;
     void putString(jobject properties, const char* key, const wchar_t* value) const;
