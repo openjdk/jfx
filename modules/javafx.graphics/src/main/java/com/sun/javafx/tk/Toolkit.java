@@ -56,6 +56,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -93,9 +94,6 @@ public abstract class Toolkit {
     private static String tk;
     private static Toolkit TOOLKIT;
     private static Thread fxUserThread = null;
-
-    // Used as the (dummy) value for the various listener maps
-    private static final Object dummyObj = new Object();
 
     private static final String QUANTUM_TOOLKIT     = "com.sun.javafx.tk.quantum.QuantumToolkit";
     private static final String DEFAULT_TOOLKIT     = QUANTUM_TOOLKIT;
@@ -369,13 +367,11 @@ public abstract class Toolkit {
 
     // The following collections of listeners is weakly referenced here in order
     // to allow garbage collection when the listeners are otherwise no longer
-    // referenced. We use a WeakHashMap with a dummy object as a value, rather
-    // than a HashSet of WeakReferences so that the entries are automatically
-    // removed after the listener is garbage collected.
-    private final Map<TKPulseListener,Object> stagePulseListeners = new WeakHashMap<>();
-    private final Map<TKPulseListener,Object> scenePulseListeners = new WeakHashMap<>();
-    private final Map<TKPulseListener,Object> postScenePulseListeners = new WeakHashMap<>();
-    private final Map<TKListener,Object> toolkitListeners = new WeakHashMap<>();
+    // referenced.
+    private final Set<TKPulseListener> stagePulseListeners = Collections.newSetFromMap(new WeakHashMap<>());
+    private final Set<TKPulseListener> scenePulseListeners = Collections.newSetFromMap(new WeakHashMap<>());
+    private final Set<TKPulseListener> postScenePulseListeners = Collections.newSetFromMap(new WeakHashMap<>());
+    private final Set<TKListener> toolkitListeners = Collections.newSetFromMap(new WeakHashMap<>());
 
     // The set of shutdown hooks is strongly held to avoid premature GC.
     private final Set<Runnable> shutdownHooks = new HashSet<>();
@@ -394,9 +390,9 @@ public abstract class Toolkit {
         final Set<TKPulseListener> postScenePulseList = new HashSet<>();
 
         synchronized (this) {
-            stagePulseList.addAll(stagePulseListeners.keySet());
-            scenePulseList.addAll(scenePulseListeners.keySet());
-            postScenePulseList.addAll(postScenePulseListeners.keySet());
+            stagePulseList.addAll(stagePulseListeners);
+            scenePulseList.addAll(scenePulseListeners);
+            postScenePulseList.addAll(postScenePulseListeners);
         }
         for (TKPulseListener listener : stagePulseList) {
             runPulse(listener);
@@ -417,7 +413,7 @@ public abstract class Toolkit {
             return;
         }
         synchronized (this) {
-            stagePulseListeners.put(listener, dummyObj);
+            stagePulseListeners.add(listener);
         }
     }
     public void removeStageTkPulseListener(TKPulseListener listener) {
@@ -430,7 +426,7 @@ public abstract class Toolkit {
             return;
         }
         synchronized (this) {
-            scenePulseListeners.put(listener, dummyObj);
+            scenePulseListeners.add(listener);
         }
     }
     public void removeSceneTkPulseListener(TKPulseListener listener) {
@@ -443,7 +439,7 @@ public abstract class Toolkit {
             return;
         }
         synchronized (this) {
-            postScenePulseListeners.put(listener, dummyObj);
+            postScenePulseListeners.add(listener);
         }
     }
     public void removePostSceneTkPulseListener(TKPulseListener listener) {
@@ -456,7 +452,7 @@ public abstract class Toolkit {
         if (listener == null) {
             return;
         }
-        toolkitListeners.put(listener, dummyObj);
+        toolkitListeners.add(listener);
     }
 
     public void removeTkListener(TKListener listener) {
@@ -497,13 +493,13 @@ public abstract class Toolkit {
     }
 
     public void notifyWindowListeners(final List<TKStage> windows) {
-        for (TKListener listener : toolkitListeners.keySet()) {
+        for (TKListener listener : toolkitListeners) {
             listener.changedTopLevelWindows(windows);
         }
     }
 
     public void notifyLastNestedLoopExited() {
-        for (TKListener listener: toolkitListeners.keySet()) {
+        for (TKListener listener: toolkitListeners) {
             listener.exitedLastNestedLoop();
         }
     }
