@@ -26,7 +26,6 @@
 package test.robot.javafx.embed.swing;
 
 import java.awt.Robot;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -39,6 +38,8 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import test.util.Util;
 
 @TestMethodOrder(OrderAnnotation.class)
@@ -98,9 +99,7 @@ public class LinuxScreencastHangCrashTest {
     private static void initFX() {
         if (!isFxStarted) {
             System.out.println("Platform.startup");
-            Platform.startup(() -> {
-                jfxRobot = new javafx.scene.robot.Robot();
-            });
+            Platform.startup(() -> jfxRobot = new javafx.scene.robot.Robot());
             isFxStarted = true;
         }
     }
@@ -130,27 +129,22 @@ public class LinuxScreencastHangCrashTest {
         robot.delay(DELAY_WAIT_FOR_SESSION_TO_CLOSE);
     }
 
-    @Test
+    @ParameterizedTest
     @Order(2)
     @Timeout(value=60)
-    public void testCrash() {
-        List.of(
-                DELAY_KEEP_SESSION,
-                DELAY_BEFORE_SESSION_CLOSE, // 3 following are just in case
-                DELAY_BEFORE_SESSION_CLOSE - 25,
-                DELAY_BEFORE_SESSION_CLOSE + 25
-        ).forEach(delay -> {
-            System.out.println("Testing with delay: " + delay);
-            try {
-                awtPixel();
-                robot.delay(delay);
-                fxPixel();
-                robot.delay(delay);
-                awtPixelOnFxThread();
-                robot.delay(delay);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
+    @ValueSource(ints = {
+            DELAY_KEEP_SESSION,
+            DELAY_BEFORE_SESSION_CLOSE, // 3 following are just in case
+            DELAY_BEFORE_SESSION_CLOSE - 25,
+            DELAY_BEFORE_SESSION_CLOSE + 25
+    })
+    public void testCrash(int delay) throws Exception {
+        System.out.println("Testing with delay: " + delay);
+        awtPixel();
+        robot.delay(delay);
+        fxPixel();
+        robot.delay(delay);
+        awtPixelOnFxThread();
+        robot.delay(delay);
     }
 }
