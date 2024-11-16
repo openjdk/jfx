@@ -133,10 +133,10 @@ public class LinuxScreencastHangCrashTest {
     @Order(2)
     @Timeout(value=60)
     @ValueSource(ints = {
-            DELAY_KEEP_SESSION,
-            DELAY_BEFORE_SESSION_CLOSE, // 3 following are just in case
-            DELAY_BEFORE_SESSION_CLOSE - 25,
-            DELAY_BEFORE_SESSION_CLOSE + 25
+        DELAY_KEEP_SESSION,
+        DELAY_BEFORE_SESSION_CLOSE, // 3 following are just in case
+        DELAY_BEFORE_SESSION_CLOSE - 25,
+        DELAY_BEFORE_SESSION_CLOSE + 25
     })
     public void testCrash(int delay) throws Exception {
         System.out.println("Testing with delay: " + delay);
