@@ -37,7 +37,7 @@ static inline bool hasFractions(double val)
     static constexpr double s_epsilon = 0.0001;
     int ival = static_cast<int>(val);
     double dval = static_cast<double>(ival);
-    return fabs(val - dval) > s_epsilon;
+    return std::abs(val - dval) > s_epsilon;
 }
 
 TextStream& TextStream::operator<<(bool b)
@@ -142,6 +142,12 @@ TextStream& TextStream::operator<<(StringView string)
     return *this;
 }
 
+TextStream& TextStream::operator<<(const HexNumberBuffer& buffer)
+{
+    m_text.append(makeString(buffer));
+    return *this;
+}
+
 TextStream& TextStream::operator<<(const FormatNumberRespectingIntegers& numberToFormat)
 {
     if (hasFractions(numberToFormat.value)) {
@@ -203,4 +209,4 @@ void writeIndent(TextStream& ts, int indent)
         ts << "  ";
 }
 
-}
+} // namespace WTF

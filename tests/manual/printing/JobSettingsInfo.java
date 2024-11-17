@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,10 +23,10 @@
  * questions.
  */
 
-import javafx.print.Printer;
-import javafx.print.PrinterJob;
-import javafx.print.JobSettings;
+import javafx.application.Application;
+import javafx.geometry.Rectangle2D;
 import javafx.print.Collation;
+import javafx.print.JobSettings;
 import javafx.print.PageLayout;
 import javafx.print.PageOrientation;
 import javafx.print.PageRange;
@@ -34,16 +34,12 @@ import javafx.print.Paper;
 import javafx.print.PaperSource;
 import javafx.print.PrintColor;
 import javafx.print.PrintQuality;
-import javafx.print.PrintResolution;
 import javafx.print.PrintSides;
-
-
-import javafx.application.Application;
-import javafx.geometry.Rectangle2D;
+import javafx.print.Printer;
+import javafx.print.PrinterJob;
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
@@ -60,6 +56,7 @@ public class JobSettingsInfo extends Application {
         launch(args);
     }
 
+    @Override
     public void start(Stage stage) {
         stage.setWidth(WIDTH);
         stage.setHeight(HEIGHT);

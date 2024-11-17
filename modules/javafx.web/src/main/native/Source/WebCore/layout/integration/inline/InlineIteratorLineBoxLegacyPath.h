@@ -51,8 +51,10 @@ public:
     float logicalTop() const { return m_rootInlineBox->lineBoxTop().toFloat(); }
     float logicalBottom() const { return m_rootInlineBox->lineBoxBottom().toFloat(); }
     float logicalWidth() const { return m_rootInlineBox->lineBoxWidth().toFloat(); }
-    float inkOverflowTop() const { return m_rootInlineBox->logicalTopVisualOverflow(); }
-    float inkOverflowBottom() const { return m_rootInlineBox->logicalBottomVisualOverflow(); }
+    float inkOverflowLogicalTop() const { return m_rootInlineBox->logicalTopVisualOverflow(); }
+    float inkOverflowLogicalBottom() const { return m_rootInlineBox->logicalBottomVisualOverflow(); }
+    float scrollableOverflowTop() const { return m_rootInlineBox->logicalTopLayoutOverflow(); }
+    float scrollableOverflowBottom() const { return m_rootInlineBox->logicalBottomLayoutOverflow(); }
 
     bool hasEllipsis() const { return !!m_rootInlineBox->ellipsisBox(); }
     FloatRect ellipsisVisualRectIgnoringBlockDirection() const
@@ -97,7 +99,7 @@ public:
         m_rootInlineBox = m_rootInlineBox->prevRootBox();
     }
 
-    bool operator==(const LineBoxIteratorLegacyPath& other) const { return m_rootInlineBox == other.m_rootInlineBox; }
+    friend bool operator==(LineBoxIteratorLegacyPath, LineBoxIteratorLegacyPath) = default;
 
     bool atEnd() const { return !m_rootInlineBox; }
 
@@ -112,7 +114,7 @@ public:
     }
 
 private:
-    const LegacyRootInlineBox* m_rootInlineBox;
+    WeakPtr<const LegacyRootInlineBox> m_rootInlineBox;
 };
 
 }

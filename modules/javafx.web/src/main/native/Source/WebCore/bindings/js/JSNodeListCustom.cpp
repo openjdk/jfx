@@ -31,7 +31,7 @@
 #include "LiveNodeList.h"
 #include "Node.h"
 #include "NodeList.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <wtf/text/AtomString.h>
 
 

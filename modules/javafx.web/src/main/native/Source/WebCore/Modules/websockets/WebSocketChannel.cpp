@@ -28,6 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#if PLATFORM(JAVA)
 
 #include "config.h"
 #include "WebSocketChannel.h"
@@ -67,7 +68,7 @@ WebSocketChannel::WebSocketChannel(Document& document, WebSocketChannelClient& c
     , m_client(client)
     , m_resumeTimer(*this, &WebSocketChannel::resumeTimerFired)
     , m_closingTimer(*this, &WebSocketChannel::closingTimerFired)
-    , m_progressIdentifier(WebSocketChannelIdentifier::generateThreadSafe())
+    , m_progressIdentifier(WebSocketChannelIdentifier::generate())
     , m_socketProvider(provider)
 {
     LOG(Network, "WebSocketChannel %p ctor, progress identifier %" PRIu64, this, m_progressIdentifier.toUInt64());
@@ -828,7 +829,7 @@ void WebSocketChannel::abortOutgoingFrameQueue()
     m_outgoingFrameQueueStatus = OutgoingFrameQueueClosed;
     if (m_blobLoaderStatus == BlobLoaderStarted) {
         m_blobLoader->cancel();
-        didFail(AbortError);
+        didFail(ExceptionCode::AbortError);
     }
 }
 
@@ -863,3 +864,4 @@ const ResourceResponse& WebSocketChannel::serverHandshakeResponse() const
 }
 
 } // namespace WebCore
+#endif

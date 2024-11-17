@@ -28,6 +28,7 @@ typedef (
     WebGLRenderingContext or
     WebGL2RenderingContext or
 #endif
+    GPUCanvasContext or
     ImageBitmapRenderingContext or
     OffscreenCanvasRenderingContext2D) OffscreenRenderingContext;
 
@@ -42,10 +43,12 @@ enum OffscreenRenderingContextType
    "2d",
    "webgl",
    "webgl2",
-   "bitmaprenderer"
+   "bitmaprenderer",
+   "webgpu"
 };
 
 [
+    ActiveDOMObject,
     GenerateIsReachable=Impl,
     EnabledBySetting=OffscreenCanvasEnabled,
     Conditional=OFFSCREEN_CANVAS,
@@ -55,8 +58,8 @@ enum OffscreenRenderingContextType
 ] interface OffscreenCanvas : EventTarget {
     [CallWith=CurrentScriptExecutionContext] constructor([EnforceRange] unsigned long width, [EnforceRange] unsigned long height);
 
-    attribute [EnforceRange] unsigned long width;
-    attribute [EnforceRange] unsigned long height;
+    [CallTracer=InspectorCanvasCallTracer] attribute [EnforceRange] unsigned long width;
+    [CallTracer=InspectorCanvasCallTracer] attribute [EnforceRange] unsigned long height;
 
     [CallWith=CurrentGlobalObject] OffscreenRenderingContext? getContext(OffscreenRenderingContextType contextType, any... arguments);
     ImageBitmap transferToImageBitmap();

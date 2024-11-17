@@ -144,6 +144,9 @@ struct Inst {
     template<typename Thing, typename Functor>
     static void forEachDefWithExtraClobberedRegs(Inst* prevInst, Inst* nextInst, const Functor&);
 
+    template<typename Thing, typename Functor>
+    static void forEachUse(Inst* prevInst, Inst* nextInst, const Functor&);
+
     // Some summaries about all arguments. These are useful for needsPadding().
     bool hasEarlyDef();
     bool hasLateUseOrDef();

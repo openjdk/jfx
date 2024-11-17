@@ -28,7 +28,7 @@
 #include <dispatch/dispatch.h>
 #include <os/object.h>
 
-#if PLATFORM(MAC) || USE(APPLE_INTERNAL_SDK) || PLATFORM(JAVA)
+#if HAVE(XPC_API) || USE(APPLE_INTERNAL_SDK) || PLATFORM(JAVA)
 #include <xpc/xpc.h>
 #else
 

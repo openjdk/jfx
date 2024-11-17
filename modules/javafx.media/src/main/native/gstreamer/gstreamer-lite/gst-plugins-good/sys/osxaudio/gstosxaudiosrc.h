@@ -82,6 +82,8 @@ struct _GstOsxAudioSrcClass
 
 GType gst_osx_audio_src_get_type (void);
 
+GST_ELEMENT_REGISTER_DECLARE (osxaudiosrc);
+
 G_END_DECLS
 
 #endif /* __GST_OSXAUDIOSRC_H__ */

@@ -37,8 +37,7 @@ public:
     bool isIndeterminate() const final;
 
 private:
-    AccessibilityRole roleValue() const override;
-    bool isProgressIndicator() const override { return true; }
+    AccessibilityRole determineAccessibilityRole() final;
 
     String valueDescription() const override;
     String gaugeRegionValueDescription() const;

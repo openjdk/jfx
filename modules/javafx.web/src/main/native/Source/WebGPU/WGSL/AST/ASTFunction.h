@@ -29,45 +29,74 @@
 #include "ASTCompoundStatement.h"
 #include "ASTDeclaration.h"
 #include "ASTParameter.h"
-#include "ASTTypeName.h"
-#include "CompilationMessage.h"
+#include "ASTWorkgroupSizeAttribute.h"
 
 #include <wtf/UniqueRefVector.h>
 
-namespace WGSL::AST {
+namespace WGSL {
+
+class AttributeValidator;
+
+namespace AST {
 
 class Function final : public Declaration {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    using List = UniqueRefVector<Function>;
+    WGSL_AST_BUILDER_NODE(Function);
+    friend AttributeValidator;
 
-    Function(SourceSpan span, Identifier&& name, Parameter::List&& parameters, TypeName::Ptr&& returnType, CompoundStatement&& body, Attribute::List&& attributes, Attribute::List&& returnAttributes)
+public:
+    NodeKind kind() const override;
+    Identifier& name() override { return m_name; }
+    Parameter::List& parameters() { return m_parameters; }
+    Attribute::List& attributes() { return m_attributes; }
+    Attribute::List& returnAttributes() { return m_returnAttributes; }
+    Expression* maybeReturnType() { return m_returnType; }
+    CompoundStatement& body() { return m_body.get(); }
+    const Identifier& name() const { return m_name; }
+    const Parameter::List& parameters() const { return m_parameters; }
+    const Attribute::List& attributes() const { return m_attributes; }
+    const Attribute::List& returnAttributes() const { return m_returnAttributes; }
+    const Expression* maybeReturnType() const { return m_returnType; }
+    const CompoundStatement& body() const { return m_body.get(); }
+
+    bool mustUse() const { return m_mustUse; }
+    std::optional<ShaderStage> stage() const { return m_stage; }
+    const std::optional<WorkgroupSize>& workgroupSize() const { return m_workgroupSize; }
+
+    bool returnTypeInvariant() const { return m_returnTypeInvariant; }
+    std::optional<Builtin> returnTypeBuiltin() const { return m_returnTypeBuiltin; }
+    std::optional<Interpolation> returnTypeInterpolation() const { return m_returnTypeInterpolation; }
+    std::optional<unsigned> returnTypeLocation() const { return m_returnTypeLocation; }
+
+private:
+    Function(SourceSpan span, Identifier&& name, Parameter::List&& parameters, Expression::Ptr returnType, CompoundStatement::Ref&& body, Attribute::List&& attributes, Attribute::List&& returnAttributes)
         : Declaration(span)
         , m_name(WTFMove(name))
         , m_parameters(WTFMove(parameters))
         , m_attributes(WTFMove(attributes))
         , m_returnAttributes(WTFMove(returnAttributes))
-        , m_returnType(WTFMove(returnType))
+        , m_returnType(returnType)
         , m_body(WTFMove(body))
     { }
 
-    NodeKind kind() const override;
-    Identifier& name() { return m_name; }
-    Parameter::List& parameters() { return m_parameters; }
-    Attribute::List& attributes() { return m_attributes; }
-    Attribute::List& returnAttributes() { return m_returnAttributes; }
-    TypeName* maybeReturnType() { return m_returnType.get(); }
-    CompoundStatement& body() { return m_body; }
-
-private:
     Identifier m_name;
     Parameter::List m_parameters;
     Attribute::List m_attributes;
     Attribute::List m_returnAttributes;
-    TypeName::Ptr m_returnType;
-    CompoundStatement m_body;
+    Expression::Ptr m_returnType;
+    CompoundStatement::Ref m_body;
+
+    // Attributes
+    bool m_mustUse { false };
+    std::optional<ShaderStage> m_stage;
+    std::optional<WorkgroupSize> m_workgroupSize;
+
+    bool m_returnTypeInvariant { false };
+    std::optional<Builtin> m_returnTypeBuiltin;
+    std::optional<Interpolation> m_returnTypeInterpolation;
+    std::optional<unsigned> m_returnTypeLocation;
 };
 
-} // namespace WGSL::AST
+} // namespace AST
+} // namespace WGSL
 
 SPECIALIZE_TYPE_TRAITS_WGSL_AST(Function)

@@ -35,18 +35,22 @@ namespace WebCore {
 // Any state that is returned by GraphicsContext methods will be retrieved from the primary context.
 
 class WEBCORE_EXPORT BifurcatedGraphicsContext : public GraphicsContext {
-    WTF_FORBID_HEAP_ALLOCATION;
+    WTF_MAKE_NONCOPYABLE(BifurcatedGraphicsContext);
 public:
     BifurcatedGraphicsContext(GraphicsContext& primaryContext, GraphicsContext& secondaryContext);
     ~BifurcatedGraphicsContext();
 
     bool hasPlatformContext() const;
+#if !PLATFORM(JAVA)
     PlatformGraphicsContext* platformContext() const final;
+#else
+    PlatformGraphicsContext* platformContext();
+#endif
 
     const DestinationColorSpace& colorSpace() const final;
 
-    void save() final;
-    void restore() final;
+    void save(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final;
+    void restore(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final;
 
     void drawRect(const FloatRect&, float borderThickness = 1) final;
     void drawLine(const FloatPoint&, const FloatPoint&) final;
@@ -68,8 +72,9 @@ public:
     using GraphicsContext::fillRect;
     void fillRect(const FloatRect&) final;
     void fillRect(const FloatRect&, const Color&) final;
+    void fillRect(const FloatRect&, Gradient&) final;
+    void fillRect(const FloatRect&, Gradient&, const AffineTransform&) final;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final;
-    void fillRoundedRect(const FloatRoundedRect&, const Color&, BlendMode blendMode) final;
     void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect& roundedHoleRect, const Color&) final;
     void clearRect(const FloatRect&) final;
     void strokeRect(const FloatRect&, float lineWidth) final;
@@ -78,20 +83,22 @@ public:
     void strokeEllipse(const FloatRect& ellipse) final;
 
 #if USE(CG)
-    void setIsCALayerContext(bool) final;
     bool isCALayerContext() const final;
-
-    void setIsAcceleratedContext(bool) final;
 #endif
 
     RenderingMode renderingMode() const final;
 
-    void clip(const FloatRect&) final;
-    void clipOut(const FloatRect&) final;
+    void resetClip() final;
 
+    void clip(const FloatRect&) final;
+    void clipRoundedRect(const FloatRoundedRect&) final;
+    void clipPath(const Path&, WindRule = WindRule::EvenOdd) final;
+
+    void clipOut(const FloatRect&) final;
+    void clipOutRoundedRect(const FloatRoundedRect&) final;
     void clipOut(const Path&) final;
 
-    void clipPath(const Path&, WindRule = WindRule::EvenOdd) final;
+    void clipToImageBuffer(ImageBuffer&, const FloatRect&) final;
 
     IntRect clipBounds() const final;
 
@@ -100,13 +107,13 @@ public:
     void setLineJoin(LineJoin) final;
     void setMiterLimit(float) final;
 
-    void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
-    bool needsCachedNativeImageInvalidationWorkaround(RenderingMode) final;
+    void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) final;
     void drawSystemImage(SystemImage&, const FloatRect&) final;
-    void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
-    ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage }) final;
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule, Image::TileRule, const ImagePaintingOptions& = { }) final;
+    void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
+    ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { ImageOrientation::Orientation::FromImage }) final;
+    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions = { }) final;
+    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule, Image::TileRule, ImagePaintingOptions = { }) final;
+    void drawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) final;
 
 #if ENABLE(VIDEO)
     void paintFrameForMedia(MediaPlayer&, const FloatRect& destination) final;
@@ -143,10 +150,6 @@ public:
     bool supportsInternalLinks() const final;
 
     void didUpdateState(GraphicsContextState&) final;
-
-#if OS(WINDOWS) && !USE(CAIRO)
-    GraphicsContextPlatformPrivate* deprecatedPrivateContext() const final;
-#endif
 
 private:
     void verifyStateSynchronization();

@@ -38,19 +38,26 @@
             "enum": [
                 "first-line",
                 "first-letter",
+                "grammar-error",
                 "highlight",
                 "marker",
                 "before",
                 "after",
                 "selection",
                 "backdrop",
-                "scrollbar",
-                "scrollbar-thumb",
-                "scrollbar-button",
-                "scrollbar-track",
-                "scrollbar-track-piece",
-                "scrollbar-corner",
-                "resizer"
+                "spelling-error",
+                "view-transition",
+                "view-transition-group",
+                "view-transition-image-pair",
+                "view-transition-old",
+                "view-transition-new",
+                "-webkit-scrollbar",
+                "-webkit-resizer",
+                "-webkit-scrollbar-thumb",
+                "-webkit-scrollbar-button",
+                "-webkit-scrollbar-track",
+                "-webkit-scrollbar-track-piece",
+                "-webkit-scrollbar-corner"
             ],
             "description": "Pseudo-style identifier (see <code>enum PseudoId</code> in <code>RenderStyleConstants.h</code>)."
         },
@@ -161,7 +168,8 @@
                 { "name": "sourceLine", "type": "integer", "description": "Line ordinal of the rule selector start character in the resource."},
                 { "name": "origin", "$ref": "StyleSheetOrigin", "description": "Parent stylesheet's origin."},
                 { "name": "style", "$ref": "CSSStyle", "description": "Associated style declaration." },
-                { "name": "groupings", "type": "array", "items": { "$ref": "Grouping" }, "optional": true, "description": "Grouping list array (for rules involving @media/@supports). The array enumerates CSS groupings starting with the innermost one, going outwards." }
+                { "name": "groupings", "type": "array", "items": { "$ref": "Grouping" }, "optional": true, "description": "Grouping list array (for rules involving @media/@supports). The array enumerates CSS groupings starting with the innermost one, going outwards." },
+                { "name": "isImplicitlyNested", "type": "boolean", "optional": true, "description": "<code>true</code> if this style is for a rule implicitly wrapping properties declared inside of CSSGrouping." }
             ]
         },
         {

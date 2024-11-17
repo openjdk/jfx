@@ -46,11 +46,13 @@
 
 #include "RenderMarquee.h"
 
-#include "FrameView.h"
 #include "HTMLMarqueeElement.h"
 #include "HTMLNames.h"
+#include "LocalFrameView.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 
 namespace WebCore {
@@ -71,9 +73,8 @@ RenderMarquee::~RenderMarquee() = default;
 int RenderMarquee::marqueeSpeed() const
 {
     int result = m_layer->renderer().style().marqueeSpeed();
-    Element* element = m_layer->renderer().element();
-    if (is<HTMLMarqueeElement>(element))
-        result = std::max(result, downcast<HTMLMarqueeElement>(*element).minimumDelay());
+    if (auto* marquee = dynamicDowncast<HTMLMarqueeElement>(m_layer->renderer().element()))
+        result = std::max(result, marquee->minimumDelay());
     return result;
 }
 
@@ -281,7 +282,7 @@ void RenderMarquee::timerFired()
         }
         bool positive = range > 0;
         int clientSize = (isHorizontal() ? roundToInt(m_layer->renderBox()->clientWidth()) : roundToInt(m_layer->renderBox()->clientHeight()));
-        int increment = abs(intValueForLength(m_layer->renderer().style().marqueeIncrement(), clientSize));
+        int increment = std::abs(intValueForLength(m_layer->renderer().style().marqueeIncrement(), clientSize));
         int currentPos = (isHorizontal() ? scrollableArea->scrollOffset().x() : scrollableArea->scrollOffset().y());
         newPos =  currentPos + (addIncrement ? increment : -increment);
         if (positive)

@@ -25,20 +25,26 @@
 
 #pragma once
 
+#include "InlineDisplayContent.h"
 #include "InlineLineTypes.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/OptionSet.h>
 
 namespace WebCore {
 namespace Layout {
 
+class Box;
 class InlineInvalidation;
 
 class InlineDamage {
     WTF_MAKE_ISO_ALLOCATED_INLINE(InlineDamage);
 public:
     InlineDamage() = default;
+    ~InlineDamage();
 
-    enum class Type {
+    enum class Type : uint8_t {
+        // Can't decide the type of damage. Let's nuke all the things.
+        Invalid,
         // Content changed or some style property that drives soft wrap opportunities (e.g. going from white-space: pre to normal).
         // This tells us to re-process the inline content and run line layout.
         NeedsContentUpdateAndLineLayout,
@@ -50,22 +56,77 @@ public:
         NeedsHorizontalAdjustment
     };
     Type type() const { return m_damageType; }
+
+    enum class Reason : uint8_t {
+        Append        = 1 << 0,
+        Insert        = 1 << 1,
+        Remove        = 1 << 2,
+        ContentChange = 1 << 3
+    };
+    OptionSet<Reason> reasons() const { return m_damageReasons; }
     // FIXME: Add support for damage range with multiple, different damage types.
-    struct ContentPosition {
+    struct Position {
         size_t lineIndex { 0 };
         InlineItemPosition inlineItemPosition { };
     };
-    std::optional<ContentPosition> contentPosition() const { return m_contentPosition; }
+    std::optional<Position> start() const { return m_startPosition; }
+    using TrailingDisplayBoxList = Vector<InlineDisplay::Box>;
+    std::optional<InlineDisplay::Box> trailingContentForLine(size_t lineIndex) const;
+
+    void addDetachedBox(UniqueRef<Box>&& layoutBox) { m_detachedLayoutBoxes.append(WTFMove(layoutBox)); }
+
+#ifndef NDEBUG
+    bool hasDetachedContent() const { return !m_detachedLayoutBoxes.isEmpty(); }
+#endif
 
 private:
     friend class InlineInvalidation;
 
+    void setDamageReason(Reason reason) { m_damageReasons.add(reason); }
     void setDamageType(Type type) { m_damageType = type; }
-    void setDamagedPosition(ContentPosition contentPosition) { m_contentPosition = contentPosition; }
+    void setDamagedPosition(Position position) { m_startPosition = position; }
+    void reset();
+    void setTrailingDisplayBoxes(TrailingDisplayBoxList&& trailingDisplayBoxes) { m_trailingDisplayBoxes = WTFMove(trailingDisplayBoxes); }
 
-    Type m_damageType { Type::NeedsContentUpdateAndLineLayout };
-    std::optional<ContentPosition> m_contentPosition;
+    Type m_damageType { Type::Invalid };
+    OptionSet<Reason> m_damageReasons;
+    std::optional<Position> m_startPosition;
+    TrailingDisplayBoxList m_trailingDisplayBoxes;
+    Vector<UniqueRef<Box>> m_detachedLayoutBoxes;
 };
+
+inline std::optional<InlineDisplay::Box> InlineDamage::trailingContentForLine(size_t lineIndex) const
+{
+    if (m_trailingDisplayBoxes.isEmpty()) {
+        // Couldn't compute trailing positions for damaged lines.
+        return { };
+    }
+    if (!start() || start()->lineIndex > lineIndex) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+    auto relativeLineIndex = lineIndex - start()->lineIndex;
+    if (relativeLineIndex >= m_trailingDisplayBoxes.size()) {
+        // At the time of the damage, we didn't have this line yet -e.g content insert at a new line.
+        return { };
+    }
+    return { m_trailingDisplayBoxes[relativeLineIndex] };
+}
+
+inline InlineDamage::~InlineDamage()
+{
+    m_trailingDisplayBoxes.clear();
+    m_detachedLayoutBoxes.clear();
+}
+
+inline void InlineDamage::reset()
+{
+    m_damageType = { };
+    m_damageReasons = { };
+    m_startPosition = { };
+    m_trailingDisplayBoxes.clear();
+    // Never reset m_detachedLayoutBoxes. We need to keep those layout boxes around until after layout.
+}
 
 }
 }

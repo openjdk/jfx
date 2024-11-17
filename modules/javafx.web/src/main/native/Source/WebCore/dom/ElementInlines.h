@@ -25,12 +25,11 @@
 
 #pragma once
 
-#include "Document.h"
 #include "DocumentInlines.h"
 #include "Element.h"
 #include "ElementData.h"
 #include "HTMLNames.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "StyleChange.h"
 
 namespace WebCore {
@@ -52,12 +51,15 @@ inline unsigned Element::findAttributeIndexByName(const AtomString& name, bool s
 
 inline bool Node::hasAttributes() const
 {
-    return is<Element>(*this) && downcast<Element>(*this).hasAttributes();
+    auto* element = dynamicDowncast<Element>(*this);
+    return element && element->hasAttributes();
 }
 
 inline NamedNodeMap* Node::attributes() const
 {
-    return is<Element>(*this) ? &downcast<Element>(*this).attributes() : nullptr;
+    if (auto* element = dynamicDowncast<Element>(*this))
+        return &element->attributes();
+    return nullptr;
 }
 
 inline Element* Node::parentElement() const
@@ -93,7 +95,7 @@ inline const AtomString& Element::attributeWithoutSynchronization(const Qualifie
 
 inline URL Element::getURLAttributeForBindings(const QualifiedName& name) const
 {
-    return document().maskedURLForBindingsIfNeeded(getURLAttribute(name));
+    return protectedDocument()->maskedURLForBindingsIfNeeded(getURLAttribute(name));
 }
 
 inline bool Element::hasAttributesWithoutUpdate() const
@@ -209,7 +211,20 @@ inline const AtomString& Element::getAttribute(const QualifiedName& name, const 
 
 inline bool isInTopLayerOrBackdrop(const RenderStyle& style, const Element* element)
 {
-    return (element && element->isInTopLayer()) || style.styleType() == PseudoId::Backdrop;
+    return (element && element->isInTopLayer()) || style.pseudoElementType() == PseudoId::Backdrop;
+}
+
+inline void Element::hideNonce()
+{
+    // In the common case, Elements don't have a nonce parameter to hide.
+    if (LIKELY(!isConnected() || !hasAttributeWithoutSynchronization(HTMLNames::nonceAttr)))
+        return;
+    hideNonceSlow();
+}
+
+inline Element* Document::cssTarget() const
+{
+    return m_cssTarget.get();
 }
 
 }

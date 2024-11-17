@@ -33,7 +33,8 @@
 #include "FontCascade.h"
 #include "KeyboardEvent.h"
 #include "RenderBlock.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
+#include "RenderStyleSetters.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextBreakIterator.h>
@@ -68,11 +69,6 @@ void DateTimeSymbolicFieldElement::adjustMinInlineSize(RenderStyle& style) const
 bool DateTimeSymbolicFieldElement::hasValue() const
 {
     return m_selectedIndex >= 0;
-}
-
-void DateTimeSymbolicFieldElement::initialize(const AtomString& pseudo)
-{
-    DateTimeFieldElement::initialize(pseudo);
 }
 
 void DateTimeSymbolicFieldElement::setEmptyValue(EventBehavior eventBehavior)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@
 #define _GLASS_APPLICATION_
 
 #include "BaseWnd.h"
-
+#include "PlatformSupport.h"
 
 class Action {
 public:
@@ -81,7 +81,10 @@ public:
     static void ExecActionLater(Action *action);
     void RegisterClipboardViewer(jobject clipboard);
     void UnregisterClipboardViewer();
-    static jstring GetThemeName(JNIEnv* env);
+
+    static jobject GetPlatformPreferences() {
+        return pInstance ? pInstance->m_platformSupport.collectPreferences() : NULL;
+    }
 
     inline static DWORD GetMainThreadId()
     {
@@ -125,6 +128,7 @@ private:
     HWND    m_hNextClipboardView;
     DWORD m_mainThreadId;
     static jobject sm_glassClassLoader;
+    PlatformSupport m_platformSupport;
 
     // These are static because the GlassApplication instance may be
     // destroyed while the nested loop is spinning

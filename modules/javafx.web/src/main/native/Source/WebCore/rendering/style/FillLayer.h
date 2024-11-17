@@ -46,6 +46,8 @@ struct FillSize {
     {
     }
 
+    friend bool operator==(const FillSize&, const FillSize&) = default;
+
     FillSizeType type;
     LengthSize size;
 };
@@ -54,18 +56,8 @@ struct FillRepeatXY {
     FillRepeat x { FillRepeat::Repeat };
     FillRepeat y { FillRepeat::Repeat };
 
-    bool operator==(const FillRepeatXY& other) const { return x == other.x && y == other.y; }
+    friend bool operator==(const FillRepeatXY&, const FillRepeatXY&) = default;
 };
-
-inline bool operator==(const FillSize& a, const FillSize& b)
-{
-    return a.type == b.type && a.size == b.size;
-}
-
-inline bool operator!=(const FillSize& a, const FillSize& b)
-{
-    return !(a == b);
-}
 
 class FillLayer : public RefCounted<FillLayer> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -78,6 +70,7 @@ public:
     ~FillLayer();
 
     StyleImage* image() const { return m_image.get(); }
+    RefPtr<StyleImage> protectedImage() const { return m_image; }
     const Length& xPosition() const { return m_xPosition; }
     const Length& yPosition() const { return m_yPosition; }
     Edge backgroundXOrigin() const { return static_cast<Edge>(m_backgroundXOrigin); }
@@ -156,10 +149,9 @@ public:
     FillLayer& operator=(const FillLayer&);
 
     bool operator==(const FillLayer&) const;
-    bool operator!=(const FillLayer& other) const { return !(*this == other); }
 
     bool containsImage(StyleImage&) const;
-    bool imagesAreLoaded() const;
+    bool imagesAreLoaded(const RenderElement*) const;
     bool hasImage() const { return m_next ? hasImageInAnyLayer() : m_image; }
     bool hasImageWithAttachment(FillAttachment) const;
     bool hasOpaqueImage(const RenderElement&) const;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,13 +52,17 @@ private:
             return true;
         }
 
+        auto bytesRemaining = view.byteLength() - localOffset;
+        if (characterCount > bytesRemaining)
+            return false;
+
         Vector<LChar> characters;
         characters.reserveInitialCapacity(static_cast<size_t>(characterCount));
         while (characterCount--) {
             int8_t character = 0;
             if (!checkedRead<int8_t>(character, view, localOffset, BigEndian))
                 return false;
-            characters.uncheckedAppend(character);
+            characters.append(character);
         }
 
         m_contents = String::fromUTF8(characters);
@@ -91,6 +95,7 @@ ISOWebVTTCue::ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, A
 {
 }
 
+ISOWebVTTCue::ISOWebVTTCue() = default;
 ISOWebVTTCue::ISOWebVTTCue(ISOWebVTTCue&&) = default;
 ISOWebVTTCue::~ISOWebVTTCue() = default;
 

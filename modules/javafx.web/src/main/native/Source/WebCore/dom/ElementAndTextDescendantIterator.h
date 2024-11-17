@@ -47,7 +47,6 @@ public:
     const Node* operator->() const;
 
     bool operator==(const ElementAndTextDescendantIterator& other) const;
-    bool operator!=(const ElementAndTextDescendantIterator& other) const;
 
     bool operator!() const { return !m_depth; }
     explicit operator bool() const { return m_depth; }
@@ -109,7 +108,7 @@ inline ElementAndTextDescendantIterator::ElementAndTextDescendantIterator(const 
 {
     if (!m_current)
         return;
-    m_ancestorSiblingStack.uncheckedAppend({ nullptr, 0 });
+    m_ancestorSiblingStack.append({ nullptr, 0 });
     m_depth = 1;
 }
 
@@ -132,7 +131,7 @@ inline ElementAndTextDescendantIterator::ElementAndTextDescendantIterator(const 
         ancestor = ancestor->parentNode();
     }
 
-    m_ancestorSiblingStack.uncheckedAppend({ nullptr, 0 });
+    m_ancestorSiblingStack.append({ nullptr, 0 });
     for (unsigned i = ancestorStack.size(); i; --i) {
         if (auto* sibling = nextSibling(*ancestorStack[i - 1]))
             m_ancestorSiblingStack.append({ sibling, i });
@@ -287,11 +286,6 @@ inline bool ElementAndTextDescendantIterator::operator==(const ElementAndTextDes
 {
     ASSERT(!m_assertions.domTreeHasMutated());
     return m_current == other.m_current || (!m_depth && !other.m_depth);
-}
-
-inline bool ElementAndTextDescendantIterator::operator!=(const ElementAndTextDescendantIterator& other) const
-{
-    return !(*this == other);
 }
 
 // ElementAndTextDescendantRange

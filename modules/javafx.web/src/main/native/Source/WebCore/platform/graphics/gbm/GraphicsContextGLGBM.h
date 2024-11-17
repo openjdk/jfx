@@ -50,22 +50,23 @@ public:
     // GraphicsContextGL overrides
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
 
-#if ENABLE(MEDIA_STREAM)
-    RefPtr<VideoFrame> paintCompositedResultsToVideoFrame() override;
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
+    RefPtr<VideoFrame> surfaceBufferToVideoFrame(SurfaceBuffer) override;
 #endif
 #if ENABLE(VIDEO)
     bool copyTextureFromMedia(MediaPlayer&, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY) override;
 #endif
+    RefPtr<PixelBuffer> readCompositedResults() final;
+
 
     void setContextVisibility(bool) override;
     void prepareForDisplay() override;
 
     // GraphicsContextGLANGLE overrides
     bool platformInitializeContext() override;
-    bool platformInitialize() override;
+    bool platformInitializeExtensions() override;
 
-    void prepareTexture() override;
-    bool reshapeDisplayBufferBacking() override;
+    bool reshapeDrawingBuffer() override;
 
     struct Swapchain {
         Swapchain() = default;
@@ -95,7 +96,7 @@ public:
     const EGLExtensions& eglExtensions() { return m_eglExtensions; }
 
 protected:
-    GraphicsContextGLGBM(WebCore::GraphicsContextGLAttributes&&);
+    explicit GraphicsContextGLGBM(WebCore::GraphicsContextGLAttributes&&);
 
 private:
     void allocateDrawBufferObject();

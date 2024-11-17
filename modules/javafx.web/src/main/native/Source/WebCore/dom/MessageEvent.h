@@ -39,11 +39,7 @@ namespace WebCore {
 
 class Blob;
 
-#if ENABLE(SERVICE_WORKER)
 using MessageEventSource = std::variant<RefPtr<WindowProxy>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
-#else
-using MessageEventSource = std::variant<RefPtr<WindowProxy>, RefPtr<MessagePort>>;
-#endif
 
 class MessageEvent final : public Event {
     WTF_MAKE_ISO_ALLOCATED(MessageEvent);
@@ -94,7 +90,7 @@ private:
 
     EventInterface eventInterface() const final;
 
-    DataType m_data;
+    DataType m_data WTF_GUARDED_BY_LOCK(m_concurrentDataAccessLock);
     String m_origin;
     String m_lastEventId;
     std::optional<MessageEventSource> m_source;

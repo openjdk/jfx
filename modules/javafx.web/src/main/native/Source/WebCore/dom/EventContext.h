@@ -46,10 +46,12 @@ public:
 
     EventContext(Type, Node*, EventTarget* currentTarget, EventTarget* origin, int closedShadowDepth);
     EventContext(Type, Node&, Node* currentTarget, EventTarget* origin, int closedShadowDepth);
-    ~EventContext();
+    ~EventContext() = default;
 
     Node* node() const { return m_node.get(); }
+    RefPtr<Node> protectedNode() const { return m_node; }
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
+    RefPtr<EventTarget> protectedCurrentTarget() const { return m_currentTarget; }
     bool isCurrentTargetInShadowTree() const { return m_currentTargetIsInShadowTree; }
     EventTarget* target() const { return m_target.get(); }
     int closedShadowDepth() const { return m_closedShadowDepth; }
@@ -61,10 +63,10 @@ public:
     bool isWindowContext() const { return m_type == Type::Window; }
 
     Node* relatedTarget() const { return m_relatedTarget.get(); }
-    void setRelatedTarget(Node*);
+    void setRelatedTarget(RefPtr<Node>&&);
 
 #if ENABLE(TOUCH_EVENTS)
-    enum TouchListType { Touches, TargetTouches, ChangedTouches };
+    enum class TouchListType : uint8_t { Touches, TargetTouches, ChangedTouches };
     TouchList& touchList(TouchListType);
 #endif
 
@@ -115,7 +117,6 @@ inline EventContext::EventContext(Type type, Node* node, RefPtr<EventTarget>&& c
 inline EventContext::EventContext(Type type, Node* node, EventTarget* currentTarget, EventTarget* origin, int closedShadowDepth)
     : EventContext(type, node, RefPtr { currentTarget }, origin, closedShadowDepth)
 {
-    ASSERT(!is<Node>(currentTarget));
 }
 
 // This variant avoids calling EventTarget::ref() which is a virtual function call.
@@ -125,10 +126,10 @@ inline EventContext::EventContext(Type type, Node& node, Node* currentTarget, Ev
     m_contextNodeIsFormElement = is<HTMLFormElement>(node);
 }
 
-inline void EventContext::setRelatedTarget(Node* relatedTarget)
+inline void EventContext::setRelatedTarget(RefPtr<Node>&& relatedTarget)
 {
-    ASSERT(!isUnreachableNode(relatedTarget));
-    m_relatedTarget = relatedTarget;
+    ASSERT(!isUnreachableNode(relatedTarget.get()));
+    m_relatedTarget = WTFMove(relatedTarget);
     m_relatedTargetIsSet = true;
 }
 
@@ -137,11 +138,11 @@ inline void EventContext::setRelatedTarget(Node* relatedTarget)
 inline TouchList& EventContext::touchList(TouchListType type)
 {
     switch (type) {
-    case Touches:
+    case TouchListType::Touches:
         return *m_touches;
-    case TargetTouches:
+    case TouchListType::TargetTouches:
         return *m_targetTouches;
-    case ChangedTouches:
+    case TouchListType::ChangedTouches:
         return *m_changedTouches;
     }
     ASSERT_NOT_REACHED();

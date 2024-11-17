@@ -2,6 +2,8 @@
  * Copyright (C) 2000-2001 Red Hat, Inc.
  * Copyright (C) 2005 Imendio AB
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -37,11 +39,13 @@
 
 
 /**
- * SECTION:gclosure
- * @short_description: Functions as first-class objects
- * @title: Closures
+ * GClosure:
+ * @in_marshal: Indicates whether the closure is currently being invoked with
+ *   g_closure_invoke()
+ * @is_invalid: Indicates whether the closure has been invalidated by
+ *   g_closure_invalidate()
  *
- * A #GClosure represents a callback supplied by the programmer.
+ * A `GClosure` represents a callback supplied by the programmer.
  *
  * It will generally comprise a function of some kind and a marshaller
  * used to call it. It is the responsibility of the marshaller to
@@ -188,7 +192,7 @@ enum {
  * }
  * ]|
  *
- * Returns: (transfer none): a floating reference to a new #GClosure
+ * Returns: (transfer floating): a floating reference to a new #GClosure
  */
 GClosure*
 g_closure_new_simple (guint           sizeof_closure,
@@ -754,7 +758,7 @@ g_closure_remove_invalidate_notifier (GClosure      *closure,
       closure->data == notify_data)
     closure->marshal = NULL;
   else if (!closure_try_remove_inotify (closure, notify_data, notify_func))
-    g_warning (G_STRLOC ": unable to remove uninstalled invalidation notifier: %p (%p)",
+    g_critical (G_STRLOC ": unable to remove uninstalled invalidation notifier: %p (%p)",
          notify_func, notify_data);
 }
 
@@ -782,8 +786,8 @@ g_closure_remove_finalize_notifier (GClosure      *closure,
       closure->data == notify_data)
     closure->marshal = NULL;
   else if (!closure_try_remove_fnotify (closure, notify_data, notify_func))
-    g_warning (G_STRLOC ": unable to remove uninstalled finalization notifier: %p (%p)",
-               notify_func, notify_data);
+    g_critical (G_STRLOC ": unable to remove uninstalled finalization notifier: %p (%p)",
+                notify_func, notify_data);
 }
 
 /**
@@ -935,7 +939,7 @@ g_closure_set_marshal (GClosure       *closure,
   g_return_if_fail (marshal != NULL);
 
   if (closure->marshal && closure->marshal != marshal)
-    g_warning ("attempt to override closure->marshal (%p) with new marshal (%p)",
+    g_critical ("attempt to override closure->marshal (%p) with new marshal (%p)",
          closure->marshal, marshal);
   else
     closure->marshal = marshal;
@@ -953,7 +957,7 @@ _g_closure_set_va_marshal (GClosure       *closure,
   real_closure = G_REAL_CLOSURE (closure);
 
   if (real_closure->va_marshal && real_closure->va_marshal != marshal)
-    g_warning ("attempt to override closure->va_marshal (%p) with new marshal (%p)",
+    g_critical ("attempt to override closure->va_marshal (%p) with new marshal (%p)",
          real_closure->va_marshal, marshal);
   else
     real_closure->va_marshal = marshal;
@@ -970,7 +974,7 @@ _g_closure_set_va_marshal (GClosure       *closure,
  *
  * @destroy_data will be called as a finalize notifier on the #GClosure.
  *
- * Returns: (transfer none): a floating reference to a new #GCClosure
+ * Returns: (transfer floating): a floating reference to a new #GCClosure
  */
 GClosure*
 g_cclosure_new (GCallback      callback_func,
@@ -1004,7 +1008,7 @@ g_cclosure_new (GCallback      callback_func,
  *
  * @destroy_data will be called as a finalize notifier on the #GClosure.
  *
- * Returns: (transfer none): a floating reference to a new #GCClosure
+ * Returns: (transfer floating): a floating reference to a new #GCClosure
  */
 GClosure*
 g_cclosure_new_swap (GCallback      callback_func,
@@ -1176,7 +1180,7 @@ g_type_iface_meta_marshalv (GClosure *closure,
  * @struct_offset in the class structure of the interface or classed type
  * identified by @itype.
  *
- * Returns: (transfer none): a floating reference to a new #GCClosure
+ * Returns: (transfer floating): a floating reference to a new #GCClosure
  */
 GClosure*
 g_signal_type_cclosure_new (GType    itype,
@@ -1187,7 +1191,7 @@ g_signal_type_cclosure_new (GType    itype,
   g_return_val_if_fail (G_TYPE_IS_CLASSED (itype) || G_TYPE_IS_INTERFACE (itype), NULL);
   g_return_val_if_fail (struct_offset >= sizeof (GTypeClass), NULL);
 
-  closure = g_closure_new_simple (sizeof (GClosure), (gpointer) itype);
+  closure = g_closure_new_simple (sizeof (GClosure), GTYPE_TO_POINTER (itype));
   if (G_TYPE_IS_INTERFACE (itype))
     {
       g_closure_set_meta_marshal (closure, GUINT_TO_POINTER (struct_offset), g_type_iface_meta_marshal);
@@ -1288,7 +1292,7 @@ value_to_ffi_type (const GValue *gvalue,
     default:
       rettype = &ffi_type_pointer;
       *value = NULL;
-      g_warning ("value_to_ffi_type: Unsupported fundamental type: %s", g_type_name (type));
+      g_critical ("value_to_ffi_type: Unsupported fundamental type: %s", g_type_name (type));
       break;
     }
   return rettype;
@@ -1368,9 +1372,9 @@ restart:
         goto restart;
       G_GNUC_FALLTHROUGH;
     default:
-      g_warning ("value_from_ffi_type: Unsupported fundamental type %s for type %s",
-                 g_type_name (g_type_fundamental (G_VALUE_TYPE (gvalue))),
-                 g_type_name (G_VALUE_TYPE (gvalue)));
+      g_critical ("value_from_ffi_type: Unsupported fundamental type %s for type %s",
+                  g_type_name (g_type_fundamental (G_VALUE_TYPE (gvalue))),
+                  g_type_name (G_VALUE_TYPE (gvalue)));
     }
 }
 
@@ -1448,7 +1452,7 @@ va_to_ffi_type (GType gtype,
     default:
       rettype = &ffi_type_pointer;
       storage->_guint64  = 0;
-      g_warning ("va_to_ffi_type: Unsupported fundamental type: %s", g_type_name (type));
+      g_critical ("va_to_ffi_type: Unsupported fundamental type: %s", g_type_name (type));
       break;
     }
   return rettype;
@@ -1628,7 +1632,7 @@ g_cclosure_marshal_generic_va (GClosure *closure,
       args[n_args-1] = &closure->data;
     }
 
-  G_VA_COPY (args_copy, args_list);
+  va_copy (args_copy, args_list);
 
   /* Box non-primitive arguments */
   for (i = 0; i < n_params; i++)
@@ -1687,320 +1691,3 @@ g_cclosure_marshal_generic_va (GClosure *closure,
   if (return_value && G_VALUE_TYPE (return_value))
     value_from_ffi_type (return_value, rvalue);
 }
-
-/**
- * g_cclosure_marshal_VOID__VOID:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 1
- * @param_values: a #GValue array holding only the instance
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__BOOLEAN:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #gboolean parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gboolean arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__CHAR:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #gchar parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gchar arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__UCHAR:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #guchar parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, guchar arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__INT:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #gint parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gint arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__UINT:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #guint parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, guint arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__LONG:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #glong parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, glong arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__ULONG:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #gulong parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gulong arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__ENUM:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the enumeration parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gint arg1, gpointer user_data)` where the #gint parameter denotes an enumeration type..
- */
-
-/**
- * g_cclosure_marshal_VOID__FLAGS:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the flags parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gint arg1, gpointer user_data)` where the #gint parameter denotes a flags type.
- */
-
-/**
- * g_cclosure_marshal_VOID__FLOAT:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #gfloat parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gfloat arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__DOUBLE:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #gdouble parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gdouble arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__STRING:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #gchar* parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, const gchar *arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__PARAM:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #GParamSpec* parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, GParamSpec *arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__BOXED:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #GBoxed* parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, GBoxed *arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__POINTER:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #gpointer parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, gpointer arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__OBJECT:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #GObject* parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, GObject *arg1, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_VOID__VARIANT:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 2
- * @param_values: a #GValue array holding the instance and the #GVariant* parameter
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, GVariant *arg1, gpointer user_data)`.
- *
- * Since: 2.26
- */
-
-/**
- * g_cclosure_marshal_VOID__UINT_POINTER:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: ignored
- * @n_param_values: 3
- * @param_values: a #GValue array holding instance, arg1 and arg2
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `void (*callback) (gpointer instance, guint arg1, gpointer arg2, gpointer user_data)`.
- */
-
-/**
- * g_cclosure_marshal_BOOLEAN__FLAGS:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: a #GValue which can store the returned #gboolean
- * @n_param_values: 2
- * @param_values: a #GValue array holding instance and arg1
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `gboolean (*callback) (gpointer instance, gint arg1, gpointer user_data)` where the #gint parameter
- * denotes a flags type.
- */
-
-/**
- * g_cclosure_marshal_BOOL__FLAGS:
- *
- * Another name for g_cclosure_marshal_BOOLEAN__FLAGS().
- */
-/**
- * g_cclosure_marshal_STRING__OBJECT_POINTER:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: a #GValue, which can store the returned string
- * @n_param_values: 3
- * @param_values: a #GValue array holding instance, arg1 and arg2
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `gchar* (*callback) (gpointer instance, GObject *arg1, gpointer arg2, gpointer user_data)`.
- */
-/**
- * g_cclosure_marshal_BOOLEAN__OBJECT_BOXED_BOXED:
- * @closure: the #GClosure to which the marshaller belongs
- * @return_value: a #GValue, which can store the returned string
- * @n_param_values: 3
- * @param_values: a #GValue array holding instance, arg1 and arg2
- * @invocation_hint: the invocation hint given as the last argument
- *  to g_closure_invoke()
- * @marshal_data: additional data specified when registering the marshaller
- *
- * A marshaller for a #GCClosure with a callback of type
- * `gboolean (*callback) (gpointer instance, GBoxed *arg1, GBoxed *arg2, gpointer user_data)`.
- *
- * Since: 2.26
- */

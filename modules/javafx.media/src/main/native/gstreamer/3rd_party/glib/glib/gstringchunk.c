@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -40,40 +42,33 @@
 #include "gutilsprivate.h"
 
 /**
- * SECTION:string_chunks
- * @title: String Chunks
- * @short_description: efficient storage of groups of strings
+ * GStringChunk:
+ *
+ * `GStringChunk` provides efficient storage of groups of strings
  *
  * String chunks are used to store groups of strings. Memory is
- * allocated in blocks, and as strings are added to the #GStringChunk
+ * allocated in blocks, and as strings are added to the `GStringChunk`
  * they are copied into the next free position in a block. When a block
  * is full a new block is allocated.
  *
  * When storing a large number of strings, string chunks are more
- * efficient than using g_strdup() since fewer calls to malloc() are
- * needed, and less memory is wasted in memory allocation overheads.
+ * efficient than using [func@GLib.strdup] since fewer calls to `malloc()`
+ * are needed, and less memory is wasted in memory allocation overheads.
  *
- * By adding strings with g_string_chunk_insert_const() it is also
+ * By adding strings with [method@GLib.StringChunk.insert_const] it is also
  * possible to remove duplicates.
  *
- * To create a new #GStringChunk use g_string_chunk_new().
+ * To create a new `GStringChunk` use [func@GLib.StringChunk.new].
  *
- * To add strings to a #GStringChunk use g_string_chunk_insert().
+ * To add strings to a `GStringChunk` use [method@GLib.StringChunk.insert].
  *
- * To add strings to a #GStringChunk, but without duplicating strings
- * which are already in the #GStringChunk, use
- * g_string_chunk_insert_const().
+ * To add strings to a `GStringChunk`, but without duplicating strings
+ * which are already in the `GStringChunk`, use [method@GLib.StringChunk.insert_const].
  *
- * To free the entire #GStringChunk use g_string_chunk_free(). It is
- * not possible to free individual strings.
+ * To free the entire `GStringChunk` use [method@GLib.StringChunk.free].
+ * It is not possible to free individual strings.
  */
 
-/**
- * GStringChunk:
- *
- * An opaque data structure representing String Chunks.
- * It should only be accessed by using the following functions.
- */
 struct _GStringChunk
 {
   GHashTable *const_table;
@@ -84,7 +79,7 @@ struct _GStringChunk
 };
 
 /**
- * g_string_chunk_new:
+ * g_string_chunk_new: (constructor)
  * @size: the default size of the blocks of memory which are
  *     allocated to store the strings. If a particular string
  *     is larger than this default size, a larger block of
@@ -92,7 +87,7 @@ struct _GStringChunk
  *
  * Creates a new #GStringChunk.
  *
- * Returns: a new #GStringChunk
+ * Returns: (transfer full): a new #GStringChunk
  */
 GStringChunk *
 g_string_chunk_new (gsize size)
@@ -113,7 +108,7 @@ g_string_chunk_new (gsize size)
 
 /**
  * g_string_chunk_free:
- * @chunk: a #GStringChunk
+ * @chunk: (transfer full): a #GStringChunk
  *
  * Frees all memory allocated by the #GStringChunk.
  * After calling g_string_chunk_free() it is not safe to

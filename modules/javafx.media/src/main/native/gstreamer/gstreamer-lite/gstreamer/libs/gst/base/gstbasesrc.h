@@ -184,6 +184,14 @@ struct _GstBaseSrcClass {
   /* decide on caps */
   gboolean      (*negotiate)    (GstBaseSrc *src);
   /* called if, in negotiation, caps need fixating */
+  /**
+   * GstBaseSrcClass::fixate:
+   * @caps: (transfer full):
+   *
+   * Called if, in negotiation, caps need fixating.
+   *
+   * Returns: (transfer full): the fixated caps
+   */
   GstCaps *     (*fixate)       (GstBaseSrc *src, GstCaps *caps);
   /* notify the subclass of new caps */
   gboolean      (*set_caps)     (GstBaseSrc *src, GstCaps *caps);
@@ -241,7 +249,7 @@ struct _GstBaseSrcClass {
 
   /**
    * GstBaseSrcClass::create:
-   * @buf: (inout):
+   * @buf: (inout) (nullable):
    *
    * Ask the subclass to create a buffer with @offset and @size, the default
    * implementation will call alloc if no allocated @buf is provided and then call fill.
@@ -250,7 +258,7 @@ struct _GstBaseSrcClass {
                                  GstBuffer **buf);
   /**
    * GstBaseSrcClass::alloc:
-   * @buf: (out):
+   * @buf: (out) (nullable):
    *
    * Ask the subclass to allocate an output buffer with @offset and @size, the default
    * implementation will use the negotiated allocator.
@@ -338,6 +346,10 @@ void            gst_base_src_get_allocator    (GstBaseSrc *src,
 GST_BASE_API
 void            gst_base_src_submit_buffer_list (GstBaseSrc    * src,
                                                  GstBufferList * buffer_list);
+
+GST_BASE_API
+gboolean gst_base_src_push_segment              (GstBaseSrc * src,
+                                                 const GstSegment * segment);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseSrc, gst_object_unref)
 

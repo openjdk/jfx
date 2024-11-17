@@ -33,11 +33,6 @@
 
 namespace WebCore {
 
-int Theme::baselinePositionAdjustment(StyleAppearance) const
-{
-    return 0;
-}
-
 std::optional<FontCascadeDescription> Theme::controlFont(StyleAppearance, const FontCascade&, float) const
 {
     return std::nullopt;
@@ -51,7 +46,8 @@ LengthSize Theme::controlSize(StyleAppearance, const FontCascade&, const LengthS
 LengthSize Theme::minimumControlSize(StyleAppearance appearance, const FontCascade& fontCascade, const LengthSize& zoomedSize, const LengthSize& nonShrinkableZoomedSize, float zoom) const
 {
     auto minSize = minimumControlSize(appearance, fontCascade, zoomedSize, zoom);
-    if (appearance == StyleAppearance::Radio) {
+    // Other StyleAppearance types are composed controls with shadow subtree.
+    if (appearance == StyleAppearance::Radio || appearance == StyleAppearance::Checkbox) {
         if (zoomedSize.width.isIntrinsicOrAuto())
             minSize.width = nonShrinkableZoomedSize.width;
         if (zoomedSize.height.isIntrinsicOrAuto())
@@ -64,30 +60,6 @@ LengthSize Theme::minimumControlSize(StyleAppearance, const FontCascade&, const 
 {
     return { { 0, LengthType::Fixed }, { 0, LengthType::Fixed } };
 }
-
-bool Theme::controlRequiresPreWhiteSpace(StyleAppearance) const
-{
-    return false;
-}
-
-void Theme::paint(StyleAppearance, ControlStates&, GraphicsContext&, const FloatRect&, float, ScrollView*, float, float, bool, bool, const Color&)
-{
-}
-
-void Theme::inflateControlPaintRect(StyleAppearance, const ControlStates&, FloatRect&, float) const
-{
-}
-
-bool Theme::userPrefersReducedMotion() const
-{
-    return false;
-}
-
-bool Theme::userPrefersContrast() const
-{
-    return false;
-}
-
 
 LengthBox Theme::controlBorder(StyleAppearance appearance, const FontCascade&, const LengthBox& zoomedBox, float) const
 {

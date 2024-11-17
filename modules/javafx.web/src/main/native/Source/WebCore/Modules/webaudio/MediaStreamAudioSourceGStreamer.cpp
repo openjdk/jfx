@@ -20,7 +20,7 @@
 #include "config.h"
 #include "MediaStreamAudioSource.h"
 
-#if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
+#if ENABLE(MEDIA_STREAM) && USE(GSTREAMER) && ENABLE(WEB_AUDIO)
 
 #include "AudioBus.h"
 #include "GStreamerAudioData.h"
@@ -59,7 +59,7 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
     GstAudioInfo info;
     gst_audio_info_set_format(&info, GST_AUDIO_FORMAT_F32LE, m_currentSettings.sampleRate(), bus.numberOfChannels(), nullptr);
     GST_AUDIO_INFO_LAYOUT(&info) = GST_AUDIO_LAYOUT_NON_INTERLEAVED;
-    size_t size = GST_AUDIO_INFO_BPF(&info) * bus.numberOfChannels() * numberOfFrames;
+    size_t size = GST_AUDIO_INFO_BPS(&info) * bus.numberOfChannels() * numberOfFrames;
 
     auto caps = adoptGRef(gst_audio_info_to_caps(&info));
     auto buffer = adoptGRef(gst_buffer_new_allocate(nullptr, size, nullptr));
@@ -77,4 +77,4 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
+#endif // ENABLE(MEDIA_STREAM) && USE(GSTREAMER) && ENABLE(WEB_AUDIO)

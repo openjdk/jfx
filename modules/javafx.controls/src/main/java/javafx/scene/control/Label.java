@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -113,7 +113,7 @@ public class Label extends Labeled {
      * This allows setting of the target Node.
      * @return the Node that this label is to be associated with
      */
-    public ObjectProperty<Node> labelForProperty() {
+    public final ObjectProperty<Node> labelForProperty() {
         if (labelFor == null) {
             labelFor = new ObjectPropertyBase<>() {
                 Node oldValue = null;

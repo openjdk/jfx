@@ -31,16 +31,23 @@
 
 namespace WebCore {
 
-Ref<FEOffset> FEOffset::create(float dx, float dy)
+Ref<FEOffset> FEOffset::create(float dx, float dy, DestinationColorSpace colorSpace)
 {
-    return adoptRef(*new FEOffset(dx, dy));
+    return adoptRef(*new FEOffset(dx, dy, colorSpace));
 }
 
-FEOffset::FEOffset(float dx, float dy)
-    : FilterEffect(FilterEffect::Type::FEOffset)
+FEOffset::FEOffset(float dx, float dy, DestinationColorSpace colorSpace)
+    : FilterEffect(FilterEffect::Type::FEOffset, colorSpace)
     , m_dx(dx)
     , m_dy(dy)
 {
+}
+
+bool FEOffset::operator==(const FEOffset& other) const
+{
+    return FilterEffect::operator==(other)
+        && m_dx == other.m_dx
+        && m_dy == other.m_dy;
 }
 
 bool FEOffset::setDx(float dx)
@@ -59,7 +66,7 @@ bool FEOffset::setDy(float dy)
     return true;
 }
 
-FloatRect FEOffset::calculateImageRect(const Filter& filter, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const
+FloatRect FEOffset::calculateImageRect(const Filter& filter, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const
 {
     auto imageRect = inputImageRects[0];
     imageRect.move(filter.resolvedSize({ m_dx, m_dy }));

@@ -25,11 +25,12 @@
 
 #pragma once
 
+#include "ProcessQualified.h"
 #include <wtf/ObjectIdentifier.h>
 
 namespace WebCore {
 
-enum DOMCacheIdentifierType { };
-using DOMCacheIdentifier = ObjectIdentifier<DOMCacheIdentifierType>;
+enum class DOMCacheIdentifierType { };
+using DOMCacheIdentifier = ProcessQualified<AtomicObjectIdentifier<DOMCacheIdentifierType>>;
 
 }

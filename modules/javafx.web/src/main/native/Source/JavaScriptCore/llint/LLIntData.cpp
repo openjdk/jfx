@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "CodeBlock.h"
 #include "JSCConfig.h"
 #include "LLIntCLoop.h"
+#include "LLIntEntrypoint.h"
 #include "LLIntPCRanges.h"
 #include "LLIntSlowPaths.h"
 #include "LLIntThunks.h"
@@ -65,11 +66,12 @@ extern "C" void exceptionHandlerTrampoline(void);
 extern "C" void returnFromLLIntTrampoline(void);
 #endif
 
-#if ENABLE(CSS_SELECTOR_JIT) && CPU(ARM64E)
+#if ENABLE(CSS_SELECTOR_JIT) && CPU(ARM64E) && !ENABLE(C_LOOP)
 extern "C" void vmEntryToCSSJITAfter(void);
 JSC_ANNOTATE_JIT_OPERATION_RETURN(vmEntryToCSSJITAfter);
 #endif
 
+#if !ENABLE(C_LOOP)
 static void neuterOpcodeMaps()
 {
 #if CPU(ARM64E)
@@ -92,7 +94,7 @@ static void neuterOpcodeMaps()
     }
 #undef SET_CRASH_TARGET
 }
-
+#endif
 
 void initialize()
 {
@@ -234,6 +236,10 @@ void initialize()
         g_jscConfig.llint.gateMap[static_cast<unsigned>(Gate::loopOSREntry)] = loopOSREntryGateThunk().code().taggedPtr();
         g_jscConfig.llint.gateMap[static_cast<unsigned>(Gate::entryOSREntry)] = entryOSREntryGateThunk().code().taggedPtr();
         g_jscConfig.llint.gateMap[static_cast<unsigned>(Gate::wasmOSREntry)] = wasmOSREntryGateThunk().code().taggedPtr();
+    } else {
+        g_jscConfig.llint.gateMap[static_cast<unsigned>(Gate::loopOSREntry)] = LLInt::getCodeRef<NativeToJITGatePtrTag>(loop_osr_entry_gate).code().taggedPtr();
+        g_jscConfig.llint.gateMap[static_cast<unsigned>(Gate::entryOSREntry)] = nullptr;
+        g_jscConfig.llint.gateMap[static_cast<unsigned>(Gate::wasmOSREntry)] = nullptr;
     }
 
 #define INITIALIZE_TAG_AND_UNTAG_THUNKS(name) \
@@ -255,6 +261,7 @@ void initialize()
     INITIALIZE_TAG_AND_UNTAG_THUNKS(llint_function_for_construct_arity_check);
 #endif // CPU(ARM64E)
 #endif // ENABLE(C_LOOP)
+    g_jscConfig.defaultCallThunk = defaultCall().code().taggedPtr();
 }
 
 IGNORE_WARNINGS_BEGIN("missing-noreturn")

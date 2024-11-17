@@ -36,7 +36,6 @@ import java.util.Set;
 import javafx.scene.image.Image;
 import javafx.util.Pair;
 
-import com.sun.javafx.tk.PermissionHelper;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
 
@@ -115,16 +114,7 @@ import com.sun.javafx.tk.Toolkit;
  * accessible from outside the JavaFX application.
  *</p>
  * <p>
- * If a security manager is present, the application must have the
- * {@link javafx.util.FXPermission} "accessClipboard" in order for the
- * Clipboard returned from Clipboard.getSystemClipboard() to be
- * accessible from outside the JavaFX application. For compatibility with
- * previous versions of the JDK the equivalent {@code AWTPermission}
- * "accessClipboard" will also allow the FX clipboard to be accessible from
- * outside the JavaFX application.
- * </p>
- * <p>
- * If the application lacks permission or if the platform doesn't support
+ * If the platform doesn't support
  * a shared clipboard, the clipboard
  * returned by Clipboard.getSystemClipboard() can be used for exchange of data
  * between different parts of one JavaFX application but cannot be used to
@@ -196,12 +186,7 @@ public class Clipboard {
      * @return The single system clipboard, used for cut / copy / paste operations
      */
     public static Clipboard getSystemClipboard() {
-        try {
-            PermissionHelper.checkClipboardPermission();
-            return getSystemClipboardImpl();
-        } catch (final SecurityException e) {
-            return getLocalClipboardImpl();
-        }
+        return getSystemClipboardImpl();
     }
 
     TKClipboard peer;

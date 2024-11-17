@@ -27,19 +27,19 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "FeaturePolicy.h"
-#include "Frame.h"
 #include "HTMLIFrameElement.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "MediaKeySystemRequest.h"
 #include "Page.h"
 
 namespace WebCore {
 
-const char* MediaKeySystemController::supplementName()
+ASCIILiteral MediaKeySystemController::supplementName()
 {
-    return "MediaKeySystemController";
+    return "MediaKeySystemController"_s;
 }
 
 MediaKeySystemController* MediaKeySystemController::from(Page* page)
@@ -65,7 +65,7 @@ void provideMediaKeySystemTo(Page& page, MediaKeySystemClient& client)
 
 void MediaKeySystemController::logRequestMediaKeySystemDenial(Document& document)
 {
-    if (auto* window = document.domWindow())
+    if (RefPtr window = document.domWindow())
         window->printErrorMessage(makeString("Not allowed to access MediaKeySystem."));
 }
 

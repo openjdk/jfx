@@ -21,12 +21,12 @@
 #include "RenderSVGGradientStop.h"
 
 #include "ElementInlines.h"
+#include "LegacyRenderSVGResourceContainer.h"
 #include "RenderSVGGradientStopInlines.h"
-#include "RenderSVGResourceContainer.h"
+#include "RenderSVGResourceGradient.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGradientElement.h"
 #include "SVGNames.h"
-#include "SVGResourcesCache.h"
 #include "SVGStopElement.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
@@ -38,8 +38,9 @@ using namespace SVGNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGGradientStop);
 
 RenderSVGGradientStop::RenderSVGGradientStop(SVGStopElement& element, RenderStyle&& style)
-    : RenderElement(element, WTFMove(style), 0)
+    : RenderElement(Type::SVGGradientStop, element, WTFMove(style), { }, { })
 {
+    ASSERT(isRenderSVGGradientStop());
 }
 
 RenderSVGGradientStop::~RenderSVGGradientStop() = default;
@@ -56,11 +57,18 @@ void RenderSVGGradientStop::styleDidChange(StyleDifference diff, const RenderSty
     if (!gradient)
         return;
 
-    RenderElement* renderer = gradient->renderer();
+    auto* renderer = gradient->renderer();
     if (!renderer)
         return;
 
-    downcast<RenderSVGResourceContainer>(*renderer).removeAllClientsFromCache();
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (auto* gradientRenderer = dynamicDowncast<RenderSVGResourceGradient>(renderer)) {
+        gradientRenderer->invalidateGradient();
+        return;
+    }
+#endif
+
+    downcast<LegacyRenderSVGResourceContainer>(*renderer).removeAllClientsFromCache();
 }
 
 void RenderSVGGradientStop::layout()
@@ -71,9 +79,7 @@ void RenderSVGGradientStop::layout()
 
 SVGGradientElement* RenderSVGGradientStop::gradientElement()
 {
-    if (is<SVGGradientElement>(element().parentElement()))
-        return downcast<SVGGradientElement>(element().parentElement());
-    return nullptr;
+    return dynamicDowncast<SVGGradientElement>(element().parentElement());
 }
 
 }

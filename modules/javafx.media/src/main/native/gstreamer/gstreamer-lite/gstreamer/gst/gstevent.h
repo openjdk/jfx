@@ -169,6 +169,7 @@ typedef enum {
   GST_EVENT_GAP                   = GST_EVENT_MAKE_TYPE (160, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED)),
 
   /* sticky downstream non-serialized */
+  /* FIXME 2.0: change to value 72 and move after the GST_EVENT_SEGMENT event */
   GST_EVENT_INSTANT_RATE_CHANGE   = GST_EVENT_MAKE_TYPE (180, _FLAG(DOWNSTREAM) | _FLAG(STICKY)),
 
   /* upstream events */
@@ -422,6 +423,10 @@ GQuark          gst_event_type_to_quark         (GstEventType type);
 GST_API
 GstEventTypeFlags
                 gst_event_type_get_flags        (GstEventType type);
+
+
+GST_API
+guint gst_event_type_to_sticky_ordering (GstEventType type) G_GNUC_CONST;
 
 #ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 /* refcounting */

@@ -4,6 +4,8 @@
  * GScanner: Flexible lexical scanner for general purpose.
  * Copyright (C) 1997, 1998 Tim Janik
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -51,15 +53,6 @@
 #include <io.h>
 #endif
 
-
-/**
- * SECTION:scanner
- * @title: Lexical Scanner
- * @short_description: a general purpose lexical scanner
- *
- * The #GScanner and its associated functions provide a
- * general purpose lexical scanner.
- */
 
 /**
  * GScannerMsgFunc:
@@ -194,7 +187,7 @@
  * @next_position: char number of the last token from g_scanner_peek_next_token()
  * @msg_handler: handler function for _warn and _error
  *
- * The data structure representing a lexical scanner.
+ * `GScanner` provides a general-purpose lexical scanner.
  *
  * You should set @input_name after creating the scanner, since
  * it is used by the default message handler when displaying
@@ -902,7 +895,7 @@ g_scanner_foreach_internal (gpointer  _key,
  * g_scanner_scope_foreach_symbol:
  * @scanner: a #GScanner
  * @scope_id: the scope id
- * @func: the function to call for each symbol/value pair
+ * @func: (scope call): the function to call for each symbol/value pair
  * @user_data: user data to pass to the function
  *
  * Calls the given function for each of the symbol/value pairs

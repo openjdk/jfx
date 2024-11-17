@@ -49,16 +49,20 @@ public:
     unsigned textLength() const { return value().length(); }
     String validationMessage() const final;
 
-    void rendererWillBeDestroyed() { updateValue(); }
+    void setSelectionRangeForBindings(unsigned start, unsigned end, const String& direction);
 
     WEBCORE_EXPORT RefPtr<TextControlInnerTextElement> innerTextElement() const final;
 
     bool shouldSaveAndRestoreFormControlState() const final { return true; }
+
+    bool dirAutoUsesValue() const final { return true; }
+
 private:
     HTMLTextAreaElement(Document&, HTMLFormElement*);
 
     void didAddUserAgentShadowRoot(ShadowRoot&) final;
 
+    static String sanitizeUserInputValue(const String& proposedValue, unsigned maxLength);
     void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&) const;
     void updateValue() const;
     void setNonDirtyValue(const String&, TextControlSetValueSelection);
@@ -91,7 +95,7 @@ private:
     bool isTextField() const final { return true; }
 
     void childrenChanged(const ChildChange&) final;
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;

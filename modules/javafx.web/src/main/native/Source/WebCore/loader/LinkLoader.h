@@ -54,6 +54,7 @@ struct LinkLoadParameters {
     String imageSizes;
     String nonce;
     ReferrerPolicy referrerPolicy { ReferrerPolicy::EmptyString };
+    RequestPriority fetchPriorityHint { RequestPriority::Auto };
 };
 
 class LinkLoader : public CachedResourceClient {
@@ -62,7 +63,7 @@ public:
     virtual ~LinkLoader();
 
     void loadLink(const LinkLoadParameters&, Document&);
-    enum class ShouldLog { No, Yes };
+    enum class ShouldLog : bool { No, Yes };
     static std::optional<CachedResource::Type> resourceTypeFromAsAttribute(const String&, Document&, ShouldLog = ShouldLog::No);
 
     enum class MediaAttributeCheck { MediaAttributeEmpty, MediaAttributeNotEmpty, SkipMediaAttributeCheck };
@@ -79,7 +80,7 @@ private:
     static std::unique_ptr<LinkPreloadResourceClient> preloadIfNeeded(const LinkLoadParameters&, Document&, LinkLoader*);
     void prefetchIfNeeded(const LinkLoadParameters&, Document&);
 
-    LinkLoaderClient& m_client;
+    WeakRef<LinkLoaderClient> m_client;
     CachedResourceHandle<CachedResource> m_cachedLinkResource;
     std::unique_ptr<LinkPreloadResourceClient> m_preloadResourceClient;
 };

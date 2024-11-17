@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -22,9 +22,11 @@
 #pragma once
 
 #include "CallFrame.h"
+#include "JSCast.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -51,6 +53,8 @@ public:
 
     size_t size() const { return m_size; }
     bool isEmpty() const { return !m_size; }
+
+    const EncodedJSValue* data() const { return m_buffer; }
 
     void removeLast()
     {
@@ -79,14 +83,14 @@ protected:
     }
 
     Status expandCapacity();
-    Status expandCapacity(int newCapacity);
-    Status slowEnsureCapacity(size_t requestedCapacity);
+    Status expandCapacity(unsigned newCapacity);
+    JS_EXPORT_PRIVATE Status slowEnsureCapacity(size_t requestedCapacity);
 
     void addMarkSet(JSValue);
 
     JS_EXPORT_PRIVATE Status slowAppend(JSValue);
 
-    EncodedJSValue& slotFor(int item) const
+    EncodedJSValue& slotFor(unsigned item) const
     {
         return m_buffer[item];
     }
@@ -110,8 +114,8 @@ protected:
     void setNeedsOverflowCheck() { }
     void clearNeedsOverflowCheck() { }
 #endif // ASSERT_ENABLED
-    int m_size;
-    int m_capacity;
+    unsigned m_size;
+    unsigned m_capacity;
     EncodedJSValue* m_buffer;
     ListSet* m_markSet;
 };
@@ -132,7 +136,7 @@ public:
         }
     }
 
-    auto at(int i) const -> decltype(auto)
+    auto at(unsigned i) const -> decltype(auto)
     {
         if constexpr (std::is_same_v<T, JSValue>) {
             if (i >= m_size)
@@ -211,18 +215,31 @@ public:
         ensureCapacity(count);
         if (OverflowHandler::hasOverflowed())
             return;
+        if (!isUsingInlineBuffer()) {
         if (LIKELY(!m_markSet)) {
             m_markSet = &vm.heap.markListSet();
             m_markSet->add(this);
         }
+        }
         m_size = count;
         auto* buffer = reinterpret_cast<JSValue*>(&slotFor(0));
+
+        // This clearing does not need to consider about concurrent marking from GC since MarkedVector
+        // gets marked only while mutator is stopping. So, while clearing in the mutator, concurrent
+        // marker will not see the buffer.
+#if USE(JSVALUE64)
+        memset(bitwise_cast<void*>(buffer), 0, sizeof(JSValue) * count);
+#else
         for (unsigned i = 0; i < count; ++i)
             buffer[i] = JSValue();
+#endif
+
         func(buffer);
     }
 
 private:
+    bool isUsingInlineBuffer() const { return m_buffer == m_inlineBuffer; }
+
     EncodedJSValue m_inlineBuffer[inlineCapacity] { };
 };
 
@@ -233,33 +250,43 @@ class MarkedArgumentBufferWithSize : public MarkedVector<JSValue, passedInlineCa
 using MarkedArgumentBuffer = MarkedVector<JSValue, 8, RecordOverflow>;
 
 class ArgList {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ArgList);
     friend class Interpreter;
     friend class JIT;
 public:
-    ArgList()
-        : m_args(nullptr)
-        , m_argCount(0)
-    {
-    }
+    ArgList() = default;
 
     ArgList(CallFrame* callFrame)
-        : m_args(reinterpret_cast<JSValue*>(&callFrame[CallFrame::argumentOffset(0)]))
+        : m_args(reinterpret_cast<EncodedJSValue*>(&callFrame[CallFrame::argumentOffset(0)]))
         , m_argCount(callFrame->argumentCount())
     {
     }
 
-    ArgList(const MarkedArgumentBuffer& args)
-        : m_args(reinterpret_cast<JSValue*>(args.m_buffer))
+    ArgList(CallFrame* callFrame, int startingFrom)
+        : m_args(reinterpret_cast<EncodedJSValue*>(&callFrame[CallFrame::argumentOffset(startingFrom)]))
+        , m_argCount(callFrame->argumentCount() - startingFrom)
+    {
+        ASSERT(static_cast<int>(callFrame->argumentCount()) >= startingFrom);
+    }
+
+    template<size_t inlineCapacity>
+    ArgList(const MarkedVector<JSValue, inlineCapacity, RecordOverflow>& args)
+        : m_args(args.m_buffer)
         , m_argCount(args.size())
     {
     }
 
-    JSValue at(int i) const
+    ArgList(EncodedJSValue* args, unsigned count)
+        : m_args(args)
+        , m_argCount(count)
+    {
+    }
+
+    JSValue at(unsigned i) const
     {
         if (i >= m_argCount)
             return jsUndefined();
-        return m_args[i];
+        return JSValue::decode(m_args[i]);
     }
 
     bool isEmpty() const { return !m_argCount; }
@@ -267,11 +294,11 @@ public:
 
     JS_EXPORT_PRIVATE void getSlice(int startIndex, ArgList& result) const;
 
-private:
-    JSValue* data() const { return m_args; }
+    EncodedJSValue* data() const { return m_args; }
 
-    JSValue* m_args;
-    int m_argCount;
+private:
+    EncodedJSValue* m_args { nullptr };
+    unsigned m_argCount { 0 };
 };
 
 } // namespace JSC

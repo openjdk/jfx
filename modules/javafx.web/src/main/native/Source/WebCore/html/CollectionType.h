@@ -24,11 +24,11 @@
 
 namespace WebCore {
 
-enum CollectionType {
+enum class CollectionType : uint8_t {
     // Unnamed HTMLCollection types cached in the document.
     DocImages,    // all <img> elements in the document
-    DocApplets,   // all <object> and <applet> elements
     DocEmbeds,    // all <embed> elements
+    DocEmpty,     // always empty (for document.applets)
     DocForms,     // all <form> elements
     DocLinks,     // all <a> _and_ <area> elements with a value for href
     DocAnchors,   // all <a> elements with a value for name
@@ -59,39 +59,39 @@ enum CollectionType {
     AllDescendants
 };
 
-enum class CollectionTraversalType { Descendants, ChildrenOnly, CustomForwardOnly };
+enum class CollectionTraversalType : uint8_t { Descendants, ChildrenOnly, CustomForwardOnly };
 template<CollectionType collectionType>
 struct CollectionTypeTraits {
     static const CollectionTraversalType traversalType = CollectionTraversalType::Descendants;
 };
 
 template<>
-struct CollectionTypeTraits<NodeChildren> {
+struct CollectionTypeTraits<CollectionType::NodeChildren> {
     static const CollectionTraversalType traversalType = CollectionTraversalType::ChildrenOnly;
 };
 
 template<>
-struct CollectionTypeTraits<TRCells> {
+struct CollectionTypeTraits<CollectionType::TRCells> {
     static const CollectionTraversalType traversalType = CollectionTraversalType::ChildrenOnly;
 };
 
 template<>
-struct CollectionTypeTraits<TSectionRows> {
+struct CollectionTypeTraits<CollectionType::TSectionRows> {
     static const CollectionTraversalType traversalType = CollectionTraversalType::ChildrenOnly;
 };
 
 template<>
-struct CollectionTypeTraits<TableTBodies> {
+struct CollectionTypeTraits<CollectionType::TableTBodies> {
     static const CollectionTraversalType traversalType = CollectionTraversalType::ChildrenOnly;
 };
 
 template<>
-struct CollectionTypeTraits<TableRows> {
+struct CollectionTypeTraits<CollectionType::TableRows> {
     static const CollectionTraversalType traversalType = CollectionTraversalType::CustomForwardOnly;
 };
 
 template<>
-struct CollectionTypeTraits<FormControls> {
+struct CollectionTypeTraits<CollectionType::FormControls> {
     static const CollectionTraversalType traversalType = CollectionTraversalType::CustomForwardOnly;
 };
 

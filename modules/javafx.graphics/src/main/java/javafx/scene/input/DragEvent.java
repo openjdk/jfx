@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -590,6 +590,7 @@ public final class DragEvent extends InputEvent {
      * @return the source object of the drag and drop gesture
      */
     public final Object getGestureSource() { return gestureSource; }
+    @SuppressWarnings("doclint:missing")
     private Object gestureSource;
 
     /**
@@ -601,6 +602,7 @@ public final class DragEvent extends InputEvent {
      * @return the target object of the drag and drop gesture
      */
     public final Object getGestureTarget() { return gestureTarget; }
+    @SuppressWarnings("doclint:missing")
     private Object gestureTarget;
 
     /**
@@ -614,8 +616,10 @@ public final class DragEvent extends InputEvent {
      * @return the data transfer mode
      */
     public final TransferMode getTransferMode() { return transferMode; }
+    @SuppressWarnings("doclint:missing")
     private TransferMode transferMode;
 
+    @SuppressWarnings("doclint:missing")
     private final State state = new State();
 
     /**
@@ -748,6 +752,7 @@ public final class DragEvent extends InputEvent {
         return state.dropCompleted;
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         in.defaultReadObject();

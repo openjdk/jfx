@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,9 +31,14 @@ import javafx.beans.NamedArg;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.StageStyle;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.junit.Ignore;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 
 public class ProxyBuilderTest {
 
@@ -97,7 +102,7 @@ public class ProxyBuilderTest {
     }
 
     @Test
-    @Ignore
+    @Disabled
     public void testImmutableTwoConstructorsWithSameArgNames() {
         ProxyBuilder pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123);

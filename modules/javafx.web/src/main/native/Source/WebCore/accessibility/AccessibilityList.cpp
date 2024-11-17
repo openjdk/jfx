@@ -32,10 +32,10 @@
 #include "AXObjectCache.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
+#include "ListStyleType.h"
 #include "PseudoElement.h"
 #include "RenderListItem.h"
-#include "RenderObject.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 
@@ -46,11 +46,21 @@ AccessibilityList::AccessibilityList(RenderObject* renderer)
 {
 }
 
+AccessibilityList::AccessibilityList(Node& node)
+    : AccessibilityRenderObject(node)
+{
+}
+
 AccessibilityList::~AccessibilityList() = default;
 
 Ref<AccessibilityList> AccessibilityList::create(RenderObject* renderer)
 {
     return adoptRef(*new AccessibilityList(renderer));
+}
+
+Ref<AccessibilityList> AccessibilityList::create(Node& node)
+{
+    return adoptRef(*new AccessibilityList(node));
 }
 
 bool AccessibilityList::computeAccessibilityIsIgnored() const
@@ -60,57 +70,48 @@ bool AccessibilityList::computeAccessibilityIsIgnored() const
 
 bool AccessibilityList::isUnorderedList() const
 {
-    if (!m_renderer)
-        return false;
-
-    Node* node = m_renderer->node();
-
     // The ARIA spec says the "list" role is supposed to mimic a UL or OL tag.
     // Since it can't be both, it's probably OK to say that it's an un-ordered list.
     // On the Mac, there's no distinction to the client.
     if (ariaRoleAttribute() == AccessibilityRole::List)
         return true;
 
-    return node && node->hasTagName(ulTag);
+    auto* node = this->node();
+    return node && (node->hasTagName(menuTag) || node->hasTagName(ulTag));
 }
 
 bool AccessibilityList::isOrderedList() const
 {
-    if (!m_renderer)
-        return false;
-
     // ARIA says a directory is like a static table of contents, which sounds like an ordered list.
     if (ariaRoleAttribute() == AccessibilityRole::Directory)
         return true;
 
-    Node* node = m_renderer->node();
+    auto* node = this->node();
     return node && node->hasTagName(olTag);
 }
 
 bool AccessibilityList::isDescriptionList() const
 {
-    if (!m_renderer)
-        return false;
-
-    Node* node = m_renderer->node();
+    auto* node = this->node();
     return node && node->hasTagName(dlTag);
 }
 
-bool AccessibilityList::childHasPseudoVisibleListItemMarkers(RenderObject* listItem)
+bool AccessibilityList::childHasPseudoVisibleListItemMarkers(Node* node)
 {
     // Check if the list item has a pseudo-element that should be accessible (e.g. an image or text)
-    Element* listItemElement = downcast<Element>(listItem->node());
-    if (!listItemElement || !listItemElement->beforePseudoElement())
+    auto* element = dynamicDowncast<Element>(node);
+    auto* beforePseudo = element ? element->beforePseudoElement() : nullptr;
+    if (!beforePseudo)
         return false;
 
-    AccessibilityObject* axObj = axObjectCache()->getOrCreate(listItemElement->beforePseudoElement()->renderer());
-    if (!axObj)
+    RefPtr axBeforePseudo = axObjectCache()->getOrCreate(beforePseudo->renderer());
+    if (!axBeforePseudo)
         return false;
 
-    if (!axObj->accessibilityIsIgnored())
+    if (!axBeforePseudo->accessibilityIsIgnored())
         return true;
 
-    for (const auto& child : axObj->children()) {
+    for (const auto& child : axBeforePseudo->children()) {
         if (!child->accessibilityIsIgnored())
             return true;
     }
@@ -118,8 +119,8 @@ bool AccessibilityList::childHasPseudoVisibleListItemMarkers(RenderObject* listI
     // Platforms which expose rendered text content through the parent element will treat
     // those renderers as "ignored" objects.
 #if USE(ATSPI)
-    String text = axObj->textUnderElement();
-    return !text.isEmpty() && !text.isAllSpecialCharacters<isHTMLSpace>();
+    String text = axBeforePseudo->textUnderElement();
+    return !text.isEmpty() && !text.containsOnly<isASCIIWhitespace>();
 #else
     return false;
 #endif
@@ -133,18 +134,19 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
     if (ariaRoleAttribute() == AccessibilityRole::Directory)
         return AccessibilityRole::List;
 
-    // Heuristic to determine if this list is being used for layout or for content.
-    //   1. If it's a named list, like ol or aria=list, then it's a list.
+    // Heuristic to determine if an ambiguous list is relevant to convey to the accessibility tree.
+    //   1. If it's an ordered list or has role="list" defined, then it's a list.
     //      1a. Unless the list has no children, then it's not a list.
-    //   2. If it displays visible list markers, it's a list.
-    //   3. If it does not display list markers and has only one child, it's not a list.
-    //   4. If it does not have any listitem children, it's not a list.
-    //   5. Otherwise it's a list (for now).
+    //   2. If it is contained in <nav> or <el role="navigation">, it's a list.
+    //   3. If it displays visible list markers, it's a list.
+    //   4. If it does not display list markers, it's not a list.
+    //   5. If it has one or zero listitem children, it's not a list.
+    //   6. Otherwise it's a list.
 
-    AccessibilityRole role = AccessibilityRole::List;
+    auto role = AccessibilityRole::List;
 
     // Temporarily set role so that we can query children (otherwise canHaveChildren returns false).
-    m_role = role;
+    SetForScope temporaryRole(m_role, role);
 
     unsigned listItemCount = 0;
     bool hasVisibleMarkers = false;
@@ -155,24 +157,21 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
         return AccessibilityRole::DescriptionList;
 
     for (const auto& child : children) {
-        if (child->ariaRoleAttribute() == AccessibilityRole::ListItem)
+        auto* axChild = dynamicDowncast<AccessibilityObject>(child.get());
+        if (axChild && axChild->ariaRoleAttribute() == AccessibilityRole::ListItem)
             listItemCount++;
         else if (child->roleValue() == AccessibilityRole::ListItem) {
-            RenderObject* listItem = child->renderer();
-            if (!listItem)
-                continue;
-
             // Rendered list items always count.
-            if (listItem->isListItem()) {
-                if (!hasVisibleMarkers && (listItem->style().listStyleType() != ListStyleType::None || listItem->style().listStyleImage() || childHasPseudoVisibleListItemMarkers(listItem)))
+            if (auto* childRenderer = child->renderer(); childRenderer && childRenderer->isRenderListItem()) {
+                if (!hasVisibleMarkers && (childRenderer->style().listStyleType().type != ListStyleType::Type::None || childRenderer->style().listStyleImage() || childHasPseudoVisibleListItemMarkers(childRenderer->node())))
                     hasVisibleMarkers = true;
                 listItemCount++;
-            } else if (listItem->node() && listItem->node()->hasTagName(liTag)) {
+            } else if (child->node() && child->node()->hasTagName(liTag)) {
                 // Inline elements that are in a list with an explicit role should also count.
                 if (m_ariaRole == AccessibilityRole::List)
                     listItemCount++;
 
-                if (childHasPseudoVisibleListItemMarkers(listItem)) {
+                if (childHasPseudoVisibleListItemMarkers(child->node())) {
                     hasVisibleMarkers = true;
                     listItemCount++;
                 }
@@ -187,19 +186,13 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
             role = AccessibilityRole::ApplicationGroup;
     } else if (!hasVisibleMarkers) {
         // http://webkit.org/b/193382 lists inside of navigation hierarchies should still be considered lists.
-        if (Accessibility::findAncestor<AXCoreObject>(*this, false, [] (auto& object) { return object.roleValue() == AccessibilityRole::LandmarkNavigation; }))
+        if (Accessibility::findAncestor<AccessibilityObject>(*this, false, [] (auto& object) { return object.roleValue() == AccessibilityRole::LandmarkNavigation; }))
             role = AccessibilityRole::List;
         else
             role = AccessibilityRole::Group;
     }
 
     return role;
-}
-
-AccessibilityRole AccessibilityList::roleValue() const
-{
-    ASSERT(m_role != AccessibilityRole::Unknown);
-    return m_role;
 }
 
 } // namespace WebCore

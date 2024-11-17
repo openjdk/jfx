@@ -402,8 +402,6 @@ static ASCIILiteral screenAPIEnumToString(ScreenAPIsAccessed screenEnum)
         return "width"_s;
     case ScreenAPIsAccessed::ColorDepth:
         return "colorDepth"_s;
-    case ScreenAPIsAccessed::PixelDepth:
-        return "pixelDepth"_s;
     case ScreenAPIsAccessed::AvailLeft:
         return "availLeft"_s;
     case ScreenAPIsAccessed::AvailTop:

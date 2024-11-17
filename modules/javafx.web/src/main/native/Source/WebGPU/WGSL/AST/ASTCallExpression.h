@@ -26,36 +26,50 @@
 #pragma once
 
 #include "ASTExpression.h"
-#include "ASTTypeName.h"
 
-namespace WGSL::AST {
+namespace WGSL {
+class RewriteGlobalVariables;
+class TypeChecker;
+
+namespace AST {
 
 // A CallExpression expresses a "function" call, which consists of a target to be called,
 // and a list of arguments. The target does not necesserily have to be a function identifier,
 // but can also be a type, in which the whole call is a type conversion expression. The exact
 // kind of expression can only be resolved during semantic analysis.
 class CallExpression final : public Expression {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(CallExpression);
+
+    friend RewriteGlobalVariables;
+    friend TypeChecker;
+
 public:
-    CallExpression(SourceSpan span, TypeName::Ref&& target, Expression::List&& arguments)
+    using Ref = std::reference_wrapper<CallExpression>;
+
+    NodeKind kind() const override;
+    Expression& target() { return m_target.get(); }
+    Expression::List& arguments() { return m_arguments; }
+
+    bool isConstructor() const { return m_isConstructor; }
+
+private:
+    CallExpression(SourceSpan span, Expression::Ref&& target, Expression::List&& arguments)
         : Expression(span)
         , m_target(WTFMove(target))
         , m_arguments(WTFMove(arguments))
     { }
 
-    NodeKind kind() const override;
-    TypeName& target() { return m_target.get(); }
-    Expression::List& arguments() { return m_arguments; }
-
-private:
     // If m_target is a NamedType, it could either be a:
     //   * Type that does not accept parameters (bool, i32, u32, ...)
     //   * Identifier that refers to a type alias.
     //   * Identifier that refers to a function.
-    TypeName::Ref m_target;
+    Expression::Ref m_target;
     Expression::List m_arguments;
+
+    bool m_isConstructor { false };
 };
 
-} // namespace WGSL::AST
+} // namespace AST
+} // namespace WGSL
 
 SPECIALIZE_TYPE_TRAITS_WGSL_AST(CallExpression)

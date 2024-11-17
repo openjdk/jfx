@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -61,23 +61,30 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
 
     // FIXME: Make the InjectedScript a module itself.
     JSC::JSLockHolder locker(injectedScript.globalObject());
-    Deprecated::ScriptFunctionCall function(injectedScript.injectedScriptObject(), "hasInjectedModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
+    ScriptFunctionCall function(injectedScript.globalObject(), injectedScript.injectedScriptObject(), "hasInjectedModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
     function.appendArgument(name());
     auto hasInjectedModuleResult = injectedScript.callFunctionWithEvalEnabled(function);
     ASSERT(hasInjectedModuleResult);
     if (!hasInjectedModuleResult) {
         auto& error = hasInjectedModuleResult.error();
         ASSERT(error);
-        unsigned line = 0;
-        unsigned column = 0;
+        JSC::LineColumn lineColumn;
         auto& stack = error->stack();
         if (stack.size() > 0)
-            stack[0].computeLineAndColumn(line, column);
-        WTFLogAlways("Error when calling 'hasInjectedModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), line, column);
+            lineColumn = stack[0].computeLineAndColumn();
+        WTFLogAlways("Error when calling 'hasInjectedModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), lineColumn.line, lineColumn.column);
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+    if (!hasInjectedModuleResult.value()) {
+        WTFLogAlways("VM is terminated when calling 'injectModule' for '%s'\n", name().utf8().data());
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+    if (!hasInjectedModuleResult.value()) {
+        WTFLogAlways("VM is terminated when calling 'injectModule' for '%s'\n", name().utf8().data());
         RELEASE_ASSERT_NOT_REACHED();
     }
     if (!hasInjectedModuleResult.value().isBoolean() || !hasInjectedModuleResult.value().asBoolean()) {
-        Deprecated::ScriptFunctionCall function(injectedScript.injectedScriptObject(), "injectModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
+        ScriptFunctionCall function(injectedScript.globalObject(), injectedScript.injectedScriptObject(), "injectModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
         function.appendArgument(name());
         function.appendArgument(JSC::JSValue(injectModuleFunction(injectedScript.globalObject())));
         function.appendArgument(host(injectedScriptManager, injectedScript.globalObject()));
@@ -85,12 +92,11 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
         if (!injectModuleResult) {
             auto& error = injectModuleResult.error();
             ASSERT(error);
-            unsigned line = 0;
-            unsigned column = 0;
+            JSC::LineColumn lineColumn;
             auto& stack = error->stack();
             if (stack.size() > 0)
-                stack[0].computeLineAndColumn(line, column);
-            WTFLogAlways("Error when calling 'injectModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), line, column);
+                lineColumn = stack[0].computeLineAndColumn();
+            WTFLogAlways("Error when calling 'injectModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), lineColumn.line, lineColumn.column);
             RELEASE_ASSERT_NOT_REACHED();
         }
     }

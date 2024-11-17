@@ -34,7 +34,7 @@ class HTMLImageElement;
 class ImageDocument final : public HTMLDocument {
     WTF_MAKE_ISO_ALLOCATED(ImageDocument);
 public:
-    static Ref<ImageDocument> create(Frame& frame, const URL& url)
+    static Ref<ImageDocument> create(LocalFrame& frame, const URL& url)
     {
         auto document = adoptRef(*new ImageDocument(frame, url));
         document->addToContextsMap();
@@ -53,7 +53,7 @@ public:
 #endif
 
 private:
-    ImageDocument(Frame&, const URL&);
+    ImageDocument(LocalFrame&, const URL&);
 
     Ref<DocumentParser> createParser() override;
 
@@ -88,5 +88,9 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ImageDocument)
     static bool isType(const WebCore::Document& document) { return document.isImageDocument(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* document = dynamicDowncast<WebCore::Document>(node);
+        return document && isType(*document);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

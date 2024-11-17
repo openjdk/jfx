@@ -199,7 +199,7 @@ void ScriptExecutable::installCode(VM& vm, CodeBlock* genericCodeBlock, CodeType
     }
 
     if (oldCodeBlock)
-        oldCodeBlock->unlinkIncomingCalls();
+        oldCodeBlock->unlinkOrUpgradeIncomingCalls(vm, genericCodeBlock);
 
     vm.writeBarrier(this);
 }
@@ -252,6 +252,11 @@ CodeBlock* ScriptExecutable::newCodeBlockFor(CodeSpecializationKind kind, JSFunc
         RELEASE_ASSERT(kind == CodeForCall);
         RELEASE_ASSERT(!executable->m_codeBlock);
         RELEASE_ASSERT(!function);
+
+        // FIXME: There might be a case that executable->unlinkedCodeBlock() will be a nullptr
+        // since ScriptExecutable::clearCode might be triggered due to limited memory usage.
+        // We should regenerate unlinkedCodeBlock if necessary for both EvalExecutable and ProgramExecutable.
+        // See similar problem for ModuleProgramExecutable in https://bugs.webkit.org/show_bug.cgi?id=255044.
         RELEASE_AND_RETURN(throwScope, EvalCodeBlock::create(vm, executable, executable->unlinkedCodeBlock(), scope));
     }
 
@@ -268,7 +273,11 @@ CodeBlock* ScriptExecutable::newCodeBlockFor(CodeSpecializationKind kind, JSFunc
         RELEASE_ASSERT(kind == CodeForCall);
         RELEASE_ASSERT(!executable->m_codeBlock);
         RELEASE_ASSERT(!function);
-        RELEASE_AND_RETURN(throwScope, ModuleProgramCodeBlock::create(vm, executable, executable->unlinkedCodeBlock(), scope));
+
+        UnlinkedModuleProgramCodeBlock* unlinkedCodeBlock = executable->getUnlinkedCodeBlock(globalObject);
+        RETURN_IF_EXCEPTION(throwScope, nullptr);
+        ASSERT(executable->unlinkedCodeBlock());
+        RELEASE_AND_RETURN(throwScope, ModuleProgramCodeBlock::create(vm, executable, unlinkedCodeBlock, scope));
     }
 
     RELEASE_ASSERT(classInfo() == FunctionExecutable::info());
@@ -299,7 +308,6 @@ CodeBlock* ScriptExecutable::newCodeBlockFor(CodeSpecializationKind kind, JSFunc
         throwException(globalObject, throwScope, error.toErrorObject(globalObject, executable->source()));
         return nullptr;
     }
-
     RELEASE_AND_RETURN(throwScope, FunctionCodeBlock::create(vm, executable, unlinkedCodeBlock, scope));
 }
 
@@ -471,19 +479,19 @@ std::optional<int> ScriptExecutable::overrideLineNumber(VM&) const
     return std::nullopt;
 }
 
-unsigned ScriptExecutable::typeProfilingStartOffset(VM& vm) const
+unsigned ScriptExecutable::typeProfilingStartOffset() const
 {
     if (inherits<FunctionExecutable>())
-        return jsCast<const FunctionExecutable*>(this)->typeProfilingStartOffset(vm);
+        return jsCast<const FunctionExecutable*>(this)->functionStart();
     if (inherits<EvalExecutable>())
         return UINT_MAX;
     return 0;
 }
 
-unsigned ScriptExecutable::typeProfilingEndOffset(VM& vm) const
+unsigned ScriptExecutable::typeProfilingEndOffset() const
 {
     if (inherits<FunctionExecutable>())
-        return jsCast<const FunctionExecutable*>(this)->typeProfilingEndOffset(vm);
+        return jsCast<const FunctionExecutable*>(this)->functionEnd();
     if (inherits<EvalExecutable>())
         return UINT_MAX;
     return source().length() - 1;
@@ -545,7 +553,7 @@ void ScriptExecutable::visitCodeBlockEdge(Visitor& visitor, CodeBlock* codeBlock
     if (codeBlock->shouldVisitStrongly(locker, visitor))
         visitor.appendUnbarriered(codeBlock);
 
-    if (JITCode::isOptimizingJIT(codeBlock->jitType())) {
+    if (JSC::JITCode::isOptimizingJIT(codeBlock->jitType())) {
         // If we jettison ourselves we'll install our alternative, so make sure that it
         // survives GC even if we don't.
         visitor.append(codeBlock->m_alternative);

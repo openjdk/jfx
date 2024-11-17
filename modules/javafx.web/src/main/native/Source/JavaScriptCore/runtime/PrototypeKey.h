@@ -25,12 +25,14 @@
 
 #pragma once
 
-#include <wtf/HashTable.h>
+#include <wtf/HashTraits.h>
 
 namespace JSC {
 
 class FunctionExecutable;
 class JSObject;
+
+struct ClassInfo;
 
 class PrototypeKey {
 public:
@@ -54,15 +56,8 @@ public:
     unsigned inlineCapacity() const { return m_inlineCapacity; }
     const ClassInfo* classInfo() const { return m_classInfo; }
 
-    bool operator==(const PrototypeKey& other) const
-    {
-        return m_prototype == other.m_prototype
-            && m_executable == other.m_executable
-            && m_inlineCapacity == other.m_inlineCapacity
-            && m_classInfo == other.m_classInfo;
-    }
+    friend bool operator==(const PrototypeKey&, const PrototypeKey&) = default;
 
-    bool operator!=(const PrototypeKey& other) const { return !(*this == other); }
     explicit operator bool() const { return *this != PrototypeKey(); }
     bool isHashTableDeletedValue() const { return *this == PrototypeKey(WTF::HashTableDeletedValue); }
 
@@ -97,4 +92,3 @@ template<typename> struct HashTraits;
 template<> struct HashTraits<JSC::PrototypeKey> : SimpleClassHashTraits<JSC::PrototypeKey> { };
 
 } // namespace WTF
-

@@ -50,13 +50,14 @@ public:
         m_currentPosition = { 1, 0, 0 };
     }
 
-    Token lex();
+    Vector<Token> lex();
     bool isAtEndOfFile() const;
-    SourcePosition currentPosition() const { return m_currentPosition; }
 
 private:
-    unsigned currentOffset() const { return m_currentPosition.m_offset; }
-    unsigned currentTokenLength() const { return currentOffset() - m_tokenStartingPosition.m_offset; }
+    Token nextToken();
+    Token lexNumber();
+    unsigned currentOffset() const { return m_currentPosition.offset; }
+    unsigned currentTokenLength() const { return currentOffset() - m_tokenStartingPosition.offset; }
 
     Token makeToken(TokenType type)
     {
@@ -74,24 +75,12 @@ private:
     T shift(unsigned = 1);
     T peek(unsigned = 0);
     void newLine();
-    void skipBlockComments();
+    bool skipBlockComments();
     void skipLineComment();
-    void skipWhitespaceAndComments();
+    bool skipWhitespaceAndComments();
 
-    // Reads [0-9]+
-    std::optional<uint64_t> parseDecimalInteger();
-    // Parse pattern (e|E)(\+|-)?[0-9]+f? if it is present, and return the exponent
-    std::optional<int64_t> parseDecimalFloatExponent();
-    // Checks whether there is an "i" or "u" coming, and return the right kind of literal token
-    Token parseIntegerLiteralSuffix(double literalValue);
-
-    static bool isIdentifierStart(T character) { return isASCIIAlpha(character); }
-    static bool isValidIdentifierCharacter(T character) { return isASCIIAlphanumeric(character) || character == '_'; }
-    static unsigned readDecimal(T character)
-    {
-        ASSERT(isASCIIDigit(character));
-        return character - '0';
-    }
+    static bool isIdentifierStart(T character) { return isASCIIAlpha(character) || character == '_'; }
+    static bool isIdentifierContinue(T character) { return isASCIIAlphanumeric(character) || character == '_'; }
 
     T m_current;
     const T* m_code;

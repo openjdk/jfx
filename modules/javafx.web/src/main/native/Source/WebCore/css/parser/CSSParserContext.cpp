@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "CSSValuePool.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "Settings.h"
 #include <wtf/NeverDestroyed.h>
@@ -53,12 +54,16 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
     , mode(mode)
 {
     // FIXME: We should turn all of the features on from their WebCore Settings defaults.
-    if (mode == UASheetMode) {
+    if (isUASheetBehavior(mode)) {
         colorMixEnabled = true;
         focusVisibleEnabled = true;
+        lightDarkEnabled = true;
+        popoverAttributeEnabled = true;
         propertySettings.cssContainmentEnabled = true;
-        propertySettings.cssIndividualTransformPropertiesEnabled = true;
         propertySettings.cssInputSecurityEnabled = true;
+        propertySettings.cssCounterStyleAtRulesEnabled = true;
+        propertySettings.viewTransitionsEnabled = true;
+        thumbAndTrackPseudoElementsEnabled = true;
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
         transformStyleOptimized3DEnabled = true;
 #endif
@@ -72,13 +77,12 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , charset { charset }
     , mode { document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode }
     , isHTMLDocument { document.isHTMLDocument() }
-    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.securityOrigin().canRequest(baseURL) }
+    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.securityOrigin().canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton()) }
     , useSystemAppearance { document.page() ? document.page()->useSystemAppearance() : false }
     , colorContrastEnabled { document.settings().cssColorContrastEnabled() }
     , colorMixEnabled { document.settings().cssColorMixEnabled() }
     , constantPropertiesEnabled { document.settings().constantPropertiesEnabled() }
     , counterStyleAtRuleImageSymbolsEnabled { document.settings().cssCounterStyleAtRuleImageSymbolsEnabled() }
-    , cssColor4 { document.settings().cssColor4() }
     , relativeColorSyntaxEnabled { document.settings().cssRelativeColorSyntaxEnabled() }
     , springTimingFunctionEnabled { document.settings().springTimingFunctionEnabled() }
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
@@ -88,7 +92,6 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , focusVisibleEnabled { document.settings().focusVisibleEnabled() }
     , hasPseudoClassEnabled { document.settings().hasPseudoClassEnabled() }
     , cascadeLayersEnabled { document.settings().cssCascadeLayersEnabled() }
-    , overflowClipEnabled { document.settings().overflowClipEnabled() }
     , gradientPremultipliedAlphaInterpolationEnabled { document.settings().cssGradientPremultipliedAlphaInterpolationEnabled() }
     , gradientInterpolationColorSpacesEnabled { document.settings().cssGradientInterpolationColorSpacesEnabled() }
     , subgridEnabled { document.settings().subgridEnabled() }
@@ -97,44 +100,23 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
 #if ENABLE(CSS_PAINTING_API)
     , cssPaintingAPIEnabled { document.settings().cssPaintingAPIEnabled() }
 #endif
+    , cssScopeAtRuleEnabled { document.settings().cssScopeAtRuleEnabled() }
+    , cssStartingStyleAtRuleEnabled { document.settings().cssStartingStyleAtRuleEnabled() }
+    , cssTextUnderlinePositionLeftRightEnabled { document.settings().cssTextUnderlinePositionLeftRightEnabled() }
+    , cssWordBreakAutoPhraseEnabled { document.settings().cssWordBreakAutoPhraseEnabled() }
+    , popoverAttributeEnabled { document.settings().popoverAttributeEnabled() }
+    , sidewaysWritingModesEnabled { document.settings().sidewaysWritingModesEnabled() }
+    , cssTextWrapPrettyEnabled { document.settings().cssTextWrapPrettyEnabled() }
+    , highlightAPIEnabled { document.settings().highlightAPIEnabled() }
+    , grammarAndSpellingPseudoElementsEnabled { document.settings().grammarAndSpellingPseudoElementsEnabled() }
+    , customStateSetEnabled { document.settings().customStateSetEnabled() }
+    , thumbAndTrackPseudoElementsEnabled { document.settings().thumbAndTrackPseudoElementsEnabled() }
+#if ENABLE(SERVICE_CONTROLS)
+    , imageControlsEnabled { document.settings().imageControlsEnabled() }
+#endif
+    , lightDarkEnabled { document.settings().cssLightDarkEnabled() }
     , propertySettings { CSSPropertySettings { document.settings() } }
 {
-}
-
-bool operator==(const CSSParserContext& a, const CSSParserContext& b)
-{
-    return a.baseURL == b.baseURL
-        && a.charset == b.charset
-        && a.mode == b.mode
-        && a.enclosingRuleType == b.enclosingRuleType
-        && a.isHTMLDocument == b.isHTMLDocument
-        && a.hasDocumentSecurityOrigin == b.hasDocumentSecurityOrigin
-        && a.isContentOpaque == b.isContentOpaque
-        && a.useSystemAppearance == b.useSystemAppearance
-        && a.shouldIgnoreImportRules == b.shouldIgnoreImportRules
-        && a.colorContrastEnabled == b.colorContrastEnabled
-        && a.colorMixEnabled == b.colorMixEnabled
-        && a.constantPropertiesEnabled == b.constantPropertiesEnabled
-        && a.counterStyleAtRuleImageSymbolsEnabled == b.counterStyleAtRuleImageSymbolsEnabled
-        && a.cssColor4 == b.cssColor4
-        && a.relativeColorSyntaxEnabled == b.relativeColorSyntaxEnabled
-        && a.springTimingFunctionEnabled == b.springTimingFunctionEnabled
-#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
-        && a.transformStyleOptimized3DEnabled == b.transformStyleOptimized3DEnabled
-#endif
-        && a.useLegacyBackgroundSizeShorthandBehavior == b.useLegacyBackgroundSizeShorthandBehavior
-        && a.focusVisibleEnabled == b.focusVisibleEnabled
-        && a.hasPseudoClassEnabled == b.hasPseudoClassEnabled
-        && a.cascadeLayersEnabled == b.cascadeLayersEnabled
-        && a.overflowClipEnabled == b.overflowClipEnabled
-        && a.gradientPremultipliedAlphaInterpolationEnabled == b.gradientPremultipliedAlphaInterpolationEnabled
-        && a.gradientInterpolationColorSpacesEnabled == b.gradientInterpolationColorSpacesEnabled
-        && a.subgridEnabled == b.subgridEnabled
-        && a.masonryEnabled == b.masonryEnabled
-        && a.cssNestingEnabled == b.cssNestingEnabled
-        && a.cssPaintingAPIEnabled == b.cssPaintingAPIEnabled
-        && a.propertySettings == b.propertySettings
-    ;
 }
 
 void add(Hasher& hasher, const CSSParserContext& context)
@@ -146,41 +128,50 @@ void add(Hasher& hasher, const CSSParserContext& context)
         | context.colorContrastEnabled                      << 4
         | context.colorMixEnabled                           << 5
         | context.constantPropertiesEnabled                 << 6
-        | context.cssColor4                                 << 7
-        | context.relativeColorSyntaxEnabled                << 8
-        | context.springTimingFunctionEnabled               << 9
+        | context.relativeColorSyntaxEnabled                << 7
+        | context.springTimingFunctionEnabled               << 8
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
-        | context.transformStyleOptimized3DEnabled          << 10
+        | context.transformStyleOptimized3DEnabled          << 9
 #endif
-        | context.useLegacyBackgroundSizeShorthandBehavior  << 11
-        | context.focusVisibleEnabled                       << 12
-        | context.hasPseudoClassEnabled                     << 13
-        | context.cascadeLayersEnabled                      << 14
-        | context.overflowClipEnabled                       << 15
-        | context.gradientPremultipliedAlphaInterpolationEnabled << 16
-        | context.gradientInterpolationColorSpacesEnabled   << 17
-        | context.subgridEnabled                            << 18
-        | context.masonryEnabled                            << 19
-        | context.cssNestingEnabled                         << 20
-        | context.cssPaintingAPIEnabled                     << 21
-        | (uint64_t)context.mode                            << 22; // This is multiple bits, so keep it last.
+        | context.useLegacyBackgroundSizeShorthandBehavior  << 10
+        | context.focusVisibleEnabled                       << 11
+        | context.hasPseudoClassEnabled                     << 12
+        | context.cascadeLayersEnabled                      << 13
+        | context.gradientPremultipliedAlphaInterpolationEnabled << 14
+        | context.gradientInterpolationColorSpacesEnabled   << 15
+        | context.subgridEnabled                            << 16
+        | context.masonryEnabled                            << 17
+        | context.cssNestingEnabled                         << 18
+        | context.cssPaintingAPIEnabled                     << 19
+        | context.cssScopeAtRuleEnabled                     << 20
+        | context.cssTextUnderlinePositionLeftRightEnabled  << 21
+        | context.cssWordBreakAutoPhraseEnabled             << 22
+        | context.popoverAttributeEnabled                   << 23
+        | context.sidewaysWritingModesEnabled               << 24
+        | context.cssTextWrapPrettyEnabled                  << 25
+        | context.highlightAPIEnabled                       << 26
+        | context.grammarAndSpellingPseudoElementsEnabled   << 27
+        | context.customStateSetEnabled                     << 28
+        | context.thumbAndTrackPseudoElementsEnabled        << 29
+#if ENABLE(SERVICE_CONTROLS)
+        | context.imageControlsEnabled                      << 30
+#endif
+        | context.lightDarkEnabled                          << 31
+        | (uint64_t)context.mode                            << 32; // This is multiple bits, so keep it last.
     add(hasher, context.baseURL, context.charset, context.propertySettings, bits);
 }
 
 ResolvedURL CSSParserContext::completeURL(const String& string) const
 {
     auto result = [&] () -> ResolvedURL {
-        // See also Document::completeURL(const String&)
+        // See also Document::completeURL(const String&), but note that CSS always uses UTF-8 for URLs
         if (string.isNull())
             return { };
 
         if (CSSValue::isCSSLocalURL(string))
             return { string, URL { string } };
 
-        if (charset.isEmpty())
             return { string, { baseURL, string } };
-        auto encodingForURLParsing = PAL::TextEncoding { charset }.encodingForFormSubmissionOrURLParsing();
-        return { string, { baseURL, string, encodingForURLParsing == PAL::UTF8Encoding() ? nullptr : &encodingForURLParsing } };
     }();
 
     if (mode == WebVTTMode && !result.resolvedURL.protocolIsData())

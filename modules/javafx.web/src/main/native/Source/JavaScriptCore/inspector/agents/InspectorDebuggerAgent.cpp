@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,7 @@
 #include "Debugger.h"
 #include "DebuggerScope.h"
 #include "DeferGC.h"
+#include "ExecutableBaseInlines.h"
 #include "HeapIterationScope.h"
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
@@ -53,6 +54,7 @@
 #include <wtf/Function.h>
 #include <wtf/JSONValues.h>
 #include <wtf/Stopwatch.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/WTFString.h>
 
@@ -60,13 +62,16 @@ namespace Inspector {
 
 const ASCIILiteral InspectorDebuggerAgent::backtraceObjectGroup = "backtrace"_s;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorDebuggerAgent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(InspectorDebuggerAgentProtocolBreakpoint, InspectorDebuggerAgent::ProtocolBreakpoint);
+
 // Objects created and retained by evaluating breakpoint actions are put into object groups
 // according to the breakpoint action identifier assigned by the frontend. A breakpoint may
 // have several object groups, and objects from several backend breakpoint action instances may
 // create objects in the same group.
 static String objectGroupForBreakpointAction(JSC::BreakpointActionID id)
 {
-    return makeString("breakpoint-action-", id);
+    return makeString("breakpoint-action-"_s, id);
 }
 
 static bool isWebKitInjectedScript(const String& sourceURL)
@@ -142,7 +147,7 @@ static T parseBreakpointOptions(Protocol::ErrorString& errorString, RefPtr<JSON:
 
                 action.emulateUserGesture = actionObject->getBoolean(Protocol::Debugger::BreakpointAction::emulateUserGestureKey).value_or(false);
 
-                actions.uncheckedAppend(WTFMove(action));
+                actions.append(WTFMove(action));
             }
         }
 
@@ -184,7 +189,7 @@ InspectorDebuggerAgent::ProtocolBreakpoint::ProtocolBreakpoint(JSC::SourceID sou
 }
 
 InspectorDebuggerAgent::ProtocolBreakpoint::ProtocolBreakpoint(const String& url, bool isRegex, unsigned lineNumber, unsigned columnNumber, const String& condition, JSC::Breakpoint::ActionsVector&& actions, bool autoContinue, size_t ignoreCount)
-    : m_id(makeString(isRegex ? "/" : "", url, isRegex ? "/" : "", ':', lineNumber, ':', columnNumber))
+    : m_id(makeString(isRegex ? "/"_s : ""_s, url, isRegex ? "/"_s : ""_s, ':', lineNumber, ':', columnNumber))
     , m_url(url)
     , m_isRegex(isRegex)
     , m_lineNumber(lineNumber)
@@ -439,6 +444,7 @@ void InspectorDebuggerAgent::didScheduleAsyncCall(JSC::JSGlobalObject* globalObj
     if (!m_currentAsyncCallIdentifierStack.isEmpty()) {
         auto it = m_pendingAsyncCalls.find(m_currentAsyncCallIdentifierStack.last());
         ASSERT(it != m_pendingAsyncCalls.end());
+        if (LIKELY(it != m_pendingAsyncCalls.end()))
         parentStackTrace = it->value;
     }
 
@@ -685,7 +691,7 @@ static String functionName(JSC::CodeBlock& codeBlock)
 
 static String functionName(JSC::CallFrame* callFrame)
 {
-    if (callFrame->isWasmFrame())
+    if (callFrame->isNativeCalleeFrame())
         return nullString();
 
     if (auto* codeBlock = callFrame->codeBlock())
@@ -802,6 +808,7 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::addSymbolicBreakpoint(cons
 #if ENABLE(JIT)
     {
         JSC::DeferGCForAWhile deferGC(m_debugger.vm());
+        m_debugger.vm().notifyDebuggerHookInjected();
 
         Vector<JSC::NativeExecutable*> newNativeExecutables;
         {
@@ -1512,6 +1519,11 @@ void InspectorDebuggerAgent::willCallNativeExecutable(JSC::CallFrame* callFrame)
     pauseData->setString("name"_s, symbol);
 
     breakProgram(DebuggerFrontendDispatcher::Reason::FunctionCall, WTFMove(pauseData), m_symbolicBreakpoints[index].specialBreakpoint.copyRef());
+}
+
+bool InspectorDebuggerAgent::isInspectorDebuggerAgent() const
+{
+    return true;
 }
 
 JSC::JSObject* InspectorDebuggerAgent::debuggerScopeExtensionObject(JSC::Debugger& debugger, JSC::JSGlobalObject* globalObject, JSC::DebuggerCallFrame& debuggerCallFrame)

@@ -27,7 +27,7 @@
 #pragma once
 
 #include "DMABufObject.h"
-#include <wtf/Span.h>
+#include <span>
 #include <wtf/Vector.h>
 
 // This is a utilities header that provides helpers for integration of DMABuf operations with EGL.
@@ -35,20 +35,19 @@
 // so the expectation is that this header is included in the place-of-use implementation file after
 // the appropriate EGL headers have already been included.
 
-namespace WebCore {
-namespace DMABufEGLUtilities {
+namespace WebCore::DMABufEGLUtilities {
 
 enum class PlaneModifiersUsage : bool {
     Use = true,
     DoNotUse = false,
 };
 
-static inline Vector<EGLint> constructEGLCreateImageAttributes(const DMABufObject& object, unsigned planeIndex, PlaneModifiersUsage planeModifiersUsage)
+static inline Vector<EGLAttrib> constructEGLCreateImageAttributes(const DMABufObject& object, unsigned planeIndex, PlaneModifiersUsage planeModifiersUsage)
 {
-    Vector<EGLint> attributes;
+    Vector<EGLAttrib> attributes;
     attributes.reserveInitialCapacity(12 + 4 + 1);
 
-    attributes.uncheckedAppend(Span<const EGLint>({
+    attributes.append(std::span<const EGLAttrib>({
         EGL_WIDTH, EGLint(object.format.planeWidth(planeIndex, object.width)),
         EGL_HEIGHT, EGLint(object.format.planeHeight(planeIndex, object.height)),
         EGL_LINUX_DRM_FOURCC_EXT, EGLint(object.format.planes[planeIndex].fourcc),
@@ -58,14 +57,14 @@ static inline Vector<EGLint> constructEGLCreateImageAttributes(const DMABufObjec
     }));
 
     if (planeModifiersUsage == PlaneModifiersUsage::Use && object.modifierPresent[planeIndex]) {
-        attributes.uncheckedAppend(Span<const EGLint>({
+        attributes.append(std::span<const EGLAttrib>({
             EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, EGLint(object.modifierValue[planeIndex] >> 32),
             EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, EGLint(object.modifierValue[planeIndex] & 0xffffffff),
         }));
     }
 
-    attributes.uncheckedAppend(EGL_NONE);
+    attributes.append(EGL_NONE);
     return attributes;
 }
 
-} } // namespace WebCore::DMABufEGLUtilities
+} // namespace WebCore::DMABufEGLUtilities

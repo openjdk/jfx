@@ -38,9 +38,10 @@
 #include "Event.h"
 #include "HTMLNames.h"
 #include "PlatformLocale.h"
+#include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
-#include "ShadowPseudoIds.h"
 #include "Text.h"
+#include "UserAgentParts.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -174,7 +175,7 @@ void DateTimeEditBuilder::visitLiteral(String&& text)
 
     auto element = HTMLDivElement::create(m_editElement.document());
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
-    element->setPseudo(ShadowPseudoIds::webkitDatetimeEditText());
+    element->setUserAgentPart(UserAgentParts::webkitDatetimeEditText());
 
     // If the literal begins/ends with a space, the gap between two fields will appear
     // exaggerated due to the presence of a 1px padding around each field. This can
@@ -204,7 +205,7 @@ DateTimeEditElement::~DateTimeEditElement() = default;
 inline Element& DateTimeEditElement::fieldsWrapperElement() const
 {
     ASSERT(firstChild());
-    return downcast<Element>(*firstChild());
+    return checkedDowncast<Element>(*firstChild());
 }
 
 void DateTimeEditElement::addField(Ref<DateTimeFieldElement> field)
@@ -239,7 +240,7 @@ Ref<DateTimeEditElement> DateTimeEditElement::create(Document& document, EditCon
 {
     auto element = adoptRef(*new DateTimeEditElement(document, editControlOwner));
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
-    element->setPseudo(ShadowPseudoIds::webkitDatetimeEdit());
+    element->setUserAgentPart(UserAgentParts::webkitDatetimeEdit());
     return element;
 }
 
@@ -248,7 +249,7 @@ void DateTimeEditElement::layout(const LayoutParameters& layoutParameters)
     if (!firstChild()) {
         auto element = HTMLDivElement::create(document());
         appendChild(element);
-        element->setPseudo(ShadowPseudoIds::webkitDatetimeEditFieldsWrapper());
+        element->setUserAgentPart(UserAgentParts::webkitDatetimeEditFieldsWrapper());
     }
 
     Element& fieldsWrapper = fieldsWrapperElement();
@@ -262,11 +263,11 @@ void DateTimeEditElement::layout(const LayoutParameters& layoutParameters)
     }
 
     if (focusedField) {
-        auto& focusedFieldId = focusedField->shadowPseudoId();
+        auto& focusedFieldId = focusedField->userAgentPart();
 
         auto foundFieldToFocus = false;
         for (auto& field : m_fields) {
-            if (field->shadowPseudoId() == focusedFieldId) {
+            if (field->userAgentPart() == focusedFieldId) {
                 foundFieldToFocus = true;
                 field->focus();
                 break;
@@ -362,6 +363,13 @@ bool DateTimeEditElement::isFieldOwnerReadOnly() const
     return m_editControlOwner && m_editControlOwner->isEditControlOwnerReadOnly();
 }
 
+bool DateTimeEditElement::isFieldOwnerHorizontal() const
+{
+    if (CheckedPtr renderer = fieldsWrapperElement().renderer())
+        return renderer->isHorizontalWritingMode();
+    return true;
+}
+
 AtomString DateTimeEditElement::localeIdentifier() const
 {
     return m_editControlOwner ? m_editControlOwner->localeIdentifier() : nullAtom();
@@ -402,6 +410,15 @@ DateTimeFieldsState DateTimeEditElement::valueAsDateTimeFieldsState() const
     for (auto& field : m_fields)
         field->populateDateTimeFieldsState(dateTimeFieldsState);
     return dateTimeFieldsState;
+}
+
+bool DateTimeEditElement::editableFieldsHaveValues() const
+{
+    for (auto& field : m_fields) {
+        if (field->hasValue())
+            return true;
+    }
+    return false;
 }
 
 } // namespace WebCore

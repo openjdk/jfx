@@ -28,6 +28,59 @@
 
 #if ENABLE(B3_JIT) && !CPU(ARM)
 
+void testCSEStoreWithLoop()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    BasicBlock* loop = proc.addBlock();
+    BasicBlock* body = proc.addBlock();
+    BasicBlock* done = proc.addBlock();
+
+    // --------------------------- Root ---------------------------
+    Value* constZero = root->appendIntConstant(proc, Origin(), Int64, 0);
+    Value* constOne = root->appendIntConstant(proc, Origin(), Int64, 1);
+    Value* constTen = root->appendIntConstant(proc, Origin(), Int64, 10);
+    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* count = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    UpsilonValue* originalCounter = root->appendNew<UpsilonValue>(proc, Origin(), constZero);
+    root->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loop));
+
+    // --------------------------- Loop ---------------------------
+    Value* loopCounter = loop->appendNew<Value>(proc, Phi, Int64, Origin());
+    Value* incCounter = loop->appendNew<Value>(proc, Add, Origin(), loopCounter, constOne);
+    UpsilonValue* incCounterUpsilon = loop->appendNew<UpsilonValue>(proc, Origin(), incCounter);
+    originalCounter->setPhi(loopCounter);
+    incCounterUpsilon->setPhi(loopCounter);
+    Value* valueFromAddress = loop->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
+    loop->appendNewControlValue(proc, Branch, Origin(),
+        loop->appendNew<Value>(proc, Below, Origin(), incCounter, constTen),
+        FrequentedBlock(body),
+        FrequentedBlock(loop));
+
+    // --------------------------- Body ---------------------------
+    body->appendNew<MemoryValue>(proc, Store, Origin(), count, address);
+    CheckValue* checkAdd = body->appendNew<CheckValue>(proc, CheckAdd, Origin(), count, valueFromAddress);
+    checkAdd->setGenerator(
+        [&](CCallHelpers& jit, const StackmapGenerationParams&) {
+            AllowMacroScratchRegisterUsage allowScratch(jit);
+            jit.abortWithReason(B3Oops);
+        });
+    body->appendNew<MemoryValue>(proc, Store, Origin(), checkAdd, address);
+    body->appendNewControlValue(proc, Branch, Origin(),
+        body->appendNew<Value>(proc, Below, Origin(), incCounter, count),
+        FrequentedBlock(loop),
+        FrequentedBlock(done));
+
+    // --------------------------- Done ---------------------------
+    done->appendNew<MemoryValue>(proc, Store, Origin(), checkAdd, address);
+    done->appendNewControlValue(proc, Return, Origin(), address);
+
+
+    auto code = compileProc(proc);
+    int64_t num = 1;
+    invoke<int64_t>(*code, bitwise_cast<intptr_t>(&num), 2);
+    CHECK_EQ(num, 5);
+}
 
 void testLoadPreIndex32()
 {
@@ -1683,7 +1736,7 @@ void testAbsArg(double a)
             proc, Abs, Origin(),
                 root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0)));
 
-    CHECK(isIdentical(compileAndRun<double>(proc, a), fabs(a)));
+    CHECK(isIdentical(compileAndRun<double>(proc, a), std::abs(a)));
 }
 
 void testAbsImm(double a)
@@ -1695,7 +1748,7 @@ void testAbsImm(double a)
         proc, Return, Origin(),
         root->appendNew<Value>(proc, Abs, Origin(), argument));
 
-    CHECK(isIdentical(compileAndRun<double>(proc), fabs(a)));
+    CHECK(isIdentical(compileAndRun<double>(proc), std::abs(a)));
 }
 
 void testAbsMem(double a)
@@ -1708,7 +1761,7 @@ void testAbsMem(double a)
         proc, Return, Origin(),
         root->appendNew<Value>(proc, Abs, Origin(), loadDouble));
 
-    CHECK(isIdentical(compileAndRun<double>(proc, &a), fabs(a)));
+    CHECK(isIdentical(compileAndRun<double>(proc, &a), std::abs(a)));
 }
 
 void testAbsAbsArg(double a)
@@ -1720,7 +1773,7 @@ void testAbsAbsArg(double a)
     Value* secondAbs = root->appendNew<Value>(proc, Abs, Origin(), firstAbs);
     root->appendNewControlValue(proc, Return, Origin(), secondAbs);
 
-    CHECK(isIdentical(compileAndRun<double>(proc, a), fabs(fabs(a))));
+    CHECK(isIdentical(compileAndRun<double>(proc, a), std::abs(std::abs(a))));
 }
 
 void testAbsNegArg(double a)
@@ -1732,7 +1785,7 @@ void testAbsNegArg(double a)
     Value* abs = root->appendNew<Value>(proc, Abs, Origin(), neg);
     root->appendNewControlValue(proc, Return, Origin(), abs);
 
-    CHECK(isIdentical(compileAndRun<double>(proc, a), fabs(- a)));
+    CHECK(isIdentical(compileAndRun<double>(proc, a), std::abs(- a)));
 }
 
 void testAbsBitwiseCastArg(double a)
@@ -1744,7 +1797,7 @@ void testAbsBitwiseCastArg(double a)
     Value* absValue = root->appendNew<Value>(proc, Abs, Origin(), argumentAsDouble);
     root->appendNewControlValue(proc, Return, Origin(), absValue);
 
-    CHECK(isIdentical(compileAndRun<double>(proc, bitwise_cast<int64_t>(a)), fabs(a)));
+    CHECK(isIdentical(compileAndRun<double>(proc, bitwise_cast<int64_t>(a)), std::abs(a)));
 }
 
 void testBitwiseCastAbsBitwiseCastArg(double a)
@@ -1758,7 +1811,7 @@ void testBitwiseCastAbsBitwiseCastArg(double a)
 
     root->appendNewControlValue(proc, Return, Origin(), resultAsInt64);
 
-    int64_t expectedResult = bitwise_cast<int64_t>(fabs(a));
+    int64_t expectedResult = bitwise_cast<int64_t>(std::abs(a));
     CHECK(isIdentical(compileAndRun<int64_t>(proc, bitwise_cast<int64_t>(a)), expectedResult));
 }
 
@@ -1773,7 +1826,7 @@ void testAbsArg(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(fabs(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
 }
 
 void testAbsImm(float a)
@@ -1785,7 +1838,7 @@ void testAbsImm(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(fabs(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
 }
 
 void testAbsMem(float a)
@@ -1798,7 +1851,7 @@ void testAbsMem(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), bitwise_cast<int32_t>(static_cast<float>(fabs(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
 }
 
 void testAbsAbsArg(float a)
@@ -1812,7 +1865,7 @@ void testAbsAbsArg(float a)
     Value* secondAbs = root->appendNew<Value>(proc, Abs, Origin(), firstAbs);
     root->appendNewControlValue(proc, Return, Origin(), secondAbs);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(fabs(fabs(a)))));
+    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(std::abs(std::abs(a)))));
 }
 
 void testAbsNegArg(float a)
@@ -1826,7 +1879,7 @@ void testAbsNegArg(float a)
     Value* abs = root->appendNew<Value>(proc, Abs, Origin(), neg);
     root->appendNewControlValue(proc, Return, Origin(), abs);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(fabs(- a))));
+    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(std::abs(- a))));
 }
 
 void testAbsBitwiseCastArg(float a)
@@ -1839,7 +1892,7 @@ void testAbsBitwiseCastArg(float a)
     Value* absValue = root->appendNew<Value>(proc, Abs, Origin(), argumentAsfloat);
     root->appendNewControlValue(proc, Return, Origin(), absValue);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(fabs(a))));
+    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(std::abs(a))));
 }
 
 void testBitwiseCastAbsBitwiseCastArg(float a)
@@ -1854,7 +1907,7 @@ void testBitwiseCastAbsBitwiseCastArg(float a)
 
     root->appendNewControlValue(proc, Return, Origin(), resultAsInt64);
 
-    int32_t expectedResult = bitwise_cast<int32_t>(static_cast<float>(fabs(a)));
+    int32_t expectedResult = bitwise_cast<int32_t>(static_cast<float>(std::abs(a)));
     CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), expectedResult));
 }
 
@@ -1871,7 +1924,7 @@ void testAbsArgWithUselessDoubleConversion(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), floatResult);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(fabs(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
 }
 
 void testAbsArgWithEffectfulDoubleConversion(float a)
@@ -1891,8 +1944,8 @@ void testAbsArgWithEffectfulDoubleConversion(float a)
 
     double effect = 0;
     int32_t resultValue = compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a), &effect);
-    CHECK(isIdentical(resultValue, bitwise_cast<int32_t>(static_cast<float>(fabs(a)))));
-    CHECK(isIdentical(effect, static_cast<double>(fabs(a))));
+    CHECK(isIdentical(resultValue, bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
+    CHECK(isIdentical(effect, static_cast<double>(std::abs(a))));
 }
 
 void testCeilArg(double a)
@@ -3735,7 +3788,7 @@ static double negativeZero()
     return -zero();
 }
 
-void addArgTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void addArgTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN(testAddArg(111));
     RUN(testAddArgs(1, 1));
@@ -3990,7 +4043,7 @@ void addArgTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
     RUN_BINARY(testSubArgsFloatWithEffectfulDoubleConversion, floatingPointOperands<float>(), floatingPointOperands<float>());
 }
 
-void addCallTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void addCallTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN(testCallSimple(1, 2));
     RUN(testCallRare(1, 2));
@@ -3999,6 +4052,9 @@ void addCallTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
     RUN(testCallFunctionWithHellaArguments());
     RUN(testCallFunctionWithHellaArguments2());
     RUN(testCallFunctionWithHellaArguments3());
+
+    RUN(testCallPairResult(1, 100));
+    RUN(testCallPairResultRare(1, 100));
 
     RUN(testReturnDouble(0.0));
     RUN(testReturnDouble(negativeZero()));
@@ -4011,7 +4067,7 @@ void addCallTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
     RUN(testCallFunctionWithHellaFloatArguments());
 }
 
-void addShrTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void addShrTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN(testSShrArgs(1, 0));
     RUN(testSShrArgs(1, 1));
@@ -4096,6 +4152,7 @@ void addShrTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
     RUN(testZShrArgImm32(0xffffffff, 0));
     RUN(testZShrArgImm32(0xffffffff, 1));
     RUN(testZShrArgImm32(0xffffffff, 63));
+    RUN(testCSEStoreWithLoop());
 
     if (Options::useB3CanonicalizePrePostIncrements()) {
         RUN(testLoadPreIndex32());

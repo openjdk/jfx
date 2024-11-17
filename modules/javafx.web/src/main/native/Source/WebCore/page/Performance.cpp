@@ -38,7 +38,7 @@
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "PerformanceEntry.h"
 #include "PerformanceMarkOptions.h"
 #include "PerformanceMeasureOptions.h"
@@ -104,10 +104,20 @@ void Performance::allowHighPrecisionTime()
     timePrecision = highTimePrecision;
 }
 
+Seconds Performance::timeResolution()
+{
+    return timePrecision;
+}
+
 DOMHighResTimeStamp Performance::relativeTimeFromTimeOriginInReducedResolution(MonotonicTime timestamp) const
 {
     Seconds seconds = timestamp - m_timeOrigin;
     return reduceTimeResolution(seconds).milliseconds();
+}
+
+MonotonicTime Performance::monotonicTimeFromRelativeTime(DOMHighResTimeStamp relativeTime) const
+{
+    return m_timeOrigin + Seconds::fromMilliseconds(relativeTime);
 }
 
 PerformanceNavigation* Performance::navigation()
@@ -249,7 +259,6 @@ void Performance::reportFirstContentfulPaint()
 
 void Performance::addNavigationTiming(DocumentLoader& documentLoader, Document& document, CachedResource& resource, const DocumentLoadTiming& timing, const NetworkLoadMetrics& metrics)
 {
-    ASSERT(document.settings().performanceNavigationTimingAPIEnabled());
     m_navigationTiming = PerformanceNavigationTiming::create(m_timeOrigin, resource, timing, metrics, document.eventTiming(), document.securityOrigin(), documentLoader.triggeringAction().type());
 }
 

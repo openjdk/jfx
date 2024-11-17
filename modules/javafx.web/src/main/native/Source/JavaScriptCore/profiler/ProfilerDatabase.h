@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,17 +29,19 @@
 #include "ProfilerBytecodes.h"
 #include "ProfilerCompilation.h"
 #include "ProfilerEvent.h"
-#include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
+#include <wtf/JSONValues.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/SegmentedVector.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC { namespace Profiler {
 
 class Database {
-    WTF_MAKE_FAST_ALLOCATED; WTF_MAKE_NONCOPYABLE(Database);
+    WTF_MAKE_TZONE_ALLOCATED(Database);
+    WTF_MAKE_NONCOPYABLE(Database);
 public:
     JS_EXPORT_PRIVATE Database(VM&);
     JS_EXPORT_PRIVATE ~Database();
@@ -51,15 +53,8 @@ public:
 
     void addCompilation(CodeBlock*, Ref<Compilation>&&);
 
-    // Converts the database to a JavaScript object that is suitable for JSON stringification.
-    // Note that it's probably a good idea to use an CallFrame* associated with a global
-    // object that is "clean" - i.e. array and object prototypes haven't had strange things
-    // done to them. And yes, it should be appropriate to just use a globalExec here.
-    JS_EXPORT_PRIVATE JSValue toJS(JSGlobalObject*) const;
-
-    // Converts the database to a JavaScript object using a private temporary global object,
-    // and then returns the JSON representation of that object.
-    JS_EXPORT_PRIVATE String toJSON() const;
+    // Converts the database to a JSON object that is suitable for JSON stringification.
+    JS_EXPORT_PRIVATE Ref<JSON::Value> toJSON() const;
 
     // Saves the JSON representation (from toJSON()) to the given file. Returns false if the
     // save failed.

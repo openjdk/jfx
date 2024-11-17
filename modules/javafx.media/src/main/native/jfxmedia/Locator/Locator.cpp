@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,10 +53,12 @@ CLocator::LocatorType CLocator::GetType()
 
 jstring CLocator::LocatorGetStringLocation(JNIEnv *env, jobject locator)
 {
-    static jmethodID mid_GetStringLocation = NULL;
-    jstring result = NULL;
+    if (env == NULL || locator == NULL)
+        return NULL;
+
     CJavaEnvironment javaEnv(env);
 
+    static jmethodID mid_GetStringLocation = NULL;
     if (mid_GetStringLocation == NULL)
     {
         jclass klass = env->GetObjectClass(locator);
@@ -69,13 +71,65 @@ jstring CLocator::LocatorGetStringLocation(JNIEnv *env, jobject locator)
         }
     }
 
-    result = (jstring)env->CallObjectMethod(locator, mid_GetStringLocation);
+    jstring result = (jstring)env->CallObjectMethod(locator, mid_GetStringLocation);
     if (javaEnv.clearException())
     {
         return NULL;
     }
 
     return result;
+}
+
+jobject CLocator::CreateConnectionHolder(JNIEnv *env, jobject locator)
+{
+    if (env == NULL || locator == NULL)
+        return NULL;
+
+    CJavaEnvironment javaEnv(env);
+
+    static jmethodID mid_CreateConnectionHolder = NULL;
+    if (mid_CreateConnectionHolder == NULL)
+    {
+        jclass klass = env->GetObjectClass(locator);
+        mid_CreateConnectionHolder = env->GetMethodID(klass,
+                "createConnectionHolder", "()Lcom/sun/media/jfxmedia/locator/ConnectionHolder;");
+        env->DeleteLocalRef(klass);
+        if (javaEnv.reportException() || (mid_CreateConnectionHolder == NULL))
+            return NULL;
+    }
+
+    jobject connectionHolder = env->CallObjectMethod(locator, mid_CreateConnectionHolder);
+    if (javaEnv.reportException())
+        return NULL;
+
+    return connectionHolder;
+}
+
+jobject CLocator::GetAudioStreamConnectionHolder(JNIEnv *env, jobject locator, jobject connectionHolder)
+{
+    if (env == NULL || locator == NULL || connectionHolder == NULL)
+        return NULL;
+
+    CJavaEnvironment javaEnv(env);
+
+    static jmethodID mid_GetAudioStreamConnectionHolder = NULL;
+    if (mid_GetAudioStreamConnectionHolder == NULL)
+    {
+        jclass klass = env->GetObjectClass(locator);
+        mid_GetAudioStreamConnectionHolder = env->GetMethodID(klass,
+                "getAudioStreamConnectionHolder",
+                "(Lcom/sun/media/jfxmedia/locator/ConnectionHolder;)Lcom/sun/media/jfxmedia/locator/ConnectionHolder;");
+        env->DeleteLocalRef(klass);
+        if (javaEnv.reportException() || (mid_GetAudioStreamConnectionHolder == NULL))
+            return NULL;
+    }
+
+    jobject audioStreamConnectionHolder = env->CallObjectMethod(locator,
+            mid_GetAudioStreamConnectionHolder, connectionHolder);
+    if (javaEnv.reportException())
+        return NULL;
+
+    return audioStreamConnectionHolder;
 }
 
 int64_t CLocator::GetSizeHint()

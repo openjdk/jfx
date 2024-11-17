@@ -26,8 +26,8 @@
 
 #if ENABLE(WEB_RTC)
 
+#include <span>
 #include <wtf/RefCounted.h>
-#include <wtf/Span.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -51,8 +51,8 @@ class RTCRtpTransformableFrame : public RefCounted<RTCRtpTransformableFrame> {
 public:
     virtual ~RTCRtpTransformableFrame() = default;
 
-    virtual Span<const uint8_t> data() const = 0;
-    virtual void setData(Span<const uint8_t>) = 0;
+    virtual std::span<const uint8_t> data() const = 0;
+    virtual void setData(std::span<const uint8_t>) = 0;
 
     virtual uint64_t timestamp() const = 0;
     virtual RTCEncodedAudioFrameMetadata audioMetadata() const = 0;

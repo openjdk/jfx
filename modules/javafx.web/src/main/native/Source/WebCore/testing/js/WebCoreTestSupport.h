@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011, 2015 Google Inc. All rights reserved.
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,9 @@
 
 #pragma once
 
+#include <span>
 #include <wtf/Forward.h>
+#include <wtf/OptionSet.h>
 
 typedef const struct OpaqueJSContext* JSContextRef;
 typedef struct OpaqueJSString* JSStringRef;
@@ -39,17 +41,19 @@ typedef struct OpaqueJSValue* JSObjectRef;
 #endif
 
 namespace WebCore {
-class Frame;
+class LocalFrame;
+enum class ParserContentPolicy : uint8_t;
 }
 
 namespace WebCoreTestSupport {
 
 TEST_SUPPORT_EXPORT void initializeNames();
+
 TEST_SUPPORT_EXPORT void injectInternalsObject(JSContextRef);
 TEST_SUPPORT_EXPORT void resetInternalsObject(JSContextRef);
-TEST_SUPPORT_EXPORT void monitorWheelEvents(WebCore::Frame&, bool clearLatchingState);
-TEST_SUPPORT_EXPORT void setWheelEventMonitorTestCallbackAndStartMonitoring(bool expectWheelEndOrCancel, bool expectMomentumEnd, WebCore::Frame&, JSContextRef, JSObjectRef);
-TEST_SUPPORT_EXPORT void clearWheelEventTestMonitor(WebCore::Frame&);
+TEST_SUPPORT_EXPORT void monitorWheelEvents(WebCore::LocalFrame&, bool clearLatchingState);
+TEST_SUPPORT_EXPORT void setWheelEventMonitorTestCallbackAndStartMonitoring(bool expectWheelEndOrCancel, bool expectMomentumEnd, WebCore::LocalFrame&, JSContextRef, JSObjectRef);
+TEST_SUPPORT_EXPORT void clearWheelEventTestMonitor(WebCore::LocalFrame&);
 
 TEST_SUPPORT_EXPORT void setLogChannelToAccumulate(const String& name);
 TEST_SUPPORT_EXPORT void clearAllLogChannelsToAccumulate();
@@ -61,7 +65,7 @@ TEST_SUPPORT_EXPORT void setLinkedOnOrAfterEverythingForTesting();
 TEST_SUPPORT_EXPORT void installMockGamepadProvider();
 TEST_SUPPORT_EXPORT void connectMockGamepad(unsigned index);
 TEST_SUPPORT_EXPORT void disconnectMockGamepad(unsigned index);
-TEST_SUPPORT_EXPORT void setMockGamepadDetails(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount);
+TEST_SUPPORT_EXPORT void setMockGamepadDetails(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble);
 TEST_SUPPORT_EXPORT void setMockGamepadAxisValue(unsigned index, unsigned axisIndex, double value);
 TEST_SUPPORT_EXPORT void setMockGamepadButtonValue(unsigned index, unsigned buttonIndex, double value);
 
@@ -71,13 +75,13 @@ TEST_SUPPORT_EXPORT void setAdditionalSupportedImageTypesForTesting(const String
 
 #if ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY)
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-void populateDisassemblyLabels() TEST_SUPPORT_EXPORT;
+TEST_SUPPORT_EXPORT void populateDisassemblyLabels();
 #else
 inline void populateDisassemblyLabels() { }
 #endif
 
 #if ENABLE(JIT_OPERATION_VALIDATION)
-void populateJITOperations() TEST_SUPPORT_EXPORT;
+TEST_SUPPORT_EXPORT void populateJITOperations();
 #else
 inline void populateJITOperations() { populateDisassemblyLabels(); }
 #endif
@@ -85,5 +89,14 @@ inline void populateJITOperations() { populateDisassemblyLabels(); }
 #else
 inline void populateJITOperations() { }
 #endif // ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY)
+#if PLATFORM(JAVA)
+TEST_SUPPORT_EXPORT bool testDocumentFragmentParseXML(const String&, OptionSet<WebCore::ParserContentPolicy>);
+#else
+bool testDocumentFragmentParseXML(const String&, OptionSet<WebCore::ParserContentPolicy>) TEST_SUPPORT_EXPORT;
+#endif
+
+#if ENABLE(WEB_AUDIO)
+void testSincResamplerProcessBuffer(std::span<const float> source, std::span<float> destination, double scaleFactor) TEST_SUPPORT_EXPORT;
+#endif
 
 } // namespace WebCoreTestSupport

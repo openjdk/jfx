@@ -530,6 +530,7 @@ end
 
 writeH("Opcode") {
     | outp |
+    outp.puts "#if ENABLE(B3_JIT)"
     outp.puts "namespace JSC { namespace B3 { namespace Air {"
     outp.puts "enum Opcode : int16_t {"
     $opcodes.keys.each {
@@ -545,6 +546,7 @@ writeH("Opcode") {
     outp.puts "class PrintStream;"
     outp.puts "JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Opcode);"
     outp.puts "} // namespace WTF"
+    outp.puts "#endif // ENABLE(B3_JIT)"
 }
 
 # From here on, we don't try to emit properly indented code, since we're using a recursive pattern
@@ -699,6 +701,7 @@ formTableWidth = (maxNumOperands + 1) * maxNumOperands / 2
 
 writeH("OpcodeUtils") {
     | outp |
+    outp.puts "#if ENABLE(B3_JIT)"
     outp.puts "#include \"AirCustom.h\""
     outp.puts "#include \"AirInst.h\""
     outp.puts "#include \"AirFormTable.h\""
@@ -834,11 +837,14 @@ writeH("OpcodeUtils") {
     outp.puts "}"
     
     outp.puts "} } } // namespace JSC::B3::Air"
+    outp.puts "#endif // ENABLE(B3_JIT)"
 }
 
 writeH("OpcodeGenerated") {
     | outp |
+    outp.puts "#if ENABLE(B3_JIT)"
     outp.puts "#include \"AirInstInlines.h\""
+    outp.puts "#include \"B3ProcedureInlines.h\""
     outp.puts "#include \"CCallHelpers.h\""
     outp.puts "#include \"wtf/PrintStream.h\""
     outp.puts "namespace WTF {"
@@ -952,7 +958,7 @@ writeH("OpcodeGenerated") {
                         outp.puts "OPGEN_RETURN(false);"
                     end
                 when "Index"
-                    outp.puts "if (!Arg::isValidIndexForm(args[#{index}].scale(), args[#{index}].offset(), #{arg.widthCode}))"
+                    outp.puts "if (!Arg::isValidIndexForm(this->kind.opcode, args[#{index}].scale(), args[#{index}].offset(), #{arg.widthCode}))"
                     outp.puts "OPGEN_RETURN(false);"
                 when "PreIndex"
                     outp.puts "if (!Arg::isValidIncrementIndexForm(args[#{index}].offset()))"
@@ -989,17 +995,17 @@ writeH("OpcodeGenerated") {
         | opcode |
         outp.puts "case Opcode::#{opcode.name}:"
 
+        numArgs = opcode.custom ? 0 : opcode.overloads.map {
+            | overload |
+            overload.signature.length
+        }.max
+
         if opcode.custom
             outp.puts "OPGEN_RETURN(#{opcode.name}Custom::admitsStack(*this, argIndex));"
-        else
+        elsif numArgs > 0
             # Switch on the argIndex.
             outp.puts "switch (argIndex) {"
 
-            numArgs = opcode.overloads.map {
-                | overload |
-                overload.signature.length
-            }.max
-            
             numArgs.times {
                 | argIndex |
                 outp.puts "case #{argIndex}:"
@@ -1296,5 +1302,6 @@ writeH("OpcodeGenerated") {
     outp.puts "}"
 
     outp.puts "} } } // namespace JSC::B3::Air"
+    outp.puts "#endif // ENABLE(B3_JIT)"
 }
 

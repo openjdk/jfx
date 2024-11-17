@@ -30,20 +30,20 @@
 #include "config.h"
 #include "ValidatedFormListedElement.h"
 
-#include "ControlStates.h"
-#include "ElementAncestorIterator.h"
+#include "AXObjectCache.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "Event.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "FormAssociatedElement.h"
 #include "FormController.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "HTMLDataListElement.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLLegendElement.h"
 #include "HTMLParserIdioms.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
@@ -59,8 +59,7 @@ using namespace HTMLNames;
 ValidatedFormListedElement::ValidatedFormListedElement(HTMLFormElement* form)
     : FormListedElement { form }
 {
-    if (supportsReadOnly())
-        ASSERT(readOnlyBarsFromConstraintValidation());
+    ASSERT(!supportsReadOnly() || readOnlyBarsFromConstraintValidation());
 }
 
 ValidatedFormListedElement::~ValidatedFormListedElement() = default;
@@ -102,7 +101,7 @@ void ValidatedFormListedElement::updateVisibleValidationMessage(Ref<HTMLElement>
         return;
     String message;
     if (element.renderer() && willValidate())
-        message = validationMessage().stripWhiteSpace();
+        message = validationMessage().trim(deprecatedIsSpaceOrNewline);
     if (!m_validationMessage)
         m_validationMessage = makeUnique<ValidationMessage>(validationAnchor);
     m_validationMessage->updateValidationMessage(validationAnchor, message);
@@ -169,9 +168,8 @@ void ValidatedFormListedElement::focusAndShowValidationMessage(Ref<HTMLElement> 
     // focus() will scroll the element into view and this scroll may happen asynchronously.
     // Because scrolling the view hides the validation message, we need to show the validation
     // message asynchronously as well.
-    callOnMainThread([this, protectedThis, validationAnchor] {
-        updateVisibleValidationMessage(validationAnchor);
-    });
+    if (RefPtr page = validationAnchor->document().page())
+        page->scheduleValidationMessageUpdate(*this, validationAnchor);
 }
 
 void ValidatedFormListedElement::reportNonFocusableControlError()
@@ -212,8 +210,8 @@ void ValidatedFormListedElement::setDisabledInternal(bool disabled, bool disable
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (changingDisabledState) {
         emplace(styleInvalidation, asHTMLElement(), {
-            { CSSSelector::PseudoClassDisabled, newDisabledState },
-            { CSSSelector::PseudoClassEnabled, !newDisabledState },
+            { CSSSelector::PseudoClass::Disabled, newDisabledState },
+            { CSSSelector::PseudoClass::Enabled, !newDisabledState },
         });
     }
 
@@ -226,19 +224,21 @@ void ValidatedFormListedElement::setDisabledInternal(bool disabled, bool disable
 
 static void addInvalidElementToAncestorFromInsertionPoint(const HTMLElement& element, ContainerNode* insertionPoint)
 {
-    if (!is<Element>(insertionPoint))
+    auto* insertionPointElement = dynamicDowncast<Element>(insertionPoint);
+    if (!insertionPointElement)
         return;
 
-    for (auto& ancestor : lineageOfType<HTMLFieldSetElement>(downcast<Element>(*insertionPoint)))
+    for (auto& ancestor : lineageOfType<HTMLFieldSetElement>(*insertionPointElement))
         ancestor.addInvalidDescendant(element);
 }
 
 static void removeInvalidElementToAncestorFromInsertionPoint(const HTMLElement& element, ContainerNode* insertionPoint)
 {
-    if (!is<Element>(insertionPoint))
+    auto* insertionPointElement = dynamicDowncast<Element>(insertionPoint);
+    if (!insertionPointElement)
         return;
 
-    for (auto& ancestor : lineageOfType<HTMLFieldSetElement>(downcast<Element>(*insertionPoint)))
+    for (auto& ancestor : lineageOfType<HTMLFieldSetElement>(*insertionPointElement))
         ancestor.removeInvalidDescendant(element);
 }
 
@@ -253,10 +253,10 @@ void ValidatedFormListedElement::updateValidity()
     if (newIsValid != m_isValid) {
         HTMLElement& element = asHTMLElement();
         Style::PseudoClassChangeInvalidation styleInvalidation(element, {
-            { CSSSelector::PseudoClassValid, newIsValid },
-            { CSSSelector::PseudoClassInvalid, !newIsValid },
-            { CSSSelector::PseudoClassUserValid, m_wasInteractedWithSinceLastFormSubmitEvent && newIsValid },
-            { CSSSelector::PseudoClassUserInvalid, m_wasInteractedWithSinceLastFormSubmitEvent && !newIsValid },
+            { CSSSelector::PseudoClass::Valid, newIsValid },
+            { CSSSelector::PseudoClass::Invalid, !newIsValid },
+            { CSSSelector::PseudoClass::UserValid, m_wasInteractedWithSinceLastFormSubmitEvent && newIsValid },
+            { CSSSelector::PseudoClass::UserInvalid, m_wasInteractedWithSinceLastFormSubmitEvent && !newIsValid },
         });
 
         m_isValid = newIsValid;
@@ -274,6 +274,9 @@ void ValidatedFormListedElement::updateValidity()
                     form->removeInvalidFormControlIfNeeded(element);
             }
         }
+
+        if (auto* cache = element.document().existingAXObjectCache())
+            cache->onValidityChange(element);
     }
 
     // Updates only if this control already has a validation message.
@@ -310,7 +313,7 @@ void ValidatedFormListedElement::parseReadOnlyAttribute(const AtomString& value)
     bool newHasReadOnlyAttribute = !value.isNull();
     if (m_hasReadOnlyAttribute != newHasReadOnlyAttribute) {
         bool newMatchesReadWrite = supportsReadOnly() && !newHasReadOnlyAttribute;
-        Style::PseudoClassChangeInvalidation readWriteInvalidation(asHTMLElement(), { { CSSSelector::PseudoClassReadWrite, newMatchesReadWrite }, { CSSSelector::PseudoClassReadOnly, !newMatchesReadWrite } });
+        Style::PseudoClassChangeInvalidation readWriteInvalidation(asHTMLElement(), { { CSSSelector::PseudoClass::ReadWrite, newMatchesReadWrite }, { CSSSelector::PseudoClass::ReadOnly, !newMatchesReadWrite } });
         m_hasReadOnlyAttribute = newHasReadOnlyAttribute;
         readOnlyStateChanged();
     }
@@ -323,6 +326,11 @@ void ValidatedFormListedElement::insertedIntoAncestor(Node::InsertionType insert
     syncWithFieldsetAncestors(&parentOfInsertedTree);
 
     FormListedElement::elementInsertedIntoAncestor(asHTMLElement(), insertionType);
+
+    if (!insertionType.connectedToDocument)
+        resetFormOwner();
+    // Need to wait for didFinishInsertingNode to reset form when this element is inserted into a document
+    // because we rely on TreeScope::getElementById to return the right element.
 }
 
 void ValidatedFormListedElement::setDataListAncestorState(TriState isInsideDataList)
@@ -365,8 +373,8 @@ bool ValidatedFormListedElement::computeIsDisabledByFieldsetAncestor() const
 {
     RefPtr<const Element> previousAncestor;
     for (auto& ancestor : ancestorsOfType<Element>(asHTMLElement())) {
-        if (is<HTMLFieldSetElement>(ancestor) && ancestor.hasAttributeWithoutSynchronization(disabledAttr)) {
-            bool isInFirstLegend = is<HTMLLegendElement>(previousAncestor) && previousAncestor == downcast<HTMLFieldSetElement>(ancestor).legend();
+        if (auto* fieldset = dynamicDowncast<HTMLFieldSetElement>(ancestor); fieldset && ancestor.hasAttributeWithoutSynchronization(disabledAttr)) {
+            bool isInFirstLegend = is<HTMLLegendElement>(previousAncestor) && previousAncestor == fieldset->legend();
             return !isInFirstLegend;
         }
         previousAncestor = &ancestor;
@@ -501,11 +509,11 @@ void ValidatedFormListedElement::setInteractedWithSinceLastFormSubmitEvent(bool 
         return;
 
     Style::PseudoClassChangeInvalidation styleInvalidation(asHTMLElement(), {
-        { CSSSelector::PseudoClassUserValid, interactedWith && matchesValidPseudoClass() },
-        { CSSSelector::PseudoClassUserInvalid, interactedWith && matchesInvalidPseudoClass() },
+        { CSSSelector::PseudoClass::UserValid, interactedWith && matchesValidPseudoClass() },
+        { CSSSelector::PseudoClass::UserInvalid, interactedWith && matchesInvalidPseudoClass() },
     });
 
     m_wasInteractedWithSinceLastFormSubmitEvent = interactedWith;
 }
 
-} // namespace Webcore
+} // namespace WebCore

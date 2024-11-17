@@ -105,7 +105,6 @@ public:
         using Base = WeakListHashSetIteratorBase<WeakListHashSet, typename WeakPtrImplSet::iterator>;
 
         bool operator==(const WeakListHashSetIterator& other) const { return Base::m_position == other.Base::m_position; }
-        bool operator!=(const WeakListHashSetIterator& other) const { return Base::m_position != other.Base::m_position; }
 
         T* get() { return Base::makePeek(); }
         T& operator*() { return *Base::makePeek(); }
@@ -136,7 +135,6 @@ public:
         using Base = WeakListHashSetIteratorBase<WeakListHashSet, typename WeakPtrImplSet::const_iterator>;
 
         bool operator==(const WeakListHashSetConstIterator& other) const { return Base::m_position == other.Base::m_position; }
-        bool operator!=(const WeakListHashSetConstIterator& other) const { return Base::m_position != other.Base::m_position; }
 
         const T* get() const { return Base::makePeek(); }
         const T& operator*() const { return *Base::makePeek(); }
@@ -148,7 +146,7 @@ public:
             return *this;
         }
 
-        WeakListHashSetIterator& operator--()
+        WeakListHashSetConstIterator& operator--()
         {
             Base::advanceBackwards();
             return *this;
@@ -174,9 +172,8 @@ public:
     iterator find(const U& value)
     {
         increaseOperationCountSinceLastCleanup();
-        auto& weakPtrImpl = value.weakPtrFactory().m_impl;
-        if (auto* pointer = weakPtrImpl.pointer(); pointer && *pointer)
-            return WeakListHashSetIterator(*this, m_set.find(*pointer));
+        if (auto* impl = value.weakPtrFactory().impl(); impl && *impl)
+            return WeakListHashSetIterator(*this, m_set.find(*impl));
         return end();
     }
 
@@ -184,9 +181,8 @@ public:
     const_iterator find(const U& value) const
     {
         increaseOperationCountSinceLastCleanup();
-        auto& weakPtrImpl = value.weakPtrFactory().m_impl;
-        if (auto* pointer = weakPtrImpl.pointer(); pointer && *pointer)
-            return WeakListHashSetIterator(*this, m_set.find(*pointer));
+        if (auto* impl = value.weakPtrFactory().impl(); impl && *impl)
+            return WeakListHashSetConstIterator(*this, m_set.find(*impl));
         return end();
     }
 
@@ -194,9 +190,8 @@ public:
     bool contains(const U& value) const
     {
         increaseOperationCountSinceLastCleanup();
-        auto& weakPtrImpl = value.weakPtrFactory().m_impl;
-        if (auto* pointer = weakPtrImpl.pointer(); pointer && *pointer)
-            return m_set.contains(*pointer);
+        if (auto* impl = value.weakPtrFactory().impl(); impl && *impl)
+            return m_set.contains(*impl);
         return false;
     }
 
@@ -212,6 +207,13 @@ public:
     {
         amortizedCleanupIfNeeded();
         return m_set.appendOrMoveToLast(*static_cast<const T&>(value).weakPtrFactory().template createWeakPtr<T>(const_cast<U&>(value), assertionsPolicy).m_impl);
+    }
+
+    template <typename U>
+    bool moveToLastIfPresent(const U& value)
+    {
+        amortizedCleanupIfNeeded();
+        return m_set.moveToLastIfPresent(*static_cast<const T&>(value).weakPtrFactory().template createWeakPtr<T>(const_cast<U&>(value), assertionsPolicy).m_impl);
     }
 
     template <typename U>
@@ -240,9 +242,8 @@ public:
     bool remove(const U& value)
     {
         amortizedCleanupIfNeeded();
-        auto& weakPtrImpl = value.weakPtrFactory().m_impl;
-        if (auto* pointer = weakPtrImpl.pointer(); pointer && *pointer)
-            return m_set.remove(*pointer);
+        if (auto* impl = value.weakPtrFactory().impl(); impl && *impl)
+            return m_set.remove(*impl);
         return false;
     }
 
@@ -258,7 +259,7 @@ public:
     void clear()
     {
         m_set.clear();
-        m_operationCountSinceLastCleanup = 0;
+        cleanupHappened();
     }
 
     unsigned capacity() const { return m_set.capacity(); }
@@ -284,7 +285,7 @@ public:
         if (result)
             increaseOperationCountSinceLastCleanup(count);
         else
-            m_operationCountSinceLastCleanup = 0;
+            cleanupHappened();
         return result;
     }
 
@@ -296,19 +297,75 @@ public:
 
     void checkConsistency() { } // To be implemented.
 
-    void removeNullReferences()
+    bool removeNullReferences()
     {
+        bool didRemove = false;
         auto it = m_set.begin();
         while (it != m_set.end()) {
             auto currentIt = it;
             ++it;
-            if (!currentIt->get())
+            if (!currentIt->get()) {
                 m_set.remove(currentIt);
+                didRemove = true;
         }
-        m_operationCountSinceLastCleanup = 0;
+        }
+        cleanupHappened();
+        return didRemove;
+    }
+
+    T& first()
+    {
+        auto it = begin();
+        ASSERT(it != end());
+        return *it;
+    }
+
+    const T& first() const
+    {
+        auto it = begin();
+        ASSERT(it != end());
+        return *it;
+    }
+
+    T& takeFirst()
+    {
+        auto it = begin();
+        auto& first = *it;
+        remove(it);
+        return first;
+    }
+
+    T* tryTakeFirst()
+    {
+        auto it = begin();
+        if (it == end())
+            return nullptr;
+        auto* first = it.get();
+        remove(it);
+        return first;
+    }
+
+    T& last()
+    {
+        auto it = end();
+        --it;
+        return *it;
+    }
+
+    const T& last() const
+    {
+        auto it = end();
+        --it;
+        return *it;
     }
 
 private:
+    ALWAYS_INLINE void cleanupHappened() const
+    {
+        m_operationCountSinceLastCleanup = 0;
+        m_maxOperationCountWithoutCleanup = std::min(std::numeric_limits<unsigned>::max() / 2, m_set.size()) * 2;
+    }
+
     ALWAYS_INLINE unsigned increaseOperationCountSinceLastCleanup(unsigned count = 1) const
     {
         unsigned currentCount = m_operationCountSinceLastCleanup += count;
@@ -318,28 +375,17 @@ private:
     ALWAYS_INLINE void amortizedCleanupIfNeeded(unsigned count = 1) const
     {
         unsigned currentCount = increaseOperationCountSinceLastCleanup(count);
-        if (currentCount / 2 > m_set.size())
+        if (currentCount > m_maxOperationCountWithoutCleanup)
             const_cast<WeakListHashSet&>(*this).removeNullReferences();
     }
 
     WeakPtrImplSet m_set;
     mutable unsigned m_operationCountSinceLastCleanup { 0 };
+    mutable unsigned m_maxOperationCountWithoutCleanup { 0 };
 };
 
-template<typename MapFunction, typename T, typename WeakMapImpl>
-struct Mapper<MapFunction, const WeakListHashSet<T, WeakMapImpl> &, void> {
-    using SourceItemType = T&;
-    using DestinationItemType = typename std::invoke_result<MapFunction, SourceItemType&>::type;
-
-    static Vector<DestinationItemType> map(const WeakListHashSet<T, WeakMapImpl>& source, const MapFunction& mapFunction)
-    {
-        Vector<DestinationItemType> result;
-        result.reserveInitialCapacity(source.computeSize());
-        for (auto& item : source)
-            result.uncheckedAppend(mapFunction(item));
-        return result;
-    }
-};
+template<typename T, typename WeakMapImpl>
+size_t containerSize(const WeakListHashSet<T, WeakMapImpl>& container) { return container.computeSize(); }
 
 template<typename T, typename WeakMapImpl>
 inline auto copyToVector(const WeakListHashSet<T, WeakMapImpl>& collection) -> Vector<WeakPtr<T, WeakMapImpl>> {

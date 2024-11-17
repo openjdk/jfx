@@ -34,6 +34,7 @@ import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.concurrent.Worker.State;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -42,11 +43,11 @@ import javafx.scene.web.WebEngineShim;
 import javafx.scene.web.WebView;
 import javafx.util.Duration;
 import netscape.javascript.JSObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import test.util.memory.JMemoryBuddy;
 
 public class LeakTest extends TestBase {
@@ -74,7 +75,7 @@ public class LeakTest extends TestBase {
                 }
             }
         }));
-        time.play();
+        Platform.runLater(time::play);
         latch.await();
     }
 
@@ -142,7 +143,7 @@ public class LeakTest extends TestBase {
 
         // Give disposer a chance to run
         Thread.sleep(SLEEP_TIME);
-        assertTrue("All JSObjects are disposed", JSObjectShim.test_getPeerCount() == 0);
+        assertTrue(JSObjectShim.test_getPeerCount() == 0, "All JSObjects are disposed");
     }
 
     private State getLoadState() {
@@ -155,14 +156,14 @@ public class LeakTest extends TestBase {
         WeakReference<?>[] willGC = new WeakReference[count];
         final String html =
                 "<html>\n" +
-                "<head></head>\n" +
-                "<body> <a href=#>hello</a><p> Paragraph </p>\n" +
-                "<div> Div Block </div> <iframe> iframe </iframe> <br> </body>\n" +
-                "</html>";
+                        "<head></head>\n" +
+                        "<body> <a href=#>hello</a><p> Paragraph </p>\n" +
+                        "<div> Div Block </div> <iframe> iframe </iframe> <br> </body>\n" +
+                        "</html>";
         loadContent(html);
         WebEngine web = getEngine();
 
-        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
+        assertTrue(getLoadState() == SUCCEEDED, "Load task completed successfully");
 
         System.gc();
         Thread.sleep(SLEEP_TIME);
@@ -173,42 +174,42 @@ public class LeakTest extends TestBase {
 
         submit(() -> {
             Document doc = web.getDocument();
-            assertNotNull("Document should not be null", doc);
+            assertNotNull(doc, "Document should not be null");
 
             NodeList tagList = doc.getElementsByTagName("html");
             Element element = (Element) tagList.item(0);
             willGC[0] = new WeakReference<>(element);
-            assertEquals("Expected NodeImpl(tag:html) HashCount", initialHashCount+1, NodeImplShim.test_getHashCount());
+            assertEquals(initialHashCount+1, NodeImplShim.test_getHashCount(), "Expected NodeImpl(tag:html) HashCount");
 
             tagList = doc.getElementsByTagName("head");
             element = (Element) tagList.item(0);
             willGC[1] = new WeakReference<>(element);
-            assertEquals("Expected NodeImpl(tag:head) HashCount", initialHashCount+2, NodeImplShim.test_getHashCount());
+            assertEquals(initialHashCount+2, NodeImplShim.test_getHashCount(), "Expected NodeImpl(tag:head) HashCount");
 
             tagList = doc.getElementsByTagName("body");
             element = (Element) tagList.item(0);
             willGC[2] = new WeakReference<>(element);
-            assertEquals("Expected NodeImpl(tag:body) HashCount", initialHashCount+3, NodeImplShim.test_getHashCount());
+            assertEquals(initialHashCount+3, NodeImplShim.test_getHashCount(), "Expected NodeImpl(tag:body) HashCount");
 
             tagList = doc.getElementsByTagName("p");
             element = (Element) tagList.item(0);
             willGC[3] = new WeakReference<>(element);
-            assertEquals("Expected NodeImpl(tag:p) HashCount", initialHashCount+4, NodeImplShim.test_getHashCount());
+            assertEquals(initialHashCount+4, NodeImplShim.test_getHashCount(), "Expected NodeImpl(tag:p) HashCount");
 
             tagList = doc.getElementsByTagName("div");
             element = (Element) tagList.item(0);
             willGC[4] = new WeakReference<>(element);
-            assertEquals("Expected NodeImpl(tag:div) HashCount", initialHashCount+5, NodeImplShim.test_getHashCount());
+            assertEquals(initialHashCount+5, NodeImplShim.test_getHashCount(), "Expected NodeImpl(tag:div) HashCount");
 
             tagList = doc.getElementsByTagName("iframe");
             element = (Element) tagList.item(0);
             willGC[5] = new WeakReference<>(element);
-            assertEquals("Expected NodeImpl(tag:iframe) HashCount", initialHashCount+6, NodeImplShim.test_getHashCount());
+            assertEquals(initialHashCount+6, NodeImplShim.test_getHashCount(), "Expected NodeImpl(tag:iframe) HashCount");
 
             tagList = doc.getElementsByTagName("br");
             element = (Element) tagList.item(0);
             willGC[6] = new WeakReference<>(element);
-            assertEquals("Expected NodeImpl(tag:br) HashCount", initialHashCount+7, NodeImplShim.test_getHashCount());
+            assertEquals(initialHashCount+7, NodeImplShim.test_getHashCount(), "Expected NodeImpl(tag:br) HashCount");
         });
 
         JMemoryBuddy.assertCollectable(willGC);

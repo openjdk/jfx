@@ -65,15 +65,12 @@ public:
         return bitwise_cast<UnlinkedProgramCodeBlock*>(Base::unlinkedCodeBlock());
     }
 
-    Ref<JITCode> generatedJITCode()
+    Ref<JSC::JITCode> generatedJITCode()
     {
         return generatedJITCodeForCall();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(ProgramExecutableType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 

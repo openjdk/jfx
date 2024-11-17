@@ -141,6 +141,7 @@ private:
 
     void processAnyOtherEndTagForInBody(AtomHTMLToken&&);
 
+    inline bool consumeAndInsertWhitespace(ExternalCharacterTokenBuffer&);
     void processCharacterBuffer(ExternalCharacterTokenBuffer&);
     inline void processCharacterBufferForInBody(ExternalCharacterTokenBuffer&);
 

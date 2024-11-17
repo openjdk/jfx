@@ -221,13 +221,14 @@ public:
     template<typename... Params>
     Node* addNode(Params... params)
     {
-        return m_nodes.addNew(params...);
+        Node* node = m_nodes.addNew(params...);
+        return node;
     }
 
     template<typename... Params>
     Node* addNode(SpeculatedType type, Params... params)
     {
-        Node* node = m_nodes.addNew(params...);
+        Node* node = addNode(params...);
         node->predict(type);
         return node;
     }
@@ -236,6 +237,7 @@ public:
     unsigned maxNodeCount() const { return m_nodes.size(); }
     Node* nodeAt(unsigned index) const { return m_nodes[index]; }
     void packNodeIndices();
+    void clearAbstractValues();
 
     void dethread();
 
@@ -303,8 +305,8 @@ public:
     {
         return addSpeculationMode(
             add,
-            add->child1()->shouldSpeculateInt32OrBooleanExpectingDefined(),
-            add->child2()->shouldSpeculateInt32OrBooleanExpectingDefined(),
+            add->child1()->shouldSpeculateInt32OrBooleanExpectingDefined(add->mayHaveDoubleResult()),
+            add->child2()->shouldSpeculateInt32OrBooleanExpectingDefined(add->mayHaveDoubleResult()),
             pass);
     }
 
@@ -312,8 +314,8 @@ public:
     {
         return addSpeculationMode(
             add,
-            add->child1()->shouldSpeculateInt32OrBooleanForArithmetic(),
-            add->child2()->shouldSpeculateInt32OrBooleanForArithmetic(),
+            add->child1()->shouldSpeculateInt32OrBooleanForArithmetic(add->mayHaveDoubleResult()),
+            add->child2()->shouldSpeculateInt32OrBooleanForArithmetic(add->mayHaveDoubleResult()),
             pass);
     }
 
@@ -364,7 +366,7 @@ public:
             NodeFlags flags = node->flags() & NodeBytecodeBackPropMask;
             if (!flags)
                 return false;
-            return (flags & (NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeUsesAsInt | NodeBytecodeUsesAsArrayIndex)) == flags;
+            return (flags & (NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeNeedsNaNOrInfinity | NodeBytecodeUsesAsInt | NodeBytecodePrefersArrayIndex)) == flags;
         };
 
         // Wrapping Int52 to Value is also not so cheap. Thus, we allow Int52 addition only when the node is used as number.
@@ -462,8 +464,7 @@ public:
 
     RegisteredStructureSet* addStructureSet(const StructureSet& structureSet)
     {
-        m_structureSets.append();
-        RegisteredStructureSet* result = &m_structureSets.last();
+        RegisteredStructureSet* result = &m_structureSets.alloc();
 
         for (Structure* structure : structureSet)
             result->add(registerStructure(structure));
@@ -473,8 +474,7 @@ public:
 
     RegisteredStructureSet* addStructureSet(const RegisteredStructureSet& structureSet)
     {
-        m_structureSets.append();
-        RegisteredStructureSet* result = &m_structureSets.last();
+        RegisteredStructureSet* result = &m_structureSets.alloc();
 
         for (RegisteredStructure structure : structureSet)
             result->add(structure);
@@ -721,11 +721,6 @@ public:
                 return m_index == other.m_index;
             }
 
-            bool operator!=(const iterator& other) const
-            {
-                return !(*this == other);
-            }
-
         private:
             BlockIndex findNext(BlockIndex index)
             {
@@ -926,8 +921,8 @@ public:
 
     // This uses either constant property inference or property type inference to derive a good abstract
     // value for some property accessed with the given abstract value base.
-    AbstractValue inferredValueForProperty(
-        const AbstractValue& base, PropertyOffset, StructureClobberState);
+    AbstractValue inferredValueForProperty(const AbstractValue& base, PropertyOffset, StructureClobberState);
+    AbstractValue inferredValueForProperty(const AbstractValue& base, const RegisteredStructureSet&, PropertyOffset, StructureClobberState);
 
     FullBytecodeLiveness& livenessFor(CodeBlock*);
     FullBytecodeLiveness& livenessFor(InlineCallFrame*);
@@ -1154,17 +1149,9 @@ public:
 
     void freeDFGIRAfterLowering();
 
-    const BoyerMooreHorspoolTable<uint8_t>* tryAddStringSearchTable8(const String& string)
-    {
-        constexpr unsigned minPatternLength = 9;
-        if (string.length() > BoyerMooreHorspoolTable<uint8_t>::maxPatternLength)
-            return nullptr;
-        if (string.length() < minPatternLength)
-            return nullptr;
-        return m_stringSearchTable8.ensure(string, [&]() {
-            return makeUnique<BoyerMooreHorspoolTable<uint8_t>>(string);
-        }).iterator->value.get();
-    }
+    bool isNeverResizableOrGrowableSharedTypedArrayIncludingDataView(const AbstractValue&);
+
+    const BoyerMooreHorspoolTable<uint8_t>* tryAddStringSearchTable8(const String&);
 
     StackCheck m_stackChecker;
     VM& m_vm;
@@ -1176,6 +1163,14 @@ public:
     Vector<BasicBlock*, 1> m_roots;
     Vector<Edge, 16> m_varArgChildren;
 
+    struct TupleData {
+        uint16_t refCount { 0 };
+        uint16_t resultFlags { 0 };
+        VirtualRegister virtualRegister;
+    };
+
+    Vector<TupleData> m_tupleData;
+
     // UnlinkedSimpleJumpTable/UnlinkedStringJumpTable are kept by UnlinkedCodeBlocks retained by baseline CodeBlocks handled by DFG / FTL.
     Vector<const UnlinkedSimpleJumpTable*> m_unlinkedSwitchJumpTables;
     Vector<SimpleJumpTable> m_switchJumpTables;
@@ -1184,7 +1179,7 @@ public:
     HashMap<String, std::unique_ptr<BoyerMooreHorspoolTable<uint8_t>>> m_stringSearchTable8;
 
     HashMap<EncodedJSValue, FrozenValue*, EncodedJSValueHash, EncodedJSValueHashTraits> m_frozenValueMap;
-    Bag<FrozenValue> m_frozenValues;
+    SegmentedVector<FrozenValue, 16> m_frozenValues;
 
     Vector<uint32_t> m_uint32ValuesInUse;
 
@@ -1236,6 +1231,7 @@ public:
     Bag<StackAccessData> m_stackAccessData;
     Bag<LazyJSValue> m_lazyJSValues;
     Bag<CallDOMGetterData> m_callDOMGetterData;
+    Bag<CallCustomAccessorData> m_callCustomAccessorData;
     Bag<BitVector> m_bitVectors;
     Vector<InlineVariableData, 4> m_inlineVariableData;
     HashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>> m_bytecodeLiveness;
@@ -1287,6 +1283,7 @@ public:
     bool m_hasExceptionHandlers { false };
     bool m_isInSSAConversion { false };
     bool m_isValidating { false };
+    bool m_frozenValuesAreFinalized { false };
     std::optional<uint32_t> m_maxLocalsForCatchOSREntry;
     std::unique_ptr<FlowIndexing> m_indexingCache;
     std::unique_ptr<FlowMap<AbstractValue>> m_abstractValuesCache;
@@ -1333,7 +1330,17 @@ private:
         if (doubleImmediate < -twoToThe48 || doubleImmediate > twoToThe48)
             return DontSpeculateInt32;
 
-        return bytecodeCanTruncateInteger(add->arithNodeFlags()) ? SpeculateInt32AndTruncateConstants : DontSpeculateInt32;
+        if (bytecodeCanTruncateInteger(add->arithNodeFlags())) {
+            // If int32 + const double, then we should not speculate this add node with int32 type.
+            // Because ToInt32(int32 + const double) is not always equivalent to int32 + ToInt32(const double).
+            // For example:
+            // let the int32 = -1 and const double = 0.1, then ToInt32(-1 + 0.1) = 0 but -1 + ToInt32(0.1) = -1.
+            if (operandResultType == NodeResultInt32 && !isInteger(doubleImmediate))
+                return DontSpeculateInt32;
+            return SpeculateInt32AndTruncateConstants;
+        }
+
+        return DontSpeculateInt32;
     }
 
     B3::SparseCollection<Node> m_nodes;

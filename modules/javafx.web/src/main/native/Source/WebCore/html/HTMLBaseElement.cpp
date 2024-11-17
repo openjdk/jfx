@@ -26,7 +26,6 @@
 #include "Document.h"
 #include "ElementInlines.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
 #include "TextResourceDecoder.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -47,12 +46,13 @@ Ref<HTMLBaseElement> HTMLBaseElement::create(const QualifiedName& tagName, Docum
     return adoptRef(*new HTMLBaseElement(tagName, document));
 }
 
-void HTMLBaseElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLBaseElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == hrefAttr || name == targetAttr)
+    if (name == hrefAttr || name == targetAttr) {
+        if (isConnected())
         document().processBaseElement();
-    else
-        HTMLElement::parseAttribute(name, value);
+    } else
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 Node::InsertedIntoAncestorResult HTMLBaseElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -87,9 +87,7 @@ String HTMLBaseElement::href() const
     if (url.isNull())
         url = emptyAtom();
 
-    // Same logic as openFunc() in XMLDocumentParserLibxml2.cpp. Keep them in sync.
-    auto* encoding = document().decoder() ? document().decoder()->encodingForURLParsing() : nullptr;
-    URL urlRecord(document().fallbackBaseURL(), stripLeadingAndTrailingHTMLSpaces(url), encoding);
+    auto urlRecord = document().completeURL(url, document().fallbackBaseURL());
     if (!urlRecord.isValid())
         return url;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,6 @@ import com.sun.javafx.stage.PopupWindowPeerListener;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 
 import com.sun.javafx.stage.PopupWindowHelper;
 import com.sun.javafx.stage.WindowHelper;
@@ -115,6 +114,11 @@ public abstract class PopupWindow extends Window {
             @Override
             public ObservableList<Node> getContent(PopupWindow popupWindow) {
                 return popupWindow.getContent();
+            }
+
+            @Override
+            public void applyStylesheetFromOwner(PopupWindow popupWindow, Window owner) {
+                popupWindow.applyStylesheetFromOwner(owner);
             }
         });
     }
@@ -457,13 +461,11 @@ public abstract class PopupWindow extends Window {
         final Scene sceneValue = getScene();
         SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
 
-        // RT-28447
+        // JDK-8116444
+        applyStylesheetFromOwner(owner);
+
         final Scene ownerScene = getRootWindow(owner).getScene();
         if (ownerScene != null) {
-            if (ownerScene.getUserAgentStylesheet() != null) {
-                sceneValue.setUserAgentStylesheet(ownerScene.getUserAgentStylesheet());
-            }
-            sceneValue.getStylesheets().setAll(ownerScene.getStylesheets());
             if (sceneValue.getCursor() == null) {
                 sceneValue.setCursor(ownerScene.getCursor());
             }
@@ -476,6 +478,23 @@ public abstract class PopupWindow extends Window {
             // popup calculated below uses the right width and height values for
             // its calculation. (fix for part of RT-10675).
             show();
+        }
+    }
+
+    /**
+     * Applies the stylesheet from the scene of the root owner {@link Window} to the {@link Scene}
+     * associated with that window.
+     *
+     * @param owner the owner {@link Window}
+     */
+    void applyStylesheetFromOwner(Window owner) {
+        Scene scene = getScene();
+        final Scene ownerScene = getRootWindow(owner).getScene();
+        if (ownerScene != null) {
+            if (ownerScene.getUserAgentStylesheet() != null) {
+                scene.setUserAgentStylesheet(ownerScene.getUserAgentStylesheet());
+            }
+            scene.getStylesheets().setAll(ownerScene.getStylesheets());
         }
     }
 
@@ -511,17 +530,7 @@ public abstract class PopupWindow extends Window {
         if (visible && (getPeer() == null)) {
             // Setup the peer
             StageStyle popupStyle;
-            try {
-                @SuppressWarnings("removal")
-                final SecurityManager securityManager =
-                        System.getSecurityManager();
-                if (securityManager != null) {
-                    securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
-                }
-                popupStyle = StageStyle.TRANSPARENT;
-            } catch (final SecurityException e) {
-                popupStyle = StageStyle.UNDECORATED;
-            }
+            popupStyle = StageStyle.TRANSPARENT;
             setPeer(toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().getPeer(), acc));
             setPeerListener(new PopupWindowPeerListener(PopupWindow.this));
         }

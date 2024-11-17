@@ -33,14 +33,13 @@
 #include "DocumentLoader.h"
 #include "DOMApplicationCache.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Page.h"
 #include "ProgressEvent.h"
-#include "ResourceHandle.h"
 #include "ResourceRequest.h"
 #include "Settings.h"
 #include "SubresourceLoader.h"
@@ -70,21 +69,21 @@ ApplicationCacheGroup* ApplicationCacheHost::candidateApplicationCacheGroup() co
 
 void ApplicationCacheHost::selectCacheWithoutManifest()
 {
-    ASSERT(m_documentLoader.frame());
-    ApplicationCacheGroup::selectCacheWithoutManifestURL(*m_documentLoader.frame());
+    ASSERT(m_documentLoader->frame());
+    ApplicationCacheGroup::selectCacheWithoutManifestURL(*m_documentLoader->frame());
 }
 
 void ApplicationCacheHost::selectCacheWithManifest(const URL& manifestURL)
 {
-    ASSERT(m_documentLoader.frame());
-    ApplicationCacheGroup::selectCache(*m_documentLoader.frame(), manifestURL);
+    ASSERT(m_documentLoader->frame());
+    ApplicationCacheGroup::selectCache(*m_documentLoader->frame(), manifestURL);
 }
 
 bool ApplicationCacheHost::canLoadMainResource(const ResourceRequest& request)
 {
     if (!isApplicationCacheEnabled() || isApplicationCacheBlockedForRequest(request))
         return false;
-    return !!ApplicationCacheGroup::cacheForMainRequest(request, &m_documentLoader);
+    return !!ApplicationCacheGroup::cacheForMainRequest(request, m_documentLoader.ptr());
 }
 
 void ApplicationCacheHost::maybeLoadMainResource(const ResourceRequest& request, SubstituteData& substituteData)
@@ -93,7 +92,7 @@ void ApplicationCacheHost::maybeLoadMainResource(const ResourceRequest& request,
     if (!substituteData.isValid() && isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(request)) {
         ASSERT(!m_mainResourceApplicationCache);
 
-        m_mainResourceApplicationCache = ApplicationCacheGroup::cacheForMainRequest(request, &m_documentLoader);
+        m_mainResourceApplicationCache = ApplicationCacheGroup::cacheForMainRequest(request, m_documentLoader.ptr());
 
         if (m_mainResourceApplicationCache) {
             // Get the resource from the application cache. By definition, cacheForMainRequest() returns a cache that contains the resource.
@@ -127,9 +126,9 @@ bool ApplicationCacheHost::maybeLoadFallbackForMainResponse(const ResourceReques
     if (r.httpStatusCode() / 100 == 4 || r.httpStatusCode() / 100 == 5) {
         ASSERT(!m_mainResourceApplicationCache);
         if (isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(request)) {
-            m_mainResourceApplicationCache = ApplicationCacheGroup::fallbackCacheForMainRequest(request, &m_documentLoader);
+            m_mainResourceApplicationCache = ApplicationCacheGroup::fallbackCacheForMainRequest(request, m_documentLoader.ptr());
 
-            if (scheduleLoadFallbackResourceFromApplicationCache(m_documentLoader.mainResourceLoader(), m_mainResourceApplicationCache.get()))
+            if (scheduleLoadFallbackResourceFromApplicationCache(m_documentLoader->mainResourceLoader(), m_mainResourceApplicationCache.get()))
                 return true;
         }
     }
@@ -141,9 +140,9 @@ bool ApplicationCacheHost::maybeLoadFallbackForMainError(const ResourceRequest& 
     if (!error.isCancellation()) {
         ASSERT(!m_mainResourceApplicationCache);
         if (isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(request)) {
-            m_mainResourceApplicationCache = ApplicationCacheGroup::fallbackCacheForMainRequest(request, &m_documentLoader);
+            m_mainResourceApplicationCache = ApplicationCacheGroup::fallbackCacheForMainRequest(request, m_documentLoader.ptr());
 
-            if (scheduleLoadFallbackResourceFromApplicationCache(m_documentLoader.mainResourceLoader(), m_mainResourceApplicationCache.get()))
+            if (scheduleLoadFallbackResourceFromApplicationCache(m_documentLoader->mainResourceLoader(), m_mainResourceApplicationCache.get()))
                 return true;
         }
     }
@@ -190,19 +189,17 @@ bool ApplicationCacheHost::maybeLoadResource(ResourceLoader& loader, const Resou
     if (request.url() != originalURL)
         return false;
 
-#if ENABLE(SERVICE_WORKER)
     if (loader.options().serviceWorkerRegistrationIdentifier)
         return false;
-#endif
 
     ApplicationCacheResource* resource;
     if (!shouldLoadResourceFromApplicationCache(request, resource))
         return false;
 
     if (resource)
-        m_documentLoader.scheduleSubstituteResourceLoad(loader, *resource);
+        m_documentLoader->scheduleSubstituteResourceLoad(loader, *resource);
     else
-        m_documentLoader.scheduleCannotShowURLError(loader);
+        m_documentLoader->scheduleCannotShowURLError(loader);
     return true;
 }
 
@@ -236,7 +233,7 @@ bool ApplicationCacheHost::maybeLoadFallbackForError(ResourceLoader* resourceLoa
         return false;
 
     if (!error.isCancellation()) {
-        if (resourceLoader == m_documentLoader.mainResourceLoader())
+        if (resourceLoader == m_documentLoader->mainResourceLoader())
             return maybeLoadFallbackForMainError(resourceLoader->request(), error);
         if (scheduleLoadFallbackResourceFromApplicationCache(resourceLoader))
             return true;
@@ -246,12 +243,7 @@ bool ApplicationCacheHost::maybeLoadFallbackForError(ResourceLoader* resourceLoa
 
 URL ApplicationCacheHost::createFileURL(const String& path)
 {
-#if USE(CF) && PLATFORM(WIN)
-    // FIXME: Is this correct? Seems improbable that the passed-in paths would be in the Windows path style.
-    return adoptCF(CFURLCreateWithFileSystemPath(0, path.createCFString().get(), kCFURLWindowsPathStyle, false)).get();
-#else
     return URL::fileURLWithFileSystemPath(path);
-#endif
 }
 
 static inline RefPtr<SharedBuffer> bufferFromResource(ApplicationCacheResource& resource)
@@ -269,7 +261,7 @@ bool ApplicationCacheHost::maybeLoadSynchronously(ResourceRequest& request, Reso
 
     auto responseData = resource ? bufferFromResource(*resource) : nullptr;
     if (!responseData) {
-        error = m_documentLoader.frameLoader()->client().cannotShowURLError(request);
+        error = m_documentLoader->frameLoader()->client().cannotShowURLError(request);
         return true;
     }
 
@@ -308,7 +300,7 @@ void ApplicationCacheHost::setDOMApplicationCache(DOMApplicationCache* domApplic
 void ApplicationCacheHost::notifyDOMApplicationCache(const AtomString& eventType, int total, int done)
 {
     if (eventType != eventNames().progressEvent)
-        InspectorInstrumentation::updateApplicationCacheStatus(m_documentLoader.frame());
+        InspectorInstrumentation::updateApplicationCacheStatus(m_documentLoader->frame());
 
     if (m_defersEvents) {
         // Event dispatching is deferred until document.onload has fired.
@@ -319,7 +311,7 @@ void ApplicationCacheHost::notifyDOMApplicationCache(const AtomString& eventType
     dispatchDOMEvent(eventType, total, done);
 }
 
-void ApplicationCacheHost::stopLoadingInFrame(Frame& frame)
+void ApplicationCacheHost::stopLoadingInFrame(LocalFrame& frame)
 {
     ASSERT(!m_applicationCache || !m_candidateApplicationCacheGroup || m_applicationCache->group() == m_candidateApplicationCacheGroup);
 
@@ -413,9 +405,9 @@ bool ApplicationCacheHost::shouldLoadResourceFromApplicationCache(const Resource
         return false;
 
     ResourceRequest request(originalRequest);
-    if (auto* loaderFrame = m_documentLoader.frame()) {
-        if (auto* document = loaderFrame->document())
-            document->contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(request, ContentSecurityPolicy::InsecureRequestType::Load);
+    if (RefPtr loaderFrame = m_documentLoader->frame()) {
+        if (RefPtr document = loaderFrame->document())
+            document->checkedContentSecurityPolicy()->upgradeInsecureRequestIfNeeded(request, ContentSecurityPolicy::InsecureRequestType::Load);
     }
 
     // If the resource is not to be fetched using the HTTP GET mechanism or equivalent, or if its URL has a different
@@ -470,17 +462,15 @@ bool ApplicationCacheHost::scheduleLoadFallbackResourceFromApplicationCache(Reso
     if (!isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(loader->request()))
         return false;
 
-#if ENABLE(SERVICE_WORKER)
     if (loader->options().serviceWorkerRegistrationIdentifier)
         return false;
-#endif
 
     ApplicationCacheResource* resource;
     if (!getApplicationCacheFallbackResource(loader->request(), resource, cache))
         return false;
 
     loader->willSwitchToSubstituteResource();
-    m_documentLoader.scheduleSubstituteResourceLoad(*loader, *resource);
+    m_documentLoader->scheduleSubstituteResourceLoad(*loader, *resource);
     return true;
 }
 
@@ -512,7 +502,7 @@ bool ApplicationCacheHost::update()
     auto* cache = applicationCache();
     if (!cache)
         return false;
-    auto* frame = m_documentLoader.frame();
+    auto* frame = m_documentLoader->frame();
     if (!frame)
         return false;
     cache->group()->update(*frame, ApplicationCacheUpdateWithoutBrowsingContext);
@@ -542,13 +532,13 @@ bool ApplicationCacheHost::swapCache()
 
     ASSERT(group == newestCache->group());
     setApplicationCache(newestCache);
-    InspectorInstrumentation::updateApplicationCacheStatus(m_documentLoader.frame());
+    InspectorInstrumentation::updateApplicationCacheStatus(m_documentLoader->frame());
     return true;
 }
 
 void ApplicationCacheHost::abort()
 {
-    auto* frame = m_documentLoader.frame();
+    auto* frame = m_documentLoader->frame();
     if (!frame)
         return;
     if (auto* cacheGroup = candidateApplicationCacheGroup())
@@ -559,12 +549,12 @@ void ApplicationCacheHost::abort()
 
 bool ApplicationCacheHost::isApplicationCacheEnabled()
 {
-    return m_documentLoader.frame() && m_documentLoader.frame()->settings().offlineWebApplicationCacheEnabled() && m_documentLoader.frame()->page() && !m_documentLoader.frame()->page()->usesEphemeralSession();
+    return false;
 }
 
 bool ApplicationCacheHost::isApplicationCacheBlockedForRequest(const ResourceRequest&)
 {
-    auto* frame = m_documentLoader.frame();
+    auto* frame = m_documentLoader->frame();
     if (!frame)
         return false;
     if (frame->isMainFrame())

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package pseudoScriptEngineCompilable;
 
-import javax.script.Bindings;
-import javax.script.ScriptContext;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.TreeMap;
+import javax.script.Bindings;
+import javax.script.ScriptContext;
 
 
 /** Stores PseudoScriptEngine related invocation information for asserting and debugging. */

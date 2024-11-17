@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -227,6 +229,11 @@ gchar           *g_log_writer_format_fields    (GLogLevelFlags   log_level,
                                                 gsize            n_fields,
                                                 gboolean         use_color);
 
+GLIB_AVAILABLE_IN_2_80
+GLogWriterOutput g_log_writer_syslog           (GLogLevelFlags   log_level,
+                                                const GLogField *fields,
+                                                gsize            n_fields,
+                                                gpointer         user_data);
 GLIB_AVAILABLE_IN_2_50
 GLogWriterOutput g_log_writer_journald         (GLogLevelFlags   log_level,
                                                 const GLogField *fields,
@@ -248,6 +255,9 @@ void            g_log_writer_default_set_use_stderr (gboolean use_stderr);
 GLIB_AVAILABLE_IN_2_68
 gboolean        g_log_writer_default_would_drop (GLogLevelFlags  log_level,
                                                  const char     *log_domain);
+GLIB_AVAILABLE_IN_2_80
+void            g_log_writer_default_set_debug_domains (const gchar * const *domains);
+
 
 /* G_MESSAGES_DEBUG enablement */
 GLIB_AVAILABLE_IN_2_72
@@ -289,8 +299,8 @@ void g_warn_message           (const char     *domain,
                                int             line,
                                const char     *func,
                                const char     *warnexpr) G_ANALYZER_NORETURN;
-GLIB_DEPRECATED
 G_NORETURN
+GLIB_DEPRECATED
 void g_assert_warning         (const char *log_domain,
                                const char *file,
                                const int   line,
@@ -407,7 +417,7 @@ void g_log_structured_standard (const gchar    *log_domain,
                                        format)
 #endif
 #else   /* no varargs macros */
-static G_NORETURN void g_error (const gchar *format, ...) G_ANALYZER_NORETURN;
+G_NORETURN static void g_error (const gchar *format, ...) G_ANALYZER_NORETURN;
 static void g_critical (const gchar *format, ...) G_ANALYZER_NORETURN;
 
 static inline void
@@ -541,6 +551,9 @@ GPrintFunc      g_set_printerr_handler  (GPrintFunc      func);
  * @expr: the expression to check
  *
  * Logs a warning if the expression is not true.
+ *
+ * Unlike g_return_if_fail(), the expression is always evaluated, even if
+ * checks and assertions are disabled.
  *
  * Since: 2.16
  */

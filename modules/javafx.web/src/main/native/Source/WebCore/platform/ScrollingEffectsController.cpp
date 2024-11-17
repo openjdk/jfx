@@ -479,7 +479,7 @@ void ScrollingEffectsController::startScrollSnapAnimation()
 
     LOG_WITH_STREAM(ScrollSnap, stream << "ScrollingEffectsController " << this << " startScrollSnapAnimation (main thread " << isMainThread() << ")");
 
-    startDeferringWheelEventTestCompletion(WheelEventTestMonitor::ScrollSnapInProgress);
+    startDeferringWheelEventTestCompletion(WheelEventTestMonitor::DeferReason::ScrollSnapInProgress);
     m_client.willStartScrollSnapAnimation();
     setIsAnimatingScrollSnap(true);
 }
@@ -491,7 +491,7 @@ void ScrollingEffectsController::stopScrollSnapAnimation()
 
     LOG_WITH_STREAM(ScrollSnap, stream << "ScrollingEffectsController " << this << " stopScrollSnapAnimation (main thread " << isMainThread() << ")");
 
-    stopDeferringWheelEventTestCompletion(WheelEventTestMonitor::ScrollSnapInProgress);
+    stopDeferringWheelEventTestCompletion(WheelEventTestMonitor::DeferReason::ScrollSnapInProgress);
     m_client.didStopScrollSnapAnimation();
 
     setIsAnimatingScrollSnap(false);
@@ -522,11 +522,11 @@ void ScrollingEffectsController::scrollAnimationWillStart(ScrollAnimation& anima
 
     if (is<ScrollAnimationKeyboard>(animation)) {
         willBeginKeyboardScrolling();
-        startDeferringWheelEventTestCompletion(WheelEventTestMonitor::ScrollAnimationInProgress);
+        startDeferringWheelEventTestCompletion(WheelEventTestMonitor::DeferReason::ScrollAnimationInProgress);
         return;
     }
 
-    startDeferringWheelEventTestCompletion(WheelEventTestMonitor::ScrollAnimationInProgress);
+    startDeferringWheelEventTestCompletion(WheelEventTestMonitor::DeferReason::ScrollAnimationInProgress);
     startOrStopAnimationCallbacks();
 }
 
@@ -548,8 +548,15 @@ void ScrollingEffectsController::scrollAnimationDidEnd(ScrollAnimation& animatio
 
     // FIXME: Need to track state better and only call this when the running animation is for CSS smooth scrolling. Calling should be harmless, though.
     m_client.didStopAnimatedScroll();
+
+    if (is<ScrollAnimationKeyboard>(animation)) {
+        didStopKeyboardScrolling();
+        stopDeferringWheelEventTestCompletion(WheelEventTestMonitor::DeferReason::ScrollAnimationInProgress);
+        return;
+    }
+
     startOrStopAnimationCallbacks();
-    stopDeferringWheelEventTestCompletion(WheelEventTestMonitor::ScrollAnimationInProgress);
+    stopDeferringWheelEventTestCompletion(WheelEventTestMonitor::DeferReason::ScrollAnimationInProgress);
 }
 
 ScrollExtents ScrollingEffectsController::scrollExtentsForAnimation(ScrollAnimation&)

@@ -25,11 +25,10 @@
 
 class MediaController
 {
-
     constructor(shadowRoot, media, host)
     {
-        this.shadowRoot = shadowRoot;
-        this.media = media;
+        this.shadowRootWeakRef = new WeakRef(shadowRoot);
+        this.mediaWeakRef = new WeakRef(media);
         this.host = host;
 
         this.fullscreenChangeEventType = media.webkitSupportsPresentationMode ? "webkitpresentationmodechanged" : "webkitfullscreenchange";
@@ -65,6 +64,16 @@ class MediaController
     }
 
     // Public
+    get media()
+    {
+        return this.mediaWeakRef ? this.mediaWeakRef.deref() : null;
+    }
+
+    get shadowRoot()
+    {
+
+        return this.shadowRootWeakRef ? this.shadowRootWeakRef.deref() : null;
+    }
 
     get isAudio()
     {
@@ -91,7 +100,10 @@ class MediaController
 
     get isFullscreen()
     {
-        return this.media.webkitSupportsPresentationMode ? this.media.webkitPresentationMode === "fullscreen" : this.media.webkitDisplayingFullscreen;
+        if (!this.media)
+            return false;
+
+        return this.media.webkitSupportsPresentationMode ? this.media.webkitPresentationMode === "fullscreen" || this.media.webkitPresentationMode === "in-window" : this.media.webkitDisplayingFullscreen;
     }
 
     get layoutTraits()
@@ -235,6 +247,7 @@ class MediaController
             let valueElement = rowElement.appendChild(document.createElement("td"));
             return valueElement;
         }
+        let sourceValueElement = createRow(UIString("Source"));
         let viewportValueElement = createRow(UIString("Viewport"));
         let framesValueElement = createRow(UIString("Frames"));
         let resolutionValueElement = createRow(UIString("Resolution"));
@@ -250,9 +263,10 @@ class MediaController
             let videoTrackConfiguration = videoTrack.configuration;
             let videoColorSpace = videoTrackConfiguration?.colorSpace;
 
+            sourceValueElement.textContent = UIString(this.host.sourceType ?? "none");
             viewportValueElement.textContent = UIString("%s\u00d7%s", this.controls.width, this.controls.height) + (window.devicePixelRatio !== 1 ? " " + UIString("(%s)", UIString("%s\u00d7", window.devicePixelRatio)) : "");
             framesValueElement.textContent = UIString("%s dropped of %s", quality.droppedVideoFrames, quality.totalVideoFrames);
-            resolutionValueElement.textContent = UIString("%s\u00d7%s", videoTrackConfiguration?.width, videoTrackConfiguration?.height) + " " + UIString("(%s)", UIString("%sfps", videoTrackConfiguration?.framerate));
+            resolutionValueElement.textContent = UIString("%s\u00d7%s", videoTrackConfiguration?.width, videoTrackConfiguration?.height) + " " + UIString("(%s)", UIString("%sfps", Math.round(videoTrackConfiguration?.framerate * 1000) / 1000));
             codecsValueElement.textContent = videoTrackConfiguration?.codec;
             colorValueElement.textContent = UIString("%s / %s / %s", videoColorSpace?.primaries, videoColorSpace?.transfer, videoColorSpace?.matrix);
 
@@ -260,6 +274,22 @@ class MediaController
         };
         update();
 
+        return true;
+    }
+
+    deinitialize()
+    {
+        this.shadowRoot.removeChild(this.container);
+        return true;
+    }
+
+    reinitialize(shadowRoot, media, host)
+    {
+        iconService.shadowRoot = shadowRoot;
+        this.shadowRootWeakRef = new WeakRef(shadowRoot);
+        this.mediaWeakRef = new WeakRef(media);
+        this.host = host;
+        shadowRoot.appendChild(this.container);
         return true;
     }
 

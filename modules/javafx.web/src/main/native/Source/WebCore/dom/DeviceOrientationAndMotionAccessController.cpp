@@ -30,10 +30,10 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "UserGestureIndicator.h"
 
@@ -51,9 +51,10 @@ DeviceOrientationOrMotionPermissionState DeviceOrientationAndMotionAccessControl
         return iterator->value;
 
     // Check per-site setting.
-    if (&document == &m_topDocument || document.securityOrigin().isSameOriginAs(m_topDocument.securityOrigin())) {
-        auto* frame = m_topDocument.frame();
-        if (auto* documentLoader = frame ? frame->loader().documentLoader() : nullptr)
+    Ref topDocument = m_topDocument.get();
+    if (&document == topDocument.ptr() || document.securityOrigin().isSameOriginAs(topDocument->securityOrigin())) {
+        RefPtr frame = topDocument->frame();
+        if (RefPtr documentLoader = frame ? frame->loader().documentLoader() : nullptr)
             return documentLoader->deviceOrientationAndMotionAccessState();
     }
 
@@ -62,8 +63,8 @@ DeviceOrientationOrMotionPermissionState DeviceOrientationAndMotionAccessControl
 
 void DeviceOrientationAndMotionAccessController::shouldAllowAccess(const Document& document, Function<void(DeviceOrientationOrMotionPermissionState)>&& callback)
 {
-    auto* page = document.page();
-    auto* frame = document.frame();
+    RefPtr page = document.page();
+    RefPtr frame = document.frame();
     if (!page || !frame)
         return callback(DeviceOrientationOrMotionPermissionState::Denied);
 
@@ -72,22 +73,25 @@ void DeviceOrientationAndMotionAccessController::shouldAllowAccess(const Documen
         return callback(accessState);
 
     bool mayPrompt = UserGestureIndicator::processingUserGesture(&document);
-    page->chrome().client().shouldAllowDeviceOrientationAndMotionAccess(*document.frame(), mayPrompt, [this, weakThis = WeakPtr { *this }, securityOrigin = Ref { document.securityOrigin() }, callback = WTFMove(callback)](DeviceOrientationOrMotionPermissionState permissionState) mutable {
+    page->chrome().client().shouldAllowDeviceOrientationAndMotionAccess(document.protectedFrame().releaseNonNull(), mayPrompt, [this, weakThis = WeakPtr { *this }, securityOrigin = Ref { document.securityOrigin() }, callback = WTFMove(callback)](DeviceOrientationOrMotionPermissionState permissionState) mutable {
         if (!weakThis)
             return;
 
         m_accessStatePerOrigin.set(securityOrigin->data(), permissionState);
         callback(permissionState);
+        if (!weakThis)
+            return;
 
         if (permissionState != DeviceOrientationOrMotionPermissionState::Granted)
             return;
 
-        for (AbstractFrame* frame = m_topDocument.frame(); frame && frame->window(); frame = frame->tree().traverseNext()) {
-            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        for (RefPtr<Frame> frame = m_topDocument->frame(); frame && frame->window(); frame = frame->tree().traverseNext()) {
+            RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
             if (!localFrame)
                 continue;
-            localFrame->window()->startListeningForDeviceOrientationIfNecessary();
-            localFrame->window()->startListeningForDeviceMotionIfNecessary();
+            RefPtr window = localFrame->window();
+            window->startListeningForDeviceOrientationIfNecessary();
+            window->startListeningForDeviceMotionIfNecessary();
         }
     });
 }

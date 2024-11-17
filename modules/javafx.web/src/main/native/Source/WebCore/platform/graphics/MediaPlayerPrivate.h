@@ -44,10 +44,15 @@ namespace WebCore {
 class VideoFrame;
 
 class MediaPlayerPrivateInterface {
-    WTF_MAKE_NONCOPYABLE(MediaPlayerPrivateInterface); WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT MediaPlayerPrivateInterface();
     WEBCORE_EXPORT virtual ~MediaPlayerPrivateInterface();
+
+    // MediaPlayerPrivateInterface subclasses should be ref-counted, but each subclass may choose whether
+    // to be RefCounted or ThreadSafeRefCounted. Therefore, each subclass must implement a pair of
+    // virtual ref()/deref() methods. See NullMediaPlayerPrivate for an example.
+    virtual void ref() = 0;
+    virtual void deref() = 0;
 
     virtual void load(const String&) { }
     virtual void load(const URL& url, const ContentType&, const String&) { load(url.string()); }
@@ -82,6 +87,12 @@ public:
     virtual void videoFullscreenStandbyChanged() { }
 #endif
 
+    using LayerHostingContextIDCallback = CompletionHandler<void(LayerHostingContextID)>;
+    virtual void requestHostingContextID(LayerHostingContextIDCallback&& completionHandler) { completionHandler({ }); }
+    virtual LayerHostingContextID hostingContextID() const { return 0; }
+    virtual FloatSize videoLayerSize() const { return { }; }
+    virtual void setVideoLayerSizeFenced(const FloatSize&, WTF::MachSendRight&&) { }
+
 #if PLATFORM(IOS_FAMILY)
     virtual NSArray *timedMetadata() const { return nil; }
     virtual String accessLog() const { return emptyString(); }
@@ -106,7 +117,7 @@ public:
     virtual bool hasVideo() const = 0;
     virtual bool hasAudio() const = 0;
 
-    virtual void setPageIsVisible(bool) = 0;
+    virtual void setPageIsVisible(bool, String&& sceneIdentifier = ""_s) = 0;
     virtual void setVisibleForCanvas(bool visible) { setPageIsVisible(visible); }
     virtual void setVisibleInViewport(bool) { }
 
@@ -117,16 +128,13 @@ public:
     virtual float currentTime() const { return 0; }
     virtual double currentTimeDouble() const { return currentTime(); }
     virtual MediaTime currentMediaTime() const { return MediaTime::createWithDouble(currentTimeDouble()); }
+    virtual bool currentMediaTimeMayProgress() const { return readyState() >= MediaPlayer::ReadyState::HaveFutureData; }
 
     virtual bool setCurrentTimeDidChangeCallback(MediaPlayer::CurrentTimeDidChangeCallback&&) { return false; }
 
     virtual MediaTime getStartDate() const { return MediaTime::createWithDouble(std::numeric_limits<double>::quiet_NaN()); }
 
-    virtual void seek(float) { }
-    virtual void seekDouble(double time) { seek(time); }
-    virtual void seek(const MediaTime& time) { seekDouble(time.toDouble()); }
-    virtual void seekWithTolerance(const MediaTime& time, const MediaTime&, const MediaTime&) { seek(time); }
-
+    virtual void seekToTarget(const SeekTarget&) = 0;
     virtual bool seeking() const = 0;
 
     virtual MediaTime startTime() const { return MediaTime::zeroTime(); }
@@ -159,12 +167,12 @@ public:
     virtual MediaPlayer::NetworkState networkState() const = 0;
     virtual MediaPlayer::ReadyState readyState() const = 0;
 
-    virtual std::unique_ptr<PlatformTimeRanges> seekable() const { return maxMediaTimeSeekable() == MediaTime::zeroTime() ? makeUnique<PlatformTimeRanges>() : makeUnique<PlatformTimeRanges>(minMediaTimeSeekable(), maxMediaTimeSeekable()); }
+    WEBCORE_EXPORT virtual const PlatformTimeRanges& seekable() const;
     virtual float maxTimeSeekable() const { return 0; }
     virtual MediaTime maxMediaTimeSeekable() const { return MediaTime::createWithDouble(maxTimeSeekable()); }
     virtual double minTimeSeekable() const { return 0; }
     virtual MediaTime minMediaTimeSeekable() const { return MediaTime::createWithDouble(minTimeSeekable()); }
-    virtual std::unique_ptr<PlatformTimeRanges> buffered() const = 0;
+    virtual const PlatformTimeRanges& buffered() const = 0;
     virtual double seekableTimeRangesLastModifiedTime() const { return 0; }
     virtual double liveUpdateInterval() const { return 0; }
 
@@ -291,7 +299,7 @@ public:
         if (!duration)
             return 0;
 
-        unsigned long long extra = totalBytes() * buffered()->totalDuration().toDouble() / duration.toDouble();
+        unsigned long long extra = totalBytes() * buffered().totalDuration().toDouble() / duration.toDouble();
         return static_cast<unsigned>(extra);
     }
 
@@ -300,6 +308,8 @@ public:
     virtual bool ended() const { return false; }
 
     virtual std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() { return std::nullopt; }
+    using VideoPlaybackQualityMetricsPromise = MediaPlayer::VideoPlaybackQualityMetricsPromise;
+    WEBCORE_EXPORT virtual Ref<VideoPlaybackQualityMetricsPromise> asyncVideoPlaybackQualityMetrics();
 
     virtual void notifyTrackModeChanged() { }
 
@@ -342,6 +352,13 @@ public:
     virtual void renderVideoWillBeDestroyed() { }
 
     virtual void isLoopingChanged() { }
+
+    virtual void setShouldCheckHardwareSupport(bool value) { m_shouldCheckHardwareSupport = value; }
+    bool shouldCheckHardwareSupport() const { return m_shouldCheckHardwareSupport; }
+
+protected:
+    mutable PlatformTimeRanges m_seekable;
+    bool m_shouldCheckHardwareSupport { false };
 };
 
 }

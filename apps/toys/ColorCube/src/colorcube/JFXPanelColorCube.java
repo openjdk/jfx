@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -132,6 +132,7 @@ public class JFXPanelColorCube {
         System.err.println("createScene: calling Platform.runLater");
         Platform.runLater(new Runnable() {
 
+            @Override
             public void run() {
                 System.err.println("Platform.runLater :: run");
                 final ArrayList<Node> cube = new ArrayList<Node>();
@@ -203,6 +204,7 @@ public class JFXPanelColorCube {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
 
+            @Override
             public void run() {
                 new JFXPanelColorCube();
             }

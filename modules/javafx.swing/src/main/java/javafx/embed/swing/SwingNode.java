@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,8 +55,6 @@ import javafx.scene.input.ScrollEvent;
 import javafx.stage.Window;
 import java.lang.ref.WeakReference;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.javafx.embed.swing.Disposer;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -70,6 +68,7 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.NodeHelper;
 import static javafx.stage.WindowEvent.WINDOW_HIDDEN;
 
+import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.embed.swing.SwingEvents;
 import com.sun.javafx.embed.swing.newimpl.SwingNodeInteropN;
@@ -116,20 +115,9 @@ import com.sun.javafx.embed.swing.newimpl.SwingNodeInteropN;
  * @since JavaFX 8.0
  */
 public class SwingNode extends Node {
-    private static boolean isThreadMerged;
+    private static boolean isThreadMerged = Boolean.valueOf(System.getProperty("javafx.embed.singleThread"));
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-                isThreadMerged = Boolean.valueOf(
-                        System.getProperty("javafx.embed.singleThread"));
-                return null;
-            }
-        });
-
-
          // This is used by classes in different packages to get access to
          // private and package private methods.
         SwingNodeHelper.setSwingNodeAccessor(new SwingNodeHelper.SwingNodeAccessor() {
@@ -251,6 +239,8 @@ public class SwingNode extends Node {
     private boolean grabbed; // lwframe initiated grab
     private Timer deactivate; // lwFrame deactivate delay for Linux
     private SwingNodeInteropN swNodeIOP;
+    private DisposerRecord rec;
+    private WeakReference disposerRecRef;
 
     {
         // To initialize the class helper at the begining each constructor of this class
@@ -361,7 +351,10 @@ public class SwingNode extends Node {
      */
     private void setContentImpl(JComponent content) {
         if (lwFrame != null) {
-            swNodeIOP.disposeFrame(lwFrame);
+            rec.dispose();
+            Disposer.removeRecord(disposerRecRef);
+            rec = null;
+            disposerRecRef = null;
             lwFrame = null;
         }
         if (content != null) {
@@ -381,7 +374,8 @@ public class SwingNode extends Node {
             swNodeIOP.setContent(lwFrame, swNodeIOP.createSwingNodeContent(content, this));
             swNodeIOP.setVisible(lwFrame, true);
 
-            Disposer.addRecord(this, swNodeIOP.createSwingNodeDisposer(lwFrame));
+            rec = swNodeIOP.createSwingNodeDisposer(lwFrame, swNodeIOP);
+            disposerRecRef = Disposer.addRecord(this, rec);
 
             if (getScene() != null) {
                 notifyNativeHandle(getScene().getWindow());
@@ -555,12 +549,10 @@ public class SwingNode extends Node {
         locateLwFrame();
     };
 
-    @SuppressWarnings("removal")
     private final EventHandler<FocusUngrabEvent> ungrabHandler = event -> {
         if (!skipBackwardUnrgabNotification) {
             if (lwFrame != null) {
-                AccessController.doPrivileged(new PostEventAction(
-                    swNodeIOP.createUngrabEvent(lwFrame)));
+                postAWTEvent(swNodeIOP.createUngrabEvent(lwFrame));
             }
         }
     };
@@ -823,17 +815,9 @@ public class SwingNode extends Node {
         }
     }
 
-    private class PostEventAction implements PrivilegedAction<Void> {
-        private AWTEvent event;
-        PostEventAction(AWTEvent event) {
-            this.event = event;
-        }
-        @Override
-        public Void run() {
-            EventQueue eq = Toolkit.getDefaultToolkit().getSystemEventQueue();
-            eq.postEvent(event);
-            return null;
-        }
+    private static void postAWTEvent(AWTEvent event) {
+        EventQueue eq = Toolkit.getDefaultToolkit().getSystemEventQueue();
+        eq.postEvent(event);
     }
 
     private class SwingMouseEventHandler implements EventHandler<MouseEvent> {
@@ -883,8 +867,7 @@ public class SwingNode extends Node {
                         frame, swingID, swingWhen, swingModifiers,
                         relX, relY, absX, absY,
                         event.getClickCount(), swingPopupTrigger, swingButton);
-            @SuppressWarnings("removal")
-            var dummy = AccessController.doPrivileged(new PostEventAction(mouseEvent));
+            postAWTEvent(mouseEvent);
         }
     }
 
@@ -925,8 +908,7 @@ public class SwingNode extends Node {
             int y = (int) Math.round(fxY);
             MouseWheelEvent mouseWheelEvent =
                 swNodeIOP.createMouseWheelEvent(source, swingModifiers, x, y, -wheelRotation);
-            @SuppressWarnings("removal")
-            var dummy = AccessController.doPrivileged(new PostEventAction(mouseWheelEvent));
+            postAWTEvent(mouseWheelEvent);
         }
     }
 
@@ -971,10 +953,7 @@ public class SwingNode extends Node {
             java.awt.event.KeyEvent keyEvent = swNodeIOP.createKeyEvent(frame,
                 swingID, swingWhen, swingModifiers, swingKeyCode,
                 swingChar);
-            @SuppressWarnings("removal")
-            var dummy = AccessController.doPrivileged(new PostEventAction(keyEvent));
+            postAWTEvent(keyEvent);
         }
     }
 }
-
-

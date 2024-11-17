@@ -35,12 +35,13 @@ namespace WGSL {
 
 namespace Metal {
 
-static constexpr bool dumpMetalCode = false;
+static constexpr bool dumpMetalCode = true;
 
 static StringView metalCodePrologue()
 {
     return StringView {
         "#include <metal_stdlib>\n"
+        "#include <metal_types>\n"
         "\n"
         "using namespace metal;\n"
         "\n"_s
@@ -56,12 +57,12 @@ static void dumpMetalCodeIfNeeded(StringBuilder& stringBuilder)
     }
 }
 
-String generateMetalCode(ShaderModule& module)
+String generateMetalCode(const CallGraph& callGraph, const HashMap<String, ConstantValue>& constantValues)
 {
     StringBuilder stringBuilder;
     stringBuilder.append(metalCodePrologue());
 
-    auto metalFunctionEntryPoints = Metal::emitMetalFunctions(stringBuilder, module);
+    Metal::emitMetalFunctions(stringBuilder, callGraph, constantValues);
 
     dumpMetalCodeIfNeeded(stringBuilder);
 

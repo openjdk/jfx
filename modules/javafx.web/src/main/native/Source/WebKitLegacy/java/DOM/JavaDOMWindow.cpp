@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DOMWindow*>(jlong_to_ptr(peer)))
+#define IMPL (dynamicDowncast<LocalDOMWindow>(static_cast<DOMWindow*>(jlong_to_ptr(peer))))
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
@@ -184,13 +184,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_setStatusImpl(JNIEn
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getDefaultStatusImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->defaultStatus());
+    return JavaReturn<String>(env, IMPL->status());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_setDefaultStatusImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setDefaultStatus(AtomString{String(env, value)});
+    IMPL->setStatus(AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getSelfImpl(JNIEnv* env, jclass, jlong peer)
@@ -216,19 +216,19 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getFramesImpl(JNIE
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getOpenerImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(downcast<DOMWindow>(IMPL->opener()->window())));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->opener()->window()));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getParentImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(downcast<DOMWindow>(IMPL->parent()->window())));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->parent()->window()));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getTopImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(downcast<DOMWindow>(IMPL->top()->window())));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->top()->window()));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getDocumentExImpl(JNIEnv* env, jclass, jlong peer)

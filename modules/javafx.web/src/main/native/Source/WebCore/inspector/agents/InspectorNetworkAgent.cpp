@@ -40,21 +40,22 @@
 #include "CachedScript.h"
 #include "CertificateInfo.h"
 #include "CertificateSummary.h"
+#include "CookieJar.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "DocumentThreadableLoader.h"
 #include "FormData.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "HTTPHeaderMap.h"
 #include "HTTPHeaderNames.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorTimelineAgent.h"
 #include "InstrumentingAgents.h"
-#include "JSDOMWindowCustom.h"
 #include "JSExecState.h"
+#include "JSLocalDOMWindowCustom.h"
 #include "JSWebSocket.h"
 #include "LoaderStrategy.h"
+#include "LocalFrame.h"
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "NetworkResourcesData.h"
@@ -69,10 +70,10 @@
 #include "SubresourceLoader.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoaderClient.h"
+#include "ThreadableWebSocketChannel.h"
 #include "WebConsoleAgent.h"
 #include "WebCorePersistentCoders.h"
 #include "WebSocket.h"
-#include "WebSocketChannel.h"
 #include "WebSocketFrame.h"
 #include <JavaScriptCore/ContentSearchUtilities.h>
 #include <JavaScriptCore/IdentifiersFactory.h>
@@ -116,7 +117,7 @@ public:
         m_statusCode = response.httpStatusCode();
 
         // FIXME: This assumes text only responses. We should support non-text responses as well.
-        PAL::TextEncoding textEncoding(response.textEncodingName().string());
+        PAL::TextEncoding textEncoding(response.textEncodingName());
         bool useDetector = false;
         if (!textEncoding.isValid()) {
             textEncoding = PAL::UTF8Encoding();
@@ -470,22 +471,6 @@ void InspectorNetworkAgent::willSendRequest(ResourceLoaderIdentifier identifier,
     auto loaderId = loaderIdentifier(loader);
     String targetId = request.initiatorIdentifier();
 
-    if (type == InspectorPageAgent::OtherResource) {
-        if (m_loadingXHRSynchronously || request.requester() == ResourceRequestRequester::XHR)
-            type = InspectorPageAgent::XHRResource;
-        else if (request.requester() == ResourceRequestRequester::Fetch)
-            type = InspectorPageAgent::FetchResource;
-        else if (loader && equalIgnoringFragmentIdentifier(request.url(), loader->url()) && !loader->isCommitted())
-            type = InspectorPageAgent::DocumentResource;
-        else if (loader) {
-            for (auto& linkIcon : loader->linkIcons()) {
-                if (equalIgnoringFragmentIdentifier(request.url(), linkIcon.url)) {
-                    type = InspectorPageAgent::ImageResource;
-                    break;
-                }
-            }
-        }
-    }
 
     m_resourcesData->resourceCreated(requestId, loaderId, type);
 
@@ -527,9 +512,27 @@ static InspectorPageAgent::ResourceType resourceTypeForLoadType(InspectorInstrum
 
 void InspectorNetworkAgent::willSendRequest(ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, const ResourceResponse& redirectResponse, const CachedResource* cachedResource, ResourceLoader* resourceLoader)
 {
+    InspectorPageAgent::ResourceType type = InspectorPageAgent::OtherResource;
+    if (m_loadingXHRSynchronously || request.requester() == ResourceRequestRequester::XHR)
+        type = InspectorPageAgent::XHRResource;
+    else if (request.requester() == ResourceRequestRequester::Fetch)
+        type = InspectorPageAgent::FetchResource;
+    else if (loader && equalIgnoringFragmentIdentifier(request.url(), loader->url()) && !loader->isCommitted())
+        type = InspectorPageAgent::DocumentResource;
+    else if (loader) {
+        for (auto& linkIcon : loader->linkIcons()) {
+            if (equalIgnoringFragmentIdentifier(request.url(), linkIcon.url)) {
+                type = InspectorPageAgent::ImageResource;
+                break;
+            }
+        }
+    }
+    if (type == InspectorPageAgent::OtherResource) {
     if (!cachedResource && loader)
         cachedResource = InspectorPageAgent::cachedResource(loader->frame(), request.url());
-    willSendRequest(identifier, loader, request, redirectResponse, resourceTypeForCachedResource(cachedResource), resourceLoader);
+        type = resourceTypeForCachedResource(cachedResource);
+    }
+    willSendRequest(identifier, loader, request, redirectResponse, type, resourceLoader);
 }
 
 void InspectorNetworkAgent::willSendRequestOfType(ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, InspectorInstrumentation::LoadType loadType)
@@ -560,8 +563,8 @@ void InspectorNetworkAgent::didReceiveResponse(ResourceLoaderIdentifier identifi
     bool isNotModified = response.httpStatusCode() == 304;
 
     CachedResource* cachedResource = nullptr;
-    if (is<SubresourceLoader>(resourceLoader) && !isNotModified)
-        cachedResource = downcast<SubresourceLoader>(resourceLoader)->cachedResource();
+    if (auto* subresourceLoader = dynamicDowncast<SubresourceLoader>(resourceLoader); subresourceLoader && !isNotModified)
+        cachedResource = subresourceLoader->cachedResource();
     if (!cachedResource && loader)
         cachedResource = InspectorPageAgent::cachedResource(loader->frame(), response.url());
 
@@ -674,7 +677,7 @@ void InspectorNetworkAgent::didFailLoading(ResourceLoaderIdentifier identifier, 
     String requestId = IdentifiersFactory::requestId(identifier.toUInt64());
 
     if (loader && m_resourcesData->resourceType(requestId) == InspectorPageAgent::DocumentResource) {
-        Frame* frame = loader->frame();
+        auto* frame = loader->frame();
         if (frame && frame->loader().documentLoader() && frame->document()) {
             m_resourcesData->addResourceSharedBuffer(requestId,
                 frame->loader().documentLoader()->mainResourceData(),
@@ -868,10 +871,10 @@ Protocol::ErrorStringOr<void> InspectorNetworkAgent::enable()
         Locker locker { WebSocket::allActiveWebSocketsLock() };
 
         for (auto* webSocket : activeWebSockets()) {
-            if (!is<Document>(webSocket->scriptExecutionContext()))
+            RefPtr document = dynamicDowncast<Document>(webSocket->scriptExecutionContext());
+            if (!document)
                 continue;
 
-            auto& document = downcast<Document>(*webSocket->scriptExecutionContext());
             auto channel = webSocket->channel();
 
             auto identifier = channel->progressIdentifier();
@@ -1046,7 +1049,7 @@ Protocol::ErrorStringOr<String> InspectorNetworkAgent::getSerializedCertificate(
         return makeUnexpected("Missing certificate of resource for given requestId"_s);
 
     WTF::Persistence::Encoder encoder;
-    WTF::Persistence::Coder<WebCore::CertificateInfo>::encode(encoder, certificate.value());
+    WTF::Persistence::Coder<WebCore::CertificateInfo>::encodeForPersistence(encoder, certificate.value());
     return base64EncodeToString(encoder.buffer(), encoder.bufferSize());
 }
 
@@ -1075,10 +1078,10 @@ Protocol::ErrorStringOr<Ref<Protocol::Runtime::RemoteObject>> InspectorNetworkAg
         return makeUnexpected("Missing web socket for given requestId"_s);
 
     // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display iframe's and worker's WebSockets
-    if (!is<Document>(webSocket->scriptExecutionContext()))
+    RefPtr document = dynamicDowncast<Document>(webSocket->scriptExecutionContext());
+    if (!document)
         return makeUnexpected("Not supported"_s);
 
-    auto* document = downcast<Document>(webSocket->scriptExecutionContext());
     auto* frame = document->frame();
     if (!frame)
         return makeUnexpected("Missing frame of web socket for given requestId"_s);
@@ -1155,10 +1158,8 @@ bool InspectorNetworkAgent::shouldInterceptRequest(const ResourceLoader& loader)
     if (!m_interceptionEnabled)
         return false;
 
-#if ENABLE(SERVICE_WORKER)
     if (loader.options().serviceWorkerRegistrationIdentifier)
         return false;
-#endif
 
     return shouldIntercept(loader.url(), Protocol::Network::NetworkStage::Request);
 }
@@ -1274,9 +1275,9 @@ Protocol::ErrorStringOr<void> InspectorNetworkAgent::interceptWithResponse(const
     if (status)
         overrideResponse.setHTTPStatusCode(*status);
     if (!!statusText)
-        overrideResponse.setHTTPStatusText(AtomString { statusText });
+        overrideResponse.setHTTPStatusText(String { statusText });
     if (!!mimeType)
-        overrideResponse.setMimeType(AtomString { mimeType });
+        overrideResponse.setMimeType(String { mimeType });
     if (headers) {
         HTTPHeaderMap explicitHeaders;
         for (auto& header : *headers) {
@@ -1332,7 +1333,7 @@ Protocol::ErrorStringOr<void> InspectorNetworkAgent::interceptRequestWithRespons
     ResourceResponse response(pendingRequest->m_loader->url(), mimeType, data->size(), String());
     response.setSource(ResourceResponse::Source::InspectorOverride);
     response.setHTTPStatusCode(status);
-    response.setHTTPStatusText(AtomString { statusText });
+    response.setHTTPStatusText(String { statusText });
     HTTPHeaderMap explicitHeaders;
     for (auto& header : headers.get()) {
         auto headerValue = header.value->asString();

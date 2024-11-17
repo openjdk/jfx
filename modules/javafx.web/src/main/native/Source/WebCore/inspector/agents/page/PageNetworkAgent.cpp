@@ -28,14 +28,14 @@
 
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "InspectorClient.h"
 #include "InstrumentingAgents.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
+#include "ThreadableWebSocketChannel.h"
 #include "WebSocket.h"
-#include "WebSocketChannel.h"
 
 namespace WebCore {
 
@@ -85,11 +85,11 @@ Vector<WebSocket*> PageNetworkAgent::activeWebSockets()
         if (!channel->hasCreatedHandshake())
             continue;
 
-        if (!is<Document>(webSocket->scriptExecutionContext()))
+        RefPtr document = dynamicDowncast<Document>(webSocket->scriptExecutionContext());
+        if (!document)
             continue;
 
         // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display iframe's WebSockets
-        auto* document = downcast<Document>(webSocket->scriptExecutionContext());
         if (document->page() != &m_inspectedPage)
             continue;
 

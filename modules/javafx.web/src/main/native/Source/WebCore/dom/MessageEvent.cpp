@@ -74,11 +74,9 @@ auto MessageEvent::create(JSC::JSGlobalObject& globalObject, Ref<SerializedScrip
     JSC::Strong<JSC::Unknown> strongData(vm, deserialized);
 
     auto& eventType = didFail ? eventNames().messageerrorEvent : eventNames().messageEvent;
-    auto event = adoptRef(*new MessageEvent(eventType, WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports)));
+    Ref event = adoptRef(*new MessageEvent(eventType, MessageEvent::JSValueTag { }, origin, lastEventId, WTFMove(source), WTFMove(ports)));
     JSC::Strong<JSC::JSObject> strongWrapper(vm, JSC::jsCast<JSC::JSObject*>(toJS(&globalObject, JSC::jsCast<JSDOMGlobalObject*>(&globalObject), event.get())));
-    // Since we've already deserialized the SerializedScriptValue, cache the result so we don't have to deserialize
-    // again the next time JSMessageEvent::data() gets called by the main world.
-    event->cachedData().set(vm, strongWrapper.get(), deserialized);
+    event->jsData().set(vm, strongWrapper.get(), deserialized);
 
     return MessageEventWithStrongData { event, WTFMove(strongWrapper) };
 }
@@ -113,7 +111,7 @@ void MessageEvent::initMessageEvent(const AtomString& type, bool canBubble, bool
     initEvent(type, canBubble, cancelable);
 
     {
-        Locker { m_concurrentDataAccessLock };
+        Locker locker { m_concurrentDataAccessLock };
         m_data = JSValueTag { };
     }
     // FIXME: This code is wrong: we should emit a write-barrier. Otherwise, GC can collect it.
@@ -134,7 +132,7 @@ EventInterface MessageEvent::eventInterface() const
 
 size_t MessageEvent::memoryCost() const
 {
-    Locker { m_concurrentDataAccessLock };
+    Locker locker { m_concurrentDataAccessLock };
     return WTF::switchOn(m_data, [] (JSValueTag) -> size_t {
         return 0;
     }, [] (const Ref<SerializedScriptValue>& data) -> size_t {

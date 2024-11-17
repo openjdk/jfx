@@ -41,23 +41,28 @@ const int nonCharacter = -1;
 void TextCodecUTF8::registerEncodingNames(EncodingNameRegistrar registrar)
 {
     // From https://encoding.spec.whatwg.org.
-    registrar("UTF-8", "UTF-8");
-    registrar("utf8", "UTF-8");
-    registrar("unicode-1-1-utf-8", "UTF-8");
+    registrar("UTF-8"_s, "UTF-8"_s);
+    registrar("utf8"_s, "UTF-8"_s);
+    registrar("unicode-1-1-utf-8"_s, "UTF-8"_s);
 
     // Additional aliases that originally were present in the encoding
     // table in WebKit on Macintosh, and subsequently added by
     // TextCodecICU. Perhaps we can prove some are not used on the web
     // and remove them.
-    registrar("unicode11utf8", "UTF-8");
-    registrar("unicode20utf8", "UTF-8");
-    registrar("x-unicode20utf8", "UTF-8");
+    registrar("unicode11utf8"_s, "UTF-8"_s);
+    registrar("unicode20utf8"_s, "UTF-8"_s);
+    registrar("x-unicode20utf8"_s, "UTF-8"_s);
+}
+
+std::unique_ptr<TextCodecUTF8> TextCodecUTF8::codec()
+{
+        return makeUnique<TextCodecUTF8>();
 }
 
 void TextCodecUTF8::registerCodecs(TextCodecRegistrar registrar)
 {
-    registrar("UTF-8", [] {
-        return makeUnique<TextCodecUTF8>();
+    registrar("UTF-8"_s, [] {
+        return codec();
     });
 }
 
@@ -296,7 +301,12 @@ String TextCodecUTF8::decode(const char* bytes, size_t length, bool flush, bool 
     // Each input byte might turn into a character.
     // That includes all bytes in the partial-sequence buffer because
     // each byte in an invalid sequence will turn into a replacement character.
-    StringBuffer<LChar> buffer(m_partialSequenceSize + length);
+    size_t bufferSize = length + m_partialSequenceSize;
+    if (bufferSize > std::numeric_limits<unsigned>::max()) {
+        sawError = true;
+        return { };
+    }
+    StringBuffer<LChar> buffer(bufferSize);
 
     const uint8_t* source = reinterpret_cast<const uint8_t*>(bytes);
     const uint8_t* end = source + length;
@@ -326,7 +336,7 @@ String TextCodecUTF8::decode(const char* bytes, size_t length, bool flush, bool 
                 if (WTF::isAlignedToMachineWord(source)) {
                     while (source < alignedEnd) {
                         auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source);
-                        if (!WTF::isAllASCII<LChar>(chunk))
+                        if (!WTF::containsOnlyASCII<LChar>(chunk))
                             break;
                         copyASCIIMachineWord(destination, source);
                         source += sizeof(WTF::MachineWord);
@@ -378,7 +388,7 @@ String TextCodecUTF8::decode(const char* bytes, size_t length, bool flush, bool 
     return String::adopt(WTFMove(buffer));
 
 upConvertTo16Bit:
-    StringBuffer<UChar> buffer16(m_partialSequenceSize + length);
+    StringBuffer<UChar> buffer16(bufferSize);
 
     UChar* destination16 = buffer16.characters();
 
@@ -406,7 +416,7 @@ upConvertTo16Bit:
                 if (WTF::isAlignedToMachineWord(source)) {
                     while (source < alignedEnd) {
                         auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source);
-                        if (!WTF::isAllASCII<LChar>(chunk))
+                        if (!WTF::containsOnlyASCII<LChar>(chunk))
                             break;
                         copyASCIIMachineWord(destination16, source);
                         source += sizeof(WTF::MachineWord);
@@ -458,7 +468,7 @@ upConvertTo16Bit:
     return String::adopt(WTFMove(buffer16));
 }
 
-Vector<uint8_t> TextCodecUTF8::encodeUTF8(StringView string, UnencodableHandling)
+Vector<uint8_t> TextCodecUTF8::encodeUTF8(StringView string)
 {
     // The maximum number of UTF-8 bytes needed per UTF-16 code unit is 3.
     // BMP characters take only one UTF-16 code unit and can take up to 3 bytes (3x).
@@ -471,9 +481,9 @@ Vector<uint8_t> TextCodecUTF8::encodeUTF8(StringView string, UnencodableHandling
     return bytes;
 }
 
-Vector<uint8_t> TextCodecUTF8::encode(StringView string, UnencodableHandling unencodableHandling) const
+Vector<uint8_t> TextCodecUTF8::encode(StringView string, UnencodableHandling) const
 {
-    return encodeUTF8(string, unencodableHandling);
+    return encodeUTF8(string);
 }
 
 } // namespace PAL

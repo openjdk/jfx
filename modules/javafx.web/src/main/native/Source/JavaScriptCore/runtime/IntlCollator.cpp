@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2015 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,12 +59,6 @@ IntlCollator::IntlCollator(VM& vm, Structure* structure)
 {
 }
 
-void IntlCollator::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
-}
-
 template<typename Visitor>
 void IntlCollator::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
@@ -106,15 +100,10 @@ Vector<String> IntlCollator::sortLocaleData(const String& locale, RelevantExtens
         break;
     }
     case RelevantExtensionKey::Kf:
-        keyLocaleData.reserveInitialCapacity(3);
-        keyLocaleData.uncheckedAppend("false"_s);
-        keyLocaleData.uncheckedAppend("lower"_s);
-        keyLocaleData.uncheckedAppend("upper"_s);
+        keyLocaleData = Vector<String>::from("false"_str, "lower"_str, "upper"_str);
         break;
     case RelevantExtensionKey::Kn:
-        keyLocaleData.reserveInitialCapacity(2);
-        keyLocaleData.uncheckedAppend("false"_s);
-        keyLocaleData.uncheckedAppend("true"_s);
+        keyLocaleData = Vector<String>::from("false"_str, "true"_str);
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -133,15 +122,10 @@ Vector<String> IntlCollator::searchLocaleData(const String&, RelevantExtensionKe
         keyLocaleData.append({ });
         break;
     case RelevantExtensionKey::Kf:
-        keyLocaleData.reserveInitialCapacity(3);
-        keyLocaleData.uncheckedAppend("false"_s);
-        keyLocaleData.uncheckedAppend("lower"_s);
-        keyLocaleData.uncheckedAppend("upper"_s);
+        keyLocaleData = Vector<String>::from("false"_str, "lower"_str, "upper"_str);
         break;
     case RelevantExtensionKey::Kn:
-        keyLocaleData.reserveInitialCapacity(2);
-        keyLocaleData.uncheckedAppend("false"_s);
-        keyLocaleData.uncheckedAppend("true"_s);
+        keyLocaleData = Vector<String>::from("false"_str, "true"_str);
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -219,7 +203,6 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
 
     TriState ignorePunctuation = intlBooleanOption(globalObject, options, vm.propertyNames->ignorePunctuation);
     RETURN_IF_EXCEPTION(scope, void());
-    m_ignorePunctuation = (ignorePunctuation == TriState::True);
 
     // UCollator does not offer an option to configure "usage" via ucol_setAttribute. So we need to pass this option via locale.
     CString dataLocaleWithExtensions;
@@ -228,14 +211,14 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
         if (collation.isNull())
             dataLocaleWithExtensions = resolved.dataLocale.utf8();
         else
-            dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-co-", m_collation).utf8();
+            dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-co-"_s, m_collation).utf8();
         break;
     case Usage::Search:
         // searchLocaleData filters out "co" unicode extension. However, we need to pass "co" to ICU when Usage::Search is specified.
         // So we need to pass "co" unicode extension through locale. Since the other relevant extensions are handled via ucol_setAttribute,
         // we can just use dataLocale
         // Since searchLocaleData filters out "co" unicode extension, "collation" option is just ignored.
-        dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-co-search").utf8();
+        dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-co-search"_s).utf8();
         break;
     }
     dataLogLnIf(IntlCollatorInternal::verbose, "locale:(", resolved.locale, "),dataLocaleWithExtensions:(", dataLocaleWithExtensions, ")");
@@ -282,12 +265,19 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
 
     // FIXME: Setting UCOL_ALTERNATE_HANDLING to UCOL_SHIFTED causes punctuation and whitespace to be
     // ignored. There is currently no way to ignore only punctuation.
-    ucol_setAttribute(m_collator.get(), UCOL_ALTERNATE_HANDLING, m_ignorePunctuation ? UCOL_SHIFTED : UCOL_DEFAULT, &status);
+    if (ignorePunctuation != TriState::Indeterminate)
+        ucol_setAttribute(m_collator.get(), UCOL_ALTERNATE_HANDLING, ignorePunctuation == TriState::True ? UCOL_SHIFTED : UCOL_NON_IGNORABLE, &status);
 
     // "The method is required to return 0 when comparing Strings that are considered canonically
     // equivalent by the Unicode standard."
     ucol_setAttribute(m_collator.get(), UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
     ASSERT(U_SUCCESS(status));
+
+    {
+        auto result = ucol_getAttribute(m_collator.get(), UCOL_ALTERNATE_HANDLING, &status);
+        ASSERT(U_SUCCESS(status));
+        m_ignorePunctuation = (result == UCOL_SHIFTED);
+    }
 }
 
 // https://tc39.es/ecma402/#sec-collator-comparestrings
@@ -310,7 +300,7 @@ UCollationResult IntlCollator::compareStrings(JSGlobalObject* globalObject, Stri
                 return compareASCIIWithUCADUCET(x.characters16(), x.length(), y.characters16(), y.length());
             }
 
-        if (x.is8Bit() && y.is8Bit() && x.isAllASCII() && y.isAllASCII())
+        if (x.is8Bit() && y.is8Bit() && x.containsOnlyASCII() && y.containsOnlyASCII())
                 return ucol_strcollUTF8(m_collator.get(), bitwise_cast<const char*>(x.characters8()), x.length(), bitwise_cast<const char*>(y.characters8()), y.length(), &status);
 
         return std::nullopt;
@@ -508,7 +498,7 @@ void IntlCollator::checkICULocaleInvariants(const LocaleSet& locales)
                         CRASH();
                     }
                 } else {
-                    if (StringView(buffer.data(), buffer.size()).isAllASCII()) {
+                    if (StringView(buffer.data(), buffer.size()).containsOnlyASCII()) {
                         dataLogLn("BAD ", locale, " ", String(buffer.data(), buffer.size()), " including ASCII tailored characters");
                         CRASH();
                     }

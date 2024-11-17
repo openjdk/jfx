@@ -240,36 +240,6 @@ private:
                 break;
             }
 
-            case CheckMul: {
-                if (isARM64() && m_value->child(0)->type() == Int32) {
-                    CheckValue* checkMul = m_value->as<CheckValue>();
-
-                    Value* left = m_insertionSet.insert<Value>(m_index, SExt32, m_origin, m_value->child(0));
-                    Value* right = m_insertionSet.insert<Value>(m_index, SExt32, m_origin, m_value->child(1));
-                    Value* mulResult = m_insertionSet.insert<Value>(m_index, Mul, m_origin, left, right);
-                    Value* mulResult32 = m_insertionSet.insert<Value>(m_index, Trunc, m_origin, mulResult);
-                    Value* upperResult = m_insertionSet.insert<Value>(m_index, Trunc, m_origin,
-                        m_insertionSet.insert<Value>(m_index, SShr, m_origin, mulResult, m_insertionSet.insert<Const32Value>(m_index, m_origin, 32)));
-                    Value* signBit = m_insertionSet.insert<Value>(m_index, SShr, m_origin,
-                        mulResult32,
-                        m_insertionSet.insert<Const32Value>(m_index, m_origin, 31));
-                    Value* hasOverflowed = m_insertionSet.insert<Value>(m_index, NotEqual, m_origin, upperResult, signBit);
-
-                    CheckValue* check = m_insertionSet.insert<CheckValue>(m_index, Check, m_origin, hasOverflowed);
-                    check->setGenerator(checkMul->generator());
-                    check->clobberEarly(checkMul->earlyClobbered());
-                    check->clobberLate(checkMul->lateClobbered());
-                    auto children = checkMul->constrainedChildren();
-                    auto it = children.begin();
-                    for (std::advance(it, 2); it != children.end(); ++it)
-                        check->append(*it);
-
-                    m_value->replaceWithIdentity(mulResult32);
-                    m_changed = true;
-                }
-                break;
-            }
-
             case Switch: {
                 SwitchValue* switchValue = m_value->as<SwitchValue>();
                 Vector<SwitchCase> cases;
@@ -528,6 +498,26 @@ private:
                 if (isX86() && m_value->as<SIMDValue>()->simdLane() == SIMDLane::i64x2)
                     invertedComparisonByXor(VectorGreaterThan, m_value->child(0), m_value->child(1));
                 break;
+            case VectorShr:
+            case VectorShl: {
+                if constexpr (!isARM64())
+                    break;
+                SIMDValue* value = m_value->as<SIMDValue>();
+                SIMDLane lane = value->simdLane();
+
+                int32_t mask = (elementByteSize(lane) * CHAR_BIT) - 1;
+                Value* shiftAmount = m_insertionSet.insert<Value>(m_index, BitAnd, m_origin, value->child(1), m_insertionSet.insertIntConstant(m_index, m_origin, Int32, mask));
+                if (value->opcode() == VectorShr) {
+                    // ARM64 doesn't have a version of this instruction for right shift. Instead, if the input to
+                    // left shift is negative, it's a right shift by the absolute value of that amount.
+                    shiftAmount = m_insertionSet.insert<Value>(m_index, Neg, m_origin, shiftAmount);
+                }
+                Value* shiftVector = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorSplat, B3::V128, SIMDLane::i8x16, SIMDSignMode::None, shiftAmount);
+                Value* result = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorShiftByVector, B3::V128, value->simdInfo(), value->child(0), shiftVector);
+                m_value->replaceWithIdentity(result);
+                m_changed = true;
+                break;
+            }
             default:
                 break;
             }

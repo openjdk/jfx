@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,13 @@
 
 package test.javafx.scene.web;
 
-import javafx.concurrent.Worker.State;
-
-import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import java.util.concurrent.CountDownLatch;
-
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
-import java.io.IOException;
-import javafx.scene.web.WebView;
+import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import org.junit.jupiter.api.Test;
 
 public class WebWorkerTest extends TestBase {
 
@@ -49,7 +44,7 @@ public class WebWorkerTest extends TestBase {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
         load(new File("src/test/resources/test/html/worker.html"));
-        assertTrue("Load task completed successfully", getLoadState() == State.SUCCEEDED);
+        assertTrue(getLoadState() == State.SUCCEEDED, "Load task completed successfully");
 
         Thread.sleep(500);
 

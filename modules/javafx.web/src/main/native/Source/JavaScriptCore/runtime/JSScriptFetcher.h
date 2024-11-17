@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "JSGlobalObject.h"
 #include "JSObject.h"
 #include "ScriptFetcher.h"
 #include <wtf/RefPtr.h>
@@ -48,10 +47,7 @@ public:
         return vm.scriptFetcherSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSScriptFetcherType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static JSScriptFetcher* create(VM& vm, Structure* structure, RefPtr<ScriptFetcher>&& scriptFetcher)
     {

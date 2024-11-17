@@ -111,16 +111,18 @@ ExceptionOr<DOMRectInit> parseVisibleRect(const DOMRectInit& defaultRect, const 
 {
     auto sourceRect = defaultRect;
     if (overrideRect) {
-        if (!overrideRect->width || !overrideRect->height)
-            return Exception { TypeError, "overrideRect is not valid"_s };
+        if (!std::isfinite(overrideRect->width) || !std::isfinite(overrideRect->height) || !std::isfinite(overrideRect->x) || !std::isfinite(overrideRect->y))
+            return Exception { ExceptionCode::TypeError, "overrideRect is not valid"_s };
+        if (overrideRect->width <= 0 || overrideRect->height <= 0 || overrideRect->x < 0 || overrideRect->y < 0)
+            return Exception { ExceptionCode::TypeError, "overrideRect is not valid"_s };
         if (overrideRect->x + overrideRect->width > codedWidth)
-            return Exception { TypeError, "overrideRect is not valid"_s };
+            return Exception { ExceptionCode::TypeError, "overrideRect is not valid"_s };
         if (overrideRect->y + overrideRect->height > codedHeight)
-            return Exception { TypeError, "overrideRect is not valid"_s };
+            return Exception { ExceptionCode::TypeError, "overrideRect is not valid"_s };
         sourceRect = *overrideRect;
     }
     if (!verifyRectOffsetAlignment(format, sourceRect))
-        return Exception { TypeError, "offset alignment is invalid"_s };
+        return Exception { ExceptionCode::TypeError, "offset alignment is invalid"_s };
     return sourceRect;
 }
 
@@ -128,10 +130,11 @@ size_t videoPixelFormatToPlaneCount(VideoPixelFormat format)
 {
     switch (format) {
     case VideoPixelFormat::I420:
-    case VideoPixelFormat::I420A:
     case VideoPixelFormat::I444:
     case VideoPixelFormat::I422:
         return 3;
+    case VideoPixelFormat::I420A:
+        return 4;
     case VideoPixelFormat::NV12:
         return 2;
     case VideoPixelFormat::RGBA:
@@ -171,11 +174,12 @@ size_t videoPixelFormatToSubSampling(VideoPixelFormat format, size_t planeNumber
 {
     switch (format) {
     case VideoPixelFormat::I420:
-    case VideoPixelFormat::I420A:
     case VideoPixelFormat::I444:
     case VideoPixelFormat::I422:
     case VideoPixelFormat::NV12:
         return planeNumber ? 2 : 1;
+    case VideoPixelFormat::I420A:
+        return (planeNumber == 1 || planeNumber == 2) ? 2 : 1;
     case VideoPixelFormat::RGBA:
     case VideoPixelFormat::RGBX:
     case VideoPixelFormat::BGRA:
@@ -190,7 +194,7 @@ ExceptionOr<CombinedPlaneLayout> computeLayoutAndAllocationSize(const DOMRectIni
 {
     auto planeCount = videoPixelFormatToPlaneCount(format);
     if (layout && layout->size() != planeCount)
-        return Exception { TypeError, "layout size is invalid"_s };
+        return Exception { ExceptionCode::TypeError, "layout size is invalid"_s };
 
     size_t minAllocationSize = 0;
     Vector<ComputedPlaneLayout> computedLayouts;
@@ -210,10 +214,11 @@ ExceptionOr<CombinedPlaneLayout> computeLayoutAndAllocationSize(const DOMRectIni
         computedLayout.sourceHeight = parsedRect.height / sampleHeight;
         computedLayout.sourceLeftBytes = pixelSampleCount * parsedRect.x / sampleWidthBytes;
         computedLayout.sourceWidthBytes = pixelSampleCount * parsedRect.width / sampleWidthBytes;
-
+        if (!computedLayout.sourceWidthBytes)
+            return Exception { ExceptionCode::TypeError, "layout width bytes is zero"_s };
         if (layout) {
             if (layout.value()[i].stride < computedLayout.sourceWidthBytes)
-                return Exception { TypeError, "layout stride is invalid"_s };
+                return Exception { ExceptionCode::TypeError, "layout stride is invalid"_s };
 
             computedLayout.destinationOffset = layout.value()[i].offset;
             computedLayout.destinationStride = layout.value()[i].stride;
@@ -224,20 +229,20 @@ ExceptionOr<CombinedPlaneLayout> computeLayoutAndAllocationSize(const DOMRectIni
 
         size_t planeSize, planeEnd;
         if (!WTF::safeMultiply(computedLayout.destinationStride, computedLayout.sourceHeight, planeSize) || planeSize > std::numeric_limits<uint32_t>::max())
-            return Exception { TypeError, "planeSize is too big"_s };
+            return Exception { ExceptionCode::TypeError, "planeSize is too big"_s };
 
         if (!WTF::safeAdd(planeSize, computedLayout.destinationOffset, planeEnd) || planeEnd > std::numeric_limits<uint32_t>::max())
-            return Exception { TypeError, "planeEnd is too big"_s };
+            return Exception { ExceptionCode::TypeError, "planeEnd is too big"_s };
 
-        endOffsets.uncheckedAppend(planeEnd);
+        endOffsets.append(planeEnd);
         minAllocationSize = std::max(minAllocationSize, planeEnd);
 
-        for (size_t j = 1; j < i; ++j) {
+        for (size_t j = 0; j < i; ++j) {
             if (planeEnd > computedLayouts[j].destinationOffset && endOffsets[j] > computedLayout.destinationOffset)
-                return Exception { TypeError, "planes are overlapping"_s };
+                return Exception { ExceptionCode::TypeError, "planes are overlapping"_s };
         }
 
-        computedLayouts.uncheckedAppend(computedLayout);
+        computedLayouts.append(computedLayout);
     }
 
     return CombinedPlaneLayout { minAllocationSize, WTFMove(computedLayouts) };
@@ -250,7 +255,7 @@ ExceptionOr<CombinedPlaneLayout> parseVideoFrameCopyToOptions(const WebCodecsVid
     ASSERT(frame.format());
 
     if (options.rect && !verifyRectSizeAlignment(*frame.format(), *options.rect))
-        return Exception { TypeError, "rect size alignment is invalid"_s };
+        return Exception { ExceptionCode::TypeError, "rect size alignment is invalid"_s };
 
     auto& visibleRect = *frame.visibleRect();
     auto parsedRect = parseVisibleRect({ visibleRect.x(), visibleRect.y(), visibleRect.width(), visibleRect.height() }, options.rect, frame.codedWidth(), frame.codedHeight(), *frame.format());

@@ -46,6 +46,8 @@ public:
 
     WEBCORE_EXPORT ~MutableStyleProperties();
 
+    Ref<ImmutableStyleProperties> immutableCopy() const;
+
     unsigned propertyCount() const { return m_propertyVector.size(); }
     bool isEmpty() const { return !propertyCount(); }
     PropertyReference propertyAt(unsigned index) const;
@@ -69,7 +71,7 @@ public:
     bool setProperty(const CSSProperty&, CSSProperty* slot = nullptr);
 
     bool removeProperty(CSSPropertyID, String* returnText = nullptr);
-    bool removeProperties(Span<const CSSPropertyID>);
+    bool removeProperties(std::span<const CSSPropertyID>);
 
     void mergeAndOverrideOnConflict(const StyleProperties&);
 

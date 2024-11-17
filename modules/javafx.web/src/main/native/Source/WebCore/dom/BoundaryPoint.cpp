@@ -26,27 +26,28 @@
 #include "config.h"
 #include "BoundaryPoint.h"
 #include "ContainerNode.h"
+#include "Document.h"
 
 namespace WebCore {
 
-template PartialOrdering treeOrder<Tree>(const BoundaryPoint&, const BoundaryPoint&);
-template PartialOrdering treeOrder< ShadowIncludingTree >(const BoundaryPoint&, const BoundaryPoint&);
-template PartialOrdering treeOrder<ComposedTree>(const BoundaryPoint&, const BoundaryPoint&);
+template std::partial_ordering treeOrder<Tree>(const BoundaryPoint&, const BoundaryPoint&);
+template std::partial_ordering treeOrder<ShadowIncludingTree>(const BoundaryPoint&, const BoundaryPoint&);
+template std::partial_ordering treeOrder<ComposedTree>(const BoundaryPoint&, const BoundaryPoint&);
 
 std::optional<BoundaryPoint> makeBoundaryPointBeforeNode(Node& node)
 {
-    auto parent = node.parentNode();
+    RefPtr parent = node.parentNode();
     if (!parent)
         return std::nullopt;
-    return BoundaryPoint { *parent, node.computeNodeIndex() };
+    return BoundaryPoint { parent.releaseNonNull(), node.computeNodeIndex() };
 }
 
 std::optional<BoundaryPoint> makeBoundaryPointAfterNode(Node& node)
 {
-    auto parent = node.parentNode();
+    RefPtr parent = node.parentNode();
     if (!parent)
         return std::nullopt;
-    return BoundaryPoint { *parent, node.computeNodeIndex() + 1 };
+    return BoundaryPoint { parent.releaseNonNull(), node.computeNodeIndex() + 1 };
 }
 
 static bool isOffsetBeforeChild(ContainerNode& container, unsigned offset, Node& child)
@@ -64,40 +65,29 @@ static bool isOffsetBeforeChild(ContainerNode& container, unsigned offset, Node&
     return false;
 }
 
-// FIXME: Once we move to C++20, replace with the C++20 <=> operator.
-// FIXME: This could return std::strong_ordering if we had that, or the equivalent.
-static PartialOrdering order(unsigned a, unsigned b)
-{
-    if (a < b)
-        return PartialOrdering::less;
-    if (a > b)
-        return PartialOrdering::greater;
-    return PartialOrdering::equivalent;
-}
-
-template<TreeType treeType> PartialOrdering treeOrder(const BoundaryPoint& a, const BoundaryPoint& b)
+template<TreeType treeType> std::partial_ordering treeOrder(const BoundaryPoint& a, const BoundaryPoint& b)
 {
     if (a.container.ptr() == b.container.ptr())
-        return order(a.offset, b.offset);
+        return a.offset <=> b.offset;
 
-    for (auto ancestor = b.container.ptr(); ancestor; ) {
-        auto nextAncestor = parent<treeType>(*ancestor);
+    for (RefPtr ancestor = b.container.copyRef(); ancestor; ) {
+        RefPtr nextAncestor = parent<treeType>(*ancestor);
         if (nextAncestor == a.container.ptr())
-            return isOffsetBeforeChild(*nextAncestor, a.offset, *ancestor) ? PartialOrdering::less : PartialOrdering::greater;
-        ancestor = nextAncestor;
+            return isOffsetBeforeChild(*nextAncestor, a.offset, *ancestor) ? std::strong_ordering::less : std::strong_ordering::greater;
+        ancestor = WTFMove(nextAncestor);
     }
 
-    for (auto ancestor = a.container.ptr(); ancestor; ) {
-        auto nextAncestor = parent<treeType>(*ancestor);
+    for (RefPtr ancestor = a.container.copyRef(); ancestor; ) {
+        RefPtr nextAncestor = parent<treeType>(*ancestor);
         if (nextAncestor == b.container.ptr())
-            return isOffsetBeforeChild(*nextAncestor, b.offset, *ancestor) ? PartialOrdering::greater : PartialOrdering::less;
-        ancestor = nextAncestor;
+            return isOffsetBeforeChild(*nextAncestor, b.offset, *ancestor) ? std::strong_ordering::greater : std::strong_ordering::less;
+        ancestor = WTFMove(nextAncestor);
     }
 
     return treeOrder<treeType>(a.container, b.container);
 }
 
-PartialOrdering treeOrderForTesting(TreeType type, const BoundaryPoint& a, const BoundaryPoint& b)
+std::partial_ordering treeOrderForTesting(TreeType type, const BoundaryPoint& a, const BoundaryPoint& b)
 {
     switch (type) {
     case Tree:
@@ -108,7 +98,7 @@ PartialOrdering treeOrderForTesting(TreeType type, const BoundaryPoint& a, const
         return treeOrder<ComposedTree>(a, b);
     }
     ASSERT_NOT_REACHED();
-    return PartialOrdering::unordered;
+    return std::partial_ordering::unordered;
 }
 
 TextStream& operator<<(TextStream& stream, const BoundaryPoint& boundaryPoint)
@@ -118,6 +108,11 @@ TextStream& operator<<(TextStream& stream, const BoundaryPoint& boundaryPoint)
     stream.dumpProperty("node", boundaryPoint.container->debugDescription());
     stream.dumpProperty("offset", boundaryPoint.offset);
     return stream;
+}
+
+Ref<Document> BoundaryPoint::protectedDocument() const
+{
+    return document();
 }
 
 }

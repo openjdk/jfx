@@ -33,11 +33,11 @@
 
 namespace WebCore {
 
-class Frame;
+class LocalFrame;
 class SecurityOrigin;
 
-enum OpaqueOriginIdentifierType { };
-using OpaqueOriginIdentifier = ObjectIdentifier<OpaqueOriginIdentifierType>;
+enum class OpaqueOriginIdentifierType { };
+using OpaqueOriginIdentifier = AtomicObjectIdentifier<OpaqueOriginIdentifierType>;
 
 class SecurityOriginData {
 public:
@@ -46,7 +46,7 @@ public:
         String host;
         std::optional<uint16_t> port;
 
-        bool operator==(const Tuple& other) const { return protocol == other.protocol && host == other.host && port == other.port; }
+        friend bool operator==(const Tuple&, const Tuple&) = default;
         Tuple isolatedCopy() const & { return { protocol.isolatedCopy(), host.isolatedCopy(), port }; }
         Tuple isolatedCopy() && { return { WTFMove(protocol).isolatedCopy(), WTFMove(host).isolatedCopy(), port }; }
     };
@@ -64,13 +64,13 @@ public:
     SecurityOriginData(WTF::HashTableDeletedValueType)
         : m_data { Tuple { WTF::HashTableDeletedValue, { }, { } } } { }
 
-    WEBCORE_EXPORT static SecurityOriginData fromFrame(Frame*);
+    WEBCORE_EXPORT static SecurityOriginData fromFrame(LocalFrame*);
     WEBCORE_EXPORT static SecurityOriginData fromURL(const URL&);
     WEBCORE_EXPORT static SecurityOriginData fromURLWithoutStrictOpaqueness(const URL&);
 
     static SecurityOriginData createOpaque()
     {
-        return SecurityOriginData { ProcessQualified<OpaqueOriginIdentifier>::generateThreadSafe() };
+        return SecurityOriginData { ProcessQualified<OpaqueOriginIdentifier>::generate() };
     }
 
     WEBCORE_EXPORT Ref<SecurityOrigin> securityOrigin() const;
@@ -165,7 +165,6 @@ private:
 };
 
 WEBCORE_EXPORT bool operator==(const SecurityOriginData&, const SecurityOriginData&);
-inline bool operator!=(const SecurityOriginData& first, const SecurityOriginData& second) { return !(first == second); }
 
 inline void add(Hasher& hasher, const SecurityOriginData& data)
 {
@@ -185,15 +184,22 @@ struct SecurityOriginDataHashTraits : SimpleClassHashTraits<SecurityOriginData> 
 
 struct SecurityOriginDataHash {
     static unsigned hash(const SecurityOriginData& data) { return computeHash(data); }
+    static unsigned hash(const std::optional<SecurityOriginData>& data) { return computeHash(data); }
     static bool equal(const SecurityOriginData& a, const SecurityOriginData& b) { return a == b; }
+    static bool equal(const std::optional<SecurityOriginData>& a, const std::optional<SecurityOriginData>& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
+struct SecurityOriginDataMarkableTraits {
+    static bool isEmptyValue(const SecurityOriginData& value) { return value.isNull(); }
+    static SecurityOriginData emptyValue() { return { }; }
+};
 } // namespace WebCore
 
 namespace WTF {
 
 template<> struct HashTraits<WebCore::SecurityOriginData> : WebCore::SecurityOriginDataHashTraits { };
 template<> struct DefaultHash<WebCore::SecurityOriginData> : WebCore::SecurityOriginDataHash { };
+template<> struct DefaultHash<std::optional<WebCore::SecurityOriginData>> : WebCore::SecurityOriginDataHash { };
 
 } // namespace WTF

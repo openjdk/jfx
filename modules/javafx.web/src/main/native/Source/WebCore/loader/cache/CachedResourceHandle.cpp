@@ -35,6 +35,12 @@ CachedResourceHandleBase::CachedResourceHandleBase()
 {
 }
 
+CachedResourceHandleBase::CachedResourceHandleBase(CachedResource& resource)
+    : m_resource(&resource)
+{
+    m_resource->registerHandle(this);
+}
+
 CachedResourceHandleBase::CachedResourceHandleBase(CachedResource* resource)
     : m_resource(resource)
 {
@@ -53,6 +59,11 @@ CachedResourceHandleBase::~CachedResourceHandleBase()
 {
     if (m_resource)
         m_resource->unregisterHandle(this);
+}
+
+CachedResource* CachedResourceHandleBase::get() const
+{
+    return m_resource.get();
 }
 
 void CachedResourceHandleBase::setResource(CachedResource* resource)

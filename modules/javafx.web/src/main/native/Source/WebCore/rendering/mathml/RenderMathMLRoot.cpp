@@ -36,6 +36,7 @@
 #include "MathMLRootElement.h"
 #include "PaintInfo.h"
 #include "RenderIterator.h"
+#include "RenderMathMLBlockInlines.h"
 #include "RenderMathMLMenclose.h"
 #include "RenderMathMLOperator.h"
 #include <wtf/IsoMallocInlines.h>
@@ -47,9 +48,10 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLRoot);
 
 RenderMathMLRoot::RenderMathMLRoot(MathMLRootElement& element, RenderStyle&& style)
-    : RenderMathMLRow(element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLRoot, element, WTFMove(style))
 {
     m_radicalOperator.setOperator(RenderMathMLRoot::style(), gRadicalCharacter, MathOperator::Type::VerticalOperator);
+    ASSERT(isRenderMathMLRoot());
 }
 
 MathMLRootElement& RenderMathMLRoot::element() const

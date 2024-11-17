@@ -1,6 +1,6 @@
 /*
  * Copyright 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,7 +82,7 @@ Value NumericOp::evaluate() const
     double rightVal;
 
     {
-        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext);
+        SetForScope contextForScope(Expression::evaluationContext(), clonedContext);
         rightVal = subexpression(1).evaluate().toNumber();
     }
 
@@ -211,7 +211,7 @@ Value EqTestOp::evaluate() const
 
     Value lhs(subexpression(0).evaluate());
     Value rhs = [&] {
-        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext);
+        SetForScope contextForScope(Expression::evaluationContext(), clonedContext);
         return subexpression(1).evaluate();
     }();
 
@@ -240,7 +240,7 @@ Value LogicalOp::evaluate() const
     if (lhsBool == shortCircuitOn())
         return lhsBool;
 
-    SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext);
+    SetForScope contextForScope(Expression::evaluationContext(), clonedContext);
     return subexpression(1).evaluate().toBoolean();
 }
 
@@ -252,11 +252,16 @@ Union::Union(std::unique_ptr<Expression> lhs, std::unique_ptr<Expression> rhs)
 
 Value Union::evaluate() const
 {
+    EvaluationContext clonedContext(Expression::evaluationContext());
     Value lhsResult = subexpression(0).evaluate();
-    Value rhs = subexpression(1).evaluate();
+    Value rhsResult = [&] {
+        SetForScope contextForScope(Expression::evaluationContext(), clonedContext);
+        return subexpression(1).evaluate();
+    }();
+    Expression::evaluationContext().hadTypeConversionError |= clonedContext.hadTypeConversionError;
 
     NodeSet& resultSet = lhsResult.modifiableNodeSet();
-    const NodeSet& rhsNodes = rhs.toNodeSet();
+    const NodeSet& rhsNodes = rhsResult.toNodeSet();
 
     HashSet<RefPtr<Node>> nodes;
     for (auto& result : resultSet)
@@ -276,7 +281,12 @@ Value Union::evaluate() const
 
 bool evaluatePredicate(const Expression& expression)
 {
-    Value result(expression.evaluate());
+    EvaluationContext clonedContext(Expression::evaluationContext());
+    Value result = [&] {
+        SetForScope contextForScope(Expression::evaluationContext(), clonedContext);
+        return expression.evaluate();
+    }();
+    Expression::evaluationContext().hadTypeConversionError |= clonedContext.hadTypeConversionError;
 
     // foo[3] means foo[position()=3]
     if (result.isNumber())
@@ -287,8 +297,8 @@ bool evaluatePredicate(const Expression& expression)
 
 bool predicateIsContextPositionSensitive(const Expression& expression)
 {
-    return expression.isContextPositionSensitive() || expression.resultType() == Value::NumberValue;
+    return expression.isContextPositionSensitive() || expression.resultType() == Value::Type::Number;
 }
 
-}
-}
+} // namespace XPath
+} // namespace WebCore

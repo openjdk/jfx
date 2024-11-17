@@ -29,7 +29,9 @@
 #include "AudioSession.h"
 #include "HTMLMediaElement.h"
 #include "MediaPlayer.h"
+#include "MediaStrategy.h"
 #include "PlatformMediaSessionManager.h"
+#include "PlatformStrategies.h"
 #include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(COCOA)
@@ -70,13 +72,6 @@ void DeprecatedGlobalSettings::setMediaSourceInlinePaintingEnabled(bool isEnable
 }
 #endif
 
-#if PLATFORM(WIN)
-void DeprecatedGlobalSettings::setShouldUseHighResolutionTimers(bool shouldUseHighResolutionTimers)
-{
-    shared().m_shouldUseHighResolutionTimers = shouldUseHighResolutionTimers;
-}
-#endif
-
 #if USE(AVFOUNDATION)
 void DeprecatedGlobalSettings::setAVFoundationEnabled(bool enabled)
 {
@@ -84,7 +79,7 @@ void DeprecatedGlobalSettings::setAVFoundationEnabled(bool enabled)
         return;
 
     shared().m_AVFoundationEnabled = enabled;
-    HTMLMediaElement::resetMediaEngines();
+    platformStrategies()->mediaStrategy().resetMediaEngines();
 }
 #endif
 
@@ -97,7 +92,7 @@ void DeprecatedGlobalSettings::setGStreamerEnabled(bool enabled)
     shared().m_GStreamerEnabled = enabled;
 
 #if ENABLE(VIDEO)
-    HTMLMediaElement::resetMediaEngines();
+    platformStrategies()->mediaStrategy().resetMediaEngines();
 #endif
 }
 #endif

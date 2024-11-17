@@ -186,6 +186,12 @@ inline bool nodeMatchesBasicTest(Node& node, Step::Axis axis, const Step::NodeTe
                 if (name == starAtom())
                     return namespaceURI.isEmpty() || node.namespaceURI() == namespaceURI;
 
+                auto& attr = downcast<Attr>(node);
+                if (attr.document().isHTMLDocument() && attr.ownerElement() && attr.ownerElement()->isHTMLElement()
+                    && namespaceURI.isNull() && attr.namespaceURI().isNull()) {
+                    return equalIgnoringASCIICase(attr.localName(), name);
+                }
+
                 return node.localName() == name && node.namespaceURI() == namespaceURI;
             }
 
@@ -194,21 +200,22 @@ inline bool nodeMatchesBasicTest(Node& node, Step::Axis axis, const Step::NodeTe
 
             // For other axes, the principal node type is element.
             ASSERT(primaryNodeType(axis) == Node::ELEMENT_NODE);
-            if (!is<Element>(node))
+            auto* element = dynamicDowncast<Element>(node);
+            if (!element)
                 return false;
 
             if (name == starAtom())
                 return namespaceURI.isEmpty() || namespaceURI == node.namespaceURI();
 
             if (node.document().isHTMLDocument()) {
-                if (is<HTMLElement>(node)) {
+                if (is<HTMLElement>(*element)) {
                     // Paths without namespaces should match HTML elements in HTML documents despite those having an XHTML namespace. Names are compared case-insensitively.
-                    return equalIgnoringASCIICase(downcast<HTMLElement>(node).localName(), name) && (namespaceURI.isNull() || namespaceURI == node.namespaceURI());
+                    return equalIgnoringASCIICase(element->localName(), name) && (namespaceURI.isNull() || namespaceURI == node.namespaceURI());
                 }
                 // An expression without any prefix shouldn't match no-namespace nodes (because HTML5 says so).
-                return downcast<Element>(node).hasLocalName(name) && namespaceURI == node.namespaceURI() && !namespaceURI.isNull();
+                return element->hasLocalName(name) && namespaceURI == node.namespaceURI() && !namespaceURI.isNull();
             }
-            return downcast<Element>(node).hasLocalName(name) && namespaceURI == node.namespaceURI();
+            return element->hasLocalName(name) && namespaceURI == node.namespaceURI();
         }
     }
     ASSERT_NOT_REACHED();
@@ -341,14 +348,19 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
             return;
         }
         case AttributeAxis: {
-            if (!is<Element>(context))
+            RefPtr contextElement = dynamicDowncast<Element>(context);
+            if (!contextElement)
                 return;
-
-            Element& contextElement = downcast<Element>(context);
 
             // Avoid lazily creating attribute nodes for attributes that we do not need anyway.
             if (m_nodeTest.m_kind == NodeTest::NameTest && m_nodeTest.m_data != starAtom()) {
-                auto attr = contextElement.getAttributeNodeNS(m_nodeTest.m_namespaceURI, m_nodeTest.m_data);
+                RefPtr<Attr> attr;
+                // We need this branch because getAttributeNodeNS() doesn't do
+                // ignore-case matching even for an HTML element in an HTML document.
+                if (m_nodeTest.m_namespaceURI.isNull())
+                    attr = contextElement->getAttributeNode(m_nodeTest.m_data);
+                else
+                    attr = contextElement->getAttributeNodeNS(m_nodeTest.m_namespaceURI, m_nodeTest.m_data);
                 if (attr && attr->namespaceURI() != XMLNSNames::xmlnsNamespaceURI) { // In XPath land, namespace nodes are not accessible on the attribute axis.
                     if (nodeMatches(*attr, AttributeAxis, m_nodeTest)) // Still need to check merged predicates.
                         nodes.append(WTFMove(attr));
@@ -356,11 +368,11 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
                 return;
             }
 
-            if (!contextElement.hasAttributes())
+            if (!contextElement->hasAttributes())
                 return;
 
-            for (const Attribute& attribute : contextElement.attributesIterator()) {
-                auto attr = contextElement.ensureAttr(attribute.name());
+            for (const Attribute& attribute : contextElement->attributesIterator()) {
+                auto attr = contextElement->ensureAttr(attribute.name());
                 if (nodeMatches(attr.get(), AttributeAxis, m_nodeTest))
                     nodes.append(WTFMove(attr));
             }

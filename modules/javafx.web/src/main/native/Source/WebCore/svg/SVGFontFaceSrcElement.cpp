@@ -22,7 +22,7 @@
 
 #include "CSSFontFaceSrcValue.h"
 #include "CSSValueList.h"
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFontFaceElement.h"
 #include "SVGFontFaceNameElement.h"
@@ -65,8 +65,8 @@ Ref<CSSValueList> SVGFontFaceSrcElement::createSrcValue() const
 void SVGFontFaceSrcElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
-    if (is<SVGFontFaceElement>(parentNode()))
-        downcast<SVGFontFaceElement>(*parentNode()).rebuildFontFace();
+    if (RefPtr parent = dynamicDowncast<SVGFontFaceElement>(parentNode()))
+        parent->rebuildFontFace();
 }
 
 }

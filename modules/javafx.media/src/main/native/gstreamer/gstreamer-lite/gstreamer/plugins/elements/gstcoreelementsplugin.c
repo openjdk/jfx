@@ -52,7 +52,7 @@ plugin_init (GstPlugin * plugin)
   ret |= GST_ELEMENT_REGISTER (downloadbuffer, plugin);
   ret |= GST_ELEMENT_REGISTER (fakesrc, plugin);
   ret |= GST_ELEMENT_REGISTER (fakesink, plugin);
-#if defined(HAVE_SYS_SOCKET_H) || defined(_MSC_VER)
+#if defined(HAVE_SYS_SOCKET_H) || defined(G_OS_WIN32)
   ret |= GST_ELEMENT_REGISTER (fdsrc, plugin);
   ret |= GST_ELEMENT_REGISTER (fdsink, plugin);
 #endif

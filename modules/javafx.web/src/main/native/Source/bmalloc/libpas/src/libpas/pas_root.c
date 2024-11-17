@@ -38,6 +38,7 @@
 #include "pas_large_map.h"
 #include "pas_large_sharing_pool.h"
 #include "pas_payload_reservation_page_list.h"
+#include "pas_probabilistic_guard_malloc_allocator.h"
 #include "pas_scavenger.h"
 #include "pas_thread_local_cache_layout.h"
 #include "pas_thread_local_cache_node.h"
@@ -125,6 +126,9 @@ void pas_root_construct(pas_root* root)
         &pas_tiny_large_map_hashtable_instance_in_flux_stash;
     root->tiny_large_map_second_level_hashtable_in_flux_stash_instance =
         &pas_tiny_large_map_second_level_hashtable_in_flux_stash_instance;
+
+    root->pas_pgm_hash_map_instance = &pas_pgm_hash_map;
+    root->pas_pgm_hash_map_instance_in_flux_stash = &pas_pgm_hash_map_in_flux_stash;
 
     root->heap_configs = pas_immortal_heap_allocate(
         sizeof(const pas_heap_config*) * pas_heap_config_kind_num_kinds,
@@ -393,7 +397,7 @@ pas_root* pas_root_ensure_for_libmalloc_enumeration(void)
 #define PAS_SYSTEM_COMPACT_POINTER_SIZE 4
 
 #if PAS_CPU(ADDRESS64)
-#if PAS_ARM64 && PAS_OS(DARWIN)
+#if PAS_ARM64 && PAS_OS(DARWIN) && !PAS_PLATFORM(IOS_FAMILY_SIMULATOR)
 #if MACH_VM_MAX_ADDRESS_RAW < (1ULL << 36)
 #define PAS_HAVE_36BIT_ADDRESS 1
 #endif

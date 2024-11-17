@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ServiceWorkerClientQueryOptions.h"
 #include "ServiceWorkerClientType.h"
 #include "ServiceWorkerIdentifier.h"
@@ -56,7 +54,7 @@ public:
     void claim(ScriptExecutionContext&, Ref<DeferredPromise>&&);
 
     enum PromiseIdentifierType { };
-    using PromiseIdentifier = ObjectIdentifier<PromiseIdentifierType>;
+    using PromiseIdentifier = AtomicObjectIdentifier<PromiseIdentifierType>;
 
     PromiseIdentifier addPendingPromise(Ref<DeferredPromise>&&);
     RefPtr<DeferredPromise> takePendingPromise(PromiseIdentifier);
@@ -70,5 +68,3 @@ private:
 WebCoreOpaqueRoot root(ServiceWorkerClients*);
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

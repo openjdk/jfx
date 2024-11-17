@@ -73,22 +73,13 @@ struct FormDataElement {
             return { filename.isolatedCopy(), fileStart, fileLength, expectedFileModificationTime };
         }
 
-        bool operator==(const EncodedFileData& other) const
-        {
-            return filename == other.filename
-                && fileStart == other.fileStart
-                && fileLength == other.fileLength
-                && expectedFileModificationTime == other.expectedFileModificationTime;
-        }
+        friend bool operator==(const EncodedFileData&, const EncodedFileData&) = default;
     };
 
     struct EncodedBlobData {
         URL url;
 
-        bool operator==(const EncodedBlobData& other) const
-        {
-            return url == other.url;
-        }
+        friend bool operator==(const EncodedBlobData&, const EncodedBlobData&) = default;
     };
 
     bool operator==(const FormDataElement& other) const
@@ -102,10 +93,6 @@ struct FormDataElement {
         if (data.index() == 1)
             return std::get<1>(data) == std::get<1>(other.data);
         return std::get<2>(data) == std::get<2>(other.data);
-    }
-    bool operator!=(const FormDataElement& other) const
-    {
-        return !(*this == other);
     }
 
     Data data;
@@ -140,7 +127,7 @@ public:
     WEBCORE_EXPORT static Ref<FormData> create(const void*, size_t);
     WEBCORE_EXPORT static Ref<FormData> create(const CString&);
     WEBCORE_EXPORT static Ref<FormData> create(Vector<uint8_t>&&);
-    WEBCORE_EXPORT static Ref<FormData> create(bool alwaysStream, Vector<char>&& boundary, Vector<WebCore::FormDataElement>&& elements, int64_t identifier);
+    WEBCORE_EXPORT static Ref<FormData> create(Vector<WebCore::FormDataElement>&&, uint64_t identifier, bool alwaysStream, Vector<char>&& boundary);
     static Ref<FormData> create(const Vector<char>&);
     static Ref<FormData> create(const Vector<uint8_t>&);
     static Ref<FormData> create(const DOMFormData&, EncodingType = EncodingType::FormURLEncoded);
@@ -217,11 +204,6 @@ private:
 inline bool operator==(const FormData& a, const FormData& b)
 {
     return a.elements() == b.elements();
-}
-
-inline bool operator!=(const FormData& a, const FormData& b)
-{
-    return !(a == b);
 }
 
 } // namespace WebCore

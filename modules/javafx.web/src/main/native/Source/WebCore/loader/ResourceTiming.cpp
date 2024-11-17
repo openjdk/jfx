@@ -27,8 +27,8 @@
 #include "ResourceTiming.h"
 
 #include "CachedResource.h"
-#include "DeprecatedGlobalSettings.h"
 #include "DocumentLoadTiming.h"
+#include "OriginAccessPatterns.h"
 #include "PerformanceServerTiming.h"
 #include "SecurityOrigin.h"
 #include "ServerTimingParser.h"
@@ -67,16 +67,13 @@ ResourceTiming::ResourceTiming(const URL& url, const String& initiatorType, cons
 
 void ResourceTiming::updateExposure(const SecurityOrigin& origin)
 {
-    m_isSameOriginRequest = m_isSameOriginRequest && origin.canRequest(m_url);
+    m_isSameOriginRequest = m_isSameOriginRequest && origin.canRequest(m_url, OriginAccessPatternsForWebProcess::singleton());
 }
 
 Vector<Ref<PerformanceServerTiming>> ResourceTiming::populateServerTiming() const
 {
     // To increase privacy, this additional check was proposed at https://github.com/w3c/resource-timing/issues/342 .
     if (!m_isSameOriginRequest)
-        return { };
-
-    if (!DeprecatedGlobalSettings::serverTimingEnabled())
         return { };
 
     return WTF::map(m_serverTiming, [] (auto& entry) {

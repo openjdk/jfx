@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,12 +31,12 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-IDirect3DVertexShader9 *createVertexShader(IDirect3DDevice9 *d, ShaderFunction pFun()) {
+IDirect3DVertexShader9 *createVertexShader(IDirect3DDevice9Ex *d, ShaderFunction pFun()) {
     IDirect3DVertexShader9 * s;
     return SUCCEEDED(d->CreateVertexShader(pFun(), &s)) ? s : 0;
 }
 
-IDirect3DPixelShader9 *createPixelShader(IDirect3DDevice9 *d, ShaderFunction pFun()) {
+IDirect3DPixelShader9 *createPixelShader(IDirect3DDevice9Ex *d, ShaderFunction pFun()) {
     IDirect3DPixelShader9 * s;
     return SUCCEEDED(d->CreatePixelShader(pFun(), &s)) ? s : 0;
 }
@@ -59,7 +59,7 @@ D3DPhongShader::~D3DPhongShader() {
     device = NULL;
 }
 
-D3DPhongShader::D3DPhongShader(IDirect3DDevice9 *dev) {
+D3DPhongShader::D3DPhongShader(IDirect3DDevice9Ex *dev) {
     device = dev;
 
     static ShaderFunction(* const sFuncArr[SelfIlllumTotal][BumpTotal][SpecTotal][maxLights])() = {

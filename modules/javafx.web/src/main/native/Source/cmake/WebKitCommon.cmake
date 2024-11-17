@@ -13,6 +13,12 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         message(STATUS "The CMake build type is: ${CMAKE_BUILD_TYPE}")
     endif ()
 
+    # Exporting compile commands is available for Ninja and Makefile generators
+    # See https://cmake.org/cmake/help/latest/variable/CMAKE_EXPORT_COMPILE_COMMANDS.html
+    if (DEVELOPER_MODE AND (CMAKE_GENERATOR MATCHES "Makefile" OR CMAKE_GENERATOR MATCHES "Ninja"))
+        set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+    endif ()
+
     option(ENABLE_JAVASCRIPTCORE "Enable building JavaScriptCore" ON)
     option(ENABLE_WEBCORE "Enable building JavaScriptCore" ON)
     option(ENABLE_WEBKIT "Enable building WebKit" ON)
@@ -37,8 +43,6 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     # Determine which port will be built
     # -----------------------------------------------------------------------------
     set(ALL_PORTS
-        Efl
-        FTW
         GTK
         JSCOnly
         Mac
@@ -68,9 +72,14 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     endif ()
 
     if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-        if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9.3.0")
-            message(FATAL_ERROR "GCC 9.3 or newer is required to build WebKit. Use a newer GCC version or Clang.")
+        if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "10.2.0")
+            message(FATAL_ERROR "GCC 10.2 or newer is required to build WebKit. Use a newer GCC version or Clang.")
         endif ()
+    endif ()
+
+    if (${CMAKE_CXX_COMPILER_ID} STREQUAL "QCC")
+        set(COMPILER_IS_QCC ON)
+        set(COMPILER_IS_GCC_OR_CLANG ON)
     endif ()
 
     if (CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
@@ -111,7 +120,7 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         endif ()
     elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|x86)")
         set(WTF_CPU_X86 1)
-    elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "ppc")
+    elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(ppc|powerpc)")
         set(WTF_CPU_PPC 1)
     elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64")
         set(WTF_CPU_PPC64 1)
@@ -189,10 +198,24 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     find_package(Perl 5.10.0 REQUIRED)
     find_package(PerlModules COMPONENTS English FindBin JSON::PP REQUIRED)
 
-    # This module looks preferably for version 3 of Python. If not found, version 2 is searched.
-    find_package(Python COMPONENTS Interpreter REQUIRED)
-    # Set the variable with uppercase name to keep compatibility with code and users expecting it.
-    set(PYTHON_EXECUTABLE ${Python_EXECUTABLE} CACHE FILEPATH "Path to the Python interpreter")
+    # This module looks preferably for version 3 of Python.
+    if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+        find_package(Python3 3.8.0 REQUIRED)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        # Set the variable with uppercase name to keep compatibility with code and users expecting it.
+        set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE} CACHE FILEPATH "Path to the Python interpreter")
+        if (NOT PYTHON_EXECUTABLE OR Python3_VERSION VERSION_LESS 3.8.0)
+           message(FATAL_ERROR "Python 3.8 or higher is required.")
+        endif ()
+    else ()
+        find_package(Python3 3.6.0 REQUIRED)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        # Set the variable with uppercase name to keep compatibility with code and users expecting it.
+        set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE} CACHE FILEPATH "Path to the Python interpreter")
+        if (NOT PYTHON_EXECUTABLE OR Python3_VERSION VERSION_LESS 3.6.0)
+            message(FATAL_ERROR "Python 3.6 or higher is required.")
+        endif ()
+    endif ()
 
     # We cannot check for RUBY_FOUND because it is set only when the full package is installed and
     # the only thing we need is the interpreter. Unlike Python, cmake does not provide a macro
@@ -208,6 +231,7 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
 
     # To prevent multiple inclusion, most modules should be included once here.
     include(CheckCCompilerFlag)
+    include(CheckCSourceCompiles)
     include(CheckCXXCompilerFlag)
     include(CheckCXXSourceCompiles)
     include(CheckFunctionExists)
@@ -240,6 +264,7 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     endif ()
 
     # -----------------------------------------------------------------------------
+
     # Job pool to avoid running too many memory hungry processes
     # -----------------------------------------------------------------------------
     if (DEFINED ENV{WEBKIT_NINJA_LINK_MAX})

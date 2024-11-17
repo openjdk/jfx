@@ -271,6 +271,12 @@
 #else
 #error "Unsupported pointer width"
 #endif
+#elif BCOMPILER(MSVC)
+#if defined(_WIN64)
+#define BCPU_ADDRESS64 1
+#else
+#define BCPU_ADDRESS32 1
+#endif
 #else
 #error "Unsupported compiler for bmalloc"
 #endif
@@ -285,12 +291,14 @@
 #else
 #error "Unknown endian"
 #endif
+#elif BCOMPILER(MSVC)
+#define BCPU_LITTLE_ENDIAN 1
 #else
 #error "Unsupported compiler for bmalloc"
 #endif
 
 #if BCPU(ADDRESS64)
-#if BOS(DARWIN)
+#if BOS(DARWIN) && !BPLATFORM(IOS_FAMILY_SIMULATOR)
 #define BOS_EFFECTIVE_ADDRESS_WIDTH (bmalloc::getMSBSetConstexpr(MACH_VM_MAX_ADDRESS) + 1)
 #else
 /* We strongly assume that effective address width is <= 48 in 64bit architectures (e.g. NaN boxing). */
@@ -300,7 +308,11 @@
 #define BOS_EFFECTIVE_ADDRESS_WIDTH 32
 #endif
 
+#if BCOMPILER(GCC_COMPATIBLE)
 #define BATTRIBUTE_PRINTF(formatStringArgument, extraArguments) __attribute__((__format__(printf, formatStringArgument, extraArguments)))
+#else
+#define BATTRIBUTE_PRINTF(formatStringArgument, extraArguments)
+#endif
 
 /* Export macro support. Detects the attributes available for shared library symbol export
    decorations. */

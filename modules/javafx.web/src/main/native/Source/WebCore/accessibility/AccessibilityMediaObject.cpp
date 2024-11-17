@@ -60,10 +60,7 @@ bool AccessibilityMediaObject::computeAccessibilityIsIgnored() const
 
 HTMLMediaElement* AccessibilityMediaObject::mediaElement() const
 {
-    Node* node = this->node();
-    if (!is<HTMLMediaElement>(*node))
-        return nullptr;
-    return downcast<HTMLMediaElement>(node);
+    return dynamicDowncast<HTMLMediaElement>(node());
 }
 
 String AccessibilityMediaObject::stringValue() const
@@ -127,15 +124,6 @@ bool AccessibilityMediaObject::press()
     return true;
 }
 
-bool AccessibilityMediaObject::hasControlsAttributeSet() const
-{
-    HTMLMediaElement* element = mediaElement();
-    if (!element)
-        return false;
-
-    return element->controls();
-}
-
 bool AccessibilityMediaObject::isPlaying() const
 {
     HTMLMediaElement* element = mediaElement();
@@ -174,11 +162,7 @@ bool AccessibilityMediaObject::isPlayingInline() const
 
 void AccessibilityMediaObject::enterFullscreen() const
 {
-    Node* node = this->node();
-    if (!is<HTMLVideoElement>(node))
-        return;
-
-    HTMLVideoElement* element = downcast<HTMLVideoElement>(node);
+    if (RefPtr element = dynamicDowncast<HTMLVideoElement>(node()))
     element->enterFullscreen();
 }
 

@@ -29,6 +29,7 @@
 #include <JavaScriptCore/JSBase.h>
 #include <JavaScriptCore/ScriptFetchParameters.h>
 #include <JavaScriptCore/Strong.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
 #include <wtf/WeakPtr.h>
@@ -55,10 +56,10 @@ class RootObject;
 namespace WebCore {
 
 class CachedScriptFetcher;
-class Frame;
 class HTMLDocument;
 class HTMLPlugInElement;
 class LoadableModuleScript;
+class LocalFrame;
 class ModuleFetchParameters;
 class ScriptSourceCode;
 class SecurityOrigin;
@@ -69,7 +70,7 @@ enum class RunAsAsyncFunction : bool;
 struct ExceptionDetails;
 struct RunJavaScriptParameters;
 
-enum ReasonForCallingCanExecuteScripts {
+enum class ReasonForCallingCanExecuteScripts : uint8_t {
     AboutToCreateEventListener,
     AboutToExecuteScript,
     NotAboutToExecuteScript
@@ -77,29 +78,29 @@ enum ReasonForCallingCanExecuteScripts {
 
 using ValueOrException = Expected<JSC::JSValue, ExceptionDetails>;
 
-class ScriptController : public CanMakeWeakPtr<ScriptController> {
+class ScriptController : public CanMakeWeakPtr<ScriptController>, public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 
     using RootObjectMap = HashMap<void*, Ref<JSC::Bindings::RootObject>>;
 
 public:
-    explicit ScriptController(Frame&);
+    explicit ScriptController(LocalFrame&);
     ~ScriptController();
 
     enum class WorldType { User, Internal };
     WEBCORE_EXPORT static Ref<DOMWrapperWorld> createWorld(const String& name, WorldType = WorldType::Internal);
 
-    JSDOMWindow* globalObject(DOMWrapperWorld& world)
+    JSDOMGlobalObject* globalObject(DOMWrapperWorld& world)
     {
-        return JSC::jsCast<JSDOMWindow*>(jsWindowProxy(world).window());
+        return jsWindowProxy(world).window();
     }
 
     static void getAllWorlds(Vector<Ref<DOMWrapperWorld>>&);
 
     using ResolveFunction = CompletionHandler<void(ValueOrException)>;
 
-    WEBCORE_EXPORT JSC::JSValue executeScriptIgnoringException(const String& script, bool forceUserGesture = false);
-    WEBCORE_EXPORT JSC::JSValue executeScriptInWorldIgnoringException(DOMWrapperWorld&, const String& script, bool forceUserGesture = false);
+    WEBCORE_EXPORT JSC::JSValue executeScriptIgnoringException(const String& script, JSC::SourceTaintedOrigin, bool forceUserGesture = false);
+    WEBCORE_EXPORT JSC::JSValue executeScriptInWorldIgnoringException(DOMWrapperWorld&, const String& script, JSC::SourceTaintedOrigin, bool forceUserGesture = false);
     WEBCORE_EXPORT JSC::JSValue executeUserAgentScriptInWorldIgnoringException(DOMWrapperWorld&, const String& script, bool forceUserGesture);
     WEBCORE_EXPORT ValueOrException executeUserAgentScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture);
     WEBCORE_EXPORT void executeAsynchronousUserAgentScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&, ResolveFunction&&);
@@ -129,7 +130,7 @@ public:
     void setEvalEnabled(bool, const String& errorMessage = String());
     void setWebAssemblyEnabled(bool, const String& errorMessage = String());
 
-    static bool canAccessFromCurrentOrigin(Frame*, Document& accessingDocument);
+    static bool canAccessFromCurrentOrigin(LocalFrame*, Document& accessingDocument);
     WEBCORE_EXPORT bool canExecuteScripts(ReasonForCallingCanExecuteScripts);
 
     void setPaused(bool b) { m_paused = b; }
@@ -186,7 +187,9 @@ private:
     WEBCORE_EXPORT WindowProxy& windowProxy();
     WEBCORE_EXPORT JSWindowProxy& jsWindowProxy(DOMWrapperWorld&);
 
-    Frame& m_frame;
+    Ref<LocalFrame> protectedFrame() const;
+
+    LocalFrame& m_frame;
     const URL* m_sourceURL { nullptr };
 
     bool m_paused;

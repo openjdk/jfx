@@ -32,6 +32,8 @@ class PointLightSource : public LightSource {
 public:
     WEBCORE_EXPORT static Ref<PointLightSource> create(const FloatPoint3D& position);
 
+    bool operator==(const PointLightSource&) const;
+
     const FloatPoint3D& position() const { return m_position; }
     bool setX(float) override;
     bool setY(float) override;
@@ -45,10 +47,12 @@ public:
 private:
     PointLightSource(const FloatPoint3D& position);
 
+    bool operator==(const LightSource& other) const override { return areEqual<PointLightSource>(*this, other); }
+
     FloatPoint3D m_position;
     mutable FloatPoint3D m_bufferPosition;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_LIGHTSOURCE(PointLightSource, LS_POINT)
+SPECIALIZE_TYPE_TRAITS_LIGHTSOURCE(PointLightSource, LightType::LS_POINT)

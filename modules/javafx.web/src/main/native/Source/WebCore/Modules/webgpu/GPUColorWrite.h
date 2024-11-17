@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,8 @@
 #include "GPUBlendFactor.h"
 #include "GPUBlendOperation.h"
 #include "GPUIntegralTypes.h"
+#include "WebGPUColorWrite.h"
 #include <cstdint>
-#include <pal/graphics/WebGPU/WebGPUColorWrite.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -44,18 +44,19 @@ public:
     static constexpr GPUFlagsConstant ALL   = 0xF;
 };
 
-inline PAL::WebGPU::ColorWriteFlags convertColorWriteFlagsToBacking(GPUColorWriteFlags colorWriteFlags)
+static constexpr bool compare(auto a, auto b)
 {
-    PAL::WebGPU::ColorWriteFlags result;
-    if (colorWriteFlags & GPUColorWrite::RED)
-        result.add(PAL::WebGPU::ColorWrite::Red);
-    if (colorWriteFlags & GPUColorWrite::GREEN)
-        result.add(PAL::WebGPU::ColorWrite::Green);
-    if (colorWriteFlags & GPUColorWrite::BLUE)
-        result.add(PAL::WebGPU::ColorWrite::Blue);
-    if (colorWriteFlags & GPUColorWrite::ALPHA)
-        result.add(PAL::WebGPU::ColorWrite::Alpha);
-    return result;
+    return static_cast<unsigned>(a) == static_cast<unsigned>(b);
+}
+
+inline WebGPU::ColorWriteFlags convertColorWriteFlagsToBacking(GPUColorWriteFlags colorWriteFlags)
+{
+    static_assert(compare(GPUColorWrite::RED, WebGPU::ColorWrite::Red), "ColorWriteFlags enum values differ");
+    static_assert(compare(GPUColorWrite::GREEN, WebGPU::ColorWrite::Green), "ColorWriteFlags enum values differ");
+    static_assert(compare(GPUColorWrite::BLUE, WebGPU::ColorWrite::Blue), "ColorWriteFlags enum values differ");
+    static_assert(compare(GPUColorWrite::ALPHA, WebGPU::ColorWrite::Alpha), "ColorWriteFlags enum values differ");
+
+    return static_cast<WebGPU::ColorWriteFlags>(colorWriteFlags);
 }
 
 }

@@ -49,12 +49,8 @@ static uint32_t greatestCommonDivisor(uint32_t a, uint32_t b)
     ASSERT(b);
 
     // Euclid's Algorithm
-    uint32_t temp = 0;
-    while (b) {
-        temp = b;
-        b = a % b;
-        a = temp;
-    }
+    while (b)
+        b = std::exchange(a, b) % b;
 
     ASSERT(a);
     return a;
@@ -71,11 +67,6 @@ static int64_t signum(int64_t val)
 }
 
 const uint32_t MediaTime::MaximumTimeScale = 1000000000;
-
-MediaTime::MediaTime(const MediaTime& rhs)
-{
-    *this = rhs;
-}
 
 MediaTime MediaTime::createWithFloat(float floatTime)
 {
@@ -161,14 +152,6 @@ double MediaTime::toDouble() const
     if (hasDoubleValue())
         return m_timeValueAsDouble;
     return static_cast<double>(m_timeValue) / m_timeScale;
-}
-
-MediaTime& MediaTime::operator=(const MediaTime& rhs)
-{
-    m_timeValue = rhs.m_timeValue;
-    m_timeScale = rhs.m_timeScale;
-    m_timeFlags = rhs.m_timeFlags;
-    return *this;
 }
 
 MediaTime MediaTime::operator+(const MediaTime& rhs) const
@@ -595,7 +578,7 @@ MediaTime abs(const MediaTime& rhs)
     if (rhs.isNegativeInfinite() || rhs.isPositiveInfinite())
         return MediaTime::positiveInfiniteTime();
     if (rhs.hasDoubleValue())
-        return MediaTime::createWithDouble(fabs(rhs.m_timeValueAsDouble));
+        return MediaTime::createWithDouble(std::abs(rhs.m_timeValueAsDouble));
 
     MediaTime val = rhs;
     val.m_timeValue = std::abs(rhs.m_timeValue);

@@ -37,9 +37,11 @@ namespace WebCore {
 class ExtendedDOMClientIsoSubspaces;
 class ExtendedDOMIsoSubspaces;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSHeapData);
+
 class JSHeapData {
     WTF_MAKE_NONCOPYABLE(JSHeapData);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSHeapData);
     friend class JSVMClientData;
 public:
     JSHeapData(JSC::Heap&);
@@ -66,15 +68,13 @@ private:
     JSC::IsoHeapCellType m_runtimeObjectHeapCellType;
     JSC::IsoHeapCellType m_windowProxyHeapCellType;
 public:
-    JSC::IsoHeapCellType m_heapCellTypeForJSDOMWindow;
+    JSC::IsoHeapCellType m_heapCellTypeForJSLocalDOMWindow;
     JSC::IsoHeapCellType m_heapCellTypeForJSDedicatedWorkerGlobalScope;
     JSC::IsoHeapCellType m_heapCellTypeForJSRemoteDOMWindow;
     JSC::IsoHeapCellType m_heapCellTypeForJSWorkerGlobalScope;
     JSC::IsoHeapCellType m_heapCellTypeForJSSharedWorkerGlobalScope;
     JSC::IsoHeapCellType m_heapCellTypeForJSShadowRealmGlobalScope;
-#if ENABLE(SERVICE_WORKER)
     JSC::IsoHeapCellType m_heapCellTypeForJSServiceWorkerGlobalScope;
-#endif
     JSC::IsoHeapCellType m_heapCellTypeForJSWorkletGlobalScope;
 #if ENABLE(CSS_PAINTING_API)
     JSC::IsoHeapCellType m_heapCellTypeForJSPaintWorkletGlobalScope;
@@ -100,9 +100,11 @@ private:
     Vector<JSC::IsoSubspace*> m_outputConstraintSpaces;
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSVMClientData);
 
 class JSVMClientData : public JSC::VM::ClientData {
-    WTF_MAKE_NONCOPYABLE(JSVMClientData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(JSVMClientData);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSVMClientData);
     friend class VMWorldIterator;
 
 public:
@@ -180,7 +182,7 @@ private:
 };
 
 
-enum class UseCustomHeapCellType { Yes, No };
+enum class UseCustomHeapCellType : bool { No, Yes };
 
 template<typename T, UseCustomHeapCellType useCustomHeapCellType, typename GetClient, typename SetClient, typename GetServer, typename SetServer>
 ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, GetClient getClient, SetClient setClient, GetServer getServer, SetServer setServer, JSC::HeapCellType& (*getCustomHeapCellType)(JSHeapData&) = nullptr)

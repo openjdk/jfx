@@ -68,7 +68,7 @@ public:
     static constexpr GPRReg regT2 = ARM64Registers::x8;
     static constexpr GPRReg remainingMatchCount = ARM64Registers::x9;
     static constexpr GPRReg regUnicodeInputAndTrail = ARM64Registers::x10;
-    static constexpr GPRReg unicodeTemp = ARM64Registers::x5;
+    static constexpr GPRReg unicodeAndSubpatternIdTemp = ARM64Registers::x5;
     static constexpr GPRReg initialStart = ARM64Registers::x11;
     static constexpr GPRReg supplementaryPlanesBase = ARM64Registers::x12;
     static constexpr GPRReg leadingSurrogateTag = ARM64Registers::x13;
@@ -79,22 +79,6 @@ public:
     static constexpr GPRReg returnRegister2 = ARM64Registers::x1;
 
     static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xfffffc00);
-#elif CPU(MIPS)
-    static constexpr GPRReg input = MIPSRegisters::a0;
-    static constexpr GPRReg index = MIPSRegisters::a1;
-    static constexpr GPRReg length = MIPSRegisters::a2;
-    static constexpr GPRReg output = MIPSRegisters::a3;
-
-    // t0 is reserved for MacroAssemblerMIPS.
-    // t1 is reserved for MacroAssemblerMIPS.
-    static constexpr GPRReg regT0 = MIPSRegisters::t2;
-    static constexpr GPRReg regT1 = MIPSRegisters::t3;
-    static constexpr GPRReg regT2 = MIPSRegisters::t4;
-    static constexpr GPRReg initialStart = MIPSRegisters::t5;
-
-    static constexpr GPRReg returnRegister = MIPSRegisters::v0;
-    static constexpr GPRReg returnRegister2 = MIPSRegisters::v1;
-
 #elif CPU(X86_64)
 #if !OS(WINDOWS)
     // Argument registers
@@ -132,7 +116,7 @@ public:
     static constexpr GPRReg remainingMatchCount = X86Registers::esi;
 #endif
     static constexpr GPRReg regUnicodeInputAndTrail = X86Registers::r13;
-    static constexpr GPRReg unicodeTemp = X86Registers::r14;
+    static constexpr GPRReg unicodeAndSubpatternIdTemp = X86Registers::r14;
     static constexpr GPRReg endOfStringAddress = X86Registers::r15;
 
     static constexpr GPRReg returnRegister = X86Registers::eax;
@@ -158,7 +142,7 @@ public:
     static constexpr GPRReg regT2 = RISCV64Registers::x5;
     static constexpr GPRReg remainingMatchCount = RISCV64Registers::x6;
     static constexpr GPRReg regUnicodeInputAndTrail = RISCV64Registers::x7;
-    static constexpr GPRReg unicodeTemp = RISCV64Registers::x15;
+    static constexpr GPRReg unicodeAndSubpatternIdTemp = RISCV64Registers::x15;
     static constexpr GPRReg initialStart = RISCV64Registers::x28;
     static constexpr GPRReg endOfStringAddress = RISCV64Registers::x29;
 
@@ -225,7 +209,7 @@ public:
     // Unicode character processing
     GPRReg remainingMatchCount { InvalidGPRReg };
     GPRReg regUnicodeInputAndTrail { InvalidGPRReg };
-    GPRReg unicodeTemp { InvalidGPRReg };
+    GPRReg unicodeAndSubpatternIdTemp { InvalidGPRReg };
     GPRReg endOfStringAddress { InvalidGPRReg };
 
     const MacroAssembler::TrustedImm32 supplementaryPlanesBase = MacroAssembler::TrustedImm32(0x10000);

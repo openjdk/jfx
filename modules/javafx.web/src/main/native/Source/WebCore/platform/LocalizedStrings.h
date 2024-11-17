@@ -41,6 +41,10 @@ namespace WebCore {
 
     class IntSize;
 
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT String truncatedStringForMenuItem(const String&);
+#endif
+
     String inputElementAltText();
     String resetButtonDefaultLabel();
     String searchableIndexIntroduction();
@@ -67,7 +71,7 @@ namespace WebCore {
     String contextMenuItemTagDownloadImageToDisk();
     String contextMenuItemTagCopyImageToClipboard();
 #if PLATFORM(GTK)
-    String contextMenuItemTagCopyImageUrlToClipboard();
+    String contextMenuItemTagCopyImageURLToClipboard();
 #endif
     String contextMenuItemTagOpenFrameInNewWindow();
     String contextMenuItemTagCopy();
@@ -99,7 +103,9 @@ namespace WebCore {
     String contextMenuItemTagIgnoreSpelling();
     String contextMenuItemTagLearnSpelling();
     String contextMenuItemTagSearchWeb();
+#if PLATFORM(COCOA)
     String contextMenuItemTagLookUpInDictionary(const String& selectedString);
+#endif
     WEBCORE_EXPORT String contextMenuItemTagOpenLink();
     WEBCORE_EXPORT String contextMenuItemTagIgnoreGrammar();
     WEBCORE_EXPORT String contextMenuItemTagSpellingMenu();
@@ -168,15 +174,20 @@ namespace WebCore {
 #if HAVE(TRANSLATION_UI_SERVICES)
     String contextMenuItemTagTranslate(const String& selectedString);
 #endif
+#if ENABLE(UNIFIED_PDF)
+    WEBCORE_EXPORT String contextMenuItemPDFOpenWithPreview();
+#endif
+#if ENABLE(PDFJS) || ENABLE(UNIFIED_PDF)
+    WEBCORE_EXPORT String contextMenuItemPDFSinglePage();
+    WEBCORE_EXPORT String contextMenuItemPDFSinglePageContinuous();
+    WEBCORE_EXPORT String contextMenuItemPDFTwoPages();
+    WEBCORE_EXPORT String contextMenuItemPDFTwoPagesContinuous();
+    WEBCORE_EXPORT String contextMenuItemPDFZoomIn();
+    WEBCORE_EXPORT String contextMenuItemPDFZoomOut();
+    WEBCORE_EXPORT String contextMenuItemPDFActualSize();
+#endif
 #if ENABLE(PDFJS)
     String contextMenuItemPDFAutoSize();
-    String contextMenuItemPDFZoomIn();
-    String contextMenuItemPDFZoomOut();
-    String contextMenuItemPDFActualSize();
-    String contextMenuItemPDFSinglePage();
-    String contextMenuItemPDFSinglePageContinuous();
-    String contextMenuItemPDFTwoPages();
-    String contextMenuItemPDFTwoPagesContinuous();
     String contextMenuItemPDFNextPage();
     String contextMenuItemPDFPreviousPage();
 #endif
@@ -215,6 +226,9 @@ namespace WebCore {
     String AXURLFieldText();
     String AXDateFieldText();
     String AXTimeFieldText();
+    String AXDateFieldMonthText();
+    String AXDateFieldDayText();
+    String AXDateFieldYearText();
     String AXDateTimeFieldText();
     String AXMonthFieldText();
     String AXNumberFieldText();
@@ -226,8 +240,8 @@ namespace WebCore {
     String AXButtonActionVerb();
     String AXRadioButtonActionVerb();
     String AXTextFieldActionVerb();
-    String AXCheckedCheckBoxActionVerb();
-    String AXUncheckedCheckBoxActionVerb();
+    String AXCheckedCheckboxActionVerb();
+    String AXUncheckedCheckboxActionVerb();
     String AXMenuListActionVerb();
     String AXMenuListPopupActionVerb();
     String AXLinkActionVerb();
@@ -265,6 +279,8 @@ namespace WebCore {
     String AXAutoFillLoadingLabel();
     String autoFillStrongPasswordLabel();
 
+    String AXProcessingPage();
+
     String missingPluginText();
     String crashedPluginText();
     String blockedPluginByContentSecurityPolicyText();
@@ -274,18 +290,6 @@ namespace WebCore {
 
     WEBCORE_EXPORT String multipleFileUploadText(unsigned numberOfFiles);
     String unknownFileSizeText();
-
-#if PLATFORM(WIN)
-    WEBCORE_EXPORT String uploadFileText();
-    WEBCORE_EXPORT String allFilesText();
-#endif
-
-#if PLATFORM(COCOA)
-    WEBCORE_EXPORT String builtInPDFPluginName();
-    WEBCORE_EXPORT String postScriptDocumentTypeDescription();
-    String keygenMenuItem2048();
-    WEBCORE_EXPORT String keygenKeychainItemName(const String& host);
-#endif
 
 #if PLATFORM(IOS_FAMILY)
     String htmlSelectMultipleItems(size_t num);
@@ -311,11 +315,13 @@ namespace WebCore {
     String validationMessageValueMissingForMultipleFileText();
     String validationMessageValueMissingForRadioText();
     String validationMessageValueMissingForSelectText();
+    String validationMessageValueMissingForSwitchText();
     String validationMessageTypeMismatchText();
     String validationMessageTypeMismatchForEmailText();
     String validationMessageTypeMismatchForMultipleEmailText();
     String validationMessageTypeMismatchForURLText();
     String validationMessagePatternMismatchText();
+    String validationMessagePatternMismatchText(const String& title);
     String validationMessageTooShortText(int valueLength, int minLength);
     String validationMessageTooLongText(int valueLength, int maxLength);
     String validationMessageRangeUnderflowText(const String& minimum);
@@ -332,7 +338,7 @@ namespace WebCore {
     String trackNoLabelText();
     String textTrackOffMenuItemText();
     String textTrackAutomaticMenuItemText();
-#if USE(CF)
+#if PLATFORM(COCOA)
     String addTrackLabelAsSuffix(const String&, const String&);
     String textTrackKindClosedCaptionsDisplayName();
     String addTextTrackKindClosedCaptionsSuffix(const String&);
@@ -354,7 +360,7 @@ namespace WebCore {
     String addAudioTrackKindDescriptionsSuffix(const String&);
     String audioTrackKindCommentaryDisplayName();
     String addAudioTrackKindCommentarySuffix(const String&);
-#endif // USE(CF)
+#endif // PLATFORM(COCOA)
     String contextMenuItemTagShowMediaStats();
 #endif // ENABLE(VIDEO)
 
@@ -363,7 +369,7 @@ namespace WebCore {
 
     WEBCORE_EXPORT String useBlockedPlugInContextMenuTitle();
 
-#if ENABLE(WEB_CRYPTO)
+#if ENABLE(WEB_CRYPTO) && PLATFORM(COCOA)
     String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName);
     String webCryptoMasterKeyKeychainComment();
 #endif
@@ -404,60 +410,56 @@ namespace WebCore {
     WEBCORE_EXPORT String contextMenuItemTitleRemoveBackground();
 #endif
 
-#if USE(CF) && !PLATFORM(WIN)
+#if PLATFORM(COCOA)
 #define WEB_UI_STRING(string, description) WebCore::localizedString(CFSTR(string))
 #define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(CFSTR(key))
 #define WEB_UI_STRING_WITH_MNEMONIC(string, mnemonic, description) WebCore::localizedString(CFSTR(string))
+#elif PLATFORM(WIN)
+#define WEB_UI_STRING(string, description) WebCore::localizedString(L##string)
+#define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(L##string)
+#define WEB_UI_STRING_WITH_MNEMONIC(string, mnemonic, description) WebCore::localizedString(L##string)
 #elif USE(GLIB) && defined(GETTEXT_PACKAGE)
 #define WEB_UI_STRING(string, description) WebCore::localizedString(_(string))
 #define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(C_(key, string))
 #define WEB_UI_STRING_WITH_MNEMONIC(string, mnemonic, description) WebCore::localizedString(_(mnemonic))
 #else
-// Work around default Mac Roman encoding of CFSTR() for Apple Windows port.
 #define WEB_UI_STRING(string, description) WebCore::localizedString(string)
 #define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(key)
 #define WEB_UI_STRING_WITH_MNEMONIC(string, mnemonic, description) WebCore::localizedString(string)
 #endif
 
-#if USE(CF)
+#if PLATFORM(COCOA)
 // This is exactly as WEB_UI_STRING, but renamed to ensure the string is not scanned by non-CF ports.
-#if PLATFORM(WIN)
-// Work around default Mac Roman encoding of CFSTR() for Apple Windows port.
-#define WEB_UI_CFSTRING(string, description) WebCore::localizedString(string)
-#define WEB_UI_CFSTRING_KEY(string, key, description) WebCore::localizedString(key)
-#else
 #define WEB_UI_CFSTRING(string, description) WebCore::localizedString(CFSTR(string))
 #define WEB_UI_CFSTRING_KEY(string, key, description) WebCore::localizedString(CFSTR(key))
-#endif
 
     WEBCORE_EXPORT RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key);
 #endif
 
-#if USE(CF) && !PLATFORM(WIN)
+#if PLATFORM(COCOA)
     WEBCORE_EXPORT String localizedString(CFStringRef key);
+#elif PLATFORM(WIN)
+    WEBCORE_EXPORT String localizedString(const wchar_t* key);
 #else
     WEBCORE_EXPORT String localizedString(const char* key);
 #endif
 
-#if USE(CF)
-#if PLATFORM(WIN)
-// Work around default Mac Roman encoding of CFSTR() for Apple Windows port.
-#define WEB_UI_FORMAT_CFSTRING(string, description, ...) WebCore::formatLocalizedString(string, __VA_ARGS__)
-#define WEB_UI_FORMAT_CFSTRING_KEY(string, key, description, ...) WebCore::formatLocalizedString(key, __VA_ARGS__)
-#define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(string, __VA_ARGS__)
-#else
+#if PLATFORM(COCOA)
 #define WEB_UI_FORMAT_CFSTRING(string, description, ...) WebCore::formatLocalizedString(CFSTR(string), __VA_ARGS__)
 #define WEB_UI_FORMAT_CFSTRING_KEY(string, key, description, ...) WebCore::formatLocalizedString(CFSTR(key), __VA_ARGS__)
 #define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(CFSTR(string), __VA_ARGS__)
-#endif // PLATFORM(WIN)
+#elif PLATFORM(WIN)
+#define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(L##string, __VA_ARGS__)
 #elif USE(GLIB) && defined(GETTEXT_PACKAGE)
 #define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(_(string), __VA_ARGS__)
 #else
 #define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(string, __VA_ARGS__)
 #endif
 
-#if USE(CF) && !PLATFORM(WIN)
+#if PLATFORM(COCOA)
     WEBCORE_EXPORT String formatLocalizedString(CFStringRef format, ...) CF_FORMAT_FUNCTION(1, 2);
+#elif PLATFORM(WIN)
+    WEBCORE_EXPORT String formatLocalizedString(const wchar_t* format, ...) WTF_ATTRIBUTE_PRINTF(1, 2);
 #else
     WEBCORE_EXPORT String formatLocalizedString(const char* format, ...) WTF_ATTRIBUTE_PRINTF(1, 2);
 #endif

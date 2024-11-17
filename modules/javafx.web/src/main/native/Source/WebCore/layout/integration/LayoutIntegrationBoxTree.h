@@ -29,6 +29,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -45,13 +46,15 @@ namespace LayoutIntegration {
 struct InlineContent;
 #endif
 
-class BoxTree {
+class BoxTree : public CanMakeWeakPtr<BoxTree> {
 public:
     BoxTree(RenderBlock&);
     ~BoxTree();
 
     void updateStyle(const RenderBoxModelObject&);
-    const Layout::Box& insert(const RenderElement& parent, RenderObject& child);
+    void updateContent(const RenderText&);
+    const Layout::Box& insert(const RenderElement& parent, RenderObject& child, const RenderObject* beforeChild = nullptr);
+    UniqueRef<Layout::Box> remove(const RenderElement& parent, RenderObject& child);
 
     const RenderBlock& rootRenderer() const { return m_rootRenderer; }
     RenderBlock& rootRenderer() { return m_rootRenderer; }
@@ -68,6 +71,8 @@ public:
     const RenderObject& rendererForLayoutBox(const Layout::Box&) const;
     RenderObject& rendererForLayoutBox(const Layout::Box&);
 
+    bool contains(const RenderElement&) const;
+
     size_t boxCount() const { return m_renderers.size(); }
 
     const auto& renderers() const { return m_renderers; }
@@ -80,16 +85,16 @@ private:
 
     void buildTreeForInlineContent();
     void buildTreeForFlexContent();
-    void appendChild(UniqueRef<Layout::Box>, RenderObject&);
+    void insertChild(UniqueRef<Layout::Box>, RenderObject&, const RenderObject* beforeChild = nullptr);
 
     RenderBlock& m_rootRenderer;
-    Vector<WeakPtr<RenderObject>, 1> m_renderers;
+    Vector<SingleThreadWeakPtr<RenderObject>, 1> m_renderers;
 
-    HashMap<CheckedRef<const Layout::Box>, WeakPtr<RenderObject>> m_boxToRendererMap;
+    HashMap<CheckedRef<const Layout::Box>, SingleThreadWeakPtr<RenderObject>> m_boxToRendererMap;
 };
 
 #if ENABLE(TREE_DEBUGGING)
-void showInlineContent(TextStream&, const InlineContent&, size_t depth);
+void showInlineContent(TextStream&, const InlineContent&, size_t depth, bool isDamaged = false);
 #endif
 }
 }

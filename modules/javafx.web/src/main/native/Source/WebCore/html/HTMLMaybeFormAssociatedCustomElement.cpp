@@ -27,6 +27,7 @@
 #include "HTMLMaybeFormAssociatedCustomElement.h"
 
 #include "Document.h"
+#include "ElementRareData.h"
 #include "FormAssociatedCustomElement.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -37,7 +38,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLMaybeFormAssociatedCustomElement);
 using namespace HTMLNames;
 
 HTMLMaybeFormAssociatedCustomElement::HTMLMaybeFormAssociatedCustomElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement { tagName, document }
+    : HTMLElement { tagName, document, TypeFlag::HasDidMoveToNewDocument }
 {
     ASSERT(Document::validateCustomElementName(tagName.localName()) == CustomElementNameValidationStatus::Valid);
 }
@@ -106,7 +107,7 @@ bool HTMLMaybeFormAssociatedCustomElement::matchesUserInvalidPseudoClass() const
 
 bool HTMLMaybeFormAssociatedCustomElement::supportsFocus() const
 {
-    return isFormAssociatedCustomElement() ? !formAssociatedCustomElementUnsafe().isDisabled() : HTMLElement::supportsFocus();
+    return isFormAssociatedCustomElement() ? (shadowRoot() && shadowRoot()->delegatesFocus()) || (HTMLElement::supportsFocus() && !formAssociatedCustomElementUnsafe().isDisabled()) : HTMLElement::supportsFocus();
 }
 
 bool HTMLMaybeFormAssociatedCustomElement::isLabelable() const
@@ -124,7 +125,8 @@ Node::InsertedIntoAncestorResult HTMLMaybeFormAssociatedCustomElement::insertedI
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (isFormAssociatedCustomElement())
         formAssociatedCustomElementUnsafe().insertedIntoAncestor(insertionType, parentOfInsertedTree);
-
+    if (!insertionType.connectedToDocument)
+        return InsertedIntoAncestorResult::Done;
     return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
 }
 
@@ -149,11 +151,11 @@ void HTMLMaybeFormAssociatedCustomElement::removedFromAncestor(RemovalType remov
         formAssociatedCustomElementUnsafe().removedFromAncestor(removalType, oldParentOfRemovedTree);
 }
 
-void HTMLMaybeFormAssociatedCustomElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLMaybeFormAssociatedCustomElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    HTMLElement::parseAttribute(name, value);
+    HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
     if (isFormAssociatedCustomElement())
-        formAssociatedCustomElementUnsafe().parseAttribute(name, value);
+        formAssociatedCustomElementUnsafe().parseAttribute(name, newValue);
 }
 
 void HTMLMaybeFormAssociatedCustomElement::finishParsingChildren()
@@ -165,7 +167,7 @@ void HTMLMaybeFormAssociatedCustomElement::finishParsingChildren()
 
 void HTMLMaybeFormAssociatedCustomElement::setInterfaceIsFormAssociated()
 {
-    setNodeFlag(NodeFlag::HasFormAssociatedCustomElementInterface);
+    setEventTargetFlag(EventTargetFlag::HasFormAssociatedCustomElementInterface, true);
     ensureFormAssociatedCustomElement();
 }
 
@@ -182,4 +184,4 @@ void HTMLMaybeFormAssociatedCustomElement::didUpgradeFormAssociated()
     formAssociatedCustomElementUnsafe().didUpgrade();
 }
 
-} // namespace Webcore
+} // namespace WebCore

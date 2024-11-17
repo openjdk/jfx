@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,7 @@ import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 /**
  * Default skin implementation for the {@link ComboBox} control.
  *
+ * @param <T> the type of the ComboBox control
  * @see ComboBox
  * @since 9
  */

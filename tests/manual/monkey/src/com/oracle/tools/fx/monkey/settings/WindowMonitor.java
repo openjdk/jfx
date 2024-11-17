@@ -167,33 +167,31 @@ class WindowMonitor {
     }
 
     private static String createID(Window win) {
-        // TODO use name provided by setName
-        String prefix = win.getClass().getSimpleName() + ".";
+        String prefix = FxSettingsSchema.getName(win);
+        if (prefix != null) {
+            HashSet<String> ids = new HashSet<>();
+            for (Window w: Window.getWindows()) {
+                if (w == win) {
+                    continue;
+                }
+                WindowMonitor m = monitors.get(w);
+                if (m == null) {
+                    return null;
+                }
+                String id = m.getID();
+                if (id.startsWith(prefix)) {
+                    ids.add(id);
+                }
+            }
 
-        HashSet<String> ids = new HashSet<>();
-        for (Window w: Window.getWindows()) {
-            if (w == win) {
-                continue;
-            }
-            WindowMonitor m = monitors.get(w);
-            if (m == null) {
-                return null;
-            }
-            String id = m.getID();
-            if (id.startsWith(prefix)) {
-                ids.add(id);
+            for (int i = 0; i < 100_000; i++) {
+                String id = prefix + i;
+                if (!ids.contains(id)) {
+                    return id;
+                }
             }
         }
-
-        for (int i = 0; i < 100_000; i++) {
-            String id = prefix + i;
-            if (!ids.contains(id)) {
-                return id;
-            }
-        }
-
-        // safeguard measure
-        throw new Error("cannot create id: too many windows?");
+        return null;
     }
 
     public static boolean remove(Window w) {

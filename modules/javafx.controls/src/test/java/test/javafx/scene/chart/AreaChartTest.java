@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,11 @@
 
 package test.javafx.scene.chart;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
+import java.util.stream.Collectors;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Point2D;
@@ -39,24 +44,18 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChartShim;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.Path;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-
 import javafx.scene.shape.PathElement;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class AreaChartTest extends XYChartTestBase {
     AreaChart<Number,Number> ac;
     final XYChart.Series<Number, Number> series1 = new XYChart.Series<>();
     boolean useCategoryAxis = false;
     final String[] countries = {"USA", "Italy", "France", "China", "India"};
+
     @Override
-    protected Chart createChart() {
+    protected void createChart() {
         final NumberAxis yAxis = new NumberAxis(0, 30, 2);
         ObservableList<XYChart.Data> data = FXCollections.observableArrayList();
         Axis xAxis;
@@ -83,7 +82,11 @@ public class AreaChartTest extends XYChartTestBase {
         xAxis.setLabel("X Axis");
         yAxis.setLabel("Y Axis");
         ac.setTitle("HelloAreaChart");
+        ac.setAnimated(false);
+    }
 
+    @Override
+    protected Chart getChart() {
         return ac;
     }
 
@@ -101,8 +104,10 @@ public class AreaChartTest extends XYChartTestBase {
         return "";
     }
 
-    @Test @Ignore
+    @Test
+    @Disabled
     public void testDataItemRemove() {
+        createChart();
         startApp();
         ac.getData().addAll(series1);
         pulse();
@@ -115,6 +120,7 @@ public class AreaChartTest extends XYChartTestBase {
 
     @Test
     public void testAreaChartWithCategoryAxis() {
+        createChart();
         useCategoryAxis = true;
         startApp();
         useCategoryAxis = false;
@@ -139,13 +145,16 @@ public class AreaChartTest extends XYChartTestBase {
 
     @Test
     public void testSeriesRemoveAnimatedStyleClasses() {
+        createChart();
         startApp();
         //ac.setCreateSymbols(false);
         int nodesPerSeries = 4; // 3 symbols + 1 path
         checkSeriesRemoveAnimatedStyleClasses(ac, nodesPerSeries, 400);
     }
 
-    @Test public void testCreateSymbols() {
+    @Test
+    public void testCreateSymbols() {
+         createChart();
          startApp();
          ac.getData().clear();
          ac.setCreateSymbols(false);
@@ -162,7 +171,9 @@ public class AreaChartTest extends XYChartTestBase {
          assertEquals(5, countSymbols(ac, "chart-area-symbol"));
      }
 
-    @Test public void testPathInsideXAndInsideYBounds() {
+    @Test
+    public void testPathInsideXAndInsideYBounds() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(85d, 15d)); // upper bound is 90,30
         ac.getData().addAll(series1);
@@ -171,7 +182,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(series1).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXLowerBoundsWithDuplicateXAndHigherY() {
+    @Test
+    public void testPathOutsideXLowerBoundsWithDuplicateXAndHigherY() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(-10d, 20d)); // lower bound is 0
         series1.getData().add(new XYChart.Data<>(-10d, 50d));
@@ -191,7 +204,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXUpperBoundsWithDuplicateXAndHigherY() {
+    @Test
+    public void testPathOutsideXUpperBoundsWithDuplicateXAndHigherY() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(100d, 20d)); // upper bound is 90
         series1.getData().add(new XYChart.Data<>(100d, 50d));
@@ -211,7 +226,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXLowerBoundsWithDuplicateXAndLowerY() {
+    @Test
+    public void testPathOutsideXLowerBoundsWithDuplicateXAndLowerY() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(-10d, 20d)); // lower bound is 0
         series1.getData().add(new XYChart.Data<>(-10d, 15d));
@@ -231,7 +248,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXUpperBoundsWithDuplicateXAndLowerY() {
+    @Test
+    public void testPathOutsideXUpperBoundsWithDuplicateXAndLowerY() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(100d, 20d)); // upper bound is 90
         series1.getData().add(new XYChart.Data<>(100d, 15d));
@@ -251,7 +270,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideYLowerBoundsWithDuplicateYAndLowerX() {
+    @Test
+    public void testPathOutsideYLowerBoundsWithDuplicateYAndLowerX() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(85d, -10d)); // y-axis lower bound is 0
         series1.getData().add(new XYChart.Data<>(70d, -10d));
@@ -273,7 +294,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideYUpperBoundsWithDuplicateYAndLowerX() {
+    @Test
+    public void testPathOutsideYUpperBoundsWithDuplicateYAndLowerX() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(85d, 40d));  // y-axis upper bound is 30
         series1.getData().add(new XYChart.Data<>(70d, 40d));
@@ -295,7 +318,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideYLowerBoundsWithDuplicateYAndHigherX() {
+    @Test
+    public void testPathOutsideYLowerBoundsWithDuplicateYAndHigherX() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(70d, -10d)); // lower bound is 30
         series1.getData().add(new XYChart.Data<>(85d, -10d));
@@ -316,7 +341,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideYUpperBoundsWithDuplicateYAndHigherX() {
+    @Test
+    public void testPathOutsideYUpperBoundsWithDuplicateYAndHigherX() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(70d, 32d)); // upper bound is 30
         series1.getData().add(new XYChart.Data<>(85d, 32d));
@@ -337,7 +364,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXAndYLowerBoundsWithDuplicateXAndHigherY() {
+    @Test
+    public void testPathOutsideXAndYLowerBoundsWithDuplicateXAndHigherY() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(-10d, -40d)); // lower bound is 0,0
         series1.getData().add(new XYChart.Data<>(-10d, -30d));
@@ -357,7 +386,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXAndYUpperBoundsWithDuplicateXAndHigherY() {
+    @Test
+    public void testPathOutsideXAndYUpperBoundsWithDuplicateXAndHigherY() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(95d, 35d)); // upper bound is 90,30
         series1.getData().add(new XYChart.Data<>(95d, 40d));
@@ -377,7 +408,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXAndYLowerBoundsWithDuplicateXAndLowerY() {
+    @Test
+    public void testPathOutsideXAndYLowerBoundsWithDuplicateXAndLowerY() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(-10d, -30d)); // lower bound is 0,0
         series1.getData().add(new XYChart.Data<>(-10d, -40d));
@@ -397,7 +430,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXAndYUpperBoundsWithDuplicateXAndLowerY() {
+    @Test
+    public void testPathOutsideXAndYUpperBoundsWithDuplicateXAndLowerY() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(95d, 40d)); // upper bound is 90,30
         series1.getData().add(new XYChart.Data<>(95d, 35d));
@@ -417,7 +452,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXAndYLowerBoundsWithDuplicateYAndHigherX() {
+    @Test
+    public void testPathOutsideXAndYLowerBoundsWithDuplicateYAndHigherX() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(-20d, -30d)); // lower bound is 0,0
         series1.getData().add(new XYChart.Data<>(-10d, -30d));
@@ -437,7 +474,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXAndYUpperBoundsWithDuplicateYAndHigherX() {
+    @Test
+    public void testPathOutsideXAndYUpperBoundsWithDuplicateYAndHigherX() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(95d, 32d)); // upper bound is 90,30
         series1.getData().add(new XYChart.Data<>(100d, 32d));
@@ -457,7 +496,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXAndYLowerBoundsWithDuplicateYAndLowerX() {
+    @Test
+    public void testPathOutsideXAndYLowerBoundsWithDuplicateYAndLowerX() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(-10d, -30d)); // lower bound is 0,0
         series1.getData().add(new XYChart.Data<>(-20d, -30d));
@@ -477,7 +518,9 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
-    @Test public void testPathOutsideXAndYUpperBoundsWithDuplicateYAndLowerX() {
+    @Test
+    public void testPathOutsideXAndYUpperBoundsWithDuplicateYAndLowerX() {
+        createChart();
         startApp();
         series1.getData().add(new XYChart.Data<>(100d, 40d)); // upper bound is 90,30
         series1.getData().add(new XYChart.Data<>(95d, 40d));
@@ -495,6 +538,26 @@ public class AreaChartTest extends XYChartTestBase {
         );
 
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
+    }
+
+    //JDK-8283675
+    @Test
+    public void testChartFillRemovedOnClearingSeries() {
+        createChart();
+        startApp();
+        ac.getData().addAll(series1);
+        pulse();
+
+        final ObservableList<Node> children = ((Group) ac.getData().get(0).getNode()).getChildren();
+        ObservableList<PathElement> fillElements = ((Path) children.get(0)).getElements();
+        ObservableList<PathElement> lineElements = ((Path) children.get(1)).getElements();
+
+        assertTrue(0 < fillElements.size());
+        assertTrue(0 < lineElements.size());
+        series1.getData().clear();
+        pulse();
+        assertEquals(0, fillElements.size());
+        assertEquals(0, lineElements.size());
     }
 
     private List<Point2D> convertSeriesDataToPoint2D(XYChart.Series<Number, Number> series) {
@@ -515,8 +578,8 @@ public class AreaChartTest extends XYChartTestBase {
                 .filter(pathElement -> pathElement instanceof LineTo)
                 .map(pathElement -> (LineTo) pathElement)
                 .map(lineTo -> new Point2D(
-                        xAxis.getValueForDisplay(lineTo.getX()).doubleValue(),
-                        yAxis.getValueForDisplay(lineTo.getY()).doubleValue())
+                        Math.round(xAxis.getValueForDisplay(lineTo.getX()).doubleValue()),
+                        Math.round(yAxis.getValueForDisplay(lineTo.getY()).doubleValue()))
                 )
                 .collect(Collectors.toList());
         // Due to fillPath, one additional LineTo element is added to close the loop

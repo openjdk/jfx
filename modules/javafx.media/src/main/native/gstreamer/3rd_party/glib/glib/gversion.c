@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1998  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -25,28 +27,6 @@
 #include "config.h"
 
 #include "gversion.h"
-
-/**
- * SECTION:version
- * @Title: Version Information
- * @Short_description: variables and functions to check the GLib version
- *
- * GLib provides version information, primarily useful in configure
- * checks for builds that have a configure script. Applications will
- * not typically use the features described here.
- *
- * The GLib headers annotate deprecated APIs in a way that produces
- * compiler warnings if these deprecated APIs are used. The warnings
- * can be turned off by defining the macro %GLIB_DISABLE_DEPRECATION_WARNINGS
- * before including the glib.h header.
- *
- * GLib also provides support for building applications against
- * defined subsets of deprecated or new GLib APIs. Define the macro
- * %GLIB_VERSION_MIN_REQUIRED to specify up to what version of GLib
- * you want to receive warnings about deprecated APIs. Define the
- * macro %GLIB_VERSION_MAX_ALLOWED to specify the newest version of
- * GLib whose API you want to use.
- */
 
 /**
  * glib_major_version:
@@ -111,8 +91,10 @@
  * @minor: the minor version to check for
  * @micro: the micro version to check for
  *
- * Checks the version of the GLib library that is being compiled
- * against. See glib_check_version() for a runtime check.
+ * Checks whether the version of the GLib library that is being compiled
+ * against is greater than or equal to the given one.
+ *
+ * See glib_check_version() for a runtime check.
  *
  * Returns: %TRUE if the version of the GLib header files
  * is the same as or newer than the passed-in version.

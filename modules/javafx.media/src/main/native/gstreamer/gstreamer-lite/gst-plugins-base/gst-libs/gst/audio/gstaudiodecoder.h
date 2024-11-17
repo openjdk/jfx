@@ -147,7 +147,7 @@ G_STMT_START {                                                              \
  *
  * Default maximum number of errors tolerated before signaling error.
  */
-#define GST_AUDIO_DECODER_MAX_ERRORS     10
+#define GST_AUDIO_DECODER_MAX_ERRORS     -1
 
 /**
  * GstAudioDecoder:
@@ -272,6 +272,11 @@ struct _GstAudioDecoderClass
   gboolean      (*set_format)         (GstAudioDecoder *dec,
                                        GstCaps *caps);
 
+  /**
+   * GstAudioDecoderClass::parse:
+   * @offset: (out):
+   * @length: (out):
+   */
   GstFlowReturn (*parse)              (GstAudioDecoder *dec,
                                        GstAdapter *adapter,
                                        gint *offset, gint *length);

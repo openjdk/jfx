@@ -34,25 +34,24 @@ class PluginViewBase;
 class PluginDocument final : public HTMLDocument {
     WTF_MAKE_ISO_ALLOCATED(PluginDocument);
 public:
-    static Ref<PluginDocument> create(Frame& frame, const URL& url)
+    static Ref<PluginDocument> create(LocalFrame& frame, const URL& url)
     {
         auto document = adoptRef(*new PluginDocument(frame, url));
         document->addToContextsMap();
         return document;
     }
 
+    virtual ~PluginDocument();
+
     WEBCORE_EXPORT PluginViewBase* pluginWidget();
     HTMLPlugInElement* pluginElement() { return m_pluginElement.get(); }
 
     void setPluginElement(HTMLPlugInElement&);
     void detachFromPluginElement();
-
-    void cancelManualPluginLoad();
-
     bool shouldLoadPluginManually() const { return m_shouldLoadPluginManually; }
 
 private:
-    PluginDocument(Frame&, const URL&);
+    PluginDocument(LocalFrame&, const URL&);
 
     Ref<DocumentParser> createParser() final;
 
@@ -64,5 +63,9 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PluginDocument)
     static bool isType(const WebCore::Document& document) { return document.isPluginDocument(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* document = dynamicDowncast<WebCore::Document>(node);
+        return document && isType(*document);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

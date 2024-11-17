@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,10 +52,6 @@ import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.ClipEnvelope;
 import com.sun.scenario.animation.shared.PulseReceiver;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /**
  * The class {@code Animation} provides the core functionality of all animations
  * used in the JavaFX runtime.
@@ -83,7 +79,8 @@ import java.security.PrivilegedAction;
  * the {@code Animation} from the specified position.
  * <p>
  * Inverting the value of {@link #rateProperty() rate} toggles the play direction.
- *
+ * <p>
+ * The animation runs on the JavaFX Application Thread.
  * @see Timeline
  * @see Transition
  *
@@ -151,20 +148,11 @@ public abstract class Animation {
     private boolean paused = false;
     private final AbstractPrimaryTimer timer;
 
-    // Access control context, captured whenever we add this pulse receiver to
-    // the PrimaryTimer (which is called when an animation is played or resumed)
-    @SuppressWarnings("removal")
-    private AccessControlContext accessCtrlCtx = null;
-
     private long now() {
         return TickCalculation.fromNano(timer.nanos());
     }
 
-    @SuppressWarnings("removal")
     private void addPulseReceiver() {
-        // Capture the Access Control Context to be used during the animation pulse
-        accessCtrlCtx = AccessController.getContext();
-
         timer.addPulseReceiver(pulseReceiver);
     }
 
@@ -193,20 +181,13 @@ public abstract class Animation {
 
     // package private only for the sake of testing
     final PulseReceiver pulseReceiver = new PulseReceiver() {
-        @SuppressWarnings("removal")
         @Override public void timePulse(long now) {
             final long elapsedTime = now - startTime;
             if (elapsedTime < 0) {
                 return;
             }
-            if (accessCtrlCtx == null) {
-                throw new IllegalStateException("Error: AccessControlContext not captured");
-            }
 
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                doTimePulse(elapsedTime);
-                return null;
-            }, accessCtrlCtx);
+            doTimePulse(elapsedTime);
         }
     };
 
@@ -882,6 +863,9 @@ public abstract class Animation {
      *
      * Note that unlike {@link #playFromStart()} calling this method will not
      * change the playing direction of this {@code Animation}.
+     * <p>
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
      * @param cuePoint
      *            name of the cue point
@@ -893,6 +877,18 @@ public abstract class Animation {
      * @see #getCuePoints()
      */
     public void playFrom(String cuePoint) {
+        if (parent != null) {
+            throw new IllegalStateException("Cannot start when embedded in another animation");
+        }
+        Utils.runOnFxThread(() -> playFromImpl(cuePoint));
+    }
+
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #playFrom(String)
+     */
+    private void playFromImpl(String cuePoint) {
         jumpTo(cuePoint);
         play();
     }
@@ -910,6 +906,9 @@ public abstract class Animation {
      *
      * Note that unlike {@link #playFromStart()} calling this method will not
      * change the playing direction of this {@code Animation}.
+     * <p>
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
      * @param time
      *            position where to play from
@@ -922,6 +921,18 @@ public abstract class Animation {
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void playFrom(Duration time) {
+        if (parent != null) {
+            throw new IllegalStateException("Cannot start when embedded in another animation");
+        }
+        Utils.runOnFxThread(() -> playFromImpl(time));
+    }
+
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #playFrom(Duration)
+     */
+    private void playFromImpl(Duration time) {
         jumpTo(time);
         play();
     }
@@ -937,17 +948,27 @@ public abstract class Animation {
      *      animation.jumpTo(Duration.ZERO);<br>
      *      animation.play();<br>
      *  </code>
-     *
      * <p>
-     * Note: <ul>
-     * <li>{@code playFromStart()} is an asynchronous call, {@code Animation} may
-     * not start immediately. </ul>
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
      * @throws IllegalStateException
      *             if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void playFromStart() {
+        if (parent != null) {
+            throw new IllegalStateException("Cannot start when embedded in another animation");
+        }
+        Utils.runOnFxThread(this::playFromStartImpl);
+    }
+
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #playFromStart()
+     */
+    private void playFromStartImpl() {
         stop();
         setRate(Math.abs(getRate()));
         jumpTo(Duration.ZERO);
@@ -975,18 +996,25 @@ public abstract class Animation {
      *  animation.play();<br>
      * </code>
      * <p>
-     * Note: <ul>
-     * <li>{@code play()} is an asynchronous call, the {@code Animation} may not
-     * start immediately. </ul>
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
-     * @throws IllegalStateException
-     *             if embedded in another animation,
+     * @throws IllegalStateException if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void play() {
         if (parent != null) {
             throw new IllegalStateException("Cannot start when embedded in another animation");
         }
+        Utils.runOnFxThread(this::playImpl);
+    }
+
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #play()
+     */
+    private void playImpl() {
         switch (getStatus()) {
             case STOPPED:
                 if (startable(true)) {
@@ -1032,17 +1060,26 @@ public abstract class Animation {
      * Stops the animation and resets the play head to its initial position. If
      * the animation is already stopped, this method has no effect.
      * <p>
-     * Note: <ul>
-     * <li>{@code stop()} is an asynchronous call, the {@code Animation} may not stop
-     * immediately. </ul>
-     * @throws IllegalStateException
-     *             if embedded in another animation,
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
+     *
+     * @throws IllegalStateException if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void stop() {
         if (parent != null) {
             throw new IllegalStateException("Cannot stop when embedded in another animation");
         }
+        Utils.runOnFxThread(this::stopImpl);
+    }
+
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #stop()
+     */
+    // package-private for Timeline
+    void stopImpl() {
         if (!isStopped()) {
             clipEnvelope.abortCurrentPulse();
             doStop();
@@ -1063,17 +1100,25 @@ public abstract class Animation {
      * Pauses the animation. If the animation is not currently running, this
      * method has no effect.
      * <p>
-     * Note: <ul>
-     * <li>{@code pause()} is an asynchronous call, the {@code Animation} may not pause
-     * immediately. </ul>
-     * @throws IllegalStateException
-     *             if embedded in another animation,
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
+     *
+     * @throws IllegalStateException if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void pause() {
         if (parent != null) {
             throw new IllegalStateException("Cannot pause when embedded in another animation");
         }
+        Utils.runOnFxThread(this::pauseImpl);
+    }
+
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #pause()
+     */
+    private void pauseImpl() {
         if (isRunning()) {
             clipEnvelope.abortCurrentPulse();
             pauseReceiver();

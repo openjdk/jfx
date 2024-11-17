@@ -190,16 +190,7 @@ public:
         ASSERT_NOT_REACHED();
     }
 
-    bool operator==(const VarOffset& other) const
-    {
-        return m_kind == other.m_kind
-            && m_offset == other.m_offset;
-    }
-
-    bool operator!=(const VarOffset& other) const
-    {
-        return !(*this == other);
-    }
+    friend bool operator==(const VarOffset&, const VarOffset&) = default;
 
     unsigned hash() const
     {

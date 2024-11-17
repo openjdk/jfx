@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,21 +27,19 @@ package com.sun.glass.ui.win;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
-import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.paint.Color;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ResourceBundle;
+import java.util.Map;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
     static float overrideUIScale;
-    private static final String BASE_NAME = "com/sun/glass/ui/win/themes";
 
     private static boolean getBoolean(String propname, boolean defval, String description) {
         String str = System.getProperty(propname);
@@ -83,31 +81,24 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private static native void initIDs(float overrideUIScale);
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                verbose = Boolean.getBoolean("javafx.verbose");
-                if (PrismSettings.allowHiDPIScaling) {
-                    overrideUIScale = getFloat("glass.win.uiScale", -1.0f, "Forcing UI scaling factor: ");
-                    // We only parse these if verbose, to inform the user...
-                    if (PrismSettings.verbose) {
-                        getFloat("glass.win.renderScale", -1.0f,
-                                 "(No longer supported) Rendering scaling factor: ");
-                        getFloat("glass.win.minHiDPI", 1.5f,
-                                 "(No longer supported) UI scaling threshold: ");
-                        getBoolean("glass.win.forceIntegerRenderScale", true,
-                                   "(No longer supported) force integer rendering scale");
-                    }
-                } else {
-                    overrideUIScale = 1.0f;
-                }
-                // Load required Microsoft runtime DLLs on Windows platforms
-                Toolkit.loadMSWindowsLibraries();
-                Application.loadNativeLibrary();
-                return null;
+        verbose = Boolean.getBoolean("javafx.verbose");
+        if (PrismSettings.allowHiDPIScaling) {
+            overrideUIScale = getFloat("glass.win.uiScale", -1.0f, "Forcing UI scaling factor: ");
+            // We only parse these if verbose, to inform the user...
+            if (PrismSettings.verbose) {
+                getFloat("glass.win.renderScale", -1.0f,
+                         "(No longer supported) Rendering scaling factor: ");
+                getFloat("glass.win.minHiDPI", 1.5f,
+                         "(No longer supported) UI scaling threshold: ");
+                getBoolean("glass.win.forceIntegerRenderScale", true,
+                           "(No longer supported) force integer rendering scale");
             }
-        });
+        } else {
+            overrideUIScale = 1.0f;
+        }
+        // Load required Microsoft runtime DLLs on Windows platforms
+        Toolkit.loadMSWindowsLibraries();
+        Application.loadNativeLibrary();
         initIDs(overrideUIScale);
     }
 
@@ -115,9 +106,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     WinApplication() {
         // Embedded in SWT, with shared event thread
-        @SuppressWarnings("removal")
-        boolean isEventThread = AccessController
-                .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
+        boolean isEventThread = Boolean.getBoolean("javafx.embed.isEventThread");
         if (!isEventThread) {
             invokeLaterDispatcher = new InvokeLaterDispatcher(this);
             invokeLaterDispatcher.start();
@@ -142,10 +131,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         if (!PrismSettings.allowHiDPIScaling) {
             return Process_DPI_Unaware;
         }
-        @SuppressWarnings("removal")
-        String awareRequested = AccessController
-            .doPrivileged((PrivilegedAction<String>) () ->
-                          System.getProperty("javafx.glass.winDPIawareness"));
+        String awareRequested = System.getProperty("javafx.glass.winDPIawareness");
         if (awareRequested != null) {
             awareRequested = awareRequested.toLowerCase();
             if (awareRequested.equals("aware")) {
@@ -164,9 +150,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected void runLoop(final Runnable launchable) {
-        @SuppressWarnings("removal")
-        boolean isEventThread = AccessController
-            .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
+        boolean isEventThread = Boolean.getBoolean("javafx.embed.isEventThread");
         int awareness = getDesiredAwarenesslevel();
 
         ClassLoader classLoader = WinApplication.class.getClassLoader();
@@ -178,12 +162,11 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             launchable.run();
             return;
         }
-        @SuppressWarnings("removal")
         final Thread toolkitThread =
-            AccessController.doPrivileged((PrivilegedAction<Thread>) () -> new Thread(() -> {
+            new Thread(() -> {
                 _init(awareness);
                 _runLoop(launchable);
-            }, "WindowsNativeRunloopThread"));
+            }, "WindowsNativeRunloopThread");
         setEventThread(toolkitThread);
         toolkitThread.start();
     }
@@ -342,17 +325,6 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    public String getHighContrastScheme(String themeName) {
-        return PlatformImpl.HighContrastScheme.fromThemeName(ResourceBundle.getBundle(BASE_NAME)::getString, themeName);
-    }
-
-    private native String _getHighContrastTheme();
-    @Override public String getHighContrastTheme() {
-        checkEventThread();
-        return getHighContrastScheme(_getHighContrastTheme());
-    }
-
-    @Override
     protected boolean _supportsInputMethods() {
         return true;
     }
@@ -367,8 +339,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     @Override
     public String getDataDirectory() {
         checkEventThread();
-        @SuppressWarnings("removal")
-        String baseDirectory = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getenv("APPDATA"));
+        String baseDirectory = System.getenv("APPDATA");
         if (baseDirectory == null || baseDirectory.length() == 0) {
             return super.getDataDirectory();
         }
@@ -376,8 +347,51 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    protected native int _getKeyCodeForChar(char c);
+    protected native int _getKeyCodeForChar(char c, int hint);
 
     @Override
     protected native int _isKeyLocked(int keyCode);
+
+    @Override
+    public native Map<String, Object> getPlatformPreferences();
+
+    // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for Windows.
+    @Override
+    public Map<String, PreferenceMapping<?>> getPlatformKeyMappings() {
+        return Map.of(
+            "Windows.UIColor.Foreground", new PreferenceMapping<>("foregroundColor", Color.class),
+            "Windows.UIColor.Background", new PreferenceMapping<>("backgroundColor", Color.class),
+            "Windows.UIColor.Accent", new PreferenceMapping<>("accentColor", Color.class),
+            "Windows.UISettings.AdvancedEffectsEnabled", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b),
+            "Windows.SPI.ClientAreaAnimation", new PreferenceMapping<>("reducedMotion", Boolean.class, b -> !b)
+        );
+    }
+
+    // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for Windows.
+    @Override
+    public Map<String, Class<?>> getPlatformKeys() {
+        return Map.ofEntries(
+            Map.entry("Windows.SPI.HighContrast", Boolean.class),
+            Map.entry("Windows.SPI.HighContrastColorScheme", String.class),
+            Map.entry("Windows.SPI.ClientAreaAnimation", Boolean.class),
+            Map.entry("Windows.SysColor.COLOR_3DFACE", Color.class),
+            Map.entry("Windows.SysColor.COLOR_BTNTEXT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_GRAYTEXT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_HIGHLIGHT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_HIGHLIGHTTEXT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_HOTLIGHT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_WINDOW", Color.class),
+            Map.entry("Windows.SysColor.COLOR_WINDOWTEXT", Color.class),
+            Map.entry("Windows.UIColor.Background", Color.class),
+            Map.entry("Windows.UIColor.Foreground", Color.class),
+            Map.entry("Windows.UIColor.AccentDark3", Color.class),
+            Map.entry("Windows.UIColor.AccentDark2", Color.class),
+            Map.entry("Windows.UIColor.AccentDark1", Color.class),
+            Map.entry("Windows.UIColor.Accent", Color.class),
+            Map.entry("Windows.UIColor.AccentLight1", Color.class),
+            Map.entry("Windows.UIColor.AccentLight2", Color.class),
+            Map.entry("Windows.UIColor.AccentLight3", Color.class),
+            Map.entry("Windows.UISettings.AdvancedEffectsEnabled", Boolean.class)
+        );
+    }
 }

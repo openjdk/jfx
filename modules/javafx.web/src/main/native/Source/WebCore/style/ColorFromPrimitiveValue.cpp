@@ -50,9 +50,9 @@ StyleColor colorFromPrimitiveValue(const Document& document, RenderStyle& style,
     case CSSValueInternalDocumentTextColor:
         return { document.textColor() };
     case CSSValueWebkitLink:
-        return { forVisitedLink == ForVisitedLink::Yes ? document.visitedLinkColor() : document.linkColor() };
+        return { forVisitedLink == ForVisitedLink::Yes ? document.visitedLinkColor(style) : document.linkColor(style) };
     case CSSValueWebkitActivelink:
-        return { document.activeLinkColor() };
+        return { document.activeLinkColor(style) };
     case CSSValueWebkitFocusRingColor:
         return { RenderTheme::singleton().focusRingColor(document.styleColorOptions(&style)) };
     case CSSValueCurrentcolor:
@@ -65,14 +65,14 @@ StyleColor colorFromPrimitiveValue(const Document& document, RenderStyle& style,
 Color colorFromPrimitiveValueWithResolvedCurrentColor(const Document& document, RenderStyle& style, const CSSPrimitiveValue& value)
 {
     // FIXME: 'currentcolor' should be resolved at use time to make it inherit correctly. https://bugs.webkit.org/show_bug.cgi?id=210005
-    if (StyleColor::isCurrentColor(value)) {
+    if (StyleColor::containsCurrentColor(value)) {
         // Color is an inherited property so depending on it effectively makes the property inherited.
         style.setHasExplicitlyInheritedProperties();
         style.setDisallowsFastPathInheritance();
-        return style.color();
     }
 
-    return colorFromPrimitiveValue(document, style, value, ForVisitedLink::No).absoluteColor();
+    auto color = colorFromPrimitiveValue(document, style, value, ForVisitedLink::No);
+    return style.colorResolvingCurrentColor(color);
 }
 
 } // namespace Style

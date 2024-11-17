@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,28 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A subscription encapsulates how to cancel it without having
- * to keep track of how it was created.
+ * Represents a cancel or cleanup operation for an action that can be cancelled or
+ * that allocated resources. Subscriptions can be obtained, for example, as a result
+ * of registering a callback, starting a timer, or allocating resources. They
+ * provide a convenient way for subscribers to cancel these actions at a later time,
+ * without requiring additional information or even access to the source from where
+ * they were originally obtained.
+ *
+ * <pre>
+ * class Publisher {
+ *   public Subscription subscribe(Consumer&lt;NewsLetter&gt; subscriber) {
+ *     register(subscriber);
+ *
+ *     // return a Subscription which unregisters the original subscriber
+ *     return () -> unregister(subscriber);
+ *   }
+ * }
+ * </pre>
+ *
+ * <p>Subscriptions can also be combined using {@link #combine} and {@link #and},
+ * which allows for multiple subscriptions to be unsubscribed together. This is
+ * useful when they share the same lifecycle, for example, when performing
+ * cleanup for the same object.
  *
  * @since 21
  */
@@ -57,9 +77,10 @@ public interface Subscription {
     }
 
     /**
-     * Cancels this subscription, or does nothing if already cancelled.<p>
+     * Cancels this subscription, or does nothing if already cancelled.
      *
-     * Implementors must ensure the implementation is idempotent.
+     * @implSpec Implementors must ensure the implementation is idempotent (a no-op
+     *     if called more than once).
      */
     void unsubscribe();
 

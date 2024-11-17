@@ -25,17 +25,31 @@
 
 #pragma once
 
+#include "FrameLoaderClient.h"
 #include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
+class FrameLoadRequest;
 class IntSize;
+class SecurityOriginData;
 
-class RemoteFrameClient {
+enum class RenderAsTextFlag : uint16_t;
+
+struct MessageWithMessagePorts;
+
+class RemoteFrameClient : public FrameLoaderClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual void frameDetached() = 0;
     virtual void sizeDidChange(IntSize) = 0;
+    virtual void postMessageToRemote(FrameIdentifier source, const String& sourceOrigin, FrameIdentifier target, std::optional<SecurityOriginData> targetOrigin, const MessageWithMessagePorts&) = 0;
+    virtual void changeLocation(FrameLoadRequest&&) = 0;
+    virtual String renderTreeAsText(size_t baseIndent, OptionSet<RenderAsTextFlag>) = 0;
+    virtual void broadcastFrameRemovalToOtherProcesses() = 0;
+    virtual void closePage() = 0;
+    virtual void focus() = 0;
+    virtual void unfocus() = 0;
     virtual ~RemoteFrameClient() { }
 };
 

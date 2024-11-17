@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,14 +23,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PlatformMediaSessionManager_h
-#define PlatformMediaSessionManager_h
+#pragma once
 
 #include "MediaUniqueIdentifier.h"
 #include "PlatformMediaSession.h"
 #include "RemoteCommandListener.h"
 #include "Timer.h"
 #include <wtf/AggregateLogger.h>
+#include <wtf/CancellableTask.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -38,6 +38,7 @@
 namespace WebCore {
 
 class PlatformMediaSession;
+struct MediaConfiguration;
 
 class PlatformMediaSessionManager
 #if !RELEASE_LOG_DISABLED
@@ -63,6 +64,8 @@ public:
     WEBCORE_EXPORT static bool opusDecoderEnabled();
     WEBCORE_EXPORT static void setAlternateWebMPlayerEnabled(bool);
     WEBCORE_EXPORT static bool alternateWebMPlayerEnabled();
+    WEBCORE_EXPORT static void setUseSCContentSharingPicker(bool);
+    WEBCORE_EXPORT static bool useSCContentSharingPicker();
 
 #if ENABLE(VP9)
     WEBCORE_EXPORT static void setShouldEnableVP9Decoder(bool);
@@ -73,7 +76,12 @@ public:
     WEBCORE_EXPORT static bool shouldEnableVP9SWDecoder();
 #endif
 
-    virtual ~PlatformMediaSessionManager() = default;
+#if ENABLE(EXTENSION_CAPABILITIES)
+    WEBCORE_EXPORT static bool mediaCapabilityGrantsEnabled();
+    WEBCORE_EXPORT static void setMediaCapabilityGrantsEnabled(bool);
+#endif
+
+    virtual ~PlatformMediaSessionManager();
 
     virtual void scheduleSessionStatusUpdate() { }
 
@@ -138,9 +146,10 @@ public:
     virtual void sessionCanProduceAudioChanged();
 
 #if PLATFORM(IOS_FAMILY)
-    virtual void configureWireLessTargetMonitoring() { }
+    virtual void configureWirelessTargetMonitoring() { }
 #endif
     virtual bool hasWirelessTargetsAvailable() { return false; }
+    virtual bool isMonitoringWirelessTargets() const { return false; }
 
     virtual void setCurrentSession(PlatformMediaSession&);
     PlatformMediaSession* currentSession() const;
@@ -149,6 +158,9 @@ public:
 
     WEBCORE_EXPORT void setIsPlayingToAutomotiveHeadUnit(bool);
     bool isPlayingToAutomotiveHeadUnit() const { return m_isPlayingToAutomotiveHeadUnit; }
+
+    WEBCORE_EXPORT void setSupportsSpatialAudioPlayback(bool);
+    virtual std::optional<bool> supportsSpatialAudioPlaybackForConfiguration(const MediaConfiguration&);
 
     void forEachMatchingSession(const Function<bool(const PlatformMediaSession&)>& predicate, const Function<void(PlatformMediaSession&)>& matchingCallback);
 
@@ -201,6 +213,10 @@ protected:
 
     bool computeSupportsSeeking() const;
 
+    std::optional<bool> supportsSpatialAudioPlayback() { return m_supportsSpatialAudioPlayback; }
+
+    void enqueueTaskOnMainThread(Function<void()>&&);
+
 private:
     friend class Internals;
 
@@ -217,6 +233,7 @@ private:
     bool m_willIgnoreSystemInterruptions { false };
     bool m_processIsSuspended { false };
     bool m_isPlayingToAutomotiveHeadUnit { false };
+    std::optional<bool> m_supportsSpatialAudioPlayback;
 
     bool m_alreadyScheduledSessionStatedUpdate { false };
 #if USE(AUDIO_SESSION)
@@ -225,6 +242,8 @@ private:
 
     WeakHashSet<PlatformMediaSession::AudioCaptureSource> m_audioCaptureSources;
     bool m_hasScheduledSessionStateUpdate { false };
+
+    TaskCancellationGroup m_taskGroup;
 
 #if ENABLE(WEBM_FORMAT_READER)
     static bool m_webMFormatReaderEnabled;
@@ -238,6 +257,9 @@ private:
 #if ENABLE(ALTERNATE_WEBM_PLAYER)
     static bool m_alternateWebMPlayerEnabled;
 #endif
+#if HAVE(SC_CONTENT_SHARING_PICKER)
+    static bool s_useSCContentSharingPicker;
+#endif
 
 #if ENABLE(VP9)
     static bool m_vp9DecoderEnabled;
@@ -245,11 +267,13 @@ private:
     static bool m_vp9SWDecoderEnabled;
 #endif
 
+#if ENABLE(EXTENSION_CAPABILITIES)
+    static bool s_mediaCapabilityGrantsEnabled;
+#endif
+
 #if !RELEASE_LOG_DISABLED
     Ref<AggregateLogger> m_logger;
 #endif
 };
 
-}
-
-#endif // PlatformMediaSessionManager_h
+} // namespace WebCore

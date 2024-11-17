@@ -64,7 +64,7 @@ ImageSource::ImageSource(Ref<NativeImage>&& nativeImage)
 ImageSource::~ImageSource()
 {
     ASSERT(!hasAsyncDecodingQueue());
-    ASSERT(&m_runLoop == &RunLoop::current());
+    assertIsCurrent(m_runLoop);
 }
 
 bool ImageSource::ensureDecoderAvailable(FragmentedSharedBuffer* data)
@@ -77,8 +77,8 @@ bool ImageSource::ensureDecoderAvailable(FragmentedSharedBuffer* data)
         return false;
 
     m_decoder->setEncodedDataStatusChangeCallback([weakThis = ThreadSafeWeakPtr { *this }] (auto status) {
-        if (RefPtr strongThis = weakThis.get())
-            strongThis->encodedDataStatusChanged(status);
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->encodedDataStatusChanged(status);
     });
 
     if (auto expectedContentSize = expectedContentLength())
@@ -166,16 +166,20 @@ void ImageSource::encodedDataStatusChanged(EncodedDataStatus status)
     if (status >= EncodedDataStatus::SizeAvailable)
         growFrames();
 
-    if (m_image && m_image->imageObserver())
-        m_image->imageObserver()->encodedDataStatusChanged(*m_image, status);
+    if (!m_image)
+        return;
+
+    if (auto observer = m_image->imageObserver())
+        observer->encodedDataStatusChanged(*m_image, status);
 }
 
 void ImageSource::decodedSizeChanged(long long decodedSize)
 {
-    if (!decodedSize || !m_image || !m_image->imageObserver())
+    if (!decodedSize || !m_image)
         return;
 
-    m_image->imageObserver()->decodedSizeChanged(*m_image, decodedSize);
+    if (auto imageObserver = m_image->imageObserver())
+        imageObserver->decodedSizeChanged(*m_image, decodedSize);
 }
 
 void ImageSource::decodedSizeIncreased(unsigned decodedSize)
@@ -479,6 +483,7 @@ void ImageSource::clearMetadata()
     m_cachedMetadata.remove({
         MetadataType::EncodedDataStatus,
         MetadataType::FrameCount,
+        MetadataType::PrimaryFrameIndex,
         MetadataType::RepetitionCount,
         MetadataType::SinglePixelSolidColor,
         MetadataType::UTI
@@ -540,6 +545,11 @@ EncodedDataStatus ImageSource::encodedDataStatus()
 size_t ImageSource::frameCount()
 {
     return metadataCacheIfNeeded(m_frameCount, m_frames.size(), MetadataType::FrameCount, &ImageDecoder::frameCount);
+}
+
+size_t ImageSource::primaryFrameIndex()
+{
+    return metadataCacheIfNeeded(m_primaryFrameIndex, static_cast<size_t>(0), MetadataType::PrimaryFrameIndex, &ImageDecoder::primaryFrameIndex);
 }
 
 RepetitionCount ImageSource::repetitionCount()
@@ -720,6 +730,7 @@ void ImageSource::dump(TextStream& ts)
 {
     ts.dumpProperty("type", filenameExtension());
     ts.dumpProperty("frame-count", frameCount());
+    ts.dumpProperty("primary-frame-index", primaryFrameIndex());
     ts.dumpProperty("repetitions", repetitionCount());
     ts.dumpProperty("solid-color", singlePixelSolidColor());
 

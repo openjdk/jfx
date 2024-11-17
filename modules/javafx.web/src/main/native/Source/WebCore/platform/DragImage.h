@@ -26,7 +26,6 @@
 #pragma once
 
 #include "FloatSize.h"
-#include "FontRenderingMode.h"
 #include "ImageOrientation.h"
 #include "IntSize.h"
 #include "Path.h"
@@ -49,15 +48,12 @@ typedef struct HBITMAP__* HBITMAP;
 #include <wtf/RefPtr.h>
 #endif
 
-// We need to #define YOffset as it needs to be shared with WebKit
-#define DragLabelBorderYOffset 2
-
 namespace WebCore {
 
 class Element;
-class Frame;
 class Image;
 class IntRect;
+class LocalFrame;
 class Node;
 
 #if PLATFORM(IOS_FAMILY)
@@ -91,12 +87,12 @@ DragImageRef dissolveDragImageToFraction(DragImageRef, float delta);
 DragImageRef createDragImageFromImage(Image*, ImageOrientation);
 DragImageRef createDragImageIconForCachedImageFilename(const String&);
 
-WEBCORE_EXPORT DragImageRef createDragImageForNode(Frame&, Node&);
-WEBCORE_EXPORT DragImageRef createDragImageForSelection(Frame&, TextIndicatorData&, bool forceBlackText = false);
-WEBCORE_EXPORT DragImageRef createDragImageForRange(Frame&, const SimpleRange&, bool forceBlackText = false);
+WEBCORE_EXPORT DragImageRef createDragImageForNode(LocalFrame&, Node&);
+WEBCORE_EXPORT DragImageRef createDragImageForSelection(LocalFrame&, TextIndicatorData&, bool forceBlackText = false);
+WEBCORE_EXPORT DragImageRef createDragImageForRange(LocalFrame&, const SimpleRange&, bool forceBlackText = false);
 DragImageRef createDragImageForColor(const Color&, const FloatRect&, float, Path&);
-DragImageRef createDragImageForImage(Frame&, Node&, IntRect& imageRect, IntRect& elementRect);
-DragImageRef createDragImageForLink(Element&, URL&, const String& label, TextIndicatorData&, FontRenderingMode, float deviceScaleFactor);
+DragImageRef createDragImageForImage(LocalFrame&, Node&, IntRect& imageRect, IntRect& elementRect);
+DragImageRef createDragImageForLink(Element&, URL&, const String& label, TextIndicatorData&, float deviceScaleFactor);
 void deleteDragImage(DragImageRef);
 
 IntPoint dragOffsetForLinkDragImage(DragImageRef);
@@ -109,15 +105,20 @@ public:
     WEBCORE_EXPORT DragImage(DragImage&&);
     WEBCORE_EXPORT ~DragImage();
 
+    DragImage(std::optional<TextIndicatorData>&& indicatorData, std::optional<Path>&& visiblePath)
+        : m_indicatorData(WTFMove(indicatorData))
+        , m_visiblePath(WTFMove(visiblePath))
+    { }
+
     WEBCORE_EXPORT DragImage& operator=(DragImage&&);
 
     void setIndicatorData(const TextIndicatorData& data) { m_indicatorData = data; }
     bool hasIndicatorData() const { return !!m_indicatorData; }
-    std::optional<TextIndicatorData> indicatorData() const { return m_indicatorData; }
+    const std::optional<TextIndicatorData>& indicatorData() const { return m_indicatorData; }
 
     void setVisiblePath(const Path& path) { m_visiblePath = path; }
     bool hasVisiblePath() const { return !!m_visiblePath; }
-    std::optional<Path> visiblePath() const { return m_visiblePath; }
+    const std::optional<Path>& visiblePath() const { return m_visiblePath; }
 
     explicit operator bool() const { return !!m_dragImageRef; }
     DragImageRef get() const { return m_dragImageRef; }

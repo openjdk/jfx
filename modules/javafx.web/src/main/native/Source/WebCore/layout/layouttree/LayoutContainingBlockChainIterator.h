@@ -39,8 +39,7 @@ public:
     const ElementBox* operator->() const { return m_current; }
 
     LayoutContainingBlockChainIterator& operator++();
-    bool operator==(const LayoutContainingBlockChainIterator& other) const { return m_current == other.m_current; }
-    bool operator!=(const LayoutContainingBlockChainIterator& other) const {  return !(*this == other); }
+    friend bool operator==(LayoutContainingBlockChainIterator, LayoutContainingBlockChainIterator) = default;
 
 private:
     const ElementBox* m_current { nullptr };

@@ -111,13 +111,13 @@ bool HTMLButtonElement::hasPresentationalHintsForAttribute(const QualifiedName& 
     return HTMLFormControlElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLButtonElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLButtonElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == typeAttr) {
         Type oldType = m_type;
-        if (equalLettersIgnoringASCIICase(value, "reset"_s))
+        if (equalLettersIgnoringASCIICase(newValue, "reset"_s))
             m_type = RESET;
-        else if (equalLettersIgnoringASCIICase(value, "button"_s))
+        else if (equalLettersIgnoringASCIICase(newValue, "button"_s))
             m_type = BUTTON;
         else
             m_type = SUBMIT;
@@ -127,7 +127,7 @@ void HTMLButtonElement::parseAttribute(const QualifiedName& name, const AtomStri
                 form()->resetDefaultButton();
         }
     } else
-        HTMLFormControlElement::parseAttribute(name, value);
+        HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void HTMLButtonElement::defaultEventHandler(Event& event)
@@ -155,32 +155,34 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
 
             if (m_type == SUBMIT || m_type == RESET)
                 event.setDefaultHandled();
-        }
+        } else if (invokeTargetElement()) {
+            handleInvokeAction();
+        } else
+            handlePopoverTargetAction();
     }
 
-    if (is<KeyboardEvent>(event)) {
-        KeyboardEvent& keyboardEvent = downcast<KeyboardEvent>(event);
-        if (keyboardEvent.type() == eventNames.keydownEvent && keyboardEvent.keyIdentifier() == "U+0020"_s) {
+    if (RefPtr keyboardEvent = dynamicDowncast<KeyboardEvent>(event)) {
+        if (keyboardEvent->type() == eventNames.keydownEvent && keyboardEvent->keyIdentifier() == "U+0020"_s) {
             setActive(true);
             // No setDefaultHandled() - IE dispatches a keypress in this case.
             return;
         }
-        if (keyboardEvent.type() == eventNames.keypressEvent) {
-            switch (keyboardEvent.charCode()) {
+        if (keyboardEvent->type() == eventNames.keypressEvent) {
+            switch (keyboardEvent->charCode()) {
                 case '\r':
-                    dispatchSimulatedClick(&keyboardEvent);
-                    keyboardEvent.setDefaultHandled();
+                    dispatchSimulatedClick(keyboardEvent.get());
+                    keyboardEvent->setDefaultHandled();
                     return;
                 case ' ':
                     // Prevent scrolling down the page.
-                    keyboardEvent.setDefaultHandled();
+                    keyboardEvent->setDefaultHandled();
                     return;
             }
         }
-        if (keyboardEvent.type() == eventNames.keyupEvent && keyboardEvent.keyIdentifier() == "U+0020"_s) {
+        if (keyboardEvent->type() == eventNames.keyupEvent && keyboardEvent->keyIdentifier() == "U+0020"_s) {
             if (active())
-                dispatchSimulatedClick(&keyboardEvent);
-            keyboardEvent.setDefaultHandled();
+                dispatchSimulatedClick(keyboardEvent.get());
+            keyboardEvent->setDefaultHandled();
             return;
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -289,14 +289,14 @@ public class SamplePageHelpers {
 
 //                        Platform.runLater(new Runnable() {
 //                            @Override public void run() {
-////                        if (selectAll) {
-////                            for (Node n: menuContent.lookupAll(".menu-item")) {
-////                                n.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
-////                            }
-////                        } else {
+//--                        if (selectAll) {
+//--                            for (Node n: menuContent.lookupAll(".menu-item")) {
+//--                                n.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+//--                            }
+//--                        } else {
 //                            new ArrayList<Node>(menuContent.lookupAll(".menu-item")).get(2)
 //                                    .pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
-////                        }
+//--                        }
 //                            }
 //                        });
             });

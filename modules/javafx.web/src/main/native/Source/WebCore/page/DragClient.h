@@ -37,6 +37,7 @@ class DataTransfer;
 class Element;
 class Frame;
 class Image;
+class LocalFrame;
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 struct PromisedAttachmentInfo;
@@ -55,12 +56,12 @@ public:
     virtual void startDrag(DragItem, DataTransfer&, Frame&) = 0;
     virtual void dragEnded() { }
 
-    virtual void beginDrag(DragItem, Frame&, const IntPoint&, const IntPoint&, DataTransfer&, DragSourceAction) { }
+    virtual void beginDrag(DragItem, LocalFrame&, const IntPoint&, const IntPoint&, DataTransfer&, DragSourceAction) { }
 
 #if PLATFORM(COCOA)
     // Mac-specific helper function to allow access to web archives and NSPasteboard extras in WebKit.
     // This is not abstract as that would require another #if PLATFORM(COCOA) for the SVGImage client empty implentation.
-    virtual void declareAndWriteDragImage(const String&, Element&, const URL&, const String&, Frame*) { }
+    virtual void declareAndWriteDragImage(const String&, Element&, const URL&, const String&, LocalFrame*) { }
 #endif
 
     virtual ~DragClient() = default;

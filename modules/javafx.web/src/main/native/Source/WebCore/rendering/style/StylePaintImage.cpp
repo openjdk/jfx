@@ -50,7 +50,8 @@ StylePaintImage::~StylePaintImage() = default;
 bool StylePaintImage::operator==(const StyleImage& other) const
 {
     // FIXME: Should probably also compare arguments?
-    return is<StylePaintImage>(other) && downcast<StylePaintImage>(other).m_name == m_name;
+    auto* otherPaintImage = dynamicDowncast<StylePaintImage>(other);
+    return otherPaintImage && otherPaintImage->m_name == m_name;
 }
 
 Ref<CSSValue> StylePaintImage::computedStyleValue(const RenderStyle&) const
@@ -67,7 +68,7 @@ void StylePaintImage::load(CachedResourceLoader&, const ResourceLoaderOptions&)
 {
 }
 
-RefPtr<Image> StylePaintImage::image(const RenderElement* renderer, const FloatSize& size) const
+RefPtr<Image> StylePaintImage::image(const RenderElement* renderer, const FloatSize& size, bool) const
 {
     if (!renderer)
         return &Image::nullImage();

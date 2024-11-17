@@ -41,7 +41,10 @@
 
 namespace WebCore {
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FetchBodyOwner);
+
 class FetchBodyOwner : public RefCounted<FetchBodyOwner>, public ActiveDOMObject, public CanMakeWeakPtr<FetchBodyOwner> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FetchBodyOwner);
 public:
     ~FetchBodyOwner();
 
@@ -66,12 +69,13 @@ public:
     virtual void consumeBodyAsStream();
     virtual void feedStream() { }
     virtual void cancel() { }
+    virtual void loadBody() { }
 
     bool hasLoadingError() const;
     ResourceError loadingError() const;
     std::optional<Exception> loadingException() const;
 
-    const String& contentType() const { return m_contentType; }
+    String contentType() const { return m_headers->fastGet(HTTPHeaderName::ContentType); }
 
 protected:
     FetchBodyOwner(ScriptExecutionContext*, std::optional<FetchBody>&&, Ref<FetchHeaders>&&);
@@ -83,7 +87,6 @@ protected:
     void cloneBody(FetchBodyOwner&);
 
     ExceptionOr<void> extractBody(FetchBody::Init&&);
-    void updateContentType();
     void consumeOnceLoadingFinished(FetchBodyConsumer::Type, Ref<DeferredPromise>&&);
 
     void setBody(FetchBody&& body) { m_body = WTFMove(body); }
@@ -117,7 +120,7 @@ private:
         void didReceiveResponse(const ResourceResponse&) final;
         void didReceiveData(const SharedBuffer& buffer) final { owner.blobChunk(buffer); }
         void didFail(const ResourceError&) final;
-        void didSucceed(const NetworkLoadMetrics&) final { owner.blobLoadingSucceeded(); }
+        void didSucceed(const NetworkLoadMetrics&) final;
 
         FetchBodyOwner& owner;
         std::unique_ptr<FetchLoader> loader;
@@ -125,7 +128,6 @@ private:
 
 protected:
     std::optional<FetchBody> m_body;
-    String m_contentType;
     bool m_isDisturbed { false };
     RefPtr<FetchBodySource> m_readableStreamSource;
     Ref<FetchHeaders> m_headers;

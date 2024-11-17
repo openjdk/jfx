@@ -26,9 +26,11 @@
 #include "config.h"
 #include "RenderFrameBase.h"
 
-#include "Frame.h"
-#include "FrameView.h"
 #include "HTMLFrameElementBase.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderView.h"
 #include "ScriptDisallowedScope.h"
 #include <wtf/IsoMallocInlines.h>
@@ -37,8 +39,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFrameBase);
 
-RenderFrameBase::RenderFrameBase(HTMLFrameElementBase& element, RenderStyle&& style)
-    : RenderWidget(element, WTFMove(style))
+RenderFrameBase::RenderFrameBase(Type type, HTMLFrameElementBase& element, RenderStyle&& style)
+    : RenderWidget(type, element, WTFMove(style))
 {
 }
 

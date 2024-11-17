@@ -50,6 +50,8 @@ class ProcessIdentity;
 class SharedBuffer;
 struct TrackInfo;
 
+using TrackID = uint64_t;
+
 struct PlatformSample {
     enum Type {
         None,
@@ -73,7 +75,7 @@ public:
     virtual MediaTime presentationTime() const = 0;
     virtual MediaTime decodeTime() const = 0;
     virtual MediaTime duration() const = 0;
-    virtual AtomString trackID() const = 0;
+    virtual TrackID trackID() const = 0;
     virtual size_t sizeInBytes() const = 0;
     virtual FloatSize presentationSize() const = 0;
     virtual void offsetTimestampsBy(const MediaTime&) = 0;
@@ -97,6 +99,7 @@ public:
         IsNonDisplaying = 1 << 1,
         HasAlpha = 1 << 2,
         HasSyncInfo = 1 << 3,
+        IsProtected = 1 << 4,
     };
     virtual SampleFlags flags() const = 0;
     virtual PlatformSample platformSample() const = 0;
@@ -112,6 +115,7 @@ public:
     bool isNonDisplaying() const { return flags() & IsNonDisplaying; }
     bool hasAlpha() const { return flags() & HasAlpha; }
     bool hasSyncInfo() const { return flags() & HasSyncInfo; }
+    bool isProtected() const { return flags() & IsProtected; }
 
     virtual void dump(PrintStream& out) const
     {
@@ -149,9 +153,9 @@ struct TrackInfo : public ThreadSafeRefCounted<TrackInfo> {
             return false;
         return equalTo(other);
     }
-    bool operator!=(const TrackInfo& other) const { return !(*this == other); }
 
     FourCC codecName;
+    String codecString;
     uint64_t trackID { 0 };
 
     virtual ~TrackInfo() = default;
@@ -217,6 +221,7 @@ public:
         MediaTime presentationTime;
         MediaTime decodeTime;
         MediaTime duration;
+        MediaTime trimDuration;
         MediaSampleDataType data;
         MediaSample::SampleFlags flags;
     };

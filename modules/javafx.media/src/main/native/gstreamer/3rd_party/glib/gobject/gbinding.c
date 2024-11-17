@@ -2,6 +2,8 @@
  *
  * Copyright (C) 2010  Intel Corp.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -19,36 +21,33 @@
  */
 
 /**
- * SECTION:gbinding
- * @Title: GBinding
- * @Short_Description: Bind two object properties
+ * GBinding:
  *
- * #GBinding is the representation of a binding between a property on a
- * #GObject instance (or source) and another property on another #GObject
+ * `GObject` instance (or source) and another property on another `GObject`
  * instance (or target).
  *
  * Whenever the source property changes, the same value is applied to the
  * target property; for instance, the following binding:
  *
- * |[<!-- language="C" -->
+ * ```c
  *   g_object_bind_property (object1, "property-a",
  *                           object2, "property-b",
  *                           G_BINDING_DEFAULT);
- * ]|
+ * ```
  *
  * will cause the property named "property-b" of @object2 to be updated
- * every time g_object_set() or the specific accessor changes the value of
+ * every time [method@GObject.set] or the specific accessor changes the value of
  * the property "property-a" of @object1.
  *
  * It is possible to create a bidirectional binding between two properties
- * of two #GObject instances, so that if either property changes, the
+ * of two `GObject` instances, so that if either property changes, the
  * other is updated as well, for instance:
  *
- * |[<!-- language="C" -->
+ * ```c
  *   g_object_bind_property (object1, "property-a",
  *                           object2, "property-b",
  *                           G_BINDING_BIDIRECTIONAL);
- * ]|
+ * ```
  *
  * will keep the two properties in sync.
  *
@@ -57,14 +56,14 @@
  * transformation from the source value to the target value before
  * applying it; for instance, the following binding:
  *
- * |[<!-- language="C" -->
+ * ```c
  *   g_object_bind_property_full (adjustment1, "value",
  *                                adjustment2, "value",
  *                                G_BINDING_BIDIRECTIONAL,
  *                                celsius_to_fahrenheit,
  *                                fahrenheit_to_celsius,
  *                                NULL, NULL);
- * ]|
+ * ```
  *
  * will keep the "value" property of the two adjustments in sync; the
  * @celsius_to_fahrenheit function will be called whenever the "value"
@@ -78,29 +77,29 @@
  *
  * Note that #GBinding does not resolve cycles by itself; a cycle like
  *
- * |[
+ * ```
  *   object1:propertyA -> object2:propertyB
  *   object2:propertyB -> object3:propertyC
  *   object3:propertyC -> object1:propertyA
- * ]|
+ * ```
  *
  * might lead to an infinite loop. The loop, in this particular case,
- * can be avoided if the objects emit the #GObject::notify signal only
+ * can be avoided if the objects emit the `GObject::notify` signal only
  * if the value has effectively been changed. A binding is implemented
- * using the #GObject::notify signal, so it is susceptible to all the
- * various ways of blocking a signal emission, like g_signal_stop_emission()
- * or g_signal_handler_block().
+ * using the `GObject::notify` signal, so it is susceptible to all the
+ * various ways of blocking a signal emission, like [func@GObject.signal_stop_emission]
+ * or [func@GObject.signal_handler_block].
  *
  * A binding will be severed, and the resources it allocates freed, whenever
- * either one of the #GObject instances it refers to are finalized, or when
+ * either one of the `GObject` instances it refers to are finalized, or when
  * the #GBinding instance loses its last reference.
  *
  * Bindings for languages with garbage collection can use
- * g_binding_unbind() to explicitly release a binding between the source
+ * [method@GObject.Binding.unbind] to explicitly release a binding between the source
  * and target properties, instead of relying on the last reference on the
  * binding, source, and target instances to drop.
  *
- * #GBinding is available since GObject 2.26
+ * Since: 2.26
  */
 
 #include "config.h"
@@ -121,9 +120,9 @@
 GType
 g_binding_flags_get_type (void)
 {
-  static gsize static_g_define_type_id = 0;
+  static GType static_g_define_type_id = 0;
 
-  if (g_once_init_enter (&static_g_define_type_id))
+  if (g_once_init_enter_pointer (&static_g_define_type_id))
     {
       static const GFlagsValue values[] = {
         { G_BINDING_DEFAULT, "G_BINDING_DEFAULT", "default" },
@@ -134,7 +133,7 @@ g_binding_flags_get_type (void)
       };
       GType g_define_type_id =
         g_flags_register_static (g_intern_static_string ("GBindingFlags"), values);
-      g_once_init_leave (&static_g_define_type_id, g_define_type_id);
+      g_once_init_leave_pointer (&static_g_define_type_id, g_define_type_id);
     }
 
   return static_g_define_type_id;
@@ -462,11 +461,11 @@ default_transform (GBinding     *binding,
             return TRUE;
         }
 
-      g_warning ("%s: Unable to convert a value of type %s to a "
-                 "value of type %s",
-                 G_STRLOC,
-                 g_type_name (G_VALUE_TYPE (value_a)),
-                 g_type_name (G_VALUE_TYPE (value_b)));
+      g_critical ("%s: Unable to convert a value of type %s to a "
+                  "value of type %s",
+                  G_STRLOC,
+                  g_type_name (G_VALUE_TYPE (value_a)),
+                  g_type_name (G_VALUE_TYPE (value_b)));
 
       return FALSE;
     }
@@ -550,7 +549,7 @@ on_source_notify (GObject          *source,
     {
       binding->is_frozen = TRUE;
 
-      g_param_value_validate (binding->target_pspec, &to_value);
+      (void) g_param_value_validate (binding->target_pspec, &to_value);
       g_object_set_property (target, binding->target_pspec->name, &to_value);
 
       binding->is_frozen = FALSE;
@@ -618,7 +617,7 @@ on_target_notify (GObject          *target,
     {
       binding->is_frozen = TRUE;
 
-      g_param_value_validate (binding->source_pspec, &to_value);
+      (void) g_param_value_validate (binding->source_pspec, &to_value);
       g_object_set_property (source, binding->source_pspec->name, &to_value);
 
       binding->is_frozen = FALSE;
@@ -697,30 +696,6 @@ static gboolean
 is_canonical (const gchar *key)
 {
   return (strchr (key, '_') == NULL);
-}
-
-static gboolean
-is_valid_property_name (const gchar *key)
-{
-  const gchar *p;
-
-  /* First character must be a letter. */
-  if ((key[0] < 'A' || key[0] > 'Z') &&
-      (key[0] < 'a' || key[0] > 'z'))
-    return FALSE;
-
-  for (p = key; *p != 0; p++)
-    {
-      const gchar c = *p;
-
-      if (c != '-' && c != '_' &&
-          (c < '0' || c > '9') &&
-          (c < 'A' || c > 'Z') &&
-          (c < 'a' || c > 'z'))
-        return FALSE;
-    }
-
-  return TRUE;
 }
 
 static void
@@ -911,9 +886,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_SOURCE,
-                                   g_param_spec_object ("source",
-                                                        P_("Source"),
-                                                        P_("The source of the binding"),
+                                   g_param_spec_object ("source", NULL, NULL,
                                                         G_TYPE_OBJECT,
                                                         G_PARAM_CONSTRUCT_ONLY |
                                                         G_PARAM_READWRITE |
@@ -926,9 +899,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_TARGET,
-                                   g_param_spec_object ("target",
-                                                        P_("Target"),
-                                                        P_("The target of the binding"),
+                                   g_param_spec_object ("target", NULL, NULL,
                                                         G_TYPE_OBJECT,
                                                         G_PARAM_CONSTRUCT_ONLY |
                                                         G_PARAM_READWRITE |
@@ -945,9 +916,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_SOURCE_PROPERTY,
-                                   g_param_spec_string ("source-property",
-                                                        P_("Source Property"),
-                                                        P_("The property on the source to bind"),
+                                   g_param_spec_string ("source-property", NULL, NULL,
                                                         NULL,
                                                         G_PARAM_CONSTRUCT_ONLY |
                                                         G_PARAM_READWRITE |
@@ -964,9 +933,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_TARGET_PROPERTY,
-                                   g_param_spec_string ("target-property",
-                                                        P_("Target Property"),
-                                                        P_("The property on the target to bind"),
+                                   g_param_spec_string ("target-property", NULL, NULL,
                                                         NULL,
                                                         G_PARAM_CONSTRUCT_ONLY |
                                                         G_PARAM_READWRITE |
@@ -979,9 +946,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_FLAGS,
-                                   g_param_spec_flags ("flags",
-                                                       P_("Flags"),
-                                                       P_("The binding flags"),
+                                   g_param_spec_flags ("flags", NULL, NULL,
                                                        G_TYPE_BINDING_FLAGS,
                                                        G_BINDING_DEFAULT,
                                                        G_PARAM_CONSTRUCT_ONLY |
@@ -1268,14 +1233,14 @@ g_object_bind_property_full (gpointer               source,
 
   g_return_val_if_fail (G_IS_OBJECT (source), NULL);
   g_return_val_if_fail (source_property != NULL, NULL);
-  g_return_val_if_fail (is_valid_property_name (source_property), NULL);
+  g_return_val_if_fail (g_param_spec_is_valid_name (source_property), NULL);
   g_return_val_if_fail (G_IS_OBJECT (target), NULL);
   g_return_val_if_fail (target_property != NULL, NULL);
-  g_return_val_if_fail (is_valid_property_name (target_property), NULL);
+  g_return_val_if_fail (g_param_spec_is_valid_name (target_property), NULL);
 
   if (source == target && g_strcmp0 (source_property, target_property) == 0)
     {
-      g_warning ("Unable to bind the same property on the same instance");
+      g_critical ("Unable to bind the same property on the same instance");
       return NULL;
     }
 
@@ -1291,82 +1256,82 @@ g_object_bind_property_full (gpointer               source,
   pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (source), source_property);
   if (pspec == NULL)
     {
-      g_warning ("%s: The source object of type %s has no property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (source),
-                 source_property);
+      g_critical ("%s: The source object of type %s has no property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (source),
+                  source_property);
       return NULL;
     }
 
   if (!(pspec->flags & G_PARAM_READABLE))
     {
-      g_warning ("%s: The source object of type %s has no readable property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (source),
-                 source_property);
+      g_critical ("%s: The source object of type %s has no readable property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (source),
+                  source_property);
       return NULL;
     }
 
   if ((flags & G_BINDING_BIDIRECTIONAL) &&
       ((pspec->flags & G_PARAM_CONSTRUCT_ONLY) || !(pspec->flags & G_PARAM_WRITABLE)))
     {
-      g_warning ("%s: The source object of type %s has no writable property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (source),
-                 source_property);
+      g_critical ("%s: The source object of type %s has no writable property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (source),
+                  source_property);
       return NULL;
     }
 
   if ((flags & G_BINDING_INVERT_BOOLEAN) &&
       !(G_PARAM_SPEC_VALUE_TYPE (pspec) == G_TYPE_BOOLEAN))
     {
-      g_warning ("%s: The G_BINDING_INVERT_BOOLEAN flag can only be used "
-                 "when binding boolean properties; the source property '%s' "
-                 "is of type '%s'",
-                 G_STRLOC,
-                 source_property,
-                 g_type_name (G_PARAM_SPEC_VALUE_TYPE (pspec)));
+      g_critical ("%s: The G_BINDING_INVERT_BOOLEAN flag can only be used "
+                  "when binding boolean properties; the source property '%s' "
+                  "is of type '%s'",
+                  G_STRLOC,
+                  source_property,
+                  g_type_name (G_PARAM_SPEC_VALUE_TYPE (pspec)));
       return NULL;
     }
 
   pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (target), target_property);
   if (pspec == NULL)
     {
-      g_warning ("%s: The target object of type %s has no property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (target),
-                 target_property);
+      g_critical ("%s: The target object of type %s has no property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (target),
+                  target_property);
       return NULL;
     }
 
   if ((pspec->flags & G_PARAM_CONSTRUCT_ONLY) || !(pspec->flags & G_PARAM_WRITABLE))
     {
-      g_warning ("%s: The target object of type %s has no writable property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (target),
-                 target_property);
+      g_critical ("%s: The target object of type %s has no writable property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (target),
+                  target_property);
       return NULL;
     }
 
   if ((flags & G_BINDING_BIDIRECTIONAL) &&
       !(pspec->flags & G_PARAM_READABLE))
     {
-      g_warning ("%s: The target object of type %s has no readable property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (target),
-                 target_property);
+      g_critical ("%s: The target object of type %s has no readable property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (target),
+                  target_property);
       return NULL;
     }
 
   if ((flags & G_BINDING_INVERT_BOOLEAN) &&
       !(G_PARAM_SPEC_VALUE_TYPE (pspec) == G_TYPE_BOOLEAN))
     {
-      g_warning ("%s: The G_BINDING_INVERT_BOOLEAN flag can only be used "
-                 "when binding boolean properties; the target property '%s' "
-                 "is of type '%s'",
-                 G_STRLOC,
-                 target_property,
-                 g_type_name (G_PARAM_SPEC_VALUE_TYPE (pspec)));
+      g_critical ("%s: The G_BINDING_INVERT_BOOLEAN flag can only be used "
+                  "when binding boolean properties; the target property '%s' "
+                  "is of type '%s'",
+                  G_STRLOC,
+                  target_property,
+                  g_type_name (G_PARAM_SPEC_VALUE_TYPE (pspec)));
       return NULL;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,73 +24,58 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import java.util.function.Supplier;
+import javafx.beans.property.ObjectProperty;
+import javafx.geometry.Pos;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.skin.TitledPaneSkin;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.VBox;
-import com.oracle.tools.fx.monkey.util.ItemSelector;
+import javafx.scene.paint.Color;
+import com.oracle.tools.fx.monkey.Loggers;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.ObjectOption;
+import com.oracle.tools.fx.monkey.sheets.LabeledPropertySheet;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.Templates;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import com.oracle.tools.fx.monkey.util.TextSelector;
 
 /**
- * TitledPane Page
+ * TitledPane Page.
  */
-public class TitledPanePage extends TestPaneBase {
-    private final TextSelector textSelector;
-    private final ItemSelector<Supplier<Node>> contentSelector;
-    private final TitledPane titledPane;
+public class TitledPanePage extends TestPaneBase implements HasSkinnable {
+    private final TitledPane control;
 
     public TitledPanePage() {
-        setId("TitledPane");
+        super("TitledPane");
 
-        textSelector = TextSelector.fromPairs(
-            "textSelector",
-            (t) -> update(),
-            Templates.multiLineTextPairs()
-        );
-
-        contentSelector = new ItemSelector<Supplier<Node>>(
-            "contentSelector",
-            (g) -> update(),
-            new Object[] {
-                "null", null,
-                "AnchorPane", mk(() -> makeAnchorPane()),
-                "Label", mk(() -> new Label("Label"))
+        control = new TitledPane() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
             }
-        );
-
-        titledPane = new TitledPane();
+        };
 
         OptionPane op = new OptionPane();
-        op.label("Text:");
-        op.option(textSelector.node());
-        op.label("Content:");
-        op.option(contentSelector.node());
+        op.section("TitledPane");
+        op.option(new BooleanOption("animated", "animated", control.animatedProperty()));
+        op.option(new BooleanOption("collapsible", "collapsible", control.collapsibleProperty()));
+        op.option("Content:", createContentOptions("content", control.contentProperty()));
+        op.option(new BooleanOption("expanded", "expanded", control.expandedProperty()));
+        LabeledPropertySheet.appendTo(op, "Labeled", false, control);
 
-        setContent(titledPane);
+        setContent(control);
         setOptions(op);
-
-        update();
     }
 
-    protected void update() {
-        Supplier<Node> gen = contentSelector.getSelectedItem();
-        Node n = (gen == null) ? null : gen.get();
-
-        titledPane.setText(textSelector.getSelectedText());
-        titledPane.setContent(n);
-    }
-
-    protected Supplier<Node> mk(Supplier<Node> gen) {
-        return gen;
-    }
-
-    protected Node makeAnchorPane() {
+    private Node makeAnchorPane() {
         VBox b = new VBox(new TextField("First"), new TextField("Second"));
         AnchorPane p = new AnchorPane(b);
         AnchorPane.setTopAnchor(b, 10.0);
@@ -98,5 +83,43 @@ public class TitledPanePage extends TestPaneBase {
         AnchorPane.setLeftAnchor(b, 100.0);
         AnchorPane.setRightAnchor(b, 50.0);
         return p;
+    }
+
+    private Node makeLabel() {
+        Label t = new Label("Label");
+        t.setAlignment(Pos.CENTER);
+        t.setMaxHeight(Double.MAX_VALUE);
+        t.setMaxWidth(Double.MAX_VALUE);
+        t.setBackground(Background.fill(Color.LIGHTGOLDENRODYELLOW));
+        return t;
+    }
+
+    private Node makeComboBox() {
+        ComboBox<Object> t = new ComboBox<>();
+        t.setEditable(true);
+        t.getItems().addAll(
+            "is a very long string to make the combo box extra wide"
+        );
+        return t;
+    }
+
+    private Node createContentOptions(String name, ObjectProperty<Node> p) {
+        ObjectOption<Node> s = new ObjectOption<>(name, p);
+        s.addChoiceSupplier("AnchorPane", () -> makeAnchorPane());
+        s.addChoiceSupplier("ComboBox", () -> makeComboBox());
+        s.addChoiceSupplier("Label", () -> makeLabel());
+        s.addChoiceSupplier("<null>", () -> null);
+        s.selectFirst();
+        return s;
+    }
+
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new TitledPaneSkin(control));
     }
 }

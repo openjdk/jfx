@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,12 +63,6 @@ IntlLocale::IntlLocale(VM& vm, Structure* structure)
 {
 }
 
-void IntlLocale::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
-}
-
 template<typename Visitor>
 void IntlLocale::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
@@ -86,7 +80,7 @@ public:
     CString toCanonical();
 
     void overrideLanguageScriptRegion(StringView language, StringView script, StringView region);
-    void setKeywordValue(ASCIILiteral key, StringView value);
+    bool setKeywordValue(ASCIILiteral key, StringView value);
 
 private:
     Vector<char, 32> m_buffer;
@@ -96,7 +90,7 @@ bool LocaleIDBuilder::initialize(const String& tag)
 {
     if (!isStructurallyValidLanguageTag(tag))
         return false;
-    ASSERT(tag.isAllASCII());
+    ASSERT(tag.containsOnlyASCII());
     m_buffer = localeIDBufferForLanguageTagWithNullTerminator(tag.ascii());
     return m_buffer.size();
 }
@@ -158,7 +152,7 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
         else
             hasAppended = true;
 
-        ASSERT(subtag.isAllASCII());
+        ASSERT(subtag.containsOnlyASCII());
         if (subtag.is8Bit())
             buffer.append(subtag.characters8(), subtag.length());
         else
@@ -168,7 +162,7 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
     if (endOfLanguageScriptRegionVariant != length) {
         auto rest = localeIDView.right(length - endOfLanguageScriptRegionVariant);
 
-        ASSERT(rest.isAllASCII());
+        ASSERT(rest.containsOnlyASCII());
         if (rest.is8Bit())
             buffer.append(rest.characters8(), rest.length());
         else
@@ -179,11 +173,11 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
     m_buffer.swap(buffer);
 }
 
-void LocaleIDBuilder::setKeywordValue(ASCIILiteral key, StringView value)
+bool LocaleIDBuilder::setKeywordValue(ASCIILiteral key, StringView value)
 {
     ASSERT(m_buffer.size());
 
-    ASSERT(value.isAllASCII());
+    ASSERT(value.containsOnlyASCII());
     Vector<char, 32> rawValue(value.length() + 1);
     value.getCharacters(reinterpret_cast<LChar*>(rawValue.data()));
     rawValue[value.length()] = '\0';
@@ -196,7 +190,7 @@ void LocaleIDBuilder::setKeywordValue(ASCIILiteral key, StringView value)
         status = U_ZERO_ERROR;
         uloc_setKeywordValue(key.characters(), rawValue.data(), m_buffer.data(), length + 1, &status);
     }
-    ASSERT(U_SUCCESS(status));
+    return U_SUCCESS(status);
 }
 
 String IntlLocale::keywordValue(ASCIILiteral key, bool isBoolean) const
@@ -275,46 +269,49 @@ void IntlLocale::initializeLocale(JSGlobalObject* globalObject, const String& ta
     String calendar = intlStringOption(globalObject, options, vm.propertyNames->calendar, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!calendar.isNull()) {
-        if (!isUnicodeLocaleIdentifierType(calendar)) {
+        if (!isUnicodeLocaleIdentifierType(calendar) || !localeID.setKeywordValue("calendar"_s, calendar)) {
             throwRangeError(globalObject, scope, "calendar is not a well-formed calendar value"_s);
             return;
         }
-        localeID.setKeywordValue("calendar"_s, calendar);
     }
 
     String collation = intlStringOption(globalObject, options, vm.propertyNames->collation, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!collation.isNull()) {
-        if (!isUnicodeLocaleIdentifierType(collation)) {
+        if (!isUnicodeLocaleIdentifierType(collation) || !localeID.setKeywordValue("collation"_s, collation)) {
             throwRangeError(globalObject, scope, "collation is not a well-formed collation value"_s);
             return;
         }
-        localeID.setKeywordValue("collation"_s, collation);
     }
 
     String hourCycle = intlStringOption(globalObject, options, vm.propertyNames->hourCycle, { "h11"_s, "h12"_s, "h23"_s, "h24"_s }, "hourCycle must be \"h11\", \"h12\", \"h23\", or \"h24\""_s, { });
     RETURN_IF_EXCEPTION(scope, void());
-    if (!hourCycle.isNull())
-        localeID.setKeywordValue("hours"_s, hourCycle);
+    if (!hourCycle.isNull()) {
+        bool success = localeID.setKeywordValue("hours"_s, hourCycle);
+        ASSERT_UNUSED(success, success);
+    }
 
     String caseFirst = intlStringOption(globalObject, options, vm.propertyNames->caseFirst, { "upper"_s, "lower"_s, "false"_s }, "caseFirst must be either \"upper\", \"lower\", or \"false\""_s, { });
     RETURN_IF_EXCEPTION(scope, void());
-    if (!caseFirst.isNull())
-        localeID.setKeywordValue("colcasefirst"_s, caseFirst);
+    if (!caseFirst.isNull()) {
+        bool success = localeID.setKeywordValue("colcasefirst"_s, caseFirst);
+        ASSERT_UNUSED(success, success);
+    }
 
     TriState numeric = intlBooleanOption(globalObject, options, vm.propertyNames->numeric);
     RETURN_IF_EXCEPTION(scope, void());
-    if (numeric != TriState::Indeterminate)
-        localeID.setKeywordValue("colnumeric"_s, numeric == TriState::True ? "yes"_s : "no"_s);
+    if (numeric != TriState::Indeterminate) {
+        bool success = localeID.setKeywordValue("colnumeric"_s, numeric == TriState::True ? "yes"_s : "no"_s);
+        ASSERT_UNUSED(success, success);
+    }
 
     String numberingSystem = intlStringOption(globalObject, options, vm.propertyNames->numberingSystem, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!numberingSystem.isNull()) {
-        if (!isUnicodeLocaleIdentifierType(numberingSystem)) {
+        if (!isUnicodeLocaleIdentifierType(numberingSystem) || !localeID.setKeywordValue("numbers"_s, numberingSystem)) {
             throwRangeError(globalObject, scope, "numberingSystem is not a well-formed numbering system value"_s);
             return;
         }
-        localeID.setKeywordValue("numbers"_s, numberingSystem);
     }
 
     m_localeID = localeID.toCanonical();

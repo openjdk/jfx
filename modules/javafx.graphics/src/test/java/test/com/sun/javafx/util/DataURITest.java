@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,11 +26,23 @@
 package test.com.sun.javafx.util;
 
 import com.sun.javafx.util.DataURI;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class DataURITest {
+
+    @Test
+    public void testNullIsInvalid() {
+        assertNull(DataURI.tryParse(null));
+    }
+
+    @Test
+    public void testEmptyStringIsInvalid() {
+        assertNull(DataURI.tryParse(""));
+    }
 
     @Test
     public void testMissingDataSeparatorIsInvalid() {
@@ -40,11 +52,11 @@ public class DataURITest {
         assertNull(uri);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testParametersListWithoutKeyValuePairsIsInvalid() {
         String data = "data:foo;bar;baz,";
         assertTrue(DataURI.matchScheme(data));
-        DataURI uri = DataURI.tryParse(data);
+        assertThrows(IllegalArgumentException.class, () -> DataURI.tryParse(data));
     }
 
     @Test
@@ -172,6 +184,36 @@ public class DataURITest {
         DataURI uri = DataURI.tryParse(data);
         assertNotNull(uri);
         assertEquals("data:text/plain;charset=utf-8;base64,SGVsbG9Xb3JsZE...RIZWxsb1dvcmxk", uri.toString());
+    }
+
+    @Test
+    public void testPercentEncodedTextIsDecodedAccordingToRFC3986() {
+        // We use URLEncoder here to escape the emoji character using percent-encoding.
+        // When DataURI parses its payload, it automatically converts percent-encoded characters back to octets.
+        String input = URLEncoder.encode("🙂", StandardCharsets.UTF_8);
+        String output = new String(DataURI.tryParse("data:," + input).getData(), StandardCharsets.UTF_8);
+        assertEquals("🙂", output);
+
+        // In the next case, URLEncoder replaces the space character with '+'.
+        // Since DataURI does not know about this special encoding, the '+' character is retained.
+        input = URLEncoder.encode("Hello 🙂!", StandardCharsets.UTF_8);
+        output = new String(DataURI.tryParse("data:," + input).getData(), StandardCharsets.UTF_8);
+        assertEquals("Hello+🙂!", output);
+    }
+
+    @Test
+    public void testPercentEncodedTextContainsInvalidEscapeSequence() {
+        var ex = assertThrows(IllegalArgumentException.class, () -> DataURI.tryParse("data:,%XY"));
+        assertTrue(ex.getMessage().startsWith("Invalid"));
+
+        ex = assertThrows(IllegalArgumentException.class, () -> DataURI.tryParse("data:,%5G"));
+        assertTrue(ex.getMessage().startsWith("Invalid"));
+
+        ex = assertThrows(IllegalArgumentException.class, () -> DataURI.tryParse("data:,%0"));
+        assertTrue(ex.getMessage().startsWith("Incomplete"));
+
+        ex = assertThrows(IllegalArgumentException.class, () -> DataURI.tryParse("data:,%"));
+        assertTrue(ex.getMessage().startsWith("Incomplete"));
     }
 
 }

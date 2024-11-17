@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,30 +25,25 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.internal.AssumptionViolatedException;
-import org.junit.rules.TestName;
-import org.junit.rules.TestWatchman;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.model.FrameworkMethod;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import com.sun.glass.ui.monocle.TestLogShim;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 
-@RunWith(Parameterized.class)
 public abstract class ParameterizedTestBase {
 
-    protected final TestTouchDevice device;
-    protected final Rectangle2D stageBounds;
+    protected TestTouchDevice device;
+    private String testName;
     private Throwable exception;
     protected double width;
     protected double height;
 
+    /**
+     * There seems to be no need to handle assumptions this way in junit5.
+     *
     @Rule
     public TestWatchman monitor = new TestWatchman() {
         @Override
@@ -62,23 +57,20 @@ public abstract class ParameterizedTestBase {
             }
         }
     };
+    */
 
-    @Rule public TestName name = new TestName();
+    // gets test name from the junit5 system
+    @BeforeEach
+    void getTestName(TestInfo t) {
+        testName = t.getDisplayName();
+    }
 
-
-    public ParameterizedTestBase(TestTouchDevice device, Rectangle2D stageBounds) {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    protected void createDevice(TestTouchDevice device, Rectangle2D stageBounds) throws Exception {
         this.device = device;
-        this.stageBounds = stageBounds;
-    }
-
-    public ParameterizedTestBase(TestTouchDevice device) {
-        this(device, null);
-    }
-
-    @Before
-    public void createDevice() throws Exception {
         TestApplication.showScene(stageBounds);
-        TestLogShim.log("Starting " + name.getMethodName() + "[" + device + "]");
+        TestLogShim.log("Starting " + testName + "[" + device + "]");
         Rectangle2D r = TestApplication.getScreenBounds();
         width = r.getWidth();
         height = r.getHeight();
@@ -93,18 +85,20 @@ public abstract class ParameterizedTestBase {
                         (t, e) -> exception = e));
     }
 
-    @After
+    @AfterEach
     public void destroyDevice() throws Throwable {
         if (device != null) {
             device.destroy();
         }
-        TestApplication.waitForNextPulse();
-        if (exception != null) {
-            RuntimeException rte = new RuntimeException("Uncaught exception");
-            rte.setStackTrace(new StackTraceElement[0]);
-            rte.initCause(exception);
-            throw rte;
+        // junit5: ignored tests do not initialize the toolkit
+        if (device != null) {
+            TestApplication.waitForNextPulse();
+            if (exception != null) {
+                RuntimeException rte = new RuntimeException("Uncaught exception");
+                rte.setStackTrace(new StackTraceElement[0]);
+                rte.initCause(exception);
+                throw rte;
+            }
         }
     }
-
 }

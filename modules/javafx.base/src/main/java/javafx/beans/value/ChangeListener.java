@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,9 +37,8 @@ package javafx.beans.value;
  * The same instance of {@code ChangeListener} can be registered to listen to
  * multiple {@code ObservableValues}.
  *
+ * @param <T> the observable value type
  * @see ObservableValue
- *
- *
  * @since JavaFX 2.0
  */
 @FunctionalInterface

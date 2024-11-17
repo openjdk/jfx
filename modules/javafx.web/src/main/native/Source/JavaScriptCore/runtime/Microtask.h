@@ -33,13 +33,13 @@ namespace JSC {
 class CallFrame;
 class JSGlobalObject;
 
-enum MicrotaskIdentifierType { };
-using MicrotaskIdentifier = ObjectIdentifier<MicrotaskIdentifierType>;
+enum class MicrotaskIdentifierType { };
+using MicrotaskIdentifier = AtomicObjectIdentifier<MicrotaskIdentifierType>;
 
 class Microtask : public RefCounted<Microtask> {
 public:
     Microtask()
-        : m_identifier(MicrotaskIdentifier::generateThreadSafe())
+        : m_identifier(MicrotaskIdentifier::generate())
     {
     }
 

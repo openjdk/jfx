@@ -35,9 +35,7 @@ namespace WebCore {
 
 class Event;
 
-class ContextMenuContext {
-public:
-    enum class Type : uint8_t {
+enum class ContextMenuContextType : uint8_t {
         ContextMenu,
 #if ENABLE(SERVICE_CONTROLS)
         ServicesMenu,
@@ -45,7 +43,11 @@ public:
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
         MediaControls,
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
-    };
+};
+
+class ContextMenuContext {
+public:
+    using Type = ContextMenuContextType;
 
     ContextMenuContext();
     ContextMenuContext(Type, const HitTestResult&, Event*);
@@ -62,9 +64,19 @@ public:
     void setSelectedText(const String& selectedText) { m_selectedText = selectedText; }
     const String& selectedText() const { return m_selectedText; }
 
+    bool hasEntireImage() const { return m_hasEntireImage; }
+
 #if ENABLE(SERVICE_CONTROLS)
     void setControlledImage(Image* controlledImage) { m_controlledImage = controlledImage; }
     Image* controlledImage() const { return m_controlledImage.get(); }
+#endif
+
+#if ENABLE(CONTEXT_MENU_QR_CODE_DETECTION)
+    void setPotentialQRCodeNodeSnapshotImage(Image* image) { m_potentialQRCodeNodeSnapshotImage = image; }
+    Image* potentialQRCodeNodeSnapshotImage() const { return m_potentialQRCodeNodeSnapshotImage.get(); }
+
+    void setPotentialQRCodeViewportSnapshotImage(Image* image) { m_potentialQRCodeViewportSnapshotImage = image; }
+    Image* potentialQRCodeViewportSnapshotImage() const { return m_potentialQRCodeViewportSnapshotImage.get(); }
 #endif
 
 private:
@@ -72,29 +84,18 @@ private:
     HitTestResult m_hitTestResult;
     RefPtr<Event> m_event;
     String m_selectedText;
+    bool m_hasEntireImage { false };
 
 #if ENABLE(SERVICE_CONTROLS)
     RefPtr<Image> m_controlledImage;
 #endif
+
+#if ENABLE(CONTEXT_MENU_QR_CODE_DETECTION)
+    RefPtr<Image> m_potentialQRCodeNodeSnapshotImage;
+    RefPtr<Image> m_potentialQRCodeViewportSnapshotImage;
+#endif
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ContextMenuContext::Type> {
-    using values = EnumValues<
-        WebCore::ContextMenuContext::Type,
-        WebCore::ContextMenuContext::Type::ContextMenu
-#if ENABLE(SERVICE_CONTROLS)
-        , WebCore::ContextMenuContext::Type::ServicesMenu
-#endif // ENABLE(SERVICE_CONTROLS)
-#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
-        , WebCore::ContextMenuContext::Type::MediaControls
-#endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
-    >;
-};
-
-} // namespace WTF
 
 #endif // ENABLE(CONTEXT_MENUS)

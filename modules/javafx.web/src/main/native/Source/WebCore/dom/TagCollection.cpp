@@ -24,7 +24,8 @@
 #include "config.h"
 #include "TagCollection.h"
 
-#include "NodeRareData.h"
+#include "CachedHTMLCollectionInlines.h"
+#include "NodeRareDataInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -34,7 +35,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(TagCollectionNS);
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTagCollection);
 
 TagCollectionNS::TagCollectionNS(ContainerNode& rootNode, const AtomString& namespaceURI, const AtomString& localName)
-    : CachedHTMLCollection(rootNode, ByTag)
+    : CachedHTMLCollection(rootNode, CollectionType::ByTag)
     , m_namespaceURI(namespaceURI)
     , m_localName(localName)
 {
@@ -43,11 +44,11 @@ TagCollectionNS::TagCollectionNS(ContainerNode& rootNode, const AtomString& name
 
 TagCollectionNS::~TagCollectionNS()
 {
-    ownerNode().nodeLists()->removeCachedTagCollectionNS(*this, m_namespaceURI, m_localName);
+    protectedOwnerNode()->nodeLists()->removeCachedTagCollectionNS(*this, m_namespaceURI, m_localName);
 }
 
 TagCollection::TagCollection(ContainerNode& rootNode, const AtomString& qualifiedName)
-    : CachedHTMLCollection(rootNode, ByTag)
+    : CachedHTMLCollection(rootNode, CollectionType::ByTag)
     , m_qualifiedName(qualifiedName)
 {
     ASSERT(qualifiedName != starAtom());
@@ -55,11 +56,11 @@ TagCollection::TagCollection(ContainerNode& rootNode, const AtomString& qualifie
 
 TagCollection::~TagCollection()
 {
-    ownerNode().nodeLists()->removeCachedCollection(this, m_qualifiedName);
+    protectedOwnerNode()->nodeLists()->removeCachedCollection(this, m_qualifiedName);
 }
 
 HTMLTagCollection::HTMLTagCollection(ContainerNode& rootNode, const AtomString& qualifiedName)
-    : CachedHTMLCollection(rootNode, ByHTMLTag)
+    : CachedHTMLCollection(rootNode, CollectionType::ByHTMLTag)
     , m_qualifiedName(qualifiedName)
     , m_loweredQualifiedName(qualifiedName.convertToASCIILowercase())
 {
@@ -68,7 +69,7 @@ HTMLTagCollection::HTMLTagCollection(ContainerNode& rootNode, const AtomString& 
 
 HTMLTagCollection::~HTMLTagCollection()
 {
-    ownerNode().nodeLists()->removeCachedCollection(this, m_qualifiedName);
+    protectedOwnerNode()->nodeLists()->removeCachedCollection(this, m_qualifiedName);
 }
 
 } // namespace WebCore

@@ -54,26 +54,7 @@ constexpr unsigned maximumURLSize = 0x04000000;
 
 bool SecurityOrigin::shouldIgnoreHost(const URL& url)
 {
-    return url.protocolIsData() || url.protocolIsAbout() || url.protocolIsJavaScript() || url.protocolIs("file"_s);
-}
-
-bool SecurityOrigin::shouldUseInnerURL(const URL& url)
-{
-    // FIXME: Blob URLs don't have inner URLs. Their form is "blob:<inner-origin>/<UUID>", so treating the part after "blob:" as a URL is incorrect.
-    if (url.protocolIsBlob())
-        return true;
-    UNUSED_PARAM(url);
-    return false;
-}
-
-// In general, extracting the inner URL varies by scheme. It just so happens
-// that all the URL schemes we currently support that use inner URLs for their
-// security origin can be parsed using this algorithm.
-URL SecurityOrigin::extractInnerURL(const URL& url)
-{
-    // FIXME: Update this callsite to use the innerURL member function when
-    // we finish implementing it.
-    return URL { PAL::decodeURLEscapeSequences(url.path()) };
+    return url.protocolIsData() || url.protocolIsAbout() || url.protocolIsJavaScript() || url.protocolIsFile();
 }
 
 static RefPtr<SecurityOrigin> getCachedOrigin(const URL& url)
@@ -179,16 +160,45 @@ SecurityOrigin::SecurityOrigin(const SecurityOrigin* other)
 
 Ref<SecurityOrigin> SecurityOrigin::create(const URL& url)
 {
-    if (RefPtr<SecurityOrigin> cachedOrigin = getCachedOrigin(url))
-        return cachedOrigin.releaseNonNull();
+    if (url.protocolIsBlob())
+        return createForBlobURL(url);
 
     if (SecurityOriginData::shouldTreatAsOpaqueOrigin(url))
         return adoptRef(*new SecurityOrigin);
 
-    if (shouldUseInnerURL(url))
-        return adoptRef(*new SecurityOrigin(extractInnerURL(url)));
-
     return adoptRef(*new SecurityOrigin(url));
+}
+
+inline bool isSafelistedBlobProtocol(const URL& url)
+{
+    if (!url.isValid())
+        return false;
+
+    // FIXME: we ought to assert we're in WebKitLegacy or a web content process as per 263652@main,
+    // except that assert gets hit on certain tests.
+    return url.protocolIsInHTTPFamily()
+        || url.protocolIsFile()
+#if PLATFORM(GTK) || PLATFORM(WPE)
+        || url.protocolIs("resource"_s)
+#endif
+#if ENABLE(PDFJS)
+        || url.protocolIs("webkit-pdfjs-viewer"_s)
+#endif
+        || LegacySchemeRegistry::schemeIsHandledBySchemeHandler(url.protocol());
+}
+
+Ref<SecurityOrigin> SecurityOrigin::createForBlobURL(const URL& url)
+{
+    ASSERT(url.protocolIsBlob());
+
+    if (auto origin = getCachedOrigin(url))
+        return origin.releaseNonNull();
+
+    URL pathURL { url.path().toString() };
+    if (isSafelistedBlobProtocol(pathURL))
+        return adoptRef(*new SecurityOrigin(pathURL));
+
+    return createOpaque();
 }
 
 Ref<SecurityOrigin> SecurityOrigin::createOpaque()
@@ -200,7 +210,7 @@ Ref<SecurityOrigin> SecurityOrigin::createOpaque()
 
 Ref<SecurityOrigin> SecurityOrigin::createNonLocalWithAllowedFilePath(const URL& url, const String& filePath)
 {
-    ASSERT(!url.isLocalFile());
+    ASSERT(!url.protocolIsFile());
     auto securityOrigin = SecurityOrigin::create(url);
     securityOrigin->m_filePath = filePath;
     return securityOrigin;
@@ -223,9 +233,8 @@ bool SecurityOrigin::isSecure(const URL& url)
     if (!url.isValid() || LegacySchemeRegistry::shouldTreatURLSchemeAsSecure(url.protocol()))
         return true;
 
-    // URLs that wrap inner URLs are secure if those inner URLs are secure.
-    if (shouldUseInnerURL(url))
-        return LegacySchemeRegistry::shouldTreatURLSchemeAsSecure(extractInnerURL(url).protocol()) || BlobURL::isSecureBlobURL(url);
+    if (url.protocolIsBlob())
+        return BlobURL::isSecureBlobURL(url);
 
     return false;
 }
@@ -285,12 +294,13 @@ bool SecurityOrigin::passesFileCheck(const SecurityOrigin& other) const
     return !m_enforcesFilePathSeparation && !other.m_enforcesFilePathSeparation;
 }
 
-bool SecurityOrigin::canRequest(const URL& url) const
+bool SecurityOrigin::canRequest(const URL& url, const OriginAccessPatterns& patterns) const
 {
     if (m_universalAccess)
         return true;
 
-    if (getCachedOrigin(url) == this)
+    auto cachedOriginForURL = getCachedOrigin(url);
+    if (cachedOriginForURL && isSameOriginAs(*cachedOriginForURL))
         return true;
 
     if (isOpaque())
@@ -306,7 +316,7 @@ bool SecurityOrigin::canRequest(const URL& url) const
     if (isSameSchemeHostPort(targetOrigin.get()))
         return true;
 
-    if (SecurityPolicy::isAccessAllowed(*this, targetOrigin.get(), url))
+    if (SecurityPolicy::isAccessAllowed(*this, targetOrigin.get(), url, patterns))
         return true;
 
     return false;
@@ -345,7 +355,7 @@ static bool isFeedWithNestedProtocolInHTTPFamily(const URL& url)
         || startsWithLettersIgnoringASCIICase(string, "feedsearch:https:"_s);
 }
 
-bool SecurityOrigin::canDisplay(const URL& url) const
+bool SecurityOrigin::canDisplay(const URL& url, const OriginAccessPatterns& patterns) const
 {
     ASSERT(!isInNetworkProcess());
     if (m_universalAccess)
@@ -355,7 +365,7 @@ bool SecurityOrigin::canDisplay(const URL& url) const
         return false;
 
 #if !PLATFORM(IOS_FAMILY) && !ENABLE(BUBBLEWRAP_SANDBOX)
-    if (m_data.protocol() == "file"_s && url.isLocalFile() && !FileSystem::filesHaveSameVolume(m_filePath, url.fileSystemPath()))
+    if (m_data.protocol() == "file"_s && url.protocolIsFile() && !FileSystem::filesHaveSameVolume(m_filePath, url.fileSystemPath()))
         return false;
 #endif
 
@@ -365,19 +375,19 @@ bool SecurityOrigin::canDisplay(const URL& url) const
     auto protocol = url.protocol();
 
     if (LegacySchemeRegistry::canDisplayOnlyIfCanRequest(protocol))
-        return canRequest(url);
+        return canRequest(url, patterns);
 
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsDisplayIsolated(protocol))
-        return equalIgnoringASCIICase(m_data.protocol(), protocol) || SecurityPolicy::isAccessAllowed(*this, url);
+        return equalIgnoringASCIICase(m_data.protocol(), protocol) || SecurityPolicy::isAccessAllowed(*this, url, patterns);
 
     if (!SecurityPolicy::restrictAccessToLocal())
         return true;
 
-    if (url.isLocalFile() && url.fileSystemPath() == m_filePath)
+    if (url.protocolIsFile() && url.fileSystemPath() == m_filePath)
         return true;
 
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(protocol))
-        return canLoadLocalResources() || SecurityPolicy::isAccessAllowed(*this, url);
+        return canLoadLocalResources() || SecurityPolicy::isAccessAllowed(*this, url, patterns);
 
     return true;
 }

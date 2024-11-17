@@ -32,10 +32,7 @@ namespace PAL {
 
 static const Seconds defaultHysteresisDuration { 5_s };
 
-enum class HysteresisState {
-    Started,
-    Stopped
-};
+enum class HysteresisState : bool { Started, Stopped };
 
 class HysteresisActivity {
     WTF_MAKE_FAST_ALLOCATED;
@@ -43,7 +40,6 @@ public:
     explicit HysteresisActivity(Function<void(HysteresisState)>&& callback = [](HysteresisState) { }, Seconds hysteresisSeconds = defaultHysteresisDuration)
         : m_callback(WTFMove(callback))
         , m_hysteresisSeconds(hysteresisSeconds)
-        , m_active(false)
         , m_timer(RunLoop::main(), this, &HysteresisActivity::hysteresisTimerFired)
     {
     }
@@ -52,6 +48,7 @@ public:
     {
         if (m_active)
             return;
+
         m_active = true;
 
         if (m_timer.isActive())
@@ -64,17 +61,23 @@ public:
     {
         if (!m_active)
             return;
-        m_active = false;
 
+        m_active = false;
         m_timer.startOneShot(m_hysteresisSeconds);
     }
 
     void impulse()
     {
-        if (!m_active) {
-            start();
-            stop();
+        if (m_active)
+            return;
+
+        if (state() == HysteresisState::Stopped) {
+            m_active = true;
+            m_callback(HysteresisState::Started);
+            m_active = false;
         }
+
+        m_timer.startOneShot(m_hysteresisSeconds);
     }
 
     HysteresisState state() const
@@ -91,8 +94,8 @@ private:
 
     Function<void(HysteresisState)> m_callback;
     Seconds m_hysteresisSeconds;
-    bool m_active;
     RunLoop::Timer m_timer;
+    bool m_active { false };
 };
 
 } // namespace PAL

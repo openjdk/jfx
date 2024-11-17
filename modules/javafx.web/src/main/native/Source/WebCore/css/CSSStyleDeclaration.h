@@ -23,6 +23,7 @@
 #include "CSSPropertyNames.h"
 #include "ExceptionOr.h"
 #include "ScriptWrappable.h"
+#include <wtf/CheckedRef.h>
 
 namespace WebCore {
 
@@ -35,7 +36,7 @@ class MutableStyleProperties;
 class StyleProperties;
 class StyledElement;
 
-class CSSStyleDeclaration : public ScriptWrappable {
+class CSSStyleDeclaration : public ScriptWrappable, public CanMakeSingleThreadWeakPtr<CSSStyleDeclaration> {
     WTF_MAKE_NONCOPYABLE(CSSStyleDeclaration);
     WTF_MAKE_ISO_ALLOCATED(CSSStyleDeclaration);
 public:
@@ -51,6 +52,7 @@ public:
     virtual ExceptionOr<void> setCssText(const String&) = 0;
     virtual unsigned length() const = 0;
     virtual String item(unsigned index) const = 0;
+    bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     virtual RefPtr<DeprecatedCSSOMValue> getPropertyCSSValue(const String& propertyName) = 0;
     virtual String getPropertyValue(const String& propertyName) = 0;
     virtual String getPropertyPriority(const String& propertyName) = 0;

@@ -70,15 +70,7 @@ struct Trigger {
             && conditions.isEmpty();
     }
 
-    bool operator==(const Trigger& other) const
-    {
-        return urlFilter == other.urlFilter
-            && urlFilterIsCaseSensitive == other.urlFilterIsCaseSensitive
-            && topURLFilterIsCaseSensitive == other.topURLFilterIsCaseSensitive
-            && frameURLFilterIsCaseSensitive == other.frameURLFilterIsCaseSensitive
-            && flags == other.flags
-            && conditions == other.conditions;
-    }
+    friend bool operator==(const Trigger&, const Trigger&) = default;
 };
 
 inline void add(Hasher& hasher, const Trigger& trigger)
@@ -127,8 +119,7 @@ struct Action {
     Action(ActionData&& data)
         : m_data(WTFMove(data)) { }
 
-    bool operator==(const Action& other) const { return m_data == other.m_data; }
-    bool operator!=(const Action& other) const { return !(*this == other); }
+    friend bool operator==(const Action&, const Action&) = default;
 
     const ActionData& data() const { return m_data; }
 
@@ -140,8 +131,8 @@ private:
 };
 
 struct DeserializedAction : public Action {
-    static DeserializedAction deserialize(Span<const uint8_t>, uint32_t location);
-    static size_t serializedLength(Span<const uint8_t>, uint32_t location);
+    static DeserializedAction deserialize(std::span<const uint8_t>, uint32_t location);
+    static size_t serializedLength(std::span<const uint8_t>, uint32_t location);
 
     uint32_t actionID() const { return m_actionID; }
 
@@ -162,10 +153,7 @@ public:
 
     ContentExtensionRule isolatedCopy() const & { return { m_trigger.isolatedCopy(), m_action.isolatedCopy() }; }
     ContentExtensionRule isolatedCopy() && { return { WTFMove(m_trigger).isolatedCopy(), WTFMove(m_action).isolatedCopy() }; }
-    bool operator==(const ContentExtensionRule& other) const
-    {
-        return m_trigger == other.m_trigger && m_action == other.m_action;
-    }
+    friend bool operator==(const ContentExtensionRule&, const ContentExtensionRule&) = default;
 
 private:
     Trigger m_trigger;

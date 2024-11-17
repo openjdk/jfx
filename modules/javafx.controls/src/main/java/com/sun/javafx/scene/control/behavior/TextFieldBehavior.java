@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,6 +105,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         textField.sceneProperty().addListener(weakSceneListener);
         if (textField.getScene() != null) {
             textField.getScene().focusOwnerProperty().addListener(weakFocusOwnerListener);
+            if (textField.getScene().getFocusOwner() == textField) {
+                textField.selectRange(textField.getLength(), 0);
+            }
         }
 
         // Only add this if we're on an embedded platform that supports 5-button navigation

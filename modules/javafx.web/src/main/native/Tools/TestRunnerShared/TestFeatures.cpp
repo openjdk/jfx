@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,11 @@
 #include "TestFeatures.h"
 
 #include "TestCommand.h"
+#include "WPTFunctions.h"
 #include <fstream>
 #include <string>
 #include <wtf/StdFilesystem.h>
+#include <wtf/URL.h>
 
 namespace WTR {
 
@@ -48,6 +50,7 @@ void merge(TestFeatures& base, TestFeatures additional)
     merge(base.stringWebPreferenceFeatures, additional.stringWebPreferenceFeatures);
     merge(base.boolTestRunnerFeatures, additional.boolTestRunnerFeatures);
     merge(base.doubleTestRunnerFeatures, additional.doubleTestRunnerFeatures);
+    merge(base.uint16TestRunnerFeatures, additional.uint16TestRunnerFeatures);
     merge(base.stringTestRunnerFeatures, additional.stringTestRunnerFeatures);
     merge(base.stringVectorTestRunnerFeatures, additional.stringVectorTestRunnerFeatures);
 }
@@ -66,16 +69,13 @@ bool operator==(const TestFeatures& a, const TestFeatures& b)
         return false;
     if (a.doubleTestRunnerFeatures != b.doubleTestRunnerFeatures)
         return false;
+    if (a.uint16TestRunnerFeatures != b.uint16TestRunnerFeatures)
+        return false;
     if (a.stringTestRunnerFeatures != b.stringTestRunnerFeatures)
         return false;
     if (a.stringVectorTestRunnerFeatures != b.stringVectorTestRunnerFeatures)
         return false;
     return true;
-}
-
-bool operator!=(const TestFeatures& a, const TestFeatures& b)
-{
-    return !(a == b);
 }
 
 static bool pathContains(const std::string& pathOrURL, const char* substring)
@@ -111,20 +111,36 @@ static std::optional<double> overrideDeviceScaleFactorForTest(const std::string&
 
 static bool shouldDumpJSConsoleLogInStdErr(const std::string& pathOrURL)
 {
-    return pathContains(pathOrURL, "localhost:8800/beacon") || pathContains(pathOrURL, "localhost:9443/beacon")
-        || pathContains(pathOrURL, "localhost:8800/cors") || pathContains(pathOrURL, "localhost:9443/cors")
-        || pathContains(pathOrURL, "localhost:8800/fetch") || pathContains(pathOrURL, "localhost:9443/fetch")
-        || pathContains(pathOrURL, "localhost:8800/service-workers") || pathContains(pathOrURL, "localhost:9443/service-workers")
-        || pathContains(pathOrURL, "localhost:8800/streams/writable-streams") || pathContains(pathOrURL, "localhost:9443/streams/writable-streams")
-        || pathContains(pathOrURL, "localhost:8800/streams/piping") || pathContains(pathOrURL, "localhost:9443/streams/piping")
-        || pathContains(pathOrURL, "localhost:8800/xhr") || pathContains(pathOrURL, "localhost:9443/xhr")
-        || pathContains(pathOrURL, "localhost:8800/webrtc") || pathContains(pathOrURL, "localhost:9443/webrtc")
-        || pathContains(pathOrURL, "localhost:8800/websockets") || pathContains(pathOrURL, "localhost:9443/websockets");
+    if (auto url = URL { { }, String::fromUTF8(pathOrURL.c_str()) }; isWebPlatformTestURL(url)) {
+        auto path = url.path();
+        return path.startsWith("/beacon"_s)
+            || path.startsWith("/cors"_s)
+            || path.startsWith("/fetch"_s)
+            || path.startsWith("/service-workers"_s)
+            || path.startsWith("/streams/writable-streams"_s)
+            || path.startsWith("/streams/piping"_s)
+            || path.startsWith("/xhr"_s)
+            || path.startsWith("/webrtc"_s)
+            || path.startsWith("/websockets"_s);
+    }
+    return false;
 }
 
 static bool shouldEnableWebGPU(const std::string& pathOrURL)
 {
-    return pathContains(pathOrURL, "127.0.0.1:8000/webgpu");
+    return pathContains(pathOrURL, "webgpu/");
+}
+
+static bool shouldSetDefaultPortsForWTR(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "localhost:8000/") || pathContains(pathOrURL, "localhost:8443/")
+        || pathContains(pathOrURL, "127.0.0.1:8000/") || pathContains(pathOrURL, "127.0.0.1:8443/");
+}
+
+static bool shouldSetDefaultPortsForWPT(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "localhost:8800/") || pathContains(pathOrURL, "localhost:9443/")
+        || pathContains(pathOrURL, "127.0.0.1:8800/") || pathContains(pathOrURL, "127.0.0.1:9443/");
 }
 
 TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
@@ -144,7 +160,14 @@ TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
         features.doubleTestRunnerFeatures.insert({ "viewHeight", viewWidthAndHeight->second });
     }
     if (shouldEnableWebGPU(command.pathOrURL))
-        features.boolWebPreferenceFeatures.insert({ "WebGPU", true });
+        features.boolWebPreferenceFeatures.insert({ "WebGPUEnabled", true });
+    if (shouldSetDefaultPortsForWTR(command.pathOrURL)) {
+        features.uint16TestRunnerFeatures.insert({ "insecureUpgradePort", 8000 });
+        features.uint16TestRunnerFeatures.insert({ "secureUpgradePort", 8443 });
+    } else if (shouldSetDefaultPortsForWPT(command.pathOrURL)) {
+        features.uint16TestRunnerFeatures.insert({ "insecureUpgradePort", 8800 });
+        features.uint16TestRunnerFeatures.insert({ "secureUpgradePort", 9443 });
+    }
 
     return features;
 }
@@ -168,6 +191,11 @@ static double parseDoubleTestHeaderValue(const std::string& value)
 static uint32_t parseUInt32TestHeaderValue(const std::string& value)
 {
     return std::stoi(value);
+}
+
+static uint16_t parseUInt16TestHeaderValue(const std::string& value)
+{
+    return static_cast<uint16_t>(std::stoul(value));
 }
 
 static std::string parseStringTestHeaderValueAsRelativePath(const std::string& value, const std::filesystem::path& testPath)
@@ -230,6 +258,9 @@ bool parseTestHeaderFeature(TestFeatures& features, std::string key, std::string
     case TestHeaderKeyType::DoubleTestRunner:
         features.doubleTestRunnerFeatures.insert_or_assign(key, parseDoubleTestHeaderValue(value));
         return true;
+    case TestHeaderKeyType::UInt16TestRunner:
+        features.uint16TestRunnerFeatures.insert_or_assign(key, parseUInt16TestHeaderValue(value));
+        return true;
     case TestHeaderKeyType::StringTestRunner:
         features.stringTestRunnerFeatures.insert_or_assign(key, value);
         return true;
@@ -261,15 +292,21 @@ static TestFeatures parseTestHeaderString(const std::string& pairString, std::fi
             pairEnd = pairString.size();
         size_t equalsLocation = pairString.find("=", pairStart);
         if (equalsLocation == std::string::npos) {
+            if (!path.empty())
             LOG_ERROR("Malformed option in test header (could not find '=' character) in %s", path.c_str());
+            else
+                LOG_ERROR("Malformed option in --additional-header option value (could not find '=' character)");
             break;
         }
         auto key = pairString.substr(pairStart, equalsLocation - pairStart);
         auto value = pairString.substr(equalsLocation + 1, pairEnd - (equalsLocation + 1));
 
-        if (!parseTestHeaderFeature(features, key, value, path, keyTypeMap))
+        if (!parseTestHeaderFeature(features, key, value, path, keyTypeMap)) {
+            if (!path.empty())
             LOG_ERROR("Unknown key, '%s', in test header in %s", key.c_str(), path.c_str());
-
+            else
+                LOG_ERROR("Unknown key, '%s', in --additional-header option value", key.c_str());
+        }
         pairStart = pairEnd + 1;
     }
 
@@ -314,6 +351,13 @@ TestFeatures featureDefaultsFromSelfComparisonHeader(const TestCommand& command,
     if (command.selfComparisonHeader.empty())
         return { };
     return parseTestHeaderString(command.selfComparisonHeader, command.absolutePath, keyTypeMap);
+}
+
+TestFeatures featureFromAdditionalHeaderOption(const TestCommand& command, const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMap)
+{
+    if (command.additionalHeader.empty())
+        return { };
+    return parseTestHeaderString(command.additionalHeader, std::filesystem::path(), keyTypeMap);
 }
 
 } // namespace WTF

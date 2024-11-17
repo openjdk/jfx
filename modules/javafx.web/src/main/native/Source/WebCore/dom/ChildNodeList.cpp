@@ -23,6 +23,7 @@
 #include "config.h"
 #include "ChildNodeList.h"
 
+#include "CollectionIndexCacheInlines.h"
 #include "ElementIterator.h"
 #include "NodeRareData.h"
 #include <wtf/IsoMallocInlines.h>
@@ -44,7 +45,7 @@ ChildNodeList::ChildNodeList(ContainerNode& parent)
 
 ChildNodeList::~ChildNodeList()
 {
-    m_parent.get().nodeLists()->removeChildNodeList(this);
+    Ref { m_parent }->nodeLists()->removeChildNodeList(this);
 }
 
 unsigned ChildNodeList::length() const

@@ -34,13 +34,13 @@
 #include "CSSParserObserverWrapper.h"
 #include "CSSParserTokenRange.h"
 #include "CSSTokenizerInputStream.h"
-#include "HTMLParserIdioms.h"
 #include "JSDOMConvertStrings.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSTokenizer);
 
 // https://drafts.csswg.org/css-syntax/#input-preprocessing
 String CSSTokenizer::preprocessString(const String& string)
@@ -642,7 +642,7 @@ CSSParserToken CSSTokenizer::consumeStringTokenUntil(UChar endingCodePoint)
             if (isNewLine(m_input.peek(0)))
                 consumeSingleWhitespaceIfNext(); // This handles \r\n for us
             else
-                output.appendCharacter(consumeEscape());
+                output.append(consumeEscape());
         } else
             output.append(cc);
     }
@@ -677,7 +677,7 @@ CSSParserToken CSSTokenizer::consumeURLToken()
         if (cc == ')' || cc == kEndOfFileMarker)
             return CSSParserToken(UrlToken, registerString(result.toString()));
 
-        if (isHTMLSpace(cc)) {
+        if (isASCIIWhitespace(cc)) {
             m_input.advanceUntilNonWhitespace();
             if (consumeIfNext(')') || m_input.nextInputChar() == kEndOfFileMarker)
                 return CSSParserToken(UrlToken, registerString(result.toString()));
@@ -689,7 +689,7 @@ CSSParserToken CSSTokenizer::consumeURLToken()
 
         if (cc == '\\') {
             if (twoCharsAreValidEscape(cc, m_input.peek(0))) {
-                result.appendCharacter(consumeEscape());
+                result.append(consumeEscape());
                 continue;
             }
             break;
@@ -716,11 +716,11 @@ void CSSTokenizer::consumeBadUrlRemnants()
 
 void CSSTokenizer::consumeSingleWhitespaceIfNext()
 {
-    // We check for \r\n and HTML spaces since we don't do preprocessing
+    // We check for \r\n and ASCII whitespace since we don't do preprocessing
     UChar next = m_input.peek(0);
     if (next == '\r' && m_input.peek(1) == '\n')
         m_input.advance(2);
-    else if (isHTMLSpace(next))
+    else if (isASCIIWhitespace(next))
         m_input.advance();
 }
 
@@ -781,7 +781,7 @@ StringView CSSTokenizer::consumeName()
             continue;
         }
         if (twoCharsAreValidEscape(cc, m_input.peek(0))) {
-            result.appendCharacter(consumeEscape());
+            result.append(consumeEscape());
             continue;
         }
         reconsume(cc);
@@ -790,7 +790,7 @@ StringView CSSTokenizer::consumeName()
 }
 
 // http://dev.w3.org/csswg/css-syntax/#consume-an-escaped-code-point
-UChar32 CSSTokenizer::consumeEscape()
+char32_t CSSTokenizer::consumeEscape()
 {
     UChar cc = consume();
     ASSERT(!isNewLine(cc));
@@ -805,7 +805,7 @@ UChar32 CSSTokenizer::consumeEscape()
         };
         consumeSingleWhitespaceIfNext();
         auto codePoint = parseInteger<uint32_t>(hexChars, 16).value();
-        if (!codePoint || (0xD800 <= codePoint && codePoint <= 0xDFFF) || codePoint > 0x10FFFF)
+        if (!codePoint || U_IS_SURROGATE(codePoint) || codePoint > UCHAR_MAX_VALUE)
             return replacementCharacter;
         return codePoint;
     }

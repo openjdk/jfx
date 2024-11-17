@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -70,6 +72,15 @@ GLIB_AVAILABLE_IN_ALL
 GArray* g_array_new               (gboolean          zero_terminated,
                    gboolean          clear_,
                    guint             element_size);
+GLIB_AVAILABLE_IN_2_76
+GArray* g_array_new_take          (gpointer          data,
+                                   gsize             len,
+                                   gboolean          clear,
+                                   gsize             element_size);
+GLIB_AVAILABLE_IN_2_76
+GArray* g_array_new_take_zero_terminated (gpointer  data,
+                                          gboolean  clear,
+                                          gsize     element_size);
 GLIB_AVAILABLE_IN_2_64
 gpointer g_array_steal            (GArray           *array,
                                    gsize            *len);
@@ -140,6 +151,16 @@ GLIB_AVAILABLE_IN_ALL
 GPtrArray* g_ptr_array_new                (void);
 GLIB_AVAILABLE_IN_ALL
 GPtrArray* g_ptr_array_new_with_free_func (GDestroyNotify    element_free_func);
+GLIB_AVAILABLE_IN_2_76
+GPtrArray* g_ptr_array_new_take           (gpointer         *data,
+                                           gsize             len,
+                                           GDestroyNotify    element_free_func);
+GLIB_AVAILABLE_IN_2_76
+GPtrArray* g_ptr_array_new_from_array     (gpointer         *data,
+                                           gsize             len,
+                                           GCopyFunc         copy_func,
+                                           gpointer          copy_func_user_data,
+                                           GDestroyNotify    element_free_func);
 GLIB_AVAILABLE_IN_2_64
 gpointer*   g_ptr_array_steal              (GPtrArray        *array,
                                             gsize            *len);
@@ -152,6 +173,18 @@ GPtrArray* g_ptr_array_sized_new          (guint             reserved_size);
 GLIB_AVAILABLE_IN_ALL
 GPtrArray* g_ptr_array_new_full           (guint             reserved_size,
                        GDestroyNotify    element_free_func);
+GLIB_AVAILABLE_IN_2_74
+GPtrArray* g_ptr_array_new_null_terminated (guint          reserved_size,
+                                            GDestroyNotify element_free_func,
+                                            gboolean       null_terminated);
+GLIB_AVAILABLE_IN_2_76
+GPtrArray* g_ptr_array_new_take_null_terminated  (gpointer       *data,
+                                                  GDestroyNotify  element_free_func);
+GLIB_AVAILABLE_IN_2_76
+GPtrArray* g_ptr_array_new_from_null_terminated_array (gpointer       *data,
+                                                       GCopyFunc       copy_func,
+                                                       gpointer        copy_func_user_data,
+                                                       GDestroyNotify  element_free_func);
 GLIB_AVAILABLE_IN_ALL
 gpointer*  g_ptr_array_free               (GPtrArray        *array,
                        gboolean          free_seg);
@@ -207,6 +240,13 @@ void       g_ptr_array_sort               (GPtrArray        *array,
                        GCompareFunc      compare_func);
 GLIB_AVAILABLE_IN_ALL
 void       g_ptr_array_sort_with_data     (GPtrArray        *array,
+GCompareDataFunc  compare_func,
+             gpointer          user_data);
+GLIB_AVAILABLE_IN_2_76
+void       g_ptr_array_sort_values        (GPtrArray        *array,
+                                           GCompareFunc      compare_func);
+GLIB_AVAILABLE_IN_2_76
+void       g_ptr_array_sort_values_with_data (GPtrArray        *array,
                        GCompareDataFunc  compare_func,
                        gpointer          user_data);
 GLIB_AVAILABLE_IN_ALL
@@ -223,6 +263,8 @@ gboolean   g_ptr_array_find_with_equal_func (GPtrArray     *haystack,
                                              GEqualFunc     equal_func,
                                              guint         *index_);
 
+GLIB_AVAILABLE_IN_2_74
+gboolean   g_ptr_array_is_null_terminated (GPtrArray *array);
 
 /* Byte arrays, an array of guint8.  Implemented as a GArray,
  * but type-safe.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include <type_traits>
 #include <wtf/RawPtrTraits.h>
 #include <wtf/RawValueTraits.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -73,6 +74,8 @@ template<class T> inline void validateCell(T)
 {
 }
 #endif
+
+enum WriteBarrierEarlyInitTag { WriteBarrierEarlyInit };
 
 // We have a separate base class with no constructors for use in Unions.
 template <typename T, typename Traits> class WriteBarrierBase {
@@ -165,7 +168,7 @@ public:
 
     JSValue get() const
     {
-        return JSValue::decode(m_value);
+        return JSValue::decodeConcurrent(&m_value);
     }
     void clear() { m_value = JSValue::encode(JSValue()); }
     void setUndefined() { m_value = JSValue::encode(jsUndefined()); }
@@ -194,7 +197,7 @@ private:
 
 template <typename T, typename Traits = WriteBarrierTraitsSelect<T>>
 class WriteBarrier : public WriteBarrierBase<T, Traits> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WriteBarrier);
 public:
     WriteBarrier()
     {
@@ -217,13 +220,18 @@ public:
     {
         this->setMayBeNull(vm, owner, value);
     }
+
+    WriteBarrier(T* value, WriteBarrierEarlyInitTag)
+    {
+        this->setWithoutWriteBarrier(value);
+    }
 };
 
 enum UndefinedWriteBarrierTagType { UndefinedWriteBarrierTag };
 enum NullWriteBarrierTagType { NullWriteBarrierTag };
 template <>
 class WriteBarrier<Unknown, RawValueTraits<Unknown>> : public WriteBarrierBase<Unknown, RawValueTraits<Unknown>> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WriteBarrier);
 public:
     WriteBarrier()
     {
@@ -246,6 +254,11 @@ public:
     WriteBarrier(DFG::DesiredWriteBarrier&, JSValue value)
     {
         ASSERT(isCompilationThread());
+        this->setWithoutWriteBarrier(value);
+    }
+
+    WriteBarrier(JSValue value, WriteBarrierEarlyInitTag)
+    {
         this->setWithoutWriteBarrier(value);
     }
 };
@@ -275,6 +288,11 @@ public:
     WriteBarrierStructureID(VM& vm, const JSCell* owner, Structure* value, MayBeNullTag)
     {
         setMayBeNull(vm, owner, value);
+    }
+
+    WriteBarrierStructureID(Structure* value, WriteBarrierEarlyInitTag)
+    {
+        setWithoutWriteBarrier(value);
     }
 
     void set(VM&, const JSCell* owner, Structure* value);

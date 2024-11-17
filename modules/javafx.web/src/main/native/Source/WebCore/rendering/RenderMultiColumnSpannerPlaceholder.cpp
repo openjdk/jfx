@@ -30,6 +30,8 @@
 #include "config.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
 
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderMultiColumnFlow.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -47,10 +49,11 @@ RenderPtr<RenderMultiColumnSpannerPlaceholder> RenderMultiColumnSpannerPlacehold
 }
 
 RenderMultiColumnSpannerPlaceholder::RenderMultiColumnSpannerPlaceholder(RenderMultiColumnFlow& fragmentedFlow, RenderBox& spanner, RenderStyle&& style)
-    : RenderBox(fragmentedFlow.document(), WTFMove(style), RenderBoxModelObjectFlag)
+    : RenderBox(Type::MultiColumnSpannerPlaceholder, fragmentedFlow.document(), WTFMove(style), TypeFlag::IsBoxModelObject)
     , m_spanner(spanner)
     , m_fragmentedFlow(fragmentedFlow)
 {
+    ASSERT(isRenderMultiColumnSpannerPlaceholder());
 }
 
 ASCIILiteral RenderMultiColumnSpannerPlaceholder::renderName() const

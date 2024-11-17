@@ -25,8 +25,8 @@
 
 #pragma once
 
+#include "WebGPUCompositorIntegration.h"
 #include <optional>
-#include <pal/graphics/WebGPU/WebGPUCompositorIntegration.h>
 #include <wtf/MachSendRight.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -34,9 +34,11 @@
 
 namespace WebCore {
 
+class ImageBuffer;
+
 class GPUCompositorIntegration : public RefCounted<GPUCompositorIntegration> {
 public:
-    static Ref<GPUCompositorIntegration> create(Ref<PAL::WebGPU::CompositorIntegration>&& backing)
+    static Ref<GPUCompositorIntegration> create(Ref<WebGPU::CompositorIntegration>&& backing)
     {
         return adoptRef(*new GPUCompositorIntegration(WTFMove(backing)));
     }
@@ -47,16 +49,18 @@ public:
 
     void prepareForDisplay(CompletionHandler<void()>&&);
 
-    PAL::WebGPU::CompositorIntegration& backing() { return m_backing; }
-    const PAL::WebGPU::CompositorIntegration& backing() const { return m_backing; }
+    WebGPU::CompositorIntegration& backing() { return m_backing; }
+    const WebGPU::CompositorIntegration& backing() const { return m_backing; }
+
+    void paintCompositedResultsToCanvas(WebCore::ImageBuffer&, uint32_t);
 
 private:
-    GPUCompositorIntegration(Ref<PAL::WebGPU::CompositorIntegration>&& backing)
+    GPUCompositorIntegration(Ref<WebGPU::CompositorIntegration>&& backing)
         : m_backing(WTFMove(backing))
     {
     }
 
-    Ref<PAL::WebGPU::CompositorIntegration> m_backing;
+    Ref<WebGPU::CompositorIntegration> m_backing;
 };
 
 }

@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum BroadcastChannelIdentifierType { };
-using BroadcastChannelIdentifier = ObjectIdentifier<BroadcastChannelIdentifierType>;
+enum class BroadcastChannelIdentifierType { };
+using BroadcastChannelIdentifier = AtomicObjectIdentifier<BroadcastChannelIdentifierType>;
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,11 +30,11 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageShim;
 import javafx.stage.StageStyle;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test those attributes on Stage that should be immutable after Stage is visible.
@@ -47,7 +47,8 @@ public class StageMutabilityTest {
     /**
      * Tests the default value of style for a Stage
      */
-    @Test public void testStyleDefault() {
+    @Test
+    public void testStyleDefault() {
         Stage stage = new Stage();
         assertEquals(StageStyle.DECORATED, stage.getStyle());
     }
@@ -55,7 +56,8 @@ public class StageMutabilityTest {
     /**
      * Tests setting the value of style for a Stage
      */
-    @Test public void testStyleSet() {
+    @Test
+    public void testStyleSet() {
         Stage stage = new Stage();
         assertEquals(StageStyle.DECORATED, stage.getStyle());
         stage.initStyle(StageStyle.UNDECORATED);
@@ -71,7 +73,8 @@ public class StageMutabilityTest {
     /**
      * Tests setting the value of style for a primary Stage
      */
-    @Test public void testStyleSetPrimary() {
+    @Test
+    public void testStyleSetPrimary() {
         Stage stage = new Stage();
         assertFalse(StageShim.isPrimary(stage));
         StageHelper.setPrimary(stage, true);
@@ -90,7 +93,8 @@ public class StageMutabilityTest {
     /**
      * Tests initializing the value of style for a Stage in the constructor
      */
-    @Test public void testStyleConstructor() {
+    @Test
+    public void testStyleConstructor() {
         Stage stage = new Stage(StageStyle.UNDECORATED);
         assertEquals(StageStyle.UNDECORATED, stage.getStyle());
         stage.initStyle(StageStyle.DECORATED);
@@ -100,7 +104,8 @@ public class StageMutabilityTest {
     /**
      * Tests that setting the value of style on a visible Stage throws an exception
      */
-    @Test public void testStyleSetWhileVisible() {
+    @Test
+    public void testStyleSetWhileVisible() {
         Stage stage = new Stage();
         assertEquals(StageStyle.DECORATED, stage.getStyle());
         stage.show();
@@ -117,7 +122,8 @@ public class StageMutabilityTest {
      * Tests that setting the value of style on a Stage after it is
      * set visible throws an exception even if it is subsequently set non-visible
      */
-    @Test public void testStyleSetAfterVisible() {
+    @Test
+    public void testStyleSetAfterVisible() {
         Stage stage = new Stage(StageStyle.TRANSPARENT);
         assertEquals(StageStyle.TRANSPARENT, stage.getStyle());
         stage.initStyle(StageStyle.UNDECORATED);
@@ -138,7 +144,8 @@ public class StageMutabilityTest {
     /**
      * Tests the default value of modality for a Stage
      */
-    @Test public void testModalityDefault() {
+    @Test
+    public void testModalityDefault() {
         Stage stage = new Stage();
         assertEquals(Modality.NONE, stage.getModality());
     }
@@ -146,7 +153,8 @@ public class StageMutabilityTest {
     /**
      * Tests setting the value of modality for a Stage
      */
-    @Test public void testModalitySet() {
+    @Test
+    public void testModalitySet() {
         Stage stage = new Stage();
         assertEquals(Modality.NONE, stage.getModality());
         stage.initModality(Modality.WINDOW_MODAL);
@@ -160,7 +168,8 @@ public class StageMutabilityTest {
     /**
      * Tests setting the value of modality for a primary Stage
      */
-    @Test public void testModalitySetPrimary() {
+    @Test
+    public void testModalitySetPrimary() {
         Stage stage = new Stage();
         assertFalse(StageShim.isPrimary(stage));
         StageHelper.setPrimary(stage, true);
@@ -179,7 +188,8 @@ public class StageMutabilityTest {
 //    /**
 //     * Tests that setting the value of style on a visible Stage throws an exception
 //     */
-//    @Test public void testStyleSetWhileVisible() {
+//    @Test
+//    public void testStyleSetWhileVisible() {
 //        Stage stage = new Stage();
 //        assertEquals(StageStyle.DECORATED, stage.getStyle());
 //        stage.show();
@@ -196,7 +206,8 @@ public class StageMutabilityTest {
 //     * Tests that setting the value of style on a Stage after it is
 //     * set visible throws an exception even if it is subsequently set non-visible
 //     */
-//    @Test public void testStyleSetAfterVisible() {
+//    @Test
+//    public void testStyleSetAfterVisible() {
 //        Stage stage = new Stage(StageStyle.TRANSPARENT);
 //        assertEquals(StageStyle.TRANSPARENT, stage.getStyle());
 //        stage.initStyle(StageStyle.UNDECORATED);

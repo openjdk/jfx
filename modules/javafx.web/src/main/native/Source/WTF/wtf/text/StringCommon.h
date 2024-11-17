@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2022 Jarred Sumner. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,9 +29,15 @@
 #include <algorithm>
 #include <unicode/uchar.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/MathExtras.h>
 #include <wtf/NotFound.h>
 #include <wtf/UnalignedAccess.h>
+#include <wtf/text/ASCIIFastPath.h>
 #include <wtf/text/ASCIILiteral.h>
+
+#if CPU(ARM64)
+#include <arm_neon.h>
+#endif
 
 namespace WTF {
 
@@ -39,6 +45,11 @@ template<typename CharacterType> inline bool isLatin1(CharacterType character)
 {
     using UnsignedCharacterType = typename std::make_unsigned<CharacterType>::type;
     return static_cast<UnsignedCharacterType>(character) <= static_cast<UnsignedCharacterType>(0xFF);
+}
+
+template<> ALWAYS_INLINE bool isLatin1(LChar)
+{
+    return true;
 }
 
 using CodeUnitMatchFunction = bool (*)(UChar);
@@ -60,72 +71,105 @@ bool equalLettersIgnoringASCIICase(const char*, ASCIILiteral);
 #if (CPU(X86_64) || CPU(ARM64)) && !ASAN_ENABLED
 ALWAYS_INLINE bool equal(const LChar* aLChar, const LChar* bLChar, unsigned length)
 {
-    unsigned dwordLength = length >> 3;
+    // These branches could be combined into one, but it's measurably faster
+    // for length 0 or 1 strings to separate them out like this.
+    if (!length)
+        return true;
+    if (length == 1)
+        return *aLChar == *bLChar;
 
-    const char* a = reinterpret_cast<const char*>(aLChar);
-    const char* b = reinterpret_cast<const char*>(bLChar);
-
-    if (dwordLength) {
-        for (unsigned i = 0; i != dwordLength; ++i) {
-            if (unalignedLoad<uint64_t>(a) != unalignedLoad<uint64_t>(b))
+#if COMPILER(GCC_COMPATIBLE)
+    switch (sizeof(unsigned) * CHAR_BIT - clz(length - 1)) { // Works as really fast log2, since length != 0.
+#else
+    switch (fastLog2(length)) {
+#endif
+    case 0:
+        RELEASE_ASSERT_NOT_REACHED();
+    case 1: // Length is 2.
+        return unalignedLoad<uint16_t>(aLChar) == unalignedLoad<uint16_t>(bLChar);
+    case 2: // Length is 3 or 4.
+        return unalignedLoad<uint16_t>(aLChar) == unalignedLoad<uint16_t>(bLChar)
+            && unalignedLoad<uint16_t>(aLChar + length - 2) == unalignedLoad<uint16_t>(bLChar + length - 2);
+    case 3: // Length is between 5 and 8 inclusive.
+        return unalignedLoad<uint32_t>(aLChar) == unalignedLoad<uint32_t>(bLChar)
+            && unalignedLoad<uint32_t>(aLChar + length - 4) == unalignedLoad<uint32_t>(bLChar + length - 4);
+    case 4: // Length is between 9 and 16 inclusive.
+        return unalignedLoad<uint64_t>(aLChar) == unalignedLoad<uint64_t>(bLChar)
+            && unalignedLoad<uint64_t>(aLChar + length - 8) == unalignedLoad<uint64_t>(bLChar + length - 8);
+#if CPU(ARM64)
+    case 5: // Length is between 17 and 32 inclusive.
+        return vminvq_u8(vandq_u8(
+            vceqq_u8(unalignedLoad<uint8x16_t>(aLChar), unalignedLoad<uint8x16_t>(bLChar)),
+            vceqq_u8(unalignedLoad<uint8x16_t>(aLChar + length - 16), unalignedLoad<uint8x16_t>(bLChar + length - 16))
+        ));
+    default: // Length is longer than 32 bytes.
+        if (!vminvq_u8(vceqq_u8(unalignedLoad<uint8x16_t>(aLChar), unalignedLoad<uint8x16_t>(bLChar))))
                 return false;
-
-            a += sizeof(uint64_t);
-            b += sizeof(uint64_t);
-        }
-    }
-
-    if (length & 4) {
-        if (unalignedLoad<uint32_t>(a) != unalignedLoad<uint32_t>(b))
+        for (unsigned i = length % 16; i < length; i += 16) {
+            if (!vminvq_u8(vceqq_u8(unalignedLoad<uint8x16_t>(aLChar + i), unalignedLoad<uint8x16_t>(bLChar + i))))
             return false;
-
-        a += sizeof(uint32_t);
-        b += sizeof(uint32_t);
     }
-
-    if (length & 2) {
-        if (unalignedLoad<uint16_t>(a) != unalignedLoad<uint16_t>(b))
+        return true;
+#else
+    default: // Length is longer than 16 bytes.
+        if (unalignedLoad<uint64_t>(aLChar) != unalignedLoad<uint64_t>(bLChar))
             return false;
-
-        a += sizeof(uint16_t);
-        b += sizeof(uint16_t);
-    }
-
-    if (length & 1 && (*reinterpret_cast<const LChar*>(a) != *reinterpret_cast<const LChar*>(b)))
+        for (unsigned i = length % 8; i < length; i += 8) {
+            if (unalignedLoad<uint64_t>(aLChar + i) != unalignedLoad<uint64_t>(bLChar + i))
         return false;
-
+        }
     return true;
+#endif
+    }
 }
 
 ALWAYS_INLINE bool equal(const UChar* aUChar, const UChar* bUChar, unsigned length)
 {
-    unsigned dwordLength = length >> 2;
+    if (!length)
+        return true;
+    if (length == 1)
+        return *aUChar == *bUChar;
 
-    const char* a = reinterpret_cast<const char*>(aUChar);
-    const char* b = reinterpret_cast<const char*>(bUChar);
-
-    if (dwordLength) {
-        for (unsigned i = 0; i != dwordLength; ++i) {
-            if (unalignedLoad<uint64_t>(a) != unalignedLoad<uint64_t>(b))
+#if COMPILER(GCC_COMPATIBLE)
+    switch (sizeof(unsigned) * CHAR_BIT - clz(length - 1)) { // Works as really fast log2, since length != 0.
+#else
+    switch (fastLog2(length)) {
+#endif
+    case 0:
+        RELEASE_ASSERT_NOT_REACHED();
+    case 1: // Length is 2 (4 bytes).
+        return unalignedLoad<uint32_t>(aUChar) == unalignedLoad<uint32_t>(bUChar);
+    case 2: // Length is 3 or 4 (6-8 bytes).
+        return unalignedLoad<uint32_t>(aUChar) == unalignedLoad<uint32_t>(bUChar)
+            && unalignedLoad<uint32_t>(aUChar + length - 2) == unalignedLoad<uint32_t>(bUChar + length - 2);
+    case 3: // Length is between 5 and 8 inclusive (10-16 bytes).
+        return unalignedLoad<uint64_t>(aUChar) == unalignedLoad<uint64_t>(bUChar)
+            && unalignedLoad<uint64_t>(aUChar + length - 4) == unalignedLoad<uint64_t>(bUChar + length - 4);
+#if CPU(ARM64)
+    case 4: // Length is between 9 and 16 inclusive (18-32 bytes).
+        return vminvq_u16(vandq_u16(
+            vceqq_u16(unalignedLoad<uint16x8_t>(aUChar), unalignedLoad<uint16x8_t>(bUChar)),
+            vceqq_u16(unalignedLoad<uint16x8_t>(aUChar + length - 8), unalignedLoad<uint16x8_t>(bUChar + length - 8))
+        ));
+    default: // Length is longer than 16 (32 bytes).
+        if (!vminvq_u16(vceqq_u16(unalignedLoad<uint16x8_t>(aUChar), unalignedLoad<uint16x8_t>(bUChar))))
                 return false;
-
-            a += sizeof(uint64_t);
-            b += sizeof(uint64_t);
-        }
-    }
-
-    if (length & 2) {
-        if (unalignedLoad<uint32_t>(a) != unalignedLoad<uint32_t>(b))
+        for (unsigned i = length % 8; i < length; i += 8) {
+            if (!vminvq_u16(vceqq_u16(unalignedLoad<uint16x8_t>(aUChar + i), unalignedLoad<uint16x8_t>(bUChar + i))))
             return false;
-
-        a += sizeof(uint32_t);
-        b += sizeof(uint32_t);
     }
-
-    if (length & 1 && (*reinterpret_cast<const UChar*>(a) != *reinterpret_cast<const UChar*>(b)))
+        return true;
+#else
+    default: // Length is longer than 8 (16 bytes).
+        if (unalignedLoad<uint64_t>(aUChar) != unalignedLoad<uint64_t>(bUChar))
         return false;
-
+        for (unsigned i = length % 4; i < length; i += 4) {
+            if (unalignedLoad<uint64_t>(aUChar + i) != unalignedLoad<uint64_t>(bUChar + i))
+                return false;
+        }
     return true;
+#endif
+    }
 }
 #elif CPU(X86) && !ASAN_ENABLED
 ALWAYS_INLINE bool equal(const LChar* aLChar, const LChar* bLChar, unsigned length)
@@ -286,11 +330,50 @@ ALWAYS_INLINE bool equal(const UChar* a, const UChar* b, unsigned length)
 
 ALWAYS_INLINE bool equal(const LChar* a, const UChar* b, unsigned length)
 {
+#if CPU(ARM64)
+    if (length >= 8) {
+        uint16x8_t aHalves = vmovl_u8(unalignedLoad<uint8x8_t>(a)); // Extends 8 LChars into 8 UChars.
+        uint16x8_t bHalves = unalignedLoad<uint16x8_t>(b);
+        if (!vminvq_u16(vceqq_u16(aHalves, bHalves)))
+            return false;
+        for (unsigned i = length % 8; i < length; i += 8) {
+            aHalves = vmovl_u8(unalignedLoad<uint8x8_t>(a + i));
+            bHalves = unalignedLoad<uint16x8_t>(b + i);
+            if (!vminvq_u16(vceqq_u16(aHalves, bHalves)))
+                return false;
+        }
+        return true;
+    }
+    if (length >= 4) {
+        auto read4 = [](const LChar* p) ALWAYS_INLINE_LAMBDA {
+            // Copy 32 bits and expand to 64 bits.
+            uint32_t v32 = unalignedLoad<uint32_t>(p);
+            uint64_t v64 = static_cast<uint64_t>(v32);
+            v64 = (v64 | (v64 << 16)) & 0x0000ffff0000ffffULL;
+            return static_cast<uint64_t>((v64 | (v64 << 8)) & 0x00ff00ff00ff00ffULL);
+        };
+
+        return static_cast<unsigned>(read4(a) == unalignedLoad<uint64_t>(b)) & static_cast<unsigned>(read4(a + (length % 4)) == unalignedLoad<uint64_t>(b + (length % 4)));
+    }
+    if (length >= 2) {
+        auto read2 = [](const LChar* p) ALWAYS_INLINE_LAMBDA {
+            // Copy 16 bits and expand to 32 bits.
+            uint16_t v16 = unalignedLoad<uint16_t>(p);
+            uint32_t v32 = static_cast<uint32_t>(v16);
+            return static_cast<uint32_t>((v32 | (v32 << 8)) & 0x00ff00ffUL);
+        };
+        return static_cast<unsigned>(read2(a) == unalignedLoad<uint32_t>(b)) & static_cast<unsigned>(read2(a + (length % 2)) == unalignedLoad<uint32_t>(b + (length % 2)));
+    }
+    if (length == 1)
+        return *a == *b;
+    return true;
+#else
     for (unsigned i = 0; i < length; ++i) {
         if (a[i] != b[i])
             return false;
     }
     return true;
+#endif
 }
 
 ALWAYS_INLINE bool equal(const UChar* a, const LChar* b, unsigned length) { return equal(b, a, length); }
@@ -298,17 +381,18 @@ ALWAYS_INLINE bool equal(const UChar* a, const LChar* b, unsigned length) { retu
 template<typename StringClassA, typename StringClassB>
 ALWAYS_INLINE bool equalCommon(const StringClassA& a, const StringClassB& b, unsigned length)
 {
+    if (!length)
+        return true;
+
     if (a.is8Bit()) {
         if (b.is8Bit())
-            return equal(a.characters8(), b.characters8(), length);
-
-        return equal(a.characters8(), b.characters16(), length);
+            return *a.characters8() == *b.characters8() && equal(a.characters8() + 1, b.characters8() + 1, length - 1);
+        return *a.characters8() == *b.characters16() && equal(a.characters8() + 1, b.characters16() + 1, length - 1);
     }
 
     if (b.is8Bit())
-        return equal(a.characters16(), b.characters8(), length);
-
-    return equal(a.characters16(), b.characters16(), length);
+        return *a.characters16() == *b.characters8() && equal(a.characters16() + 1, b.characters8() + 1, length - 1);
+    return *a.characters16() == *b.characters16() && equal(a.characters16() + 1, b.characters16() + 1, length - 1);
 }
 
 template<typename StringClassA, typename StringClassB>
@@ -835,6 +919,218 @@ inline bool equalIgnoringASCIICase(const char* string, ASCIILiteral literal)
 inline bool equalIgnoringASCIICase(ASCIILiteral a, ASCIILiteral b)
 {
     return equalIgnoringASCIICase(a.characters(), a.length(), b.characters(), b.length());
+}
+
+template<typename ElementType>
+inline void copyElements(ElementType* __restrict destination, const ElementType* __restrict source, size_t length)
+{
+    if (length == 1)
+        *destination = *source;
+    else if (length)
+        std::memcpy(destination, source, length * sizeof(ElementType));
+}
+
+inline void copyElements(uint16_t* __restrict destination, const uint8_t* __restrict source, size_t length)
+{
+#if CPU(ARM64)
+    // SIMD Upconvert.
+    const auto* end = destination + length;
+    constexpr uintptr_t memoryAccessSize = 64;
+
+    if (length >= memoryAccessSize) {
+        constexpr uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        const auto* simdEnd = destination + (length & ~memoryAccessMask);
+        uint8x16_t zeros = vdupq_n_u8(0);
+        do {
+            uint8x16x4_t bytes = vld1q_u8_x4(bitwise_cast<const uint8_t*>(source));
+            source += memoryAccessSize;
+
+            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[0], zeros }));
+            destination += memoryAccessSize / 4;
+            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[1], zeros }));
+            destination += memoryAccessSize / 4;
+            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[2], zeros }));
+            destination += memoryAccessSize / 4;
+            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[3], zeros }));
+            destination += memoryAccessSize / 4;
+        } while (destination != simdEnd);
+    }
+
+    while (destination != end)
+        *destination++ = *source++;
+#else
+    for (unsigned i = 0; i < length; ++i)
+        destination[i] = source[i];
+#endif
+}
+
+inline void copyElements(uint8_t* __restrict destination, const uint16_t* __restrict source, size_t length)
+{
+#if CPU(X86_SSE2)
+    const uintptr_t memoryAccessSize = 16; // Memory accesses on 16 byte (128 bit) alignment
+    const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+
+    unsigned i = 0;
+    for (; i < length && !isAlignedTo<memoryAccessMask>(&source[i]); ++i)
+        destination[i] = source[i];
+
+    const uintptr_t sourceLoadSize = 32; // Process 32 bytes (16 uint16_ts) each iteration
+    const unsigned ucharsPerLoop = sourceLoadSize / sizeof(uint16_t);
+    if (length > ucharsPerLoop) {
+        const unsigned endLength = length - ucharsPerLoop + 1;
+        for (; i < endLength; i += ucharsPerLoop) {
+            __m128i first8Uint16s = _mm_load_si128(reinterpret_cast<const __m128i*>(&source[i]));
+            __m128i second8Uint16s = _mm_load_si128(reinterpret_cast<const __m128i*>(&source[i+8]));
+            __m128i packedChars = _mm_packus_epi16(first8Uint16s, second8Uint16s);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(&destination[i]), packedChars);
+        }
+    }
+
+    for (; i < length; ++i)
+        destination[i] = source[i];
+#elif COMPILER(GCC_COMPATIBLE) && CPU(ARM64) && CPU(ADDRESS64) && !ASSERT_ENABLED
+    const uint8_t* const end = destination + length;
+    const uintptr_t memoryAccessSize = 16;
+
+    if (length >= memoryAccessSize) {
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+
+        // Vector interleaved unpack, we only store the lower 8 bits.
+        const uintptr_t lengthLeft = end - destination;
+        const uint8_t* const simdEnd = destination + (lengthLeft & ~memoryAccessMask);
+        do {
+            asm("ld2   { v0.16B, v1.16B }, [%[SOURCE]], #32\n\t"
+                "st1   { v0.16B }, [%[DESTINATION]], #16\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "v0", "v1");
+        } while (destination != simdEnd);
+    }
+
+    while (destination != end)
+        *destination++ = static_cast<uint8_t>(*source++);
+#elif COMPILER(GCC_COMPATIBLE) && CPU(ARM_NEON) && !(CPU(BIG_ENDIAN) || CPU(MIDDLE_ENDIAN)) && !ASSERT_ENABLED
+    const uint8_t* const end = destination + length;
+    const uintptr_t memoryAccessSize = 8;
+
+    if (length >= (2 * memoryAccessSize) - 1) {
+        // Prefix: align dst on 64 bits.
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        while (!isAlignedTo<memoryAccessMask>(destination))
+            *destination++ = static_cast<uint8_t>(*source++);
+
+        // Vector interleaved unpack, we only store the lower 8 bits.
+        const uintptr_t lengthLeft = end - destination;
+        const uint8_t* const simdEnd = end - (lengthLeft % memoryAccessSize);
+        do {
+            asm("vld2.8   { d0-d1 }, [%[SOURCE]] !\n\t"
+                "vst1.8   { d0 }, [%[DESTINATION],:64] !\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "d0", "d1");
+        } while (destination != simdEnd);
+    }
+
+    while (destination != end)
+        *destination++ = static_cast<uint8_t>(*source++);
+#else
+    for (unsigned i = 0; i < length; ++i)
+        destination[i] = static_cast<uint8_t>(source[i]);
+#endif
+}
+
+inline void copyElements(uint16_t* __restrict destination, const uint32_t* __restrict source, size_t length)
+{
+    const auto* end = destination + length;
+#if CPU(ARM64) && CPU(ADDRESS64)
+    const uintptr_t memoryAccessSize = 32 / sizeof(uint32_t);
+    if (length >= memoryAccessSize) {
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        const uintptr_t lengthLeft = end - destination;
+        const auto* const simdEnd = destination + (lengthLeft & ~memoryAccessMask);
+        // Use ld2 to load lower 16bit of 8 uint32_t.
+        do {
+            asm("ld2   { v0.8H, v1.8H }, [%[SOURCE]], #32\n\t"
+                "st1   { v0.8H }, [%[DESTINATION]], #16\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "v0", "v1");
+        } while (destination != simdEnd);
+    }
+#endif
+    while (destination != end)
+        *destination++ = *source++;
+}
+
+inline void copyElements(uint32_t* __restrict destination, const uint64_t* __restrict source, size_t length)
+{
+    const auto* end = destination + length;
+#if CPU(ARM64) && CPU(ADDRESS64)
+    const uintptr_t memoryAccessSize = 32 / sizeof(uint64_t);
+    if (length >= memoryAccessSize) {
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        const uintptr_t lengthLeft = end - destination;
+        const auto* const simdEnd = destination + (lengthLeft & ~memoryAccessMask);
+        // Use ld2 to load lower 32bit of 4 uint64_t.
+        do {
+            asm("ld2   { v0.4S, v1.4S }, [%[SOURCE]], #32\n\t"
+                "st1   { v0.4S }, [%[DESTINATION]], #16\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "v0", "v1");
+        } while (destination != simdEnd);
+    }
+#endif
+    while (destination != end)
+        *destination++ = *source++;
+}
+
+inline void copyElements(uint16_t* __restrict destination, const uint64_t* __restrict source, size_t length)
+{
+    const auto* end = destination + length;
+#if CPU(ARM64) && CPU(ADDRESS64)
+    const uintptr_t memoryAccessSize = 64 / sizeof(uint64_t);
+    if (length >= memoryAccessSize) {
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        const uintptr_t lengthLeft = end - destination;
+        const auto* const simdEnd = destination + (lengthLeft & ~memoryAccessMask);
+        // Use ld4 to load lower 16bit of 8 uint64_t.
+        do {
+            asm("ld4   { v0.8H, v1.8H, v2.8H, v3.8H }, [%[SOURCE]], #64\n\t"
+                "st1   { v0.8H }, [%[DESTINATION]], #16\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "v0", "v1", "v2", "v3");
+        } while (destination != simdEnd);
+    }
+#endif
+    while (destination != end)
+        *destination++ = *source++;
+}
+
+inline void copyElements(uint8_t* __restrict destination, const uint64_t* __restrict source, size_t length)
+{
+    const auto* end = destination + length;
+#if CPU(ARM64) && CPU(ADDRESS64)
+    const uintptr_t memoryAccessSize = 64 / sizeof(uint64_t);
+    if (length >= memoryAccessSize) {
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        const uintptr_t lengthLeft = end - destination;
+        const auto* const simdEnd = destination + (lengthLeft & ~memoryAccessMask);
+        // Since ARM64 does not ld8, we use ld4 to load lower 16bit of 8 uint64_t.
+        // And then narrow 8 16bit lanes into 8 8bit lanes and store it to the destination.
+        do {
+            asm("ld4   { v0.8H, v1.8H, v2.8H, v3.8H }, [%[SOURCE]], #64\n\t"
+                "xtn   v0.8B, v0.8H\n\t"
+                "st1   { v0.8B }, [%[DESTINATION]], #8\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "v0", "v1", "v2", "v3");
+        } while (destination != simdEnd);
+    }
+#endif
+    while (destination != end)
+        *destination++ = *source++;
 }
 
 }

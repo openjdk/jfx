@@ -107,6 +107,9 @@ public class FxSettingsFileProvider implements ISettingsProvider {
 
     @Override
     public void set(String key, String value) {
+        if (FxSettings.LOG) {
+            System.out.println("FxSettingsFileProvider.set key=" + key + " value=" + value);
+        }
         synchronized (data) {
             if (value == null) {
                 data.remove(key);
@@ -117,12 +120,15 @@ public class FxSettingsFileProvider implements ISettingsProvider {
     }
 
     @Override
-    public void set(String key, SStream s) {
+    public void set(String key, SStream stream) {
+        if (FxSettings.LOG) {
+            System.out.println("FxSettingsFileProvider.set key=" + key + " stream=" + stream);
+        }
         synchronized (data) {
-            if (s == null) {
+            if (stream == null) {
                 data.remove(key);
             } else {
-                data.put(key, s.toArray());
+                data.put(key, stream.toArray());
             }
         }
     }
@@ -140,6 +146,10 @@ public class FxSettingsFileProvider implements ISettingsProvider {
         } else {
             s = null;
         }
+
+        if (FxSettings.LOG) {
+            System.out.println("FxSettingsFileProvider.get key=" + key + " value=" + s);
+        }
         return s;
     }
 
@@ -156,6 +166,10 @@ public class FxSettingsFileProvider implements ISettingsProvider {
             } else {
                 s = null;
             }
+        }
+
+        if (FxSettings.LOG) {
+            System.out.println("FxSettingsFileProvider.get key=" + key + " stream=" + s);
         }
         return s;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,7 +67,6 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
-import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 
@@ -225,12 +224,6 @@ public class Window implements EventTarget {
      * @since 9
      */
     public static ObservableList<Window> getWindows() {
-        @SuppressWarnings("removal")
-        final SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(ACCESS_WINDOW_LIST_PERMISSION);
-        }
-
         return unmodifiableWindows;
     }
 
@@ -292,15 +285,27 @@ public class Window implements EventTarget {
     /**
      * Set the width and height of this Window to match the size of the content
      * of this Window's Scene.
+     * <p>This request might be ignored if the Window is not allowed to do so, for example a {@link Stage}
+     * may be {@code maximized} or in {@code fullScreen} and therefore does not allow this request.
+     * If that is the case, this request is remembered and reapplied later when allowed.</p>
      */
     public void sizeToScene() {
-        if (getScene() != null && peer != null) {
+        if (isSizeToSceneAllowed() && getScene() != null && peer != null) {
             SceneHelper.preferredSize(getScene());
             adjustSize(false);
         } else {
             // Remember the request to reapply it later if needed
             sizeToScene = true;
         }
+    }
+
+    /**
+     * Determines whether the {@link #sizeToScene()} request is allowed or not.
+     *
+     * @return true if allowed, false otherwise
+     */
+    boolean isSizeToSceneAllowed() {
+        return true;
     }
 
     private void adjustSize(boolean selfSizePriority) {
@@ -632,6 +637,7 @@ public class Window implements EventTarget {
         width.set(value);
         peerBoundsConfigurator.setWindowWidth(value);
         widthExplicit = true;
+        sizeToScene = false;
     }
     public final double getWidth() { return width.get(); }
     public final ReadOnlyDoubleProperty widthProperty() { return width.getReadOnlyProperty(); }
@@ -664,6 +670,7 @@ public class Window implements EventTarget {
         height.set(value);
         peerBoundsConfigurator.setWindowHeight(value);
         heightExplicit = true;
+        sizeToScene = false;
     }
     public final double getHeight() { return height.get(); }
     public final ReadOnlyDoubleProperty heightProperty() { return height.getReadOnlyProperty(); }

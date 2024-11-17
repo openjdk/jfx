@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 
 namespace JSC {
 
-#if ENABLE(FTL_JIT) || ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(FTL_JIT) || ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 namespace B3 {
 class PCToOriginMap;
 }
@@ -44,30 +44,39 @@ class LinkBuffer;
 class PCToCodeOriginMapBuilder;
 
 class PCToCodeOriginMapBuilder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PCToCodeOriginMapBuilder);
     WTF_MAKE_NONCOPYABLE(PCToCodeOriginMapBuilder);
     friend class PCToCodeOriginMap;
 
 public:
     PCToCodeOriginMapBuilder(VM&);
     PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder&& other);
+    PCToCodeOriginMapBuilder(bool shouldBuildMapping)
+        : m_shouldBuildMapping(shouldBuildMapping)
+    { }
 
 #if ENABLE(FTL_JIT)
     enum JSTag { JSCodeOriginMap };
     PCToCodeOriginMapBuilder(JSTag, VM&, B3::PCToOriginMap);
 #endif
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
     enum WasmTag { WasmCodeOriginMap };
     PCToCodeOriginMapBuilder(WasmTag, B3::PCToOriginMap);
 #endif
 
-    void appendItem(MacroAssembler::Label, const CodeOrigin&);
+    void appendItem(MacroAssembler::Label label, const CodeOrigin& origin)
+    {
+        if (!m_shouldBuildMapping)
+            return;
+        appendItemSlow(label, origin);
+    }
     static CodeOrigin defaultCodeOrigin() { return CodeOrigin(BytecodeIndex(0)); }
 
     bool didBuildMapping() const { return m_shouldBuildMapping; }
 
 private:
+    void appendItemSlow(MacroAssembler::Label, const CodeOrigin&);
 
     struct CodeRange {
         MacroAssembler::Label start;
@@ -81,7 +90,7 @@ private:
 
 // FIXME: <rdar://problem/39436658>
 class PCToCodeOriginMap {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PCToCodeOriginMap);
     WTF_MAKE_NONCOPYABLE(PCToCodeOriginMap);
 public:
     PCToCodeOriginMap(PCToCodeOriginMapBuilder&&, LinkBuffer&);

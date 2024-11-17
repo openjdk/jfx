@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,19 +23,20 @@
  * questions.
  */
 
+import static javafx.print.PageOrientation.LANDSCAPE;
+import static javafx.print.PageOrientation.PORTRAIT;
+import static javafx.print.PageOrientation.REVERSE_LANDSCAPE;
+import static javafx.print.PageOrientation.REVERSE_PORTRAIT;
 import java.util.Set;
-
-import javafx.print.JobSettings;
-import javafx.print.Printer;
-import javafx.print.PrinterAttributes;
-import javafx.print.PrinterJob;
-import javafx.print.PrintColor;
-import javafx.print.PageOrientation;
-import javafx.print.PageLayout;
-import static javafx.print.PageOrientation.*;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
+import javafx.print.JobSettings;
+import javafx.print.PageLayout;
+import javafx.print.PageOrientation;
+import javafx.print.Printer;
+import javafx.print.PrinterAttributes;
+import javafx.print.PrinterJob;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -54,6 +55,7 @@ public class PrintOrientTest extends Application {
     static int WIDTH=400;
     static int HEIGHT=400;
 
+    @Override
     public void start(Stage stage) {
         stage.setWidth(WIDTH);
         stage.setHeight(HEIGHT);

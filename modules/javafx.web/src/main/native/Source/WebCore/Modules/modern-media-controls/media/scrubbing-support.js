@@ -51,7 +51,9 @@ class ScrubbingSupport extends MediaControllerSupport
     controlValueDidChange(control)
     {
         const media = this.mediaController.media;
-        media.fastSeek(control.value * media.duration);
+        const seekTime = control.value * media.duration;
+        media.fastSeek(seekTime);
+        this.mediaController.controls.timeControl.currentTime = seekTime;
     }
 
     controlValueDidStopChanging(control)
@@ -68,11 +70,22 @@ class ScrubbingSupport extends MediaControllerSupport
         if (isNaN(media.duration))
             return;
 
-        let buffered = 0;
-        for (let i = 0, count = media.buffered.length; i < count; ++i)
-            buffered = Math.max(media.buffered.end(i), buffered);
+        // Let's find the buffered time range containing the current time and
+        // set the scrubber's secondary value to the end of that range.
+        const endTimeForBufferedRangeContainingCurrentTime = () => {
+            const ranges = media.buffered;
+            const currentTime = media.currentTime;
+            for (let i = 0; i < ranges.length; ++i) {
+                if (currentTime < ranges.start(i))
+                    continue;
+                const end = ranges.end(i);
+                if (currentTime <= end)
+                    return end;
+            }
+            return 0;
+        }
 
-        this.control.secondaryValue = buffered / media.duration;
+        this.control.secondaryValue = endTimeForBufferedRangeContainingCurrentTime() / media.duration;
     }
 
 }

@@ -4,6 +4,8 @@
  *  g_execvpe implementation based on GNU libc execvp:
  *   Copyright 1991, 92, 95, 96, 97, 98, 99 Free Software Foundation, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -22,6 +24,7 @@
 
 #include <errno.h>
 
+#include "glibintl.h"
 #include "gspawn.h"
 
 static inline gint
@@ -112,4 +115,25 @@ _g_spawn_exec_err_to_g_error (gint en)
     default:
       return G_SPAWN_ERROR_FAILED;
     }
+}
+
+static inline gboolean
+_g_spawn_invalid_source_fd (gint         fd,
+                            const gint  *source_fds,
+                            gsize        n_fds,
+                            GError     **error)
+{
+  gsize i;
+
+  for (i = 0; i < n_fds; i++)
+    if (fd == source_fds[i])
+      {
+        g_set_error (error,
+                     G_SPAWN_ERROR,
+                     G_SPAWN_ERROR_INVAL,
+                     _("Invalid source FDs argument"));
+        return TRUE;
+      }
+
+  return FALSE;
 }

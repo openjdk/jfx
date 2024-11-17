@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Nicholas Shanks <contact@nickshanks.com>
- * Copyright (C) 2008, 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,32 +40,32 @@ FontDescription::FontDescription()
     : m_variantAlternates(FontCascadeDescription::initialVariantAlternates())
     , m_fontPalette({ FontPalette::Type::Normal, nullAtom() })
     , m_fontSelectionRequest { FontCascadeDescription::initialWeight(), FontCascadeDescription::initialStretch(), FontCascadeDescription::initialItalic() }
-    , m_orientation(static_cast<unsigned>(FontOrientation::Horizontal))
-    , m_nonCJKGlyphOrientation(static_cast<unsigned>(NonCJKGlyphOrientation::Mixed))
-    , m_widthVariant(static_cast<unsigned>(FontWidthVariant::RegularWidth))
-    , m_renderingMode(static_cast<unsigned>(FontRenderingMode::Normal))
-    , m_textRendering(static_cast<unsigned>(TextRenderingMode::AutoTextRendering))
+    , m_orientation(enumToUnderlyingType(FontOrientation::Horizontal))
+    , m_nonCJKGlyphOrientation(enumToUnderlyingType(NonCJKGlyphOrientation::Mixed))
+    , m_widthVariant(enumToUnderlyingType(FontWidthVariant::RegularWidth))
+    , m_textRendering(enumToUnderlyingType(TextRenderingMode::AutoTextRendering))
     , m_script(USCRIPT_COMMON)
-    , m_fontSynthesisWeight(static_cast<unsigned>(FontSynthesisLonghandValue::Auto))
-    , m_fontSynthesisStyle(static_cast<unsigned>(FontSynthesisLonghandValue::Auto))
-    , m_fontSynthesisCaps(static_cast<unsigned>(FontSynthesisLonghandValue::Auto))
-    , m_variantCommonLigatures(static_cast<unsigned>(FontVariantLigatures::Normal))
-    , m_variantDiscretionaryLigatures(static_cast<unsigned>(FontVariantLigatures::Normal))
-    , m_variantHistoricalLigatures(static_cast<unsigned>(FontVariantLigatures::Normal))
-    , m_variantContextualAlternates(static_cast<unsigned>(FontVariantLigatures::Normal))
-    , m_variantPosition(static_cast<unsigned>(FontVariantPosition::Normal))
-    , m_variantCaps(static_cast<unsigned>(FontVariantCaps::Normal))
-    , m_variantNumericFigure(static_cast<unsigned>(FontVariantNumericFigure::Normal))
-    , m_variantNumericSpacing(static_cast<unsigned>(FontVariantNumericSpacing::Normal))
-    , m_variantNumericFraction(static_cast<unsigned>(FontVariantNumericFraction::Normal))
-    , m_variantNumericOrdinal(static_cast<unsigned>(FontVariantNumericOrdinal::Normal))
-    , m_variantNumericSlashedZero(static_cast<unsigned>(FontVariantNumericSlashedZero::Normal))
-    , m_variantEastAsianVariant(static_cast<unsigned>(FontVariantEastAsianVariant::Normal))
-    , m_variantEastAsianWidth(static_cast<unsigned>(FontVariantEastAsianWidth::Normal))
-    , m_variantEastAsianRuby(static_cast<unsigned>(FontVariantEastAsianRuby::Normal))
-    , m_opticalSizing(static_cast<unsigned>(FontOpticalSizing::Enabled))
+    , m_fontSynthesisWeight(enumToUnderlyingType(FontSynthesisLonghandValue::Auto))
+    , m_fontSynthesisStyle(enumToUnderlyingType(FontSynthesisLonghandValue::Auto))
+    , m_fontSynthesisCaps(enumToUnderlyingType(FontSynthesisLonghandValue::Auto))
+    , m_variantCommonLigatures(enumToUnderlyingType(FontVariantLigatures::Normal))
+    , m_variantDiscretionaryLigatures(enumToUnderlyingType(FontVariantLigatures::Normal))
+    , m_variantHistoricalLigatures(enumToUnderlyingType(FontVariantLigatures::Normal))
+    , m_variantContextualAlternates(enumToUnderlyingType(FontVariantLigatures::Normal))
+    , m_variantPosition(enumToUnderlyingType(FontVariantPosition::Normal))
+    , m_variantCaps(enumToUnderlyingType(FontVariantCaps::Normal))
+    , m_variantNumericFigure(enumToUnderlyingType(FontVariantNumericFigure::Normal))
+    , m_variantNumericSpacing(enumToUnderlyingType(FontVariantNumericSpacing::Normal))
+    , m_variantNumericFraction(enumToUnderlyingType(FontVariantNumericFraction::Normal))
+    , m_variantNumericOrdinal(enumToUnderlyingType(FontVariantNumericOrdinal::Normal))
+    , m_variantNumericSlashedZero(enumToUnderlyingType(FontVariantNumericSlashedZero::Normal))
+    , m_variantEastAsianVariant(enumToUnderlyingType(FontVariantEastAsianVariant::Normal))
+    , m_variantEastAsianWidth(enumToUnderlyingType(FontVariantEastAsianWidth::Normal))
+    , m_variantEastAsianRuby(enumToUnderlyingType(FontVariantEastAsianRuby::Normal))
+    , m_variantEmoji(enumToUnderlyingType(FontVariantEmoji::Normal))
+    , m_opticalSizing(enumToUnderlyingType(FontOpticalSizing::Enabled))
     , m_fontStyleAxis(FontCascadeDescription::initialFontStyleAxis() == FontStyleAxis::ital)
-    , m_shouldAllowUserInstalledFonts(static_cast<unsigned>(AllowUserInstalledFonts::No))
+    , m_shouldAllowUserInstalledFonts(enumToUnderlyingType(AllowUserInstalledFonts::No))
     , m_shouldDisableLigaturesForSpacing(false)
 {
 }
@@ -118,4 +118,10 @@ AtomString FontDescription::platformResolveGenericFamily(UScriptCode, const Atom
 }
 #endif
 
+float FontDescription::adjustedSizeForFontFace(float fontFaceSizeAdjust) const
+{
+    // It is not worth modifying the used size with @font-face size-adjust if we are to re-adjust it later with font-size-adjust. This is because font-size-adjust will overrule this change, since size-adjust also modifies the font's metric values and thus, keeps the aspect-value unchanged.
+    return fontSizeAdjust().value ? computedSize() : fontFaceSizeAdjust * computedSize();
+
+}
 } // namespace WebCore

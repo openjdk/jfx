@@ -27,6 +27,13 @@
 
 namespace WebCore {
 
+class GraphicsContext;
+class FloatRoundedRect;
+
+enum class ShadowStyle : uint8_t;
+
+class FloatRoundedRect;
+
 struct BackgroundImageGeometry {
     BackgroundImageGeometry(const LayoutRect& destinationRect, const LayoutSize& tileSizeWithoutPixelSnapping, const LayoutSize& tileSize, const LayoutSize& phase, const LayoutSize& spaceSize, bool fixedAttachment);
 
@@ -61,7 +68,7 @@ public:
 
     static bool paintsOwnBackground(const RenderBoxModelObject&);
     static BackgroundImageGeometry calculateBackgroundImageGeometry(const RenderBoxModelObject&, const RenderLayerModelObject* paintContainer, const FillLayer&, const LayoutPoint& paintOffset, const LayoutRect& borderBoxRect);
-    static void clipRoundedInnerRect(GraphicsContext&, const FloatRect&, const FloatRoundedRect& clipRect);
+    static void clipRoundedInnerRect(GraphicsContext&, const FloatRoundedRect& clipRect);
     static bool boxShadowShouldBeAppliedToBackground(const RenderBoxModelObject&, const LayoutPoint& paintOffset, BackgroundBleedAvoidance, const InlineIterator::InlineBoxIterator&);
 
 private:

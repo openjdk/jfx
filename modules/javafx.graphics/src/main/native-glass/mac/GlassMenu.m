@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,8 @@
 #import "GlassMenu.h"
 #import "GlassHelper.h"
 #import "GlassKey.h"
+
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -236,7 +238,6 @@ static jfieldID  jPixelsScaleYField = 0;
     }
     if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_FUNCTION) != 0)
     {
-        modifier = modifier | NSFunctionKeyMask;
         if (jshortcut >= com_sun_glass_events_KeyEvent_VK_F1 &&
             jshortcut <= com_sun_glass_events_KeyEvent_VK_F12) {
             int delta = jshortcut - com_sun_glass_events_KeyEvent_VK_F1;
@@ -371,6 +372,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1remove
         GlassMenu *glassmenu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
         if ([menubar->menu indexOfItem: glassmenu->item] != -1) {
             [menubar->menu removeItem:glassmenu->item];
+            [glassmenu release];
         }
         [[NSApp mainMenu] update];
     }
@@ -533,6 +535,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1remove
 
             if ([menu->menu indexOfItem: submenu->item] != -1) {
                 [menu->menu removeItem:submenu->item];
+                [submenu release];
             }
         }
         else
@@ -648,6 +651,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setCallback
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
         GET_MAIN_JENV;
         (*env)->DeleteGlobalRef(env, menu->jCallback);
+        menu->jCallback = NULL;
         if (jCallback != NULL)
         {
             menu->jCallback = (*env)->NewGlobalRef(env, jCallback);

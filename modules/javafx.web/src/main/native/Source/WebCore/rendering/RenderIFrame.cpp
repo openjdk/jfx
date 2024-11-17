@@ -26,10 +26,13 @@
 #include "config.h"
 #include "RenderIFrame.h"
 
-#include "Frame.h"
-#include "FrameView.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "Settings.h"
 #include <wtf/IsoMallocInlines.h>
@@ -42,8 +45,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderIFrame);
 using namespace HTMLNames;
 
 RenderIFrame::RenderIFrame(HTMLIFrameElement& element, RenderStyle&& style)
-    : RenderFrameBase(element, WTFMove(style))
+    : RenderFrameBase(Type::IFrame, element, WTFMove(style))
 {
+    ASSERT(isRenderIFrame());
 }
 
 HTMLIFrameElement& RenderIFrame::iframeElement() const
@@ -64,13 +68,6 @@ bool RenderIFrame::isInlineBlockOrInlineTable() const
 bool RenderIFrame::requiresLayer() const
 {
     return RenderFrameBase::requiresLayer() || style().resize() != Resize::None;
-}
-
-RenderView* RenderIFrame::contentRootRenderer() const
-{
-    FrameView* childFrameView = childView();
-    auto* localFrame = childFrameView ? dynamicDowncast<LocalFrame>(childFrameView->frame()) : nullptr;
-    return localFrame ? localFrame->contentRenderer() : nullptr;
 }
 
 bool RenderIFrame::isFullScreenIFrame() const

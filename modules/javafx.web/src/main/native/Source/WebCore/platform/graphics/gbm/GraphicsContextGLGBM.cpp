@@ -31,11 +31,15 @@
 
 #include "ANGLEHeaders.h"
 #include "DMABufEGLUtilities.h"
+#include "GBMDevice.h"
 #include "Logging.h"
 #include "PixelBuffer.h"
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
 #include "VideoFrame.h"
+#if USE(GSTREAMER)
+#include "VideoFrameGStreamer.h"
+#endif
 #endif
 
 namespace WebCore {
@@ -65,10 +69,14 @@ RefPtr<GraphicsLayerContentsDisplayDelegate> GraphicsContextGLGBM::layerContents
     return { };
 }
 
-#if ENABLE(MEDIA_STREAM)
-RefPtr<VideoFrame> GraphicsContextGLGBM::paintCompositedResultsToVideoFrame()
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
+RefPtr<VideoFrame> GraphicsContextGLGBM::surfaceBufferToVideoFrame(SurfaceBuffer)
 {
-    return { };
+#if USE(GSTREAMER)
+    if (auto pixelBuffer = readCompositedResults())
+        return VideoFrameGStreamer::createFromPixelBuffer(pixelBuffer.releaseNonNull(), VideoFrameGStreamer::CanvasContentType::WebGL, VideoFrameGStreamer::Rotation::UpsideDown, MediaTime::invalidTime(), { }, 30, true, { });
+#endif
+    return nullptr;
 }
 #endif
 
@@ -79,17 +87,22 @@ bool GraphicsContextGLGBM::copyTextureFromMedia(MediaPlayer&, PlatformGLObject, 
 }
 #endif
 
+RefPtr<PixelBuffer> GraphicsContextGLGBM::readCompositedResults()
+{
+    return readRenderingResults();
+}
+
 void GraphicsContextGLGBM::setContextVisibility(bool)
 {
 }
 
 void GraphicsContextGLGBM::prepareForDisplay()
 {
-    if (m_layerComposited || !makeContextCurrent())
+    if (!makeContextCurrent())
         return;
 
     prepareTexture();
-    markLayerComposited();
+    GL_Flush();
 
     m_swapchain.displayBO = WTFMove(m_swapchain.drawBO);
     allocateDrawBufferObject();
@@ -97,16 +110,22 @@ void GraphicsContextGLGBM::prepareForDisplay()
 
 bool GraphicsContextGLGBM::platformInitializeContext()
 {
-    m_isForWebGL2 = contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
+    auto* device = GBMDevice::singleton().device();
+    if (!device) {
+        LOG(WebGL, "Warning: Unable to access the GBM device, we fallback to common GL images, they require a copy, that causes a performance penalty.");
+        return false;
+    }
+
+    m_isForWebGL2 = contextAttributes().isWebGL2;
 
     Vector<EGLint> displayAttributes {
         EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE,
         EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE,
-        EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE, EGL_PLATFORM_SURFACELESS_MESA,
+        EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE, EGL_PLATFORM_GBM_KHR,
         EGL_NONE,
     };
 
-    m_displayObj = EGL_GetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, displayAttributes.data());
+    m_displayObj = EGL_GetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, device, displayAttributes.data());
     if (m_displayObj == EGL_NO_DISPLAY)
         return false;
 
@@ -144,7 +163,7 @@ bool GraphicsContextGLGBM::platformInitializeContext()
 
     EGLint configAttributes[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
@@ -212,71 +231,23 @@ bool GraphicsContextGLGBM::platformInitializeContext()
     return true;
 }
 
-bool GraphicsContextGLGBM::platformInitialize()
+bool GraphicsContextGLGBM::platformInitializeExtensions()
 {
-    bool success = makeContextCurrent();
-    ASSERT_UNUSED(success, success);
-
     // We require this extension to render into the dmabuf-backed EGLImage.
     RELEASE_ASSERT(supportsExtension("GL_OES_EGL_image"_s));
-    GL_RequestExtensionANGLE("GL_OES_EGL_image");
-
-    validateAttributes();
-    auto attributes = contextAttributes(); // They may have changed during validation.
-
-    GLenum textureTarget = drawingBufferTextureTarget();
-    // Create a texture to render into.
-    GL_GenTextures(1, &m_texture);
-    GL_BindTexture(textureTarget, m_texture);
-    GL_TexParameterf(textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    GL_TexParameterf(textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    GL_TexParameteri(textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    GL_TexParameteri(textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    GL_BindTexture(textureTarget, 0);
-
-    // Create an FBO.
-    GL_GenFramebuffers(1, &m_fbo);
-    GL_BindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-
-    // Create a multisample FBO.
-    ASSERT(m_state.boundReadFBO == m_state.boundDrawFBO);
-    if (attributes.antialias) {
-        GL_GenFramebuffers(1, &m_multisampleFBO);
-        GL_BindFramebuffer(GL_FRAMEBUFFER, m_multisampleFBO);
-        m_state.boundDrawFBO = m_state.boundReadFBO = m_multisampleFBO;
-        GL_GenRenderbuffers(1, &m_multisampleColorBuffer);
-        if (attributes.stencil || attributes.depth)
-            GL_GenRenderbuffers(1, &m_multisampleDepthStencilBuffer);
-    } else {
-        // Bind canvas FBO.
-        GL_BindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-        m_state.boundDrawFBO = m_state.boundReadFBO = m_fbo;
-        if (attributes.stencil || attributes.depth)
-            GL_GenRenderbuffers(1, &m_depthStencilBuffer);
-    }
-
-    GL_ClearColor(0, 0, 0, 0);
-    return GraphicsContextGLANGLE::platformInitialize();
+    if (!enableExtension("GL_OES_EGL_image"_s))
+        return false;
+    return true;
 }
 
-void GraphicsContextGLGBM::prepareTexture()
-{
-    ASSERT(!m_layerComposited);
-
-    if (contextAttributes().antialias)
-        resolveMultisamplingIfNecessary();
-
-    GL_Flush();
-}
-
-bool GraphicsContextGLGBM::reshapeDisplayBufferBacking()
+bool GraphicsContextGLGBM::reshapeDrawingBuffer()
 {
     m_swapchain = Swapchain(platformDisplay());
     allocateDrawBufferObject();
 
     {
-        GLenum textureTarget = drawingBufferTextureTarget();
-        ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
+        auto [textureTarget, textureBinding] = drawingBufferTextureBindingPoint();
+        ScopedRestoreTextureBinding restoreBinding(textureBinding, textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
 
         GL_BindTexture(textureTarget, m_texture);
         GL_FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textureTarget, m_texture, 0);
@@ -301,15 +272,18 @@ void GraphicsContextGLGBM::allocateDrawBufferObject()
     if (!m_swapchain.drawBO)
         return;
 
-    GLenum textureTarget = drawingBufferTextureTarget();
-    ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
+    auto [textureTarget, textureBinding] = drawingBufferTextureBindingPoint();
+    ScopedRestoreTextureBinding restoreBinding(textureBinding, textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
 
     auto result = m_swapchain.images.ensure(m_swapchain.drawBO->handle(),
         [&] {
             auto dmabufObject = m_swapchain.drawBO->createDMABufObject(0);
             auto attributes = DMABufEGLUtilities::constructEGLCreateImageAttributes(dmabufObject, 0,
                 DMABufEGLUtilities::PlaneModifiersUsage { static_cast<GraphicsContextGLGBM&>(*this).eglExtensions().EXT_image_dma_buf_import_modifiers });
-            return EGL_CreateImageKHR(m_swapchain.platformDisplay, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, (EGLClientBuffer)nullptr, attributes.data());
+            auto intAttributes = attributes.map<Vector<EGLint>>([] (EGLAttrib value) {
+                return value;
+            });
+            return EGL_CreateImageKHR(m_swapchain.platformDisplay, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, (EGLClientBuffer)nullptr, intAttributes.isEmpty() ? nullptr : intAttributes.data());
         });
 
     GL_BindTexture(textureTarget, m_texture);

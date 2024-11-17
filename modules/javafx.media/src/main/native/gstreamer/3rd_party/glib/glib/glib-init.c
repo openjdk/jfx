@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2011 Canonical Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -24,6 +26,7 @@
 #include "gtypes.h"
 #include "gutils.h"     /* for GDebugKey */
 #include "gconstructor.h"
+#include "gconstructorprivate.h"
 #include "gmem.h"       /* for g_mem_gc_friendly */
 
 #include <string.h>
@@ -87,7 +90,24 @@ G_STATIC_ASSERT (sizeof (void *) == GLIB_SIZEOF_VOID_P);
 G_STATIC_ASSERT (sizeof (gintptr) == sizeof (void *));
 G_STATIC_ASSERT (sizeof (guintptr) == sizeof (void *));
 
+G_STATIC_ASSERT (sizeof (short) == sizeof (gshort));
+G_STATIC_ASSERT (G_MINSHORT == SHRT_MIN);
+G_STATIC_ASSERT (G_MAXSHORT == SHRT_MAX);
+G_STATIC_ASSERT (sizeof (unsigned short) == sizeof (gushort));
+G_STATIC_ASSERT (G_MAXUSHORT == USHRT_MAX);
+
+G_STATIC_ASSERT (sizeof (int) == sizeof (gint));
+G_STATIC_ASSERT (G_MININT == INT_MIN);
+G_STATIC_ASSERT (G_MAXINT == INT_MAX);
+G_STATIC_ASSERT (sizeof (unsigned int) == sizeof (guint));
+G_STATIC_ASSERT (G_MAXUINT == UINT_MAX);
+
 G_STATIC_ASSERT (sizeof (long) == GLIB_SIZEOF_LONG);
+G_STATIC_ASSERT (sizeof (long) == sizeof (glong));
+G_STATIC_ASSERT (G_MINLONG == LONG_MIN);
+G_STATIC_ASSERT (G_MAXLONG == LONG_MAX);
+G_STATIC_ASSERT (sizeof (unsigned long) == sizeof (gulong));
+G_STATIC_ASSERT (G_MAXULONG == ULONG_MAX);
 
 G_STATIC_ASSERT (G_HAVE_GINT64 == 1);
 
@@ -97,11 +117,28 @@ G_STATIC_ASSERT (sizeof (size_t) == GLIB_SIZEOF_SIZE_T);
 G_STATIC_ASSERT (sizeof (size_t) == GLIB_SIZEOF_SSIZE_T);
 G_STATIC_ASSERT (sizeof (gsize) == GLIB_SIZEOF_SSIZE_T);
 G_STATIC_ASSERT (sizeof (gsize) == sizeof (size_t));
+G_STATIC_ASSERT (G_MAXSIZE == SIZE_MAX);
 /* Again this is size_t not ssize_t, because ssize_t is POSIX, not C99 */
 G_STATIC_ASSERT (sizeof (gssize) == sizeof (size_t));
 G_STATIC_ASSERT (G_ALIGNOF (gsize) == G_ALIGNOF (size_t));
 G_STATIC_ASSERT (G_ALIGNOF (gssize) == G_ALIGNOF (size_t));
-
+/* We assume that GSIZE_TO_POINTER is reversible by GPOINTER_TO_SIZE
+ * without losing information.
+ * However, we do not assume that GPOINTER_TO_SIZE can store an arbitrary
+ * pointer in a gsize (known to be false on CHERI). */
+G_STATIC_ASSERT (sizeof (size_t) <= sizeof (void *));
+/* Standard C does not guarantee that size_t is the same as uintptr_t,
+ * but GLib currently assumes they are the same: see
+ * <https://gitlab.gnome.org/GNOME/glib/-/issues/2842>.
+ *
+ * To enable working on bringup for new architectures these assertions
+ * can be disabled with -DG_ENABLE_EXPERIMENTAL_ABI_COMPILATION.
+ *
+ * FIXME: remove these assertions once the API/ABI has stabilized. */
+#ifndef G_ENABLE_EXPERIMENTAL_ABI_COMPILATION
+G_STATIC_ASSERT (sizeof (size_t) == sizeof (uintptr_t));
+G_STATIC_ASSERT (G_ALIGNOF (size_t) == G_ALIGNOF (uintptr_t));
+#endif
 /* goffset is always 64-bit, even if off_t is only 32-bit
  * (compiling without large-file-support on 32-bit) */
 G_STATIC_ASSERT (sizeof (goffset) == sizeof (gint64));
@@ -184,7 +221,7 @@ G_STATIC_ASSERT (sizeof (int) == sizeof (gint32));
  *
  * Parses a string containing debugging options
  * into a %guint containing bit flags. This is used
- * within GDK and GTK+ to parse the debug options passed on the
+ * within GDK and GTK to parse the debug options passed on the
  * command line or through environment variables.
  *
  * If @string is equal to "all", all flags are set. Any flags
@@ -416,32 +453,60 @@ DllMain (HINSTANCE hinstDLL,
   return TRUE;
 }
 
-#elif defined(G_HAS_CONSTRUCTORS) /* && G_PLATFORM_WIN32 && GLIB_STATIC_COMPILATION */
-#ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
-#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(glib_init_ctor)
-#endif
-#ifdef G_DEFINE_DESTRUCTOR_NEEDS_PRAGMA
-#pragma G_DEFINE_DESTRUCTOR_PRAGMA_ARGS(glib_init_dtor)
+#else
+
+#ifndef G_HAS_CONSTRUCTORS
+#error static compilation on Windows requires constructor support
 #endif
 
-G_DEFINE_CONSTRUCTOR (glib_init_ctor)
+#ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
+#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(glib_priv_constructor)
+#endif
+
+static gboolean tls_callback_invoked;
+
+G_DEFINE_CONSTRUCTOR (glib_priv_constructor)
 
 static void
-glib_init_ctor (void)
+glib_priv_constructor (void)
 {
   glib_win32_init ();
+
+  if (!tls_callback_invoked)
+    g_critical ("TLS callback not invoked");
 }
 
-G_DEFINE_DESTRUCTOR (glib_init_dtor)
+#ifndef G_HAS_TLS_CALLBACKS
+#error static compilation on Windows requires TLS callbacks support
+#endif
 
-static void
-glib_init_dtor (void)
+G_DEFINE_TLS_CALLBACK (glib_priv_tls_callback)
+
+static void NTAPI
+glib_priv_tls_callback (LPVOID hinstance,
+                        DWORD  reason,
+                        LPVOID reserved)
 {
-  glib_win32_deinit (FALSE);
+  switch (reason)
+    {
+    case DLL_PROCESS_ATTACH:
+      glib_dll = hinstance;
+      tls_callback_invoked = TRUE;
+      break;
+    case DLL_THREAD_DETACH:
+#ifdef THREADS_WIN32
+      g_thread_win32_thread_detach ();
+#endif
+      break;
+    case DLL_PROCESS_DETACH:
+      glib_win32_deinit (reserved == NULL);
+      break;
+
+    default:
+      break;
+    }
 }
 
-#else /* G_PLATFORM_WIN32 && GLIB_STATIC_COMPILATION && !G_HAS_CONSTRUCTORS */
-#error Your platform/compiler is missing constructor support
 #endif /* GLIB_STATIC_COMPILATION */
 
 #elif defined(G_HAS_CONSTRUCTORS) /* && !G_PLATFORM_WIN32 */

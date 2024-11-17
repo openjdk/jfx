@@ -27,6 +27,7 @@
 #include "CommonAtomStrings.h"
 #include "HTMLLabelElement.h"
 #include "HTMLNames.h"
+#include "LiveNodeListInlines.h"
 #include "NodeRareData.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -37,7 +38,7 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(LabelsNodeList);
 
 LabelsNodeList::LabelsNodeList(HTMLElement& element)
-    : CachedLiveNodeList(element, InvalidateOnForTypeAttrChange)
+    : CachedLiveNodeList(element, NodeListInvalidationType::InvalidateOnForTypeAttrChange)
 {
 }
 
@@ -53,7 +54,8 @@ LabelsNodeList::~LabelsNodeList()
 
 bool LabelsNodeList::elementMatches(Element& testNode) const
 {
-    return is<HTMLLabelElement>(testNode) && downcast<HTMLLabelElement>(testNode).control() == &ownerNode();
+    auto* label = dynamicDowncast<HTMLLabelElement>(testNode);
+    return label && label->control() == &ownerNode();
 }
 
 } // namespace WebCore

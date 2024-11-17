@@ -813,8 +813,10 @@ bool ApplicationCacheStorage::store(ApplicationCacheResource* resource, unsigned
         resource->setPath(fullPath);
         dataStatement->bindText(2, path);
     } else {
-        if (resource->data().size())
-            dataStatement->bindBlob(1, resource->data().makeContiguous().get());
+        if (resource->data().size()) {
+            auto contiguousData = resource->data().makeContiguous();
+            dataStatement->bindBlob(1, contiguousData->dataAsSpanForContiguousData());
+        }
     }
 
     if (!dataStatement->executeCommand()) {
@@ -899,7 +901,6 @@ bool ApplicationCacheStorage::storeUpdatedType(ApplicationCacheResource* resourc
     entryStatement->bindInt64(2, resource->storageID());
 
     return executeStatement(entryStatement.value());
-    return true;
 }
 
 bool ApplicationCacheStorage::store(ApplicationCacheResource* resource, ApplicationCache* cache)
@@ -1278,7 +1279,7 @@ bool ApplicationCacheStorage::writeDataToUniqueFileInDirectory(FragmentedSharedB
     String fullPath;
 
     do {
-        path = makeString(UUID::createVersion4(), fileExtension);
+        path = makeString(WTF::UUID::createVersion4(), fileExtension);
         if (path.isEmpty())
             return false;
 

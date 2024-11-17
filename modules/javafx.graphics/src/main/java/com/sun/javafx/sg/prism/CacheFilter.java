@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -221,7 +221,6 @@ public class CacheFilter {
         if (lastXDelta != 0 || lastYDelta != 0) {
             if (Math.abs(lastXDelta) >= cacheBounds.width || Math.abs(lastYDelta) >= cacheBounds.height ||
                     Math.rint(lastXDelta) != lastXDelta || Math.rint(lastYDelta) != lastYDelta) {
-                node.clearDirtyTree(); // Need to clear dirty (by translation) flags in the children
                 lastXDelta = lastYDelta = 0;
                 return true;
             }

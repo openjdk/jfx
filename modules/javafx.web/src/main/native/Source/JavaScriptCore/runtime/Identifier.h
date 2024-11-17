@@ -144,21 +144,14 @@ public:
     bool isPrivateName() const { return isSymbol() && static_cast<const SymbolImpl*>(impl())->isPrivate(); }
 
     friend bool operator==(const Identifier&, const Identifier&);
-    friend bool operator!=(const Identifier&, const Identifier&);
-
     friend bool operator==(const Identifier&, const LChar*);
     friend bool operator==(const Identifier&, const char*);
-    friend bool operator!=(const Identifier&, const LChar*);
-    friend bool operator!=(const Identifier&, const char*);
 
     static bool equal(const StringImpl*, const LChar*);
     static inline bool equal(const StringImpl*a, const char*b) { return Identifier::equal(a, reinterpret_cast<const LChar*>(b)); };
     static bool equal(const StringImpl*, const LChar*, unsigned length);
     static bool equal(const StringImpl*, const UChar*, unsigned length);
     static bool equal(const StringImpl* a, const StringImpl* b) { return ::equal(a, b); }
-
-    // Only to be used with string literals.
-    JS_EXPORT_PRIVATE static Ref<AtomStringImpl> add(VM&, const char*);
 
     void dump(PrintStream&) const;
 
@@ -238,11 +231,6 @@ inline bool operator==(const Identifier& a, const Identifier& b)
     return Identifier::equal(a, b);
 }
 
-inline bool operator!=(const Identifier& a, const Identifier& b)
-{
-    return !Identifier::equal(a, b);
-}
-
 inline bool operator==(const Identifier& a, const LChar* b)
 {
     return Identifier::equal(a, b);
@@ -251,16 +239,6 @@ inline bool operator==(const Identifier& a, const LChar* b)
 inline bool operator==(const Identifier& a, const char* b)
 {
     return Identifier::equal(a, reinterpret_cast<const LChar*>(b));
-}
-
-inline bool operator!=(const Identifier& a, const LChar* b)
-{
-    return !Identifier::equal(a, b);
-}
-
-inline bool operator!=(const Identifier& a, const char* b)
-{
-    return !Identifier::equal(a, reinterpret_cast<const LChar*>(b));
 }
 
 inline bool Identifier::equal(const StringImpl* r, const LChar* s)
@@ -299,7 +277,7 @@ JSValue identifierToSafePublicJSValue(VM&, const Identifier&);
 // https://bugs.webkit.org/show_bug.cgi?id=150137
 struct IdentifierRepHash : PtrHash<RefPtr<UniquedStringImpl>> {
     static unsigned hash(const RefPtr<UniquedStringImpl>& key) { return key->existingSymbolAwareHash(); }
-    static unsigned hash(UniquedStringImpl* key) { return key->existingSymbolAwareHash(); }
+    static unsigned hash(const UniquedStringImpl* key) { return key->existingSymbolAwareHash(); }
     static constexpr bool hasHashInValue = true;
 };
 

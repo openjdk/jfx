@@ -1,6 +1,8 @@
 /* gmain.h - the GLib Main loop
  * Copyright (C) 1998-2000 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -71,7 +73,7 @@ typedef struct _GMainContext            GMainContext;
  * GMainLoop:
  *
  * The `GMainLoop` struct is an opaque data type
- * representing the main event loop of a GLib or GTK+ application.
+ * representing the main event loop of a GLib or GTK application.
  */
 typedef struct _GMainLoop               GMainLoop;
 
@@ -193,6 +195,20 @@ typedef struct _GSourceFuncs            GSourceFuncs;
 typedef gboolean (*GSourceFunc)       (gpointer user_data);
 
 /**
+ * GSourceOnceFunc:
+ * @user_data: data passed to the function, set when the source was
+ *   created
+ *
+ * A source function that is only called once before being removed from the main
+ * context automatically.
+ *
+ * See: g_idle_add_once(), g_timeout_add_once()
+ *
+ * Since: 2.74
+ */
+typedef void (* GSourceOnceFunc) (gpointer user_data);
+
+/**
  * G_SOURCE_FUNC:
  * @f: a function pointer.
  *
@@ -308,7 +324,7 @@ struct _GSourceFuncs
  *
  * Use this for high priority event sources.
  *
- * It is not used within GLib or GTK+.
+ * It is not used within GLib or GTK.
  */
 #define G_PRIORITY_HIGH            -100
 
@@ -328,7 +344,7 @@ struct _GSourceFuncs
  *
  * Use this for high priority idle functions.
  *
- * GTK+ uses %G_PRIORITY_HIGH_IDLE + 10 for resizing operations,
+ * GTK uses %G_PRIORITY_HIGH_IDLE + 10 for resizing operations,
  * and %G_PRIORITY_HIGH_IDLE + 20 for redrawing operations. (This is
  * done to ensure that any pending resizes are processed before any
  * pending redraws, so that widgets are not redrawn twice unnecessarily.)
@@ -350,7 +366,7 @@ struct _GSourceFuncs
  *
  * Use this for very low priority background tasks.
  *
- * It is not used within GLib or GTK+.
+ * It is not used within GLib or GTK.
  */
 #define G_PRIORITY_LOW              300
 
@@ -794,14 +810,25 @@ GLIB_AVAILABLE_IN_ALL
 guint    g_child_watch_add          (GPid            pid,
                                      GChildWatchFunc function,
                                      gpointer        data);
+GLIB_AVAILABLE_IN_2_74
+guint    g_timeout_add_once         (guint           interval,
+                                     GSourceOnceFunc function,
+                                     gpointer        data);
 GLIB_AVAILABLE_IN_ALL
 guint    g_idle_add                 (GSourceFunc     function,
+                                     gpointer        data);
+GLIB_AVAILABLE_IN_2_78
+guint    g_timeout_add_seconds_once (guint           interval,
+                                     GSourceOnceFunc function,
                                      gpointer        data);
 GLIB_AVAILABLE_IN_ALL
 guint    g_idle_add_full            (gint            priority,
                                      GSourceFunc     function,
                                      gpointer        data,
                                      GDestroyNotify  notify);
+GLIB_AVAILABLE_IN_2_74
+guint    g_idle_add_once            (GSourceOnceFunc function,
+                                     gpointer        data);
 GLIB_AVAILABLE_IN_ALL
 gboolean g_idle_remove_by_data      (gpointer        data);
 

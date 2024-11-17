@@ -97,6 +97,12 @@ public:
         or16(imm, Address(scratchRegister()));
     }
 
+    void or16(RegisterID mask, AbsoluteAddress address)
+    {
+        move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        or16(mask, Address(scratchRegister()));
+    }
+
     void sub32(TrustedImm32 imm, AbsoluteAddress address)
     {
         move(TrustedImmPtr(address.m_ptr), scratchRegister());
@@ -190,41 +196,24 @@ public:
     }
 
 #if OS(WINDOWS)
-    Call callWithSlowPathReturnType(PtrTag)
+    Call callWithUGPRPair(PtrTag)
     {
-        // On Win64, when the return type is larger than 8 bytes, we need to allocate space on the stack for the return value.
-        // On entry, rcx should contain a pointer to this stack space. The other parameters are shifted to the right,
-        // rdx should contain the first argument, r8 should contain the second argument, and r9 should contain the third argument.
-        // On return, rax contains a pointer to this stack value. See http://msdn.microsoft.com/en-us/library/7572ztz4.aspx.
-        // We then need to copy the 16 byte return value into rax and rdx, since JIT expects the return value to be split between the two.
-        // It is assumed that the parameters are already shifted to the right, when entering this method.
-        // Note: this implementation supports up to 3 parameters.
-
-        // JIT relies on the CallerFrame (frame pointer) being put on the stack,
-        // On Win64 we need to manually copy the frame pointer to the stack, since MSVC may not maintain a frame pointer on 64-bit.
-        // See http://msdn.microsoft.com/en-us/library/9z1stfyw.aspx where it's stated that rbp MAY be used as a frame pointer.
-        store64(X86Registers::ebp, Address(X86Registers::esp, -16));
-
-        // We also need to allocate the shadow space on the stack for the 4 parameter registers.
-        // In addition, we need to allocate 16 bytes for the return value.
-        // Also, we should allocate 16 bytes for the frame pointer, and return address (not populated).
-        sub64(TrustedImm32(8 * sizeof(int64_t)), X86Registers::esp);
-
-        // The first parameter register should contain a pointer to the stack allocated space for the return value.
-        move(X86Registers::esp, X86Registers::ecx);
-        add64(TrustedImm32(4 * sizeof(int64_t)), X86Registers::ecx);
-
         DataLabelPtr label = moveWithPatch(TrustedImmPtr(nullptr), scratchRegister());
         Call result = Call(m_assembler.call(scratchRegister()), Call::Linkable);
-
-        add64(TrustedImm32(8 * sizeof(int64_t)), X86Registers::esp);
-
         // Copy the return value into rax and rdx.
         load64(Address(X86Registers::eax, sizeof(int64_t)), X86Registers::edx);
         load64(Address(X86Registers::eax), X86Registers::eax);
 
         ASSERT_UNUSED(label, differenceBetween(label, result) == REPATCH_OFFSET_CALL_R11);
         return result;
+    }
+
+    void callWithUGPRPair(Address address, PtrTag)
+    {
+        m_assembler.call_m(address.offset, address.base);
+        // Copy the return value into rax and rdx.
+        load64(Address(X86Registers::eax, sizeof(int64_t)), X86Registers::edx);
+        load64(Address(X86Registers::eax), X86Registers::eax);
     }
 #endif
 
@@ -261,7 +250,8 @@ public:
         return result;
     }
 
-    void callOperation(const CodePtr<OperationPtrTag> operation)
+    template<PtrTag tag>
+    void callOperation(const CodePtr<tag> operation)
     {
         move(TrustedImmPtr(operation.taggedPtr()), scratchRegister());
         m_assembler.call(scratchRegister());
@@ -490,6 +480,12 @@ public:
         }
     }
 
+    void and64(TrustedImm32 imm, RegisterID src, RegisterID dest)
+    {
+        move(src, dest);
+        and64(imm, dest);
+    }
+
     void countLeadingZeros64(RegisterID src, RegisterID dst)
     {
         if (supportsLZCNT()) {
@@ -570,8 +566,29 @@ public:
         m_assembler.popcntq_mr(src.offset, src.base, dst);
     }
 
+    void countPopulation64(RegisterID src, RegisterID dst, FPRegisterID)
+    {
+        ASSERT(supportsCountPopulation());
+        m_assembler.popcntq_rr(src, dst);
+    }
+
+    void countPopulation64(Address src, RegisterID dst, FPRegisterID)
+    {
+        ASSERT(supportsCountPopulation());
+        m_assembler.popcntq_mr(src.offset, src.base, dst);
+    }
+
+    void addUnsignedRightShift32(RegisterID src1, RegisterID src2, TrustedImm32 amount, RegisterID dest)
+    {
+        // dest = src1 + (src2 >> amount)
+        urshift32(src2, amount, scratchRegister());
+        add32(src1, scratchRegister(), dest);
+    }
+
     void lshift64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.shlq_i8r(imm.m_value, dest);
     }
 
@@ -625,6 +642,8 @@ public:
 
     void rshift64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.sarq_i8r(imm.m_value, dest);
     }
 
@@ -662,6 +681,8 @@ public:
 
     void urshift64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.shrq_i8r(imm.m_value, dest);
     }
 
@@ -699,6 +720,8 @@ public:
 
     void rotateRight64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.rorq_i8r(imm.m_value, dest);
     }
 
@@ -736,6 +759,8 @@ public:
 
     void rotateLeft64(TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return;
         m_assembler.rolq_i8r(imm.m_value, dest);
     }
 
@@ -919,9 +944,14 @@ public:
 
     void sub64(RegisterID a, RegisterID b, RegisterID dest)
     {
-        ASSERT(b != dest);
+        if (b != dest) {
         move(a, dest);
         sub64(b, dest);
+        } else if (a != b) {
+            neg64(b);
+            add64(a, b);
+        } else
+            move(TrustedImm32(0), dest);
     }
 
     void sub64(TrustedImm32 imm, RegisterID dest)
@@ -1057,6 +1087,26 @@ public:
         m_assembler.notq_m(dest.offset, dest.base, dest.index, dest.scale);
     }
 
+    void zeroExtend8To64(RegisterID src, RegisterID dest)
+    {
+        zeroExtend8To32(src, dest);
+    }
+
+    void signExtend8To64(RegisterID src, RegisterID dest)
+    {
+        m_assembler.movsbq_rr(src, dest);
+    }
+
+    void zeroExtend16To64(RegisterID src, RegisterID dest)
+    {
+        zeroExtend16To32(src, dest);
+    }
+
+    void signExtend16To64(RegisterID src, RegisterID dest)
+    {
+        m_assembler.movswq_rr(src, dest);
+    }
+
     void load64(Address address, RegisterID dest)
     {
         m_assembler.movq_mr(address.offset, address.base, dest);
@@ -1092,6 +1142,11 @@ public:
             load64(Address(src, offset.m_value), dest1);
             load64(Address(src, offset.m_value + 8), dest2);
         }
+    }
+
+    void loadPair64(Address src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(src.base, TrustedImm32(src.offset), dest1, dest2);
     }
 
     DataLabel32 load64WithAddressOffsetPatch(Address address, RegisterID dest)
@@ -1188,6 +1243,11 @@ public:
         store64(src2, Address(dest, offset.m_value + 8));
     }
 
+    void storePair64(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair64(src1, src2, dest.base, TrustedImm32(dest.offset));
+    }
+
     void transfer32(Address src, Address dest)
     {
         load32(src, scratchRegister());
@@ -1201,6 +1261,23 @@ public:
     }
 
     void transferPtr(Address src, Address dest)
+    {
+        transfer64(src, dest);
+    }
+
+    void transfer32(BaseIndex src, BaseIndex dest)
+    {
+        load32(src, scratchRegister());
+        store32(scratchRegister(), dest);
+    }
+
+    void transfer64(BaseIndex src, BaseIndex dest)
+    {
+        load64(src, scratchRegister());
+        store64(scratchRegister(), dest);
+    }
+
+    void transferPtr(BaseIndex src, BaseIndex dest)
     {
         transfer64(src, dest);
     }
@@ -1220,6 +1297,19 @@ public:
     void swap64(RegisterID src, Address dest)
     {
         m_assembler.xchgq_rm(src, dest.offset, dest.base);
+    }
+
+    void swapDouble(FPRegisterID reg1, FPRegisterID reg2)
+    {
+        if (reg1 == reg2)
+            return;
+
+        // FIXME: This is kinda a hack since we don't use xmm7 as a temp.
+        ASSERT(reg1 != FPRegisterID::xmm7);
+        ASSERT(reg2 != FPRegisterID::xmm7);
+        moveDouble(reg1, FPRegisterID::xmm7);
+        moveDouble(reg2, reg1);
+        moveDouble(FPRegisterID::xmm7, reg2);
     }
 
     void move32ToFloat(RegisterID src, FPRegisterID dest)
@@ -1274,6 +1364,10 @@ public:
 
     void materializeVector(v128_t value, FPRegisterID dest)
     {
+        if (bitEquals(value, vectorAllZeros())) {
+            moveZeroToVector(dest);
+            return;
+        }
         move(TrustedImm64(value.u64x2[0]), scratchRegister());
         vectorReplaceLaneInt64(TrustedImm32(0), scratchRegister(), dest);
         move(TrustedImm64(value.u64x2[1]), scratchRegister());
@@ -1402,6 +1496,12 @@ public:
     Jump branch32(RelationalCondition cond, AbsoluteAddress left, RegisterID right)
     {
         load32(left.m_ptr, scratchRegister());
+        return branch32(cond, scratchRegister(), right);
+    }
+
+    Jump branch32WithMemory16(RelationalCondition cond, Address left, RegisterID right)
+    {
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, scratchRegister());
         return branch32(cond, scratchRegister(), right);
     }
 
@@ -2863,6 +2963,20 @@ public:
         default:
             RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Invalid SIMD lane for vector multiply.");
         }
+    }
+
+    void vectorFusedMulAdd(SIMDInfo simdInfo, FPRegisterID mul1, FPRegisterID mul2, FPRegisterID addend, FPRegisterID dest, FPRegisterID scratch)
+    {
+        ASSERT(scalarTypeIsFloatingPoint(simdInfo.lane));
+        vectorMul(simdInfo, mul1, mul2, scratch);
+        vectorAdd(simdInfo, addend, scratch, dest);
+    }
+
+    void vectorFusedNegMulAdd(SIMDInfo simdInfo, FPRegisterID mul1, FPRegisterID mul2, FPRegisterID addend, FPRegisterID dest, FPRegisterID scratch)
+    {
+        ASSERT(scalarTypeIsFloatingPoint(simdInfo.lane));
+        vectorMul(simdInfo, mul1, mul2, scratch);
+        vectorSub(simdInfo, addend, scratch, dest);
     }
 
     void vectorDiv(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest)

@@ -42,7 +42,6 @@ class VideoFrameCV : public VideoFrame {
 public:
     WEBCORE_EXPORT static Ref<VideoFrameCV> create(MediaTime presentationTime, bool isMirrored, Rotation, RetainPtr<CVPixelBufferRef>&&, std::optional<PlatformVideoColorSpace>&& = { });
     WEBCORE_EXPORT static Ref<VideoFrameCV> create(CMSampleBufferRef, bool isMirrored, Rotation);
-    static RefPtr<VideoFrameCV> createFromPixelBuffer(Ref<PixelBuffer>&&);
     WEBCORE_EXPORT ~VideoFrameCV();
 
     CVPixelBufferRef pixelBuffer() const final { return m_pixelBuffer.get(); }
@@ -57,6 +56,9 @@ public:
 private:
     friend struct IPC::ArgumentCoder<VideoFrameCV, void>;
     WEBCORE_EXPORT VideoFrameCV(MediaTime presentationTime, bool isMirrored, Rotation, RetainPtr<CVPixelBufferRef>&&, std::optional<PlatformVideoColorSpace>&&);
+    VideoFrameCV(MediaTime presentationTime, bool isMirrored, Rotation, RetainPtr<CVPixelBufferRef>&&, PlatformVideoColorSpace&&);
+
+    Ref<VideoFrame> clone() final;
 
     const RetainPtr<CVPixelBufferRef> m_pixelBuffer;
 };

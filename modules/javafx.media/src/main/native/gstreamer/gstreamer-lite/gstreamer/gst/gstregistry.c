@@ -110,11 +110,11 @@
 #include "gstregistry.h"
 #ifndef GSTREAMER_LITE
 #include "gstdeviceproviderfactory.h"
-#endif // GSTREAMER_LITE
 
 #include "gstpluginloader.h"
+#endif // GSTREAMER_LITE
 
-#include "gst-i18n-lib.h"
+#include <glib/gi18n-lib.h>
 
 #include "gst.h"
 #include "glib-compat-private.h"
@@ -146,7 +146,7 @@ static const int AVCODEC_LIBAV_EXPLICIT_VERSIONS[] = { 54, 56 };
 // For ffmpeg (libavcodec-ffmpeg.so)
 static const int AVCODEC_FFMPEG_EXPLICIT_VERSIONS[] = { 56 };
 // For libav or ffmpeg (libavcodec.so)
-static const int AVCODEC_EXPLICIT_VERSIONS[] = { 57, 58, 59 };
+static const int AVCODEC_EXPLICIT_VERSIONS[] = { 57, 58, 59, 60, 61 };
 
 /*
  * Callback passed to dl_iterate_phdr(): finds the path of
@@ -776,8 +776,9 @@ gst_plugin_feature_type_name_filter (GstPluginFeature * feature,
 {
   g_assert (GST_IS_PLUGIN_FEATURE (feature));
 
-  return ((data->type == 0 || data->type == G_OBJECT_TYPE (feature)) &&
-      (data->name == NULL || !strcmp (data->name, GST_OBJECT_NAME (feature))));
+  return ((data->type == G_TYPE_INVALID
+          || data->type == G_OBJECT_TYPE (feature)) && (data->name == NULL
+          || !strcmp (data->name, GST_OBJECT_NAME (feature))));
 }
 
 /* returns TRUE if the list was changed
@@ -1181,7 +1182,9 @@ typedef struct
 {
   GstRegistry *registry;
   GstRegistryScanHelperState helper_state;
+#ifndef GSTREAMER_LITE
   GstPluginLoader *helper;
+#endif // GSTREAMER_LITE
   gboolean changed;
 } GstRegistryScanContext;
 
@@ -1209,17 +1212,21 @@ init_scan_context (GstRegistryScanContext * context, GstRegistry * registry)
   else
     context->helper_state = REGISTRY_SCAN_HELPER_DISABLED;
 
+#ifndef GSTREAMER_LITE
   context->helper = NULL;
+#endif // GSTREAMER_LITE
   context->changed = FALSE;
 }
 
 static void
 clear_scan_context (GstRegistryScanContext * context)
 {
+#ifndef GSTREAMER_LITE
   if (context->helper) {
     context->changed |= _priv_gst_plugin_loader_funcs.destroy (context->helper);
     context->helper = NULL;
   }
+#endif // GSTREAMER_LITE
 }
 
 static gboolean
@@ -1229,12 +1236,7 @@ gst_registry_scan_plugin_file (GstRegistryScanContext * context,
   gboolean changed = FALSE;
   GstPlugin *newplugin = NULL;
 
-#ifdef G_OS_WIN32
-  /* Disable external plugin loader on Windows until it is ported properly. */
-  context->helper_state = REGISTRY_SCAN_HELPER_DISABLED;
-#endif
-
-
+#ifndef GSTREAMER_LITE
   /* Have a plugin to load - see if the scan-helper needs starting */
   if (context->helper_state == REGISTRY_SCAN_HELPER_NOT_STARTED) {
     GST_DEBUG ("Starting plugin scanner for file %s", filename);
@@ -1259,6 +1261,9 @@ gst_registry_scan_plugin_file (GstRegistryScanContext * context,
       context->helper_state = REGISTRY_SCAN_HELPER_DISABLED;
     }
   }
+#else // GSTREAMER_LITE
+  context->helper_state = REGISTRY_SCAN_HELPER_DISABLED;
+#endif // GSTREAMER_LITE
 
   /* Check if the helper is disabled (or just got disabled above) */
   if (context->helper_state == REGISTRY_SCAN_HELPER_DISABLED) {
@@ -1290,12 +1295,44 @@ gst_registry_scan_plugin_file (GstRegistryScanContext * context,
 
 #ifndef GSTREAMER_LITE
 static gboolean
-is_blacklisted_directory (const gchar * dirent)
+skip_directory (const gchar * parent_path, const gchar * dirent)
 {
+  const gchar *target;
+
   /* hotdoc private folder can contain many files and it slows down
    * the discovery for nothing */
   if (g_str_has_prefix (dirent, "hotdoc-private-"))
     return TRUE;
+
+  /* gst-integration-testsuites can end up with many log files */
+  if (strcmp (dirent, "gst-integration-testsuites") == 0)
+    return TRUE;
+
+  /* Rust build dirs which may contain artefacts we should skip, can be
+   * /target/{debug,release} or /target/{arch}/{debug,release} */
+  target = strstr (parent_path, "/target/");
+
+  /* On Windows both forward and backward slashes may be used */
+#ifdef G_OS_WIN32
+  if (target == NULL)
+    target = strstr (parent_path, "\\target\\");
+#endif
+
+  if (target != NULL) {
+    if (g_str_has_suffix (target + 7, "/debug")
+#ifdef G_OS_WIN32
+        || g_str_has_suffix (target + 7, "\\debug")
+        || g_str_has_suffix (target + 7, "\\release")
+#endif
+        || g_str_has_suffix (target + 7, "/release")) {
+      if (dirent[0] == '.'
+          || strcmp (dirent, "build") == 0
+          || strcmp (dirent, "deps") == 0
+          || strcmp (dirent, "incremental") == 0) {
+        return TRUE;
+      }
+    }
+  }
 
   if (G_LIKELY (dirent[0] != '.'))
     return FALSE;
@@ -1383,7 +1420,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
     }
 
     if (file_status.st_mode & S_IFDIR) {
-      if (G_UNLIKELY (is_blacklisted_directory (dirent))) {
+      if (G_UNLIKELY (skip_directory (path, dirent))) {
         GST_TRACE_OBJECT (context->registry, "ignoring %s directory", dirent);
         g_free (filename);
         continue;
@@ -1806,9 +1843,11 @@ priv_gst_get_relocated_libgstreamer (void)
 
     g_free (base_dir);
   }
-#elif defined(__APPLE__) && defined(HAVE_DLADDR)
+#elif defined(HAVE_DLADDR)
   {
     Dl_info info;
+    char *real_fname = NULL;
+    long path_max = 0;
 
     GST_DEBUG ("attempting to retrieve libgstreamer-1.0 location using "
         "dladdr()");
@@ -1819,18 +1858,109 @@ priv_gst_get_relocated_libgstreamer (void)
       if (!info.dli_fname) {
         return NULL;
       }
+#ifdef PATH_MAX
+      path_max = PATH_MAX;
+#else
+      path_max = pathconf (info.dli_fname, _PC_PATH_MAX);
+      if (path_max <= 0)
+        path_max = 4096;
+#endif
 
-      dir = g_path_get_dirname (info.dli_fname);
+      real_fname = g_malloc (path_max);
+      if (realpath (info.dli_fname, real_fname)) {
+        dir = g_path_get_dirname (real_fname);
+        GST_DEBUG ("real directory location: %s", dir);
+      } else {
+        GST_ERROR ("could not canonicalize path %s: %s", info.dli_fname,
+            g_strerror (errno));
+        dir = g_path_get_dirname (info.dli_fname);
+      }
+      g_free (real_fname);
+
     } else {
       GST_LOG ("dladdr() failed");
       return NULL;
     }
   }
+#else
+#warning "Unsupported platform for retrieving the current location of a shared library."
+#warning "Relocatable builds will not work."
+  GST_WARNING ("Don't know how to retrieve the location of the shared "
+      "library libgstreamer-" GST_API_VERSION);
 #endif
 
   return dir;
 }
 #endif // GSTREAMER_LITE
+
+int
+priv_gst_count_directories (const char *filepath)
+{
+  int i = 0;
+  char *tmp;
+  gsize len;
+
+  g_return_val_if_fail (!g_path_is_absolute (filepath), 0);
+
+  tmp = g_strdup (filepath);
+  len = strlen (tmp);
+
+  /* ignore UNC share paths entirely */
+  if (len >= 3 && G_IS_DIR_SEPARATOR (tmp[0]) && G_IS_DIR_SEPARATOR (tmp[1])
+      && !G_IS_DIR_SEPARATOR (tmp[2])) {
+    GST_WARNING ("found a UNC share path, ignoring");
+    g_clear_pointer (&tmp, g_free);
+    return 0;
+  }
+
+  /* remove trailing slashes if they exist */
+  while (
+      /* don't remove the trailing slash for C:\.
+       * UNC paths are at least \\s\s */
+      len > 3 && G_IS_DIR_SEPARATOR (tmp[len - 1])) {
+    tmp[len - 1] = '\0';
+    len--;
+  }
+
+  while (tmp) {
+    char *dirname, *basename;
+    len = strlen (tmp);
+
+    if (g_strcmp0 (tmp, ".") == 0)
+      break;
+    if (g_strcmp0 (tmp, "/") == 0)
+      break;
+
+    /* g_path_get_dirname() may return something of the form 'C:.', where C is
+     * a drive letter */
+    if (len == 3 && g_ascii_isalpha (tmp[0]) && tmp[1] == ':' && tmp[2] == '.')
+      break;
+
+    basename = g_path_get_basename (tmp);
+    dirname = g_path_get_dirname (tmp);
+
+    if (g_strcmp0 (basename, "..") == 0) {
+      i--;
+    } else if (g_strcmp0 (basename, ".") == 0) {
+      /* nothing to do */
+    } else {
+      i++;
+    }
+
+    g_clear_pointer (&basename, g_free);
+    g_clear_pointer (&tmp, g_free);
+    tmp = dirname;
+  }
+
+  g_clear_pointer (&tmp, g_free);
+
+  if (i < 0) {
+    g_critical ("path counting resulted in a negative directory count!");
+    return 0;
+  }
+
+  return i;
+}
 
 #ifndef GST_DISABLE_REGISTRY
 /* Unref all plugins marked 'cached', to clear old plugins that no
@@ -2101,12 +2231,11 @@ scan_and_update_registry (GstRegistry * default_registry,
   return REGISTRY_SCAN_AND_UPDATE_SUCCESS_UPDATED;
 }
 
-static gboolean
+static void
 ensure_current_registry (GError ** error)
 {
   gchar *registry_file;
   GstRegistry *default_registry;
-  gboolean ret = TRUE;
   gboolean do_update = TRUE;
   gboolean have_cache = TRUE;
 
@@ -2160,9 +2289,7 @@ ensure_current_registry (GError ** error)
   }
 
   g_free (registry_file);
-  GST_INFO ("registry reading and updating done, result = %d", ret);
-
-  return ret;
+  GST_INFO ("registry reading and updating done");
 }
 #endif /* GST_DISABLE_REGISTRY */
 
@@ -2225,13 +2352,11 @@ gst_registry_fork_set_enabled (gboolean enabled)
 gboolean
 gst_update_registry (void)
 {
-  gboolean res;
-
 #ifndef GST_DISABLE_REGISTRY
   if (!_priv_gst_disable_registry) {
     GError *err = NULL;
 
-    res = ensure_current_registry (&err);
+    ensure_current_registry (&err);
     if (err) {
       GST_WARNING ("registry update failed: %s", err->message);
       g_error_free (err);
@@ -2240,12 +2365,10 @@ gst_update_registry (void)
     }
   } else {
     GST_INFO ("registry update disabled by environment");
-    res = TRUE;
   }
 
 #else
   GST_WARNING ("registry update failed: %s", "registry disabled");
-  res = TRUE;
 #endif /* GST_DISABLE_REGISTRY */
 
 #ifndef GST_DISABLE_OPTION_PARSING
@@ -2255,7 +2378,7 @@ gst_update_registry (void)
   }
 #endif
 
-  return res;
+  return TRUE;
 }
 
 /**

@@ -26,9 +26,10 @@
 #include "config.h"
 #include "ReportingObserver.h"
 
-#include "DOMWindow.h"
+#include "DocumentInlines.h"
 #include "EventLoop.h"
 #include "InspectorInstrumentation.h"
+#include "LocalDOMWindow.h"
 #include "Report.h"
 #include "ReportBody.h"
 #include "ReportingObserverCallback.h"
@@ -60,10 +61,10 @@ Ref<ReportingObserver> ReportingObserver::create(ScriptExecutionContext& scriptE
 
 static WeakPtr<ReportingScope> reportingScopeForContext(ScriptExecutionContext& scriptExecutionContext)
 {
-    if (auto* document = dynamicDowncast<Document>(&scriptExecutionContext))
+    if (RefPtr document = dynamicDowncast<Document>(&scriptExecutionContext))
         return document->reportingScope();
 
-    if (auto* workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(&scriptExecutionContext))
+    if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(&scriptExecutionContext))
         return workerGlobalScope->reportingScope();
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -77,10 +78,7 @@ ReportingObserver::ReportingObserver(ScriptExecutionContext& scriptExecutionCont
 {
 }
 
-ReportingObserver::~ReportingObserver()
-{
-    disconnect();
-}
+ReportingObserver::~ReportingObserver() = default;
 
 void ReportingObserver::disconnect()
 {
@@ -131,7 +129,7 @@ void ReportingObserver::appendQueuedReportIfCorrectType(const Ref<Report>& repor
     if (m_queuedReports.size() > 1)
         return;
 
-    auto* context = m_callback->scriptExecutionContext();
+    RefPtr context = m_callback->scriptExecutionContext();
     if (!context)
         return;
 
@@ -146,6 +144,11 @@ void ReportingObserver::appendQueuedReportIfCorrectType(const Ref<Report>& repor
         protectedCallback->handleEvent(reports, *protectedThis);
         InspectorInstrumentation::didFireObserverCallback(*context);
     });
+}
+
+ReportingObserverCallback& ReportingObserver::callbackConcurrently()
+{
+    return m_callback.get();
 }
 
 } // namespace WebCore

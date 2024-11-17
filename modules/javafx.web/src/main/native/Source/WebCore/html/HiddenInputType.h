@@ -35,14 +35,18 @@
 namespace WebCore {
 
 class HiddenInputType final : public InputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
+    static Ref<HiddenInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new HiddenInputType(element));
+    }
+
+private:
     explicit HiddenInputType(HTMLInputElement& element)
         : InputType(Type::Hidden, element)
     {
     }
 
-private:
     const AtomString& formControlType() const final;
     FormControlState saveFormControlState() const final;
     void restoreFormControlState(const FormControlState&) final;
@@ -53,6 +57,7 @@ private:
     bool shouldRespectHeightAndWidthAttributes() final;
     void setValue(const String&, bool, TextFieldEventBehavior, TextControlSetValueSelection) final;
     bool appendFormData(DOMFormData&) const final;
+    bool dirAutoUsesValue() const final;
 };
 
 } // namespace WebCore

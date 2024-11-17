@@ -36,7 +36,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
 #include "Document.h"
-#include "HighlightRegister.h"
+#include "HighlightRegistry.h"
 #include "MutableStyleProperties.h"
 #include "StyleProperties.h"
 #include <wtf/text/StringBuilder.h>
@@ -47,6 +47,7 @@ namespace WebCore {
 bool DOMCSSNamespace::supports(Document& document, const String& property, const String& value)
 {
     CSSParserContext parserContext(document);
+    parserContext.mode = HTMLStandardMode;
 
     auto propertyNameWithoutWhitespace = property;
     CSSPropertyID propertyID = cssPropertyID(propertyNameWithoutWhitespace);
@@ -75,6 +76,7 @@ bool DOMCSSNamespace::supports(Document& document, const String& property, const
 bool DOMCSSNamespace::supports(Document& document, const String& conditionText)
 {
     CSSParserContext context(document);
+    context.mode = HTMLStandardMode;
     CSSParser parser(context);
     return parser.parseSupportsCondition(conditionText);
 }
@@ -86,9 +88,9 @@ String DOMCSSNamespace::escape(const String& ident)
     return builder.toString();
 }
 
-HighlightRegister& DOMCSSNamespace::highlights(Document& document)
+HighlightRegistry& DOMCSSNamespace::highlights(Document& document)
 {
-    return document.highlightRegister();
+    return document.highlightRegistry();
 }
 
 }

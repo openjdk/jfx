@@ -32,6 +32,7 @@
 #include "AbstractWorker.h"
 
 #include "ContentSecurityPolicy.h"
+#include "OriginAccessPatterns.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "WorkerOptions.h"
@@ -62,14 +63,14 @@ ExceptionOr<URL> AbstractWorker::resolveURL(const String& url)
     // FIXME: This should use the dynamic global scope (bug #27887).
     URL scriptURL = context.completeURL(url);
     if (!scriptURL.isValid())
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
 
-    if (!context.securityOrigin()->canRequest(scriptURL) && !scriptURL.protocolIsData())
-        return Exception { SecurityError };
+    if (!context.securityOrigin()->canRequest(scriptURL, OriginAccessPatternsForWebProcess::singleton()) && !scriptURL.protocolIsData())
+        return Exception { ExceptionCode::SecurityError };
 
     ASSERT(context.contentSecurityPolicy());
-    if (!context.contentSecurityPolicy()->allowWorkerFromSource(scriptURL))
-        return Exception { SecurityError };
+    if (!context.checkedContentSecurityPolicy()->allowWorkerFromSource(scriptURL))
+        return Exception { ExceptionCode::SecurityError };
 
     return scriptURL;
 }

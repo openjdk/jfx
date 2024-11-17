@@ -73,9 +73,9 @@ std::unique_ptr<Relations> commitRelationsToRenderStyle(RenderStyle& style, cons
         case Relation::ChildrenAffectedByBackwardPositionalRules:
         case Relation::DescendantsAffectedByBackwardPositionalRules:
         case Relation::ChildrenAffectedByFirstChildRules:
-        case Relation::ChildrenAffectedByPropertyBasedBackwardPositionalRules:
         case Relation::ChildrenAffectedByLastChildRules:
         case Relation::NthChildIndex:
+        case Relation::AffectedByHasWithPositionalPseudoClass:
             appendStyleRelation(relation);
             break;
         }
@@ -120,12 +120,11 @@ void commitRelations(std::unique_ptr<Relations> relations, Update& update)
         case Relation::ChildrenAffectedByFirstChildRules:
             element.setChildrenAffectedByFirstChildRules();
             break;
-        case Relation::ChildrenAffectedByPropertyBasedBackwardPositionalRules:
-            element.setChildrenAffectedByBackwardPositionalRules();
-            element.setChildrenAffectedByPropertyBasedBackwardPositionalRules();
-            break;
         case Relation::ChildrenAffectedByLastChildRules:
             element.setChildrenAffectedByLastChildRules();
+            break;
+        case Relation::AffectedByHasWithPositionalPseudoClass:
+            element.setAffectedByHasWithPositionalPseudoClass();
             break;
         case Relation::FirstChild:
             if (auto* style = update.elementStyle(element))

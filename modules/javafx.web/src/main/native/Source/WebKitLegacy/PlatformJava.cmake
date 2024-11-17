@@ -171,17 +171,6 @@ elseif (WIN32)
     set(WebKitLegacy_EXTERNAL_DEP "${CMAKE_BINARY_DIR}/WebCore/obj/version.res")
 endif ()
 
-# Create a dummy depency c file to relink when mapfile changes
-get_filename_component(STAMP_NAME ${WebKitLegacy_EXTERNAL_DEP} NAME)
-set(WebKitLegacy_EXTERNAL_DEP_STAMP "${CMAKE_BINARY_DIR}/${STAMP_NAME}.stamp.cpp")
-add_custom_command(
-    OUTPUT "${WebKitLegacy_EXTERNAL_DEP_STAMP}"
-    DEPENDS "${WebKitLegacy_EXTERNAL_DEP}"
-    COMMAND ${CMAKE_COMMAND} -E touch "${WebKitLegacy_EXTERNAL_DEP_STAMP}"
-    VERBATIM
-)
-list(APPEND WebKitLegacy_SOURCES ${WebKitLegacy_EXTERNAL_DEP_STAMP})
-
 add_custom_command(
     OUTPUT ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebKitVersion.h
     MAIN_DEPENDENCY ${WEBKITLEGACY_DIR}/scripts/generate-webkitversion.pl

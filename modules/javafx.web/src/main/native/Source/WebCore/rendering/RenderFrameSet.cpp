@@ -28,14 +28,16 @@
 #include "Document.h"
 #include "EventHandler.h"
 #include "EventNames.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "GraphicsContext.h"
 #include "HTMLFrameSetElement.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "MouseEvent.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderFrame.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
@@ -53,10 +55,10 @@ static constexpr auto borderFillColor = SRGBA<uint8_t> { 208, 208, 208 };
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFrameSet);
 
 RenderFrameSet::RenderFrameSet(HTMLFrameSetElement& frameSet, RenderStyle&& style)
-    : RenderBox(frameSet, WTFMove(style), 0)
+    : RenderBox(Type::FrameSet, frameSet, WTFMove(style))
     , m_isResizing(false)
-    , m_isChildResizing(false)
 {
+    ASSERT(isRenderFrameSet());
     setInline(false);
 }
 
@@ -397,8 +399,8 @@ void RenderFrameSet::computeEdgeInfo()
     for (size_t r = 0; r < rows; ++r) {
         for (size_t c = 0; c < cols; ++c) {
             FrameEdgeInfo edgeInfo;
-            if (is<RenderFrameSet>(*child))
-                edgeInfo = downcast<RenderFrameSet>(*child).edgeInfo();
+            if (auto* frameSet = dynamicDowncast<RenderFrameSet>(*child))
+                edgeInfo = frameSet->edgeInfo();
             else
                 edgeInfo = downcast<RenderFrame>(*child).edgeInfo();
             fillFromEdgeInfo(edgeInfo, r, c);
@@ -436,13 +438,13 @@ void RenderFrameSet::layout()
 
     bool doFullRepaint = selfNeedsLayout() && checkForRepaintDuringLayout();
     LayoutRect oldBounds;
-    const RenderLayerModelObject* repaintContainer = nullptr;
+    CheckedPtr<const RenderLayerModelObject> repaintContainer;
     if (doFullRepaint) {
         repaintContainer = containerForRepaint().renderer;
-        oldBounds = clippedOverflowRectForRepaint(repaintContainer);
+        oldBounds = clippedOverflowRectForRepaint(repaintContainer.get());
     }
 
-    if (!parent()->isFrameSet() && !document().printing()) {
+    if (!parent()->isRenderFrameSet() && !document().printing()) {
         setWidth(view().viewWidth());
         setHeight(view().viewHeight());
     }
@@ -468,10 +470,10 @@ void RenderFrameSet::layout()
     updateLayerTransform();
 
     if (doFullRepaint) {
-        repaintUsingContainer(repaintContainer, snappedIntRect(oldBounds));
-        LayoutRect newBounds = clippedOverflowRectForRepaint(repaintContainer);
+        repaintUsingContainer(repaintContainer.get(), snappedIntRect(oldBounds));
+        LayoutRect newBounds = clippedOverflowRectForRepaint(repaintContainer.get());
         if (newBounds != oldBounds)
-            repaintUsingContainer(repaintContainer, snappedIntRect(newBounds));
+            repaintUsingContainer(repaintContainer.get(), snappedIntRect(newBounds));
     }
 
     clearNeedsLayout();
@@ -561,7 +563,7 @@ bool RenderFrameSet::userResize(MouseEvent& event)
     if (!m_isResizing) {
         if (needsLayout())
             return false;
-        if (event.type() == eventNames().mousedownEvent && event.button() == LeftButton) {
+        if (event.type() == eventNames().mousedownEvent && event.button() == MouseButton::Left) {
             FloatPoint localPos = absoluteToLocal(event.absoluteLocation(), UseTransforms);
             startResizing(m_cols, localPos.x());
             startResizing(m_rows, localPos.y());
@@ -571,11 +573,11 @@ bool RenderFrameSet::userResize(MouseEvent& event)
             }
         }
     } else {
-        if (event.type() == eventNames().mousemoveEvent || (event.type() == eventNames().mouseupEvent && event.button() == LeftButton)) {
+        if (event.type() == eventNames().mousemoveEvent || (event.type() == eventNames().mouseupEvent && event.button() == MouseButton::Left)) {
             FloatPoint localPos = absoluteToLocal(event.absoluteLocation(), UseTransforms);
             continueResizing(m_cols, localPos.x());
             continueResizing(m_rows, localPos.y());
-            if (event.type() == eventNames().mouseupEvent && event.button() == LeftButton) {
+            if (event.type() == eventNames().mouseupEvent && event.button() == MouseButton::Left) {
                 setIsResizing(false);
                 return true;
             }
@@ -588,19 +590,7 @@ bool RenderFrameSet::userResize(MouseEvent& event)
 void RenderFrameSet::setIsResizing(bool isResizing)
 {
     m_isResizing = isResizing;
-    for (auto& ancestor : ancestorsOfType<RenderFrameSet>(*this))
-        ancestor.m_isChildResizing = isResizing;
     frame().eventHandler().setResizingFrameSet(isResizing ? &frameSetElement() : nullptr);
-}
-
-bool RenderFrameSet::isResizingRow() const
-{
-    return m_isResizing && m_rows.m_splitBeingResized != noSplit;
-}
-
-bool RenderFrameSet::isResizingColumn() const
-{
-    return m_isResizing && m_cols.m_splitBeingResized != noSplit;
 }
 
 bool RenderFrameSet::canResizeRow(const IntPoint& p) const
@@ -656,7 +646,7 @@ int RenderFrameSet::hitTestSplit(const GridAxis& axis, int position) const
 
 bool RenderFrameSet::isChildAllowed(const RenderObject& child, const RenderStyle&) const
 {
-    return child.isFrame() || child.isFrameSet();
+    return child.isRenderFrame() || child.isRenderFrameSet();
 }
 
 CursorDirective RenderFrameSet::getCursor(const LayoutPoint& point, Cursor& cursor) const

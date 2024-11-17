@@ -23,11 +23,12 @@
 #include "SVGGraphicsElement.h"
 
 #include "LegacyRenderSVGPath.h"
+#include "LegacyRenderSVGResource.h"
 #include "RenderAncestorIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderLayer.h"
 #include "RenderSVGHiddenContainer.h"
 #include "RenderSVGPath.h"
-#include "RenderSVGResource.h"
 #include "SVGMatrix.h"
 #include "SVGNames.h"
 #include "SVGPathData.h"
@@ -35,6 +36,7 @@
 #include "SVGRenderSupport.h"
 #include "SVGSVGElement.h"
 #include "SVGStringList.h"
+#include "TransformOperationData.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -42,8 +44,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGraphicsElement);
 
-SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
-    : SVGElement(tagName, document, WTFMove(propertyRegistry))
+SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry, OptionSet<TypeFlag> typeFlags)
+    : SVGElement(tagName, document, WTFMove(propertyRegistry), typeFlags)
     , SVGTests(this)
     , m_shouldIsolateBlending(false)
 {
@@ -96,7 +98,7 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
         // Note: objectBoundingBox is an emptyRect for elements like pattern or clipPath.
         // See the "Object bounding box units" section of http://dev.w3.org/csswg/css3-transforms/
         TransformationMatrix transform;
-        style->applyTransform(transform, renderer()->transformReferenceBoxRect());
+        style->applyTransform(transform, TransformOperationData(renderer()->transformReferenceBoxRect(), renderer()));
 
         // Flatten any 3D transform.
         matrix = transform.toAffineTransform();
@@ -129,15 +131,13 @@ AffineTransform* SVGGraphicsElement::ensureSupplementalTransform()
     return m_supplementalTransform.get();
 }
 
-void SVGGraphicsElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGGraphicsElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::transformAttr) {
-        m_transform->baseVal()->parse(value);
-        return;
-    }
+    if (name == SVGNames::transformAttr)
+        m_transform->baseVal()->parse(newValue);
 
-    SVGElement::parseAttribute(name, value);
-    SVGTests::parseAttribute(name, value);
+    SVGTests::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGGraphicsElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -207,8 +207,11 @@ void SVGGraphicsElement::didAttachRenderers()
 
 Path SVGGraphicsElement::toClipPath()
 {
-    // FIXME: [LBSE] Stop mutating the path here and stop calling animatedLocalTransform().
-    Path path = pathFromGraphicsElement(this);
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    RELEASE_ASSERT(!document().settings().layerBasedSVGEngineEnabled());
+#endif
+
+    Path path = pathFromGraphicsElement(*this);
     // FIXME: How do we know the element has done a layout?
     path.transform(animatedLocalTransform());
     return path;

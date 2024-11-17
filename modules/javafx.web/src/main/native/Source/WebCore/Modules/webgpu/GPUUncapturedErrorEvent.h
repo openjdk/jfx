@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 #include "Event.h"
 #include "GPUError.h"
 #include "GPUUncapturedErrorEventInit.h"
-#include <pal/graphics/WebGPU/WebGPUUncapturedErrorEvent.h>
+#include "WebGPUUncapturedErrorEvent.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -38,36 +38,21 @@ namespace WebCore {
 class GPUUncapturedErrorEvent final : public Event {
     WTF_MAKE_ISO_ALLOCATED(GPUUncapturedErrorEvent);
 public:
-    static Ref<GPUUncapturedErrorEvent> create(String&& type, const GPUUncapturedErrorEventInit& gpuUncapturedErrorEventInitDict)
-    {
-        return adoptRef(*new GPUUncapturedErrorEvent(WTFMove(type), gpuUncapturedErrorEventInitDict));
-    }
+    virtual ~GPUUncapturedErrorEvent() = default;
 
-    static Ref<GPUUncapturedErrorEvent> create(Ref<PAL::WebGPU::UncapturedErrorEvent>&& backing)
+    static Ref<GPUUncapturedErrorEvent> create(const AtomString& type, GPUUncapturedErrorEventInit&& gpuUncapturedErrorEventInitDict)
     {
-        return adoptRef(*new GPUUncapturedErrorEvent(WTFMove(backing)));
+        return adoptRef(*new GPUUncapturedErrorEvent(type, WTFMove(gpuUncapturedErrorEventInitDict)));
     }
 
     GPUError error() const;
-
-    PAL::WebGPU::UncapturedErrorEvent* backing() { return m_backing.get(); }
-    const PAL::WebGPU::UncapturedErrorEvent* backing() const { return m_backing.get(); }
+    EventInterface eventInterface() const override;
 
 private:
-    GPUUncapturedErrorEvent(String&& type, const GPUUncapturedErrorEventInit& uncapturedErrorEventInit)
-        : m_type(WTFMove(type))
-        , m_uncapturedErrorEventInit(uncapturedErrorEventInit)
-    {
-    }
-
-    GPUUncapturedErrorEvent(Ref<PAL::WebGPU::UncapturedErrorEvent>&& backing)
-        : m_backing(WTFMove(backing))
-    {
-    }
+    GPUUncapturedErrorEvent(const AtomString&, GPUUncapturedErrorEventInit&&);
 
     String m_type;
     GPUUncapturedErrorEventInit m_uncapturedErrorEventInit;
-    RefPtr<PAL::WebGPU::UncapturedErrorEvent> m_backing;
 };
 
 }

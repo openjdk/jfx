@@ -190,7 +190,7 @@ private:
             return false;
 
         while (true) {
-            while (m_srcPtr != m_bufferEnd && isASCIISpace(*m_srcPtr))
+            while (m_srcPtr != m_bufferEnd && isUnicodeCompatibleASCIIWhitespace(*m_srcPtr))
                 m_srcPtr++;
 
             if (m_srcPtr != m_bufferEnd)
@@ -243,9 +243,9 @@ ConfigFile::ConfigFile(const char* filename)
     if (!filename)
         m_filename[0] = '\0';
     else {
-        IGNORE_GCC_WARNINGS_BEGIN("stringop-truncation")
+        IGNORE_WARNINGS_BEGIN("stringop-truncation")
         strncpy(m_filename, filename, s_maxPathLength);
-        IGNORE_GCC_WARNINGS_END
+        IGNORE_WARNINGS_END
         m_filename[s_maxPathLength] = '\0';
     }
 
@@ -312,12 +312,12 @@ void ConfigFile::parse()
 
                     char* optionNameStart = p;
 
-                    while (*p && !isASCIISpace(*p) && *p != '=')
+                    while (*p && !isUnicodeCompatibleASCIIWhitespace(*p) && *p != '=')
                         p++;
 
                     builder.appendCharacters(optionNameStart, p - optionNameStart);
 
-                    while (*p && isASCIISpace(*p) && *p != '=')
+                    while (*p && isUnicodeCompatibleASCIIWhitespace(*p) && *p != '=')
                         p++;
 
                     if (!*p)
@@ -326,7 +326,7 @@ void ConfigFile::parse()
 
                     builder.append('=');
 
-                    while (*p && isASCIISpace(*p))
+                    while (*p && isUnicodeCompatibleASCIIWhitespace(*p))
                         p++;
 
                     if (!*p)
@@ -334,13 +334,13 @@ void ConfigFile::parse()
 
                     char* optionValueStart = p;
 
-                    while (*p && !isASCIISpace(*p))
+                    while (*p && !isUnicodeCompatibleASCIIWhitespace(*p))
                         p++;
 
                     builder.appendCharacters(optionValueStart, p - optionValueStart);
                     builder.append('\n');
 
-                    while (*p && isASCIISpace(*p))
+                    while (*p && isUnicodeCompatibleASCIIWhitespace(*p))
                         p++;
                 } while (*p);
 
@@ -489,20 +489,20 @@ void ConfigFile::canonicalizePaths()
             if (sizeof(filenameBuffer) - 1  >= pathnameLength + shouldAddPathSeparator) {
                 if (shouldAddPathSeparator)
                     strncat(filenameBuffer, "/", 2); // Room for '/' plus NUL
-                IGNORE_GCC_WARNINGS_BEGIN("stringop-truncation")
+                IGNORE_WARNINGS_BEGIN("stringop-truncation")
                 strncat(filenameBuffer, m_filename, sizeof(filenameBuffer) - strlen(filenameBuffer) - 1);
-                IGNORE_GCC_WARNINGS_END
                 strncpy(m_filename, filenameBuffer, s_maxPathLength);
+                IGNORE_WARNINGS_END
                 m_filename[s_maxPathLength] = '\0';
             }
         }
     }
 #endif
 
-    char* lastPathSeperator = strrchr(m_filename, '/');
+    char* lastPathSeparator = strrchr(m_filename, '/');
 
-    if (lastPathSeperator) {
-        unsigned dirnameLength = lastPathSeperator - &m_filename[0];
+    if (lastPathSeparator) {
+        unsigned dirnameLength = lastPathSeparator - &m_filename[0];
         strncpy(m_configDirectory, m_filename, dirnameLength);
         m_configDirectory[dirnameLength] = '\0';
     } else {

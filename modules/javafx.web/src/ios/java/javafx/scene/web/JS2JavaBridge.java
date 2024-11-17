@@ -103,6 +103,7 @@ class JS2JavaBridge {
         return javaBridge;
     }
 
+    @SuppressWarnings("removal")
     AccessControlContext getAccessControlContext() {
         return webEngine.getAccessControlContext();
     }

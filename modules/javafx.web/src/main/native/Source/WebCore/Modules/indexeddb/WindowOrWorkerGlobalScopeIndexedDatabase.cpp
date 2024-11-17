@@ -28,28 +28,28 @@
 #include "config.h"
 #include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 
-#include "DOMWindow.h"
-#include "DOMWindowProperty.h"
 #include "Document.h"
 #include "IDBConnectionProxy.h"
 #include "IDBFactory.h"
+#include "LocalDOMWindow.h"
+#include "LocalDOMWindowProperty.h"
 #include "Page.h"
 #include "Supplementable.h"
 #include "WorkerGlobalScope.h"
 
 namespace WebCore {
 
-class DOMWindowIndexedDatabase : public DOMWindowProperty, public Supplement<DOMWindow> {
+class DOMWindowIndexedDatabase : public LocalDOMWindowProperty, public Supplement<LocalDOMWindow> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit DOMWindowIndexedDatabase(DOMWindow&);
+    explicit DOMWindowIndexedDatabase(LocalDOMWindow&);
     virtual ~DOMWindowIndexedDatabase() = default;
 
-    static DOMWindowIndexedDatabase* from(DOMWindow&);
+    static DOMWindowIndexedDatabase* from(LocalDOMWindow&);
     IDBFactory* indexedDB();
 
 private:
-    static const char* supplementName() { return "DOMWindowIndexedDatabase"; }
+    static ASCIILiteral supplementName() { return "DOMWindowIndexedDatabase"_s; }
 
     RefPtr<IDBFactory> m_idbFactory;
 };
@@ -64,7 +64,7 @@ public:
     IDBFactory* indexedDB();
 
 private:
-    static const char* supplementName() { return "WorkerGlobalScopeIndexedDatabase"; }
+    static ASCIILiteral supplementName() { return "WorkerGlobalScopeIndexedDatabase"_s; }
 
     RefPtr<IDBFactory> m_idbFactory;
     Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
@@ -72,14 +72,14 @@ private:
 
 // DOMWindowIndexedDatabase supplement.
 
-DOMWindowIndexedDatabase::DOMWindowIndexedDatabase(DOMWindow& window)
-    : DOMWindowProperty(&window)
+DOMWindowIndexedDatabase::DOMWindowIndexedDatabase(LocalDOMWindow& window)
+    : LocalDOMWindowProperty(&window)
 {
 }
 
-DOMWindowIndexedDatabase* DOMWindowIndexedDatabase::from(DOMWindow& window)
+DOMWindowIndexedDatabase* DOMWindowIndexedDatabase::from(LocalDOMWindow& window)
 {
-    auto* supplement = static_cast<DOMWindowIndexedDatabase*>(Supplement<DOMWindow>::from(&window, supplementName()));
+    auto* supplement = static_cast<DOMWindowIndexedDatabase*>(Supplement<LocalDOMWindow>::from(&window, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<DOMWindowIndexedDatabase>(window);
         supplement = newSupplement.get();
@@ -93,11 +93,11 @@ IDBFactory* DOMWindowIndexedDatabase::indexedDB()
 #if PLATFORM(JAVA)
     return nullptr;
 #else /* PLATFORM(JAVA) */
-    auto* window = this->window();
+    RefPtr window = this->window();
     if (!window)
         return nullptr;
 
-    auto* document = window->document();
+    RefPtr document = window->document();
     if (!document)
         return nullptr;
 
@@ -170,7 +170,7 @@ IDBFactory* WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(WorkerGlobalScop
 #endif /* PLATFORM(JAVA) */
 }
 
-IDBFactory* WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(DOMWindow& window)
+IDBFactory* WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(LocalDOMWindow& window)
 {
 #if PLATFORM(JAVA)
     UNUSED_PARAM(window);

@@ -33,10 +33,7 @@
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
 
-#if USE(CF)
-#if PLATFORM(WIN)
-#include "WebCoreBundleWin.h"
-#endif
+#if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 #endif
 
@@ -46,7 +43,7 @@
 
 namespace WebCore {
 
-#if USE(CF) && !PLATFORM(WIN)
+#if PLATFORM(COCOA)
 String formatLocalizedString(CFStringRef format, ...)
 {
     va_list arguments;
@@ -61,20 +58,23 @@ ALLOW_NONLITERAL_FORMAT_END
     va_end(arguments);
     return result.get();
 }
+#elif PLATFORM(WIN)
+String formatLocalizedString(const wchar_t* format, ...)
+{
+    va_list arguments;
+    va_start(arguments, format);
+    int len = _vscwprintf(format, arguments);
+    Vector<wchar_t> buffer(len + 1);
+    _vsnwprintf(buffer.data(), len + 1, format, arguments);
+    va_end(arguments);
+    return { buffer.data() };
+}
 #else
 // Because |format| is used as the second parameter to va_start, it cannot be a reference
 // type according to section 18.7/3 of the C++ N1905 standard.
 String formatLocalizedString(const char* format, ...)
 {
-#if USE(CF) && PLATFORM(WIN)
-    auto cfFormat = adoptCF(CFStringCreateWithCStringNoCopy(nullptr, format, kCFStringEncodingUTF8, kCFAllocatorNull));
-    va_list arguments;
-    va_start(arguments, format);
-    auto localizedFormat = copyLocalizedString(cfFormat.get());
-    auto result = adoptCF(CFStringCreateWithFormatAndArguments(0, 0, localizedFormat.get(), arguments));
-    va_end(arguments);
-    return result.get();
-#elif USE(GLIB)
+#if USE(GLIB)
     va_list arguments;
     va_start(arguments, format);
     GUniquePtr<gchar> result(g_strdup_vprintf(format, arguments));
@@ -87,15 +87,13 @@ String formatLocalizedString(const char* format, ...)
 }
 #endif
 
-#if USE(CF)
-#if !PLATFORM(WIN)
+#if PLATFORM(COCOA)
 static CFBundleRef webCoreBundle()
 {
     static NeverDestroyed<RetainPtr<CFBundleRef>> bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore"));
     ASSERT(bundle.get());
     return bundle.get().get();
 }
-#endif
 
 RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 {
@@ -107,12 +105,7 @@ RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 
     static CFStringRef notFound = CFSTR("localized string not found");
 
-#if PLATFORM(WIN)
-    CFBundleRef bundle = webKitBundle();
-#else
-    CFBundleRef bundle = webCoreBundle();
-#endif
-    auto result = adoptCF(CFBundleCopyLocalizedString(bundle, key, notFound, nullptr));
+    auto result = adoptCF(CFBundleCopyLocalizedString(webCoreBundle(), key, notFound, nullptr));
 
 #if ASSERT_ENABLED
     if (result.get() == notFound) {
@@ -126,31 +119,31 @@ RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 }
 #endif
 
-#if USE(CF) && !PLATFORM(WIN)
+#if PLATFORM(COCOA)
 String localizedString(CFStringRef key)
 {
     return copyLocalizedString(key).get();
 }
+#elif PLATFORM(WIN)
+String localizedString(const wchar_t* key)
+{
+    return key;
+}
 #else
 String localizedString(const char* key)
 {
-#if USE(CF)
-    auto keyString = adoptCF(CFStringCreateWithCStringNoCopy(nullptr, key, kCFStringEncodingUTF8, kCFAllocatorNull));
-    return copyLocalizedString(keyString.get()).get();
-#else
     return String::fromUTF8(key, strlen(key));
-#endif
 }
 #endif
 
-#if ENABLE(CONTEXT_MENUS)
+#if PLATFORM(COCOA)
 
-static String truncatedStringForMenuItem(const String& original)
+String truncatedStringForMenuItem(const String& original)
 {
     // Truncate the string if it's too long. This number is roughly the same as the one used by AppKit.
     unsigned maxNumberOfGraphemeClustersInLookupMenuItem = 24;
 
-    String trimmed = original.stripWhiteSpace();
+    auto trimmed = original.trim(deprecatedIsSpaceOrNewline);
     unsigned numberOfCharacters = numCodeUnitsInGraphemeClusters(trimmed, maxNumberOfGraphemeClustersInLookupMenuItem);
     return numberOfCharacters == trimmed.length() ? trimmed : makeString(trimmed.left(numberOfCharacters), horizontalEllipsis);
 }
@@ -301,17 +294,13 @@ String contextMenuItemTagSearchWeb()
 }
 #endif
 
+#if PLATFORM(COCOA)
 String contextMenuItemTagLookUpInDictionary(const String& selectedString)
 {
-#if USE(CF)
     auto selectedCFString = truncatedStringForMenuItem(selectedString).createCFString();
     return WEB_UI_FORMAT_CFSTRING("Look Up “%@”", "Look Up context menu item with selected word", selectedCFString.get());
-#elif USE(GLIB)
-    return WEB_UI_FORMAT_STRING("Look Up “%s”", "Look Up context menu item with selected word", truncatedStringForMenuItem(selectedString).utf8().data());
-#else
-    return makeStringByReplacingAll(WEB_UI_STRING("Look Up “<selection>”", "Look Up context menu item with selected word"), "<selection>"_s, truncatedStringForMenuItem(selectedString));
-#endif
 }
+#endif
 
 String contextMenuItemTagOpenLink()
 {
@@ -492,12 +481,12 @@ String contextMenuItemTagPauseAllAnimations()
 
 String contextMenuItemTagPlayAnimation()
 {
-    return WEB_UI_STRING("Play Animation", "Play animation context menu item");
+    return WEB_UI_STRING("Play Animation", "Title for play animation action button or context menu item");
 }
 
 String contextMenuItemTagPauseAnimation()
 {
-    return WEB_UI_STRING("Pause Animation", "Pause animation context menu item");
+    return WEB_UI_STRING("Pause Animation", "Title for pause animation action button or context menu item");
 }
 #endif // ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
 
@@ -514,27 +503,14 @@ String contextMenuItemTagTranslate(const String& selectedString)
 }
 #endif
 
-#if ENABLE(PDFJS)
-String contextMenuItemPDFAutoSize()
+#if ENABLE(UNIFIED_PDF)
+String contextMenuItemPDFOpenWithPreview()
 {
-    return WEB_UI_STRING_WITH_MNEMONIC("Automatically Resize", "_Automatically Resize", "Automatically Resize context menu item");
+    return WEB_UI_STRING("Open with Preview", "Open with Preview context menu item");
 }
+#endif
 
-String contextMenuItemPDFZoomIn()
-{
-    return WEB_UI_STRING_WITH_MNEMONIC("Zoom In", "_Zoom In", "Zoom In Continuous context menu item");
-}
-
-String contextMenuItemPDFZoomOut()
-{
-    return WEB_UI_STRING_WITH_MNEMONIC("Zoom Out", "_Zoom Out", "Zoom Out context menu item");
-}
-
-String contextMenuItemPDFActualSize()
-{
-    return WEB_UI_STRING_WITH_MNEMONIC("Actual Size", "_Actual Size", "Actual Size context menu item");
-}
-
+#if ENABLE(PDFJS) || ENABLE(UNIFIED_PDF)
 String contextMenuItemPDFSinglePage()
 {
     return WEB_UI_STRING_WITH_MNEMONIC("Single Page", "_Single Page", "Single Page context menu item");
@@ -553,6 +529,28 @@ String contextMenuItemPDFTwoPages()
 String contextMenuItemPDFTwoPagesContinuous()
 {
     return WEB_UI_STRING_WITH_MNEMONIC("Two Pages Continuous", "_Two Pages Continuous", "Two Pages Continuous context menu item");
+}
+
+String contextMenuItemPDFZoomIn()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Zoom In", "_Zoom In", "Zoom In Continuous context menu item");
+}
+
+String contextMenuItemPDFZoomOut()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Zoom Out", "_Zoom Out", "Zoom Out context menu item");
+}
+
+String contextMenuItemPDFActualSize()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Actual Size", "_Actual Size", "Actual Size context menu item");
+}
+#endif
+
+#if ENABLE(PDFJS)
+String contextMenuItemPDFAutoSize()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Automatically Resize", "_Automatically Resize", "Automatically Resize context menu item");
 }
 
 String contextMenuItemPDFNextPage()
@@ -719,6 +717,21 @@ String AXTimeFieldText()
     return WEB_UI_STRING("time field", "accessibility role description for a time field.");
 }
 
+String AXDateFieldMonthText()
+{
+    return WEB_UI_STRING("month", "accessibility label for a date field month input.");
+}
+
+String AXDateFieldDayText()
+{
+    return WEB_UI_STRING("day", "accessibility label for a date field day input.");
+}
+
+String AXDateFieldYearText()
+{
+    return WEB_UI_STRING("year", "accessibility label for a date field year input.");
+}
+
 String AXDateTimeFieldText()
 {
     return WEB_UI_STRING("date and time field", "accessibility role description for a date and time field.");
@@ -811,12 +824,12 @@ String AXTextFieldActionVerb()
     return WEB_UI_STRING("activate", "Verb stating the action that will occur when a text field is selected, as used by accessibility");
 }
 
-String AXCheckedCheckBoxActionVerb()
+String AXCheckedCheckboxActionVerb()
 {
     return WEB_UI_STRING("uncheck", "Verb stating the action that will occur when a checked checkbox is clicked, as used by accessibility");
 }
 
-String AXUncheckedCheckBoxActionVerb()
+String AXUncheckedCheckboxActionVerb()
 {
     return WEB_UI_STRING("check", "Verb stating the action that will occur when an unchecked checkbox is clicked, as used by accessibility");
 }
@@ -946,6 +959,11 @@ String autoFillStrongPasswordLabel()
     return WEB_UI_STRING("Strong Password", "Label for strong password.");
 }
 
+String AXProcessingPage()
+{
+    return WEB_UI_STRING("Processing page", "Title for the webarea while the accessibility tree is being built.");
+}
+
 String missingPluginText()
 {
     return WEB_UI_STRING("Missing Plug-in", "Label text to be used when a plugin is missing");
@@ -988,7 +1006,7 @@ String unknownFileSizeText()
 
 String imageTitle(const String& filename, const IntSize& size)
 {
-#if USE(CF)
+#if PLATFORM(COCOA)
     auto locale = adoptCF(CFLocaleCopyCurrent());
     auto formatter = adoptCF(CFNumberFormatterCreate(0, locale.get(), kCFNumberFormatterDecimalStyle));
 
@@ -1001,6 +1019,8 @@ String imageTitle(const String& filename, const IntSize& size)
     auto heightString = adoptCF(CFNumberFormatterCreateStringWithNumber(0, formatter.get(), height.get()));
 
     return WEB_UI_FORMAT_CFSTRING("%@ %@×%@ pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.createCFString().get(), widthString.get(), heightString.get());
+#elif PLATFORM(WIN)
+    return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.wideCharacters().data(), size.width(), size.height());
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.utf8().data(), size.width(), size.height());
 #else
@@ -1119,7 +1139,7 @@ String localizedMediaTimeDescription(float time)
     if (!std::isfinite(time))
         return WEB_UI_STRING("indefinite time", "accessibility help text for an indefinite media controller time value");
 
-    int seconds = static_cast<int>(fabsf(time));
+    int seconds = static_cast<int>(std::abs(time));
     int days = seconds / (60 * 60 * 24);
     int hours = seconds / (60 * 60);
     int minutes = (seconds / 60) % 60;
@@ -1141,7 +1161,7 @@ String validationMessageValueMissingText()
 
 String validationMessageValueMissingForCheckboxText()
 {
-    return WEB_UI_STRING("Select this checkbox", "Validation message for required checkboxes that have not be selected");
+    return WEB_UI_STRING("Select this checkbox", "Validation message for required checkboxes that have not been selected");
 }
 
 String validationMessageValueMissingForFileText()
@@ -1162,6 +1182,11 @@ String validationMessageValueMissingForRadioText()
 String validationMessageValueMissingForSelectText()
 {
     return WEB_UI_STRING("Select an item in the list", "Validation message for required menu list controls that have no selection");
+}
+
+String validationMessageValueMissingForSwitchText()
+{
+    return WEB_UI_STRING("Tap this switch", "Validation message for required switches that are not on");
 }
 
 String validationMessageTypeMismatchText()
@@ -1189,6 +1214,18 @@ String validationMessagePatternMismatchText()
     return WEB_UI_STRING("Match the requested format", "Validation message for input form controls requiring a constrained value according to pattern");
 }
 
+String validationMessagePatternMismatchText(const String& title)
+{
+#if PLATFORM(COCOA)
+    return WEB_UI_FORMAT_CFSTRING("Match the requested format: %@", "Validation message for input form controls requiring a constrained value according to pattern followed by a website-provided description of the pattern", title.createCFString().get());
+#elif USE(GLIB)
+    return WEB_UI_FORMAT_STRING("Match the requested format: %s", "Validation message for input form controls requiring a constrained value according to pattern followed by a website-provided description of the pattern", title.utf8().data());
+#else
+    UNUSED_PARAM(title);
+    return validationMessagePatternMismatchText();
+#endif
+}
+
 #if !PLATFORM(GTK)
 String validationMessageTooShortText(int, int minLength)
 {
@@ -1205,7 +1242,7 @@ String validationMessageTooLongText(int, int maxLength)
 
 String validationMessageRangeUnderflowText(const String& minimum)
 {
-#if USE(CF)
+#if PLATFORM(COCOA)
     return WEB_UI_FORMAT_CFSTRING("Value must be greater than or equal to %@", "Validation message for input form controls with value lower than allowed minimum", minimum.createCFString().get());
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("Value must be greater than or equal to %s", "Validation message for input form controls with value lower than allowed minimum", minimum.utf8().data());
@@ -1217,7 +1254,7 @@ String validationMessageRangeUnderflowText(const String& minimum)
 
 String validationMessageRangeOverflowText(const String& maximum)
 {
-#if USE(CF)
+#if PLATFORM(COCOA)
     return WEB_UI_FORMAT_CFSTRING("Value must be less than or equal to %@", "Validation message for input form controls with value higher than allowed maximum", maximum.createCFString().get());
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("Value must be less than or equal to %s", "Validation message for input form controls with value higher than allowed maximum", maximum.utf8().data());
@@ -1259,7 +1296,7 @@ String textTrackAutomaticMenuItemText()
     return WEB_UI_STRING_KEY("Auto (Recommended)", "Auto (Recommended) (text track)", "Menu item label for automatic track selection behavior.");
 }
 
-#if USE(CF)
+#if PLATFORM(COCOA)
 
 String addTrackLabelAsSuffix(const String& text, const String& label)
 {
@@ -1386,7 +1423,7 @@ String addAudioTrackKindCommentarySuffix(const String& text)
     return WEB_UI_FORMAT_CFSTRING_KEY("%@ Commentary", "%@ Commentary (audio track)", "Commentary audio track display name format that includes the language and/or locale (e.g. 'English Commentary').", text.createCFString().get());
 }
 
-#endif // USE(CF)
+#endif // PLATFORM(COCOA)
 
 String contextMenuItemTagShowMediaStats()
 {
@@ -1410,17 +1447,11 @@ String useBlockedPlugInContextMenuTitle()
     return WEB_UI_STRING("Show in blocked plug-in", "Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin");
 }
 
-#if ENABLE(WEB_CRYPTO)
+#if ENABLE(WEB_CRYPTO) && PLATFORM(COCOA)
 
 String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 {
-#if USE(CF)
     return WEB_UI_FORMAT_CFSTRING("%@ WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain", localizedApplicationName.createCFString().get());
-#elif USE(GLIB)
-    return WEB_UI_FORMAT_STRING("%s WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain", localizedApplicationName.utf8().data());
-#else
-    return makeStringByReplacingAll(WEB_UI_STRING("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), "<application>"_s, localizedApplicationName);
-#endif
 }
 
 String webCryptoMasterKeyKeychainComment()

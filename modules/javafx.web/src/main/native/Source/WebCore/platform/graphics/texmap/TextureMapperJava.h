@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,9 +47,10 @@ public:
     void endClip() final { graphicsContext()->restore(); }
     IntRect clipBounds() final { return currentContext()->clipBounds(); }
     IntSize maxTextureSize() const final;
-    Ref<BitmapTexture> createTexture() final { return BitmapTextureJava::create(); }
-    Ref<BitmapTexture> createTexture(GCGLint) final { return createTexture(); }
-        void setDepthRange(double zNear, double zFar) final;
+    Ref<BitmapTexture> createTexture() { return BitmapTextureJava::create(); }
+    BitmapTexture* currentSurface() { return m_currentSurface.get(); }
+    Ref<BitmapTexture> createTexture(GCGLint) { return createTexture(); }
+    void setDepthRange(double zNear, double zFar) final;
     void clearColor(const Color&) final;
 
     inline GraphicsContext* currentContext()

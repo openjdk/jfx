@@ -37,6 +37,7 @@
 #include "IDBTransaction.h"
 #include "IDBVersionChangeEvent.h"
 #include "Logging.h"
+#include "Node.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <wtf/IsoMallocInlines.h>
@@ -145,20 +146,20 @@ ExceptionOr<Ref<IDBObjectStore>> IDBDatabase::createObjectStore(const String& na
     ASSERT(!m_versionChangeTransaction || m_versionChangeTransaction->isVersionChange());
 
     if (!m_versionChangeTransaction)
-        return Exception { InvalidStateError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The database is not running a version change transaction."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The database is not running a version change transaction."_s };
 
     if (!m_versionChangeTransaction->isActive())
-        return Exception { TransactionInactiveError };
+        return Exception { ExceptionCode::TransactionInactiveError };
 
     auto& keyPath = parameters.keyPath;
     if (keyPath && !isIDBKeyPathValid(keyPath.value()))
-        return Exception { SyntaxError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The keyPath option is not a valid key path."_s };
+        return Exception { ExceptionCode::SyntaxError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The keyPath option is not a valid key path."_s };
 
     if (m_info.hasObjectStore(name))
-        return Exception { ConstraintError, "Failed to execute 'createObjectStore' on 'IDBDatabase': An object store with the specified name already exists."_s };
+        return Exception { ExceptionCode::ConstraintError, "Failed to execute 'createObjectStore' on 'IDBDatabase': An object store with the specified name already exists."_s };
 
     if (keyPath && parameters.autoIncrement && ((std::holds_alternative<String>(keyPath.value()) && std::get<String>(keyPath.value()).isEmpty()) || std::holds_alternative<Vector<String>>(keyPath.value())))
-        return Exception { InvalidAccessError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The autoIncrement option was set but the keyPath option was empty or an array."_s };
+        return Exception { ExceptionCode::InvalidAccessError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The autoIncrement option was set but the keyPath option was empty or an array."_s };
 
     // Install the new ObjectStore into the connection's metadata.
     auto info = m_info.createNewObjectStore(name, WTFMove(keyPath), parameters.autoIncrement);
@@ -174,10 +175,10 @@ ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfString
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     if (m_versionChangeTransaction && !m_versionChangeTransaction->isFinishedOrFinishing())
-        return Exception { InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': A version change transaction is running."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': A version change transaction is running."_s };
 
     if (m_closePending)
-        return Exception { InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing."_s };
 
     Vector<String> objectStores;
     if (std::holds_alternative<Vector<String>>(storeNames)) {
@@ -190,14 +191,14 @@ ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfString
     for (auto& objectStoreName : objectStores) {
         if (m_info.hasObjectStore(objectStoreName))
             continue;
-        return Exception { NotFoundError, "Failed to execute 'transaction' on 'IDBDatabase': One of the specified object stores was not found."_s };
+        return Exception { ExceptionCode::NotFoundError, "Failed to execute 'transaction' on 'IDBDatabase': One of the specified object stores was not found."_s };
     }
 
     if (objectStores.isEmpty())
-        return Exception { InvalidAccessError, "Failed to execute 'transaction' on 'IDBDatabase': The storeNames parameter was empty."_s };
+        return Exception { ExceptionCode::InvalidAccessError, "Failed to execute 'transaction' on 'IDBDatabase': The storeNames parameter was empty."_s };
 
     if (mode != IDBTransactionMode::Readonly && mode != IDBTransactionMode::Readwrite)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
     auto info = IDBTransactionInfo::clientTransaction(m_connectionProxy.get(), objectStores, mode, options.durability);
 
@@ -218,13 +219,13 @@ ExceptionOr<void> IDBDatabase::deleteObjectStore(const String& objectStoreName)
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     if (!m_versionChangeTransaction)
-        return Exception { InvalidStateError, "Failed to execute 'deleteObjectStore' on 'IDBDatabase': The database is not running a version change transaction."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'deleteObjectStore' on 'IDBDatabase': The database is not running a version change transaction."_s };
 
     if (!m_versionChangeTransaction->isActive())
-        return Exception { TransactionInactiveError };
+        return Exception { ExceptionCode::TransactionInactiveError };
 
     if (!m_info.hasObjectStore(objectStoreName))
-        return Exception { NotFoundError, "Failed to execute 'deleteObjectStore' on 'IDBDatabase': The specified object store was not found."_s };
+        return Exception { ExceptionCode::NotFoundError, "Failed to execute 'deleteObjectStore' on 'IDBDatabase': The specified object store was not found."_s };
 
     m_info.deleteObjectStore(objectStoreName);
     m_versionChangeTransaction->deleteObjectStore(objectStoreName);
@@ -317,7 +318,7 @@ void IDBDatabase::stop()
     removeAllEventListeners();
 
     for (auto& id : copyToVector(m_activeTransactions.keys())) {
-        if (auto* transaction = m_activeTransactions.get(id))
+        if (RefPtr transaction = m_activeTransactions.get(id))
             transaction->stop();
     }
 
@@ -469,8 +470,10 @@ void IDBDatabase::dispatchEvent(Event& event)
 
     EventTarget::dispatchEvent(event);
 
-    if (event.isVersionChangeEvent() && event.type() == m_eventNames.versionchangeEvent)
-        m_connectionProxy->didFireVersionChangeEvent(m_databaseConnectionIdentifier, downcast<IDBVersionChangeEvent>(event).requestIdentifier());
+    if (auto* versionChangeEvent = dynamicDowncast<IDBVersionChangeEvent>(event)) {
+        if (versionChangeEvent->type() == m_eventNames.versionchangeEvent)
+            m_connectionProxy->didFireVersionChangeEvent(m_databaseConnectionIdentifier, versionChangeEvent->requestIdentifier());
+    }
 }
 
 void IDBDatabase::didCreateIndexInfo(const IDBIndexInfo& info)

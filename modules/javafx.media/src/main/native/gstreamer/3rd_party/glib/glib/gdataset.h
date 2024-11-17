@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -53,6 +55,10 @@ void     g_datalist_id_set_data_full    (GData            **datalist,
            GQuark             key_id,
            gpointer           data,
            GDestroyNotify     destroy_func);
+GLIB_AVAILABLE_IN_2_74
+void     g_datalist_id_remove_multiple  (GData            **datalist,
+                                         GQuark            *keys,
+                                         gsize              n_keys);
 
 typedef gpointer (*GDuplicateFunc) (gpointer data, gpointer user_data);
 
@@ -117,7 +123,7 @@ gpointer  g_dataset_id_get_data         (gconstpointer    dataset_location,
                                          GQuark           key_id);
 GLIB_AVAILABLE_IN_ALL
 gpointer  g_datalist_get_data            (GData  **datalist,
-            const gchar *key);
+                                          const gchar *key);
 GLIB_AVAILABLE_IN_ALL
 void      g_dataset_id_set_data_full    (gconstpointer    dataset_location,
                                          GQuark           key_id,

@@ -28,6 +28,7 @@
 
 #include "CodeBlock.h"
 #include "JSCellInlines.h"
+#include "JSGlobalObjectInlines.h"
 #include "JSTypedArrays.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/StringPrintStream.h>
@@ -119,16 +120,16 @@ void dumpArrayModes(PrintStream& out, ArrayModes arrayModes)
         out.print(comma, "BigUint64ArrayMode");
 }
 
-void ArrayProfile::computeUpdatedPrediction(const ConcurrentJSLocker& locker, CodeBlock* codeBlock)
+void ArrayProfile::computeUpdatedPrediction(CodeBlock* codeBlock)
 {
     auto lastSeenStructureID = std::exchange(m_lastSeenStructureID, StructureID());
     if (!lastSeenStructureID)
         return;
 
-    computeUpdatedPrediction(locker, codeBlock, lastSeenStructureID.decode());
+    computeUpdatedPrediction(codeBlock, lastSeenStructureID.decode());
 }
 
-void ArrayProfile::computeUpdatedPrediction(const ConcurrentJSLocker&, CodeBlock* codeBlock, Structure* lastSeenStructure)
+void ArrayProfile::computeUpdatedPrediction(CodeBlock* codeBlock, Structure* lastSeenStructure)
 {
     m_observedArrayModes |= arrayModesFromStructure(lastSeenStructure);
 
@@ -168,13 +169,13 @@ void ArrayProfile::observeIndexedRead(JSCell* cell, unsigned index)
     }
 }
 
-CString ArrayProfile::briefDescription(const ConcurrentJSLocker& locker, CodeBlock* codeBlock)
+CString ArrayProfile::briefDescription(CodeBlock* codeBlock)
 {
-    computeUpdatedPrediction(locker, codeBlock);
-    return briefDescriptionWithoutUpdating(locker);
+    computeUpdatedPrediction(codeBlock);
+    return briefDescriptionWithoutUpdating();
 }
 
-CString ArrayProfile::briefDescriptionWithoutUpdating(const ConcurrentJSLocker&)
+CString ArrayProfile::briefDescriptionWithoutUpdating()
 {
     StringPrintStream out;
     CommaPrinter comma;

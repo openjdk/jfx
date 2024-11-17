@@ -35,6 +35,11 @@
 
 namespace WebCore {
 
+FilterOperations::FilterOperations(Vector<RefPtr<FilterOperation>>&& operations)
+    : m_operations(WTFMove(operations))
+{
+}
+
 bool FilterOperations::operator==(const FilterOperations& other) const
 {
     size_t size = m_operations.size();
@@ -66,6 +71,11 @@ bool FilterOperations::hasReferenceFilter() const
             return true;
     }
     return false;
+}
+
+bool FilterOperations::isReferenceFilter() const
+{
+    return m_operations.size() == 1 && m_operations[0]->type() == FilterOperation::Type::Reference;
 }
 
 IntOutsets FilterOperations::outsets() const
@@ -168,6 +178,33 @@ bool FilterOperations::hasFilterThatShouldBeRestrictedBySecurityOrigin() const
             return true;
     }
     return false;
+}
+
+bool FilterOperations::canInterpolate(const FilterOperations& to, CompositeOperation compositeOperation) const
+{
+    // https://drafts.fxtf.org/filter-effects/#interpolation-of-filters
+
+    // We can't interpolate between lists if a reference filter is involved.
+    if (hasReferenceFilter() || to.hasReferenceFilter())
+        return false;
+
+    // Additive and accumulative composition will always yield interpolation.
+    if (compositeOperation != CompositeOperation::Replace)
+        return true;
+
+    // Provided the two filter lists have a shared set of initial primitives, we will be able to interpolate.
+    // Note that this means that if either list is empty, interpolation is supported.
+    auto numItems = std::min(size(), to.size());
+    for (size_t i = 0; i < numItems; ++i) {
+        auto* fromOperation = at(i);
+        auto* toOperation = to.at(i);
+        if (!!fromOperation != !!toOperation)
+            return false;
+        if (fromOperation && toOperation && fromOperation->type() != toOperation->type())
+            return false;
+    }
+
+    return true;
 }
 
 FilterOperations FilterOperations::blend(const FilterOperations& to, const BlendingContext& context) const

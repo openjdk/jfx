@@ -40,9 +40,9 @@ FontVariantLigaturesValues extractFontVariantLigatures(const CSSValue& value)
     FontVariantLigatures historical = FontVariantLigatures::Normal;
     FontVariantLigatures contextualAlternates = FontVariantLigatures::Normal;
 
-    if (is<CSSValueList>(value)) {
-        for (auto& item : downcast<CSSValueList>(value)) {
-            switch (downcast<CSSPrimitiveValue>(item.get()).valueID()) {
+    if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {
+        for (auto& item : *valueList) {
+            switch (item.valueID()) {
             case CSSValueNoCommonLigatures:
                 common = FontVariantLigatures::No;
                 break;
@@ -73,7 +73,7 @@ FontVariantLigaturesValues extractFontVariantLigatures(const CSSValue& value)
             }
         }
     } else if (is<CSSPrimitiveValue>(value)) {
-        switch (downcast<CSSPrimitiveValue>(value).valueID()) {
+        switch (value.valueID()) {
         case CSSValueNormal:
             break;
         case CSSValueNone:
@@ -99,9 +99,9 @@ FontVariantNumericValues extractFontVariantNumeric(const CSSValue& value)
     FontVariantNumericOrdinal ordinal = FontVariantNumericOrdinal::Normal;
     FontVariantNumericSlashedZero slashedZero = FontVariantNumericSlashedZero::Normal;
 
-    if (is<CSSValueList>(value)) {
-        for (auto& item : downcast<CSSValueList>(value)) {
-            switch (downcast<CSSPrimitiveValue>(item.get()).valueID()) {
+    if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {
+        for (auto& item : *valueList) {
+            switch (item.valueID()) {
             case CSSValueLiningNums:
                 figure = FontVariantNumericFigure::LiningNumbers;
                 break;
@@ -132,7 +132,7 @@ FontVariantNumericValues extractFontVariantNumeric(const CSSValue& value)
             }
         }
     } else if (is<CSSPrimitiveValue>(value))
-        ASSERT(downcast<CSSPrimitiveValue>(value).valueID() == CSSValueNormal);
+        ASSERT(value.valueID() == CSSValueNormal);
 
     return FontVariantNumericValues(figure, spacing, fraction, ordinal, slashedZero);
 }
@@ -143,9 +143,9 @@ FontVariantEastAsianValues extractFontVariantEastAsian(const CSSValue& value)
     FontVariantEastAsianWidth width = FontVariantEastAsianWidth::Normal;
     FontVariantEastAsianRuby ruby = FontVariantEastAsianRuby::Normal;
 
-    if (is<CSSValueList>(value)) {
-        for (auto& item : downcast<CSSValueList>(value)) {
-            switch (downcast<CSSPrimitiveValue>(item.get()).valueID()) {
+    if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {
+        for (auto& item : *valueList) {
+            switch (item.valueID()) {
             case CSSValueJis78:
                 variant = FontVariantEastAsianVariant::Jis78;
                 break;
@@ -179,7 +179,7 @@ FontVariantEastAsianValues extractFontVariantEastAsian(const CSSValue& value)
             }
         }
     } else if (is<CSSPrimitiveValue>(value))
-        ASSERT(downcast<CSSPrimitiveValue>(value).valueID() == CSSValueNormal);
+        ASSERT(value.valueID() == CSSValueNormal);
 
     return FontVariantEastAsianValues(variant, width, ruby);
 }

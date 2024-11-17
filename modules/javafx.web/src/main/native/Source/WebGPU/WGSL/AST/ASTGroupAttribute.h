@@ -26,22 +26,23 @@
 #pragma once
 
 #include "ASTAttribute.h"
+#include "ASTBuilder.h"
 
 namespace WGSL::AST {
 
 class GroupAttribute final : public Attribute {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(GroupAttribute);
 public:
-    GroupAttribute(SourceSpan span, unsigned group)
+    NodeKind kind() const override;
+    Expression& group() const { return m_value; }
+
+private:
+    GroupAttribute(SourceSpan span, Expression::Ref&& group)
         : Attribute(span)
         , m_value(group)
     { }
 
-    NodeKind kind() const override;
-    unsigned group() const { return m_value; }
-
-private:
-    unsigned m_value;
+    Expression::Ref m_value;
 };
 
 } // namespace WGSL::AST

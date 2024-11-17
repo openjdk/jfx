@@ -68,7 +68,7 @@ enum class GammaAndColorProfileOption {
     Ignored
 };
 
-enum class ImageAnimatingState { Yes, No };
+enum class ImageAnimatingState : bool { No, Yes };
 
 enum class EncodedDataStatus {
     Error,
@@ -90,6 +90,16 @@ enum class ImageDrawResult {
     DidRequestDecoding,
     DidRecord,
     DidDraw
+};
+
+enum class ShowDebugBackground : bool {
+    No,
+    Yes
+};
+
+enum class AllowImageSubsampling : bool {
+    No,
+    Yes
 };
 
 }

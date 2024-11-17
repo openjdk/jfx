@@ -42,7 +42,6 @@
 #include "GlyphBuffer.h"
 #include "OpenTypeTypes.h"
 #include "RefPtrCairo.h"
-#include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
 #include <fontconfig/fcfreetype.h>
@@ -206,8 +205,9 @@ RefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescripti
         m_platformData.isFixedWidth(),
         m_platformData.syntheticBold(),
         m_platformData.syntheticOblique(),
-        fontDescription.orientation()),
-        origin(), Interstitial::No);
+        fontDescription.orientation(),
+        m_platformData.customPlatformData()),
+        origin(), IsInterstitial::No);
 }
 
 void Font::determinePitch()
@@ -229,7 +229,7 @@ bool Font::variantCapsSupportedForSynthesis(FontVariantCaps fontVariantCaps) con
     }
 }
 
-bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const
+bool Font::platformSupportsCodePoint(char32_t character, std::optional<char32_t> variation) const
 {
     CairoFtFaceLocker cairoFtFaceLocker(m_platformData.scaledFont());
     if (FT_Face face = cairoFtFaceLocker.ftFace())

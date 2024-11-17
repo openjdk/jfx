@@ -53,6 +53,10 @@ public:
         NoInformation,
         // It's cached as a simple store of some kind.
         Simple,
+        // It's cached for a custom accessor with a possible structure chain.
+        CustomAccessor,
+        // It's cached for a megamorphic case.
+        Megamorphic,
         // It will likely take the slow path.
         LikelyTakesSlowPath,
         // It's known to take slow path. We also observed that the slow path was taken on StructureStubInfo.
@@ -78,6 +82,7 @@ public:
         case ObservedTakesSlowPath:
         case MakesCalls:
         case ObservedSlowPathAndMakesCalls:
+        case Megamorphic:
             break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -108,9 +113,13 @@ public:
     bool isSet() const { return m_state != NoInformation; }
     bool operator!() const { return m_state == NoInformation; }
     bool isSimple() const { return m_state == Simple; }
+    bool isCustomAccessor() const { return m_state == CustomAccessor; }
+    bool isMegamorphic() const { return m_state == Megamorphic; }
     bool takesSlowPath() const
     {
         switch (m_state) {
+        case CustomAccessor:
+        case Megamorphic:
         case LikelyTakesSlowPath:
         case ObservedTakesSlowPath:
             return true;
@@ -140,7 +149,7 @@ public:
 
 private:
 #if ENABLE(JIT)
-    static PutByStatus computeForStubInfo(const ConcurrentJSLocker&, CodeBlock*, StructureStubInfo*, CallLinkStatus::ExitSiteData);
+    static PutByStatus computeForStubInfo(const ConcurrentJSLocker&, CodeBlock*, StructureStubInfo*, CallLinkStatus::ExitSiteData, CodeOrigin);
 #endif
     static PutByStatus computeFromLLInt(CodeBlock*, BytecodeIndex);
 

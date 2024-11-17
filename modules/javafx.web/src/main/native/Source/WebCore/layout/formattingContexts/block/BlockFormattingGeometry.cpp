@@ -29,12 +29,12 @@
 #include "BlockFormattingContext.h"
 #include "BlockFormattingQuirks.h"
 #include "BlockMarginCollapse.h"
-#include "InlineFormattingState.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
 #include "LayoutContext.h"
 #include "LayoutInitialContainingBlock.h"
 #include "Logging.h"
+#include "RenderStyleInlines.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -68,7 +68,7 @@ ContentHeightAndMargin BlockFormattingGeometry::inFlowNonReplacedContentHeightAn
         auto& boxGeometry = formattingContext().geometryForBox(layoutBox);
         auto computedVerticalMargin = FormattingGeometry::computedVerticalMargin(layoutBox, horizontalConstraints);
         auto nonCollapsedMargin = UsedVerticalMargin::NonCollapsedValues { computedVerticalMargin.before.value_or(0), computedVerticalMargin.after.value_or(0) };
-        auto borderAndPaddingTop = boxGeometry.borderBefore() + boxGeometry.paddingBefore().value_or(0);
+        auto borderAndPaddingTop = boxGeometry.borderAndPaddingBefore();
         auto height = overriddenVerticalValues.height ? overriddenVerticalValues.height.value() : computedHeight(layoutBox);
 
         if (height)
@@ -79,11 +79,9 @@ ContentHeightAndMargin BlockFormattingGeometry::inFlowNonReplacedContentHeightAn
 
         // 1. the bottom edge of the last line box, if the box establishes a inline formatting context with one or more lines
         if (layoutBox.establishesInlineFormattingContext()) {
-            auto& inlineFormattingState = layoutState().formattingStateForInlineFormattingContext(layoutBox);
-            auto& lines = inlineFormattingState.lines();
-            // Even empty containers generate one line.
-            ASSERT(!lines.isEmpty());
-            return { toLayoutUnit(lines.last().bottom() + inlineFormattingState.clearGapAfterLastLine()) - borderAndPaddingTop, nonCollapsedMargin };
+            // FIXME: Need access to display content.
+            ASSERT_NOT_IMPLEMENTED_YET();
+            return { };
         }
 
         // 2. the bottom edge of the bottom (possibly collapsed) margin of its last in-flow child, if the child's bottom margin...
@@ -151,8 +149,8 @@ ContentWidthAndMargin BlockFormattingGeometry::inFlowNonReplacedContentWidthAndM
         UsedHorizontalMargin usedHorizontalMargin;
         auto borderLeft = boxGeometry.borderStart();
         auto borderRight = boxGeometry.borderEnd();
-        auto paddingLeft = boxGeometry.paddingStart().value_or(0);
-        auto paddingRight = boxGeometry.paddingEnd().value_or(0);
+        auto paddingLeft = boxGeometry.paddingStart();
+        auto paddingRight = boxGeometry.paddingEnd();
 
         // #1
         if (width) {

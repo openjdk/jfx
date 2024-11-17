@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -420,7 +420,7 @@ public class Tooltip extends PopupControl {
         if (imageUrl == null) {
             imageUrl = new StyleableStringProperty() {
                 // If imageUrlProperty is invalidated, this is the origin of the style that
-                // triggered the invalidation. This is used in the invaildated() method where the
+                // triggered the invalidation. This is used in the invalidated() method where the
                 // value of super.getStyleOrigin() is not valid until after the call to set(v) returns,
                 // by which time invalidated will have been called.
                 // This value is initialized to USER in case someone calls set on the imageUrlProperty, which
@@ -859,7 +859,6 @@ public class Tooltip extends PopupControl {
         private double lastMouseY;
 
         private boolean hideOnExit;
-        private boolean cssForced = false;
 
         TooltipBehavior(final boolean hideOnExit) {
             this.hideOnExit = hideOnExit;
@@ -996,16 +995,13 @@ public class Tooltip extends PopupControl {
                         }
                         hideTimer.playFromStart();
                     } else {
-                        // Force the CSS to be processed for the tooltip so that it uses the
-                        // appropriate timings for showDelay, showDuration, and hideDelay.
-                        if (!cssForced) {
-                            double opacity = t.getOpacity();
-                            t.setOpacity(0);
-                            t.show(owner);
-                            t.hide();
-                            t.setOpacity(opacity);
-                            cssForced = true;
-                        }
+                        // We need to copy the stylesheet from the owner so that we get all the defined tooltip styles.
+                        // Note that this is normally done when showing the tooltip,
+                        // which is too late for some properties.
+                        PopupWindowHelper.applyStylesheetFromOwner(t, owner);
+                        // Force the CSS to be processed for the tooltip so that it uses the appropriate timings for
+                        // showDelay, showDuration, and hideDelay.
+                        t.bridge.applyCss();
 
                         // Start / restart the timer and make sure the tooltip
                         // is marked as activated.

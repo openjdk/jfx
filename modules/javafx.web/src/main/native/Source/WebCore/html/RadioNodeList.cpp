@@ -30,6 +30,7 @@
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLObjectElement.h"
+#include "LiveNodeListInlines.h"
 #include "NodeRareData.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -40,7 +41,7 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RadioNodeList);
 
 RadioNodeList::RadioNodeList(ContainerNode& rootNode, const AtomString& name)
-    : CachedLiveNodeList(rootNode, InvalidateForFormControls)
+    : CachedLiveNodeList(rootNode, NodeListInvalidationType::InvalidateForFormControls)
     , m_name(name)
     , m_isRootedAtTreeScope(is<HTMLFormElement>(rootNode))
 {
@@ -56,15 +57,15 @@ RadioNodeList::~RadioNodeList()
     ownerNode().nodeLists()->removeCacheWithAtomName(*this, m_name);
 }
 
-static RefPtr<HTMLInputElement> nonEmptyRadioButton(Element& element)
+static RefPtr<HTMLInputElement> nonEmptyRadioButton(Node& node)
 {
-    if (!is<HTMLInputElement>(element))
+    auto* inputElement = dynamicDowncast<HTMLInputElement>(node);
+    if (!inputElement)
         return nullptr;
 
-    auto& inputElement = downcast<HTMLInputElement>(element);
-    if (!inputElement.isRadioButton() || inputElement.value().isEmpty())
+    if (!inputElement->isRadioButton() || inputElement->value().isEmpty())
         return nullptr;
-    return &inputElement;
+    return inputElement;
 }
 
 String RadioNodeList::value() const
@@ -97,7 +98,7 @@ bool RadioNodeList::elementMatches(Element& element) const
     if (!element.isFormListedElement())
         return false;
 
-    if (is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isImageButton())
+    if (auto* input = dynamicDowncast<HTMLInputElement>(element); input && input->isImageButton())
         return false;
 
     if (is<HTMLFormElement>(ownerNode())) {

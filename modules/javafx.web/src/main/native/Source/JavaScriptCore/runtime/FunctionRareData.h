@@ -97,7 +97,7 @@ public:
     Structure* createInternalFunctionAllocationStructureFromBase(VM& vm, JSGlobalObject* baseGlobalObject, JSObject* prototype, Structure* baseStructure)
     {
         initializeAllocationProfileWatchpointSet();
-        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, baseGlobalObject, this, prototype, baseStructure);
+        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, baseGlobalObject, this, prototype, baseStructure, allocationProfileWatchpointSet());
     }
     void clearInternalFunctionAllocationProfile(const char* reason)
     {
@@ -121,15 +121,15 @@ public:
     bool hasReifiedName() const { return m_hasReifiedName; }
     void setHasReifiedName() { m_hasReifiedName = true; }
 
-    bool hasModifiedLengthForNonHostFunction() const { return m_hasModifiedLengthForNonHostFunction; }
-    void setHasModifiedLengthForNonHostFunction()
+    bool hasModifiedLengthForBoundOrNonHostFunction() const { return m_hasModifiedLengthForBoundOrNonHostFunction; }
+    void setHasModifiedLengthForBoundOrNonHostFunction()
     {
-        m_hasModifiedLengthForNonHostFunction = true;
+        m_hasModifiedLengthForBoundOrNonHostFunction = true;
     }
-    bool hasModifiedNameForNonHostFunction() const { return m_hasModifiedNameForNonHostFunction; }
-    void setHasModifiedNameForNonHostFunction()
+    bool hasModifiedNameForBoundOrNonHostFunction() const { return m_hasModifiedNameForBoundOrNonHostFunction; }
+    void setHasModifiedNameForBoundOrNonHostFunction()
     {
-        m_hasModifiedNameForNonHostFunction = true;
+        m_hasModifiedNameForBoundOrNonHostFunction = true;
     }
 
     bool hasAllocationProfileClearingWatchpoint() const { return !!m_allocationProfileClearingWatchpoint; }
@@ -163,8 +163,8 @@ private:
     std::unique_ptr<AllocationProfileClearingWatchpoint> m_allocationProfileClearingWatchpoint;
     bool m_hasReifiedLength : 1;
     bool m_hasReifiedName : 1;
-    bool m_hasModifiedLengthForNonHostFunction : 1;
-    bool m_hasModifiedNameForNonHostFunction : 1;
+    bool m_hasModifiedLengthForBoundOrNonHostFunction : 1;
+    bool m_hasModifiedNameForBoundOrNonHostFunction : 1;
 };
 
 class FunctionRareData::AllocationProfileClearingWatchpoint final : public Watchpoint {

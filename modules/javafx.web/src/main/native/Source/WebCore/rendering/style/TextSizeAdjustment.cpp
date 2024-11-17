@@ -29,18 +29,9 @@
 #if ENABLE(TEXT_AUTOSIZING)
 
 #include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
-
-AutosizeStatus::AutosizeStatus(OptionSet<Fields> fields)
-    : m_fields(fields)
-{
-}
-
-bool AutosizeStatus::contains(Fields fields) const
-{
-    return m_fields.contains(fields);
-}
 
 bool AutosizeStatus::probablyContainsASmallFixedNumberOfLines(const RenderStyle& style)
 {
@@ -92,7 +83,7 @@ auto AutosizeStatus::computeStatus(const RenderStyle& style) -> AutosizeStatus
         if (lineHeight.isFixed() && lineHeight.value() - style.specifiedFontSize() > maximumDifferenceBetweenFixedLineHeightAndFontSize)
             return false;
 
-        if (style.whiteSpace() == WhiteSpace::NoWrap)
+        if (style.whiteSpaceCollapse() == WhiteSpaceCollapse::Collapse && style.textWrapMode() == TextWrapMode::NoWrap)
             return false;
 
         return probablyContainsASmallFixedNumberOfLines(style);

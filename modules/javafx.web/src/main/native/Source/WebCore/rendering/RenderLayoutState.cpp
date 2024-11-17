@@ -26,22 +26,26 @@
 #include "config.h"
 #include "RenderLayoutState.h"
 
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderMultiColumnFlow.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-RenderLayoutState::RenderLayoutState(RenderElement& renderer, IsPaginated isPaginated)
+RenderLayoutState::RenderLayoutState(RenderElement& renderer)
     : m_clipped(false)
-    , m_isPaginated(isPaginated == IsPaginated::Yes)
+    , m_isPaginated(false)
     , m_pageLogicalHeightChanged(false)
 #if ASSERT_ENABLED
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
+    , m_blockStartTrimming(Vector<bool>(0))
     , m_renderer(&renderer)
 #endif
 {
@@ -62,7 +66,7 @@ RenderLayoutState::RenderLayoutState(RenderElement& renderer, IsPaginated isPagi
     }
 }
 
-RenderLayoutState::RenderLayoutState(const FrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged, std::optional<size_t> maximumLineCountForLineClamp, std::optional<size_t> visibleLineCountForLineClamp, std::optional<LeadingTrim> leadingTrim)
+RenderLayoutState::RenderLayoutState(const LocalFrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged, std::optional<LineClamp> lineClamp, std::optional<TextBoxTrim> textBoxTrim)
     : m_clipped(false)
     , m_isPaginated(false)
     , m_pageLogicalHeightChanged(false)
@@ -70,9 +74,9 @@ RenderLayoutState::RenderLayoutState(const FrameViewLayoutContext::LayoutStateSt
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
 #endif
-    , m_maximumLineCountForLineClamp(maximumLineCountForLineClamp)
-    , m_visibleLineCountForLineClamp(visibleLineCountForLineClamp)
-    , m_leadingTrim(leadingTrim)
+    , m_blockStartTrimming(Vector<bool>(0))
+    , m_lineClamp(lineClamp)
+    , m_textBoxTrim(textBoxTrim)
 #if ASSERT_ENABLED
     , m_renderer(&renderer)
 #endif
@@ -95,9 +99,9 @@ void RenderLayoutState::computeOffsets(const RenderLayoutState& ancestor, Render
         m_paintOffset = ancestor.paintOffset() + offset;
 
     if (renderer.isOutOfFlowPositioned() && !fixed) {
-        if (auto* container = renderer.container()) {
-            if (container->isInFlowPositioned() && is<RenderInline>(*container))
-                m_paintOffset += downcast<RenderInline>(*container).offsetForInFlowPositionedInline(&renderer);
+        if (CheckedPtr container = dynamicDowncast<RenderInline>(renderer.container())) {
+            if (container && container->isInFlowPositioned())
+                m_paintOffset += container->offsetForInFlowPositionedInline(&renderer);
         }
     }
 
@@ -134,7 +138,7 @@ void RenderLayoutState::computeClipRect(const RenderLayoutState& ancestor, Rende
     // FIXME: <http://bugs.webkit.org/show_bug.cgi?id=13443> Apply control clip if present.
 }
 
-void RenderLayoutState::computePaginationInformation(const FrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged)
+void RenderLayoutState::computePaginationInformation(const LocalFrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged)
 {
     auto* ancestor = layoutStateStack.isEmpty() ? nullptr : layoutStateStack.last().get();
     // If we establish a new page height, then cache the offset to the top of the first page.
@@ -163,12 +167,16 @@ void RenderLayoutState::computePaginationInformation(const FrameViewLayoutContex
     if (ancestor)
         propagateLineGridInfo(*ancestor, renderer);
 
-    if (lineGrid() && (lineGrid()->style().writingMode() == renderer.style().writingMode()) && is<RenderMultiColumnFlow>(renderer))
-        computeLineGridPaginationOrigin(downcast<RenderMultiColumnFlow>(renderer));
+    if (lineGrid() && (lineGrid()->style().writingMode() == renderer.style().writingMode())) {
+        if (CheckedPtr columnFlow = dynamicDowncast<RenderMultiColumnFlow>(renderer))
+            computeLineGridPaginationOrigin(*columnFlow);
+    }
 
     // If we have a new grid to track, then add it to our set.
-    if (renderer.style().lineGrid() != RenderStyle::initialLineGrid() && is<RenderBlockFlow>(renderer))
-        establishLineGrid(layoutStateStack, downcast<RenderBlockFlow>(renderer));
+    if (renderer.style().lineGrid() != RenderStyle::initialLineGrid()) {
+        if (CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(renderer))
+            establishLineGrid(layoutStateStack, *blockFlow);
+    }
 }
 
 LayoutUnit RenderLayoutState::pageLogicalOffset(RenderBox* child, LayoutUnit childLogicalOffset) const
@@ -189,10 +197,6 @@ void RenderLayoutState::computeLineGridPaginationOrigin(const RenderMultiColumnF
     // at the top of each column.
     // Get the current line grid and offset.
     ASSERT(m_lineGrid);
-    // Get the hypothetical line box used to establish the grid.
-    auto* lineGridBox = m_lineGrid->lineGridBox();
-    if (!lineGridBox)
-        return;
 
     // Now determine our position on the grid. Our baseline needs to be adjusted to the nearest baseline multiple
     // as established by the line box.
@@ -200,17 +204,17 @@ void RenderLayoutState::computeLineGridPaginationOrigin(const RenderMultiColumnF
     // the grid should honor line-box-contain.
     bool isHorizontalWritingMode = m_lineGrid->isHorizontalWritingMode();
     LayoutUnit lineGridBlockOffset = isHorizontalWritingMode ? m_lineGridOffset.height() : m_lineGridOffset.width();
-    LayoutUnit firstLineTopWithLeading = lineGridBlockOffset + lineGridBox->lineBoxTop();
+    LayoutUnit firstLineTop = lineGridBlockOffset + m_lineGrid->borderAndPaddingBefore();
     LayoutUnit pageLogicalTop = isHorizontalWritingMode ? m_pageOffset.height() : m_pageOffset.width();
-    if (pageLogicalTop <= firstLineTopWithLeading)
+    if (pageLogicalTop <= firstLineTop)
         return;
 
     // Shift to the next highest line grid multiple past the page logical top. Cache the delta
     // between this new value and the page logical top as the pagination origin.
-    auto lineBoxHeight = lineGridBox->lineBoxHeight();
+    auto lineBoxHeight = m_lineGrid->style().computedLineHeight();
     if (!roundToInt(lineBoxHeight))
         return;
-    LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTopWithLeading) % roundToInt(lineBoxHeight);
+    LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTop) % roundToInt(lineBoxHeight);
     LayoutUnit paginationDelta = lineBoxHeight - remainder;
     if (isHorizontalWritingMode)
         m_lineGridPaginationOrigin.setHeight(paginationDelta);
@@ -230,7 +234,7 @@ void RenderLayoutState::propagateLineGridInfo(const RenderLayoutState& ancestor,
     m_lineGridPaginationOrigin = ancestor.lineGridPaginationOrigin();
 }
 
-void RenderLayoutState::establishLineGrid(const FrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBlockFlow& renderer)
+void RenderLayoutState::establishLineGrid(const LocalFrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBlockFlow& renderer)
 {
     // First check to see if this grid has been established already.
     if (m_lineGrid) {
@@ -291,7 +295,7 @@ LayoutStateMaintainer::~LayoutStateMaintainer()
         m_context.enablePaintOffsetCache();
 }
 
-LayoutStateDisabler::LayoutStateDisabler(FrameViewLayoutContext& context)
+LayoutStateDisabler::LayoutStateDisabler(LocalFrameViewLayoutContext& context)
     : m_context(context)
 {
     m_context.disablePaintOffsetCache();
@@ -332,16 +336,18 @@ SubtreeLayoutStateMaintainer::~SubtreeLayoutStateMaintainer()
     }
 }
 
-PaginatedLayoutStateMaintainer::PaginatedLayoutStateMaintainer(RenderBlockFlow& flow)
-    : m_context(flow.view().frameView().layoutContext())
-    , m_pushed(m_context.pushLayoutStateForPaginationIfNeeded(flow))
+ContentVisibilityForceLayoutScope::ContentVisibilityForceLayoutScope(RenderView& layoutRoot, const Element* context)
 {
+    if (context) {
+        m_context = &layoutRoot.frameView().layoutContext();
+        m_context->setNeedsSkippedContentLayout(true);
+    }
 }
 
-PaginatedLayoutStateMaintainer::~PaginatedLayoutStateMaintainer()
+ContentVisibilityForceLayoutScope::~ContentVisibilityForceLayoutScope()
 {
-    if (m_pushed)
-        m_context.popLayoutState();
+    if (m_context)
+        m_context->setNeedsSkippedContentLayout(false);
 }
 
 } // namespace WebCore

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,12 +73,6 @@ IntlPluralRules::IntlPluralRules(VM& vm, Structure* structure)
 {
 }
 
-void IntlPluralRules::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
-}
-
 template<typename Visitor>
 void IntlPluralRules::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
@@ -130,7 +124,6 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
 
 #if HAVE(ICU_U_NUMBER_FORMATTER)
     StringBuilder skeletonBuilder;
-    skeletonBuilder.append("rounding-mode-half-up");
 
     appendNumberFormatDigitOptionsToSkeleton(this, skeletonBuilder);
 
@@ -231,7 +224,10 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
         RETURN_IF_EXCEPTION(scope, { });
     }
     options->putDirect(vm, Identifier::fromString(vm, "pluralCategories"_s), categories);
-    options->putDirect(vm, vm.propertyNames->roundingMode, jsNontrivialString(vm, IntlNumberFormat::roundingPriorityString(m_roundingType)));
+    options->putDirect(vm, vm.propertyNames->roundingIncrement, jsNumber(m_roundingIncrement));
+    options->putDirect(vm, vm.propertyNames->roundingMode, jsNontrivialString(vm, IntlNumberFormat::roundingModeString(m_roundingMode)));
+    options->putDirect(vm, vm.propertyNames->roundingPriority, jsNontrivialString(vm, IntlNumberFormat::roundingPriorityString(m_roundingType)));
+    options->putDirect(vm, vm.propertyNames->trailingZeroDisplay, jsNontrivialString(vm, IntlNumberFormat::trailingZeroDisplayString(m_trailingZeroDisplay)));
 
     return options;
 }

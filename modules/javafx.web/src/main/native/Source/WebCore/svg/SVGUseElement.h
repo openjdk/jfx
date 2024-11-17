@@ -39,6 +39,7 @@ public:
     void invalidateShadowTree();
     void updateUserAgentShadowTree() final;
 
+    RefPtr<SVGElement> clipChild() const;
     RenderElement* rendererClipChild() const;
 
     const SVGLengthValue& x() const { return m_x->currentValue(); }
@@ -61,7 +62,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGUseElement, SVGGraphicsElement, SVGURIReference>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,22 +25,25 @@
 
 #pragma once
 
-#if OS(UNIX)
-
-#include <signal.h>
-#include <tuple>
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
 #include <wtf/PlatformRegisters.h>
 
+#if OS(UNIX)
+
+#include <signal.h>
+#include <tuple>
+
 #if HAVE(MACH_EXCEPTIONS)
 #include <mach/exception_types.h>
 #endif
+#endif // OS(UNIX)
 
 namespace WTF {
 
 // Note that SIGUSR1 is used in Pthread-based ports except for Darwin to suspend and resume threads.
 enum class Signal {
+#if OS(UNIX)
     // Usr will always chain to any non-default handler install before us. Since there is no way to know
     // if a signal was intended exclusively for us.
     Usr,
@@ -56,39 +59,14 @@ enum class Signal {
     AccessFault, // For posix this is both SIGSEGV and SIGBUS
     NumberOfSignals = AccessFault + 2, // AccessFault is really two signals.
     Unknown = NumberOfSignals
+#else
+    FloatingPoint,
+    IllegalInstruction,
+    AccessFault,
+    NumberOfSignals = AccessFault + 1,
+    Unknown = NumberOfSignals
+#endif
 };
-
-inline std::tuple<int, std::optional<int>> toSystemSignal(Signal signal)
-{
-    switch (signal) {
-    case Signal::AccessFault: return std::make_tuple(SIGSEGV, SIGBUS);
-    case Signal::IllegalInstruction: return std::make_tuple(SIGILL, std::nullopt);
-    case Signal::Usr: return std::make_tuple(SIGUSR2, std::nullopt);
-    case Signal::FloatingPoint: return std::make_tuple(SIGFPE, std::nullopt);
-    case Signal::Breakpoint: return std::make_tuple(SIGTRAP, std::nullopt);
-#if !OS(DARWIN)
-    case Signal::Abort: return std::make_tuple(SIGABRT, std::nullopt);
-#endif
-    default: break;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-inline Signal fromSystemSignal(int signal)
-{
-    switch (signal) {
-    case SIGSEGV: return Signal::AccessFault;
-    case SIGBUS: return Signal::AccessFault;
-    case SIGFPE: return Signal::FloatingPoint;
-    case SIGTRAP: return Signal::Breakpoint;
-    case SIGILL: return Signal::IllegalInstruction;
-    case SIGUSR2: return Signal::Usr;
-#if !OS(DARWIN)
-    case SIGABRT: return Signal::Abort;
-#endif
-    default: return Signal::Unknown;
-    }
-}
 
 enum class SignalAction {
     Handled,
@@ -119,12 +97,22 @@ struct SignalHandlers {
     mach_port_t exceptionPort;
     exception_mask_t addedExceptions;
     bool useMach;
+
+    enum class InitState : uint8_t {
+        Uninitialized = 0,
+        InitializedHandlerThread,
+        AddedHandlers
+    };
+    InitState initState;
 #else
     static constexpr bool useMach = false;
 #endif
     uint8_t numberOfHandlers[numberOfSignals];
     SignalHandlerMemory handlers[numberOfSignals][maxNumberOfHandlers];
+
+#if OS(UNIX)
     struct sigaction oldActions[numberOfSignals];
+#endif
 };
 
 // Call this method whenever you want to add a signal handler. This function needs to be called
@@ -141,9 +129,14 @@ WTF_EXPORT_PRIVATE void activateSignalHandlersFor(Signal);
 #if HAVE(MACH_EXCEPTIONS)
 class Thread;
 void registerThreadForMachExceptionHandling(Thread&);
-void startMachExceptionHandlerThread();
+WTF_EXPORT_PRIVATE void initMachExceptionHandlerThread(bool);
+inline void initializeSignalHandling() { initMachExceptionHandlerThread(true); }
+inline void disableSignalHandling() { initMachExceptionHandlerThread(false); }
 
 void handleSignalsWithMach();
+#else
+inline void initializeSignalHandling() { }
+inline void disableSignalHandling() { }
 #endif // HAVE(MACH_EXCEPTIONS)
 
 } // namespace WTF
@@ -155,11 +148,9 @@ using WTF::handleSignalsWithMach;
 
 using WTF::Signal;
 using WTF::SigInfo;
-using WTF::toSystemSignal;
-using WTF::fromSystemSignal;
 using WTF::SignalAction;
 using WTF::SignalHandler;
 using WTF::addSignalHandler;
 using WTF::activateSignalHandlersFor;
-
-#endif // OS(UNIX)
+using WTF::initializeSignalHandling;
+using WTF::disableSignalHandling;

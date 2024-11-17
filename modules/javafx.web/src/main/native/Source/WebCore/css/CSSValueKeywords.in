@@ -58,6 +58,15 @@ small-caption
 // This has to go after the -apple-system versions.
 status-bar
 
+// font-size-adjust:
+//
+ex-height
+cap-height
+ch-width
+ic-width
+ic-height
+//from-font
+
 //
 // CSS_PROP_FONT_STYLE:
 //
@@ -125,6 +134,13 @@ traditional
 full-width
 proportional-width
 ruby
+
+// font-variant-emoji
+//
+// normal
+// text
+emoji
+unicode
 
 //
 // CSS_PROP_FONT_WEIGHT:
@@ -264,6 +280,7 @@ accentcolortext
 -apple-system-label enable-if=WTF_PLATFORM_COCOA
 -apple-system-secondary-label enable-if=WTF_PLATFORM_COCOA
 -apple-system-tertiary-label enable-if=WTF_PLATFORM_COCOA
+-apple-system-tertiary-fill enable-if=WTF_PLATFORM_COCOA
 -apple-system-quaternary-label enable-if=WTF_PLATFORM_COCOA
 -apple-system-grid enable-if=WTF_PLATFORM_COCOA
 -apple-system-separator enable-if=WTF_PLATFORM_COCOA
@@ -302,6 +319,7 @@ accentcolortext
 -apple-system-opaque-secondary-fill enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-opaque-secondary-fill-disabled enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-opaque-tertiary-fill enable-if=WTF_PLATFORM_IOS_FAMILY
+-apple-system-quaternary-fill enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-opaque-separator enable-if=WTF_PLATFORM_IOS_FAMILY
 -webkit-control-background enable-if=WTF_PLATFORM_COCOA|HAVE_OS_DARK_MODE_SUPPORT
 activebuttontext
@@ -389,6 +407,7 @@ inside
 //
 // CSS_PROP_LIST_STYLE_TYPE:
 // The order here must match the order of the ListStyleType enum in RenderStyleConstants.h.
+// If the first or last counter style change, please make sure to update `isPredefinedCounterStyle()`.
 //
 disc
 circle
@@ -484,8 +503,6 @@ simp-chinese-formal
 trad-chinese-informal
 trad-chinese-formal
 ethiopic-numeric
-// FIXME: enable representation for custom-counter-style rdar://102988393.
-custom-counter-style
 //none
 //
 // CSS_PROP_DISPLAY:
@@ -516,7 +533,11 @@ flow-root
 flow
 -webkit-inline-flex
 -webkit-flex
-//none
+// ruby
+block-ruby
+ruby-base
+ruby-text
+// none
 //
 // CSS_PROP_CURSOR:
 // The order here must match the order of the CursorType enum in RenderStyleConstants.h.
@@ -577,7 +598,8 @@ capitalize
 uppercase
 lowercase
 full-size-kana
-//none
+// full-width
+// none
 //
 // CSS_PROP_VISIBILITY:
 //
@@ -655,8 +677,8 @@ end
 //baseline
 
 // CSS_PROP_BOX_DECORATION_BREAK
-clone enable-if=ENABLE_CSS_BOX_DECORATION_BREAK
-slice enable-if=ENABLE_CSS_BOX_DECORATION_BREAK
+clone
+slice
 
 // CSS_PROP_BOX_DIRECTION
 // normal
@@ -678,7 +700,7 @@ block-axis
 single
 multiple
 
-// align-content / align-tracks
+// align-content
 flex-start
 flex-end
 // center
@@ -696,7 +718,7 @@ first-baseline
 last-baseline
 // stretch
 
-// justify-content / justify-tracks
+// justify-content
 // start
 // end
 // flex-start
@@ -818,13 +840,6 @@ stable
 pretty
 
 //
-// CSS_PROP__KHTML_MARGIN_COLLAPSE
-//
-// collapse
-// separate
-discard
-
-//
 // CSS_PROP_TEXT_*_COLOR
 //
 dot-dash
@@ -840,6 +855,7 @@ skip-white-space
 //
 // CSS_PROP_WORD_BREAK
 //
+auto-phrase
 break-all
 keep-all
 
@@ -852,6 +868,18 @@ break-word
 // CSS_PROP_WHITE_SPACE
 //
 break-spaces
+
+//
+// CSS_PROP_WHITE_SPACE_COLLAPSE
+//
+// collapse
+preserve
+preserve-breaks
+// break-spaces
+
+// Unimplemented:
+// discard
+// preserve-spaces
 
 //
 // CSS_PROP__KHTML_NBSP_MODE
@@ -917,6 +945,9 @@ padding-box
 // text
 -webkit-text
 
+// block-step-insert
+margin
+
 //
 // CSS_PROP_MASK_CLIP
 //
@@ -935,7 +966,6 @@ exclude
 // Variables Implementation
 //
 var
--internal-variable-value
 
 //
 // Environment Variables
@@ -1029,6 +1059,17 @@ accumulate
 replace
 
 //
+// animation-timeline
+//
+// auto
+// none
+// scroll
+nearest
+root
+self
+view
+
+//
 // CSS_PROP_ZOOM
 //
 document
@@ -1064,7 +1105,7 @@ no-punctuation
 antialiased
 subpixel-antialiased
 
-// text-edge
+// text-box-edge
 leading
 // text
 cap
@@ -1095,7 +1136,7 @@ manual
 // auto
 touch enable-if=ENABLE_OVERFLOW_SCROLLING_TOUCH
 
-// -webkit-writing-mode
+// writing-mode
 // SVG compatibility
 lr
 rl
@@ -1105,8 +1146,11 @@ rl-tb
 tb-rl
 // Standard values from CSS3
 horizontal-tb
-vertical-rl
 vertical-lr
+vertical-rl
+sideways-lr
+sideways-rl
+// Non-standard
 horizontal-bt
 
 // -webkit-ruby-position
@@ -1218,6 +1262,16 @@ interlace
 // none
 active
 
+// (overflow-block/inline:) media feature.
+// none
+// scroll
+paged
+
+// (scripting:) media feature.
+enabled
+initial-only
+// none
+
 // blend modes
 // normal
 multiply
@@ -1272,6 +1326,9 @@ filter
 -webkit-filter
 paint enable-if=ENABLE_CSS_PAINTING_API
 
+// image-set's MIME type
+type
+
 // deprecated gradients
 from
 to
@@ -1298,6 +1355,19 @@ svg
 truetype
 woff
 woff2
+// @font-face src tech()
+tech
+color-cbdt
+color-colrv0
+color-colrv1
+color-sbix
+color-svg
+features-aat
+features-graphite
+features-opentype
+incremental
+palettes
+variations
 
 // (-webkit-)filter
 // invert
@@ -1379,6 +1449,7 @@ fill-box
 
 // motion path
 path
+xywh
 
 calc
 -webkit-calc
@@ -1403,14 +1474,12 @@ sign
 mod
 rem
 to-zero
-nearest
+// nearest
 infinity
 -infinity id=NegativeInfinity
 NaN
 
 from-image
-
-snap enable-if=ENABLE_CSS_IMAGE_RESOLUTION
 
 // overflow
 -webkit-paged-x
@@ -1523,6 +1592,9 @@ AAA-large
 // color-mix()
 color-mix
 
+// light-dark()
+light-dark
+
 // color-space-interpolation
 in
 // srgb
@@ -1596,6 +1668,11 @@ numeric
 symbolic
 additive
 // fixed
+-internal-simplified-chinese-informal
+-internal-simplified-chinese-formal
+-internal-traditional-chinese-informal
+-internal-traditional-chinese-formal
+-internal-ethiopic-numeric
 extends
 
 // @counter-style `speak-as` descriptor values
@@ -1606,9 +1683,13 @@ numbers
 words
 // spell-out
 
-// @supports selector()
+// @supports
 // https://drafts.csswg.org/css-conditional-4/#typedef-supports-selector-fn
+// https://drafts.csswg.org/css-conditional-5/#typedef-supports-font-format-fn
+// https://drafts.csswg.org/css-conditional-5/#typedef-supports-font-tech-fn
 selector
+font-format
+font-tech
 
 // math-style
 // normal
@@ -1665,3 +1746,21 @@ false
 space-all
 // text-autospace
 no-autospace
+
+// scrollbar-gutter
+// auto
+// stable
+both-edges
+
+// transition-behavior
+// normal
+allow-discrete
+
+// resize
+// none
+// both
+// horizontal
+// vertical
+// block
+// inline
+-internal-textarea-auto

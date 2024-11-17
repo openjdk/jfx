@@ -26,12 +26,13 @@
 #include "config.h"
 #include "FeaturePolicy.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
+#include "LocalDOMWindow.h"
+#include "Quirks.h"
 #include "SecurityOrigin.h"
 
 namespace WebCore {
@@ -49,6 +50,8 @@ static const char* policyTypeName(FeaturePolicy::Type type)
         return "SpeakerSelection";
     case FeaturePolicy::Type::DisplayCapture:
         return "DisplayCapture";
+    case FeaturePolicy::Type::Gamepad:
+        return "Gamepad";
     case FeaturePolicy::Type::Geolocation:
         return "Geolocation";
     case FeaturePolicy::Type::Payment:
@@ -77,6 +80,8 @@ static const char* policyTypeName(FeaturePolicy::Type type)
     case FeaturePolicy::Type::XRSpatialTracking:
         return "XRSpatialTracking";
 #endif
+    case FeaturePolicy::Type::PrivateToken:
+        return "PrivateToken";
     }
     ASSERT_NOT_REACHED();
     return "";
@@ -84,25 +89,32 @@ static const char* policyTypeName(FeaturePolicy::Type type)
 
 bool isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type type, const Document& document, LogFeaturePolicyFailure logFailure)
 {
-    auto& topDocument = document.topDocument();
-    auto* ancestorDocument = &document;
-    while (ancestorDocument != &topDocument) {
+    Ref topDocument = document.topDocument();
+    RefPtr ancestorDocument = &document;
+    while (ancestorDocument.get() != topDocument.ptr()) {
         if (!ancestorDocument) {
             if (logFailure == LogFeaturePolicyFailure::Yes && document.domWindow())
                 document.domWindow()->printErrorMessage(makeString("Feature policy '", policyTypeName(type), "' check failed."));
             return false;
         }
 
-        auto* ownerElement = ancestorDocument->ownerElement();
-        if (is<HTMLIFrameElement>(ownerElement)) {
-            const auto& featurePolicy = downcast<HTMLIFrameElement>(ownerElement)->featurePolicy();
-            if (!featurePolicy.allows(type, ancestorDocument->securityOrigin().data())) {
-                if (logFailure == LogFeaturePolicyFailure::Yes && document.domWindow()) {
-                    auto& allowValue = downcast<HTMLIFrameElement>(ownerElement)->attributeWithoutSynchronization(HTMLNames::allowAttr);
-                    document.domWindow()->printErrorMessage(makeString("Feature policy '", policyTypeName(type), "' check failed for iframe with origin '", document.securityOrigin().toString(), "' and allow attribute '", allowValue, "'."));
-                }
-                return false;
+        RefPtr ownerElement = ancestorDocument->ownerElement();
+        RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(ownerElement.get());
+
+        bool isAllowedByFeaturePolicy = false;
+        if (iframe)
+            isAllowedByFeaturePolicy = iframe->featurePolicy().allows(type, ancestorDocument->securityOrigin().data());
+        else if (ownerElement)
+            isAllowedByFeaturePolicy = FeaturePolicy::defaultPolicy(ownerElement->document()).allows(type, ancestorDocument->securityOrigin().data());
+
+        if (!isAllowedByFeaturePolicy) {
+            if (logFailure == LogFeaturePolicyFailure::Yes && document.domWindow()) {
+                String allowValue;
+                if (iframe)
+                    allowValue = iframe->attributeWithoutSynchronization(HTMLNames::allowAttr);
+                document.domWindow()->printErrorMessage(makeString("Feature policy '", policyTypeName(type), "' check failed for element with origin '", document.securityOrigin().toString(), "' and allow attribute '", allowValue, "'."));
             }
+            return false;
         }
 
         ancestorDocument = ancestorDocument->parentDocument();
@@ -125,15 +137,25 @@ static bool isAllowedByFeaturePolicy(const FeaturePolicy::AllowRule& rule, const
     return false;
 }
 
-static inline void processOriginItem(Document& document, FeaturePolicy::AllowRule& rule, StringView item)
+static inline void processOriginItem(Document& document, const HTMLIFrameElement& iframe, FeaturePolicy::AllowRule& rule, StringView item)
 {
     if (rule.type == FeaturePolicy::AllowRule::Type::None)
         return;
 
-    item = item.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
-    // FIXME: Support 'src'.
-    if (item == "'src'"_s)
+    item = item.trim(isASCIIWhitespace<UChar>);
+    if (item == "'src'"_s) {
+        auto srcURL = document.completeURL(iframe.getAttribute(srcAttr));
+        if (srcURL.isValid()) {
+            RefPtr<SecurityOrigin> allowedOrigin;
+            if (srcURL.protocolIsInHTTPFamily())
+                allowedOrigin = SecurityOrigin::create(srcURL);
+            else if (auto contentDocument = iframe.contentDocument())
+                allowedOrigin = &contentDocument->securityOrigin();
+            if (allowedOrigin)
+                rule.allowedList.add(allowedOrigin->data());
+        }
         return;
+    }
 
     if (item == "*"_s) {
         rule.type = FeaturePolicy::AllowRule::Type::All;
@@ -153,33 +175,42 @@ static inline void processOriginItem(Document& document, FeaturePolicy::AllowRul
         rule.allowedList.add(SecurityOriginData::fromURL(url));
 }
 
-static inline void updateList(Document& document, FeaturePolicy::AllowRule& rule, StringView value)
+static inline void updateList(Document& document, const HTMLIFrameElement& iframe, FeaturePolicy::AllowRule& rule, StringView value)
 {
-    // We keep the empty string value equivalent to '*' for existing websites.
     if (value.isEmpty()) {
-        rule.type = FeaturePolicy::AllowRule::Type::All;
+        if (document.quirks().shouldStarBeFeaturePolicyDefaultValue()) {
+            rule.type = FeaturePolicy::AllowRule::Type::All;
+            return;
+        }
+
+        // The allowlist for the features named in the attribute may be empty; in that case,
+        // the default value for the allowlist is 'src', which represents the origin of the
+        // URL in the iframe’s src attribute.
+        // https://www.w3.org/TR/permissions-policy/#iframe-allow-attribute
+        processOriginItem(document, iframe, rule, "'src'"_s);
         return;
     }
 
     while (!value.isEmpty()) {
-        auto position = value.find(isHTMLSpace<UChar>);
+        auto position = value.find(isASCIIWhitespace<UChar>);
         if (position == notFound) {
-            processOriginItem(document, rule, value);
+            processOriginItem(document, iframe, rule, value);
             return;
         }
 
-        processOriginItem(document, rule, value.left(position));
-        value = value.substring(position + 1).stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
+        processOriginItem(document, iframe, rule, value.left(position));
+        value = value.substring(position + 1).trim(isASCIIWhitespace<UChar>);
     }
 }
 
-FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& iframe, StringView allowAttributeValue)
+FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement* iframe, StringView allowAttributeValue)
 {
     FeaturePolicy policy;
     bool isCameraInitialized = false;
     bool isMicrophoneInitialized = false;
     bool isSpeakerSelectionInitialized = false;
     bool isDisplayCaptureInitialized = false;
+    bool isGamepadInitialized = false;
     bool isGeolocationInitialized = false;
     bool isPaymentInitialized = false;
     bool isScreenWakeLockInitialized = false;
@@ -197,89 +228,103 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
 #if ENABLE(WEBXR)
     bool isXRSpatialTrackingInitialized = false;
 #endif
-    for (auto allowItem : allowAttributeValue.split(';')) {
-        auto item = allowItem.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
-        if (item.startsWith("camera"_s)) {
-            isCameraInitialized = true;
-            updateList(document, policy.m_cameraRule, item.substring(7));
-            continue;
-        }
-        if (item.startsWith("microphone"_s)) {
-            isMicrophoneInitialized = true;
-            updateList(document, policy.m_microphoneRule, item.substring(11));
-            continue;
-        }
-        if (item.startsWith("speaker-selection"_s)) {
-            isSpeakerSelectionInitialized = true;
-            updateList(document, policy.m_speakerSelectionRule, item.substring(18));
-            continue;
-        }
-        if (item.startsWith("display-capture"_s)) {
-            isDisplayCaptureInitialized = true;
-            updateList(document, policy.m_displayCaptureRule, item.substring(16));
-            continue;
-        }
-        if (item.startsWith("geolocation"_s)) {
-            isGeolocationInitialized = true;
-            updateList(document, policy.m_geolocationRule, item.substring(12));
-            continue;
-        }
-        if (item.startsWith("payment"_s)) {
-            isPaymentInitialized = true;
-            updateList(document, policy.m_paymentRule, item.substring(8));
-            continue;
-        }
-        if (item.startsWith("screen-wake-lock"_s)) {
-            isScreenWakeLockInitialized = true;
-            updateList(document, policy.m_screenWakeLockRule, item.substring(17));
-            continue;
-        }
-        if (item.startsWith("sync-xhr"_s)) {
-            isSyncXHRInitialized = true;
-            updateList(document, policy.m_syncXHRRule, item.substring(9));
-            continue;
-        }
-        if (item.startsWith("fullscreen"_s)) {
-            isFullscreenInitialized = true;
-            updateList(document, policy.m_fullscreenRule, item.substring(11));
-            continue;
-        }
-        if (item.startsWith("web-share"_s)) {
-            isWebShareInitialized = true;
-            updateList(document, policy.m_webShareRule, item.substring(10));
-            continue;
-        }
+    bool isPrivateTokenInitialized = false;
+    if (iframe) {
+        for (auto allowItem : allowAttributeValue.split(';')) {
+            auto item = allowItem.trim(isASCIIWhitespace<UChar>);
+            if (item.startsWith("camera"_s)) {
+                isCameraInitialized = true;
+                updateList(document, *iframe, policy.m_cameraRule, item.substring(7));
+                continue;
+            }
+            if (item.startsWith("microphone"_s)) {
+                isMicrophoneInitialized = true;
+                updateList(document, *iframe, policy.m_microphoneRule, item.substring(11));
+                continue;
+            }
+            if (item.startsWith("speaker-selection"_s)) {
+                isSpeakerSelectionInitialized = true;
+                updateList(document, *iframe, policy.m_speakerSelectionRule, item.substring(18));
+                continue;
+            }
+            if (item.startsWith("display-capture"_s)) {
+                isDisplayCaptureInitialized = true;
+                updateList(document, *iframe, policy.m_displayCaptureRule, item.substring(16));
+                continue;
+            }
+            if (item.startsWith("gamepad"_s)) {
+                isGamepadInitialized = true;
+                updateList(document, *iframe, policy.m_gamepadRule, item.substring(8));
+                continue;
+            }
+            if (item.startsWith("geolocation"_s)) {
+                isGeolocationInitialized = true;
+                updateList(document, *iframe, policy.m_geolocationRule, item.substring(12));
+                continue;
+            }
+            if (item.startsWith("payment"_s)) {
+                isPaymentInitialized = true;
+                updateList(document, *iframe, policy.m_paymentRule, item.substring(8));
+                continue;
+            }
+            if (item.startsWith("screen-wake-lock"_s)) {
+                isScreenWakeLockInitialized = true;
+                updateList(document, *iframe, policy.m_screenWakeLockRule, item.substring(17));
+                continue;
+            }
+            if (item.startsWith("sync-xhr"_s)) {
+                isSyncXHRInitialized = true;
+                updateList(document, *iframe, policy.m_syncXHRRule, item.substring(9));
+                continue;
+            }
+            if (item.startsWith("fullscreen"_s)) {
+                isFullscreenInitialized = true;
+                updateList(document, *iframe, policy.m_fullscreenRule, item.substring(11));
+                continue;
+            }
+            if (item.startsWith("web-share"_s)) {
+                isWebShareInitialized = true;
+                updateList(document, *iframe, policy.m_webShareRule, item.substring(10));
+                continue;
+            }
 #if ENABLE(DEVICE_ORIENTATION)
-        if (item.startsWith("gyroscope"_s)) {
-            isGyroscopeInitialized = true;
-            updateList(document, policy.m_gyroscopeRule, item.substring(10));
-            continue;
-        }
-        if (item.startsWith("accelerometer"_s)) {
-            isAccelerometerInitialized = true;
-            updateList(document, policy.m_accelerometerRule, item.substring(14));
-            continue;
-        }
-        if (item.startsWith("magnetometer"_s)) {
-            isMagnetometerInitialized = true;
-            updateList(document, policy.m_magnetometerRule, item.substring(13));
-            continue;
-        }
+            if (item.startsWith("gyroscope"_s)) {
+                isGyroscopeInitialized = true;
+                updateList(document, *iframe, policy.m_gyroscopeRule, item.substring(10));
+                continue;
+            }
+            if (item.startsWith("accelerometer"_s)) {
+                isAccelerometerInitialized = true;
+                updateList(document, *iframe, policy.m_accelerometerRule, item.substring(14));
+                continue;
+            }
+            if (item.startsWith("magnetometer"_s)) {
+                isMagnetometerInitialized = true;
+                updateList(document, *iframe, policy.m_magnetometerRule, item.substring(13));
+                continue;
+            }
 #endif
 #if ENABLE(WEB_AUTHN)
-        if (item.startsWith("publickey-credentials-get"_s)) {
-            isPublickeyCredentialsGetInitialized = true;
-            updateList(document, policy.m_publickeyCredentialsGetRule, item.substring(26));
-            continue;
-        }
+            if (item.startsWith("publickey-credentials-get"_s)) {
+                isPublickeyCredentialsGetInitialized = true;
+                updateList(document, *iframe, policy.m_publickeyCredentialsGetRule, item.substring(26));
+                continue;
+            }
 #endif
 #if ENABLE(WEBXR)
-        if (item.startsWith("xr-spatial-tracking"_s)) {
-            isXRSpatialTrackingInitialized = true;
-            updateList(document, policy.m_xrSpatialTrackingRule, item.substring(19));
-            continue;
-        }
+            if (item.startsWith("xr-spatial-tracking"_s)) {
+                isXRSpatialTrackingInitialized = true;
+                updateList(document, *iframe, policy.m_xrSpatialTrackingRule, item.substring(19));
+                continue;
+            }
 #endif
+            constexpr auto privateTokenToken { "private-token"_s };
+            if (item.startsWith(privateTokenToken)) {
+                isPrivateTokenInitialized = true;
+                updateList(document, *iframe, policy.m_privateTokenRule, item.substring(privateTokenToken.length()));
+                continue;
+        }
+    }
     }
 
     // By default, camera, microphone, speaker-selection, display-capture, fullscreen, xr-spatial-tracking, screen-wake-lock, and web-share policy is 'self'.
@@ -291,6 +336,8 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
         policy.m_speakerSelectionRule.allowedList.add(document.securityOrigin().data());
     if (!isDisplayCaptureInitialized)
         policy.m_displayCaptureRule.allowedList.add(document.securityOrigin().data());
+    if (!isGamepadInitialized)
+        policy.m_gamepadRule.type = FeaturePolicy::AllowRule::Type::All;
     if (!isScreenWakeLockInitialized)
         policy.m_screenWakeLockRule.allowedList.add(document.securityOrigin().data());
     if (!isGeolocationInitialized)
@@ -315,13 +362,15 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
     if (!isXRSpatialTrackingInitialized)
         policy.m_xrSpatialTrackingRule.allowedList.add(document.securityOrigin().data());
 #endif
+    if (!isPrivateTokenInitialized)
+        policy.m_privateTokenRule.allowedList.add(document.securityOrigin().data());
 
     // https://w3c.github.io/webappsec-feature-policy/#process-feature-policy-attributes
     // 9.5 Process Feature Policy Attributes
     // 3.1 If element’s allowfullscreen attribute is specified, and container policy does
     //     not contain an allowlist for fullscreen,
     if (!isFullscreenInitialized) {
-        if (iframe.hasAttribute(allowfullscreenAttr) || iframe.hasAttribute(webkitallowfullscreenAttr)) {
+        if (iframe && (iframe->hasAttribute(allowfullscreenAttr) || iframe->hasAttribute(webkitallowfullscreenAttr))) {
             // 3.1.1 Construct a new declaration for fullscreen, whose allowlist is the special value *.
             policy.m_fullscreenRule.type = FeaturePolicy::AllowRule::Type::All;
         } else {
@@ -348,6 +397,8 @@ bool FeaturePolicy::allows(Type type, const SecurityOriginData& origin) const
         return isAllowedByFeaturePolicy(m_speakerSelectionRule, origin);
     case Type::DisplayCapture:
         return isAllowedByFeaturePolicy(m_displayCaptureRule, origin);
+    case Type::Gamepad:
+        return isAllowedByFeaturePolicy(m_gamepadRule, origin);
     case Type::Geolocation:
         return isAllowedByFeaturePolicy(m_geolocationRule, origin);
     case Type::Payment:
@@ -376,6 +427,8 @@ bool FeaturePolicy::allows(Type type, const SecurityOriginData& origin) const
     case Type::XRSpatialTracking:
         return isAllowedByFeaturePolicy(m_xrSpatialTrackingRule, origin);
 #endif
+    case Type::PrivateToken:
+        return isAllowedByFeaturePolicy(m_privateTokenRule, origin);
     }
     ASSERT_NOT_REACHED();
     return false;

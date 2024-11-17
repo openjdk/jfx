@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ public class CSSValueListImpl extends CSSValueImpl implements CSSValueList {
 
 
 // Attributes
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -46,6 +47,7 @@ public class CSSValueListImpl extends CSSValueImpl implements CSSValueList {
 
 
 // Functions
+    @Override
     public CSSValue item(int index)
     {
         return CSSValueImpl.getImpl(itemImpl(getPeer()

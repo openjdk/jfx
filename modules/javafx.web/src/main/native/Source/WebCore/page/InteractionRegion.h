@@ -27,6 +27,7 @@
 
 #include "ElementIdentifier.h"
 #include "FloatRect.h"
+#include "Path.h"
 #include "Region.h"
 
 namespace IPC {
@@ -45,69 +46,42 @@ class Page;
 class RenderObject;
 
 struct InteractionRegion {
-    enum class Type : bool { Interaction, Occlusion };
+    enum class Type : uint8_t { Interaction, Occlusion, Guard };
+    enum class CornerMask : uint8_t {
+        MinXMinYCorner = 1 << 0,
+        MaxXMinYCorner = 1 << 1,
+        MinXMaxYCorner = 1 << 2,
+        MaxXMaxYCorner = 1 << 3
+    };
 
-    ElementIdentifier elementIdentifier;
-    Region regionInLayerCoordinates;
-    float borderRadius { 0 };
     Type type;
+    ElementIdentifier elementIdentifier;
+    FloatRect rectInLayerCoordinates;
+    float cornerRadius { 0 };
+    OptionSet<CornerMask> maskedCorners { };
+    std::optional<Path> clipPath { std::nullopt };
 
     WEBCORE_EXPORT ~InteractionRegion();
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<InteractionRegion> decode(Decoder&);
 };
 
 inline bool operator==(const InteractionRegion& a, const InteractionRegion& b)
 {
-    return a.elementIdentifier == b.elementIdentifier
-        && a.regionInLayerCoordinates == b.regionInLayerCoordinates
-        && a.borderRadius == b.borderRadius
-        && a.type == b.type;
+    return a.type == b.type
+        && a.elementIdentifier == b.elementIdentifier
+        && a.rectInLayerCoordinates == b.rectInLayerCoordinates
+        && a.cornerRadius == b.cornerRadius
+        && a.maskedCorners == b.maskedCorners
+        && a.clipPath.has_value() == b.clipPath.has_value()
+        && (!a.clipPath || &a.clipPath.value() == &b.clipPath.value());
 }
 
-WEBCORE_EXPORT std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject&, const Region&);
+WEBCORE_EXPORT std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject&, const FloatRect&);
+WEBCORE_EXPORT bool elementMatchesHoverRules(Element&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, const InteractionRegion&);
 
-template<class Encoder>
-void InteractionRegion::encode(Encoder& encoder) const
-{
-    encoder << elementIdentifier;
-    encoder << regionInLayerCoordinates;
-    encoder << borderRadius;
-    encoder << type;
 }
-
-template<class Decoder>
-std::optional<InteractionRegion> InteractionRegion::decode(Decoder& decoder)
-{
-    std::optional<ElementIdentifier> elementIdentifier;
-    decoder >> elementIdentifier;
-    if (!elementIdentifier)
-        return std::nullopt;
-
-    std::optional<Region> regionInLayerCoordinates;
-    decoder >> regionInLayerCoordinates;
-    if (!regionInLayerCoordinates)
-        return std::nullopt;
-
-    std::optional<float> borderRadius;
-    decoder >> borderRadius;
-    if (!borderRadius)
-        return std::nullopt;
-
-    std::optional<Type> type;
-    decoder >> type;
-    if (!type)
-        return std::nullopt;
-
-    return { {
-        WTFMove(*elementIdentifier),
-        WTFMove(*regionInLayerCoordinates),
-        WTFMove(*borderRadius),
-        WTFMove(*type)
-    } };
-}
-
+namespace WTF {
+template<typename T> struct DefaultHash;
+template<> struct DefaultHash<WebCore::InteractionRegion::Type> : IntHash<WebCore::InteractionRegion::Type> { };
 }

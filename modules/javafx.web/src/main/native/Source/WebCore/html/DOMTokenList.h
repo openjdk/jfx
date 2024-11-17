@@ -42,6 +42,7 @@ public:
     void deref() { m_element.deref(); }
 
     unsigned length() const;
+    bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     const AtomString& item(unsigned index) const;
 
     WEBCORE_EXPORT bool contains(const AtomString&) const;
@@ -59,11 +60,11 @@ public:
     WEBCORE_EXPORT const AtomString& value() const;
 
 private:
-    void updateTokensFromAttributeValue(StringView);
+    void updateTokensFromAttributeValue(const AtomString&);
     void updateAssociatedAttributeFromTokens();
 
-    WEBCORE_EXPORT Vector<AtomString>& tokens();
-    const Vector<AtomString>& tokens() const { return const_cast<DOMTokenList&>(*this).tokens(); }
+    WEBCORE_EXPORT Vector<AtomString, 1>& tokens();
+    const Vector<AtomString, 1>& tokens() const { return const_cast<DOMTokenList&>(*this).tokens(); }
 
     static ExceptionOr<void> validateToken(StringView);
     static ExceptionOr<void> validateTokens(const AtomString* tokens, size_t length);
@@ -74,7 +75,7 @@ private:
     const WebCore::QualifiedName& m_attributeName;
     bool m_inUpdateAssociatedAttributeFromTokens { false };
     bool m_tokensNeedUpdating { true };
-    Vector<AtomString> m_tokens;
+    Vector<AtomString, 1> m_tokens;
     IsSupportedTokenFunction m_isSupportedToken;
 };
 

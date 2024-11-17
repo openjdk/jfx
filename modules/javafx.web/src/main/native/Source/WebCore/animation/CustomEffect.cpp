@@ -27,10 +27,14 @@
 #include "CustomEffect.h"
 
 #include "CustomEffectCallback.h"
+#include "ScriptExecutionContext.h"
 #include <JavaScriptCore/Exception.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(CustomEffect);
 
 ExceptionOr<Ref<CustomEffect>> CustomEffect::create(Ref<CustomEffectCallback>&& callback, std::optional<std::variant<double, EffectTiming>>&& options)
 {

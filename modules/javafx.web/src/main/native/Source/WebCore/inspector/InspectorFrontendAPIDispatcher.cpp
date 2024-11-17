@@ -26,9 +26,9 @@
 #include "config.h"
 #include "InspectorFrontendAPIDispatcher.h"
 
-#include "Frame.h"
 #include "InspectorController.h"
 #include "JSDOMPromise.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
@@ -107,7 +107,11 @@ JSDOMGlobalObject* InspectorFrontendAPIDispatcher::frontendGlobalObject()
     if (!m_frontendPage)
         return nullptr;
 
-    return m_frontendPage->mainFrame().script().globalObject(mainThreadNormalWorld());
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame());
+    if (!localMainFrame)
+        return nullptr;
+
+    return localMainFrame->script().globalObject(mainThreadNormalWorld());
 }
 
 static String expressionForEvaluatingCommand(const String& command, Vector<Ref<JSON::Value>>&& arguments)
@@ -195,14 +199,14 @@ void InspectorFrontendAPIDispatcher::evaluateOrQueueExpression(const String& exp
         if (!weakThis)
             return;
 
-        Ref strongThis = { *weakThis };
-        if (!strongThis->m_pendingResponses.size())
+        Ref protectedThis = { *weakThis };
+        if (!protectedThis->m_pendingResponses.size())
             return;
 
-        EvaluationResultHandler resultHandler = strongThis->m_pendingResponses.take(promise);
+        EvaluationResultHandler resultHandler = protectedThis->m_pendingResponses.take(promise);
         ASSERT(resultHandler);
 
-        JSDOMGlobalObject* globalObject = strongThis->frontendGlobalObject();
+        JSDOMGlobalObject* globalObject = protectedThis->frontendGlobalObject();
         if (!globalObject) {
             resultHandler(makeUnexpected(EvaluationError::ContextDestroyed));
             return;
@@ -259,7 +263,9 @@ ValueOrException InspectorFrontendAPIDispatcher::evaluateExpression(const String
     ASSERT(m_queuedEvaluations.isEmpty());
 
     JSC::SuspendExceptionScope scope(m_frontendPage->inspectorController().vm());
-    return m_frontendPage->mainFrame().script().evaluateInWorld(ScriptSourceCode(expression), mainThreadNormalWorld());
+
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame());
+    return localMainFrame->script().evaluateInWorld(ScriptSourceCode(expression, JSC::SourceTaintedOrigin::Untainted), mainThreadNormalWorld());
 }
 
 void InspectorFrontendAPIDispatcher::evaluateExpressionForTesting(const String& expression)

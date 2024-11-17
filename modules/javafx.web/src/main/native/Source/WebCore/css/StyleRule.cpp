@@ -36,8 +36,9 @@
 #include "CSSMediaRule.h"
 #include "CSSNamespaceRule.h"
 #include "CSSPageRule.h"
-#include "CSSParserSelector.h"
 #include "CSSPropertyRule.h"
+#include "CSSScopeRule.h"
+#include "CSSStartingStyleRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
 #include "MediaList.h"
@@ -45,6 +46,7 @@
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
 #include "StyleRuleImport.h"
+#include "StyleSheetContents.h"
 
 namespace WebCore {
 
@@ -82,42 +84,46 @@ template<typename Visitor> constexpr decltype(auto) StyleRuleBase::visitDerived(
 {
     switch (type()) {
     case StyleRuleType::Style:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRule>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRule>(*this));
     case StyleRuleType::StyleWithNesting:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleWithNesting>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleWithNesting>(*this));
     case StyleRuleType::Page:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRulePage>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRulePage>(*this));
     case StyleRuleType::FontFace:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleFontFace>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleFontFace>(*this));
     case StyleRuleType::FontFeatureValues:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleFontFeatureValues>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleFontFeatureValues>(*this));
     case StyleRuleType::FontFeatureValuesBlock:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleFontFeatureValuesBlock>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleFontFeatureValuesBlock>(*this));
     case StyleRuleType::FontPaletteValues:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleFontPaletteValues>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleFontPaletteValues>(*this));
     case StyleRuleType::Media:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleMedia>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleMedia>(*this));
     case StyleRuleType::Supports:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleSupports>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleSupports>(*this));
     case StyleRuleType::Import:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleImport>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleImport>(*this));
     case StyleRuleType::Keyframes:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleKeyframes>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleKeyframes>(*this));
     case StyleRuleType::Namespace:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleNamespace>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleNamespace>(*this));
     case StyleRuleType::Keyframe:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleKeyframe>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleKeyframe>(*this));
     case StyleRuleType::Charset:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleCharset>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleCharset>(*this));
     case StyleRuleType::CounterStyle:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleCounterStyle>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleCounterStyle>(*this));
     case StyleRuleType::LayerBlock:
     case StyleRuleType::LayerStatement:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleLayer>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleLayer>(*this));
     case StyleRuleType::Container:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleContainer>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleContainer>(*this));
     case StyleRuleType::Property:
-        return std::invoke(std::forward<Visitor>(visitor), downcast<StyleRuleProperty>(*this));
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleProperty>(*this));
+    case StyleRuleType::Scope:
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleScope>(*this));
+    case StyleRuleType::StartingStyle:
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleStartingStyle>(*this));
     case StyleRuleType::Margin:
         break;
     case StyleRuleType::Unknown:
@@ -205,6 +211,12 @@ Ref<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet, CSSRu
         [&](StyleRuleProperty& rule) -> Ref<CSSRule> {
             return CSSPropertyRule::create(rule, parentSheet);
         },
+        [&](StyleRuleScope& rule) -> Ref<CSSRule> {
+            return CSSScopeRule::create(rule, parentSheet);
+        },
+        [&](StyleRuleStartingStyle& rule) -> Ref<CSSRule> {
+            return CSSStartingStyleRule::create(rule, parentSheet);
+        },
         [](StyleRuleCharset&) -> Ref<CSSRule> {
             RELEASE_ASSERT_NOT_REACHED();
         },
@@ -257,9 +269,12 @@ void StyleRule::setProperties(Ref<StyleProperties>&& properties)
 
 MutableStyleProperties& StyleRule::mutableProperties()
 {
-    if (!is<MutableStyleProperties>(m_properties))
-        m_properties = properties().mutableCopy();
-    return downcast<MutableStyleProperties>(m_properties.get());
+    if (auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(m_properties.get()))
+        return *mutableProperties;
+    Ref mutableProperties = m_properties->mutableCopy();
+    auto& mutablePropertiesRef = mutableProperties.get();
+    m_properties = WTFMove(mutableProperties);
+    return mutablePropertiesRef;
 }
 
 Ref<StyleRule> StyleRule::createForSplitting(const Vector<const CSSSelector*>& selectors, Ref<StyleProperties>&& properties, bool hasDocumentSecurityOrigin)
@@ -274,11 +289,11 @@ Ref<StyleRule> StyleRule::createForSplitting(const Vector<const CSSSelector*>& s
     return styleRule;
 }
 
-Vector<RefPtr<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorComponentCount(unsigned maxCount) const
+Vector<Ref<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorComponentCount(unsigned maxCount) const
 {
     ASSERT(selectorList().componentCount() > maxCount);
 
-    Vector<RefPtr<StyleRule>> rules;
+    Vector<Ref<StyleRule>> rules;
     Vector<const CSSSelector*> componentsSinceLastSplit;
 
     for (const CSSSelector* selector = selectorList().first(); selector; selector = CSSSelectorList::next(selector)) {
@@ -303,30 +318,44 @@ Vector<RefPtr<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorCo
     return rules;
 }
 
+StyleRuleWithNesting::~StyleRuleWithNesting() = default;
 
-const CSSSelectorList& StyleRule::resolvedSelectorList() const
+Ref<StyleRuleWithNesting> StyleRuleWithNesting::copy() const
 {
-    if (isStyleRuleWithNesting())
-        return downcast<StyleRuleWithNesting>(*this).resolvedSelectorList();
+    return adoptRef(*new StyleRuleWithNesting(*this));
+}
 
-    return m_selectorList;
+StyleRuleWithNesting::StyleRuleWithNesting(const StyleRuleWithNesting& other)
+    : StyleRule(other)
+    , m_nestedRules(other.m_nestedRules.map([](auto& rule) { return rule->copy(); }))
+    , m_originalSelectorList(other.m_originalSelectorList)
+{
+}
+
+StyleRuleWithNesting::StyleRuleWithNesting(StyleRule&& styleRule)
+    : StyleRule(WTFMove(styleRule))
+    , m_nestedRules({ })
+    , m_originalSelectorList(selectorList())
+{
+    setType(StyleRuleType::StyleWithNesting);
 }
 
 Ref<StyleRuleWithNesting> StyleRuleWithNesting::create(Ref<StyleProperties>&& properties, bool hasDocumentSecurityOrigin, CSSSelectorList&& selectors, Vector<Ref<StyleRuleBase>>&& nestedRules)
 {
-    return adoptRef(* new StyleRuleWithNesting(WTFMove(properties), hasDocumentSecurityOrigin, WTFMove(selectors), WTFMove(nestedRules)));
+    return adoptRef(*new StyleRuleWithNesting(WTFMove(properties), hasDocumentSecurityOrigin, WTFMove(selectors), WTFMove(nestedRules)));
+}
+
+Ref<StyleRuleWithNesting> StyleRuleWithNesting::create(StyleRule&& styleRule)
+{
+    return adoptRef(*new StyleRuleWithNesting(WTFMove(styleRule)));
 }
 
 StyleRuleWithNesting::StyleRuleWithNesting(Ref<StyleProperties>&& properties, bool hasDocumentSecurityOrigin, CSSSelectorList&& selectors, Vector<Ref<StyleRuleBase>>&& nestedRules)
     : StyleRule(WTFMove(properties), hasDocumentSecurityOrigin, WTFMove(selectors))
     , m_nestedRules(WTFMove(nestedRules))
+    , m_originalSelectorList(selectorList())
 {
     setType(StyleRuleType::StyleWithNesting);
-}
-
-void StyleRuleWithNesting::setResolvedSelectorList(CSSSelectorList&& selectorList) const
-{
-    m_resolvedSelectorList = WTFMove(selectorList);
 }
 
 StyleRulePage::StyleRulePage(Ref<StyleProperties>&& properties, CSSSelectorList&& selectors)
@@ -352,9 +381,12 @@ Ref<StyleRulePage> StyleRulePage::create(Ref<StyleProperties>&& properties, CSSS
 
 MutableStyleProperties& StyleRulePage::mutableProperties()
 {
-    if (!is<MutableStyleProperties>(m_properties))
-        m_properties = m_properties->mutableCopy();
-    return downcast<MutableStyleProperties>(m_properties.get());
+    if (auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(m_properties.get()))
+        return *mutableProperties;
+    Ref mutableProperties = m_properties->mutableCopy();
+    auto& mutablePropertiesRef = mutableProperties.get();
+    m_properties = WTFMove(mutableProperties);
+    return mutablePropertiesRef;
 }
 
 StyleRuleFontFace::StyleRuleFontFace(Ref<StyleProperties>&& properties)
@@ -373,9 +405,12 @@ StyleRuleFontFace::~StyleRuleFontFace() = default;
 
 MutableStyleProperties& StyleRuleFontFace::mutableProperties()
 {
-    if (!is<MutableStyleProperties>(m_properties))
-        m_properties = m_properties->mutableCopy();
-    return downcast<MutableStyleProperties>(m_properties.get());
+    if (auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(m_properties.get()))
+        return *mutableProperties;
+    Ref mutableProperties = m_properties->mutableCopy();
+    auto& mutablePropertiesRef = mutableProperties.get();
+    m_properties = WTFMove(mutableProperties);
+    return mutablePropertiesRef;
 }
 
 StyleRuleFontFeatureValues::StyleRuleFontFeatureValues(const Vector<AtomString>& fontFamilies, Ref<FontFeatureValues>&& value)
@@ -397,20 +432,20 @@ Ref<StyleRuleFontFeatureValues> StyleRuleFontFeatureValues::create(const Vector<
     return adoptRef(*new StyleRuleFontFeatureValues(fontFamilies, WTFMove(values)));
 }
 
-Ref<StyleRuleFontPaletteValues> StyleRuleFontPaletteValues::create(const AtomString& name, const AtomString& fontFamily, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&& overrideColors)
+Ref<StyleRuleFontPaletteValues> StyleRuleFontPaletteValues::create(const AtomString& name, Vector<AtomString>&& fontFamilies, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&& overrideColors)
 {
-    return adoptRef(*new StyleRuleFontPaletteValues(name, fontFamily, basePalette, WTFMove(overrideColors)));
+    return adoptRef(*new StyleRuleFontPaletteValues(name, WTFMove(fontFamilies), basePalette, WTFMove(overrideColors)));
 }
 
-StyleRuleFontPaletteValues::StyleRuleFontPaletteValues(const AtomString& name, const AtomString& fontFamily, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&& overrideColors)
+StyleRuleFontPaletteValues::StyleRuleFontPaletteValues(const AtomString& name, Vector<AtomString>&& fontFamilies, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&& overrideColors)
     : StyleRuleBase(StyleRuleType::FontPaletteValues)
     , m_name(name)
-    , m_fontFamily(fontFamily)
+    , m_fontFamilies(WTFMove(fontFamilies))
     , m_fontPaletteValues(basePalette, WTFMove(overrideColors))
 {
 }
 
-StyleRuleGroup::StyleRuleGroup(StyleRuleType type, Vector<RefPtr<StyleRuleBase>>&& rules)
+StyleRuleGroup::StyleRuleGroup(StyleRuleType type, Vector<Ref<StyleRuleBase>>&& rules)
     : StyleRuleBase(type)
     , m_childRules(WTFMove(rules))
 {
@@ -418,11 +453,11 @@ StyleRuleGroup::StyleRuleGroup(StyleRuleType type, Vector<RefPtr<StyleRuleBase>>
 
 StyleRuleGroup::StyleRuleGroup(const StyleRuleGroup& other)
     : StyleRuleBase(other)
-    , m_childRules(other.childRules().map([](auto& rule) -> RefPtr<StyleRuleBase> { return rule->copy(); }))
+    , m_childRules(other.childRules().map([](auto& rule) -> Ref<StyleRuleBase> { return rule->copy(); }))
 {
 }
 
-const Vector<RefPtr<StyleRuleBase>>& StyleRuleGroup::childRules() const
+const Vector<Ref<StyleRuleBase>>& StyleRuleGroup::childRules() const
 {
     return m_childRules;
 }
@@ -437,7 +472,7 @@ void StyleRuleGroup::wrapperRemoveRule(unsigned index)
     m_childRules.remove(index);
 }
 
-StyleRuleMedia::StyleRuleMedia(MQ::MediaQueryList&& mediaQueries, Vector<RefPtr<StyleRuleBase>>&& rules)
+StyleRuleMedia::StyleRuleMedia(MQ::MediaQueryList&& mediaQueries, Vector<Ref<StyleRuleBase>>&& rules)
     : StyleRuleGroup(StyleRuleType::Media, WTFMove(rules))
     , m_mediaQueries(WTFMove(mediaQueries))
 {
@@ -449,7 +484,7 @@ StyleRuleMedia::StyleRuleMedia(const StyleRuleMedia& other)
 {
 }
 
-Ref<StyleRuleMedia> StyleRuleMedia::create(MQ::MediaQueryList&& mediaQueries, Vector<RefPtr<StyleRuleBase>>&& rules)
+Ref<StyleRuleMedia> StyleRuleMedia::create(MQ::MediaQueryList&& mediaQueries, Vector<Ref<StyleRuleBase>>&& rules)
 {
     return adoptRef(*new StyleRuleMedia(WTFMove(mediaQueries), WTFMove(rules)));
 }
@@ -459,25 +494,25 @@ Ref<StyleRuleMedia> StyleRuleMedia::copy() const
     return adoptRef(*new StyleRuleMedia(*this));
 }
 
-StyleRuleSupports::StyleRuleSupports(const String& conditionText, bool conditionIsSupported, Vector<RefPtr<StyleRuleBase>>&& rules)
+StyleRuleSupports::StyleRuleSupports(const String& conditionText, bool conditionIsSupported, Vector<Ref<StyleRuleBase>>&& rules)
     : StyleRuleGroup(StyleRuleType::Supports, WTFMove(rules))
     , m_conditionText(conditionText)
     , m_conditionIsSupported(conditionIsSupported)
 {
 }
 
-Ref<StyleRuleSupports> StyleRuleSupports::create(const String& conditionText, bool conditionIsSupported, Vector<RefPtr<StyleRuleBase>>&& rules)
+Ref<StyleRuleSupports> StyleRuleSupports::create(const String& conditionText, bool conditionIsSupported, Vector<Ref<StyleRuleBase>>&& rules)
 {
     return adoptRef(*new StyleRuleSupports(conditionText, conditionIsSupported, WTFMove(rules)));
 }
 
 StyleRuleLayer::StyleRuleLayer(Vector<CascadeLayerName>&& nameList)
-    : StyleRuleGroup(StyleRuleType::LayerStatement, Vector<RefPtr<StyleRuleBase>> { })
+    : StyleRuleGroup(StyleRuleType::LayerStatement, Vector<Ref<StyleRuleBase>> { })
     , m_nameVariant(WTFMove(nameList))
 {
 }
 
-StyleRuleLayer::StyleRuleLayer(CascadeLayerName&& name, Vector<RefPtr<StyleRuleBase>>&& rules)
+StyleRuleLayer::StyleRuleLayer(CascadeLayerName&& name, Vector<Ref<StyleRuleBase>>&& rules)
     : StyleRuleGroup(StyleRuleType::LayerBlock, WTFMove(rules))
     , m_nameVariant(WTFMove(name))
 {
@@ -488,18 +523,18 @@ Ref<StyleRuleLayer> StyleRuleLayer::createStatement(Vector<CascadeLayerName>&& n
     return adoptRef(*new StyleRuleLayer(WTFMove(nameList)));
 }
 
-Ref<StyleRuleLayer> StyleRuleLayer::createBlock(CascadeLayerName&& name, Vector<RefPtr<StyleRuleBase>>&& rules)
+Ref<StyleRuleLayer> StyleRuleLayer::createBlock(CascadeLayerName&& name, Vector<Ref<StyleRuleBase>>&& rules)
 {
     return adoptRef(*new StyleRuleLayer(WTFMove(name), WTFMove(rules)));
 }
 
-StyleRuleContainer::StyleRuleContainer(CQ::ContainerQuery&& query, Vector<RefPtr<StyleRuleBase>>&& rules)
+StyleRuleContainer::StyleRuleContainer(CQ::ContainerQuery&& query, Vector<Ref<StyleRuleBase>>&& rules)
     : StyleRuleGroup(StyleRuleType::Container, WTFMove(rules))
     , m_containerQuery(WTFMove(query))
 {
 }
 
-Ref<StyleRuleContainer> StyleRuleContainer::create(CQ::ContainerQuery&& query, Vector<RefPtr<StyleRuleBase>>&& rules)
+Ref<StyleRuleContainer> StyleRuleContainer::create(CQ::ContainerQuery&& query, Vector<Ref<StyleRuleBase>>&& rules)
 {
     return adoptRef(*new StyleRuleContainer(WTFMove(query), WTFMove(rules)));
 }
@@ -513,6 +548,47 @@ StyleRuleProperty::StyleRuleProperty(Descriptor&& descriptor)
 Ref<StyleRuleProperty> StyleRuleProperty::create(Descriptor&& descriptor)
 {
     return adoptRef(*new StyleRuleProperty(WTFMove(descriptor)));
+}
+
+Ref<StyleRuleScope> StyleRuleScope::create(CSSSelectorList&& scopeStart, CSSSelectorList&& scopeEnd, Vector<Ref<StyleRuleBase>>&& rules)
+{
+    return adoptRef(*new StyleRuleScope(WTFMove(scopeStart), WTFMove(scopeEnd), WTFMove(rules)));
+}
+
+StyleRuleScope::~StyleRuleScope() = default;
+
+Ref<StyleRuleScope> StyleRuleScope::copy() const
+{
+    return adoptRef(*new StyleRuleScope(*this));
+}
+
+StyleRuleScope::StyleRuleScope(CSSSelectorList&& scopeStart, CSSSelectorList&& scopeEnd, Vector<Ref<StyleRuleBase>>&& rules)
+    : StyleRuleGroup(StyleRuleType::Scope, WTFMove(rules))
+    , m_originalScopeStart(WTFMove(scopeStart))
+    , m_originalScopeEnd(WTFMove(scopeEnd))
+{
+}
+
+StyleRuleScope::StyleRuleScope(const StyleRuleScope&) = default;
+
+WeakPtr<const StyleSheetContents> StyleRuleScope::styleSheetContents() const
+{
+    return m_styleSheetOwner;
+}
+
+void StyleRuleScope::setStyleSheetContents(const StyleSheetContents& sheet)
+{
+    m_styleSheetOwner = sheet;
+}
+
+Ref<StyleRuleStartingStyle> StyleRuleStartingStyle::create(Vector<Ref<StyleRuleBase>>&& rules)
+{
+    return adoptRef(*new StyleRuleStartingStyle(WTFMove(rules)));
+}
+
+StyleRuleStartingStyle::StyleRuleStartingStyle(Vector<Ref<StyleRuleBase>>&& rules)
+    : StyleRuleGroup(StyleRuleType::StartingStyle, WTFMove(rules))
+{
 }
 
 StyleRuleCharset::StyleRuleCharset()

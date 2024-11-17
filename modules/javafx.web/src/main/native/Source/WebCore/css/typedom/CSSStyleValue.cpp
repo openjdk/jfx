@@ -41,10 +41,10 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CSSStyleValue);
 
-ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(const AtomString& property, const String& cssText)
+ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(const Document& document, const AtomString& property, const String& cssText)
 {
     constexpr bool parseMultiple = false;
-    auto parseResult = CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple);
+    auto parseResult = CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple, { document });
     if (parseResult.hasException())
         return parseResult.releaseException();
 
@@ -52,15 +52,15 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(const AtomString& property,
 
     // Returned vector should not be empty. If parsing failed, an exception should be returned.
     if (returnValue.isEmpty())
-        return Exception { SyntaxError, makeString(cssText, " cannot be parsed as a ", property) };
+        return Exception { ExceptionCode::SyntaxError, makeString(cssText, " cannot be parsed as a ", property) };
 
     return WTFMove(returnValue.at(0));
 }
 
-ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValue::parseAll(const AtomString& property, const String& cssText)
+ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValue::parseAll(const Document& document, const AtomString& property, const String& cssText)
 {
     constexpr bool parseMultiple = true;
-    return CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple);
+    return CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple, { document });
 }
 
 Ref<CSSStyleValue> CSSStyleValue::create(RefPtr<CSSValue>&& cssValue, String&& property)

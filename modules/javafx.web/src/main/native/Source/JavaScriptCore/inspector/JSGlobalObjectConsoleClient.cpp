@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "InspectorDebuggerAgent.h"
 #include "InspectorScriptProfilerAgent.h"
 #include "ScriptArguments.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace Inspector {
 
@@ -41,6 +42,8 @@ static bool sLogToSystemConsole = true;
 #else
 static bool sLogToSystemConsole = false;
 #endif
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSGlobalObjectConsoleClient);
 
 bool JSGlobalObjectConsoleClient::logToSystemConsole()
 {
@@ -102,7 +105,7 @@ void JSGlobalObjectConsoleClient::profile(JSC::JSGlobalObject*, const String& ti
         for (auto& existingTitle : m_profiles) {
             if (existingTitle == title) {
                 // FIXME: Send an enum to the frontend for localization?
-                String warning = title.isEmpty() ? "Unnamed Profile already exists"_s : makeString("Profile \"", ScriptArguments::truncateStringForConsoleMessage(title), "\" already exists");
+                String warning = title.isEmpty() ? "Unnamed Profile already exists"_s : makeString("Profile \""_s, ScriptArguments::truncateStringForConsoleMessage(title), "\" already exists"_s);
                 m_consoleAgent->addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Profile, MessageLevel::Warning, warning));
                 return;
             }
@@ -130,7 +133,7 @@ void JSGlobalObjectConsoleClient::profileEnd(JSC::JSGlobalObject*, const String&
     }
 
     // FIXME: Send an enum to the frontend for localization?
-    String warning = title.isEmpty() ? "No profiles exist"_s : makeString("Profile \"", title, "\" does not exist");
+    String warning = title.isEmpty() ? "No profiles exist"_s : makeString("Profile \""_s, title, "\" does not exist"_s);
     m_consoleAgent->addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::ProfileEnd, MessageLevel::Warning, warning));
 }
 
@@ -220,7 +223,7 @@ void JSGlobalObjectConsoleClient::screenshot(JSGlobalObject*, Ref<ScriptArgument
 
 void JSGlobalObjectConsoleClient::warnUnimplemented(const String& method)
 {
-    String message = method + " is currently ignored in JavaScript context inspection.";
+    String message = method + " is currently ignored in JavaScript context inspection."_s;
     m_consoleAgent->addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Log, MessageLevel::Warning, message));
 }
 

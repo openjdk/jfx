@@ -25,21 +25,24 @@
 
 #pragma once
 
+#include "IntDegrees.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-class OrientationNotifier {
+class OrientationNotifier : public CanMakeCheckedPtr {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit OrientationNotifier(int orientation) { m_orientation = orientation; }
+    explicit OrientationNotifier(IntDegrees orientation) { m_orientation = orientation; }
     ~OrientationNotifier();
 
-    void orientationChanged(int orientation);
+    void orientationChanged(IntDegrees orientation);
 
     class Observer {
     public:
         virtual ~Observer();
-        virtual void orientationChanged(int orientation) = 0;
+        virtual void orientationChanged(IntDegrees orientation) = 0;
         void setNotifier(OrientationNotifier*);
 
     private:
@@ -48,11 +51,11 @@ public:
 
     void addObserver(Observer&);
     void removeObserver(Observer&);
-    int orientation() const { return m_orientation; }
+    IntDegrees orientation() const { return m_orientation; }
 
 private:
     Vector<std::reference_wrapper<Observer>> m_observers;
-    int m_orientation;
+    IntDegrees m_orientation;
 };
 
 inline OrientationNotifier::~OrientationNotifier()
@@ -79,7 +82,7 @@ inline void OrientationNotifier::Observer::setNotifier(OrientationNotifier* noti
     m_notifier = notifier;
 }
 
-inline void OrientationNotifier::orientationChanged(int orientation)
+inline void OrientationNotifier::orientationChanged(IntDegrees orientation)
 {
     m_orientation = orientation;
     for (Observer& observer : m_observers)

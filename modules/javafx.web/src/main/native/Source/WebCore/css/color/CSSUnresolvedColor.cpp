@@ -25,12 +25,25 @@
 
 #include "config.h"
 #include "CSSUnresolvedColor.h"
+#include "StyleColor.h"
 
 #include "StyleBuilderState.h"
 
 namespace WebCore {
 
 CSSUnresolvedColor::~CSSUnresolvedColor() = default;
+
+bool CSSUnresolvedColor::containsCurrentColor() const
+{
+    return WTF::switchOn(m_value,
+        [&] (const CSSUnresolvedColorMix& unresolved) {
+            return StyleColor::containsCurrentColor(unresolved.mixComponents1.color) || StyleColor::containsCurrentColor(unresolved.mixComponents2.color);
+        },
+        [&] (const CSSUnresolvedLightDark& unresolved) {
+            return StyleColor::containsCurrentColor(unresolved.lightColor) || StyleColor::containsCurrentColor(unresolved.darkColor);
+        }
+    );
+}
 
 void CSSUnresolvedColor::serializationForCSS(StringBuilder& builder) const
 {
@@ -50,7 +63,7 @@ bool CSSUnresolvedColor::equals(const CSSUnresolvedColor& other) const
 StyleColor CSSUnresolvedColor::createStyleColor(const Document& document, RenderStyle& style, Style::ForVisitedLink forVisitedLink) const
 {
     return WTF::switchOn(m_value,
-        [&] (const CSSUnresolvedColorMix& unresolved) {
+        [&] (const auto& unresolved) {
             return WebCore::createStyleColor(unresolved, document, style, forVisitedLink);
         }
     );

@@ -30,7 +30,7 @@
 #include "config.h"
 #include "ClassCollection.h"
 
-#include "NodeRareData.h"
+#include "NodeRareDataInlines.h"
 #include "StyledElement.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -40,13 +40,13 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(ClassCollection);
 
 Ref<ClassCollection> ClassCollection::create(ContainerNode& rootNode, CollectionType type, const AtomString& classNames)
 {
-    ASSERT(type == ByClass);
+    ASSERT(type == CollectionType::ByClass);
     return adoptRef(*new ClassCollection(rootNode, type, classNames));
 }
 
 ClassCollection::~ClassCollection()
 {
-    ownerNode().nodeLists()->removeCachedCollection(this, m_originalClassNames);
+    protectedOwnerNode()->nodeLists()->removeCachedCollection(this, m_originalClassNames);
 }
 
 } // namespace WebCore

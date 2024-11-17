@@ -28,6 +28,7 @@
 #include "StyleSheet.h"
 #include <memory>
 #include <variant>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
@@ -42,20 +43,22 @@ class CSSParser;
 class CSSRule;
 class CSSStyleSheet;
 class CachedCSSStyleSheet;
+class ContainerNode;
 class DeferredPromise;
 class Document;
 class Element;
 class WeakPtrImplWithEventTargetData;
-class ShadowRoot;
+class StyleRule;
+class StyleRuleBase;
 class StyleRuleKeyframes;
+class StyleRuleWithNesting;
 class StyleSheetContents;
-class TreeScope;
 
 namespace Style {
 class Scope;
 }
 
-class CSSStyleSheet final : public StyleSheet {
+class CSSStyleSheet final : public StyleSheet, public CanMakeSingleThreadWeakPtr<CSSStyleSheet> {
 public:
     struct Init {
         String baseURL;
@@ -104,11 +107,8 @@ public:
 
     void clearOwnerRule() { m_ownerRule = nullptr; }
 
-    enum class IsTreeScopeBeingDestroyed : bool { No, Yes };
-    void removeAdoptingTreeScope(Document&, IsTreeScopeBeingDestroyed);
-    void removeAdoptingTreeScope(ShadowRoot&, IsTreeScopeBeingDestroyed);
-    void addAdoptingTreeScope(Document&);
-    void addAdoptingTreeScope(ShadowRoot&);
+    void removeAdoptingTreeScope(ContainerNode&);
+    void addAdoptingTreeScope(ContainerNode&);
 
     Document* ownerDocument() const;
     CSSStyleSheet& rootStyleSheet();
@@ -121,6 +121,7 @@ public:
 
     bool hadRulesMutation() const { return m_mutatedRules; }
     void clearHadRulesMutation() { m_mutatedRules = false; }
+    RefPtr<StyleRuleWithNesting> prepareChildStyleRuleForNesting(StyleRule&&);
 
     enum RuleMutationType { OtherMutation, RuleInsertion, KeyframesRuleMutation, RuleReplace };
     enum WhetherContentsWereClonedForMutation { ContentsWereNotClonedForMutation = 0, ContentsWereClonedForMutation };
@@ -149,6 +150,7 @@ public:
     void reattachChildRuleCSSOMWrappers();
 
     StyleSheetContents& contents() { return m_contents; }
+    Ref<StyleSheetContents> protectedContents();
 
     bool isInline() const { return m_isInlineStylesheet; }
     TextPosition startPosition() const { return m_startPosition; }
@@ -158,6 +160,10 @@ public:
     bool canAccessRules() const;
 
     String debugDescription() const final;
+    String cssTextWithReplacementURLs(const HashMap<String, String>&, const HashMap<RefPtr<CSSStyleSheet>, String>&);
+    void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&);
+
+    bool isDetached() const;
 
 private:
     CSSStyleSheet(Ref<StyleSheetContents>&&, CSSImportRule* ownerRule);
@@ -169,6 +175,7 @@ private:
 
     bool isCSSStyleSheet() const final { return true; }
     String type() const final { return cssContentTypeAtom(); }
+    RefPtr<CSSRuleList> cssRulesSkippingAccessCheck();
 
     Ref<StyleSheetContents> m_contents;
     bool m_isInlineStylesheet { false };
@@ -180,8 +187,7 @@ private:
     MQ::MediaQueryList m_mediaQueries;
     WeakPtr<Style::Scope> m_styleScope;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_constructorDocument;
-    WeakHashSet<ShadowRoot, WeakPtrImplWithEventTargetData> m_adoptingShadowRoots;
-    WeakHashSet<Document, WeakPtrImplWithEventTargetData> m_adoptingDocuments;
+    WeakHashSet<ContainerNode, WeakPtrImplWithEventTargetData> m_adoptingTreeScopes;
 
     WeakPtr<Node, WeakPtrImplWithEventTargetData> m_ownerNode;
     WeakPtr<CSSImportRule> m_ownerRule;

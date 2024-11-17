@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,12 +33,16 @@
 #include <wtf/DataLog.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RawPointer.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
 namespace WaiterListsManagerInternal {
 static constexpr bool verbose = false;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Waiter);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WaiterList);
 
 WaiterListManager& WaiterListManager::singleton()
 {
@@ -55,7 +59,7 @@ WaiterListManager::WaitSyncResult WaiterListManager::waitSyncImpl(VM& vm, ValueT
 {
     Ref<Waiter> syncWaiter = vm.syncWaiter();
     Ref<WaiterList> list = findOrCreateList(ptr);
-    MonotonicTime time = MonotonicTime::now() + timeout;
+    MonotonicTime time = MonotonicTime::timePointFromNow(timeout);
 
     {
         Locker listLocker { list->lock };

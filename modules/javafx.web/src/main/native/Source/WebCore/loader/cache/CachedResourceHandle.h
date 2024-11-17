@@ -26,41 +26,41 @@
 #pragma once
 
 #include <wtf/Forward.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class CachedResource;
 
-class WEBCORE_EXPORT CachedResourceHandleBase {
+class CachedResourceHandleBase {
 public:
-    ~CachedResourceHandleBase();
+    WEBCORE_EXPORT ~CachedResourceHandleBase();
 
-    CachedResource* get() const { return m_resource; }
+    WEBCORE_EXPORT CachedResource* get() const;
 
     bool operator!() const { return !m_resource; }
-
-    // This conversion operator allows implicit conversion to bool but not to other integer types.
-    typedef CachedResource* CachedResourceHandleBase::*UnspecifiedBoolType;
-    operator UnspecifiedBoolType() const { return m_resource ? &CachedResourceHandleBase::m_resource : 0; }
+    operator bool() const { return !!m_resource; }
 
 protected:
-    CachedResourceHandleBase();
-    CachedResourceHandleBase(CachedResource*);
-    CachedResourceHandleBase(const CachedResourceHandleBase&);
+    WEBCORE_EXPORT CachedResourceHandleBase();
+    WEBCORE_EXPORT explicit CachedResourceHandleBase(CachedResource*);
+    WEBCORE_EXPORT explicit CachedResourceHandleBase(CachedResource&);
+    WEBCORE_EXPORT CachedResourceHandleBase(const CachedResourceHandleBase&);
 
-    void setResource(CachedResource*);
+    WEBCORE_EXPORT void setResource(CachedResource*);
 
 private:
     CachedResourceHandleBase& operator=(const CachedResourceHandleBase&) { return *this; }
 
     friend class CachedResource;
 
-    CachedResource* m_resource;
+    WeakPtr<CachedResource> m_resource;
 };
 
 template <class R> class CachedResourceHandle : public CachedResourceHandleBase {
 public:
-    CachedResourceHandle() { }
+    CachedResourceHandle() = default;
+    CachedResourceHandle(R& res) : CachedResourceHandleBase(res) { }
     CachedResourceHandle(R* res) : CachedResourceHandleBase(res) { }
     CachedResourceHandle(const CachedResourceHandle<R>& o) : CachedResourceHandleBase(o) { }
     template<typename U> CachedResourceHandle(const CachedResourceHandle<U>& o) : CachedResourceHandleBase(o.get()) { }
@@ -75,7 +75,6 @@ public:
 
     bool operator==(const CachedResourceHandle& o) const { return operator==(static_cast<const CachedResourceHandleBase&>(o)); }
     bool operator==(const CachedResourceHandleBase& o) const { return get() == o.get(); }
-    bool operator!=(const CachedResourceHandleBase& o) const { return get() != o.get(); }
 };
 
 template <class R, class RR> bool operator==(const CachedResourceHandle<R>& h, const RR* res)
@@ -85,14 +84,6 @@ template <class R, class RR> bool operator==(const CachedResourceHandle<R>& h, c
 template <class R, class RR> bool operator==(const RR* res, const CachedResourceHandle<R>& h)
 {
     return h.get() == res;
-}
-template <class R, class RR> bool operator!=(const CachedResourceHandle<R>& h, const RR* res)
-{
-    return h.get() != res;
-}
-template <class R, class RR> bool operator!=(const RR* res, const CachedResourceHandle<R>& h)
-{
-    return h.get() != res;
 }
 
 } // namespace WebCore

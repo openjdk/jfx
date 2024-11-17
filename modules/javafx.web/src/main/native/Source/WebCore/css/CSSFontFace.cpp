@@ -37,6 +37,7 @@
 #include "CSSValueList.h"
 #include "CachedFont.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontDescription.h"
@@ -63,14 +64,14 @@ void CSSFontFace::appendSources(CSSFontFace& fontFace, CSSValueList& srcList, Sc
     bool allowDownloading = context && (context->settingsValues().downloadableBinaryFontAllowedTypes != DownloadableBinaryFontAllowedTypes::None);
     for (auto& src : srcList) {
         // An item in the list either specifies a string (local font name) or a URL (remote font to download).
-        if (auto local = dynamicDowncast<CSSFontFaceSrcLocalValue>(src.get())) {
+        if (auto local = dynamicDowncast<CSSFontFaceSrcLocalValue>(src)) {
             if (!local->svgFontFaceElement())
                 fontFace.adoptSource(makeUnique<CSSFontFaceSource>(fontFace, local->fontFaceName()));
             else if (allowDownloading)
                 fontFace.adoptSource(makeUnique<CSSFontFaceSource>(fontFace, local->fontFaceName(), *local->svgFontFaceElement()));
         } else {
             if (allowDownloading) {
-                if (auto request = downcast<CSSFontFaceSrcResourceValue>(src.get()).fontLoadRequest(*context, isInitiatingElementInUserAgentShadowTree))
+                if (auto request = downcast<CSSFontFaceSrcResourceValue>(const_cast<CSSValue&>(src)).fontLoadRequest(*context, isInitiatingElementInUserAgentShadowTree))
                     fontFace.adoptSource(makeUnique<CSSFontFaceSource>(fontFace, *context->cssFontSelector(), makeUniqueRefFromNonNullUniquePtr(WTFMove(request))));
             }
         }
@@ -164,21 +165,19 @@ FontFace* CSSFontFace::existingWrapper()
 
 static FontSelectionRange calculateWeightRange(CSSValue& value)
 {
-    if (value.isValueList()) {
-        auto& valueList = downcast<CSSValueList>(value);
-        ASSERT(valueList.length() == 2);
-        if (valueList.length() != 2)
+    if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {
+        ASSERT(valueList->length() == 2);
+        if (valueList->length() != 2)
             return { normalWeightValue(), normalWeightValue() };
-        ASSERT(valueList.item(0)->isPrimitiveValue());
-        ASSERT(valueList.item(1)->isPrimitiveValue());
-        auto& value0 = downcast<CSSPrimitiveValue>(*valueList.item(0));
-        auto& value1 = downcast<CSSPrimitiveValue>(*valueList.item(1));
+        ASSERT(valueList->item(0)->isPrimitiveValue());
+        ASSERT(valueList->item(1)->isPrimitiveValue());
+        auto& value0 = downcast<CSSPrimitiveValue>(*valueList->item(0));
+        auto& value1 = downcast<CSSPrimitiveValue>(*valueList->item(1));
         auto result0 = Style::BuilderConverter::convertFontWeightFromValue(value0);
         auto result1 = Style::BuilderConverter::convertFontWeightFromValue(value1);
         return { result0, result1 };
     }
 
-    ASSERT(is<CSSPrimitiveValue>(value));
     auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
     FontSelectionValue result = Style::BuilderConverter::convertFontWeightFromValue(primitiveValue);
     return { result, result };
@@ -201,21 +200,19 @@ void CSSFontFace::setWeight(CSSValue& weight)
 
 static FontSelectionRange calculateStretchRange(CSSValue& value)
 {
-    if (value.isValueList()) {
-        auto& valueList = downcast<CSSValueList>(value);
-        ASSERT(valueList.length() == 2);
-        if (valueList.length() != 2)
+    if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {
+        ASSERT(valueList->length() == 2);
+        if (valueList->length() != 2)
             return { normalStretchValue(), normalStretchValue() };
-        ASSERT(valueList.item(0)->isPrimitiveValue());
-        ASSERT(valueList.item(1)->isPrimitiveValue());
-        auto& value0 = downcast<CSSPrimitiveValue>(*valueList.item(0));
-        auto& value1 = downcast<CSSPrimitiveValue>(*valueList.item(1));
+        ASSERT(valueList->item(0)->isPrimitiveValue());
+        ASSERT(valueList->item(1)->isPrimitiveValue());
+        auto& value0 = downcast<CSSPrimitiveValue>(*valueList->item(0));
+        auto& value1 = downcast<CSSPrimitiveValue>(*valueList->item(1));
         auto result0 = Style::BuilderConverter::convertFontStretchFromValue(value0);
         auto result1 = Style::BuilderConverter::convertFontStretchFromValue(value1);
         return { result0, result1 };
     }
 
-    ASSERT(is<CSSPrimitiveValue>(value));
     const auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
     FontSelectionValue result = Style::BuilderConverter::convertFontStretchFromValue(primitiveValue);
     return { result, result };
@@ -238,22 +235,22 @@ void CSSFontFace::setStretch(CSSValue& style)
 
 static FontSelectionRange calculateItalicRange(CSSValue& value)
 {
-    if (!is<CSSFontStyleRangeValue>(value))
+    auto* rangeValue = dynamicDowncast<CSSFontStyleRangeValue>(value);
+    if (!rangeValue)
         return FontSelectionRange { Style::BuilderConverter::convertFontStyleFromValue(value).value_or(normalItalicValue()) };
 
-    auto& rangeValue = downcast<CSSFontStyleRangeValue>(value);
-    auto keyword = rangeValue.fontStyleValue->valueID();
-    if (!rangeValue.obliqueValues) {
+    auto keyword = rangeValue->fontStyleValue->valueID();
+    if (!rangeValue->obliqueValues) {
         if (keyword == CSSValueNormal)
             return FontSelectionRange { normalItalicValue() };
         ASSERT(keyword == CSSValueItalic || keyword == CSSValueOblique);
         return FontSelectionRange { italicValue() };
     }
     ASSERT(keyword == CSSValueOblique);
-    auto length = rangeValue.obliqueValues->length();
+    auto length = rangeValue->obliqueValues->length();
     ASSERT(length == 1 || length == 2);
     auto angleAtIndex = [&] (size_t index) {
-        return Style::BuilderConverter::convertFontStyleAngle(*rangeValue.obliqueValues->itemWithoutBoundsCheck(index));
+        return Style::BuilderConverter::convertFontStyleAngle(*rangeValue->obliqueValues->itemWithoutBoundsCheck(index));
     };
     if (length == 1)
         return FontSelectionRange { angleAtIndex(0) };
@@ -279,13 +276,10 @@ void CSSFontFace::setUnicodeRange(CSSValueList& list)
 {
     mutableProperties().setProperty(CSSPropertyUnicodeRange, &list);
 
-    Vector<UnicodeRange> ranges;
-    ranges.reserveInitialCapacity(list.length());
-
-    for (auto& rangeValue : list) {
-        auto& range = downcast<CSSUnicodeRangeValue>(rangeValue.get());
-        ranges.uncheckedAppend({ range.from(), range.to() });
-    }
+    auto ranges = WTF::map(list, [](auto& rangeValue) {
+        auto& range = downcast<CSSUnicodeRangeValue>(rangeValue);
+        return UnicodeRange { range.from(), range.to() };
+    });
 
     if (ranges == m_ranges)
         return;
@@ -306,10 +300,9 @@ void CSSFontFace::setFeatureSettings(CSSValue& featureSettings)
 
     FontFeatureSettings settings;
 
-    if (is<CSSValueList>(featureSettings)) {
-        auto& list = downcast<CSSValueList>(featureSettings);
-        for (auto& rangeValue : list) {
-            auto& feature = downcast<CSSFontFeatureValue>(rangeValue.get());
+    if (auto* list = dynamicDowncast<CSSValueList>(featureSettings)) {
+        for (auto& rangeValue : *list) {
+            auto& feature = downcast<CSSFontFeatureValue>(rangeValue);
             settings.insert({ feature.tag(), feature.value() });
         }
     }
@@ -318,6 +311,23 @@ void CSSFontFace::setFeatureSettings(CSSValue& featureSettings)
         return;
 
     m_featureSettings = WTFMove(settings);
+
+    iterateClients(m_clients, [&](Client& client) {
+        client.fontPropertyChanged(*this);
+    });
+}
+
+void CSSFontFace::setSizeAdjust(CSSValue& value)
+{
+    mutableProperties().setProperty(CSSPropertySizeAdjust, &value);
+
+    auto& sizeAdjustValue = downcast<CSSPrimitiveValue>(value);
+    auto sizeAdjust = sizeAdjustValue.floatValue() / 100;
+
+    if (m_sizeAdjust == sizeAdjust)
+        return;
+
+    m_sizeAdjust = sizeAdjust;
 
     iterateClients(m_clients, [&](Client& client) {
         client.fontPropertyChanged(*this);
@@ -379,6 +389,11 @@ String CSSFontFace::featureSettings() const
     return properties().getPropertyValue(CSSPropertyFontFeatureSettings);
 }
 
+String CSSFontFace::sizeAdjust() const
+{
+    return properties().getPropertyValue(CSSPropertySizeAdjust);
+}
+
 String CSSFontFace::display() const
 {
     return properties().getPropertyValue(CSSPropertyFontDisplay);
@@ -389,7 +404,7 @@ RefPtr<CSSValueList> CSSFontFace::families() const
     return m_families;
 }
 
-bool CSSFontFace::rangesMatchCodePoint(UChar32 character) const
+bool CSSFontFace::rangesMatchCodePoint(char32_t character) const
 {
     if (m_ranges.isEmpty())
         return true;
@@ -440,8 +455,8 @@ void CSSFontFace::timeoutFired()
 
 Document* CSSFontFace::document()
 {
-    if (m_wrapper && is<Document>(m_wrapper->scriptExecutionContext()))
-        return &downcast<Document>(*m_wrapper->scriptExecutionContext());
+    if (m_wrapper)
+        return dynamicDowncast<Document>(m_wrapper->scriptExecutionContext());
     return nullptr;
 }
 
@@ -719,10 +734,10 @@ RefPtr<Font> CSSFontFace::font(const FontDescription& fontDescription, bool synt
         case CSSFontFaceSource::Status::Pending:
         case CSSFontFaceSource::Status::Loading: {
             Font::Visibility visibility = WebCore::visibility(status(), fontLoadTiming());
-            return Font::create(FontCache::forCurrentThread().lastResortFallbackFont(fontDescription)->platformData(), Font::Origin::Local, Font::Interstitial::Yes, visibility);
+            return Font::create(FontCache::forCurrentThread().lastResortFallbackFont(fontDescription)->platformData(), Font::Origin::Local, Font::IsInterstitial::Yes, visibility);
         }
         case CSSFontFaceSource::Status::Success: {
-            FontCreationContext fontCreationContext { m_featureSettings, m_fontSelectionCapabilities, fontPaletteValues, fontFeatureValues };
+            FontCreationContext fontCreationContext { m_featureSettings, m_fontSelectionCapabilities, fontPaletteValues, fontFeatureValues, m_sizeAdjust };
             if (auto result = source->font(fontDescription, syntheticBold, syntheticItalic, fontCreationContext))
                 return result;
             break;

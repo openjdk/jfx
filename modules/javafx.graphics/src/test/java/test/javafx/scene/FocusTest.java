@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.javafx.scene;
 
-
 import com.sun.javafx.scene.SceneHelper;
 import javafx.event.Event;
 import javafx.event.EventTarget;
@@ -34,12 +33,6 @@ import javafx.scene.input.KeyEvent;
 import test.com.sun.javafx.pgstub.StubScene;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,9 +52,15 @@ import javafx.scene.input.TouchPoint;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class FocusTest {
 
@@ -72,7 +71,7 @@ public class FocusTest {
     private StubToolkit toolkit;
     private boolean actionTaken;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         stage = new Stage();
         scene = new Scene(new Group(), 500, 500);
@@ -85,7 +84,7 @@ public class FocusTest {
         toolkit = (StubToolkit) Toolkit.getToolkit();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         stage.hide();
         stage = null;
@@ -756,7 +755,7 @@ public class FocusTest {
         assertFalse(n2.isFocused());
     }
 
-    @Test public void shouldCancelInputMethodWhenLoosingFocus() {
+    @Test public void shouldCancelInputMethodWhenLosingFocus() {
         final Node n1 = n();
         final Node n2 = n();
         scene.setRoot(new Group(n1, n2));
@@ -1103,6 +1102,63 @@ public class FocusTest {
         assertNotFocusWithin(node2);
         assertNotFocusWithin(node3);
         assertNotFocusWithin(node4);
+    }
+
+    @Test public void testFocusWithinBitsAreSetOnParentsWhenAddedNodeIsAlreadyFocused() {
+        class N extends Group {
+            N(Node... children) { super(children); }
+            void _setFocused(boolean value) { setFocused(value); }
+        }
+
+        N node1, node2, node3 = new N();
+
+        scene.setRoot(
+            node1 = new N(
+                node2 = new N()
+            )
+        );
+
+        node3._setFocused(true);
+        assertNotFocusWithin(node1);
+        assertNotFocusWithin(node2);
+
+        node2.getChildren().add(node3);
+        assertIsFocusWithin(node1);
+        assertIsFocusWithin(node2);
+        assertIsFocusWithin(node3);
+    }
+
+    @Test public void testFocusWithinBitsAreSetAndClearedOnParentsOfNodeContainingMultipleFocuses() {
+        class N extends Group {
+            N(Node... children) { super(children); }
+            void _setFocused(boolean value) { setFocused(value); }
+        }
+
+        N node1, node2, node3, node4;
+
+        scene.setRoot(
+            node1 = new N(
+                node2 = new N()
+            )
+        );
+
+        node3 = new N(
+            node4 = new N()
+        );
+
+        node3._setFocused(true);
+        node4._setFocused(true);
+        assertNotFocusWithin(node1);
+        assertNotFocusWithin(node2);
+
+        node2.getChildren().add(node3);
+        assertIsFocusWithin(node1);
+        assertIsFocusWithin(node2);
+        assertIsFocusWithin(node3);
+
+        node2.getChildren().clear();
+        assertNotFocusWithin(node1);
+        assertNotFocusWithin(node2);
     }
 
 }

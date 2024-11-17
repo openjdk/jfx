@@ -32,6 +32,9 @@
 #include "GraphicsContext.h"
 #include "MathMLNames.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RoundedRect.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 
@@ -46,8 +49,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLMenclose);
 const unsigned short longDivLeftSpace = 10;
 
 RenderMathMLMenclose::RenderMathMLMenclose(MathMLMencloseElement& element, RenderStyle&& style)
-    : RenderMathMLRow(element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLMenclose, element, WTFMove(style))
 {
+    ASSERT(isRenderMathMLMenclose());
 }
 
 // This arbitrary thickness value is used for the parameter \xi_8 from the MathML in HTML5 implementation note.
@@ -341,7 +345,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
         ellipseRect.setX(m_contentRect.x() - (ellipseRect.width() - m_contentRect.width()) / 2);
         ellipseRect.setY(m_contentRect.y() - (ellipseRect.height() - m_contentRect.height()) / 2);
         Path path;
-        path.addEllipse(ellipseRect);
+        path.addEllipseInRect(ellipseRect);
         paintInfo.context().strokePath(path);
     }
 }

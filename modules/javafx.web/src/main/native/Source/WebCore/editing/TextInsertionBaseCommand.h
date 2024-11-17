@@ -35,11 +35,11 @@ class VisibleSelection;
 
 class TextInsertionBaseCommand : public CompositeEditCommand {
 public:
-    virtual ~TextInsertionBaseCommand() { };
+    virtual ~TextInsertionBaseCommand() { }
 
 protected:
-    explicit TextInsertionBaseCommand(Document&, EditAction = EditAction::Unspecified);
-    static void applyTextInsertionCommand(Frame*, TextInsertionBaseCommand&, const VisibleSelection& selectionForInsertion, const VisibleSelection& endingSelection);
+    explicit TextInsertionBaseCommand(Ref<Document>&&, EditAction = EditAction::Unspecified);
+    static void applyTextInsertionCommand(LocalFrame*, TextInsertionBaseCommand&, const VisibleSelection& selectionForInsertion, const VisibleSelection& endingSelection);
 };
 
 String dispatchBeforeTextInsertedEvent(const String& text, const VisibleSelection& selectionForInsertion, bool insertionIsForUpdatingComposition);

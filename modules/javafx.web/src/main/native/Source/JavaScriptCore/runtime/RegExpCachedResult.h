@@ -25,14 +25,15 @@
 
 #pragma once
 
-#include "Heap.h"
-#include "JSObject.h"
-#include "RegExp.h"
+#include "MatchResult.h"
+#include "SlotVisitorMacros.h"
+#include "WriteBarrier.h"
 
 namespace JSC {
 
 class JSArray;
 class JSString;
+class RegExp;
 
 // RegExpCachedResult is used to track the cached results of the last
 // match, stores on the RegExp constructor (e.g. $&, $_, $1, $2 ...).
@@ -45,14 +46,7 @@ class JSString;
 // m_reifiedResult and m_reifiedInput hold the cached results.
 class RegExpCachedResult {
 public:
-    ALWAYS_INLINE void record(VM& vm, JSObject* owner, RegExp* regExp, JSString* input, MatchResult result)
-    {
-        m_lastRegExp.setWithoutWriteBarrier(regExp);
-        m_lastInput.setWithoutWriteBarrier(input);
-        m_result = result;
-        m_reified = false;
-        vm.writeBarrier(owner);
-    }
+    inline void record(VM&, JSObject* owner, RegExp*, JSString* input, MatchResult);
 
     JSArray* lastResult(JSGlobalObject*, JSObject* owner);
     void setInput(JSGlobalObject*, JSObject* owner, JSString*);
@@ -73,6 +67,8 @@ public:
     static ptrdiff_t offsetOfLastInput() { return OBJECT_OFFSETOF(RegExpCachedResult, m_lastInput); }
     static ptrdiff_t offsetOfResult() { return OBJECT_OFFSETOF(RegExpCachedResult, m_result); }
     static ptrdiff_t offsetOfReified() { return OBJECT_OFFSETOF(RegExpCachedResult, m_reified); }
+
+    MatchResult result() const { return m_result; }
 
 private:
     MatchResult m_result { 0, 0 };

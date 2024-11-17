@@ -31,6 +31,7 @@ namespace WebCore {
 
 class RenderBlockFlow;
 class RenderBox;
+class FloatingObjects;
 
 template<typename, typename> class PODInterval;
 template<typename, typename> class PODIntervalTree;
@@ -42,11 +43,11 @@ public:
     enum Type { FloatLeft = 1, FloatRight = 2, FloatLeftRight = 3 };
 
     static std::unique_ptr<FloatingObject> create(RenderBox&);
-    std::unique_ptr<FloatingObject> copyToNewContainer(LayoutSize, bool shouldPaint = false, bool isDescendant = false) const;
+    std::unique_ptr<FloatingObject> copyToNewContainer(LayoutSize, bool shouldPaint = false, bool isDescendant = false, bool overflowClipped = false) const;
     std::unique_ptr<FloatingObject> cloneForNewParent() const;
 
     explicit FloatingObject(RenderBox&);
-    FloatingObject(RenderBox&, Type, const LayoutRect&, const LayoutSize&, bool shouldPaint, bool isDescendant);
+    FloatingObject(RenderBox&, Type, const LayoutRect&, const LayoutSize&, bool shouldPaint, bool isDescendant, bool overflowClipped);
 
     Type type() const { return static_cast<Type>(m_type); }
     RenderBox& renderer() const { ASSERT(m_renderer); return *m_renderer; }
@@ -64,7 +65,7 @@ public:
     void setX(LayoutUnit x) { ASSERT(!isInPlacedTree()); m_frameRect.setX(x); }
     void setY(LayoutUnit y) { ASSERT(!isInPlacedTree()); m_frameRect.setY(y); }
     void setWidth(LayoutUnit width) { ASSERT(!isInPlacedTree()); m_frameRect.setWidth(width); }
-    void setHeight(LayoutUnit height) { ASSERT(!isInPlacedTree() || isLowestPlacedFloatBottomInBlockFormattingContext()); m_frameRect.setHeight(height); }
+    void setHeight(LayoutUnit height) { ASSERT(!isInPlacedTree()); m_frameRect.setHeight(height); }
 
     void setMarginOffset(LayoutSize offset) { ASSERT(!isInPlacedTree()); m_marginOffset = offset; }
 
@@ -84,6 +85,8 @@ public:
     bool paintsFloat() const { return m_paintsFloat; }
     void setPaintsFloat(bool paintsFloat) { m_paintsFloat = paintsFloat; }
 
+    bool hasAncestorWithOverflowClip() const { return m_hasAncestorWithOverflowClip; }
+
     bool isDescendant() const { return m_isDescendant; }
     void setIsDescendant(bool isDescendant) { m_isDescendant = isDescendant; }
 
@@ -91,8 +94,6 @@ public:
     LegacyRootInlineBox* originatingLine() const { return m_originatingLine.get(); }
     void clearOriginatingLine() { m_originatingLine = nullptr; }
     void setOriginatingLine(LegacyRootInlineBox& line) { m_originatingLine = line; }
-
-    bool isLowestPlacedFloatBottomInBlockFormattingContext() const;
 
     LayoutSize locationOffsetOfBorderBox() const
     {
@@ -103,17 +104,20 @@ public:
     LayoutSize translationOffsetToAncestor() const;
 
 private:
-    WeakPtr<RenderBox> m_renderer;
+    friend FloatingObjects;
+
+    SingleThreadWeakPtr<RenderBox> m_renderer;
     WeakPtr<LegacyRootInlineBox> m_originatingLine;
     LayoutRect m_frameRect;
     LayoutUnit m_paginationStrut;
     LayoutSize m_marginOffset;
     unsigned m_type : 2; // Type (left or right aligned)
-    unsigned m_paintsFloat : 1;
-    unsigned m_isDescendant : 1;
-    unsigned m_isPlaced : 1;
+    unsigned m_paintsFloat : 1 { true };
+    unsigned m_isDescendant : 1 { false };
+    unsigned m_isPlaced : 1 { false };
+    unsigned m_hasAncestorWithOverflowClip : 1 { false };
 #if ASSERT_ENABLED
-    unsigned m_isInPlacedTree : 1;
+    unsigned m_isInPlacedTree : 1 { false };
 #endif
 };
 
@@ -121,17 +125,17 @@ private:
 // changed PtrHashBase to have all of its hash and equal functions bottleneck through single functions (as
 // is done here). That would allow us to only override those master hash and equal functions.
 struct FloatingObjectHashFunctions {
-    typedef std::unique_ptr<FloatingObject> T;
-    typedef typename WTF::GetPtrHelper<T>::PtrType PtrType;
+    using T = std::unique_ptr<FloatingObject>;
+    using PtrType = FloatingObject*;
 
-    static unsigned hash(PtrType key) { return PtrHash<RenderBox*>::hash(&key->renderer()); }
-    static bool equal(PtrType a, PtrType b) { return &a->renderer() == &b->renderer(); }
+    static unsigned hash(const FloatingObject* key) { return PtrHash<RenderBox*>::hash(&key->renderer()); }
+    static bool equal(const FloatingObject* a, const FloatingObject* b) { return &a->renderer() == &b->renderer(); }
     static const bool safeToCompareToEmptyOrDeleted = true;
 
     static unsigned hash(const T& key) { return hash(WTF::getPtr(key)); }
     static bool equal(const T& a, const T& b) { return equal(WTF::getPtr(a), WTF::getPtr(b)); }
-    static bool equal(PtrType a, const T& b) { return equal(a, WTF::getPtr(b)); }
-    static bool equal(const T& a, PtrType b) { return equal(WTF::getPtr(a), b); }
+    static bool equal(const FloatingObject* a, const T& b) { return equal(a, WTF::getPtr(b)); }
+    static bool equal(const T& a, const FloatingObject* b) { return equal(WTF::getPtr(a), b); }
 };
 struct FloatingObjectHashTranslator {
     static unsigned hash(const RenderBox& key) { return PtrHash<const RenderBox*>::hash(&key); }
@@ -145,7 +149,7 @@ typedef PODIntervalTree<LayoutUnit, FloatingObject*> FloatingObjectTree;
 
 // FIXME: This is really the same thing as FloatingObjectSet.
 // Change clients to use that set directly, and replace the moveAllToFloatInfoMap function with a takeSet function.
-typedef HashMap<RenderBox*, std::unique_ptr<FloatingObject>> RendererToFloatInfoMap;
+using RendererToFloatInfoMap = HashMap<SingleThreadWeakRef<RenderBox>, std::unique_ptr<FloatingObject>>;
 
 class FloatingObjects {
     WTF_MAKE_NONCOPYABLE(FloatingObjects); WTF_MAKE_FAST_ALLOCATED;
@@ -175,6 +179,8 @@ public:
     LayoutUnit findNextFloatLogicalBottomBelow(LayoutUnit logicalHeight);
     LayoutUnit findNextFloatLogicalBottomBelowForBlock(LayoutUnit logicalHeight);
 
+    void shiftFloatsBy(LayoutUnit blockShift);
+
 private:
     const RenderBlockFlow& renderer() const { ASSERT(m_renderer); return *m_renderer; }
     void computePlacedFloatsTree();
@@ -188,7 +194,7 @@ private:
     unsigned m_leftObjectsCount { 0 };
     unsigned m_rightObjectsCount { 0 };
     bool m_horizontalWritingMode { false };
-    WeakPtr<const RenderBlockFlow> m_renderer;
+    SingleThreadWeakPtr<const RenderBlockFlow> m_renderer;
 };
 
 #if ENABLE(TREE_DEBUGGING)

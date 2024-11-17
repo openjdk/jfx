@@ -27,10 +27,7 @@
 #include "Attribute.h"
 #include "CSSValueKeywords.h"
 #include "CachedImage.h"
-#include "DOMFormData.h"
-#include "ElementIterator.h"
-#include "ElementName.h"
-#include "Frame.h"
+#include "ElementChildIteratorInlines.h"
 #include "FrameLoader.h"
 #include "HTMLDocument.h"
 #include "HTMLFormElement.h"
@@ -38,9 +35,10 @@
 #include "HTMLMetaElement.h"
 #include "HTMLNames.h"
 #include "HTMLParamElement.h"
-#include "HTMLParserIdioms.h"
+#include "LocalFrame.h"
 #include "MIMETypeRegistry.h"
 #include "NodeList.h"
+#include "NodeName.h"
 #include "Page.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderImage.h"
@@ -100,26 +98,33 @@ void HTMLObjectElement::collectPresentationalHintsForAttribute(const QualifiedNa
         HTMLPlugInImageElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
-void HTMLObjectElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLObjectElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
+    HTMLPlugInImageElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+
     bool invalidateRenderer = false;
     bool needsWidgetUpdate = false;
 
-    if (name == typeAttr) {
-        m_serviceType = value.string().left(value.find(';')).convertToASCIILowercase();
+    switch (name.nodeName()) {
+    case AttributeNames::typeAttr:
+        m_serviceType = newValue.string().left(newValue.find(';')).convertToASCIILowercase();
         invalidateRenderer = !hasAttributeWithoutSynchronization(classidAttr);
         needsWidgetUpdate = true;
-    } else if (name == dataAttr) {
-        m_url = stripLeadingAndTrailingHTMLSpaces(value);
+        break;
+    case AttributeNames::dataAttr:
+        // FIXME: trimming whitespace is probably redundant with the URL parser
+        m_url = newValue.string().trim(isASCIIWhitespace);
         invalidateRenderer = !hasAttributeWithoutSynchronization(classidAttr);
         needsWidgetUpdate = true;
         updateImageLoaderWithNewURLSoon();
-    } else if (name == classidAttr) {
+        break;
+    case AttributeNames::classidAttr:
         invalidateRenderer = true;
         needsWidgetUpdate = true;
-    } else {
-        HTMLPlugInImageElement::parseAttribute(name, value);
-        FormListedElement::parseAttribute(name, value);
+        break;
+    default:
+        FormListedElement::parseAttribute(name, newValue);
+        break;
     }
 
     if (needsWidgetUpdate) {
@@ -151,92 +156,29 @@ static void mapDataParamToSrc(Vector<AtomString>& paramNames, Vector<AtomString>
     }
 }
 
-// FIXME: This function should not deal with url or serviceType!
-void HTMLObjectElement::parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues, String& url, String& serviceType)
+void HTMLObjectElement::parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues)
 {
-    HashSet<StringImpl*, ASCIICaseInsensitiveHash> uniqueParamNames;
-    String urlParameter;
-
-    // Scan the PARAM children and store their name/value pairs.
-    // Get the URL and type from the params if we don't already have them.
-    for (auto& param : childrenOfType<HTMLParamElement>(*this)) {
-        String name = param.name();
-        if (name.isEmpty())
-            continue;
-
-        uniqueParamNames.add(name.impl());
-        paramNames.append(param.name());
-        paramValues.append(param.value());
-
-        // FIXME: url adjustment does not belong in this function.
-        if (url.isEmpty() && urlParameter.isEmpty() && (equalLettersIgnoringASCIICase(name, "src"_s) || equalLettersIgnoringASCIICase(name, "movie"_s) || equalLettersIgnoringASCIICase(name, "code"_s) || equalLettersIgnoringASCIICase(name, "url"_s)))
-            urlParameter = stripLeadingAndTrailingHTMLSpaces(param.value());
-        // FIXME: serviceType calculation does not belong in this function.
-        if (serviceType.isEmpty() && equalLettersIgnoringASCIICase(name, "type"_s)) {
-            serviceType = param.value();
-            size_t pos = serviceType.find(';');
-            if (pos != notFound)
-                serviceType = serviceType.left(pos);
-        }
-    }
-
-    // When OBJECT is used for an applet via Sun's Java plugin, the CODEBASE attribute in the tag
-    // points to the Java plugin itself (an ActiveX component) while the actual applet CODEBASE is
-    // in a PARAM tag. See <http://java.sun.com/products/plugin/1.2/docs/tags.html>. This means
-    // we have to explicitly suppress the tag's CODEBASE attribute if there is none in a PARAM,
-    // else our Java plugin will misinterpret it. [4004531]
-    String codebase;
-    if (MIMETypeRegistry::isJavaAppletMIMEType(serviceType)) {
-        codebase = "codebase"_s;
-        uniqueParamNames.add(codebase.impl()); // pretend we found it in a PARAM already
-    }
-
-    // Turn the attributes of the <object> element into arrays, but don't override <param> values.
     if (hasAttributes()) {
         for (const Attribute& attribute : attributesIterator()) {
-            const AtomString& name = attribute.name().localName();
-            if (!uniqueParamNames.contains(name.impl())) {
-                paramNames.append(name);
+            paramNames.append(attribute.name().localName());
                 paramValues.append(attribute.value());
             }
         }
-    }
 
     mapDataParamToSrc(paramNames, paramValues);
-
-    // HTML5 says that an object resource's URL is specified by the object's data
-    // attribute, not by a param element. However, for compatibility, allow the
-    // resource's URL to be given by a param named "src", "movie", "code" or "url"
-    // if we know that resource points to a plug-in.
-
-    if (url.isEmpty() && !urlParameter.isEmpty()) {
-        auto& loader = document().frame()->loader().subframeLoader();
-        if (loader.resourceWillUsePlugin(urlParameter, serviceType))
-            url = urlParameter;
-    }
 }
 
 bool HTMLObjectElement::hasFallbackContent() const
 {
     for (RefPtr<Node> child = firstChild(); child; child = child->nextSibling()) {
         // Ignore whitespace-only text, and <param> tags, any other content is fallback content.
-        if (is<Text>(*child)) {
-            if (!downcast<Text>(*child).data().isAllSpecialCharacters<isHTMLSpace>())
+        if (auto* textChild = dynamicDowncast<Text>(*child)) {
+            if (!textChild->containsOnlyASCIIWhitespace())
                 return true;
         } else if (!is<HTMLParamElement>(*child))
             return true;
     }
     return false;
-}
-
-bool HTMLObjectElement::hasValidClassId()
-{
-    if (MIMETypeRegistry::isJavaAppletMIMEType(serviceType()) && protocolIs(attributeWithoutSynchronization(classidAttr), "java"_s))
-        return true;
-
-    // HTML5 says that fallback content should be rendered if a non-empty
-    // classid is specified for which the UA can't find a suitable plug-in.
-    return attributeWithoutSynchronization(classidAttr).isEmpty();
 }
 
 // FIXME: This should be unified with HTMLEmbedElement::updateWidget and
@@ -260,15 +202,12 @@ void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
         return;
     }
 
-    String url = this->url();
-    String serviceType = this->serviceType();
-
     // FIXME: These should be joined into a PluginParameters class.
     Vector<AtomString> paramNames;
     Vector<AtomString> paramValues;
-    parametersForPlugin(paramNames, paramValues, url, serviceType);
+    parametersForPlugin(paramNames, paramValues);
 
-    // Note: url is modified above by parametersForPlugin.
+    auto url = this->url();
     if (!canLoadURL(url)) {
         setNeedsWidgetUpdate(false);
         return;
@@ -276,6 +215,7 @@ void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
 
     // FIXME: It's unfortunate that we have this special case here.
     // See http://trac.webkit.org/changeset/25128 and the plugins/netscape-plugin-setwindow-size.html test.
+    auto serviceType = this->serviceType();
     if (createPlugins == CreatePlugins::No && wouldLoadAsPlugIn(url, serviceType))
         return;
 
@@ -283,9 +223,12 @@ void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
 
     Ref protectedThis = *this; // Plugin loading can make arbitrary DOM mutations.
 
+    // HTML5 says that fallback content should be rendered if a non-empty
+    // classid is specified for which the UA can't find a suitable plug-in.
+    //
     // Dispatching a beforeLoad event could have executed code that changed the document.
     // Make sure the URL is still safe to load.
-    bool success = hasValidClassId() && canLoadURL(url);
+    bool success = attributeWithoutSynchronization(classidAttr).isEmpty() && canLoadURL(url);
     if (success)
         success = requestObject(url, serviceType, paramNames, paramValues);
     if (!success && hasFallbackContent())
@@ -296,6 +239,8 @@ Node::InsertedIntoAncestorResult HTMLObjectElement::insertedIntoAncestor(Inserti
 {
     HTMLPlugInImageElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     FormListedElement::elementInsertedIntoAncestor(*this, insertionType);
+    if (!insertionType.connectedToDocument)
+        return InsertedIntoAncestorResult::Done;
     return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
 }
 
@@ -369,7 +314,6 @@ static inline bool preventsParentObjectFromExposure(const Element& child)
             // have decided, over the years, to treat as children that do not prevent object
             // names from being exposed.
             if (tag == bgsoundTag
-                || tag == commandTag
                 || tag == detailsTag
                 || tag == figcaptionTag
                 || tag == figureTag
@@ -386,10 +330,10 @@ static inline bool preventsParentObjectFromExposure(const Element& child)
 
 static inline bool preventsParentObjectFromExposure(const Node& child)
 {
-    if (is<Element>(child))
-        return preventsParentObjectFromExposure(downcast<Element>(child));
-    if (is<Text>(child))
-        return !downcast<Text>(child).data().isAllSpecialCharacters<isHTMLSpace>();
+    if (auto* childElement = dynamicDowncast<Element>(child))
+        return preventsParentObjectFromExposure(*childElement);
+    if (auto* childText = dynamicDowncast<Text>(child))
+        return !childText->containsOnlyASCIIWhitespace();
     return true;
 }
 
@@ -413,43 +357,25 @@ void HTMLObjectElement::updateExposedState()
 {
     bool wasExposed = std::exchange(m_isExposed, shouldBeExposed(*this));
 
-    if (m_isExposed != wasExposed && isConnected() && !isInShadowTree() && is<HTMLDocument>(document())) {
-        auto& document = downcast<HTMLDocument>(this->document());
-
+    if (m_isExposed != wasExposed && isConnected() && !isInShadowTree()) {
+        if (RefPtr document = dynamicDowncast<HTMLDocument>(this->document())) {
         auto& id = getIdAttribute();
         if (!id.isEmpty()) {
             if (m_isExposed)
-                document.addDocumentNamedItem(*id.impl(), *this);
+                    document->addDocumentNamedItem(id, *this);
             else
-                document.removeDocumentNamedItem(*id.impl(), *this);
+                    document->removeDocumentNamedItem(id, *this);
         }
 
         auto& name = getNameAttribute();
         if (!name.isEmpty() && id != name) {
             if (m_isExposed)
-                document.addDocumentNamedItem(*name.impl(), *this);
+                    document->addDocumentNamedItem(name, *this);
             else
-                document.removeDocumentNamedItem(*name.impl(), *this);
+                    document->removeDocumentNamedItem(name, *this);
+            }
         }
     }
-}
-
-bool HTMLObjectElement::containsJavaApplet() const
-{
-    if (MIMETypeRegistry::isJavaAppletMIMEType(attributeWithoutSynchronization(typeAttr)))
-        return true;
-
-    for (auto& child : childrenOfType<Element>(*this)) {
-        if (child.hasTagName(paramTag) && equalLettersIgnoringASCIICase(child.getNameAttribute(), "type"_s)
-            && MIMETypeRegistry::isJavaAppletMIMEType(child.attributeWithoutSynchronization(valueAttr).string()))
-            return true;
-        if (child.hasTagName(objectTag) && downcast<HTMLObjectElement>(child).containsJavaApplet())
-            return true;
-        if (child.hasTagName(appletTag))
-            return true;
-    }
-
-    return false;
 }
 
 void HTMLObjectElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const

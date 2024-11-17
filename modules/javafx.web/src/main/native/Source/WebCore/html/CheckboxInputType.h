@@ -34,24 +34,65 @@
 
 namespace WebCore {
 
+enum class WasSetByJavaScript : bool;
+
+enum class SwitchAnimationType : bool { VisuallyOn, Pressed };
+
 class CheckboxInputType final : public BaseCheckableInputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
+    static Ref<CheckboxInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new CheckboxInputType(element));
+    }
+
+    bool valueMissing(const String&) const final;
+    float switchAnimationVisuallyOnProgress() const;
+    bool isSwitchVisuallyOn() const;
+    float switchAnimationPressedProgress() const;
+
+private:
     explicit CheckboxInputType(HTMLInputElement& element)
         : BaseCheckableInputType(Type::Checkbox, element)
     {
     }
 
-    bool valueMissing(const String&) const final;
-
-private:
     const AtomString& formControlType() const final;
     String valueMissingText() const final;
+    void createShadowSubtree() final;
     void handleKeyupEvent(KeyboardEvent&) final;
+    void handleMouseDownEvent(MouseEvent&) final;
+    void handleMouseMoveEvent(MouseEvent&) final;
+// FIXME: It should not be iOS-specific, but it's not been tested with a non-iOS touch
+// implementation thus far.
+#if ENABLE(IOS_TOUCH_EVENTS)
+    void handleTouchEvent(TouchEvent&) final;
+#endif
+    void startSwitchPointerTracking(LayoutPoint, std::optional<unsigned> = std::nullopt);
+    void stopSwitchPointerTracking();
+    bool isSwitchPointerTracking() const;
     void willDispatchClick(InputElementClickState&) final;
     void didDispatchClick(Event&, const InputElementClickState&) final;
     bool matchesIndeterminatePseudoClass() const final;
-    bool shouldAppearIndeterminate() const final;
+    void willUpdateCheckedness(bool /* nowChecked */, WasSetByJavaScript);
+    void disabledStateChanged() final;
+    Seconds switchAnimationStartTime(SwitchAnimationType) const;
+    void setSwitchAnimationStartTime(SwitchAnimationType, Seconds);
+    bool isSwitchAnimating(SwitchAnimationType) const;
+    void performSwitchAnimation(SwitchAnimationType);
+    void stopSwitchAnimation(SwitchAnimationType);
+    float switchAnimationProgress(SwitchAnimationType) const;
+    void updateIsSwitchVisuallyOnFromAbsoluteLocation(LayoutPoint);
+    void switchAnimationTimerFired();
+
+    // FIXME: Consider moving all switch-related state (and methods?) to their own object so
+    // CheckboxInputType can stay somewhat small.
+    std::optional<int> m_switchPointerTrackingLogicalLeftPositionStart { std::nullopt };
+    bool m_hasSwitchVisuallyOnChanged { false };
+    bool m_isSwitchVisuallyOn { false };
+    Seconds m_switchAnimationVisuallyOnStartTime { 0_s };
+    Seconds m_switchAnimationPressedStartTime { 0_s };
+    std::unique_ptr<Timer> m_switchAnimationTimer;
+    std::optional<unsigned> m_switchPointerTrackingTouchIdentifier { std::nullopt };
 };
 
 } // namespace WebCore

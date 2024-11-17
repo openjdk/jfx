@@ -37,10 +37,11 @@ class CachedResource;
 class FragmentedSharedBuffer;
 
 struct ResourceCryptographicDigest {
-    enum class Algorithm {
+    static constexpr unsigned algorithmCount = 3;
+    enum class Algorithm : uint8_t {
         SHA256 = 1 << 0,
         SHA384 = 1 << 1,
-        SHA512 = 1 << 2,
+        SHA512 = 1 << (algorithmCount - 1),
     };
 
     // Number of bytes to hold SHA-512 digest
@@ -49,15 +50,7 @@ struct ResourceCryptographicDigest {
     Algorithm algorithm;
     Vector<uint8_t> value;
 
-    bool operator==(const ResourceCryptographicDigest& other) const
-    {
-        return algorithm == other.algorithm && value == other.value;
-    }
-
-    bool operator!=(const ResourceCryptographicDigest& other) const
-    {
-        return !(*this == other);
-    }
+    friend bool operator==(const ResourceCryptographicDigest&, const ResourceCryptographicDigest&) = default;
 };
 
 inline void add(Hasher& hasher, const ResourceCryptographicDigest& digest)

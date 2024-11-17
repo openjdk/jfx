@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Google Inc. All rights reserved.
+ * Copyright (C) 2023 Apple Inc. All right reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +33,7 @@
 
 #include "RenderRubyBase.h"
 
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderRubyRun.h"
 #include "RenderRubyText.h"
@@ -42,11 +44,12 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderRubyBase);
 
 RenderRubyBase::RenderRubyBase(Document& document, RenderStyle&& style)
-    : RenderBlockFlow(document, WTFMove(style))
+    : RenderBlockFlow(Type::RubyBase, document, WTFMove(style))
     , m_initialOffset(0)
     , m_isAfterExpansion(true)
 {
     setInline(false);
+    ASSERT(isRenderRubyBase());
 }
 
 RenderRubyBase::~RenderRubyBase() = default;
@@ -86,23 +89,23 @@ void RenderRubyBase::adjustInlineDirectionLineBounds(int expansionOpportunityCou
     logicalWidth -= inset;
 }
 
-void RenderRubyBase::cachePriorCharactersIfNeeded(const LazyLineBreakIterator& lineBreakIterator)
+void RenderRubyBase::cachePriorCharactersIfNeeded(const CachedLineBreakIteratorFactory& lineBreakIteratorFactory)
 {
     auto* run = rubyRun();
     if (run)
-        run->setCachedPriorCharacters(lineBreakIterator.lastCharacter(), lineBreakIterator.secondToLastCharacter());
+        run->setCachedPriorCharacters(lineBreakIteratorFactory.priorContext().lastCharacter(), lineBreakIteratorFactory.priorContext().secondToLastCharacter());
 }
 
 bool RenderRubyBase::isEmptyOrHasInFlowContent() const
 {
-    auto* firstChild = this->firstChild();
-    if (!firstChild || !is<RenderElement>(*firstChild))
+    auto* firstChild = dynamicDowncast<RenderElement>(this->firstChild());
+    if (!firstChild)
         return true;
 
     if (firstChild->isOutOfFlowPositioned())
         return false;
 
-    for (auto& child : childrenOfType<RenderObject>(*downcast<RenderElement>(firstChild))) {
+    for (auto& child : childrenOfType<RenderObject>(*firstChild)) {
         if (!child.isOutOfFlowPositioned())
             return true;
     }

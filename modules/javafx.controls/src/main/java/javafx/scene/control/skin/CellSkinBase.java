@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import javafx.scene.control.SkinBase;
  * as {@link javafx.scene.control.ListCell}, {@link javafx.scene.control.TreeCell},
  * etc.
  *
+ * @param <C> the type of the cell control
  * @see Cell
  * @since 9
  */

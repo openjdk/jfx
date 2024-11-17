@@ -33,8 +33,8 @@
 
 #if ENABLE(DATALIST_ELEMENT)
 
-#include "ElementIterator.h"
 #include "HTMLElement.h"
+#include "TypedElementDescendantIterator.h"
 
 namespace WebCore {
 
@@ -51,10 +51,13 @@ public:
     void optionElementChildrenChanged();
 
     static bool isSuggestion(const HTMLOptionElement& descendant);
-    auto suggestions() const { return filteredDescendants<HTMLOptionElement, isSuggestion>(*this); }
+    using SuggestionRange = FilteredElementDescendantRange<HTMLOptionElement, isSuggestion>;
+    SuggestionRange suggestions() const;
 
 private:
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
+
+    void childrenChanged(const ChildChange&) final;
 
     HTMLDataListElement(const QualifiedName&, Document&);
 };

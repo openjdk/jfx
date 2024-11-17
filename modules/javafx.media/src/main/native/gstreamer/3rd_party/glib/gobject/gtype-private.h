@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 1998-1999, 2000-2001 Tim Janik and Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -94,7 +96,8 @@ void        _g_closure_invoke_va (GClosure       *closure,
           GType          *param_types);
 
 gboolean    _g_object_has_signal_handler     (GObject     *object);
-void        _g_object_set_has_signal_handler (GObject     *object);
+void        _g_object_set_has_signal_handler (GObject     *object,
+                                              guint        signal_id);
 
 /**
  * _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE:

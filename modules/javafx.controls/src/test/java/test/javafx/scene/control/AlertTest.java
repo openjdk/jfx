@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,11 @@
  */
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import java.util.Locale;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -32,11 +37,8 @@ import javafx.scene.control.DialogShim;
 import javafx.scene.control.HeavyweightDialogShim;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import java.util.Locale;
-import org.junit.After;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Note that this class tests non-blocking alerts only. For blocking alerts,
@@ -57,7 +59,8 @@ public class AlertTest {
     private boolean closeVetoed = false;
     private Object result = DUMMY_RESULT;
 
-    @After public void cleanup() {
+    @AfterEach
+    public void cleanup() {
         if (dialog != null) {
             getStage(dialog).close();
             dialog = null;
@@ -92,7 +95,7 @@ public class AlertTest {
                         Platform.runLater(() -> getStage(dialog).close());
                     }
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    fail(e);
                 }
             }).start();
 

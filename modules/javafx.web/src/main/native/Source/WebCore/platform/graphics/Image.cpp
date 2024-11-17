@@ -35,6 +35,9 @@
 #include "Length.h"
 #include "MIMETypeRegistry.h"
 #include "SVGImage.h"
+#if !PLATFORM(JAVA)
+#include "ShareableBitmap.h"
+#endif
 #include "SharedBuffer.h"
 #include <math.h>
 #include <wtf/MainThread.h>
@@ -55,6 +58,30 @@ Image::Image(ImageObserver* observer)
 }
 
 Image::~Image() = default;
+
+RefPtr<ImageObserver> Image::imageObserver() const
+{
+    return m_imageObserver.get();
+}
+
+void Image::setImageObserver(RefPtr<ImageObserver>&& observer)
+{
+    m_imageObserver = observer.get();
+}
+
+ImageAdapter& Image::adapter()
+{
+    if (!m_adapter)
+        m_adapter = makeUnique<ImageAdapter>(*this);
+    return *m_adapter;
+}
+
+void Image::invalidateAdapter()
+{
+    if (!m_adapter)
+        return;
+    m_adapter->invalidate();
+}
 
 Image& Image::nullImage()
 {
@@ -86,6 +113,17 @@ RefPtr<Image> Image::create(ImageObserver& observer)
 
     return BitmapImage::create(&observer);
 }
+#if USE(CG)
+std::optional<Ref<Image>> Image::create(RefPtr<ShareableBitmap>&& bitmap)
+{
+    if (!bitmap)
+        return std::nullopt;
+    RefPtr image = bitmap->createImage();
+    if (!image)
+        return std::nullopt;
+    return image.releaseNonNull();
+}
+#endif
 
 bool Image::supportsType(const String& type)
 {
@@ -144,7 +182,7 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
     ctxt.setCompositeOperation(previousOperator);
 }
 
-void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,  const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
     auto tileImage = preTransformedNativeImageForCurrentFrame(options.orientation() == ImageOrientation::Orientation::FromImage);
     if (!tileImage)
@@ -152,11 +190,11 @@ void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const 
 
     ctxt.drawPattern(*tileImage, destRect, tileRect, patternTransform, phase, spacing, options);
 
-    if (imageObserver())
-        imageObserver()->didDraw(*this);
+    if (auto observer = imageObserver())
+        observer->didDraw(*this);
 }
 
-ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, const FloatSize& spacing, const ImagePaintingOptions& options)
+ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, const FloatSize& spacing, ImagePaintingOptions options)
 {
     Color color = singlePixelSolidColor();
     if (color.isValid()) {
@@ -262,7 +300,7 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
 }
 
 // FIXME: Merge with the other drawTiled eventually, since we need a combination of both for some things.
-ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, const ImagePaintingOptions& options)
+ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, ImagePaintingOptions options)
 {
     Color color = singlePixelSolidColor();
     if (color.isValid()) {
@@ -278,16 +316,17 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect
     bool centerOnGapVertically = false;
     switch (hRule) {
     case RoundTile: {
-        int numItems = std::max<int>(floorf(dstRect.width() / srcRect.width()), 1);
+        float scaledSourceWidth = srcRect.width() * tileScale.width();
+        int numItems = std::max<int>(floorf(dstRect.width() / scaledSourceWidth), 1);
         tileScale.setWidth(dstRect.width() / (srcRect.width() * numItems));
         break;
     }
     case SpaceTile: {
-        int numItems = floorf(dstRect.width() / srcRect.width());
+        float scaledSourceWidth = srcRect.width() * tileScale.width();
+        int numItems = floorf(dstRect.width() / scaledSourceWidth);
         if (!numItems)
             return ImageDrawResult::DidNothing;
-        spacing.setWidth((dstRect.width() - srcRect.width() * numItems) / (numItems + 1));
-        tileScale.setWidth(1);
+        spacing.setWidth((dstRect.width() - scaledSourceWidth * numItems) / (numItems + 1));
         centerOnGapHorizonally = !(numItems & 1);
         break;
     }
@@ -298,16 +337,17 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect
 
     switch (vRule) {
     case RoundTile: {
-        int numItems = std::max<int>(floorf(dstRect.height() / srcRect.height()), 1);
+        float scaledSourceHeight = srcRect.height() * tileScale.height();
+        int numItems = std::max<int>(floorf(dstRect.height() / scaledSourceHeight), 1);
         tileScale.setHeight(dstRect.height() / (srcRect.height() * numItems));
         break;
         }
     case SpaceTile: {
-        int numItems = floorf(dstRect.height() / srcRect.height());
+        float scaledSourceHeight = srcRect.height() * tileScale.height();
+        int numItems = floorf(dstRect.height() / scaledSourceHeight);
         if (!numItems)
             return ImageDrawResult::DidNothing;
-        spacing.setHeight((dstRect.height() - srcRect.height() * numItems) / (numItems + 1));
-        tileScale.setHeight(1);
+        spacing.setHeight((dstRect.height() - scaledSourceHeight * numItems) / (numItems + 1));
         centerOnGapVertically = !(numItems & 1);
         break;
     }
@@ -361,6 +401,18 @@ DestinationColorSpace Image::colorSpace()
 {
     return DestinationColorSpace::SRGB();
 }
+#if USE(CG)
+RefPtr<ShareableBitmap> Image::toShareableBitmap() const
+{
+    RefPtr bitmap = ShareableBitmap::create({ IntSize(size()) });
+    std::unique_ptr graphicsContext = bitmap->createGraphicsContext();
+    if (!graphicsContext)
+        return nullptr;
+
+    graphicsContext->drawImage(const_cast<Image&>(*this), IntPoint());
+    return bitmap;
+}
+#endif
 
 void Image::dump(TextStream& ts) const
 {
@@ -387,6 +439,8 @@ TextStream& operator<<(TextStream& ts, const Image& image)
         ts << "gradient image";
     else if (image.isSVGImage())
         ts << "svg image";
+    else if (image.isSVGResourceImage())
+        ts << "svg resource image";
     else if (image.isSVGImageForContainer())
         ts << "svg image for container";
     else if (image.isPDFDocumentImage())
@@ -396,17 +450,4 @@ TextStream& operator<<(TextStream& ts, const Image& image)
     return ts;
 }
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(JAVA)
-
-void BitmapImage::invalidatePlatformData()
-{
-}
-
-Ref<Image> Image::loadPlatformResource(const char* resource)
-{
-    WTFLogAlways("WARNING: trying to load platform resource '%s'", resource);
-    return BitmapImage::create();
-}
-
-#endif // !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN)
-}
+} // namespace WebCore

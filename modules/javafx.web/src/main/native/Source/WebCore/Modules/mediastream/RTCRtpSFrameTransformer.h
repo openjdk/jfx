@@ -38,7 +38,7 @@ class CryptoKey;
 
 class RTCRtpSFrameTransformer : public ThreadSafeRefCounted<RTCRtpSFrameTransformer, WTF::DestructionThread::Main> {
 public:
-    enum class CompatibilityMode { None, H264, VP8 };
+    enum class CompatibilityMode : uint8_t { None, H264, VP8 };
 
     WEBCORE_EXPORT static Ref<RTCRtpSFrameTransformer> create(CompatibilityMode = CompatibilityMode::None);
     WEBCORE_EXPORT ~RTCRtpSFrameTransformer();
@@ -49,14 +49,14 @@ public:
 
     WEBCORE_EXPORT ExceptionOr<void> setEncryptionKey(const Vector<uint8_t>& rawKey, std::optional<uint64_t>);
 
-    enum class Error { KeyID, Authentication, Syntax, Other };
+    enum class Error : uint8_t { KeyID, Authentication, Syntax, Other };
     struct ErrorInformation {
         Error error;
         String message;
         uint64_t keyId { 0 };
     };
     using TransformResult = Expected<Vector<uint8_t>, ErrorInformation>;
-    WEBCORE_EXPORT TransformResult transform(Span<const uint8_t>);
+    WEBCORE_EXPORT TransformResult transform(std::span<const uint8_t>);
 
     const Vector<uint8_t>& authenticationKey() const { return m_authenticationKey; }
     const Vector<uint8_t>& encryptionKey() const { return m_encryptionKey; }
@@ -71,10 +71,10 @@ public:
 private:
     WEBCORE_EXPORT explicit RTCRtpSFrameTransformer(CompatibilityMode);
 
-    TransformResult decryptFrame(Span<const uint8_t>);
-    TransformResult encryptFrame(Span<const uint8_t>);
+    TransformResult decryptFrame(std::span<const uint8_t>);
+    TransformResult encryptFrame(std::span<const uint8_t>);
 
-    enum class ShouldUpdateKeys { No, Yes };
+    enum class ShouldUpdateKeys : bool { No, Yes };
     ExceptionOr<void> updateEncryptionKey(const Vector<uint8_t>& rawKey, std::optional<uint64_t>, ShouldUpdateKeys = ShouldUpdateKeys::Yes) WTF_REQUIRES_LOCK(m_keyLock);
 
     ExceptionOr<Vector<uint8_t>> computeSaltKey(const Vector<uint8_t>&);

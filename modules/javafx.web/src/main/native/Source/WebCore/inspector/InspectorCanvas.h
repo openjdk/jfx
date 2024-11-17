@@ -28,11 +28,11 @@
 #include "InspectorCanvasCallTracer.h"
 #include <JavaScriptCore/AsyncStackTrace.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
-#include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/ScriptCallFrame.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <variant>
 #include <wtf/HashSet.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -53,12 +53,13 @@ public:
 
     const String& identifier() const { return m_identifier; }
 
-    CanvasRenderingContext& canvasContext() const { return m_context; }
+    const CanvasRenderingContext& canvasContext() const { return m_context.get(); }
+    CanvasRenderingContext& canvasContext() { return m_context.get(); }
     HTMLCanvasElement* canvasElement() const;
 
     ScriptExecutionContext* scriptExecutionContext() const;
 
-    JSC::JSValue resolveContext(JSC::JSGlobalObject*) const;
+    JSC::JSValue resolveContext(JSC::JSGlobalObject*);
 
     HashSet<Element*> clientNodes() const;
 
@@ -93,7 +94,8 @@ public:
     Ref<Inspector::Protocol::Canvas::Canvas> buildObjectForCanvas(bool captureBacktrace);
     Ref<Inspector::Protocol::Recording::Recording> releaseObjectForRecording();
 
-    String getCanvasContentAsDataURL(Inspector::Protocol::ErrorString&);
+    static Inspector::Protocol::ErrorStringOr<String> getContentAsDataURL(CanvasRenderingContext&);
+    Inspector::Protocol::ErrorStringOr<String> getContentAsDataURL() { return getContentAsDataURL(m_context); };
 
 private:
     explicit InspectorCanvas(CanvasRenderingContext&);
@@ -131,7 +133,7 @@ private:
 
     String m_identifier;
 
-    CanvasRenderingContext& m_context;
+    WeakRef<CanvasRenderingContext> m_context;
 
     RefPtr<Inspector::Protocol::Recording::InitialState> m_initialState;
     RefPtr<JSON::ArrayOf<Inspector::Protocol::Recording::Frame>> m_frames;

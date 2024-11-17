@@ -21,35 +21,37 @@
 #pragma once
 
 #include "CSSValue.h"
-#include "CSSValueKeywords.h"
-#include <wtf/Function.h>
-#include <wtf/Vector.h>
+#include <array>
+#include <unicode/umachine.h>
 
 namespace WebCore {
 
-using CSSValueListBuilder = Vector<Ref<CSSValue>, 4>;
+static constexpr size_t CSSValueListBuilderInlineCapacity = 4;
+using CSSValueListBuilder = Vector<Ref<CSSValue>, CSSValueListBuilderInlineCapacity>;
 
 class CSSValueContainingVector : public CSSValue {
 public:
-    // Remove these functions; use size() and operator[] instead.
-    size_t length() const { return m_values.size(); }
-    CSSValue* item(size_t index) { return index < m_values.size() ? m_values[index].ptr() : nullptr; }
-    const CSSValue* item(size_t index) const { return index < m_values.size() ? m_values[index].ptr() : nullptr; }
-    CSSValue* itemWithoutBoundsCheck(size_t index) { return m_values[index].ptr(); }
-    const CSSValue* itemWithoutBoundsCheck(size_t index) const { ASSERT(index < m_values.size()); return m_values[index].ptr(); }
+    unsigned size() const { return m_size; }
+    const CSSValue& operator[](unsigned index) const;
 
-    const CSSValue& operator[](size_t index) const { return m_values[index]; }
-    using const_iterator = CSSValueListBuilder::const_iterator;
-    using iterator = const_iterator;
-    iterator begin() const { return m_values.begin(); }
-    iterator end() const { return m_values.end(); }
-    size_t size() const { return m_values.size(); }
+    struct iterator {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = const CSSValue&;
+        using difference_type = ptrdiff_t;
+        using pointer = const CSSValue*;
+        using reference = const CSSValue&;
 
-    // FIXME: Remove these functions and instead always construct with a CSSValueListBuilder.
-    void append(Ref<CSSValue>&&);
-    void prepend(Ref<CSSValue>&&);
-    bool removeAll(CSSValue&);
-    bool removeAll(CSSValueID);
+        const CSSValue& operator*() const { return vector[index]; }
+        iterator& operator++() { ++index; return *this; }
+        constexpr bool operator==(const iterator& other) const { return index == other.index; }
+
+        const CSSValueContainingVector& vector;
+        unsigned index { 0 };
+    };
+    using const_iterator = iterator;
+
+    iterator begin() const { return { *this, 0 }; }
+    iterator end() const { return { *this, size() }; }
 
     bool hasValue(CSSValue&) const;
     bool hasValue(CSSValueID) const;
@@ -64,45 +66,88 @@ public:
     using CSSValue::separatorCSSText;
 
     bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
+    void customSetReplacementURLForSubresources(const HashMap<String, String>&);
+    void customClearReplacementURLForSubresources();
+
+    CSSValueListBuilder copyValues() const;
+
+    // Consider removing these functions and having callers use size() and operator[] instead.
+    unsigned length() const { return size(); }
+    const CSSValue* item(unsigned index) const { return index < size() ? &(*this)[index] : nullptr; }
+    RefPtr<const CSSValue> protectedItem(unsigned index) const { return item(index); }
+    const CSSValue* itemWithoutBoundsCheck(unsigned index) const { return &(*this)[index]; }
 
 protected:
+    friend bool CSSValue::addHash(Hasher&) const;
+
     CSSValueContainingVector(ClassType, ValueSeparator);
     CSSValueContainingVector(ClassType, ValueSeparator, CSSValueListBuilder);
+    CSSValueContainingVector(ClassType, ValueSeparator, Ref<CSSValue>);
+    CSSValueContainingVector(ClassType, ValueSeparator, Ref<CSSValue>, Ref<CSSValue>);
+    CSSValueContainingVector(ClassType, ValueSeparator, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
+    CSSValueContainingVector(ClassType, ValueSeparator, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
+    ~CSSValueContainingVector();
 
-    const CSSValueListBuilder& values() const { return m_values; }
+    bool addDerivedHash(Hasher&) const;
 
 private:
-    CSSValueListBuilder m_values;
+    unsigned m_size { 0 };
+    std::array<const CSSValue*, 4> m_inlineStorage;
+    const CSSValue** m_additionalStorage;
 };
 
 class CSSValueList : public CSSValueContainingVector {
 public:
-    static Ref<CSSValueList> createCommaSeparated();
-    static Ref<CSSValueList> createSpaceSeparated();
-    static Ref<CSSValueList> createSlashSeparated();
-    static Ref<CSSValueList> createCommaSeparated(CSSValueListBuilder);
-    static Ref<CSSValueList> createSpaceSeparated(CSSValueListBuilder);
-    static Ref<CSSValueList> createSlashSeparated(CSSValueListBuilder);
+    static Ref<CSSValueList> create(UChar separator, CSSValueListBuilder);
 
-    Ref<CSSValueList> copy();
+    static Ref<CSSValueList> createCommaSeparated(CSSValueListBuilder);
+    static Ref<CSSValueList> createCommaSeparated(Ref<CSSValue>); // FIXME: Upgrade callers to not use a list at all.
+
+    static Ref<CSSValueList> createSpaceSeparated(CSSValueListBuilder);
+    static Ref<CSSValueList> createSpaceSeparated(); // FIXME: Get rid of the caller that needs to create an empty list.
+    static Ref<CSSValueList> createSpaceSeparated(Ref<CSSValue>); // FIXME: Upgrade callers to not use a list at all.
+    static Ref<CSSValueList> createSpaceSeparated(Ref<CSSValue>, Ref<CSSValue>);
+    static Ref<CSSValueList> createSpaceSeparated(Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
+    static Ref<CSSValueList> createSpaceSeparated(Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
+
+    static Ref<CSSValueList> createSlashSeparated(CSSValueListBuilder);
+    static Ref<CSSValueList> createSlashSeparated(Ref<CSSValue>); // FIXME: Upgrade callers to not use a list at all.
+    static Ref<CSSValueList> createSlashSeparated(Ref<CSSValue>, Ref<CSSValue>);
 
     String customCSSText() const;
     bool equals(const CSSValueList&) const;
 
 private:
+    friend void add(Hasher&, const CSSValueList&);
+
     explicit CSSValueList(ValueSeparator);
     CSSValueList(ValueSeparator, CSSValueListBuilder);
+    CSSValueList(ValueSeparator, Ref<CSSValue>);
+    CSSValueList(ValueSeparator, Ref<CSSValue>, Ref<CSSValue>);
+    CSSValueList(ValueSeparator, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
+    CSSValueList(ValueSeparator, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
 };
 
-inline void CSSValueContainingVector::append(Ref<CSSValue>&& value)
+inline CSSValueContainingVector::~CSSValueContainingVector()
 {
-    m_values.append(WTFMove(value));
+    for (auto& value : *this)
+        value.deref();
+    if (m_size > m_inlineStorage.size())
+        fastFree(m_additionalStorage);
 }
 
-inline void CSSValueContainingVector::prepend(Ref<CSSValue>&& value)
+inline const CSSValue& CSSValueContainingVector::operator[](unsigned index) const
 {
-    m_values.insert(0, WTFMove(value));
+    unsigned maxInlineSize = m_inlineStorage.size();
+    if (index < maxInlineSize) {
+        ASSERT(index < m_size);
+        return *m_inlineStorage[index];
+    }
+    RELEASE_ASSERT(index < m_size);
+    return *m_additionalStorage[index - maxInlineSize];
 }
+
+void add(Hasher&, const CSSValueContainingVector&);
 
 } // namespace WebCore
 

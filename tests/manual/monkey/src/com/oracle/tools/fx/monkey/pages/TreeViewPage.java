@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,88 +24,170 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import javafx.geometry.Pos;
-import javafx.scene.Parent;
+import java.util.function.Supplier;
+import javafx.beans.property.ObjectProperty;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckBoxTreeItem;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.scene.layout.HBox;
+import javafx.scene.control.cell.CheckBoxTreeCell;
+import javafx.scene.control.cell.TextFieldTreeCell;
+import javafx.scene.control.skin.TreeViewSkin;
+import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.Loggers;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.ObjectOption;
+import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
+import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.ObjectSelector;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
- * Test code from CheckBoxTreeEditor, see https://bugs.openjdk.org/browse/JDK-8209017
- *
- * FIX don't see checkboxes for some reason!
+ * TreeView Page.
  */
-public class TreeViewPage extends TestPaneBase {
-    private TreeView<String> tree;
-    private int childNum;
+public class TreeViewPage extends TestPaneBase implements HasSkinnable {
+    private final TreeView<Object> control;
+    private int seq;
 
     public TreeViewPage() {
-        setId("TreeViewPage");
+        super("TreeViewPage");
+
+        control = new TreeView<>(new CheckBoxTreeItem<>("root")) {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
+        control.getRoot().setExpanded(true);
+        addChild(true, true);
+
+        control.setOnEditCommit((ev) -> {
+            TreeItem<Object> item = ev.getTreeItem();
+            item.setValue(ev.getNewValue());
+        });
 
         CheckBox indeterminate = new CheckBox("Indeterminate");
-        indeterminate.setId("indeterminate");
+        FX.name(indeterminate, "indeterminate");
 
         CheckBox selected = new CheckBox("Selected");
-        selected.setId("selected");
+        FX.name(selected, "selected");
 
-        Button add = new Button("Add");
-        add.setOnAction((ev) -> {
+        Button addButton = FX.button("Add", () -> {
             addChild(indeterminate.isSelected(), selected.isSelected());
         });
 
-        Button remove = new Button("Remove");
-        remove.setOnAction((ev) -> {
-            removeChild();
-        });
+        Button removeButton = FX.button("Remove", this::removeChild);
 
-        toolbar().addAll(
-            add,
-            remove,
-            indeterminate,
-            selected
-        );
+        OptionPane op = new OptionPane();
+        op.section("TreeView");
+        op.option("Cell Factory:", createCellFactoryOptions());
+        op.option(new BooleanOption("editable", "editable", control.editableProperty()));
+        op.option("Fixed Cell Size:", Options.fixedSizeOption("fixedCellSize", control.fixedCellSizeProperty()));
+        op.option("Focus Model:", createFocusModelOptions("focusModel", control.focusModelProperty()));
+        op.option("Root:", createRootOptions("root", control.rootProperty()));
+        op.option(Utils.buttons(addButton, removeButton));
+        op.option("Selection Model:", createSelectionModelOptions("selectionModel"));
+        op.option(new BooleanOption("showRoot", "show root", control.showRootProperty()));
+        op.separator();
+        op.option(indeterminate);
+        op.option(selected);
+        ControlPropertySheet.appendTo(op, control);
 
-        updatePane();
-    }
-
-    protected void updatePane() {
-        tree = new TreeView<>(new CheckBoxTreeItem<>("root"));
-
-        Button button = new Button("0");
-        tree.getRoot().setGraphic(button);
-        tree.getRoot().setExpanded(true);
-        tree.getSelectionModel().select(tree.getRoot());
-
-        // add children for initial setup as needed
-        addChild(true, true);
-
-        setContent(tree);
+        setContent(control);
+        setOptions(op);
     }
 
     private void addChild(boolean indeterminate, boolean selected) {
-        CheckBoxTreeItem<String> item = new CheckBoxTreeItem<>("child " + childNum++);
-        Button button = new Button("" + childNum);
-        item.setGraphic(button);
+        CheckBoxTreeItem<Object> item = new CheckBoxTreeItem<>("child " + seq++);
         item.setSelected(selected);
         item.setIndeterminate(indeterminate);
         item.setExpanded(true);
 
-        if (tree.getSelectionModel().getSelectedItem() != null) {
-            tree.getSelectionModel().getSelectedItem().getChildren().add(item);
+        if (control.getSelectionModel().getSelectedItem() != null) {
+            control.getSelectionModel().getSelectedItem().getChildren().add(item);
         }
     }
 
     private void removeChild() {
-        TreeItem<String> sel = tree.getSelectionModel().getSelectedItem();
+        TreeItem<Object> sel = control.getSelectionModel().getSelectedItem();
         if (sel != null) {
-            TreeItem<String> parent = sel.getParent();
+            TreeItem<Object> parent = sel.getParent();
             if (parent != null) {
                 parent.getChildren().remove(sel);
             }
         }
+    }
+
+    private Node createFocusModelOptions(String name, ObjectProperty<FocusModel<TreeItem<Object>>> p) {
+        var original = p.get();
+        ObjectOption<FocusModel<TreeItem<Object>>> s = new ObjectOption<>(name, p);
+        s.addChoice("<default>", original);
+        s.addChoice("<null>", null);
+        s.selectFirst();
+        return s;
+    }
+
+    private Supplier<TreeItem<Object>> mk(int count) {
+        return () -> {
+            TreeItem<Object> root = new TreeItem<>("ROOT");
+            for (int i = 0; i < count; i++) {
+                root.getChildren().add(new TreeItem<>(String.valueOf("Item_" + (seq++))));
+            }
+            return root;
+        };
+    }
+
+    private Node createRootOptions(String name, ObjectProperty<TreeItem<Object>> p) {
+        ObjectOption<TreeItem<Object>> s = new ObjectOption(name, p);
+        s.addChoiceSupplier("1 Row", mk(1));
+        s.addChoiceSupplier("10 Rows", mk(10));
+        s.addChoiceSupplier("1,000 Rows", mk(1_000));
+        s.addChoice("<null>", null);
+        return s;
+    }
+
+    private Node createCellFactoryOptions() {
+        var original = control.getCellFactory();
+        ObjectOption<Callback> s = new ObjectOption("cellFactory", control.cellFactoryProperty());
+        s.addChoice("<default>", original);
+        s.addChoiceSupplier("CheckBoxTreeCell", () -> CheckBoxTreeCell.<Object>forTreeView());
+        s.addChoiceSupplier("TextFieldTreeCell", () -> TextFieldTreeCell.forTreeView());
+        s.addChoice("<null>", null);
+        s.selectFirst();
+        return s;
+    }
+
+    private Node createSelectionModelOptions(String name) {
+        var original = control.getSelectionModel();
+        ObjectSelector<Boolean> s = new ObjectSelector<>(name, (v) -> {
+            control.setSelectionModel(v == null ? null : original);
+            original.setSelectionMode(Boolean.TRUE.equals(v) ? SelectionMode.MULTIPLE : SelectionMode.SINGLE);
+        });
+        s.addChoice("Single", Boolean.FALSE);
+        s.addChoice("Multiple", Boolean.TRUE);
+        s.addChoice("<null>", null);
+        s.selectFirst();
+        return s;
+    }
+
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new TreeViewSkin(control));
     }
 }

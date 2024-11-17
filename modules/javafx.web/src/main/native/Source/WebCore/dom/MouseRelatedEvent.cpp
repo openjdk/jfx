@@ -23,11 +23,13 @@
 #include "config.h"
 #include "MouseRelatedEvent.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
-#include "Frame.h"
-#include "FrameView.h"
+#include "DocumentInlines.h"
+#include "EventNames.h"
 #include "LayoutPoint.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "RenderLayer.h"
 #include "RenderObject.h"
 #include <wtf/IsoMallocInlines.h>
@@ -64,18 +66,31 @@ MouseRelatedEvent::MouseRelatedEvent(const AtomString& eventType, const MouseRel
     init(false, IntPoint(0, 0));
 }
 
+static inline bool isMoveEventType(const AtomString& eventType)
+{
+    auto& eventNames = WebCore::eventNames();
+    return eventType == eventNames.mousemoveEvent
+        || eventType == eventNames.pointermoveEvent
+        || eventType == eventNames.touchmoveEvent;
+}
+
 void MouseRelatedEvent::init(bool isSimulated, const IntPoint& windowLocation)
 {
     if (!isSimulated) {
-        if (auto* frameView = frameViewFromWindowProxy(view())) {
+        if (RefPtr frameView = frameViewFromWindowProxy(view())) {
             FloatPoint absolutePoint = frameView->windowToContents(windowLocation);
             FloatPoint documentPoint = frameView->absoluteToDocumentPoint(absolutePoint);
             m_pageLocation = flooredLayoutPoint(documentPoint);
-            m_clientLocation = pagePointToClientPoint(m_pageLocation, frameView);
+            m_clientLocation = pagePointToClientPoint(m_pageLocation, frameView.get());
         }
     }
 
     initCoordinates();
+
+    if (!isConstructedFromInitializer() && !isMoveEventType(type())) {
+        m_movementX = 0;
+        m_movementY = 0;
+    }
 }
 
 void MouseRelatedEvent::initCoordinates()
@@ -89,16 +104,20 @@ void MouseRelatedEvent::initCoordinates()
     m_hasCachedRelativePosition = false;
 }
 
-FrameView* MouseRelatedEvent::frameViewFromWindowProxy(WindowProxy* windowProxy)
+LocalFrameView* MouseRelatedEvent::frameViewFromWindowProxy(WindowProxy* windowProxy)
 {
-    if (!windowProxy || !is<DOMWindow>(windowProxy->window()))
+    if (!windowProxy)
         return nullptr;
 
-    auto* frame = downcast<DOMWindow>(*windowProxy->window()).frame();
+    auto* window = dynamicDowncast<LocalDOMWindow>(windowProxy->window());
+    if (!window)
+        return nullptr;
+
+    auto* frame = window->frame();
     return frame ? frame->view() : nullptr;
 }
 
-LayoutPoint MouseRelatedEvent::pagePointToClientPoint(LayoutPoint pagePoint, FrameView* frameView)
+LayoutPoint MouseRelatedEvent::pagePointToClientPoint(LayoutPoint pagePoint, LocalFrameView* frameView)
 {
     if (!frameView)
         return pagePoint;
@@ -106,7 +125,7 @@ LayoutPoint MouseRelatedEvent::pagePointToClientPoint(LayoutPoint pagePoint, Fra
     return flooredLayoutPoint(frameView->documentToClientPoint(pagePoint));
 }
 
-LayoutPoint MouseRelatedEvent::pagePointToAbsolutePoint(LayoutPoint pagePoint, FrameView* frameView)
+LayoutPoint MouseRelatedEvent::pagePointToAbsolutePoint(LayoutPoint pagePoint, LocalFrameView* frameView)
 {
     if (!frameView)
         return pagePoint;
@@ -119,7 +138,7 @@ void MouseRelatedEvent::initCoordinates(const LayoutPoint& clientLocation)
     // Set up initial values for coordinates.
     // Correct values are computed lazily, see computeRelativePosition.
     FloatSize documentToClientOffset;
-    if (auto* frameView = frameViewFromWindowProxy(view()))
+    if (RefPtr frameView = frameViewFromWindowProxy(view()))
         documentToClientOffset = frameView->documentToClientOffset();
 
     m_clientLocation = clientLocation;
@@ -134,7 +153,7 @@ void MouseRelatedEvent::initCoordinates(const LayoutPoint& clientLocation)
 
 float MouseRelatedEvent::documentToAbsoluteScaleFactor() const
 {
-    if (auto* frameView = frameViewFromWindowProxy(view()))
+    if (RefPtr frameView = frameViewFromWindowProxy(view()))
         return frameView->documentToAbsoluteScaleFactor();
 
     return 1;
@@ -152,20 +171,20 @@ void MouseRelatedEvent::receivedTarget()
 
 void MouseRelatedEvent::computeRelativePosition()
 {
-    if (!is<Node>(target()))
+    RefPtr targetNode = dynamicDowncast<Node>(target());
+    if (!targetNode)
         return;
-    auto& targetNode = downcast<Node>(*target());
 
     // Compute coordinates that are based on the target.
     m_layerLocation = m_pageLocation;
     m_offsetLocation = m_pageLocation;
 
     // Must have an updated render tree for this math to work correctly.
-    targetNode.document().updateLayoutIgnorePendingStylesheets();
+    targetNode->protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
     // Adjust offsetLocation to be relative to the target's position.
-    if (RenderObject* r = targetNode.renderer()) {
-        m_offsetLocation = LayoutPoint(r->absoluteToLocal(absoluteLocation(), UseTransforms));
+    if (CheckedPtr renderer = targetNode->renderer()) {
+        m_offsetLocation = LayoutPoint(renderer->absoluteToLocal(absoluteLocation(), UseTransforms));
         float scaleFactor = 1 / documentToAbsoluteScaleFactor();
         if (scaleFactor != 1.0f)
             m_offsetLocation.scale(scaleFactor);
@@ -175,12 +194,12 @@ void MouseRelatedEvent::computeRelativePosition()
     // FIXME: event.layerX and event.layerY are poorly defined,
     // and probably don't always correspond to RenderLayer offsets.
     // https://bugs.webkit.org/show_bug.cgi?id=21868
-    Node* n = &targetNode;
-    while (n && !n->renderer())
-        n = n->parentNode();
+    RefPtr node = WTFMove(targetNode);
+    while (node && !node->renderer())
+        node = node->parentNode();
 
     RenderLayer* layer;
-    if (n && (layer = n->renderer()->enclosingLayer())) {
+    if (node && (layer = node->renderer()->enclosingLayer())) {
         for (; layer; layer = layer->parent()) {
             m_layerLocation -= toLayoutSize(layer->location());
         }
@@ -191,7 +210,7 @@ void MouseRelatedEvent::computeRelativePosition()
 
 FloatPoint MouseRelatedEvent::locationInRootViewCoordinates() const
 {
-    if (auto* frameView = frameViewFromWindowProxy(view()))
+    if (RefPtr frameView = frameViewFromWindowProxy(view()))
         return frameView->contentsToRootView(roundedIntPoint(m_absoluteLocation));
 
     return m_absoluteLocation;
@@ -242,20 +261,6 @@ int MouseRelatedEvent::pageY() const
 const LayoutPoint& MouseRelatedEvent::pageLocation() const
 {
     return m_pageLocation;
-}
-
-int MouseRelatedEvent::x() const
-{
-    // FIXME: This is not correct.
-    // See Microsoft documentation and <http://www.quirksmode.org/dom/w3c_events.html>.
-    return m_clientLocation.x();
-}
-
-int MouseRelatedEvent::y() const
-{
-    // FIXME: This is not correct.
-    // See Microsoft documentation and <http://www.quirksmode.org/dom/w3c_events.html>.
-    return m_clientLocation.y();
 }
 
 } // namespace WebCore

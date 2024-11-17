@@ -64,27 +64,18 @@ private:
     const char* m_string;
 };
 
-template<typename... Types>
 class LazyFireDetail final : public FireDetail {
 public:
-    LazyFireDetail(const Types&... args)
+    LazyFireDetail(ScopedLambda<void(PrintStream&)>& lambda)
+        : m_lambda(lambda)
     {
-        m_lambda = scopedLambda<void(PrintStream&)>([&] (PrintStream& out) {
-            out.print(args...);
-        });
     }
 
     void dump(PrintStream& out) const final { m_lambda(out); }
 
 private:
-    ScopedLambda<void(PrintStream&)> m_lambda;
+    ScopedLambda<void(PrintStream&)>& m_lambda;
 };
-
-template<typename... Types>
-LazyFireDetail<Types...> createLazyFireDetail(const Types&... types)
-{
-    return LazyFireDetail<Types...>(types...);
-}
 
 class WatchpointSet;
 
@@ -120,7 +111,7 @@ class WatchpointSet;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Watchpoint);
 
-class Watchpoint : public PackedRawSentinelNode<Watchpoint> {
+class Watchpoint : public BasicRawSentinelNode<Watchpoint> {
     WTF_MAKE_NONCOPYABLE(Watchpoint);
     WTF_MAKE_NONMOVABLE(Watchpoint);
     WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Watchpoint);
@@ -283,7 +274,7 @@ private:
     int8_t m_state;
     int8_t m_setIsNotEmpty;
 
-    SentinelLinkedList<Watchpoint, PackedRawSentinelNode<Watchpoint>> m_set;
+    SentinelLinkedList<Watchpoint, BasicRawSentinelNode<Watchpoint>> m_set;
 };
 
 // InlineWatchpointSet is a low-overhead, non-copyable watchpoint set in which
@@ -509,8 +500,6 @@ protected:
     WatchpointSet& watchpointsToFire() { return m_watchpointsToFire; }
 
 private:
-    JS_EXPORT_PRIVATE void fireAllSlow();
-
     WatchpointSet m_watchpointsToFire;
 };
 

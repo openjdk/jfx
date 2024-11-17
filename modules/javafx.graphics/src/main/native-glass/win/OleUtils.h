@@ -142,6 +142,7 @@ inline void raise_error_empty(HRESULT hr) { }
 
 #define OLE_RETURN_SUCCESS return SUCCEEDED(_hr_);
 #define OLE_RETURN_HR      return _hr_;
+#define OLE_RETURN_HR_IF_FAILED if (FAILED(_hr_)) OLE_RETURN_HR
 #define OLE_HR             _hr_
 
 #define E_JAVAEXCEPTION  MAKE_HRESULT(SEVERITY_ERROR, 0xDE, 1)

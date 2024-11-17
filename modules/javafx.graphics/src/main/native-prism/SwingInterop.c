@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,14 +24,15 @@
  */
 
 #include <jni.h>
+#include "com_sun_glass_ui_Application.h"
 
 /*
- * Class com_sun_javafx_embed_swing_newimpl_SwingNodeInteropN
- * Method: overrideNativeWindowHandle
- * Signature (Ljava/lang/Class;JLjava/lang/Runnable)Ljdk.swing.interop.LightweightFrameWrapper;
+ * Class com_sun_glass_ui_Application
+ * Method: _overrideNativeWindowHandle
+ * Signature (Ljava/lang/Class;Ljava/lang/Object;JLjava/lang/Runnable;)V
  */
 JNIEXPORT void JNICALL
-Java_com_sun_javafx_embed_swing_newimpl_SwingNodeInteropN_overrideNativeWindowHandle(
+Java_com_sun_glass_ui_Application__1overrideNativeWindowHandle(
  JNIEnv *env, jclass cls, jclass lwFrameClass, jobject lwFrame, jlong id, jobject runnable) {
 
     jmethodID cons;

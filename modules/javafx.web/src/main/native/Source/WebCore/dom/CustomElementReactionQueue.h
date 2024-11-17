@@ -27,9 +27,12 @@
 
 #include "CustomElementFormValue.h"
 #include "GCReachableRef.h"
+#include "QualifiedName.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
+#include <wtf/text/AtomString.h>
 
 namespace JSC {
 
@@ -40,33 +43,78 @@ class CallFrame;
 
 namespace WebCore {
 
-class CustomElementReactionQueueItem;
+class CustomElementQueue;
 class Document;
 class Element;
 class HTMLFormElement;
 class JSCustomElementInterface;
-class QualifiedName;
+
+class CustomElementReactionQueueItem {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(CustomElementReactionQueueItem);
+public:
+    enum class Type : uint8_t {
+        Invalid,
+        ElementUpgrade,
+        Connected,
+        Disconnected,
+        Adopted,
+        AttributeChanged,
+        FormAssociated,
+        FormReset,
+        FormDisabled,
+        FormStateRestore,
+    };
+
+    struct AdoptedPayload {
+        Ref<Document> oldDocument;
+        Ref<Document> newDocument;
+        ~AdoptedPayload();
+    };
+
+    struct FormAssociatedPayload {
+        RefPtr<HTMLFormElement> form;
+        ~FormAssociatedPayload();
+    };
+
+    using AttributeChangedPayload = std::tuple<QualifiedName, AtomString, AtomString>;
+    using FormDisabledPayload = bool;
+    using FormStateRestorePayload = CustomElementFormValue;
+    using Payload = std::optional<std::variant<AdoptedPayload, AttributeChangedPayload, FormAssociatedPayload, FormDisabledPayload, FormStateRestorePayload>>;
+
+    CustomElementReactionQueueItem();
+    CustomElementReactionQueueItem(CustomElementReactionQueueItem&&);
+    CustomElementReactionQueueItem(Type, Payload = std::nullopt);
+    ~CustomElementReactionQueueItem();
+    Type type() const { return m_type; }
+    void invoke(Element&, JSCustomElementInterface&);
+
+private:
+    Type m_type { Type::Invalid };
+    Payload m_payload;
+};
 
 // https://html.spec.whatwg.org/multipage/custom-elements.html#element-queue
 class CustomElementQueue {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(CustomElementQueue);
 public:
-    CustomElementQueue() = default;
+    CustomElementQueue();
+    WEBCORE_EXPORT ~CustomElementQueue();
 
     void add(Element&);
     void processQueue(JSC::JSGlobalObject*);
 
-    Vector<GCReachableRef<Element>> takeElements();
+    Vector<GCReachableRef<Element>, 4> takeElements();
 
 private:
     void invokeAll();
 
-    Vector<GCReachableRef<Element>> m_elements;
+    Vector<GCReachableRef<Element>, 4> m_elements;
     bool m_invoking { false };
 };
 
-class CustomElementReactionQueue {
+class CustomElementReactionQueue : public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(CustomElementReactionQueue);
 public:
@@ -109,7 +157,7 @@ private:
     using Item = CustomElementReactionQueueItem;
 
     Ref<JSCustomElementInterface> m_interface;
-    Vector<Item> m_items;
+    Vector<Item, 1> m_items;
     bool m_elementInternalsAttached { false };
 };
 
@@ -181,12 +229,12 @@ public:
         s_currentProcessingStack = m_previousProcessingStack;
     }
 
-    Vector<GCReachableRef<Element>> takeElements();
+    Vector<GCReachableRef<Element>, 4> takeElements();
 
 private:
     WEBCORE_EXPORT void processQueue(JSC::JSGlobalObject*);
 
-    CustomElementQueue* m_queue { nullptr }; // Use raw pointer to avoid generating delete in the destructor.
+    std::unique_ptr<CustomElementQueue> m_queue;
     CustomElementReactionStack* const m_previousProcessingStack;
     JSC::JSGlobalObject* const m_state;
 

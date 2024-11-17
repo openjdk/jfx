@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
+import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -50,6 +51,7 @@ import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
+import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.*;
@@ -88,9 +90,9 @@ import com.sun.javafx.logging.PlatformLogger.Level;
 import java.io.File;
 import java.security.AccessControlContext;
 import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 
 import com.sun.javafx.logging.PulseLogger;
 
@@ -397,8 +399,8 @@ public class Scene implements EventTarget {
                         }
 
                         @Override
-                        public void processKeyEvent(Scene scene, KeyEvent e) {
-                            scene.processKeyEvent(e);
+                        public boolean processKeyEvent(Scene scene, KeyEvent e) {
+                            return scene.processKeyEvent(e);
                         }
 
                         @Override
@@ -1299,7 +1301,7 @@ public class Scene implements EventTarget {
 
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
     // we might be doing a Node snapshot with a null scene
-    static WritableImage doSnapshot(Scene scene,
+    static WritableImage doSnapshot(Scene scene, SubScene subScene,
             double x, double y, double w, double h,
             Node root, BaseTransform transform, boolean depthBuffer,
             Paint fill, Camera camera, WritableImage wimg) {
@@ -1345,14 +1347,15 @@ public class Scene implements EventTarget {
             context.camera = null;
         }
 
-        // Grab the lights from the scene
-        context.lights = null;
-        if (scene != null && !scene.lights.isEmpty()) {
-            context.lights = new NGLightBase[scene.lights.size()];
-            for (int i = 0; i < scene.lights.size(); i++) {
-                context.lights[i] = scene.lights.get(i).getPeer();
-            }
+        // Grab the lights from the scene or subscene
+        Stream<NGLightBase> lights;
+        if (subScene != null) {
+            lights = Optional.of(subScene).stream().flatMap(s -> s.getLights().stream()).map(LightBase::getPeer);
+        } else {
+            lights = Optional.ofNullable(scene).stream().flatMap(s -> s.lights.stream()).map(LightBase::getPeer);
         }
+
+        context.lights = lights.toArray(NGLightBase[]::new);
 
         Toolkit.WritableImageAccessor accessor = Toolkit.getWritableImageAccessor();
         context.platformImage = accessor.getTkImageLoader(wimg);
@@ -1393,7 +1396,7 @@ public class Scene implements EventTarget {
         double h = getHeight();
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
-        return doSnapshot(this, 0, 0, w, h,
+        return doSnapshot(this, null, 0, 0, w, h,
                 getRoot(), transform, isDepthBufferInternal(),
                 getFill(), getEffectiveCamera(), img);
     }
@@ -1405,7 +1408,6 @@ public class Scene implements EventTarget {
     private static List<Runnable> snapshotRunnableListB;
     private static List<Runnable> snapshotRunnableList;
 
-    @SuppressWarnings("removal")
     static void addSnapshotRunnable(final Runnable runnable) {
         Toolkit.getToolkit().checkFxUserThread();
 
@@ -1439,13 +1441,7 @@ public class Scene implements EventTarget {
             Toolkit.getToolkit().addPostSceneTkPulseListener(snapshotPulseListener);
         }
 
-        final AccessControlContext acc = AccessController.getContext();
-        snapshotRunnableList.add(() -> {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                runnable.run();
-                return null;
-            }, acc);
-        });
+        snapshotRunnableList.add(runnable);
         Toolkit.getToolkit().requestNextPulse();
     }
 
@@ -2178,7 +2174,7 @@ public class Scene implements EventTarget {
         traverse(node, Direction.NEXT, TraversalMethod.DEFAULT);
     }
 
-    void processKeyEvent(KeyEvent e) {
+    boolean processKeyEvent(KeyEvent e) {
         if (dndGesture != null) {
             if (!dndGesture.processKey(e)) {
                 dndGesture = null;
@@ -2189,9 +2185,11 @@ public class Scene implements EventTarget {
         final EventTarget eventTarget =
                 (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner : Scene.this;
 
+        if (eventTarget == null) return false;
+
         // send the key event to the current focus owner or to scene if
         // the focus owner is not set
-        Event.fireEvent(eventTarget, e);
+        return EventUtil.fireEvent(eventTarget, e) == null;
     }
 
     void requestFocus(Node node, boolean focusVisible) {
@@ -2710,9 +2708,9 @@ public class Scene implements EventTarget {
 
 
         @Override
-        public void keyEvent(KeyEvent keyEvent)
+        public boolean keyEvent(KeyEvent keyEvent)
         {
-            processKeyEvent(keyEvent);
+            return processKeyEvent(keyEvent);
         }
 
         @Override
@@ -6238,13 +6236,20 @@ public class Scene implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
-    @SuppressWarnings("removal")
     private static final NodeOrientation defaultNodeOrientation =
-        AccessController.doPrivileged(
-                (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL")) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
+        Boolean.getBoolean("javafx.scene.nodeOrientation.RTL") ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
 
-
-
+    /**
+     * Node orientation describes the flow of visual data within a node.
+     * In the English speaking world, visual data normally flows from
+     * left-to-right. In an Arabic or Hebrew world, visual data flows
+     * from right-to-left. This is consistent with the reading order
+     * of text in both worlds.
+     *
+     * @defaultValue if the system property {@code javafx.scene.nodeOrientation.RTL} is {@code true},
+     *     {@code NodeOrientation.RIGHT_TO_LEFT}, otherwise {@code NodeOrientation.INHERIT}
+     * @since JavaFX 8.0
+     */
     private ObjectProperty<NodeOrientation> nodeOrientation;
     private EffectiveOrientationProperty effectiveNodeOrientationProperty;
 
@@ -6258,19 +6263,6 @@ public class Scene implements EventTarget {
         return nodeOrientation == null ? defaultNodeOrientation : nodeOrientation.get();
     }
 
-    /**
-     * Property holding NodeOrientation.
-     * <p>
-     * Node orientation describes the flow of visual data within a node.
-     * In the English speaking world, visual data normally flows from
-     * left-to-right. In an Arabic or Hebrew world, visual data flows
-     * from right-to-left.  This is consistent with the reading order
-     * of text in both worlds.  The default value is left-to-right.
-     * </p>
-     *
-     * @return NodeOrientation
-     * @since JavaFX 8.0
-     */
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(defaultNodeOrientation) {
@@ -6348,6 +6340,8 @@ public class Scene implements EventTarget {
                 Window parent = null;
                 if (window instanceof Stage) {
                     parent = ((Stage)window).getOwner();
+                } else if (window instanceof EmbeddedWindow win) {
+                    return win.getNodeOrientation();
                 } else {
                     if (window instanceof PopupWindow) {
                         parent = ((PopupWindow)window).getOwnerWindow();

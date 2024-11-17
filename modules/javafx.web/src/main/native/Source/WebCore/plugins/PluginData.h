@@ -53,12 +53,9 @@ struct MimeClassInfo {
     AtomString type;
     String desc;
     Vector<String> extensions;
-};
 
-inline bool operator==(const MimeClassInfo& a, const MimeClassInfo& b)
-{
-    return a.type == b.type && a.desc == b.desc && a.extensions == b.extensions;
-}
+    friend bool operator==(const MimeClassInfo&, const MimeClassInfo&) = default;
+};
 
 struct PluginInfo {
     String name;
@@ -73,23 +70,13 @@ struct PluginInfo {
 #if PLATFORM(MAC)
     String versionString;
 #endif
-};
 
-inline bool operator==(PluginInfo& a, PluginInfo& b)
-{
-    bool result = a.name == b.name && a.file == b.file && a.desc == b.desc && a.mimes == b.mimes && a.isApplicationPlugin == b.isApplicationPlugin && a.clientLoadPolicy == b.clientLoadPolicy && a.bundleIdentifier == b.bundleIdentifier;
-#if PLATFORM(MAC)
-    result = result && a.versionString == b.versionString;
-#endif
-    return result;
-}
+    friend bool operator==(const PluginInfo&, const PluginInfo&) = default;
+};
 
 struct SupportedPluginIdentifier {
     String matchingDomain;
     String pluginIdentifier;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<SupportedPluginIdentifier> decode(Decoder&);
 };
 
 // FIXME: merge with PluginDatabase in the future
@@ -139,40 +126,4 @@ inline bool isSupportedPlugin(const Vector<SupportedPluginIdentifier>& pluginIde
     }) != notFound;
 }
 
-template<class Decoder> inline std::optional<SupportedPluginIdentifier> SupportedPluginIdentifier::decode(Decoder& decoder)
-{
-    std::optional<String> matchingDomain;
-    decoder >> matchingDomain;
-    if (!matchingDomain)
-        return std::nullopt;
-
-    std::optional<String> pluginIdentifier;
-    decoder >> pluginIdentifier;
-    if (!pluginIdentifier)
-        return std::nullopt;
-
-    return SupportedPluginIdentifier { WTFMove(matchingDomain.value()), WTFMove(pluginIdentifier.value()) };
-}
-
-template<class Encoder> inline void SupportedPluginIdentifier::encode(Encoder& encoder) const
-{
-    encoder << matchingDomain;
-    encoder << pluginIdentifier;
-}
-
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PluginLoadClientPolicy> {
-    using values = EnumValues<
-        WebCore::PluginLoadClientPolicy,
-        WebCore::PluginLoadClientPolicy::Undefined,
-        WebCore::PluginLoadClientPolicy::Block,
-        WebCore::PluginLoadClientPolicy::Ask,
-        WebCore::PluginLoadClientPolicy::Allow,
-        WebCore::PluginLoadClientPolicy::AllowAlways
-    >;
-};
-
-} // namespace WTF

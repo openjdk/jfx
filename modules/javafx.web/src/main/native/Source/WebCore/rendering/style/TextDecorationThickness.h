@@ -41,35 +41,27 @@ public:
     {
         return TextDecorationThickness(Type::FromFont);
     }
-    static TextDecorationThickness createWithLength(float length)
+    static TextDecorationThickness createWithLength(Length&& length)
     {
-        TextDecorationThickness result(Type::Length);
-        result.setLengthValue(length);
-        return result;
+        return { Type::Length, WTFMove(length) };
     }
 
-    bool isAuto() const
+    constexpr bool isAuto() const
     {
         return m_type == Type::Auto;
     }
 
-    bool isFromFont() const
+    constexpr bool isFromFont() const
     {
         return m_type == Type::FromFont;
     }
 
-    bool isLength() const
+    constexpr bool isLength() const
     {
         return m_type == Type::Length;
     }
 
-    void setLengthValue(float length)
-    {
-        ASSERT(isLength());
-        m_length = length;
-    }
-
-    float lengthValue() const
+    const Length& length() const
     {
         ASSERT(isLength());
         return m_length;
@@ -83,11 +75,16 @@ public:
         }
         if (isFromFont())
             return metrics.underlineThickness();
+
         ASSERT(isLength());
-        return m_length;
+        if (m_length.isPercent())
+            return fontSize * (m_length.percent() / 100.0f);
+        if (m_length.isCalculated())
+            return m_length.nonNanCalculatedValue(fontSize);
+        return m_length.value();
     }
 
-    bool operator==(const TextDecorationThickness& other) const
+    constexpr bool operator==(const TextDecorationThickness& other) const
     {
         switch (m_type) {
         case Type::Auto:
@@ -101,11 +98,6 @@ public:
         }
     }
 
-    bool operator!=(const TextDecorationThickness& other) const
-    {
-        return !(*this == other);
-    }
-
 private:
     enum class Type : uint8_t {
         Auto,
@@ -114,12 +106,18 @@ private:
     };
 
     TextDecorationThickness(Type type)
-        : m_type { type }
+        : m_type(type)
+    {
+    }
+
+    TextDecorationThickness(Type type, Length&& length)
+        : m_type(type)
+        , m_length(WTFMove(length))
     {
     }
 
     Type m_type;
-    float m_length { 0 };
+    Length m_length;
 };
 
 inline TextStream& operator<<(TextStream& ts, const TextDecorationThickness& thickness)
@@ -129,7 +127,7 @@ inline TextStream& operator<<(TextStream& ts, const TextDecorationThickness& thi
     else if (thickness.isFromFont())
         ts << "from-font";
     else
-        ts << TextStream::FormatNumberRespectingIntegers(thickness.lengthValue());
+        ts << thickness.length();
     return ts;
 }
 

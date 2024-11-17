@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "BlockLayoutState.h"
 #include "InlineFormattingContext.h"
+#include "InlineLayoutState.h"
 #include "InlineLineBuilder.h"
 #include "TextUtil.h"
 
@@ -36,11 +36,10 @@ namespace Layout {
 class Box;
 class ElementBox;
 class LayoutState;
-struct AscentAndDescent;
 
 class LineBoxBuilder {
 public:
-    LineBoxBuilder(const InlineFormattingContext&, const LineBuilder::LineContent&, const BlockLayoutState&);
+    LineBoxBuilder(const InlineFormattingContext&, const LineLayoutResult&);
 
     LineBox build(size_t lineIndex);
 
@@ -49,28 +48,30 @@ private:
     void setLayoutBoundsForInlineBox(InlineLevelBox&, FontBaseline) const;
     void adjustInlineBoxHeightsForLineBoxContainIfApplicable(LineBox&);
     void computeLineBoxGeometry(LineBox&) const;
-    AscentAndDescent enclosingAscentDescentWithFallbackFonts(const InlineLevelBox&, const TextUtil::FallbackFontList& fallbackFontsForContent, FontBaseline) const;
+    InlineLevelBox::AscentAndDescent enclosingAscentDescentWithFallbackFonts(const InlineLevelBox&, const TextUtil::FallbackFontList& fallbackFontsForContent, FontBaseline) const;
     TextUtil::FallbackFontList collectFallbackFonts(const InlineLevelBox& parentInlineBox, const Line::Run&, const RenderStyle&);
+    void adjustMarginStartForListMarker(const ElementBox& listMarkerBox, LayoutUnit nestedListMarkerMarginStart, InlineLayoutUnit rootInlineBoxOffset) const;
 
     void constructInlineLevelBoxes(LineBox&);
     void adjustIdeographicBaselineIfApplicable(LineBox&);
     void adjustOutsideListMarkersPosition(LineBox&);
+    void expandAboveRootInlineBox(LineBox&, InlineLayoutUnit) const;
 
-    bool isFirstLine() const { return m_lineContent.isFirstFormattedLine != LineBuilder::LineContent::FirstFormattedLine::No; }
-    bool isLastLine() const { return m_lineContent.isLastLineWithInlineContent; }
+    bool isFirstLine() const { return lineLayoutResult().isFirstLast.isFirstFormattedLine != LineLayoutResult::IsFirstLast::FirstFormattedLine::No; }
+    bool isLastLine() const { return lineLayoutResult().isFirstLast.isLastLineWithInlineContent; }
     const InlineFormattingContext& formattingContext() const { return m_inlineFormattingContext; }
-    const LineBuilder::LineContent lineContent() const { return m_lineContent; }
-    const Box& rootBox() const { return formattingContext().root(); }
+    const LineLayoutResult& lineLayoutResult() const { return m_lineLayoutResult; }
+    const ElementBox& rootBox() const { return formattingContext().root(); }
     const RenderStyle& rootStyle() const { return isFirstLine() ? rootBox().firstLineStyle() : rootBox().style(); }
 
-    const BlockLayoutState& blockLayoutState() const { return m_blockLayoutState; }
-    LayoutState& layoutState() const { return formattingContext().layoutState(); }
+    const InlineLayoutState& layoutState() const { return formattingContext().layoutState(); }
+    const BlockLayoutState& blockLayoutState() const { return layoutState().parentBlockLayoutState(); }
 
 private:
     const InlineFormattingContext& m_inlineFormattingContext;
-    const LineBuilder::LineContent& m_lineContent;
-    const BlockLayoutState& m_blockLayoutState;
+    const LineLayoutResult& m_lineLayoutResult;
     bool m_fallbackFontRequiresIdeographicBaseline { false };
+    bool m_lineHasNonLineSpanningRubyContent { false };
     HashMap<const InlineLevelBox*, TextUtil::FallbackFontList> m_fallbackFontsForInlineBoxes;
     Vector<size_t> m_outsideListMarkers;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "WriteBarrier.h"
 #include <wtf/MallocPtr.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace JSC {
@@ -46,9 +47,9 @@ class FuncRefTable;
 
 class Table : public ThreadSafeRefCounted<Table> {
     WTF_MAKE_NONCOPYABLE(Table);
-    WTF_MAKE_FAST_ALLOCATED(Table);
+    WTF_MAKE_TZONE_ALLOCATED(Table);
 public:
-    static RefPtr<Table> tryCreate(uint32_t initial, std::optional<uint32_t> maximum, TableElementType);
+    static RefPtr<Table> tryCreate(uint32_t initial, std::optional<uint32_t> maximum, TableElementType, Type);
 
     JS_EXPORT_PRIVATE ~Table() = default;
 
@@ -70,7 +71,7 @@ public:
     TableElementType type() const { return m_type; }
     bool isExternrefTable() const { return m_type == TableElementType::Externref; }
     bool isFuncrefTable() const { return m_type == TableElementType::Funcref; }
-    Type wasmType() const;
+    Type wasmType() const { return m_wasmType; }
     FuncRefTable* asFuncrefTable();
 
     static bool isValidLength(uint32_t length) { return length < maxTableEntries; }
@@ -87,7 +88,7 @@ public:
     void operator delete(Table*, std::destroying_delete_t);
 
 protected:
-    Table(uint32_t initial, std::optional<uint32_t> maximum, TableElementType = TableElementType::Externref);
+    Table(uint32_t initial, std::optional<uint32_t> maximum, Type, TableElementType = TableElementType::Externref);
 
     template<typename Visitor> constexpr decltype(auto) visitDerived(Visitor&&);
     template<typename Visitor> constexpr decltype(auto) visitDerived(Visitor&&) const;
@@ -99,11 +100,13 @@ protected:
     uint32_t m_length;
     NO_UNIQUE_ADDRESS const std::optional<uint32_t> m_maximum;
     const TableElementType m_type;
+    Type m_wasmType;
     bool m_isFixedSized { false };
     JSWebAssemblyTable* m_owner;
 };
 
 class ExternRefTable final : public Table {
+    WTF_MAKE_TZONE_ALLOCATED(ExternRefTable);
 public:
     friend class Table;
 
@@ -112,12 +115,13 @@ public:
     JSValue get(uint32_t index) const { return m_jsValues.get()[index].get(); }
 
 private:
-    ExternRefTable(uint32_t initial, std::optional<uint32_t> maximum);
+    ExternRefTable(uint32_t initial, std::optional<uint32_t> maximum, Type wasmType);
 
     MallocPtr<WriteBarrier<Unknown>, VMMalloc> m_jsValues;
 };
 
 class FuncRefTable final : public Table {
+    WTF_MAKE_TZONE_ALLOCATED(FuncRefTable);
 public:
     friend class Table;
 
@@ -152,11 +156,11 @@ public:
     JSValue get(uint32_t index) const { return m_importableFunctions.get()[index].m_value.get(); }
 
 private:
-    FuncRefTable(uint32_t initial, std::optional<uint32_t> maximum);
+    FuncRefTable(uint32_t initial, std::optional<uint32_t> maximum, Type wasmType);
 
     Function* tailPointer() { return bitwise_cast<Function*>(bitwise_cast<uint8_t*>(this) + offsetOfTail()); }
 
-    static Ref<FuncRefTable> createFixedSized(uint32_t size);
+    static Ref<FuncRefTable> createFixedSized(uint32_t size, Type wasmType);
 
     MallocPtr<Function, VMMalloc> m_importableFunctions;
 };

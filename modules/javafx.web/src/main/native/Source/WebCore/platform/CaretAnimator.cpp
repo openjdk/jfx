@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CaretAnimator.h"
 
+#include "GraphicsContext.h"
 #include "Page.h"
 
 namespace WebCore {
@@ -38,18 +39,36 @@ Page* CaretAnimator::page() const
     return nullptr;
 }
 
-void CaretAnimator::serviceCaretAnimation(ReducedResolutionSeconds timestamp)
+void CaretAnimator::stop(CaretAnimatorStopReason)
+{
+    if (!m_isActive)
+        return;
+
+    didEnd();
+}
+
+void CaretAnimator::serviceCaretAnimation()
 {
     if (!isActive())
         return;
 
-    updateAnimationProperties(timestamp);
+    updateAnimationProperties();
 }
 
 void CaretAnimator::scheduleAnimation()
 {
     if (auto* page = this->page())
         page->scheduleRenderingUpdate(RenderingUpdateStep::CaretAnimation);
+}
+
+void CaretAnimator::paint(GraphicsContext& context, const FloatRect& caret, const Color& color, const LayoutPoint&) const
+{
+    context.fillRect(caret, color);
+}
+
+LayoutRect CaretAnimator::caretRepaintRectForLocalRect(LayoutRect rect) const
+{
+    return rect;
 }
 
 } // namespace WebCore

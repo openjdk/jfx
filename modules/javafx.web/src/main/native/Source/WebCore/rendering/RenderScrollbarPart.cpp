@@ -27,8 +27,11 @@
 #include "RenderScrollbarPart.h"
 
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderScrollbar.h"
 #include "RenderScrollbarTheme.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
@@ -38,10 +41,11 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderScrollbarPart);
 
 RenderScrollbarPart::RenderScrollbarPart(Document& document, RenderStyle&& style, RenderScrollbar* scrollbar, ScrollbarPart part)
-    : RenderBlock(document, WTFMove(style), 0)
+    : RenderBlock(Type::ScrollbarPart, document, WTFMove(style), { })
     , m_scrollbar(scrollbar)
     , m_part(part)
 {
+    ASSERT(isRenderScrollbarPart());
 }
 
 RenderScrollbarPart::~RenderScrollbarPart() = default;

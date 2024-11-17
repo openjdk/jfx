@@ -50,8 +50,8 @@ public:
 
     static FunctionExecutable* create(VM& vm, ScriptExecutable* topLevelExecutable, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic, bool isInsideOrdinaryFunction)
     {
-        FunctionExecutable* executable = new (NotNull, allocateCell<FunctionExecutable>(vm)) FunctionExecutable(vm, source, unlinkedExecutable, intrinsic, isInsideOrdinaryFunction);
-        executable->finishCreation(vm, topLevelExecutable);
+        FunctionExecutable* executable = new (NotNull, allocateCell<FunctionExecutable>(vm)) FunctionExecutable(vm, topLevelExecutable, source, unlinkedExecutable, intrinsic, isInsideOrdinaryFunction);
+        executable->finishCreation(vm);
         return executable;
     }
     static FunctionExecutable* fromGlobalCode(
@@ -132,6 +132,7 @@ public:
     ImplementationVisibility implementationVisibility() const { return m_unlinkedExecutable->implementationVisibility(); }
     bool isBuiltinFunction() const { return m_unlinkedExecutable->isBuiltinFunction(); }
     ConstructAbility constructAbility() const { return m_unlinkedExecutable->constructAbility(); }
+    InlineAttribute inlineAttribute() const { return m_unlinkedExecutable->inlineAttribute(); }
     bool isClass() const { return m_unlinkedExecutable->isClass(); }
     bool isArrowFunction() const { return parseMode() == SourceParseMode::ArrowFunctionMode; }
     bool isGetter() const { return parseMode() == SourceParseMode::GetterMode; }
@@ -162,10 +163,7 @@ public:
 
     DECLARE_VISIT_CHILDREN;
     DECLARE_VISIT_OUTPUT_CONSTRAINTS;
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(FunctionExecutableType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     void setOverrideLineNumber(int overrideLineNumber)
     {
@@ -208,28 +206,18 @@ public:
         return firstLine() + lineCount();
     }
 
-    unsigned typeProfilingStartOffset(VM&) const
-    {
-        return typeProfilingStartOffset();
-    }
-
-    unsigned typeProfilingStartOffset() const
+    unsigned functionEnd() const
     {
         if (UNLIKELY(m_rareData))
-            return m_rareData->m_typeProfilingStartOffset;
-        return m_unlinkedExecutable->typeProfilingStartOffset();
+            return m_rareData->m_functionEnd;
+        return m_unlinkedExecutable->unlinkedFunctionEnd();
     }
 
-    unsigned typeProfilingEndOffset(VM&) const
-    {
-        return typeProfilingEndOffset();
-    }
-
-    unsigned typeProfilingEndOffset() const
+    unsigned functionStart() const
     {
         if (UNLIKELY(m_rareData))
-            return m_rareData->m_typeProfilingEndOffset;
-        return m_unlinkedExecutable->typeProfilingEndOffset();
+            return m_rareData->m_functionStart;
+        return m_unlinkedExecutable->unlinkedFunctionStart();
     }
 
     unsigned parametersStartOffset() const
@@ -278,7 +266,7 @@ public:
 
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
 
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
 
     JSString* toString(JSGlobalObject*);
     JSString* asStringConcurrently() const
@@ -314,18 +302,18 @@ public:
         unsigned m_endColumn;
         Markable<int, IntegralMarkableTraits<int, -1>> m_overrideLineNumber;
         unsigned m_parametersStartOffset { 0 };
-        unsigned m_typeProfilingStartOffset { UINT_MAX };
-        unsigned m_typeProfilingEndOffset { UINT_MAX };
         WriteBarrierStructureID m_cachedPolyProtoStructureID;
         std::unique_ptr<TemplateObjectMap> m_templateObjectMap;
         WriteBarrier<JSString> m_asString;
+        unsigned m_functionStart { UINT_MAX };
+        unsigned m_functionEnd { UINT_MAX };
     };
 
 private:
     friend class ExecutableBase;
-    FunctionExecutable(VM&, const SourceCode&, UnlinkedFunctionExecutable*, Intrinsic, bool isInsideOrdinaryFunction);
+    FunctionExecutable(VM&, ScriptExecutable* topLevelExecutable, const SourceCode&, UnlinkedFunctionExecutable*, Intrinsic, bool isInsideOrdinaryFunction);
 
-    void finishCreation(VM&, ScriptExecutable* topLevelExecutable);
+    DECLARE_DEFAULT_FINISH_CREATION;
 
     friend class ScriptExecutable;
 

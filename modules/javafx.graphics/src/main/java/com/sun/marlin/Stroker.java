@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -180,14 +180,14 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
             // chord:  s = 2 r * sin( phi / 2)
             // height: h = 2 r * sin( phi / 4)^2
             // small angles (phi < 90):
-            // h = s² / (8 r)
-            // so s² = (8 h * r)
+            // h = s^2 / (8 r)
+            // so s^2 = (8 h * r)
 
             // height max (note ROUND_JOIN_ERROR = 8 * JOIN_ERROR)
             final double limitMin = ((this.rdrCtx.clipInvScale == 0.0d) ? ROUND_JOIN_ERROR
                     : (ROUND_JOIN_ERROR * this.rdrCtx.clipInvScale));
 
-            // chord limit (s²):
+            // chord limit (s^2):
             this.joinLimitMinSq = limitMin * this.lineWidth2;
         }
         this.prev = CLOSE;
@@ -594,7 +594,6 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
                     return;
                 }
             }
-
             this.cOutCode = outcode1;
         }
 
@@ -1155,7 +1154,6 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
                     return;
                 }
             }
-
             this.cOutCode = outcode3;
         }
         _curveTo(x1, y1, x2, y2, x3, y3, outcode0);
@@ -1302,7 +1300,6 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
                     return;
                 }
             }
-
             this.cOutCode = outcode2;
         }
         _quadTo(x1, y1, x2, y2, outcode0);
@@ -1331,6 +1328,7 @@ public final class Stroker implements StartFlagPathConsumer2D, MarlinConst {
             lineTo(cx0, cy0);
             return;
         }
+
         // if these vectors are too small, normalize them, to avoid future
         // precision problems.
         if (Math.abs(dxs) < 0.1d && Math.abs(dys) < 0.1d) {

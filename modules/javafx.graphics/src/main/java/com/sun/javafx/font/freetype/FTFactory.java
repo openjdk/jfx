@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.javafx.font.freetype;
 
 import java.util.ArrayList;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.font.FontConfigManager;
 import com.sun.javafx.font.FontFallbackInfo;
 import com.sun.javafx.font.FontResource;
@@ -40,6 +41,7 @@ import com.sun.javafx.text.TextRun;
 public class FTFactory extends PrismFontFactory {
 
     static boolean LCD_SUPPORT;
+    static boolean isLinux = PlatformUtil.isLinux();
 
     public static PrismFontFactory getFactory() {
         PrismFontFactory factory = null;
@@ -127,16 +129,19 @@ public class FTFactory extends PrismFontFactory {
         }
     }
 
+    @Override
     public FontFallbackInfo getFallbacks(FontResource primaryResource) {
-        boolean isBold = primaryResource.isBold();
-        boolean isItalic = primaryResource.isItalic();
-        FontConfigManager.FcCompFont font =
-            FontConfigManager.getFontConfigFont("sans", isBold, isItalic);
-        ArrayList<String> linkedFontFiles = FontConfigManager.getFileNames(font, false);
-        ArrayList<String> linkedFontNames = FontConfigManager.getFontNames(font, false);
         FontFallbackInfo info = new FontFallbackInfo();
-        for (int i=0; i<linkedFontNames.size(); i++)  {
-            info.add(linkedFontNames.get(i), linkedFontFiles.get(i), null);
+        if (isLinux) {
+            boolean isBold = primaryResource.isBold();
+            boolean isItalic = primaryResource.isItalic();
+            FontConfigManager.FcCompFont font =
+                    FontConfigManager.getFontConfigFont("sans", isBold, isItalic);
+            ArrayList<String> linkedFontFiles = FontConfigManager.getFileNames(font, false);
+            ArrayList<String> linkedFontNames = FontConfigManager.getFontNames(font, false);
+            for (int i=0; i<linkedFontNames.size(); i++)  {
+                info.add(linkedFontNames.get(i), linkedFontFiles.get(i), null);
+            }
         }
         return info;
     }

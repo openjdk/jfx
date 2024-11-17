@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,18 +26,13 @@
 package test.com.sun.glass.ui.monocle.headless;
 
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.sun.glass.ui.Screen;
-
 import test.util.Util;
 
 public class HeadlessGeometry2Test {
@@ -58,7 +53,7 @@ public class HeadlessGeometry2Test {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws Exception {
         System.setProperty("glass.platform", "Monocle");
         System.setProperty("monocle.platform", "Headless");
@@ -66,18 +61,18 @@ public class HeadlessGeometry2Test {
         System.setProperty("headless.geometry", "150x250-16");
 
         Util.launch(startupLatch, TestApp.class);
-        Assert.assertEquals(0, startupLatch.getCount());
+        Assertions.assertEquals(0, startupLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void shutdown() {
         Util.shutdown();
     }
 
     @Test
     public void setScreenBounds() throws Exception {
-        Assert.assertEquals(150, width);
-        Assert.assertEquals(250, height);
-        Assert.assertEquals(16, depth);
+        Assertions.assertEquals(150, width);
+        Assertions.assertEquals(250, height);
+        Assertions.assertEquals(16, depth);
     }
 }

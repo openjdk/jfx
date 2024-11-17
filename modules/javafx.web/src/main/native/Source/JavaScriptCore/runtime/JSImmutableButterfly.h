@@ -46,10 +46,7 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, IndexingType indexingType)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSImmutableButterflyType, StructureFlags), info(), indexingType);
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue, IndexingType);
 
     ALWAYS_INLINE static JSImmutableButterfly* tryCreate(VM& vm, Structure* structure, unsigned length)
     {
@@ -137,6 +134,7 @@ public:
     static JSImmutableButterfly* createFromDirectArguments(JSGlobalObject*, DirectArguments*);
     static JSImmutableButterfly* createFromScopedArguments(JSGlobalObject*, ScopedArguments*);
     static JSImmutableButterfly* createFromString(JSGlobalObject*, JSString*);
+    static JSImmutableButterfly* tryCreateFromArgList(VM&, ArgList);
 
     unsigned publicLength() const { return m_header.publicLength(); }
     unsigned vectorLength() const { return m_header.vectorLength(); }

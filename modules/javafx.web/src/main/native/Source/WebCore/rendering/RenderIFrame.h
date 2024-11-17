@@ -46,13 +46,9 @@ private:
 
     void layout() override;
 
-    bool isRenderIFrame() const override { return true; }
-
     ASCIILiteral renderName() const override { return "RenderIFrame"_s; }
 
     bool requiresLayer() const override;
-
-    RenderView* contentRootRenderer() const;
 
     bool isFullScreenIFrame() const;
 };

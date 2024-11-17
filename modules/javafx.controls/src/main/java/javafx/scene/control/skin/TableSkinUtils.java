@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -203,16 +203,5 @@ class TableSkinUtils {
     /** returns true if the column resize policy is constrained */
     public static boolean isConstrainedResizePolicy(Callback<? extends ResizeFeaturesBase, Boolean> x) {
         return (x instanceof ConstrainedColumnResizeBase);
-    }
-
-    /** returns the number of visible rows in Tree/TableView */
-    public static int getItemCount(TableViewSkinBase<?,?,?,?,?> skin) {
-        Object control = skin.getSkinnable();
-        if (control instanceof TableView table) {
-            return table.getItems().size();
-        } else if (control instanceof TreeTableView tree) {
-            return tree.getExpandedItemCount();
-        }
-        return 0;
     }
 }

@@ -40,6 +40,8 @@ log = logging.getLogger('global')
 
 
 def ucfirst(str):
+    if str == 'webkit':
+        return 'WebKit'
     return str[:1].upper() + str[1:]
 
 
@@ -47,17 +49,27 @@ _ALWAYS_SPECIALCASED_ENUM_VALUE_SUBSTRINGS = set(['2D', 'API', 'CSS', 'DOM', 'HT
 _ALWAYS_SPECIALCASED_ENUM_VALUE_LOOKUP_TABLE = dict([(s.upper(), s) for s in _ALWAYS_SPECIALCASED_ENUM_VALUE_SUBSTRINGS])
 
 _ENUM_IDENTIFIER_RENAME_MAP = {
-    'canvas-bitmaprenderer': 'CanvasBitmapRenderer',  # Recording.Type.canvas-bitmaprenderer
-    'canvas-webgl': 'CanvasWebGL',  # Recording.Type.canvas-webgl
-    'canvas-webgl2': 'CanvasWebGL2',  # Recording.Type.canvas-webgl2
-    'webgl': 'WebGL',  # Canvas.ContextType.webgl
-    'webgl2': 'WebGL2',  # Canvas.ContextType.webgl2
-    'webgpu': 'WebGPU',  # Canvas.ContextType.webgpu
-    'bitmaprenderer': 'BitmapRenderer',  # Canvas.ContextType.bitmaprenderer
-    'mediasource': 'MediaSource',  # Console.ChannelSource.mediasource
-    'webrtc': 'WebRTC',  # Console.ChannelSource.webrtc
-    'itp-debug': 'ITPDebug',  # Console.ChannelSource.itp-debug
-    'webkit': 'WebKit',  # CPUProfiler.ThreadInfo.type
+    # Recording.Type
+    'canvas-bitmaprenderer': 'CanvasBitmapRenderer',
+    'offscreen-canvas-bitmaprenderer': 'OffscreenCanvasBitmapRenderer',
+    'canvas-webgl': 'CanvasWebGL',
+    'offscreen-canvas-webgl': 'OffscreenCanvasWebGL',
+    'canvas-webgl2': 'CanvasWebGL2',
+    'offscreen-canvas-webgl2': 'OffscreenCanvasWebGL2',
+
+    # Canvas.ContextType
+    'bitmaprenderer': 'BitmapRenderer',
+    'offscreen-bitmaprenderer': 'OffscreenBitmapRenderer',
+    'webgl': 'WebGL',
+    'offscreen-webgl': 'OffscreenWebGL',
+    'webgl2': 'WebGL2',
+    'offscreen-webgl2': 'OffscreenWebGL2',
+    'webgpu': 'WebGPU',
+
+    # Console.ChannelSource
+    'mediasource': 'MediaSource',
+    'webrtc': 'WebRTC',
+    'itp-debug': 'ITPDebug'
 }
 
 # These objects are built manually by creating and setting JSON::Value instances.

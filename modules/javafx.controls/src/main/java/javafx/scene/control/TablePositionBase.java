@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ import java.lang.ref.WeakReference;
  * TablePositionBase can be 'disabled' to represent an entire row or column. This is
  * done by setting the unrequired property to -1 or null.
  *
+ * @param <TC> the type of the TableColumnBase
  * @see TablePosition
  * @see TreeTablePosition
  * @since JavaFX 8.0

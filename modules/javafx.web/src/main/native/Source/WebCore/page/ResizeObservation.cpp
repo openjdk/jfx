@@ -29,8 +29,10 @@
 #include "ElementInlines.h"
 #include "HTMLFrameOwnerElement.h"
 #include "Logging.h"
-#include "RenderBox.h"
+#include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include "SVGElement.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
@@ -38,6 +40,8 @@ Ref<ResizeObservation> ResizeObservation::create(Element& target, ResizeObserver
 {
     return adoptRef(*new ResizeObservation(target, observedBox));
 }
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(ResizeObservation);
 
 ResizeObservation::ResizeObservation(Element& element, ResizeObserverBoxOptions observedBox)
     : m_target { element }
@@ -53,14 +57,24 @@ void ResizeObservation::updateObservationSize(const BoxSizes& boxSizes)
     m_lastObservationSizes = boxSizes;
 }
 
+void ResizeObservation::resetObservationSize()
+{
+    m_lastObservationSizes = { LayoutSize(-1, -1), LayoutSize(-1, -1), LayoutSize(-1, -1) };
+}
+
 auto ResizeObservation::computeObservedSizes() const -> std::optional<BoxSizes>
 {
-    if (m_target->isSVGElement()) {
-        if (auto svgRect = downcast<SVGElement>(*m_target).getBoundingBox()) {
-            auto size = LayoutSize(svgRect->width(), svgRect->height());
+    if (auto* svg = dynamicDowncast<SVGElement>(target())) {
+        if (svg->hasAssociatedSVGLayoutBox()) {
+            LayoutSize size;
+            if (auto svgRect = svg->getBoundingBox()) {
+                size.setWidth(svgRect->width());
+                size.setHeight(svgRect->height());
+            }
             return { { size, size, size } };
         }
     }
+
     auto* box = m_target->renderBox();
     if (box) {
         if (box->isSkippedContent())
@@ -127,11 +141,12 @@ std::optional<ResizeObservation::BoxSizes> ResizeObservation::elementSizeChanged
     return { };
 }
 
+// https://drafts.csswg.org/resize-observer/#calculate-depth-for-node
 size_t ResizeObservation::targetElementDepth() const
 {
     unsigned depth = 0;
     for (Element* ownerElement = m_target.get(); ownerElement; ownerElement = ownerElement->document().ownerElement()) {
-        for (Element* parent = ownerElement; parent; parent = parent->parentElement())
+        for (Element* parent = ownerElement; parent; parent = parent->parentElementInComposedTree())
             ++depth;
     }
 

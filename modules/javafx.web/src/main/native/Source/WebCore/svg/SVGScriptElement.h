@@ -41,7 +41,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGScriptElement, SVGElement, SVGURIReference>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
@@ -59,8 +59,6 @@ private:
     String charsetAttributeValue() const final { return String(); }
     String typeAttributeValue() const final { return getAttribute(SVGNames::typeAttr).string(); }
     String languageAttributeValue() const final { return String(); }
-    String forAttributeValue() const final { return String(); }
-    String eventAttributeValue() const final { return String(); }
     bool hasAsyncAttribute() const final { return false; }
     bool hasDeferAttribute() const final { return false; }
     bool hasNoModuleAttribute() const final { return false; }

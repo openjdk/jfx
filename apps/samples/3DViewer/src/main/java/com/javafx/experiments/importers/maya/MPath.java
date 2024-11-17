@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -61,6 +61,7 @@ public class MPath implements Comparable {
     static class Index extends Component {
         int index;
 
+        @Override
         public String toString() {
             return "[" + index + "]";
         }
@@ -69,6 +70,7 @@ public class MPath implements Comparable {
             index = i;
         }
 
+        @Override
         public MData apply(MData data) {
             data.setSize(index + 1);
             return data.getData(index);
@@ -78,6 +80,7 @@ public class MPath implements Comparable {
             return index;
         }
 
+        @Override
         public boolean equals(Object other) {
             if (!(other instanceof Index)) {
                 return false;
@@ -85,10 +88,12 @@ public class MPath implements Comparable {
             return index == ((Index) other).index;
         }
 
+        @Override
         public int hashCode() {
             return 11 + 17 * index;
         }
 
+        @Override
         public int compareTo(Object arg) {
             if (arg instanceof Index) {
                 return index - ((Index) arg).index;
@@ -103,6 +108,7 @@ public class MPath implements Comparable {
     }
 
     static class Slice extends Component {
+        @Override
         public String toString() {
             return "[" + start + ":" + end + "]";
         }
@@ -114,11 +120,13 @@ public class MPath implements Comparable {
             end = j;
         }
 
+        @Override
         public MData apply(MData data) {
             data.setSize(end + 1);
             return data.getData(start, end);
         }
 
+        @Override
         public boolean equals(Object arg) {
             if (!(arg instanceof Slice)) {
                 return false;
@@ -128,10 +136,12 @@ public class MPath implements Comparable {
                     end == other.end);
         }
 
+        @Override
         public int hashCode() {
             return 11 + 17 * start + 23 * end;
         }
 
+        @Override
         public int compareTo(Object arg) {
             if (arg instanceof Slice) {
                 Slice other = (Slice) arg;
@@ -155,6 +165,7 @@ public class MPath implements Comparable {
     }
 
     static class Select extends Component {
+        @Override
         public String toString() {
             return "." + name;
         }
@@ -165,14 +176,17 @@ public class MPath implements Comparable {
             name = n;
         }
 
+        @Override
         public MData apply(MData data) {
             return data.getData(name);
         }
 
+        @Override
         public MData apply(MNode node) {
             return node.getAttrDirect(name);
         }
 
+        @Override
         public boolean equals(Object arg) {
             if (!(arg instanceof Select)) {
                 return false;
@@ -181,10 +195,12 @@ public class MPath implements Comparable {
             return (name.equals(other.name));
         }
 
+        @Override
         public int hashCode() {
             return name.hashCode();
         }
 
+        @Override
         public int compareTo(Object arg) {
             if (arg instanceof Select) {
                 return name.compareTo(((Select) arg).name);
@@ -262,6 +278,7 @@ public class MPath implements Comparable {
         this.node = node;
     }
 
+    @Override
     public boolean equals(Object arg) {
         if (!(arg instanceof MPath)) {
             return false;
@@ -271,6 +288,7 @@ public class MPath implements Comparable {
                 components.equals(other.components));
     }
 
+    @Override
     public int hashCode() {
         int hashCode = 0;
         for (Component comp : components) {
@@ -285,6 +303,7 @@ public class MPath implements Comparable {
         */
     }
 
+    @Override
     public int compareTo(Object arg) {
         MPath other = (MPath) arg;
         if (node != other.node) {
@@ -434,6 +453,7 @@ public class MPath implements Comparable {
         return data;
     }
 
+    @Override
     public String toString() {
         if (node == null) {
             return "[invalid path -- no node]";

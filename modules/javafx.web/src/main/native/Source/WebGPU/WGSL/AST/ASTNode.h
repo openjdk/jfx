@@ -25,12 +25,9 @@
 
 #pragma once
 
+#include "ASTBuilder.h"
 #include "SourceSpan.h"
-
-#include <wtf/FastMalloc.h>
 #include <wtf/TypeCasts.h>
-#include <wtf/UniqueRef.h>
-#include <wtf/UniqueRefVector.h>
 
 namespace WGSL::AST {
 
@@ -42,16 +39,20 @@ enum class NodeKind : uint8_t {
     BindingAttribute,
     BuiltinAttribute,
     ConstAttribute,
+    DiagnosticAttribute,
     GroupAttribute,
     IdAttribute,
     InterpolateAttribute,
     InvariantAttribute,
     LocationAttribute,
+    MustUseAttribute,
     SizeAttribute,
     StageAttribute,
     WorkgroupSizeAttribute,
 
+    ConstAssert,
     Directive,
+    DiagnosticDirective,
 
     // Expression
     BinaryExpression,
@@ -74,6 +75,7 @@ enum class NodeKind : uint8_t {
     AbstractIntegerLiteral,
     BoolLiteral,
     Float32Literal,
+    Float16Literal,
     Signed32Literal,
     Unsigned32Literal,
 
@@ -85,6 +87,7 @@ enum class NodeKind : uint8_t {
     CallStatement,
     CompoundAssignmentStatement,
     CompoundStatement,
+    ConstAssertStatement,
     ContinueStatement,
     DecrementIncrementStatement,
     DiscardStatement,
@@ -103,12 +106,9 @@ enum class NodeKind : uint8_t {
 
     TypeAlias,
 
-    // TypeName
-    ArrayTypeName,
-    NamedTypeName,
-    ParameterizedTypeName,
-    ReferenceTypeName,
-    StructTypeName,
+    ArrayTypeExpression,
+    ElaboratedTypeExpression,
+    ReferenceTypeExpression,
 
     Variable,
 
@@ -116,19 +116,17 @@ enum class NodeKind : uint8_t {
 };
 
 class Node {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(Node);
 public:
-    using Ref = UniqueRef<Node>;
-    using List = UniqueRefVector<Node, 2>;
-
-    Node(SourceSpan span)
-        : m_span(span)
-    { }
     virtual ~Node() = default;
 
     virtual NodeKind kind() const { return NodeKind::Unknown; };
-
     const SourceSpan& span() const { return m_span; }
+
+protected:
+    Node(SourceSpan span)
+        : m_span(span)
+    { }
 
 private:
     SourceSpan m_span;

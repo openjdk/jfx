@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,8 @@
 
 package test.robot.test3d;
 
-import static org.junit.Assume.assumeTrue;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.concurrent.TimeUnit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -42,6 +38,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import com.sun.javafx.PlatformUtil;
 import test.robot.testharness.VisualTestBase;
 
 /**
@@ -53,6 +54,7 @@ import test.robot.testharness.VisualTestBase;
  * the pixel scale factor, but it simply creates a test scene containing a sphere and a perspective
  * camera. Some pixels of the scene will be tested if they have got the expected color and brightness.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class PointLightIlluminationTest extends VisualTestBase {
 
     private static final int    SCENE_WIDTH_HEIGHT = 100;
@@ -66,9 +68,17 @@ public class PointLightIlluminationTest extends VisualTestBase {
     private static final double COLOR_TOLERANCE    = 0.07;
     private static volatile Scene testScene = null;
 
-    @Before
+    // Used to skip failing tests until JDK-8318985 is fixed
+    private boolean isMacAarch64MacOS14;
+
+    @BeforeEach
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+        // JDK-8318985
+        isMacAarch64MacOS14 = PlatformUtil.isMac() &&
+                "aarch64".equals(System.getProperty("os.arch")) &&
+                System.getProperty("os.version") != null &&
+                System.getProperty("os.version").startsWith("14");
         // Use the same test scene for all tests
         if (testScene == null) {
             runAndWait(() -> {
@@ -82,7 +92,7 @@ public class PointLightIlluminationTest extends VisualTestBase {
         }
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void sceneBackgroundColorShouldBeBlue() {
         runAndWait(() -> {
             assertColorEquals(
@@ -92,39 +102,43 @@ public class PointLightIlluminationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void sphereUpperLeftPixelColorShouldBeDarkRed() {
+        assumeTrue(!isMacAarch64MacOS14); // JDK-8318985
         runAndWait(() -> {
             Color color = getColor(testScene, LEFT_CORNER_X, UPPER_CORNER_Y);
             assertColorEquals(Color.DARKRED, color, COLOR_TOLERANCE);
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void sphereUpperRightPixelColorShouldBeDarkRed() {
+        assumeTrue(!isMacAarch64MacOS14); // JDK-8318985
         runAndWait(() -> {
             Color color = getColor(testScene, RIGHT_CORNER_X, UPPER_CORNER_Y);
             assertColorEquals(Color.DARKRED, color, COLOR_TOLERANCE);
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void sphereLowerRightPixelColorShouldBeDarkRed() {
+        assumeTrue(!isMacAarch64MacOS14); // JDK-8318985
         runAndWait(() -> {
             Color color = getColor(testScene, RIGHT_CORNER_X, LOWER_CORNER_Y);
             assertColorEquals(Color.DARKRED, color, COLOR_TOLERANCE);
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void sphereLowerLeftPixelColorShouldBeDarkRed() {
+        assumeTrue(!isMacAarch64MacOS14); // JDK-8318985
         runAndWait(() -> {
             Color color = getColor(testScene, LEFT_CORNER_X, LOWER_CORNER_Y);
             assertColorEquals(Color.DARKRED, color, COLOR_TOLERANCE);
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void sphereCenterPixelColorShouldBeRed() {
         runAndWait(() -> {
             Color color = getColor(testScene, SCENE_WIDTH_HEIGHT / 2, SCENE_WIDTH_HEIGHT / 2);
@@ -138,7 +152,7 @@ public class PointLightIlluminationTest extends VisualTestBase {
      * scene can be used for all the illumination tests by this class.
      */
     @Override
-    @After
+    @AfterEach
     public void doTeardown() {
     }
 

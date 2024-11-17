@@ -91,8 +91,8 @@ public:
         Length logicalHeight;
     };
 
-    const BorderValue& borderAdjoiningTableStart() const;
-    const BorderValue& borderAdjoiningTableEnd() const;
+    inline const BorderValue& borderAdjoiningTableStart() const;
+    inline const BorderValue& borderAdjoiningTableEnd() const;
     const BorderValue& borderAdjoiningStartCell(const RenderTableCell&) const;
     const BorderValue& borderAdjoiningEndCell(const RenderTableCell&) const;
 
@@ -118,10 +118,10 @@ public:
     LayoutUnit outerBorderStart() const { return m_outerBorderStart; }
     LayoutUnit outerBorderEnd() const { return m_outerBorderEnd; }
 
-    LayoutUnit outerBorderLeft(const RenderStyle* styleForCellFlow) const;
-    LayoutUnit outerBorderRight(const RenderStyle* styleForCellFlow) const;
-    LayoutUnit outerBorderTop(const RenderStyle* styleForCellFlow) const;
-    LayoutUnit outerBorderBottom(const RenderStyle* styleForCellFlow) const;
+    inline LayoutUnit outerBorderLeft(const RenderStyle* styleForCellFlow) const;
+    inline LayoutUnit outerBorderRight(const RenderStyle* styleForCellFlow) const;
+    inline LayoutUnit outerBorderTop(const RenderStyle* styleForCellFlow) const;
+    inline LayoutUnit outerBorderBottom(const RenderStyle* styleForCellFlow) const;
 
     unsigned numRows() const;
     unsigned numColumns() const;
@@ -165,8 +165,6 @@ private:
 
     bool canHaveChildren() const override { return true; }
 
-    bool isTableSection() const override { return true; }
-
     void willBeRemovedFromTree(IsInternalMove) override;
 
     void layout() override;
@@ -193,7 +191,7 @@ private:
     void distributeExtraLogicalHeightToAutoRows(LayoutUnit& extraLogicalHeight, unsigned autoRowsCount);
     void distributeRemainingExtraLogicalHeight(LayoutUnit& extraLogicalHeight);
 
-    bool hasOverflowingCell() const { return m_overflowingCells.size() || m_forceSlowPaintPathWithOverflowingCell; }
+    bool hasOverflowingCell() const { return m_overflowingCells.computeSize() || m_forceSlowPaintPathWithOverflowingCell; }
     void computeOverflowFromCells(unsigned totalRows, unsigned nEffCols);
 
     CellSpan fullTableRowSpan() const;
@@ -234,7 +232,7 @@ private:
     // This HashSet holds the overflowing cells for faster painting.
     // If we have more than gMaxAllowedOverflowingCellRatio * total cells, it will be empty
     // and m_forceSlowPaintPathWithOverflowingCell will be set to save memory.
-    HashSet<RenderTableCell*> m_overflowingCells;
+    SingleThreadWeakHashSet<RenderTableCell> m_overflowingCells;
 
     // This map holds the collapsed border values for cells with collapsed borders.
     // It is held at RenderTableSection level to spare memory consumption by table cells.
@@ -244,20 +242,6 @@ private:
     bool m_hasMultipleCellLevels { false };
     bool m_needsCellRecalc  { false };
 };
-
-inline const BorderValue& RenderTableSection::borderAdjoiningTableStart() const
-{
-    if (isDirectionSame(this, table()))
-        return style().borderStart();
-    return style().borderEnd();
-}
-
-inline const BorderValue& RenderTableSection::borderAdjoiningTableEnd() const
-{
-    if (isDirectionSame(this, table()))
-        return style().borderEnd();
-    return style().borderStart();
-}
 
 inline RenderTableSection::CellStruct& RenderTableSection::cellAt(unsigned row,  unsigned col)
 {
@@ -282,34 +266,6 @@ inline RenderTableRow* RenderTableSection::rowRendererAt(unsigned row) const
 {
     ASSERT(!m_needsCellRecalc);
     return m_grid[row].rowRenderer;
-}
-
-inline LayoutUnit RenderTableSection::outerBorderLeft(const RenderStyle* styleForCellFlow) const
-{
-    if (styleForCellFlow->isHorizontalWritingMode())
-        return styleForCellFlow->isLeftToRightDirection() ? outerBorderStart() : outerBorderEnd();
-    return styleForCellFlow->isFlippedBlocksWritingMode() ? outerBorderAfter() : outerBorderBefore();
-}
-
-inline LayoutUnit RenderTableSection::outerBorderRight(const RenderStyle* styleForCellFlow) const
-{
-    if (styleForCellFlow->isHorizontalWritingMode())
-        return styleForCellFlow->isLeftToRightDirection() ? outerBorderEnd() : outerBorderStart();
-    return styleForCellFlow->isFlippedBlocksWritingMode() ? outerBorderBefore() : outerBorderAfter();
-}
-
-inline LayoutUnit RenderTableSection::outerBorderTop(const RenderStyle* styleForCellFlow) const
-{
-    if (styleForCellFlow->isHorizontalWritingMode())
-        return styleForCellFlow->isFlippedBlocksWritingMode() ? outerBorderAfter() : outerBorderBefore();
-    return styleForCellFlow->isLeftToRightDirection() ? outerBorderStart() : outerBorderEnd();
-}
-
-inline LayoutUnit RenderTableSection::outerBorderBottom(const RenderStyle* styleForCellFlow) const
-{
-    if (styleForCellFlow->isHorizontalWritingMode())
-        return styleForCellFlow->isFlippedBlocksWritingMode() ? outerBorderBefore() : outerBorderAfter();
-    return styleForCellFlow->isLeftToRightDirection() ? outerBorderEnd() : outerBorderStart();
 }
 
 inline unsigned RenderTableSection::numRows() const
@@ -343,4 +299,4 @@ inline RenderPtr<RenderBox> RenderTableSection::createAnonymousBoxWithSameTypeAs
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableSection, isTableSection())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableSection, isRenderTableSection())

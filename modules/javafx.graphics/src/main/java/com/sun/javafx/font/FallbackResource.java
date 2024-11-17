@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,8 @@
 package com.sun.javafx.font;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import com.sun.javafx.geom.transform.BaseTransform;
 
 
@@ -272,6 +270,7 @@ public class FallbackResource implements CompositeFontResource {
         return ns+1;
     }
 
+    @Override
     public int addSlotFont(FontResource fr) {
         int slot = getSlotForFont(fr.getFullName());
         if (slot >= 0) {
@@ -366,6 +365,7 @@ public class FallbackResource implements CompositeFontResource {
         return strike;
     }
 
+    @Override
     public String toString() {
         int ns = getNumSlots();
         String s = "Fallback resource:\n";

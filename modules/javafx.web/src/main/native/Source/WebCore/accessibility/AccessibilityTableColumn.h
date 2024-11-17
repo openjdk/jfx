@@ -29,8 +29,6 @@
 #pragma once
 
 #include "AccessibilityMockObject.h"
-#include "AccessibilityTable.h"
-#include "IntRect.h"
 
 namespace WebCore {
 
@@ -43,7 +41,7 @@ public:
 
     AXCoreObject* columnHeader() override;
 
-    AccessibilityRole roleValue() const override { return AccessibilityRole::Column; }
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::Column; }
 
     void setColumnIndex(unsigned columnIndex) { m_columnIndex = columnIndex; }
     unsigned columnIndex() const override { return m_columnIndex; }
@@ -56,7 +54,6 @@ public:
 private:
     AccessibilityTableColumn();
 
-    AccessibilityObject* headerObjectForSection(RenderTableSection*, bool thTagRequired);
     bool computeAccessibilityIsIgnored() const override;
     bool isTableColumn() const override { return true; }
 

@@ -23,29 +23,53 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * Probabilistic Guard Malloc (PGM) is an allocator designed to catch use after free attempts
+ * and out of bounds accesses. It behaves similarly to AddressSanitizer (ASAN), but aims to have
+ * minimal runtime overhead.
+ *
+ * The design of PGM is quite simple. Each time an allocation is performed an additional guard page
+ * is added above and below the newly allocated page(s). An allocation may span multiple pages.
+ * When a deallocation is performed, the page(s) allocated will be protected using mprotect to ensure
+ * that any use after frees will trigger a crash. Virtual memory addresses are never reused, so we will
+ * never run into a case where object 1 is freed, object 2 is allocated over the same address space, and
+ * object 1 then accesses the memory address space of now object 2.
+ *
+ * PGM does add notable virtual memory overhead. Each allocation, no matter the size, adds an additional 2 guard pages
+ * (8KB for X86_64 and 32KB for ARM64). In addition, there may be free memory left over in the page(s) allocated
+ * for the user. This memory may not be used by any other allocation.
+ *
+ * We added limits on virtual memory and wasted memory to help limit the memory impact on the overall system.
+ * Virtual memory for this allocator is limited to 1GB. Wasted memory, which is the unused memory in the page(s)
+ * allocated by the user, is limited to 1MB. These overall limits should ensure that the memory impact on the system
+ * is minimal, while helping to tackle the problems of catching use after frees and out of bounds accesses.
+ */
+
 #ifndef PAS_PROBABILISTIC_GUARD_MALLOC_ALLOCATOR
 #define PAS_PROBABILISTIC_GUARD_MALLOC_ALLOCATOR
 
 #include "pas_utils.h"
 #include "pas_large_heap.h"
+#include "pas_ptr_hash_map.h"
 #include <stdbool.h>
 #include <stdint.h>
 
 PAS_BEGIN_EXTERN_C;
 
-/*
- * structure for holding metadata of pgm allocations
- * FIXME : Reduce size of structure
- */
+/* structure for holding pgm metadata allocations */
 typedef struct pas_pgm_storage pas_pgm_storage;
 struct pas_pgm_storage {
     size_t allocation_size_requested;
     size_t size_of_data_pages;
-    size_t mem_to_waste;
-    size_t mem_to_alloc;
     uintptr_t start_of_data_pages;
-    uintptr_t upper_guard_page;
-    uintptr_t lower_guard_page;
+
+    /*
+     * These parameter below rely on page sizes being less than 65536.
+     * I am not aware of any platforms using more than this at the moment.
+     */
+    uint16_t mem_to_waste;
+    uint16_t page_size;
+
     pas_large_heap* large_heap;
 };
 
@@ -57,6 +81,9 @@ struct pas_pgm_storage {
  * including guard pages and wasted memory
  */
 #define PAS_PGM_MAX_VIRTUAL_MEMORY (1024 * 1024 * 1024)
+
+extern PAS_API pas_ptr_hash_map pas_pgm_hash_map;
+extern PAS_API pas_ptr_hash_map_in_flux_stash pas_pgm_hash_map_in_flux_stash;
 
 /*
  * We want a fast way to determine if we can call PGM or not.

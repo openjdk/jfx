@@ -222,7 +222,6 @@ my %idlFileNameHash = map { $_, 1 } @idlFileNames;
 
 # Populate $idlFilePathToInterfaceName and $interfaceNameToIdlFilePath.
 foreach my $idlFileName (sort keys %idlFileNameHash) {
-    $idlFileName =~ s/\s*$//g;
     my $fullPath = Cwd::realpath($idlFileName);
     my $interfaceName = fileparse(basename($idlFileName), ".idl");
     $idlFilePathToInterfaceName{$fullPath} = $interfaceName;
@@ -231,7 +230,6 @@ foreach my $idlFileName (sort keys %idlFileNameHash) {
 
 # Parse all IDL files.
 foreach my $idlFileName (sort keys %idlFileNameHash) {
-    $idlFileName =~ s/\s*$//g;
     my $fullPath = Cwd::realpath($idlFileName);
 
     my $idlFile = processIDL($idlFileName, $fullPath);
@@ -334,7 +332,7 @@ foreach my $idlFileName (sort keys %idlFileNameHash) {
 }
 
 # Generate partial interfaces for Constructors.
-GeneratePartialInterface("DOMWindow", $windowConstructorsCode, $windowConstructorsFile);
+GeneratePartialInterface("LocalDOMWindow", $windowConstructorsCode, $windowConstructorsFile);
 GeneratePartialInterface("WorkerGlobalScope", $workerGlobalScopeConstructorsCode, $workerGlobalScopeConstructorsFile);
 GeneratePartialInterface("ShadowRealmGlobalScope", $shadowRealmGlobalScopeConstructorsCode, $shadowRealmGlobalScopeConstructorsFile);
 GeneratePartialInterface("DedicatedWorkerGlobalScope", $dedicatedWorkerGlobalScopeConstructorsCode, $dedicatedWorkerGlobalScopeConstructorsFile);
@@ -392,12 +390,12 @@ foreach my $idlFilePath (sort keys %supplementalDependencies) {
 # Outputs the dependency.
 # The format of a supplemental dependency file:
 #
-# DOMWindow.idl P.idl Q.idl R.idl
+# LocalDOMWindow.idl P.idl Q.idl R.idl
 # Document.idl S.idl
 # Event.idl
 # ...
 #
-# The above indicates that DOMWindow.idl is supplemented by P.idl, Q.idl and R.idl,
+# The above indicates that LocalDOMWindow.idl is supplemented by P.idl, Q.idl and R.idl,
 # Document.idl is supplemented by S.idl, and Event.idl is supplemented by no IDLs.
 my $dependencies = "";
 foreach my $idlFilePath (sort keys %supplementals) {

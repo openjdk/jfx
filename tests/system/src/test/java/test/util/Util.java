@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.util;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -37,19 +38,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
-import javafx.scene.robot.Robot;
 import javafx.scene.Scene;
+import javafx.scene.layout.Region;
+import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
-import javafx.stage.Stage;
-
-import org.junit.Assert;
-
-import junit.framework.AssertionFailedError;
+import javafx.stage.Window;
+import org.junit.jupiter.api.Assertions;
+import com.sun.javafx.PlatformUtil;
 
 /**
  * Utility methods for life-cycle testing
@@ -71,20 +70,19 @@ public class Util {
             } else if (testError instanceof RuntimeException) {
                 throw (RuntimeException)testError;
             } else {
-                AssertionFailedError err = new AssertionFailedError("Unknown exception");
-                err.initCause(testError.getCause());
-                throw err;
+                fail(testError);
             }
         } else {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            throw err;
+            fail("Unexpected exception");
         }
     }
 
     public static void sleep(long msec) {
         try {
             Thread.sleep(msec);
-        } catch (InterruptedException ex) {}
+        } catch (InterruptedException ex) {
+            fail(ex);
+        }
     }
 
     public static boolean await(final CountDownLatch latch) {
@@ -118,9 +116,7 @@ public class Util {
                     return false;
                 }
             } catch (InterruptedException ex) {
-                AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-                err.initCause(ex);
-                throw err;
+                fail(ex);
             }
 
             if (testError[0] != null) {
@@ -129,9 +125,7 @@ public class Util {
                 } else if (testError[0] instanceof RuntimeException) {
                     throw (RuntimeException)testError[0];
                 } else {
-                    AssertionFailedError err = new AssertionFailedError("Unknown execution exception");
-                    err.initCause(testError[0].getCause());
-                    throw err;
+                    fail(testError[0].getCause());
                 }
             }
 
@@ -171,22 +165,20 @@ public class Util {
         }
 
         if (!futures.isEmpty()) {
-            throw new AssertionFailedError("Exceeded timeout limit of " + TIMEOUT + " msec");
+            fail("Exceeded timeout limit of " + TIMEOUT + " msec");
         }
     }
 
     public static ArrayList<String> createApplicationLaunchCommand(
             String testAppName,
-            String testPldrName,
-            String testPolicy) throws IOException {
+            String testPldrName) throws IOException {
 
-        return createApplicationLaunchCommand(testAppName, testPldrName, testPolicy, null);
+        return createApplicationLaunchCommand(testAppName, testPldrName, null);
     }
 
     public static ArrayList<String> createApplicationLaunchCommand(
             String testAppName,
             String testPldrName,
-            String testPolicy,
             String[] jvmArgs) throws IOException {
 
         final boolean isJar = testAppName.endsWith(".jar");
@@ -196,7 +188,6 @@ public class Util {
          */
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
         final String workerPatchModuleFile = System.getProperty("worker.patchmodule.file");
-        final String workerPatchPolicy = System.getProperty("worker.patch.policy");
         final String workerClassPath = System.getProperty("worker.classpath.file");
         final Boolean workerDebug = Boolean.getBoolean("worker.debug");
 
@@ -224,64 +215,6 @@ public class Util {
 
         if (testPldrName != null) {
             cmd.add("-Djavafx.preloader=" + testPldrName);
-        }
-
-        if (testPolicy != null) {
-
-            cmd.add("-Djava.security.manager");
-
-            try {
-                if (workerPatchPolicy != null) {
-                    // with Jigsaw, we need to create a merged java.policy
-                    // file that contains the permissions for the patchmodule classes
-                    // as well as the permissions needed for this test
-
-                    File wpp = new File(workerPatchPolicy);
-                    if (!wpp.exists()) {
-                        throw new RuntimeException("Missing workerPatchPolicy");
-                    }
-
-                    File tempFile = null;
-                    if (workerDebug) {
-                        String baseAppName = isJar
-                                ? testAppName.substring(0, testAppName.length() - 4)
-                                : testAppName;
-                        final int lastSlashIdx = baseAppName.lastIndexOf("/");
-                        if (lastSlashIdx >= 0) {
-                            baseAppName = baseAppName.substring(lastSlashIdx + 1);
-                        }
-                        tempFile = new File(workerPatchPolicy +
-                                "_" + baseAppName);
-                    } else {
-                        tempFile = File.createTempFile("java", "policy");
-                        tempFile.deleteOnExit();
-                    }
-
-                    BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
-
-                    BufferedReader reader1 = new BufferedReader(new FileReader(wpp));
-                    URL url = new URL(testPolicy);
-                    BufferedReader reader2 = new BufferedReader(new FileReader(url.getFile()));
-
-                    String line = null;
-                    while ((line = reader1.readLine()) != null) {
-                        writer.write(line);
-                        writer.newLine();
-                    }
-                    while ((line = reader2.readLine()) != null) {
-                        writer.write(line);
-                        writer.newLine();
-                    }
-                    writer.close();
-                    cmd.add("-Djava.security.policy=" +
-                        tempFile.getAbsolutePath().replaceAll("\\\\","/"));
-                } else {
-                    cmd.add("-Djava.security.policy=" + testPolicy);
-                }
-            } catch (IOException e) {
-                throw e;
-            }
-
         }
 
         if (jvmArgs != null) {
@@ -350,9 +283,9 @@ public class Util {
 
         String msg = "Failed to launch FX application " + applicationClass + " within " + timeoutSeconds + " sec.";
         try {
-            Assert.assertTrue(msg, startupLatch.await(timeoutSeconds, TimeUnit.SECONDS));
+            Assertions.assertTrue(startupLatch.await(timeoutSeconds, TimeUnit.SECONDS), msg);
         } catch (InterruptedException e) {
-            throw new AssertionError(e);
+            fail(e);
         }
     }
 
@@ -369,23 +302,21 @@ public class Util {
         Platform.startup(r);
         try {
             String msg = "Timeout waiting for FX runtime to start";
-            Assert.assertTrue(msg, startupLatch.await(STARTUP_TIMEOUT, TimeUnit.SECONDS));
+            Assertions.assertTrue(startupLatch.await(STARTUP_TIMEOUT, TimeUnit.SECONDS), msg);
         } catch (InterruptedException e) {
-            throw new AssertionError(e);
+            fail(e);
         }
     }
 
     /**
-     * This synchronous method first hides all the specified stages (ignoring any
-     * null Stages) in the platform thread, then calls {@link Platform.exit()}.
+     * This synchronous method first hides all the open {@code Window}s in the platform thread,
+     * then invokes {@link Platform.exit()}.
      */
-    public static void shutdown(Stage... stages) {
+    public static void shutdown() {
         runAndWait(() -> {
-            for (Stage s : stages) {
-                if (s != null) {
-                    s.hide();
-                }
-            }
+            List.
+                copyOf(Window.getWindows()).
+                forEach(Window::hide);
             Platform.exit();
         });
     }
@@ -396,9 +327,9 @@ public class Util {
      */
     public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
         try {
-            Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
+            Assertions.assertTrue(latch.await(seconds, TimeUnit.SECONDS), "Timeout: " + msg);
         } catch (InterruptedException e) {
-            throw new AssertionError(e);
+            fail(e);
         }
     }
 
@@ -465,5 +396,46 @@ public class Util {
 
     private static boolean isFractional(double x) {
         return x != Math.rint(x);
+    }
+
+    /**
+     * Returns the tolerance which should be used when comparing values,
+     * when {@link Region#isSnapToPixel()} returns true and the scale can
+     * be determined from the region's parent {@code Window}.
+     * When scale cannot be determined it is assumed to be 1.0.
+     * Otherwise, returns 0.0.
+     *
+     * @param r the region in question
+     * @return the tolerance value
+     */
+    public static double getTolerance(Region r) {
+        if (r.isSnapToPixel()) {
+            Scene scene = r.getScene();
+            if (scene != null) {
+                Window win = scene.getWindow();
+                if (win != null) {
+                    // x and y usually have the same scale, so we'll use x
+                    double scale = win.getRenderScaleX();
+                    // distance between pixels in the local (unscaled) coordinates is (1 / scale)
+                    return 1.0 / scale;
+                }
+            }
+            // default to 1 when the scale cannot be determited
+            return 1.0;
+        }
+        return 0.0;
+    }
+
+
+    /**
+     * Checks if the system is running Linux with the Wayland server.
+     *
+     * @return true if running on Wayland, false otherwise
+     */
+    public static boolean isOnWayland() {
+        if (!PlatformUtil.isLinux()) return false;
+
+        String waylandDisplay = System.getenv("WAYLAND_DISPLAY");
+        return waylandDisplay != null && !waylandDisplay.isEmpty();
     }
 }

@@ -80,6 +80,10 @@ typedef enum /*< skip >*/
   GST_TRACER_QUARK_HOOK_OBJECT_REFFED,
   GST_TRACER_QUARK_HOOK_OBJECT_UNREFFED,
   GST_TRACER_QUARK_HOOK_PLUGIN_FEATURE_LOADED,
+  GST_TRACER_QUARK_HOOK_PAD_CHAIN_PRE,
+  GST_TRACER_QUARK_HOOK_PAD_CHAIN_POST,
+  GST_TRACER_QUARK_HOOK_PAD_CHAIN_LIST_PRE,
+  GST_TRACER_QUARK_HOOK_PAD_CHAIN_LIST_POST,
   GST_TRACER_QUARK_MAX
 } GstTracerQuarkId;
 
@@ -722,6 +726,118 @@ typedef void (*GstTracerHookPluginFeatureLoaded) (GObject *self, GstClockTime ts
     GstTracerHookPluginFeatureLoaded, (GST_TRACER_ARGS, feature)); \
 }G_STMT_END
 
+/**
+ * GstTracerHookPadChainPre:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @pad: the pad
+ * @buffer: the buffer
+ *
+ * Pre-hook for gst_pad_chain() named "pad-chain-pre".
+ *
+ * Since: 1.22
+ */
+typedef void (*GstTracerHookPadChainPre) (GObject *self, GstClockTime ts,
+    GstPad *pad, GstBuffer *buffer);
+
+/**
+ * GST_TRACER_PAD_CHAIN_PRE:
+ * @pad: a %GstPad
+ * @buffer: a %GstBuffer
+ *
+ * Dispatches the "pad-chain-pre" hook.
+ *
+ * Since: 1.22
+ */
+#define GST_TRACER_PAD_CHAIN_PRE(pad, buffer) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_PAD_CHAIN_PRE), \
+    GstTracerHookPadChainPre, (GST_TRACER_ARGS, pad, buffer)); \
+}G_STMT_END
+
+/**
+ * GstTracerHookPadChainPost:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @pad: the pad
+ * @res: the result of gst_pad_chain()
+ *
+ * Post-hook for gst_pad_chain() named "pad-chain-post".
+ *
+ * Since: 1.22
+ */
+typedef void (*GstTracerHookPadChainPost) (GObject * self, GstClockTime ts,
+    GstPad *pad, GstFlowReturn res);
+
+/**
+ * GST_TRACER_PAD_CHAIN_POST:
+ * @pad: a %GstPad
+ * @res: a %GstFlowReturn
+ *
+ * Dispatches the "pad-chain-post" hook.
+ *
+ * Since: 1.22
+ */
+#define GST_TRACER_PAD_CHAIN_POST(pad, res) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_PAD_CHAIN_POST), \
+    GstTracerHookPadChainPost, (GST_TRACER_ARGS, pad, res)); \
+}G_STMT_END
+
+/**
+ * GstTracerHookPadChainListPre:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @pad: the pad
+ * @list: the buffer-list
+ *
+ * Pre-hook for gst_pad_chain_list() named "pad-chain-list-pre".
+ *
+ * Since: 1.22
+ */
+typedef void (*GstTracerHookPadChainListPre) (GObject *self, GstClockTime ts,
+    GstPad *pad, GstBufferList *list);
+
+/**
+ * GST_TRACER_PAD_CHAIN_LIST_PRE:
+ * @pad: a %GstPad
+ * @list: a %GstBufferList
+ *
+ * Dispatches the "pad-chain-list-pre" hook.
+ *
+ * Since: 1.22
+ */
+#define GST_TRACER_PAD_CHAIN_LIST_PRE(pad, list) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_PAD_CHAIN_LIST_PRE), \
+    GstTracerHookPadChainListPre, (GST_TRACER_ARGS, pad, list)); \
+}G_STMT_END
+
+/**
+ * GstTracerHookPadChainListPost:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @pad: the pad
+ * @res: the result of gst_pad_chain_list()
+ *
+ * Post-hook for gst_pad_chain_list() named "pad-chain-list-post".
+ *
+ * Since: 1.22
+ */
+typedef void (*GstTracerHookPadChainListPost) (GObject *self, GstClockTime ts,
+    GstPad *pad,
+    GstFlowReturn res);
+
+/**
+ * GST_TRACER_PAD_CHAIN_LIST_POST:
+ * @pad: a %GstPad
+ * @res: a %GstFlowReturn
+ *
+ * Dispatches the "pad-chain-list-post" hook.
+ *
+ * Since: 1.22
+ */
+#define GST_TRACER_PAD_CHAIN_LIST_POST(pad, res) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_PAD_CHAIN_LIST_POST), \
+    GstTracerHookPadChainListPost, (GST_TRACER_ARGS, pad, res)); \
+}G_STMT_END
 
 #else /* !GST_DISABLE_GST_TRACER_HOOKS */
 
@@ -772,6 +888,10 @@ _priv_gst_tracing_deinit (void)
 #define GST_TRACER_OBJECT_REFFED(object, new_refcount)
 #define GST_TRACER_OBJECT_UNREFFED(object, new_refcount)
 #define GST_TRACER_PLUGIN_FEATURE_LOADED(feature)
+#define GST_TRACER_PAD_CHAIN_PRE(pad, buffer)
+#define GST_TRACER_PAD_CHAIN_POST(pad, res)
+#define GST_TRACER_PAD_CHAIN_LIST_PRE(pad, list)
+#define GST_TRACER_PAD_CHAIN_LIST_POST(pad, res)
 
 #endif /* GST_DISABLE_GST_TRACER_HOOKS */
 

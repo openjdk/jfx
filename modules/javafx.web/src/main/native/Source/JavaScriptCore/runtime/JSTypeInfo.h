@@ -41,7 +41,6 @@ static constexpr unsigned MasqueradesAsUndefined = 1; // WebCore uses Masquerade
 static constexpr unsigned ImplementsDefaultHasInstance = 1 << 1;
 static constexpr unsigned OverridesGetCallData = 1 << 2; // Need this flag if you implement [[Callable]] interface, which means overriding getCallData. The object may not be callable since getCallData can say it is not callable.
 static constexpr unsigned OverridesGetOwnPropertySlot = 1 << 3;
-static constexpr unsigned OverridesToThis = 1 << 4; // If this is false then this returns something other than 'this'. Non-object cells that are visible to JS have this set as do some exotic objects.
 static constexpr unsigned HasStaticPropertyTable = 1 << 5;
 static constexpr unsigned TypeInfoPerCellBit = 1 << 7; // Unlike other inline flags, this will only be set on the cell itself and will not be set on the Structure.
 
@@ -60,6 +59,7 @@ static constexpr unsigned StructureIsImmortal = 1 << 17;
 static constexpr unsigned OverridesPut = 1 << 18;
 static constexpr unsigned OverridesGetPrototype = 1 << 19;
 static constexpr unsigned GetOwnPropertySlotMayBeWrongAboutDontEnum = 1 << 20;
+static constexpr unsigned OverridesIsExtensible = 1 << 21;
 
 static constexpr unsigned numberOfInlineBits = 8;
 static constexpr unsigned OverridesGetPrototypeOutOfLine = OverridesGetPrototype >> numberOfInlineBits;
@@ -69,20 +69,20 @@ public:
     typedef uint8_t InlineTypeFlags;
     typedef uint16_t OutOfLineTypeFlags;
 
-    TypeInfo(JSType type, unsigned flags)
+    constexpr TypeInfo(JSType type, unsigned flags)
         : TypeInfo(type, flags & 0xff, flags >> numberOfInlineBits)
     {
-        ASSERT(!(flags >> 24));
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(!(flags >> 24));
     }
 
-    TypeInfo(JSType type, InlineTypeFlags inlineTypeFlags, OutOfLineTypeFlags outOfLineTypeFlags)
+    constexpr TypeInfo(JSType type, InlineTypeFlags inlineTypeFlags, OutOfLineTypeFlags outOfLineTypeFlags)
         : m_type(type)
         , m_flags(inlineTypeFlags)
         , m_flags2(outOfLineTypeFlags)
     {
     }
 
-    JSType type() const { return static_cast<JSType>(m_type); }
+    constexpr JSType type() const { return static_cast<JSType>(m_type); }
     bool isObject() const { return isObject(type()); }
     static bool isObject(JSType type) { return type >= ObjectType; }
     bool isFinalObject() const { return type() == FinalObjectType; }
@@ -98,13 +98,13 @@ public:
     static bool overridesGetOwnPropertySlot(InlineTypeFlags flags) { return flags & OverridesGetOwnPropertySlot; }
     static bool hasStaticPropertyTable(InlineTypeFlags flags) { return flags & HasStaticPropertyTable; }
     static bool perCellBit(InlineTypeFlags flags) { return flags & TypeInfoPerCellBit; }
-    bool overridesToThis() const { return isSetOnFlags1<OverridesToThis>(); }
     bool structureIsImmortal() const { return isSetOnFlags2<StructureIsImmortal>(); }
     bool overridesGetOwnPropertyNames() const { return isSetOnFlags2<OverridesGetOwnPropertyNames>(); }
     bool overridesGetOwnSpecialPropertyNames() const { return isSetOnFlags2<OverridesGetOwnSpecialPropertyNames>(); }
     bool overridesAnyFormOfGetOwnPropertyNames() const { return overridesGetOwnPropertyNames() || overridesGetOwnSpecialPropertyNames(); }
     bool overridesPut() const { return isSetOnFlags2<OverridesPut>(); }
     bool overridesGetPrototype() const { return isSetOnFlags2<OverridesGetPrototype>(); }
+    bool overridesIsExtensible() const { return isSetOnFlags2<OverridesIsExtensible>(); }
     bool prohibitsPropertyCaching() const { return isSetOnFlags2<ProhibitsPropertyCaching>(); }
     bool getOwnPropertySlotIsImpure() const { return isSetOnFlags2<GetOwnPropertySlotIsImpure>(); }
     bool getOwnPropertySlotIsImpureForPropertyAbsence() const { return isSetOnFlags2<GetOwnPropertySlotIsImpureForPropertyAbsence>(); }
@@ -136,8 +136,8 @@ public:
         return structureFlags | (oldCellFlags & static_cast<InlineTypeFlags>(TypeInfoPerCellBit));
     }
 
-    InlineTypeFlags inlineTypeFlags() const { return m_flags; }
-    OutOfLineTypeFlags outOfLineTypeFlags() const { return m_flags2; }
+    constexpr InlineTypeFlags inlineTypeFlags() const { return m_flags; }
+    constexpr OutOfLineTypeFlags outOfLineTypeFlags() const { return m_flags2; }
 
 private:
     friend class LLIntOffsetsExtractor;

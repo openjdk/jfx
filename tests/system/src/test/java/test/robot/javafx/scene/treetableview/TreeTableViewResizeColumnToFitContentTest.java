@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.robot.javafx.scene.treetableview;
 
-import static org.junit.Assert.fail;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -39,10 +38,10 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
@@ -68,15 +67,14 @@ public class TreeTableViewResizeColumnToFitContentTest {
 
     @Test
     public void resizeColumnToFitContentTest() {
-        double colOneWidth = treeTableView.getColumns().get(0).getWidth();
-        double colTwoWidth = treeTableView.getColumns().get(1).getWidth();
-        double colThreeWidth = treeTableView.getColumns().get(2).getWidth();
-        double colsWidthBeforeResize = colOneWidth + colTwoWidth + colThreeWidth;
+        double wid0 = treeTableView.getColumns().get(0).getWidth();
+        double wid1 = treeTableView.getColumns().get(1).getWidth();
+        double wid2 = treeTableView.getColumns().get(2).getWidth();
+        double colsWidthBeforeResize = wid0 + wid1 + wid2;
         double colHeaderHeight = 25;
-        double posX = scene.getWindow().getX() + treeTableView.getLayoutX() +
-                colOneWidth + colTwoWidth;
-        double posY = scene.getWindow().getY() + treeTableView.getLayoutY() +
-                colHeaderHeight / 2;
+        double posX = scene.getWindow().getX() + treeTableView.getLayoutX() + wid0 + wid1;
+        double posY = scene.getWindow().getY() + treeTableView.getLayoutY() + colHeaderHeight / 2;
+
         CountDownLatch latch = new CountDownLatch(1);
         Platform.runLater(() -> {
             robot.mouseMove((int) posX, (int) posY);
@@ -86,33 +84,33 @@ public class TreeTableViewResizeColumnToFitContentTest {
             robot.mouseRelease(MouseButton.PRIMARY);
             latch.countDown();
         });
-        Util.waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
-        try {
-            Thread.sleep(1000); // Delay for table resizing of table columns.
-        } catch (Exception e) {
-            fail("Thread was interrupted." + e);
-        }
-        Assert.assertTrue("resizeColumnToFitContent failed",
-                (colTwoWidth != treeTableView.getColumns().get(1).getWidth()));
 
-        // Skip this check on platforms with fractional scale until JDK-8299753 gets implemented
-        if (!Util.isFractionalScaleX(treeTableView)) {
-            colTwoWidth = treeTableView.getColumns().get(1).getWidth();
-            colThreeWidth = treeTableView.getColumns().get(2).getWidth();
-            double colsWidthAfterResize = colOneWidth + colTwoWidth + colThreeWidth;
-            Assert.assertEquals("TreeTableView.CONSTRAINED_RESIZE_POLICY ignored.",
-                    colsWidthBeforeResize, colsWidthAfterResize, EPSILON);
-        }
+        Util.waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
+        Util.waitForIdle(scene);
+
+        Assertions.assertTrue((wid1 != treeTableView.getColumns().get(1).getWidth()), "resizeColumnToFitContent failed");
+
+        wid1 = treeTableView.getColumns().get(1).getWidth();
+        wid2 = treeTableView.getColumns().get(2).getWidth();
+        double colsWidthAfterResize = wid0 + wid1 + wid2;
+        double tolerance = Util.getTolerance(treeTableView);
+        String message = "TreeTableView.CONSTRAINED_RESIZE_POLICY ignored" +
+            ", before=" + colsWidthBeforeResize +
+            ", after=" + colsWidthAfterResize +
+            ", diff=" + Math.abs(colsWidthBeforeResize - colsWidthAfterResize) +
+            ", tolerance=" + tolerance +
+            ", tol+eps=" + (tolerance + EPSILON);
+        Assertions.assertEquals(colsWidthBeforeResize, colsWidthAfterResize, tolerance + EPSILON, message);
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     public static class TestApp extends Application {

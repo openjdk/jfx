@@ -33,8 +33,9 @@
 
 namespace WebCore {
 
-class Frame;
+class LocalFrame;
 class SecurityOrigin;
+enum class Initiator : uint8_t;
 
 namespace MixedContentChecker {
 
@@ -45,9 +46,9 @@ enum class ContentType {
 
 enum class ShouldLogWarning { No, Yes };
 
-bool frameAndAncestorsCanDisplayInsecureContent(Frame&, ContentType, const URL&);
-bool frameAndAncestorsCanRunInsecureContent(Frame&, SecurityOrigin&, const URL&, ShouldLogWarning = ShouldLogWarning::Yes);
-void checkFormForMixedContent(Frame&, const URL&);
+bool frameAndAncestorsCanDisplayInsecureContent(LocalFrame&, ContentType, const URL&);
+bool frameAndAncestorsCanRunInsecureContent(LocalFrame&, SecurityOrigin&, const URL&, ShouldLogWarning = ShouldLogWarning::Yes);
+void checkFormForMixedContent(LocalFrame&, const URL&);
 
 } // namespace MixedContentChecker
 } // namespace WebCore

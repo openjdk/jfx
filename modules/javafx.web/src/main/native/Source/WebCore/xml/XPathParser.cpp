@@ -1,6 +1,7 @@
 /*
  * Copyright 2005 Maksim Orlovich <maksim@kde.org>
- * Copyright (C) 2006, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Google Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,16 +47,22 @@ namespace XPath {
 
 struct Parser::Token {
     int type;
-    String string;
-    Step::Axis axis;
-    NumericOp::Opcode numericOpcode;
-    EqTestOp::Opcode equalityTestOpcode;
+    using TokenValue = std::variant<String, Step::Axis, NumericOp::Opcode, EqTestOp::Opcode>;
+    TokenValue value;
 
-    Token(int type) : type(type) { }
-    Token(int type, const String& string) : type(type), string(string) { }
-    Token(int type, Step::Axis axis) : type(type), axis(axis) { }
-    Token(int type, NumericOp::Opcode opcode) : type(type), numericOpcode(opcode) { }
-    Token(int type, EqTestOp::Opcode opcode) : type(type), equalityTestOpcode(opcode) { }
+    Token() = delete;
+
+    Token(int type)
+        : type(type)
+    { }
+    Token(int type, TokenValue&& value)
+        : type(type), value(WTFMove(value))
+    { }
+
+    String& string() { return std::get<String>(value); }
+    Step::Axis axis() const { return std::get<Step::Axis>(value); }
+    NumericOp::Opcode numericOpcode() const { return std::get<NumericOp::Opcode>(value); }
+    EqTestOp::Opcode equalityTestOpcode() const { return std::get<EqTestOp::Opcode>(value); }
 };
 
 enum XMLCat { NameStart, NameCont, NotPartOfName };
@@ -130,9 +137,10 @@ bool Parser::isBinaryOperatorContext() const
     }
 }
 
+// See https://www.w3.org/TR/1999/REC-xpath-19991116/#NT-ExprWhitespace .
 void Parser::skipWS()
 {
-    while (m_nextPos < m_data.length() && isSpaceOrNewline(m_data[m_nextPos]))
+    while (m_nextPos < m_data.length() && isASCIIWhitespaceWithoutFF(m_data[m_nextPos]))
         ++m_nextPos;
 }
 
@@ -407,14 +415,14 @@ int Parser::lex(YYSTYPE& yylval)
 
     switch (token.type) {
     case AXISNAME:
-        yylval.axis = token.axis;
+        yylval.axis = token.axis();
         break;
     case MULOP:
-        yylval.numericOpcode = token.numericOpcode;
+        yylval.numericOpcode = token.numericOpcode();
         break;
     case RELOP:
     case EQOP:
-        yylval.equalityTestOpcode = token.equalityTestOpcode;
+        yylval.equalityTestOpcode = token.equalityTestOpcode();
         break;
     case NODETYPE:
     case FUNCTIONNAME:
@@ -422,7 +430,7 @@ int Parser::lex(YYSTYPE& yylval)
     case VARIABLEREFERENCE:
     case NUMBER:
     case NAMETEST:
-        yylval.string = token.string.releaseImpl().leakRef();
+        yylval.string = token.string().releaseImpl().leakRef();
         break;
     }
 
@@ -455,12 +463,13 @@ ExceptionOr<std::unique_ptr<Expression>> Parser::parseStatement(const String& st
     int parseError = xpathyyparse(parser);
 
     if (parser.m_sawNamespaceError)
-        return Exception { NamespaceError };
+        return Exception { ExceptionCode::NamespaceError };
 
     if (parseError)
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
 
     return WTFMove(parser.m_result);
 }
 
-} }
+} // namespace XPath
+} // namespace WebCore

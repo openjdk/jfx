@@ -37,6 +37,8 @@ class Path;
 
 class ThemeAdwaita : public Theme {
 public:
+    ThemeAdwaita();
+
     enum class PaintRounded : bool { No, Yes };
 
     static void paintFocus(GraphicsContext&, const FloatRect&, int offset, const Color&, PaintRounded = PaintRounded::No);
@@ -47,22 +49,34 @@ public:
 
     virtual void platformColorsDidChange() { };
 
+    bool userPrefersContrast() const final;
+    bool userPrefersReducedMotion() const final;
+
     void setAccentColor(const Color&);
     Color accentColor();
 private:
     LengthSize controlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const final;
     LengthSize minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const final;
     LengthBox controlBorder(StyleAppearance, const FontCascade&, const LengthBox&, float) const final;
-    void paint(StyleAppearance, ControlStates&, GraphicsContext&, const FloatRect&, float, ScrollView*, float, float, bool, bool, const Color&) final;
+    void paint(StyleAppearance, OptionSet<ControlStyle::State>, GraphicsContext&, const FloatRect&, bool, const Color&) final;
 
-    void paintCheckbox(ControlStates&, GraphicsContext&, const FloatRect&, bool, const Color&);
-    void paintRadio(ControlStates&, GraphicsContext&, const FloatRect&, bool, const Color&);
-    void paintButton(ControlStates&, GraphicsContext&, const FloatRect&, bool);
-    void paintSpinButton(ControlStates&, GraphicsContext&, const FloatRect&, bool);
+    void paintCheckbox(OptionSet<ControlStyle::State>, GraphicsContext&, const FloatRect&, bool, const Color&);
+    void paintRadio(OptionSet<ControlStyle::State>, GraphicsContext&, const FloatRect&, bool, const Color&);
+    void paintButton(OptionSet<ControlStyle::State>, GraphicsContext&, const FloatRect&, bool);
+    void paintSpinButton(OptionSet<ControlStyle::State>, GraphicsContext&, const FloatRect&, bool);
 
     static Color focusColor(const Color&);
 
+#if PLATFORM(GTK)
+    void refreshGtkSettings();
+#endif // PLATFORM(GTK)
+
     Color m_accentColor { SRGBA<uint8_t> { 52, 132, 228 } };
+
+    bool m_prefersReducedMotion { false };
+#if !USE(GTK4)
+    bool m_prefersContrast { false };
+#endif
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,9 +27,12 @@
 #include "config.h"
 #include "CachedSVGFont.h"
 
+#include "CookieJar.h"
+#include "ElementChildIteratorInlines.h"
 #include "FontCreationContext.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
+#include "ParserContentPolicy.h"
 #include "SVGDocument.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFontElement.h"
@@ -39,21 +42,22 @@
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 
 namespace WebCore {
 
 CachedSVGFont::CachedSVGFont(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar, const Settings& settings)
     : CachedFont(WTFMove(request), sessionID, cookieJar, Type::SVGFontResource)
-    , m_externalSVGFontElement(nullptr)
     , m_settings(settings)
 {
 }
 
 CachedSVGFont::CachedSVGFont(CachedResourceRequest&& request, CachedSVGFont& resource)
-    : CachedSVGFont(WTFMove(request), resource.sessionID(), resource.cookieJar(), resource.m_settings)
+    : CachedSVGFont(WTFMove(request), resource.sessionID(), resource.protectedCookieJar().get(), resource.m_settings.copyRef())
 {
 }
+
+CachedSVGFont::~CachedSVGFont() = default;
 
 RefPtr<Font> CachedSVGFont::createFont(const FontDescription& fontDescription, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext)
 {
@@ -64,7 +68,7 @@ RefPtr<Font> CachedSVGFont::createFont(const FontDescription& fontDescription, b
 FontPlatformData CachedSVGFont::platformDataFromCustomData(const FontDescription& fontDescription, bool bold, bool italic, const FontCreationContext& fontCreationContext)
 {
     if (m_externalSVGDocument)
-        return FontPlatformData(fontDescription.computedPixelSize(), bold, italic); // FIXME: This doesn't seem right.
+        return FontPlatformData(fontDescription.computedSize(), bold, italic); // FIXME: Why are we creating a bogus font here?
     return CachedFont::platformDataFromCustomData(fontDescription, bold, italic, fontCreationContext);
 }
 
@@ -75,12 +79,12 @@ bool CachedSVGFont::ensureCustomFontData()
         {
             // We may get here during render tree updates when events are forbidden.
             // Frameless document can't run scripts or call back to the client so this is safe.
-            auto externalSVGDocument = SVGDocument::create(nullptr, m_settings, URL());
-            auto decoder = TextResourceDecoder::create("application/xml"_s);
+            Ref externalSVGDocument = SVGDocument::create(nullptr, m_settings.copyRef(), URL());
+            Ref decoder = TextResourceDecoder::create("application/xml"_s);
 
             ScriptDisallowedScope::DisableAssertionsInScope disabledScope;
 
-            externalSVGDocument->setContent(decoder->decodeAndFlush(m_data->makeContiguous()->data(), m_data->size()));
+            externalSVGDocument->setMarkupUnsafe(decoder->decodeAndFlush(m_data->makeContiguous()->data(), m_data->size()), { ParserContentPolicy::AllowDeclarativeShadowRoots });
             sawError = decoder->sawError();
             m_externalSVGDocument = WTFMove(externalSVGDocument);
         }
@@ -91,7 +95,7 @@ bool CachedSVGFont::ensureCustomFontData()
             maybeInitializeExternalSVGFontElement();
         if (!m_externalSVGFontElement || !firstFontFace())
             return false;
-        if (auto convertedFont = convertSVGToOTFFont(*m_externalSVGFontElement))
+        if (auto convertedFont = convertSVGToOTFFont(Ref { *m_externalSVGFontElement }))
             m_convertedFont = SharedBuffer::create(WTFMove(convertedFont.value()));
         else {
             m_externalSVGDocument = nullptr;
@@ -100,7 +104,7 @@ bool CachedSVGFont::ensureCustomFontData()
         }
     }
 
-    return m_externalSVGDocument && CachedFont::ensureCustomFontData(m_convertedFont.get());
+    return m_externalSVGDocument && CachedFont::ensureCustomFontData(m_convertedFont.copyRef().get());
 }
 
 SVGFontElement* CachedSVGFont::getSVGFontById(const AtomString& fontName) const
@@ -120,10 +124,9 @@ SVGFontElement* CachedSVGFont::getSVGFontById(const AtomString& fontName) const
 
 SVGFontElement* CachedSVGFont::maybeInitializeExternalSVGFontElement()
 {
-    if (m_externalSVGFontElement)
-        return m_externalSVGFontElement;
+    if (!m_externalSVGFontElement)
     m_externalSVGFontElement = getSVGFontById(url().fragmentIdentifier().toAtomString());
-    return m_externalSVGFontElement;
+    return m_externalSVGFontElement.get();
 }
 
 SVGFontFaceElement* CachedSVGFont::firstFontFace()

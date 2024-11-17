@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class TurbulenceType {
+enum class TurbulenceType : uint8_t {
     Unknown,
     FractalNoise,
     Turbulence
@@ -37,7 +37,9 @@ enum class TurbulenceType {
 
 class FETurbulence : public FilterEffect {
 public:
-    WEBCORE_EXPORT static Ref<FETurbulence> create(TurbulenceType, float baseFrequencyX, float baseFrequencyY, int numOctaves, float seed, bool stitchTiles);
+    WEBCORE_EXPORT static Ref<FETurbulence> create(TurbulenceType, float baseFrequencyX, float baseFrequencyY, int numOctaves, float seed, bool stitchTiles, DestinationColorSpace = DestinationColorSpace::SRGB());
+
+    bool operator==(const FETurbulence&) const;
 
     TurbulenceType type() const { return m_type; }
     bool setType(TurbulenceType);
@@ -58,11 +60,13 @@ public:
     bool setStitchTiles(bool);
 
 private:
-    FETurbulence(TurbulenceType, float baseFrequencyX, float baseFrequencyY, int numOctaves, float seed, bool stitchTiles);
+    FETurbulence(TurbulenceType, float baseFrequencyX, float baseFrequencyY, int numOctaves, float seed, bool stitchTiles, DestinationColorSpace);
+
+    bool operator==(const FilterEffect& other) const override { return areEqual<FETurbulence>(*this, other); }
 
     unsigned numberOfEffectInputs() const override { return 0; }
 
-    FloatRect calculateImageRect(const Filter&, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
+    FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
@@ -78,18 +82,4 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::TurbulenceType> {
-    using values = EnumValues<
-        WebCore::TurbulenceType,
-
-        WebCore::TurbulenceType::Unknown,
-        WebCore::TurbulenceType::FractalNoise,
-        WebCore::TurbulenceType::Turbulence
-    >;
-};
-
-} // namespace WTF
-
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FETurbulence)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FETurbulence)

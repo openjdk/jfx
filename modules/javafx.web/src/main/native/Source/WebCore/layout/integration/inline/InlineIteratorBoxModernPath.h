@@ -52,7 +52,7 @@ public:
 
     FloatRect visualRectIgnoringBlockDirection() const { return box().visualRectIgnoringBlockDirection(); }
 
-    bool isHorizontal() const { return box().isHorizontal(); }
+    inline bool isHorizontal() const;
     bool isLineBreak() const { return box().isLineBreak(); }
 
     unsigned minimumCaretOffset() const { return isText() ? start() : 0; }
@@ -65,6 +65,7 @@ public:
     unsigned start() const { return box().text().start(); }
     unsigned end() const { return box().text().end(); }
     unsigned length() const { return box().text().length(); }
+    size_t lineIndex() const { return box().lineIndex(); }
 
     TextBoxSelectableRange selectableRange() const
     {
@@ -88,20 +89,7 @@ public:
         };
     }
 
-    TextRun textRun(TextRunMode mode = TextRunMode::Painting) const
-    {
-        auto& style = box().style();
-        auto expansion = box().expansion();
-        auto logicalLeft = [&] {
-            if (style.isLeftToRightDirection())
-                return visualRectIgnoringBlockDirection().x() - (line().lineBoxLeft() + line().contentLogicalLeft());
-            return line().lineBoxRight() - (visualRectIgnoringBlockDirection().maxX() + line().contentLogicalLeft());
-        };
-        auto characterScanForCodePath = isText() && !renderText().canUseSimpleFontCodePath();
-        auto textRun = TextRun { mode == TextRunMode::Editing ? originalText() : box().text().renderedContent(), logicalLeft(), expansion.horizontalExpansion, expansion.behavior, direction(), style.rtlOrdering() == Order::Visual, characterScanForCodePath };
-        textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
-        return textRun;
-    };
+    inline TextRun textRun(TextRunMode = TextRunMode::Painting) const;
 
     const RenderObject& renderer() const
     {
@@ -241,7 +229,7 @@ public:
     TextDirection direction() const { return bidiLevel() % 2 ? TextDirection::RTL : TextDirection::LTR; }
     bool isFirstLine() const { return !box().lineIndex(); }
 
-    bool operator==(const BoxModernPath& other) const { return m_inlineContent == other.m_inlineContent && m_boxIndex == other.m_boxIndex; }
+    friend bool operator==(const BoxModernPath&, const BoxModernPath&) = default;
 
     bool atEnd() const { return !m_inlineContent || m_boxIndex == boxes().size(); }
     const InlineDisplay::Box& box() const { return boxes()[m_boxIndex]; }
@@ -302,7 +290,7 @@ private:
 
     void setAtEnd() { m_boxIndex = boxes().size(); }
 
-    const LayoutIntegration::InlineContent::Boxes& boxes() const { return m_inlineContent->boxes; }
+    const InlineDisplay::Boxes& boxes() const { return m_inlineContent->displayContent().boxes; }
     const InlineDisplay::Line& line() const { return m_inlineContent->lineForBox(box()); }
 
     const RenderText& renderText() const { return downcast<RenderText>(renderer()); }

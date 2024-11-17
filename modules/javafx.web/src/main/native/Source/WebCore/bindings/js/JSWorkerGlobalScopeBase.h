@@ -28,14 +28,9 @@
 
 #include "JSDOMGlobalObject.h"
 #include "JSDOMWrapper.h"
-
-#if ENABLE(SERVICE_WORKER)
 #include "ServiceWorkerGlobalScope.h"
-#endif
 
 namespace WebCore {
-
-class WorkerGlobalScope;
 
 class JSWorkerGlobalScopeBase : public JSDOMGlobalObject {
 public:
@@ -56,8 +51,6 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::GlobalObjectType, StructureFlags), info());
     }
 
-    static const JSC::GlobalObjectMethodTable s_globalObjectMethodTable;
-
     static bool supportsRichSourceInfo(const JSC::JSGlobalObject*);
     static bool shouldInterruptScript(const JSC::JSGlobalObject*);
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
@@ -68,11 +61,13 @@ public:
 
 protected:
     JSWorkerGlobalScopeBase(JSC::VM&, JSC::Structure*, RefPtr<WorkerGlobalScope>&&);
-    void finishCreation(JSC::VM&, JSC::JSProxy*);
+    void finishCreation(JSC::VM&, JSC::JSGlobalProxy*);
 
     DECLARE_VISIT_CHILDREN;
 
 private:
+    static const JSC::GlobalObjectMethodTable* globalObjectMethodTable();
+
     RefPtr<WorkerGlobalScope> m_wrapped;
 };
 

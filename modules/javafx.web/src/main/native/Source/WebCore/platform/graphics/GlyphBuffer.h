@@ -35,13 +35,16 @@
 #include "GlyphBufferMembers.h"
 #include <climits>
 #include <limits>
+#include <wtf/CheckedRef.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
+static const constexpr GlyphBufferGlyph deletedGlyph = 0xFFFF;
+
 class Font;
 
-class GlyphBuffer {
+class GlyphBuffer : public CanMakeCheckedPtr {
 public:
     bool isEmpty() const { return m_fonts.isEmpty(); }
     unsigned size() const { return m_fonts.size(); }
@@ -126,7 +129,6 @@ public:
     void makeGlyphInvisible(unsigned index)
     {
         // GlyphID 0xFFFF is the "deleted glyph" and is supposed to be invisible when rendered.
-        static const constexpr GlyphBufferGlyph deletedGlyph = 0xFFFF;
         m_glyphs[index] = deletedGlyph;
     }
 

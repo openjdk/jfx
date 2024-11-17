@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,27 @@
 
 package test.javafx.css.imagecacheleaktest;
 
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.javafx.css.imagecacheleaktest.Constants.ERROR_IMAGE_VIEW;
+import static test.javafx.css.imagecacheleaktest.Constants.ERROR_INCORRECT_GC;
+import static test.javafx.css.imagecacheleaktest.Constants.ERROR_LEAK;
+import static test.javafx.css.imagecacheleaktest.Constants.ERROR_NONE;
 import java.util.ArrayList;
-
-import org.junit.Test;
-import org.junit.Assert;
-import static org.junit.Assert.fail;
-
-import static test.javafx.css.imagecacheleaktest.Constants.*;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Unit test for verifying leak in CSS styles ImageCache.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class ImageCacheLeakTest {
 
     private static final String className = ImageCacheLeakTest.class.getName();
     private static final String pkgName = className.substring(0, className.lastIndexOf("."));
     private final String testAppName = pkgName + "." + "ImageCacheLeakApp";
 
-    @Test (timeout = 15000)
+    @Test
     public void testImageCacheLeak() throws Exception {
 
         String[] jvmArgs = new String[1];
@@ -50,7 +53,7 @@ public class ImageCacheLeakTest {
 
         // Launch the test app
         final ArrayList<String> cmd = test.util.Util.createApplicationLaunchCommand(
-                testAppName, null, null, jvmArgs);
+                testAppName, null, jvmArgs);
         ProcessBuilder builder = new ProcessBuilder(cmd);
         builder.redirectError(ProcessBuilder.Redirect.INHERIT);
         builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);

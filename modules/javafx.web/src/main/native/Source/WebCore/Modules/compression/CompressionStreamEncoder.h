@@ -32,7 +32,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #if !PLATFORM(JAVA)
-    #include <zlib.h>
+#include <zlib.h>
 #endif
 
 namespace WebCore {
@@ -57,21 +57,7 @@ public:
     }
 
 private:
-#if !PLATFORM(JAVA)
-    // If the user provides too small of an input size we will automatically allocate a page worth of memory instead.
-    // Very small input sizes can result in a larger output than their input. This would require an additional
-    // encode call then, which is not desired.
-    const size_t startingAllocationSize = 16384; // 16KB
-    const size_t maxAllocationSize = 1073741824; // 1GB
-
-    Formats::CompressionFormat m_format;
-
-    bool m_initialized { false };
-
-
-    z_stream m_zstream;
-#endif
-     bool m_finish { false };
+    bool didDeflateFinish(int) const;
 
     ExceptionOr<RefPtr<JSC::ArrayBuffer>> compress(const uint8_t* input, const size_t inputLength);
     ExceptionOr<bool> initialize();
@@ -81,10 +67,22 @@ private:
         : m_format(static_cast<Formats::CompressionFormat>(format))
 #endif
     {
-         UNUSED_PARAM(format);
 #if !PLATFORM(JAVA)
         std::memset(&m_zstream, 0, sizeof(m_zstream));
 #endif
     }
+
+    // If the user provides too small of an input size we will automatically allocate a page worth of memory instead.
+    // Very small input sizes can result in a larger output than their input. This would require an additional
+    // encode call then, which is not desired.
+    const size_t startingAllocationSize = 16384; // 16KB
+    const size_t maxAllocationSize = 1073741824; // 1GB
+
+    bool m_initialized { false };
+    bool m_didFinish { false };
+#if !PLATFORM(JAVA)
+    z_stream m_zstream;
+#endif
+    Formats::CompressionFormat m_format;
 };
 } // namespace WebCore

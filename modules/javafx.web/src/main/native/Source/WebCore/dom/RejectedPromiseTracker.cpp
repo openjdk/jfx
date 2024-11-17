@@ -31,6 +31,7 @@
 #include "EventTarget.h"
 #include "JSDOMGlobalObject.h"
 #include "JSDOMPromise.h"
+#include "Node.h"
 #include "PromiseRejectionEvent.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/Exception.h>
@@ -126,7 +127,7 @@ void RejectedPromiseTracker::promiseHandled(JSDOMGlobalObject& globalObject, JSP
     if (!m_outstandingRejectedPromises.remove(&promise))
         return;
 
-    m_context.postTask([this, rejectedPromise = DOMPromise::create(globalObject, promise)] (ScriptExecutionContext&) mutable {
+    m_context->postTask([this, rejectedPromise = DOMPromise::create(globalObject, promise)] (ScriptExecutionContext&) mutable {
         reportRejectionHandled(WTFMove(rejectedPromise));
     });
 }
@@ -139,7 +140,7 @@ void RejectedPromiseTracker::processQueueSoon()
         return;
 
     Vector<UnhandledPromise> items = WTFMove(m_aboutToBeNotifiedRejectedPromises);
-    m_context.postTask([this, items = WTFMove(items)] (ScriptExecutionContext&) mutable {
+    m_context->postTask([this, items = WTFMove(items)] (ScriptExecutionContext&) mutable {
         reportUnhandledRejections(WTFMove(items));
     });
 }
@@ -148,7 +149,7 @@ void RejectedPromiseTracker::reportUnhandledRejections(Vector<UnhandledPromise>&
 {
     // https://html.spec.whatwg.org/multipage/webappapis.html#unhandled-promise-rejections
 
-    VM& vm = m_context.vm();
+    Ref vm = m_context->vm();
     JSC::JSLockHolder lock(vm);
 
     for (auto& unhandledPromise : unhandledPromises) {
@@ -166,12 +167,12 @@ void RejectedPromiseTracker::reportUnhandledRejections(Vector<UnhandledPromise>&
         initializer.promise = &domPromise;
         initializer.reason = promise.result(vm);
 
-        auto event = PromiseRejectionEvent::create(eventNames().unhandledrejectionEvent, initializer);
-        auto target = m_context.errorEventTarget();
+        Ref event = PromiseRejectionEvent::create(eventNames().unhandledrejectionEvent, initializer);
+        RefPtr target = m_context->errorEventTarget();
         target->dispatchEvent(event);
 
         if (!event->defaultPrevented())
-            m_context.reportUnhandledPromiseRejection(lexicalGlobalObject, promise, unhandledPromise.callStack());
+            m_context->reportUnhandledPromiseRejection(lexicalGlobalObject, promise, unhandledPromise.callStack());
 
         if (!promise.isHandled(vm))
             m_outstandingRejectedPromises.set(&promise, &promise);
@@ -182,7 +183,7 @@ void RejectedPromiseTracker::reportRejectionHandled(Ref<DOMPromise>&& rejectedPr
 {
     // https://html.spec.whatwg.org/multipage/webappapis.html#the-hostpromiserejectiontracker-implementation
 
-    VM& vm = m_context.vm();
+    Ref vm = m_context->vm();
     JSC::JSLockHolder lock(vm);
 
     if (rejectedPromise->isSuspended())
@@ -194,8 +195,8 @@ void RejectedPromiseTracker::reportRejectionHandled(Ref<DOMPromise>&& rejectedPr
     initializer.promise = rejectedPromise.ptr();
     initializer.reason = promise.result(vm);
 
-    auto event = PromiseRejectionEvent::create(eventNames().rejectionhandledEvent, initializer);
-    auto target = m_context.errorEventTarget();
+    Ref event = PromiseRejectionEvent::create(eventNames().rejectionhandledEvent, initializer);
+    RefPtr target = m_context->errorEventTarget();
     target->dispatchEvent(event);
 }
 

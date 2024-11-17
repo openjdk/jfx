@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -87,8 +87,10 @@ public class MaxAseParser {
     }
 
     private class FileParserCallback extends MaxAseTokenizer.Callback {
+        @Override
         void onValue(String name, Callback.ParamList list) {}
 
+        @Override
         Callback onObject(String name, Callback.ParamList list) {
             switch (name) {
                 case "*SCENE":
@@ -114,6 +116,7 @@ public class MaxAseParser {
         Material current;
         int currentMapId;
 
+        @Override
         void onValue(String name, Callback.ParamList list) {
             switch (name) {
                 case "*MATERIAL_COUNT":
@@ -142,6 +145,7 @@ public class MaxAseParser {
             }
         }
 
+        @Override
         Callback onObject(String name, Callback.ParamList list) {
             switch (name) {
                 case "*MATERIAL":
@@ -164,6 +168,7 @@ public class MaxAseParser {
             nodeTm = newNodeTm;
         }
 
+        @Override
         void onValue(String name, Callback.ParamList list) {
             switch (name) {
                 case "*NODE_NAME":
@@ -181,6 +186,7 @@ public class MaxAseParser {
     }
 
     private abstract class NodeParserBase extends MaxAseTokenizer.Callback {
+        @Override
         void onValue(String name, Callback.ParamList list) {
             switch (name) {
                 case "*NODE_NAME":
@@ -190,6 +196,7 @@ public class MaxAseParser {
             }
         }
 
+        @Override
         Callback onObject(String name, Callback.ParamList list) {
             switch (name) {
                 case "*NODE_TM": return new NodeTMParser(addNodeTm());
@@ -207,10 +214,13 @@ public class MaxAseParser {
     private class LightNodeParser extends NodeParserBase {
         LightNode n;
 
+        @Override
         Node createNode() { return n = new LightNode(); }
 
+        @Override
         Node getNode() { return n; }
 
+        @Override
         void onValue(String name, Callback.ParamList list) {
             switch (name) {
                 case "*LIGHT_INTENS":
@@ -224,6 +234,7 @@ public class MaxAseParser {
             }
         }
 
+        @Override
         Callback onObject(String name, Callback.ParamList list) {
             switch (name) {
                 case "*LIGHT_SETTINGS": return this;
@@ -236,10 +247,13 @@ public class MaxAseParser {
     private class CameraNodeParser extends NodeParserBase {
         CameraNode node;
 
+        @Override
         Node createNode() { return node = new CameraNode(); }
 
+        @Override
         Node getNode() { return node; }
 
+        @Override
         NodeTM addNodeTm() {
             NodeTM ntm = new NodeTM();
             if (node.nodeTM == null) return node.nodeTM = ntm;
@@ -247,6 +261,7 @@ public class MaxAseParser {
             return ntm;
         }
 
+        @Override
         void onValue(String name, Callback.ParamList list) {
             switch (name) {
                 case "*CAMERA_NEAR":
@@ -260,6 +275,7 @@ public class MaxAseParser {
             }
         }
 
+        @Override
         Callback onObject(String name, Callback.ParamList list) {
             switch (name) {
                 case "*CAMERA_SETTINGS": return this;
@@ -271,8 +287,10 @@ public class MaxAseParser {
     private class NodeParser extends NodeParserBase {
         Node n;
 
+        @Override
         Node createNode() { return n = new Node(); }
 
+        @Override
         Node getNode() { return n; }
     }
 
@@ -282,6 +300,7 @@ public class MaxAseParser {
 
         private MeshParser(Mesh mesh) { this.mesh = mesh; }
 
+        @Override
         void onValue(String name, Callback.ParamList list) {
             switch (name) {
                 case "*MESH_NUMVERTEX":
@@ -308,6 +327,7 @@ public class MaxAseParser {
             }
         }
 
+        @Override
         Callback onObject(String name, Callback.ParamList list) {
             switch (name) {
                 case "*MESH_VERTEX_LIST": return new MeshVertexList(mesh.points);
@@ -339,6 +359,7 @@ public class MaxAseParser {
 
             MeshVertexList(float data[]) { this.data = data; }
 
+            @Override
             void value(byte args[][], int len[], int argc) {
                 int idx = parseInt(args[1], len[1]) * 3;
                 data[idx + 0] = parseFloat(args[2], len[2]);
@@ -352,6 +373,7 @@ public class MaxAseParser {
 
             MeshTVertexList(float data[]) { this.data = data; }
 
+            @Override
             void value(byte args[][], int len[], int argc) {
                 int idx = parseInt(args[1], len[1]) * 2;
                 data[idx + 0] = parseFloat(args[2], len[2]);
@@ -364,6 +386,7 @@ public class MaxAseParser {
 
             MeshTFaceList(int data[]) { this.data = data; }
 
+            @Override
             void value(byte args[][], int len[], int argc) {
                 int idx = parseInt(args[1], len[1]) * 3;
                 data[idx + 0] = parseInt(args[2], len[2]);
@@ -378,6 +401,7 @@ public class MaxAseParser {
 
             MeshFaceList(int data[]) { this.data = data; }
 
+            @Override
             void value(byte args[][], int len[], int argc) {
                 int idx = parseInt(args[1], len[1]) * 4;
                 data[idx + 0] = parseInt(args[3], len[3]);
@@ -405,10 +429,13 @@ public class MaxAseParser {
     private class GeomNodeParser extends NodeParserBase {
         GeomNode n;
 
+        @Override
         Node createNode() { return n = new GeomNode(); }
 
+        @Override
         Node getNode() { return n; }
 
+        @Override
         void onValue(String name, Callback.ParamList list) {
             switch (name) {
                 case "*MATERIAL_REF":
@@ -417,6 +444,7 @@ public class MaxAseParser {
             }
         }
 
+        @Override
         Callback onObject(String name, Callback.ParamList list) {
             switch (name) {
                 case "*MESH":

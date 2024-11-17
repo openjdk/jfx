@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2010 Igalia S.L.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,6 +23,7 @@
 #include "config.h"
 #include "FontCustomPlatformData.h"
 
+#include "CSSFontFaceSrcValue.h"
 #include "CairoUtilities.h"
 #include "Font.h"
 #include "FontCacheFreeType.h"
@@ -36,23 +38,23 @@
 #include FT_MODULE_H
 #include <mutex>
 
-namespace WebCore {
+#ifdef HAVE_HB_FEATURES_H
+#include <hb.h>
+// Workaround https://github.com/harfbuzz/harfbuzz/commit/30c5402e3d0cc156fd5f04560864a88723173cf2
+#define HB_NO_SINGLE_HEADER_ERROR
+#include <hb-features.h>
+#undef HB_NO_SINGLE_HEADER_ERROR
+#endif
 
-static void releaseCustomFontData(void* data)
-{
-    static_cast<FragmentedSharedBuffer*>(data)->deref();
-}
+namespace WebCore {
 
 static cairo_user_data_key_t freeTypeFaceKey;
 
-FontCustomPlatformData::FontCustomPlatformData(FT_Face freeTypeFace, FragmentedSharedBuffer& buffer)
+FontCustomPlatformData::FontCustomPlatformData(FT_Face freeTypeFace, FontPlatformData::CreationData&& data)
     : m_fontFace(adoptRef(cairo_ft_font_face_create_for_ft_face(freeTypeFace, FT_LOAD_DEFAULT)))
+    , creationData(WTFMove(data))
+    , m_renderingResourceIdentifier(RenderingResourceIdentifier::generate())
 {
-    buffer.ref(); // This is balanced by the buffer->deref() in releaseCustomFontData.
-    static cairo_user_data_key_t bufferKey;
-    cairo_font_face_set_user_data(m_fontFace.get(), &bufferKey, &buffer,
-         static_cast<cairo_destroy_func_t>(releaseCustomFontData));
-
     // Cairo doesn't do FreeType reference counting, so we need to ensure that when
     // this cairo_font_face_t is destroyed, it cleans up the FreeType face as well.
     cairo_font_face_set_user_data(m_fontFace.get(), &freeTypeFaceKey, freeTypeFace,
@@ -102,10 +104,10 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription&
     }
 #endif
 
-    auto size = description.computedPixelSize();
+    auto size = description.adjustedSizeForFontFace(fontCreationContext.sizeAdjust());
     FontPlatformData platformData(m_fontFace.get(), WTFMove(pattern), size, freeTypeFace->face_flags & FT_FACE_FLAG_FIXED_WIDTH, bold, italic, description.orientation());
 
-    platformData.updateSizeWithFontSizeAdjust(description.fontSizeAdjust());
+    platformData.updateSizeWithFontSizeAdjust(description.fontSizeAdjust(), description.computedSize());
     return platformData;
 }
 
@@ -138,7 +140,7 @@ static bool initializeFreeTypeLibrary(FT_Library& library)
     return true;
 }
 
-std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String&)
+RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String& itemInCollection)
 {
     static FT_Library library;
     if (!library && !initializeFreeTypeLibrary(library)) {
@@ -149,14 +151,15 @@ std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffe
     FT_Face freeTypeFace;
     if (FT_New_Memory_Face(library, reinterpret_cast<const FT_Byte*>(buffer.data()), buffer.size(), 0, &freeTypeFace))
         return nullptr;
-    return makeUnique<FontCustomPlatformData>(freeTypeFace, buffer);
+    FontPlatformData::CreationData creationData = { buffer, itemInCollection };
+    return adoptRef(new FontCustomPlatformData(freeTypeFace, WTFMove(creationData)));
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)
 {
     return equalLettersIgnoringASCIICase(format, "truetype"_s)
         || equalLettersIgnoringASCIICase(format, "opentype"_s)
-#if USE(WOFF2)
+#if HAVE(WOFF_SUPPORT) || USE(WOFF2)
         || equalLettersIgnoringASCIICase(format, "woff2"_s)
 #if ENABLE(VARIATION_FONTS)
         || equalLettersIgnoringASCIICase(format, "woff2-variations"_s)
@@ -167,7 +170,40 @@ bool FontCustomPlatformData::supportsFormat(const String& format)
         || equalLettersIgnoringASCIICase(format, "truetype-variations"_s)
         || equalLettersIgnoringASCIICase(format, "opentype-variations"_s)
 #endif
-        || equalLettersIgnoringASCIICase(format, "woff"_s);
+        || equalLettersIgnoringASCIICase(format, "woff"_s)
+        || equalLettersIgnoringASCIICase(format, "svg"_s);
+}
+
+bool FontCustomPlatformData::supportsTechnology(const FontTechnology& technology)
+{
+#if USE(HARFBUZZ)
+    // https://harfbuzz.github.io/what-does-harfbuzz-do.html
+    // Many of these features *could* be disabled but hb doesn't easily expose
+    // this and it is unlikely.
+    switch (technology) {
+    case FontTechnology::ColorCbdt:
+    case FontTechnology::ColorColrv0:
+    case FontTechnology::ColorColrv1:
+    case FontTechnology::ColorSbix:
+    case FontTechnology::ColorSvg:
+    case FontTechnology::FeaturesAat:
+    case FontTechnology::FeaturesOpentype:
+    case FontTechnology::Palettes:
+    case FontTechnology::Variations:
+    return true;
+    case FontTechnology::Incremental:
+    case FontTechnology::Invalid:
+        return false;
+    case FontTechnology::FeaturesGraphite:
+#ifdef HB_HAS_GRAPHITE
+        return true;
+#else
+        return false;
+#endif
+    }
+#endif
+
+    return false;
 }
 
 }

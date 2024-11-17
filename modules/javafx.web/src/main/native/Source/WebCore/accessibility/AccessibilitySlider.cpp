@@ -32,9 +32,11 @@
 #include "AXObjectCache.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
-#include "RenderObject.h"
 #include "RenderSlider.h"
+#include "RenderStyleInlines.h"
 #include "SliderThumbElement.h"
+#include "StyleAppearance.h"
+#include <wtf/Scope.h>
 
 namespace WebCore {
 
@@ -52,10 +54,6 @@ Ref<AccessibilitySlider> AccessibilitySlider::create(RenderObject* renderer)
 
 AccessibilityOrientation AccessibilitySlider::orientation() const
 {
-    // Default to horizontal in the unknown case.
-    if (!m_renderer)
-        return AccessibilityOrientation::Horizontal;
-
     auto ariaOrientation = getAttribute(aria_orientationAttr);
     if (equalLettersIgnoringASCIICase(ariaOrientation, "horizontal"_s))
         return AccessibilityOrientation::Horizontal;
@@ -64,9 +62,12 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
     if (equalLettersIgnoringASCIICase(ariaOrientation, "undefined"_s))
         return AccessibilityOrientation::Undefined;
 
-    const RenderStyle& style = m_renderer->style();
+    const auto* style = this->style();
+    // Default to horizontal in the unknown case.
+    if (!style)
+        return AccessibilityOrientation::Horizontal;
 
-    auto styleAppearance = style.effectiveAppearance();
+    auto styleAppearance = style->effectiveAppearance();
     switch (styleAppearance) {
     case StyleAppearance::SliderThumbHorizontal:
     case StyleAppearance::SliderHorizontal:
@@ -85,6 +86,9 @@ void AccessibilitySlider::addChildren()
 {
     ASSERT(!m_childrenInitialized);
     m_childrenInitialized = true;
+    auto clearDirtySubtree = makeScopeExit([&] {
+        m_subtreeDirty = false;
+    });
 
     auto* cache = axObjectCache();
     if (!cache)
@@ -108,12 +112,12 @@ const AtomString& AccessibilitySlider::getAttribute(const QualifiedName& attribu
     return nullAtom();
 }
 
-AXCoreObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const
+AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const
 {
     if (m_children.size()) {
         ASSERT(m_children.size() == 1);
         if (m_children[0]->elementRect().contains(point))
-            return m_children[0].get();
+            return dynamicDowncast<AccessibilityObject>(m_children[0].get());
     }
 
     return axObjectCache()->getOrCreate(renderer());
@@ -153,9 +157,7 @@ bool AccessibilitySlider::setValue(const String& value)
 
 HTMLInputElement* AccessibilitySlider::inputElement() const
 {
-    if (!m_renderer)
-        return nullptr;
-    return downcast<HTMLInputElement>(m_renderer->node());
+    return dynamicDowncast<HTMLInputElement>(node());
 }
 
 
@@ -174,7 +176,7 @@ LayoutRect AccessibilitySliderThumb::elementRect() const
         return LayoutRect();
 
     RenderObject* sliderRenderer = m_parent->renderer();
-    if (!sliderRenderer || !sliderRenderer->isSlider())
+    if (!sliderRenderer || !sliderRenderer->isRenderSlider())
         return LayoutRect();
     if (auto* thumbRenderer = downcast<RenderSlider>(*sliderRenderer).element().sliderThumbElement()->renderer())
         return thumbRenderer->absoluteBoundingBoxRect();

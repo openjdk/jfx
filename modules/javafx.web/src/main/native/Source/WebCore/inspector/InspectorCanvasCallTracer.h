@@ -78,7 +78,7 @@ enum class CanvasLineCap;
 enum class CanvasLineJoin;
 enum class CanvasTextAlign;
 enum class CanvasTextBaseline;
-enum class PredefinedColorSpace;
+enum class PredefinedColorSpace : uint8_t;
 enum ImageSmoothingQuality;
 
 #define FOR_EACH_INSPECTOR_CANVAS_CALL_TRACER_CSS_TYPED_OM_ARGUMENT(macro) \
@@ -206,8 +206,8 @@ public:
 
     static void recordAction(CanvasRenderingContext&, String&&, ProcessedArguments&& = { });
 
-    static std::optional<ProcessedArgument> processArgument(const HTMLCanvasElement&, uint32_t);
-    static void recordAction(const HTMLCanvasElement&, String&&, ProcessedArguments&& = { });
+    static std::optional<ProcessedArgument> processArgument(const CanvasBase&, uint32_t);
+    static void recordAction(const CanvasBase&, String&&, ProcessedArguments&& = { });
 };
 
 } // namespace WebCore

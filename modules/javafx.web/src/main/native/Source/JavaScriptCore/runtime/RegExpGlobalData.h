@@ -54,6 +54,11 @@ public:
 
     static ptrdiff_t offsetOfCachedResult() { return OBJECT_OFFSETOF(RegExpGlobalData, m_cachedResult); }
 
+    const Vector<int>& ovector() const { return m_ovector; }
+
+    inline MatchResult matchResult() const;
+    void resetResultFromCache(JSGlobalObject* owner, RegExp*, JSString*, MatchResult, Vector<int>&&);
+
 private:
     RegExpCachedResult m_cachedResult;
     bool m_multiline { false };

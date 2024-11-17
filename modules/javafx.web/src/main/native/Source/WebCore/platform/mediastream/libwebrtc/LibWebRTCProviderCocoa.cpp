@@ -94,15 +94,7 @@ bool LibWebRTCProviderCocoa::isVPSoftwareDecoderSmooth(const VideoConfiguration&
     return WebCore::isVPSoftwareDecoderSmooth(configuration);
 }
 
-std::optional<MediaCapabilitiesInfo> LibWebRTCProviderCocoa::computeVPParameters(const VideoConfiguration& configuration)
-{
-    return WebCore::computeVPParameters(configuration);
-}
 
-bool LibWebRTCProviderCocoa::isVPSoftwareDecoderSmooth(const VideoConfiguration& configuration)
-{
-    return WebCore::isVPSoftwareDecoderSmooth(configuration);
-}
 
 void LibWebRTCProviderCocoa::setActive(bool value)
 {
@@ -112,7 +104,7 @@ void LibWebRTCProviderCocoa::setActive(bool value)
 
 bool WebRTCProvider::webRTCAvailable()
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || PLATFORM(VISION)
     return true;
 #else
     return !!webrtc::setApplicationStatus;

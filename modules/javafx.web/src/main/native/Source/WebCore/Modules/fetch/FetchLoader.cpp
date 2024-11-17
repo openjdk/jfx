@@ -46,12 +46,6 @@
 
 namespace WebCore {
 
-FetchLoader::~FetchLoader()
-{
-    if (!m_urlForReading.isEmpty())
-        ThreadableBlobRegistry::unregisterBlobURL(m_urlForReading);
-}
-
 void FetchLoader::start(ScriptExecutionContext& context, const Blob& blob)
 {
     return startLoadingBlobURL(context, blob.url());
@@ -59,7 +53,8 @@ void FetchLoader::start(ScriptExecutionContext& context, const Blob& blob)
 
 void FetchLoader::startLoadingBlobURL(ScriptExecutionContext& context, const URL& blobURL)
 {
-    m_urlForReading = BlobURL::createPublicURL(context.securityOrigin());
+    m_urlForReading = { BlobURL::createPublicURL(context.securityOrigin()), context.topOrigin().data() };
+
     if (m_urlForReading.isEmpty()) {
         m_client.didFail({ errorDomainWebKitInternal, 0, URL(), "Could not create URL for Blob"_s });
         return;
@@ -96,17 +91,21 @@ void FetchLoader::start(ScriptExecutionContext& context, const FetchRequest& req
     options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
     options.navigationPreloadIdentifier = request.navigationPreloadIdentifier();
     options.contentEncodingSniffingPolicy = ContentEncodingSniffingPolicy::Disable;
+    if (context.settingsValues().fetchPriorityEnabled)
+        options.fetchPriorityHint = request.fetchPriorityHint();
 
     ResourceRequest fetchRequest = request.resourceRequest();
 
     ASSERT(context.contentSecurityPolicy());
-    auto& contentSecurityPolicy = *context.contentSecurityPolicy();
+    {
+        CheckedRef contentSecurityPolicy = *context.contentSecurityPolicy();
 
-    contentSecurityPolicy.upgradeInsecureRequestIfNeeded(fetchRequest, ContentSecurityPolicy::InsecureRequestType::Load);
+        contentSecurityPolicy->upgradeInsecureRequestIfNeeded(fetchRequest, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    if (!context.shouldBypassMainWorldContentSecurityPolicy() && !contentSecurityPolicy.allowConnectToSource(fetchRequest.url())) {
+        if (!context.shouldBypassMainWorldContentSecurityPolicy() && !contentSecurityPolicy->allowConnectToSource(fetchRequest.url())) {
         m_client.didFail({ errorDomainWebKitInternal, 0, fetchRequest.url(), "Not allowed by ContentSecurityPolicy"_s, ResourceError::Type::AccessControl });
         return;
+        }
     }
 
     String referrer = request.internalRequestReferrer();

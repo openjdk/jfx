@@ -112,7 +112,7 @@ static JLObject createEntry(HistoryItem* item, jlong jpage)
     return jEntry;
 }
 
-void notifyHistoryItemChangedImpl(HistoryItem& item) {
+void historyItemChangedImpl(HistoryItem& item) {
     JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID notifyItemChangedMID = initMethod(env, getJEntryClass(), "notifyItemChanged", "()V");
     if (item.hostObject()) {
@@ -182,6 +182,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetTitle(JN
     HistoryItem* item = getItem(jitem);
     String title = item->title();
     return title.toJavaString(env).releaseLocal();
+
 }
 
 // entry.getIcon()
@@ -344,7 +345,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflSetHostObject(JNIE
     BackForwardList* bfl = getBfl(jpage);
     bfl->setHostObject(JLObject(host, true));
 
-    notifyHistoryItemChanged = notifyHistoryItemChangedImpl;
+    //notifyHistoryItemChanged = historyItemChangedImpl;//Check 4ef4b65d33f45734ad3c6cbc7f2fe0dda17051bc for more details
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,6 +109,11 @@ enum
     PROP_0,
     PROP_CODEC_ID,
     PROP_IS_SUPPORTED,
+    // If set MP2T demuxer will not reset PTS to 0 after
+    // seek. Required to be true when we playback two
+    // separate streams like video in TS and raw audio.
+    // Used by HLS with EXT-X-MEDIA.
+    PROP_DISABLE_MP2T_PTS_RESET
 };
 
 #pragma pack(push)
@@ -275,6 +280,10 @@ static void gst_dshowwrapper_class_init (GstDShowWrapperClass *klass)
     g_object_class_install_property (gobject_class, PROP_IS_SUPPORTED,
         g_param_spec_boolean ("is-supported", "Is supported", "Is codec ID supported", FALSE,
         (GParamFlags)(G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS)));
+
+    g_object_class_install_property (gobject_class, PROP_DISABLE_MP2T_PTS_RESET,
+        g_param_spec_boolean ("disable-mp2t-pts-reset", "MP2T PTS Reset", "Disable/Enable PTS reset", FALSE,
+        (GParamFlags)(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS)));
 }
 
 // Initialize the new element
@@ -355,7 +364,7 @@ static void gst_dshowwrapper_init (GstDShowWrapper *decoder)
     decoder->clock = NULL;
 #endif // ENABLE_CLOCK
 
-    decoder->set_base_pts = FALSE;
+    decoder->disable_mp2t_pts_reset = FALSE;
     decoder->base_pts = GST_CLOCK_TIME_NONE;
 
     decoder->pending_event = NULL;
@@ -420,6 +429,8 @@ static void gst_dshowwrapper_set_property(GObject *object, guint property_id, co
     case PROP_CODEC_ID:
         decoder->codec_id = g_value_get_int(value);
         break;
+    case PROP_DISABLE_MP2T_PTS_RESET:
+        decoder->disable_mp2t_pts_reset = g_value_get_boolean(value);
     default:
         break;
     }
@@ -665,8 +676,18 @@ void dshowwrapper_deliver_post_process_mp2t(GstBuffer *pBuffer, GstDShowWrapper 
                     }
                 }
 
-                if (gst_pts >= decoder->base_pts && gst_pts > decoder->last_pts[index] && gst_pts - decoder->last_pts[index] < PTS_WRAPAROUND_THRESHOLD)
-                    GST_BUFFER_TIMESTAMP(pBuffer) = gst_pts - decoder->base_pts;
+                // If last_pts is not valid, just set PTS on buffer, otherwise we will be
+                // missing PTS on first buffer.
+                if (GST_CLOCK_TIME_IS_VALID(decoder->last_pts[index]))
+                {
+                    if (gst_pts >= decoder->base_pts && gst_pts > decoder->last_pts[index] && gst_pts - decoder->last_pts[index] < PTS_WRAPAROUND_THRESHOLD)
+                        GST_BUFFER_TIMESTAMP(pBuffer) = gst_pts - decoder->base_pts;
+                }
+                else
+                {
+                    if (gst_pts >= decoder->base_pts)
+                        GST_BUFFER_TIMESTAMP(pBuffer) = gst_pts - decoder->base_pts;
+                }
 
                 if (!GST_CLOCK_TIME_IS_VALID(decoder->last_pts[index]) || (gst_pts > decoder->last_pts[index] && gst_pts - decoder->last_pts[index] < PTS_WRAPAROUND_THRESHOLD))
                     decoder->last_pts[index] = gst_pts;
@@ -732,7 +753,7 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
         if ((decoder->eInputFormat == MEDIA_FORMAT_AUDIO_AAC || decoder->eInputFormat == MEDIA_FORMAT_VIDEO_H264) && GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]))
         {
             // Do not deliver buffers with backward PTS. GStreamer does not like it.
-            // Use it only for uncomressed data. For compressed it is valid to have backward PTS.
+            // Use it only for uncompressed data. For compressed it is valid to have backward PTS.
             if ((decoder->last_pts[pUserData->output_index] != GST_CLOCK_TIME_NONE && GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]) < decoder->last_pts[pUserData->output_index]) || (gint64)GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]) < 0)
             {
                 // INLINE - gst_buffer_unref()
@@ -3002,7 +3023,8 @@ static gboolean dshowwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent
                 decoder->last_stop = segment.position;
             }
         }
-        if (decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T) // Resend new segment event with GST_FORMAT_TIME
+        // Resend new segment event with GST_FORMAT_TIME
+        if (!decoder->disable_mp2t_pts_reset && decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T)
         {
             // INLINE - gst_event_unref()
             gst_event_unref (event);
@@ -3266,11 +3288,13 @@ static gboolean dshowwrapper_src_event (GstPad* pad, GstObject *parent, GstEvent
                     int index = 0;
                     decoder->seek_position = start;
                     decoder->rate = rate;
-                    decoder->base_pts = GST_CLOCK_TIME_NONE;
+                    // Do not reset base PTS, if PTS reset disabled
+                    if (!decoder->disable_mp2t_pts_reset)
+                        decoder->base_pts = GST_CLOCK_TIME_NONE;
                     for (index = 0; index < MAX_OUTPUT_DS_STREAMS; index++)
                     {
                         decoder->offset_pts[index] = 0;
-                        decoder->last_pts[index] = 0;
+                        decoder->last_pts[index] = GST_CLOCK_TIME_NONE;
                     }
                 }
             }

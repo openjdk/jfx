@@ -142,7 +142,6 @@ public:
 private:
     static uint32_t highUInt32(uint64_t x) { return static_cast<uint32_t>(x >> 32); }
     static uint32_t lowUInt32(uint64_t x) { return static_cast<uint32_t>(x & ((static_cast<uint64_t>(1) << 32) - 1)); }
-    bool isZero() const { return !m_low && !m_high; }
     static uint64_t makeUInt64(uint32_t low, uint32_t high) { return low | (static_cast<uint64_t>(high) << 32); }
 
     static uint64_t multiplyHigh(uint64_t, uint64_t);
@@ -268,14 +267,6 @@ Decimal::EncodedData::EncodedData(Sign sign, int exponent, uint64_t coefficient)
 
     m_coefficient = coefficient;
     m_exponent = static_cast<int16_t>(exponent);
-}
-
-bool Decimal::EncodedData::operator==(const EncodedData& another) const
-{
-    return m_sign == another.m_sign
-        && m_formatClass == another.m_formatClass
-        && m_exponent == another.m_exponent
-        && m_coefficient == another.m_coefficient;
 }
 
 Decimal::Decimal(int32_t i32)
@@ -620,8 +611,7 @@ Decimal::AlignedOperands Decimal::alignOperands(const Decimal& lhs, const Decima
 }
 
 // Round toward positive infinity.
-// Note: Mac ports defines ceil(x) as wtf_ceil(x), so we can't use name "ceil" here.
-Decimal Decimal::ceiling() const
+Decimal Decimal::ceil() const
 {
     if (isSpecial())
         return *this;
@@ -751,19 +741,6 @@ Decimal Decimal::fromString(StringView str)
             return nan();
 
         case StateDot:
-            if (isASCIIDigit(ch)) {
-                if (numberOfDigits < Precision) {
-                    ++numberOfDigits;
-                    ++numberOfDigitsAfterDot;
-                    accumulator *= 10;
-                    accumulator += ch - '0';
-                }
-                state = StateDotDigit;
-                break;
-            }
-            // FIXME: <http://webkit.org/b/127667> Decimal::fromString's EBNF documentation does not match implementation
-            FALLTHROUGH;
-
         case StateDotDigit:
             if (isASCIIDigit(ch)) {
                 if (numberOfDigits < Precision) {
@@ -772,6 +749,8 @@ Decimal Decimal::fromString(StringView str)
                     accumulator *= 10;
                     accumulator += ch - '0';
                 }
+                // FIXME: <http://webkit.org/b/127667> Decimal::fromString's EBNF documentation does not match implementation.
+                state = StateDotDigit;
                 break;
             }
 
@@ -915,7 +894,7 @@ Decimal Decimal::nan()
 Decimal Decimal::remainder(const Decimal& rhs) const
 {
     const Decimal quotient = *this / rhs;
-    return quotient.isSpecial() ? quotient : *this - (quotient.isNegative() ? quotient.ceiling() : quotient.floor()) * rhs;
+    return quotient.isSpecial() ? quotient : *this - (quotient.isNegative() ? quotient.ceil() : quotient.floor()) * rhs;
 }
 
 Decimal Decimal::round() const

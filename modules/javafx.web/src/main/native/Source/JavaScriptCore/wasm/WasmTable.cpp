@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +30,16 @@
 
 #include "JSCJSValueInlines.h"
 #include "JSWebAssemblyTable.h"
-#include <wtf/CheckedArithmetic.h>
+#include "WasmTypeDefinitionInlines.h"
 #include <type_traits>
+#include <wtf/CheckedArithmetic.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace Wasm {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Table);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ExternRefTable);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FuncRefTable);
 
 template<typename Visitor> constexpr decltype(auto) Table::visitDerived(Visitor&& visitor)
 {
@@ -72,9 +78,10 @@ void Table::operator delete(Table* table, std::destroying_delete_t)
     });
 }
 
-Table::Table(uint32_t initial, std::optional<uint32_t> maximum, TableElementType type)
+Table::Table(uint32_t initial, std::optional<uint32_t> maximum, Type wasmType, TableElementType type)
     : m_maximum(maximum)
     , m_type(type)
+    , m_wasmType(wasmType)
     , m_isFixedSized(maximum && maximum.value() == initial)
     , m_owner(nullptr)
 {
@@ -82,19 +89,19 @@ Table::Table(uint32_t initial, std::optional<uint32_t> maximum, TableElementType
     ASSERT(!m_maximum || *m_maximum >= m_length);
 }
 
-RefPtr<Table> Table::tryCreate(uint32_t initial, std::optional<uint32_t> maximum, TableElementType type)
+RefPtr<Table> Table::tryCreate(uint32_t initial, std::optional<uint32_t> maximum, TableElementType type, Type wasmType)
 {
     if (!isValidLength(initial))
         return nullptr;
     switch (type) {
     case TableElementType::Externref:
-        return adoptRef(new ExternRefTable(initial, maximum));
+        return adoptRef(new ExternRefTable(initial, maximum, wasmType));
     case TableElementType::Funcref: {
         if (maximum && maximum.value() == initial) {
             // If the table is fixed-sized, we should put table slots inline to avoid one-level indirection.
-            return FuncRefTable::createFixedSized(initial);
+            return FuncRefTable::createFixedSized(initial, wasmType);
         }
-        return adoptRef(new FuncRefTable(initial, maximum));
+        return adoptRef(new FuncRefTable(initial, maximum, wasmType));
     }
     }
 
@@ -219,22 +226,15 @@ void Table::visitAggregateImpl(Visitor& visitor)
 
 DEFINE_VISIT_AGGREGATE(Table);
 
-Type Table::wasmType() const
-{
-    if (isExternrefTable())
-        return externrefType();
-    ASSERT(isFuncrefTable());
-    return funcrefType();
-}
-
 FuncRefTable* Table::asFuncrefTable()
 {
     return m_type == TableElementType::Funcref ? static_cast<FuncRefTable*>(this) : nullptr;
 }
 
-ExternRefTable::ExternRefTable(uint32_t initial, std::optional<uint32_t> maximum)
-    : Table(initial, maximum, TableElementType::Externref)
+ExternRefTable::ExternRefTable(uint32_t initial, std::optional<uint32_t> maximum, Type wasmType)
+    : Table(initial, maximum, wasmType, TableElementType::Externref)
 {
+    RELEASE_ASSERT(isExternref(wasmType) || (Options::useWebAssemblyGC() && isSubtype(wasmType, anyrefType())));
     // FIXME: It might be worth trying to pre-allocate maximum here. The spec recommends doing so.
     // But for now, we're not doing that.
     // FIXME this over-allocates and could be smarter about not committing all of that memory https://bugs.webkit.org/show_bug.cgi?id=181425
@@ -253,9 +253,11 @@ void ExternRefTable::set(uint32_t index, JSValue value)
     m_jsValues.get()[index].set(m_owner->vm(), m_owner, value);
 }
 
-FuncRefTable::FuncRefTable(uint32_t initial, std::optional<uint32_t> maximum)
-    : Table(initial, maximum, TableElementType::Funcref)
+FuncRefTable::FuncRefTable(uint32_t initial, std::optional<uint32_t> maximum, Type wasmType)
+    : Table(initial, maximum, wasmType, TableElementType::Funcref)
 {
+    RELEASE_ASSERT(isFuncref(wasmType) || Options::useWebAssemblyTypedFunctionReferences());
+    ASSERT(isSubtype(wasmType, funcrefType()));
     // FIXME: It might be worth trying to pre-allocate maximum here. The spec recommends doing so.
     // But for now, we're not doing that.
     // FIXME this over-allocates and could be smarter about not committing all of that memory https://bugs.webkit.org/show_bug.cgi?id=181425
@@ -281,9 +283,9 @@ FuncRefTable::~FuncRefTable()
     }
 }
 
-Ref<FuncRefTable> FuncRefTable::createFixedSized(uint32_t size)
+Ref<FuncRefTable> FuncRefTable::createFixedSized(uint32_t size, Type wasmType)
 {
-    return adoptRef(*new (NotNull, fastMalloc(allocationSize(allocatedLength(size)))) FuncRefTable(size, size));
+    return adoptRef(*new (NotNull, fastMalloc(allocationSize(allocatedLength(size)))) FuncRefTable(size, size, wasmType));
 }
 
 void FuncRefTable::setFunction(uint32_t index, JSObject* optionalWrapper, WasmToWasmImportableFunction function, Instance* instance)

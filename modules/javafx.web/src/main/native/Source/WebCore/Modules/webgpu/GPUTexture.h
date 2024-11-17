@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,41 +25,69 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
+#include "GPUIntegralTypes.h"
+#include "GPUTextureDimension.h"
+#include "GPUTextureFormat.h"
+#include "WebGPUTexture.h"
 #include <optional>
-#include <pal/graphics/WebGPU/WebGPUTexture.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class GPUDevice;
 class GPUTextureView;
+
+struct GPUTextureDescriptor;
 struct GPUTextureViewDescriptor;
 
 class GPUTexture : public RefCounted<GPUTexture> {
 public:
-    static Ref<GPUTexture> create(Ref<PAL::WebGPU::Texture>&& backing)
+    static Ref<GPUTexture> create(Ref<WebGPU::Texture>&& backing, const GPUTextureDescriptor& descriptor, const GPUDevice& device)
     {
-        return adoptRef(*new GPUTexture(WTFMove(backing)));
+        return adoptRef(*new GPUTexture(WTFMove(backing), descriptor, device));
     }
 
     String label() const;
     void setLabel(String&&);
 
-    Ref<GPUTextureView> createView(const std::optional<GPUTextureViewDescriptor>&) const;
+    ExceptionOr<Ref<GPUTextureView>> createView(const std::optional<GPUTextureViewDescriptor>&) const;
 
     void destroy();
 
-    PAL::WebGPU::Texture& backing() { return m_backing; }
-    const PAL::WebGPU::Texture& backing() const { return m_backing; }
+    WebGPU::Texture& backing() { return m_backing; }
+    const WebGPU::Texture& backing() const { return m_backing; }
+    GPUTextureFormat format() const { return m_format; }
 
+    GPUIntegerCoordinateOut width() const;
+    GPUIntegerCoordinateOut height() const;
+    GPUIntegerCoordinateOut depthOrArrayLayers() const;
+    GPUIntegerCoordinateOut mipLevelCount() const;
+    GPUSize32Out sampleCount() const;
+    GPUTextureDimension dimension() const;
+    GPUFlagsConstant usage() const;
+
+    virtual ~GPUTexture();
 private:
-    GPUTexture(Ref<PAL::WebGPU::Texture>&& backing)
-        : m_backing(WTFMove(backing))
-    {
-    }
+    GPUTexture(Ref<WebGPU::Texture>&&, const GPUTextureDescriptor&, const GPUDevice&);
 
-    Ref<PAL::WebGPU::Texture> m_backing;
+    GPUTexture(const GPUTexture&) = delete;
+    GPUTexture(GPUTexture&&) = delete;
+    GPUTexture& operator=(const GPUTexture&) = delete;
+    GPUTexture& operator=(GPUTexture&&) = delete;
+
+    Ref<WebGPU::Texture> m_backing;
+    const GPUTextureFormat m_format;
+    const GPUIntegerCoordinateOut m_width;
+    const GPUIntegerCoordinateOut m_height;
+    const GPUIntegerCoordinateOut m_depthOrArrayLayers;
+    const GPUIntegerCoordinateOut m_mipLevelCount;
+    const GPUSize32Out m_sampleCount;
+    const GPUTextureDimension m_dimension;
+    const GPUFlagsConstant m_usage;
+    Ref<const GPUDevice> m_device;
 };
 
 }

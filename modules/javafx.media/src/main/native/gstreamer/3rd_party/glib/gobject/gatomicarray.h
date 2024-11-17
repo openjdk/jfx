@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2009 Benjamin Otte <otte@gnome.org>
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -25,7 +27,16 @@
 
 G_BEGIN_DECLS
 
-#define G_ATOMIC_ARRAY_DATA_SIZE(mem) (*((gsize *) (mem) - 1))
+typedef union _GAtomicArrayMetadata
+{
+  gsize size;
+  /* We have to ensure that the memory location is sufficiently aligned to
+   * store any object. With C11 this would be max_align_t, but in practise
+   * gpointer is sufficient for all known architectures. We could change
+   * this to `_Alignas(max_align_t) char pad` once we depend on C11. */
+  gpointer _alignment_padding;
+} GAtomicArrayMetadata;
+#define G_ATOMIC_ARRAY_DATA_SIZE(mem) (((GAtomicArrayMetadata *) (mem) - 1)->size)
 
 typedef struct _GAtomicArray GAtomicArray;
 struct _GAtomicArray {

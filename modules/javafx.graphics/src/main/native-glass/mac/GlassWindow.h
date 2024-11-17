@@ -67,8 +67,6 @@
     BOOL                isWindowResizable;
 }
 
-- (void)setFullscreenWindow:(NSWindow *)fsWindow;
-
 // NSWindow overrides delegate methods
 - (void)close;
 - (void)sendEvent:(NSEvent *)event;

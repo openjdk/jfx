@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,34 +24,101 @@
  */
 package com.oracle.tools.fx.monkey.util;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 
 /**
  * Option Pane - a vertical option sheet.
  */
-public class OptionPane extends GridPane {
-    private int row;
-    private int column;
-    private static final Insets MARGIN = new Insets(2, 4, 2, 4);
+public class OptionPane extends VBox {
 
     public OptionPane() {
+        FX.name(this, "OptionPane");
+        FX.style(this, "option-pane");
     }
 
     public void label(String text) {
-        add(new Label(text));
+        lastSection().add(new Label(text));
     }
 
     public void option(Node n) {
-        add(n);
+        lastSection().add(n);
+    }
+
+    public void option(String text, Node n) {
+        lastSection().add(new Label(text));
+        if (n != null) {
+            lastSection().add(n);
+        }
     }
 
     public void add(Node n) {
-        add(n, column, row++);
-        setMargin(n, MARGIN);
-        setFillHeight(n, Boolean.TRUE);
-        setFillWidth(n, Boolean.TRUE);
+        lastSection().add(n);
+    }
+
+    public void separator() {
+        lastSection().add(new Separator(Orientation.HORIZONTAL));
+    }
+
+    public void section(String name) {
+        section(name, new OptionGridPane());
+    }
+
+    private List<TitledPane> getPanes() {
+        return getChildren().
+            stream().
+            filter((n) -> n instanceof TitledPane).
+            map((n) -> (TitledPane)n).
+            collect(Collectors.toList());
+    }
+
+    public void section(String name, OptionGridPane content) {
+        TitledPane t = new TitledPane(name, content);
+        getChildren().add(t);
+    }
+
+    private OptionGridPane lastSection() {
+        List<TitledPane> panes = getPanes();
+        if (panes.size() == 0) {
+            section("Properties");
+        }
+        panes = getPanes();
+        TitledPane t = panes.get(panes.size() - 1);
+        return (OptionGridPane)t.getContent();
+    }
+
+    private static class OptionGridPane extends GridPane {
+        private int row;
+        private int column;
+        private static final Insets MARGIN = new Insets(1, 4, 0, 4);
+        private static final Insets PADDING = new Insets(0, 0, 2, 0);
+
+        public OptionGridPane() {
+            setPadding(PADDING);
+            setMaxWidth(Double.MAX_VALUE);
+        }
+
+        public void label(String text) {
+            add(new Label(text));
+        }
+
+        public void option(Node n) {
+            add(n);
+        }
+
+        public void add(Node n) {
+            add(n, column, row++);
+            setMargin(n, MARGIN);
+            setFillHeight(n, Boolean.TRUE);
+            setFillWidth(n, Boolean.TRUE);
+        }
     }
 }

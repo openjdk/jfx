@@ -31,22 +31,25 @@
 namespace WGSL::AST {
 
 class FieldAccessExpression final : public Expression {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(FieldAccessExpression);
 public:
-    FieldAccessExpression(SourceSpan span, UniqueRef<Expression>&& base, Identifier&& fieldName)
-        : Expression(span)
-        , m_base(WTFMove(base))
-        , m_fieldName(WTFMove(fieldName))
-    { }
-
     NodeKind kind() const override;
 
     Expression& base() { return m_base.get(); }
     Identifier& fieldName() { return m_fieldName; }
+    const Identifier& originalFieldName() const { return m_originalFieldName; }
 
 private:
+    FieldAccessExpression(SourceSpan span, Expression::Ref&& base, Identifier&& fieldName)
+        : Expression(span)
+        , m_base(WTFMove(base))
+        , m_fieldName(WTFMove(fieldName))
+        , m_originalFieldName(m_fieldName)
+    { }
+
     Expression::Ref m_base;
     Identifier m_fieldName;
+    Identifier m_originalFieldName;
 };
 
 } // namespace WGSL::AST

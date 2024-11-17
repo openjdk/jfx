@@ -27,13 +27,17 @@
 #include "CSSSelector.h"
 
 #include "CSSMarkup.h"
-#include "CSSParserSelector.h"
+#include "CSSParserTokenRange.h"
+#include "CSSSelectorInlines.h"
 #include "CSSSelectorList.h"
+#include "CSSSelectorParserContext.h"
+#include "CSSTokenizer.h"
 #include "CommonAtomStrings.h"
-#include "DeprecatedGlobalSettings.h"
 #include "HTMLNames.h"
+#include "MutableCSSSelector.h"
 #include "SelectorPseudoTypeMap.h"
 #include <memory>
+#include <queue>
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
@@ -50,32 +54,23 @@ struct SameSizeAsCSSSelector {
     void* unionPointer;
 };
 
-static_assert(CSSSelector::RelationType::Subselector == 0, "Subselector must be 0 for consumeCombinator.");
+static_assert(CSSSelector::Relation::Subselector == static_cast<CSSSelector::Relation>(0u), "Subselector must be 0 for consumeCombinator.");
 static_assert(sizeof(CSSSelector) == sizeof(SameSizeAsCSSSelector), "CSSSelector should remain small.");
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSSelectorRareData);
 
 CSSSelector::CSSSelector(const QualifiedName& tagQName, bool tagIsForNamespaceRule)
-    : m_relation(DescendantSpace)
-    , m_match(Tag)
+    : m_relation(enumToUnderlyingType(Relation::DescendantSpace))
+    , m_match(enumToUnderlyingType(Match::Tag))
     , m_tagIsForNamespaceRule(tagIsForNamespaceRule)
 {
-    const AtomString& tagLocalName = tagQName.localName();
-    const AtomString tagLocalNameASCIILowercase = tagLocalName.convertToASCIILowercase();
-
-    if (tagLocalName == tagLocalNameASCIILowercase) {
         m_data.tagQName = tagQName.impl();
         m_data.tagQName->ref();
-    } else {
-        m_data.nameWithCase = adoptRef(new NameWithCase(tagQName, tagLocalNameASCIILowercase)).leakRef();
-        m_hasNameWithCase = true;
-    }
 }
 
 void CSSSelector::createRareData()
 {
-    ASSERT(match() != Tag);
-    ASSERT(!m_hasNameWithCase);
+    ASSERT(match() != Match::Tag);
     if (m_hasRareData)
         return;
     // Move the value to the rare data stucture.
@@ -90,7 +85,29 @@ struct SelectorSpecificity {
     SelectorSpecificity(unsigned);
     SelectorSpecificity(SelectorSpecificityIncrement);
     SelectorSpecificity& operator+=(SelectorSpecificity);
+
+    std::array<uint8_t, 3> specificityTuple() const
+    {
+        uint8_t a = specificity >> 16;
+        uint8_t b = specificity >> 8;
+        uint8_t c = specificity;
+        return { a, b, c };
+    }
+
+    String debugDescription() const
+    {
+        StringBuilder builder;
+        auto tuple = specificityTuple();
+        builder.append('{', tuple[0], ' ', tuple[1], ' ', tuple[2], '}');
+        return builder.toString();
+    }
 };
+
+UNUSED_FUNCTION static TextStream& operator<<(TextStream& ts, const SelectorSpecificity& selectorSpecificity)
+{
+    ts << selectorSpecificity.debugDescription();
+    return ts;
+}
 
 SelectorSpecificity::SelectorSpecificity(unsigned specificity)
     : specificity(specificity)
@@ -98,7 +115,7 @@ SelectorSpecificity::SelectorSpecificity(unsigned specificity)
 }
 
 SelectorSpecificity::SelectorSpecificity(SelectorSpecificityIncrement specificity)
-    : specificity(static_cast<unsigned>(specificity))
+    : specificity(enumToUnderlyingType(specificity))
 {
 }
 
@@ -127,7 +144,7 @@ static SelectorSpecificity simpleSelectorSpecificity(const CSSSelector&);
 static SelectorSpecificity selectorSpecificity(const CSSSelector& firstSimpleSelector)
 {
     SelectorSpecificity total;
-    for (auto* selector = &firstSimpleSelector; selector; selector = selector->tagHistory())
+    for (const auto* selector = &firstSimpleSelector; selector; selector = selector->tagHistory())
         total += simpleSelectorSpecificity(*selector);
     return total;
 }
@@ -136,7 +153,7 @@ static SelectorSpecificity maxSpecificity(const CSSSelectorList* selectorList)
 {
     unsigned max = 0;
     if (selectorList) {
-        for (auto* selector = selectorList->first(); selector; selector = CSSSelectorList::next(selector))
+        for (const auto* selector = selectorList->first(); selector; selector = CSSSelectorList::next(selector))
             max = std::max(max, selectorSpecificity(*selector).specificity);
     }
     return max;
@@ -146,52 +163,53 @@ SelectorSpecificity simpleSelectorSpecificity(const CSSSelector& simpleSelector)
 {
     ASSERT_WITH_MESSAGE(!simpleSelector.isForPage(), "At the time of this writing, page selectors are not treated as real selectors that are matched. The value computed here only account for real selectors.");
 
+    if (UNLIKELY(simpleSelector.isImplicit()))
+        return 0;
+
     switch (simpleSelector.match()) {
-    case CSSSelector::Id:
+    case CSSSelector::Match::Id:
         return SelectorSpecificityIncrement::ClassA;
-    case CSSSelector::PagePseudoClass:
+    case CSSSelector::Match::NestingParent:
+    case CSSSelector::Match::PagePseudoClass:
         break;
-    case CSSSelector::PseudoClass:
-        switch (simpleSelector.pseudoClassType()) {
-        case CSSSelector::PseudoClassIs:
-        case CSSSelector::PseudoClassMatches:
-        case CSSSelector::PseudoClassNot:
-        case CSSSelector::PseudoClassHas:
+    case CSSSelector::Match::PseudoClass:
+        switch (simpleSelector.pseudoClass()) {
+        case CSSSelector::PseudoClass::Is:
+        case CSSSelector::PseudoClass::Not:
+        case CSSSelector::PseudoClass::Has:
             return maxSpecificity(simpleSelector.selectorList());
-        case CSSSelector::PseudoClassWhere:
+        case CSSSelector::PseudoClass::Where:
             return 0;
-        case CSSSelector::PseudoClassNthChild:
-        case CSSSelector::PseudoClassNthLastChild:
-        case CSSSelector::PseudoClassHost:
+        case CSSSelector::PseudoClass::NthChild:
+        case CSSSelector::PseudoClass::NthLastChild:
+        case CSSSelector::PseudoClass::Host:
             return SelectorSpecificityIncrement::ClassB + maxSpecificity(simpleSelector.selectorList());
-        case CSSSelector::PseudoClassRelativeScope:
-            return 0;
-        case CSSSelector::PseudoClassNestingParent:
-            ASSERT_NOT_REACHED();
-            return { };
         default:
             return SelectorSpecificityIncrement::ClassB;
         }
-    case CSSSelector::Exact:
-    case CSSSelector::Class:
-    case CSSSelector::Set:
-    case CSSSelector::List:
-    case CSSSelector::Hyphen:
-    case CSSSelector::Contain:
-    case CSSSelector::Begin:
-    case CSSSelector::End:
+    case CSSSelector::Match::Exact:
+    case CSSSelector::Match::Class:
+    case CSSSelector::Match::Set:
+    case CSSSelector::Match::List:
+    case CSSSelector::Match::Hyphen:
+    case CSSSelector::Match::Contain:
+    case CSSSelector::Match::Begin:
+    case CSSSelector::Match::End:
         return SelectorSpecificityIncrement::ClassB;
-    case CSSSelector::Tag:
+    case CSSSelector::Match::Tag:
         if (simpleSelector.tagQName().localName() == starAtom())
             return 0;
         return SelectorSpecificityIncrement::ClassC;
-    case CSSSelector::PseudoElement:
+    case CSSSelector::Match::PseudoElement:
         // Slotted only competes with other slotted selectors for specificity,
         // so whether we add the ClassC specificity shouldn't be observable.
-        if (simpleSelector.pseudoElementType() == CSSSelector::PseudoElementSlotted)
+        if (simpleSelector.pseudoElement() == CSSSelector::PseudoElement::Slotted)
             return maxSpecificity(simpleSelector.selectorList());
         return SelectorSpecificityIncrement::ClassC;
-    case CSSSelector::Unknown:
+    case CSSSelector::Match::HasScope:
+    case CSSSelector::Match::Unknown:
+    case CSSSelector::Match::ForgivingUnknown:
+    case CSSSelector::Match::ForgivingUnknownNestContaining:
         return 0;
     }
     ASSERT_NOT_REACHED();
@@ -205,11 +223,7 @@ unsigned CSSSelector::computeSpecificity() const
 
 std::array<uint8_t, 3> CSSSelector::computeSpecificityTuple() const
 {
-    auto integer = computeSpecificity();
-    uint8_t a = integer >> 16;
-    uint8_t b = integer >> 8;
-    uint8_t c = integer;
-    return { a, b, c };
+    return selectorSpecificity(*this).specificityTuple();
 }
 
 unsigned CSSSelector::specificityForPage() const
@@ -221,16 +235,16 @@ unsigned CSSSelector::specificityForPage() const
 
     for (const CSSSelector* component = this; component; component = component->tagHistory()) {
         switch (component->match()) {
-        case Tag:
+        case Match::Tag:
             s += tagQName().localName() == starAtom() ? 0 : 4;
             break;
-        case PagePseudoClass:
-            switch (component->pagePseudoClassType()) {
-            case PagePseudoClassFirst:
+        case Match::PagePseudoClass:
+            switch (component->pagePseudoClass()) {
+            case PagePseudoClass::First:
                 s += 2;
                 break;
-            case PagePseudoClassLeft:
-            case PagePseudoClassRight:
+            case PagePseudoClass::Left:
+            case PagePseudoClass::Right:
                 s += 1;
                 break;
             }
@@ -242,47 +256,61 @@ unsigned CSSSelector::specificityForPage() const
     return s;
 }
 
-PseudoId CSSSelector::pseudoId(PseudoElementType type)
+PseudoId CSSSelector::pseudoId(PseudoElement type)
 {
     switch (type) {
-    case PseudoElementFirstLine:
+    case PseudoElement::FirstLine:
         return PseudoId::FirstLine;
-    case PseudoElementFirstLetter:
+    case PseudoElement::FirstLetter:
         return PseudoId::FirstLetter;
-    case PseudoElementSelection:
+    case PseudoElement::GrammarError:
+        return PseudoId::GrammarError;
+    case PseudoElement::SpellingError:
+        return PseudoId::SpellingError;
+    case PseudoElement::Selection:
         return PseudoId::Selection;
-    case PseudoElementHighlight:
+    case PseudoElement::Highlight:
         return PseudoId::Highlight;
-    case PseudoElementMarker:
+    case PseudoElement::Marker:
         return PseudoId::Marker;
-    case PseudoElementBackdrop:
+    case PseudoElement::Backdrop:
         return PseudoId::Backdrop;
-    case PseudoElementBefore:
+    case PseudoElement::Before:
         return PseudoId::Before;
-    case PseudoElementAfter:
+    case PseudoElement::After:
         return PseudoId::After;
-    case PseudoElementScrollbar:
-        return PseudoId::Scrollbar;
-    case PseudoElementScrollbarButton:
-        return PseudoId::ScrollbarButton;
-    case PseudoElementScrollbarCorner:
-        return PseudoId::ScrollbarCorner;
-    case PseudoElementScrollbarThumb:
-        return PseudoId::ScrollbarThumb;
-    case PseudoElementScrollbarTrack:
-        return PseudoId::ScrollbarTrack;
-    case PseudoElementScrollbarTrackPiece:
-        return PseudoId::ScrollbarTrackPiece;
-    case PseudoElementResizer:
-        return PseudoId::Resizer;
+    case PseudoElement::WebKitScrollbar:
+        return PseudoId::WebKitScrollbar;
+    case PseudoElement::WebKitScrollbarButton:
+        return PseudoId::WebKitScrollbarButton;
+    case PseudoElement::WebKitScrollbarCorner:
+        return PseudoId::WebKitScrollbarCorner;
+    case PseudoElement::WebKitScrollbarThumb:
+        return PseudoId::WebKitScrollbarThumb;
+    case PseudoElement::WebKitScrollbarTrack:
+        return PseudoId::WebKitScrollbarTrack;
+    case PseudoElement::WebKitScrollbarTrackPiece:
+        return PseudoId::WebKitScrollbarTrackPiece;
+    case PseudoElement::WebKitResizer:
+        return PseudoId::WebKitResizer;
+    case PseudoElement::ViewTransition:
+        return PseudoId::ViewTransition;
+    case PseudoElement::ViewTransitionGroup:
+        return PseudoId::ViewTransitionGroup;
+    case PseudoElement::ViewTransitionImagePair:
+        return PseudoId::ViewTransitionImagePair;
+    case PseudoElement::ViewTransitionOld:
+        return PseudoId::ViewTransitionOld;
+    case PseudoElement::ViewTransitionNew:
+        return PseudoId::ViewTransitionNew;
 #if ENABLE(VIDEO)
-    case PseudoElementCue:
+    case PseudoElement::Cue:
 #endif
-    case PseudoElementSlotted:
-    case PseudoElementPart:
-    case PseudoElementUnknown:
-    case PseudoElementWebKitCustom:
-    case PseudoElementWebKitCustomLegacyPrefixed:
+    case PseudoElement::Slotted:
+    case PseudoElement::Part:
+    case PseudoElement::UserAgentPart:
+    case PseudoElement::UserAgentPartLegacyAlias:
+    case PseudoElement::WebKitUnknown:
         return PseudoId::None;
     }
 
@@ -290,21 +318,51 @@ PseudoId CSSSelector::pseudoId(PseudoElementType type)
     return PseudoId::None;
 }
 
-CSSSelector::PseudoElementType CSSSelector::parsePseudoElementType(StringView name)
+std::optional<CSSSelector::PseudoElement> CSSSelector::parsePseudoElementName(StringView name, const CSSSelectorParserContext& context)
 {
-    if (name.isNull())
-        return PseudoElementUnknown;
+    if (name.isEmpty())
+        return std::nullopt;
 
-    auto type = parsePseudoElementString(name);
-    if (type == PseudoElementUnknown) {
-        if (name.startsWith("-webkit-"_s) || name.startsWith("-apple-"_s))
-            type = PseudoElementWebKitCustom;
+    auto type = findPseudoElementName(name);
+    if (!type) {
+        if (name.startsWithIgnoringASCIICase("-webkit-"_s))
+            return PseudoElement::WebKitUnknown;
+        return type;
     }
 
-    if (type == PseudoElementHighlight && !DeprecatedGlobalSettings::highlightAPIEnabled())
-        return PseudoElementUnknown;
+    if (!CSSSelector::isPseudoElementEnabled(*type, name, context))
+        return std::nullopt;
 
-    return type;
+    return *type;
+}
+
+// FIXME: We should eventually deduplicate this with CSSSelectorParser::consumePseudo() somehow.
+std::optional<PseudoId> CSSSelector::parsePseudoElement(const String& input, const CSSSelectorParserContext& context)
+{
+    // FIXME: Add support for FunctionToken (webkit.org/b/264103).
+    auto tokenizer = CSSTokenizer { input };
+    auto range = tokenizer.tokenRange();
+    auto token = range.consume();
+    if (token.type() != ColonToken)
+        return std::nullopt;
+    token = range.consume();
+    if (token.type() == IdentToken) {
+        if (!range.atEnd())
+            return std::nullopt;
+        auto pseudoClassOrElement = findPseudoClassAndCompatibilityElementName(token.value());
+        if (!pseudoClassOrElement.compatibilityPseudoElement)
+            return std::nullopt;
+        ASSERT(CSSSelector::isPseudoElementEnabled(*pseudoClassOrElement.compatibilityPseudoElement, token.value(), context));
+        return pseudoId(*pseudoClassOrElement.compatibilityPseudoElement);
+    }
+    if (token.type() != ColonToken)
+        return std::nullopt;
+    token = range.consume();
+    if (token.type() != IdentToken || !range.atEnd())
+        return std::nullopt;
+    if (auto pseudoElement = parsePseudoElementName(token.value(), context))
+        return pseudoId(*pseudoElement);
+    return std::nullopt;
 }
 
 const CSSSelector* CSSSelector::firstInCompound() const
@@ -312,53 +370,23 @@ const CSSSelector* CSSSelector::firstInCompound() const
     auto* selector = this;
     while (!selector->isFirstInTagHistory()) {
         auto* previousSelector = selector - 1;
-        if (previousSelector->relation() != Subselector)
+        if (previousSelector->relation() != Relation::Subselector)
             break;
         selector = previousSelector;
     }
     return selector;
 }
 
-bool CSSSelector::operator==(const CSSSelector& other) const
-{
-    const CSSSelector* sel1 = this;
-    const CSSSelector* sel2 = &other;
-
-    while (sel1 && sel2) {
-        if (sel1->attribute() != sel2->attribute()
-            || sel1->relation() != sel2->relation()
-            || sel1->match() != sel2->match()
-            || sel1->value() != sel2->value()
-            || sel1->m_pseudoType != sel2->m_pseudoType
-            || sel1->argument() != sel2->argument()) {
-            return false;
-        }
-        if (sel1->match() == Tag) {
-            if (sel1->tagQName() != sel2->tagQName())
-                return false;
-        }
-        sel1 = sel1->tagHistory();
-        sel2 = sel2->tagHistory();
-    }
-
-    if (sel1 || sel2)
-        return false;
-
-    return true;
-}
-
 static void appendPseudoClassFunctionTail(StringBuilder& builder, const CSSSelector* selector)
 {
-    switch (selector->pseudoClassType()) {
-    case CSSSelector::PseudoClassDir:
-    case CSSSelector::PseudoClassLang:
-    case CSSSelector::PseudoClassNthChild:
-    case CSSSelector::PseudoClassNthLastChild:
-    case CSSSelector::PseudoClassNthOfType:
-    case CSSSelector::PseudoClassNthLastOfType:
+    switch (selector->pseudoClass()) {
+    case CSSSelector::PseudoClass::Dir:
+    case CSSSelector::PseudoClass::NthOfType:
+    case CSSSelector::PseudoClass::NthLastOfType:
         builder.append(selector->argument(), ')');
         break;
     default:
+        ASSERT_NOT_REACHED();
         break;
     }
 
@@ -372,7 +400,7 @@ static void appendLangArgumentList(StringBuilder& builder, const FixedVector<Pos
         else
             serializeString(list[i].identifier, builder);
         if (i != size - 1)
-            builder.append(", ");
+            builder.append(", "_s);
     }
 }
 
@@ -408,7 +436,7 @@ static void outputNthChildAnPlusB(const CSSSelector& selector, StringBuilder& bu
         builder.append('n', b);
     } else {
         outputFirstTerm(a);
-        builder.append("n+", b);
+        builder.append("n+"_s, b);
     }
 }
 
@@ -416,350 +444,113 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
 {
     StringBuilder builder;
 
-    if (match() == CSSSelector::Tag && !m_tagIsForNamespaceRule) {
-        if (tagQName().prefix().isNull())
-            builder.append(tagQName().localName());
+    auto serializeIdentifierOrStar = [&] (const AtomString& identifier) {
+        if (identifier == starAtom())
+            builder.append('*');
         else
-            builder.append(tagQName().prefix().string(), '|', tagQName().localName());
+            serializeIdentifier(identifier, builder);
+    };
+
+    if (match() == Match::Tag && !m_tagIsForNamespaceRule) {
+        if (auto& prefix = tagQName().prefix(); !prefix.isNull()) {
+            serializeIdentifierOrStar(prefix);
+            builder.append('|');
+        }
+        serializeIdentifierOrStar(tagQName().localName());
     }
 
     const CSSSelector* cs = this;
     while (true) {
-        if (cs->match() == CSSSelector::Id) {
+        if (cs->isImplicit()) {
+            // Remove the space before the implicit selector.
+            separator = separator.substring(1);
+            break;
+        }
+        if (cs->match() == Match::Id) {
             builder.append('#');
             serializeIdentifier(cs->serializingValue(), builder);
-        } else if (cs->match() == CSSSelector::Class) {
+        } else if (cs->match() == Match::NestingParent) {
+            builder.append('&');
+        } else if (cs->match() == Match::Class) {
             builder.append('.');
             serializeIdentifier(cs->serializingValue(), builder);
-        } else if (cs->match() == CSSSelector::PseudoClass) {
-            switch (cs->pseudoClassType()) {
-#if ENABLE(FULLSCREEN_API)
-            case CSSSelector::PseudoClassAnimatingFullScreenTransition:
-                builder.append(":-webkit-animating-full-screen-transition");
-                break;
-#endif
-            case CSSSelector::PseudoClassAny: {
-                builder.append(":-webkit-any(");
-                cs->selectorList()->buildSelectorsText(builder);
+        } else if (cs->match() == Match::ForgivingUnknown || cs->match() == Match::ForgivingUnknownNestContaining) {
+            builder.append(cs->value());
+        } else if (cs->match() == Match::HasScope) {
+            // Remove the space from the start to generate a relative selector string like in ":has(> foo)".
+            return makeString(separator.substring(1), rightSide);
+        } else if (cs->match() == Match::PseudoClass) {
+            builder.append(selectorTextForPseudoClass(cs->pseudoClass()));
+
+            // Handle serialization of functional variants.
+            switch (cs->pseudoClass()) {
+            case PseudoClass::Host:
+                if (auto* selectorList = cs->selectorList()) {
+                    builder.append('(');
+                    selectorList->buildSelectorsText(builder);
                 builder.append(')');
-                break;
             }
-            case CSSSelector::PseudoClassAnyLink:
-                builder.append(":any-link");
                 break;
-            case CSSSelector::PseudoClassAnyLinkDeprecated:
-                builder.append(":-webkit-any-link");
-                break;
-            case CSSSelector::PseudoClassAutofill:
-                builder.append(":autofill");
-                break;
-            case CSSSelector::PseudoClassAutofillAndObscured:
-                builder.append(":-webkit-autofill-and-obscured");
-                break;
-            case CSSSelector::PseudoClassAutofillStrongPassword:
-                builder.append(":-webkit-autofill-strong-password");
-                break;
-            case CSSSelector::PseudoClassAutofillStrongPasswordViewable:
-                builder.append(":-webkit-autofill-strong-password-viewable");
-                break;
-            case CSSSelector::PseudoClassDrag:
-                builder.append(":-webkit-drag");
-                break;
-            case CSSSelector::PseudoClassFullPageMedia:
-                builder.append(":-webkit-full-page-media");
-                break;
-#if ENABLE(FULLSCREEN_API)
-            case CSSSelector::PseudoClassFullscreen:
-                builder.append(":fullscreen");
-                break;
-            case CSSSelector::PseudoClassWebkitFullScreen:
-                builder.append(":-webkit-full-screen");
-                break;
-            case CSSSelector::PseudoClassFullScreenAncestor:
-                builder.append(":-webkit-full-screen-ancestor");
-                break;
-            case CSSSelector::PseudoClassFullScreenDocument:
-                builder.append(":-webkit-full-screen-document");
-                break;
-            case CSSSelector::PseudoClassFullScreenControlsHidden:
-                builder.append(":-webkit-full-screen-controls-hidden");
-                break;
-#endif
-#if ENABLE(PICTURE_IN_PICTURE_API)
-            case CSSSelector::PseudoClassPictureInPicture:
-                builder.append(":picture-in-picture");
-                break;
-#endif
-            case CSSSelector::PseudoClassActive:
-                builder.append(":active");
-                break;
-            case CSSSelector::PseudoClassChecked:
-                builder.append(":checked");
-                break;
-            case CSSSelector::PseudoClassClosed:
-                builder.append(":closed");
-                break;
-            case CSSSelector::PseudoClassCornerPresent:
-                builder.append(":corner-present");
-                break;
-            case CSSSelector::PseudoClassDecrement:
-                builder.append(":decrement");
-                break;
-            case CSSSelector::PseudoClassDefault:
-                builder.append(":default");
-                break;
-            case CSSSelector::PseudoClassDir:
-                builder.append(":dir(");
-                appendPseudoClassFunctionTail(builder, cs);
-                break;
-            case CSSSelector::PseudoClassDisabled:
-                builder.append(":disabled");
-                break;
-            case CSSSelector::PseudoClassDoubleButton:
-                builder.append(":double-button");
-                break;
-            case CSSSelector::PseudoClassEmpty:
-                builder.append(":empty");
-                break;
-            case CSSSelector::PseudoClassEnabled:
-                builder.append(":enabled");
-                break;
-            case CSSSelector::PseudoClassEnd:
-                builder.append(":end");
-                break;
-            case CSSSelector::PseudoClassFirstChild:
-                builder.append(":first-child");
-                break;
-            case CSSSelector::PseudoClassFirstOfType:
-                builder.append(":first-of-type");
-                break;
-            case CSSSelector::PseudoClassFocus:
-                builder.append(":focus");
-                break;
-            case CSSSelector::PseudoClassFocusVisible:
-                builder.append(":focus-visible");
-                break;
-            case CSSSelector::PseudoClassFocusWithin:
-                builder.append(":focus-within");
-                break;
-#if ENABLE(VIDEO)
-            case CSSSelector::PseudoClassFuture:
-                builder.append(":future");
-                break;
-            case CSSSelector::PseudoClassPlaying:
-                builder.append(":playing");
-                break;
-            case CSSSelector::PseudoClassPaused:
-                builder.append(":paused");
-                break;
-            case CSSSelector::PseudoClassSeeking:
-                builder.append(":seeking");
-                break;
-            case CSSSelector::PseudoClassBuffering:
-                builder.append(":buffering");
-                break;
-            case CSSSelector::PseudoClassStalled:
-                builder.append(":stalled");
-                break;
-            case CSSSelector::PseudoClassMuted:
-                builder.append(":muted");
-                break;
-            case CSSSelector::PseudoClassVolumeLocked:
-                builder.append(":volume-locked");
-                break;
-#endif
-            case CSSSelector::PseudoClassHas:
-                builder.append(":has(");
-                cs->selectorList()->buildSelectorsText(builder);
-                builder.append(')');
-                break;
-#if ENABLE(ATTACHMENT_ELEMENT)
-            case CSSSelector::PseudoClassHasAttachment:
-                builder.append(":has-attachment");
-                break;
-#endif
-            case CSSSelector::PseudoClassHorizontal:
-                builder.append(":horizontal");
-                break;
-            case CSSSelector::PseudoClassHover:
-                builder.append(":hover");
-                break;
-            case CSSSelector::PseudoClassInRange:
-                builder.append(":in-range");
-                break;
-            case CSSSelector::PseudoClassIncrement:
-                builder.append(":increment");
-                break;
-            case CSSSelector::PseudoClassIndeterminate:
-                builder.append(":indeterminate");
-                break;
-            case CSSSelector::PseudoClassInvalid:
-                builder.append(":invalid");
-                break;
-            case CSSSelector::PseudoClassLang:
-                builder.append(":lang(");
+            case PseudoClass::Lang:
+                builder.append('(');
                 ASSERT_WITH_MESSAGE(cs->argumentList() && !cs->argumentList()->isEmpty(), "An empty :lang() is invalid and should never be generated by the parser.");
                 appendLangArgumentList(builder, *cs->argumentList());
                 builder.append(')');
                 break;
-            case CSSSelector::PseudoClassLastChild:
-                builder.append(":last-child");
-                break;
-            case CSSSelector::PseudoClassLastOfType:
-                builder.append(":last-of-type");
-                break;
-            case CSSSelector::PseudoClassLink:
-                builder.append(":link");
-                break;
-            case CSSSelector::PseudoClassModal:
-                builder.append(":modal");
-                break;
-            case CSSSelector::PseudoClassNoButton:
-                builder.append(":no-button");
-                break;
-            case CSSSelector::PseudoClassNot:
-                builder.append(":not(");
-                cs->selectorList()->buildSelectorsText(builder);
-                builder.append(')');
-                break;
-            case CSSSelector::PseudoClassNthChild:
-                builder.append(":nth-child(");
+            case PseudoClass::NthChild:
+            case PseudoClass::NthLastChild:
+                builder.append('(');
                 outputNthChildAnPlusB(*cs, builder);
-                if (const CSSSelectorList* selectorList = cs->selectorList()) {
-                    builder.append(" of ");
-                    selectorList->buildSelectorsText(builder);
-                }
-                builder.append(')');
-                break;
-            case CSSSelector::PseudoClassNthLastChild:
-                builder.append(":nth-last-child(");
-                outputNthChildAnPlusB(*cs, builder);
-                if (const CSSSelectorList* selectorList = cs->selectorList()) {
-                    builder.append(" of ");
-                    selectorList->buildSelectorsText(builder);
-                }
-                builder.append(')');
-                break;
-            case CSSSelector::PseudoClassNthLastOfType:
-                builder.append(":nth-last-of-type(");
-                appendPseudoClassFunctionTail(builder, cs);
-                break;
-            case CSSSelector::PseudoClassNthOfType:
-                builder.append(":nth-of-type(");
-                appendPseudoClassFunctionTail(builder, cs);
-                break;
-            case CSSSelector::PseudoClassOnlyChild:
-                builder.append(":only-child");
-                break;
-            case CSSSelector::PseudoClassOnlyOfType:
-                builder.append(":only-of-type");
-                break;
-            case CSSSelector::PseudoClassOpen:
-                builder.append(":open");
-                break;
-            case CSSSelector::PseudoClassOptional:
-                builder.append(":optional");
-                break;
-            case CSSSelector::PseudoClassNestingParent:
-                builder.append('&');
-                break;
-            case CSSSelector::PseudoClassIs: {
-                builder.append(":is(");
-                cs->selectorList()->buildSelectorsText(builder);
-                builder.append(')');
-                break;
-            }
-            case CSSSelector::PseudoClassMatches: {
-                builder.append(":matches(");
-                cs->selectorList()->buildSelectorsText(builder);
-                builder.append(')');
-                break;
-            }
-            case CSSSelector::PseudoClassWhere: {
-                builder.append(":where(");
-                cs->selectorList()->buildSelectorsText(builder);
-                builder.append(')');
-                break;
-            }
-            case CSSSelector::PseudoClassPlaceholderShown:
-                builder.append(":placeholder-shown");
-                break;
-            case CSSSelector::PseudoClassOutOfRange:
-                builder.append(":out-of-range");
-                break;
-#if ENABLE(VIDEO)
-            case CSSSelector::PseudoClassPast:
-                builder.append(":past");
-                break;
-#endif
-            case CSSSelector::PseudoClassReadOnly:
-                builder.append(":read-only");
-                break;
-            case CSSSelector::PseudoClassReadWrite:
-                builder.append(":read-write");
-                break;
-            case CSSSelector::PseudoClassRequired:
-                builder.append(":required");
-                break;
-            case CSSSelector::PseudoClassRoot:
-                builder.append(":root");
-                break;
-            case CSSSelector::PseudoClassScope:
-                builder.append(":scope");
-                break;
-            case CSSSelector::PseudoClassRelativeScope:
-                // Remove the space from the start to generate a relative selector string like in ":has(> foo)".
-                return makeString(separator.substring(1), rightSide);
-            case CSSSelector::PseudoClassSingleButton:
-                builder.append(":single-button");
-                break;
-            case CSSSelector::PseudoClassStart:
-                builder.append(":start");
-                break;
-            case CSSSelector::PseudoClassTarget:
-                builder.append(":target");
-                break;
-            case CSSSelector::PseudoClassUserInvalid:
-                builder.append(":user-invalid");
-                break;
-            case CSSSelector::PseudoClassUserValid:
-                builder.append(":user-valid");
-                break;
-            case CSSSelector::PseudoClassValid:
-                builder.append(":valid");
-                break;
-            case CSSSelector::PseudoClassVertical:
-                builder.append(":vertical");
-                break;
-            case CSSSelector::PseudoClassVisited:
-                builder.append(":visited");
-                break;
-            case CSSSelector::PseudoClassWindowInactive:
-                builder.append(":window-inactive");
-                break;
-            case CSSSelector::PseudoClassHost:
-                builder.append(":host");
                 if (auto* selectorList = cs->selectorList()) {
-                    builder.append('(');
+                    builder.append(" of "_s);
                     selectorList->buildSelectorsText(builder);
-                    builder.append(')');
                 }
+                builder.append(')');
                 break;
-            case CSSSelector::PseudoClassDefined:
-                builder.append(":defined");
+            case PseudoClass::Dir:
+            case PseudoClass::NthOfType:
+            case PseudoClass::NthLastOfType:
+                builder.append('(');
+                appendPseudoClassFunctionTail(builder, cs);
                 break;
-            case CSSSelector::PseudoClassUnknown:
-                ASSERT_NOT_REACHED();
-            }
-        } else if (cs->match() == CSSSelector::PseudoElement) {
-            switch (cs->pseudoElementType()) {
-            case CSSSelector::PseudoElementSlotted:
-                builder.append("::slotted(");
+            case PseudoClass::Has:
+            case PseudoClass::Is:
+            case PseudoClass::Not:
+            case PseudoClass::Where:
+            case PseudoClass::WebKitAny: {
+                builder.append('(');
                 cs->selectorList()->buildSelectorsText(builder);
                 builder.append(')');
                 break;
-            case CSSSelector::PseudoElementPart: {
-                builder.append("::part(");
+            }
+            case PseudoClass::State:
+                    builder.append('(');
+                serializeIdentifier(cs->argument(), builder);
+                    builder.append(')');
+                break;
+            default:
+                ASSERT(!pseudoClassMayHaveArgument(cs->pseudoClass()), "Missing serialization for pseudo-class argument");
+                break;
+            }
+        } else if (cs->match() == Match::PseudoElement) {
+            switch (cs->pseudoElement()) {
+            case PseudoElement::Slotted:
+                builder.append("::slotted("_s);
+                cs->selectorList()->buildSelectorsText(builder);
+                builder.append(')');
+                break;
+            case PseudoElement::Highlight:
+            case PseudoElement::ViewTransitionGroup:
+            case PseudoElement::ViewTransitionImagePair:
+            case PseudoElement::ViewTransitionOld:
+            case PseudoElement::ViewTransitionNew: {
+                builder.append("::"_s, cs->serializingValue(), '(');
+                serializeIdentifierOrStar(cs->argumentList()->first().identifier);
+                builder.append(')');
+                break;
+            }
+            case PseudoElement::Part: {
+                builder.append("::part("_s);
                 bool isFirst = true;
                 for (auto& partName : *cs->argumentList()) {
                     if (!isFirst)
@@ -770,119 +561,132 @@ String CSSSelector::selectorText(StringView separator, StringView rightSide) con
                 builder.append(')');
                 break;
             }
-            case CSSSelector::PseudoElementWebKitCustomLegacyPrefixed:
-                if (cs->value() == "placeholder"_s)
-                    builder.append("::-webkit-input-placeholder"_s);
-                if (cs->value() == "file-selector-button"_s)
-                    builder.append("::-webkit-file-upload-button"_s);
-                break;
 #if ENABLE(VIDEO)
-            case CSSSelector::PseudoElementCue: {
+            case PseudoElement::Cue: {
+                builder.append("::cue"_s);
                 if (auto* selectorList = cs->selectorList()) {
-                    builder.append("::cue(");
+                    builder.append('(');
                     selectorList->buildSelectorsText(builder);
                     builder.append(')');
-                } else
-                    builder.append("::cue");
+                }
                 break;
             }
 #endif
             default:
-                builder.append("::", cs->serializingValue());
+                ASSERT(!pseudoElementMayHaveArgument(cs->pseudoElement()), "Missing serialization for pseudo-element argument");
+                builder.append("::"_s);
+                serializeIdentifier(cs->serializingValue(), builder);
             }
         } else if (cs->isAttributeSelector()) {
             builder.append('[');
-            if (auto& prefix = cs->attribute().prefix(); !prefix.isEmpty())
-                builder.append(prefix, '|');
-            builder.append(cs->attribute().localName());
+            if (auto& prefix = cs->attribute().prefix(); !prefix.isEmpty()) {
+                serializeIdentifierOrStar(prefix);
+                builder.append('|');
+            }
+            serializeIdentifierOrStar(cs->attribute().localName());
             switch (cs->match()) {
-                case CSSSelector::Exact:
+            case Match::Exact:
                     builder.append('=');
                     break;
-                case CSSSelector::Set:
+            case Match::Set:
                     // set has no operator or value, just the attrName
                     builder.append(']');
                     break;
-                case CSSSelector::List:
-                    builder.append("~=");
+            case Match::List:
+                builder.append("~="_s);
                     break;
-                case CSSSelector::Hyphen:
-                    builder.append("|=");
+            case Match::Hyphen:
+                builder.append("|="_s);
                     break;
-                case CSSSelector::Begin:
-                    builder.append("^=");
+            case Match::Begin:
+                builder.append("^="_s);
                     break;
-                case CSSSelector::End:
-                    builder.append("$=");
+            case Match::End:
+                builder.append("$="_s);
                     break;
-                case CSSSelector::Contain:
-                    builder.append("*=");
+            case Match::Contain:
+                builder.append("*="_s);
                     break;
                 default:
                     break;
             }
-            if (cs->match() != CSSSelector::Set) {
+            if (cs->match() != Match::Set) {
                 serializeString(cs->serializingValue(), builder);
                 if (cs->attributeValueMatchingIsCaseInsensitive())
-                    builder.append(" i]");
+                    builder.append(" i]"_s);
                 else
                     builder.append(']');
             }
-        } else if (cs->match() == CSSSelector::PagePseudoClass) {
-            switch (cs->pagePseudoClassType()) {
-            case PagePseudoClassFirst:
-                builder.append(":first");
+        } else if (cs->match() == Match::PagePseudoClass) {
+            switch (cs->pagePseudoClass()) {
+            case PagePseudoClass::First:
+                builder.append(":first"_s);
                 break;
-            case PagePseudoClassLeft:
-                builder.append(":left");
+            case PagePseudoClass::Left:
+                builder.append(":left"_s);
                 break;
-            case PagePseudoClassRight:
-                builder.append(":right");
+            case PagePseudoClass::Right:
+                builder.append(":right"_s);
                 break;
             }
         }
 
-        if (cs->relation() != CSSSelector::Subselector || !cs->tagHistory())
+        if (cs->relation() != Relation::Subselector || !cs->tagHistory())
             break;
         cs = cs->tagHistory();
     }
 
     builder.append(separator, rightSide);
 
+    auto separatorTextForNestingRelative = [&] () -> String {
+        switch (cs->relation()) {
+        case Relation::Child:
+            return "> "_s;
+        case Relation::DirectAdjacent:
+            return "+ "_s;
+        case Relation::IndirectAdjacent:
+            return "~ "_s;
+        default:
+            return { };
+        }
+    };
+
     if (auto* previousSelector = cs->tagHistory()) {
         ASCIILiteral separator = ""_s;
         switch (cs->relation()) {
-        case CSSSelector::DescendantSpace:
+        case Relation::DescendantSpace:
             separator = " "_s;
             break;
-        case CSSSelector::Child:
+        case Relation::Child:
             separator = " > "_s;
             break;
-        case CSSSelector::DirectAdjacent:
+        case Relation::DirectAdjacent:
             separator = " + "_s;
             break;
-        case CSSSelector::IndirectAdjacent:
+        case Relation::IndirectAdjacent:
             separator = " ~ "_s;
             break;
-        case CSSSelector::Subselector:
+        case Relation::Subselector:
             ASSERT_NOT_REACHED();
             break;
-        case CSSSelector::ShadowDescendant:
-        case CSSSelector::ShadowPartDescendant:
-        case CSSSelector::ShadowSlotted:
+        case Relation::ShadowDescendant:
+        case Relation::ShadowPartDescendant:
+        case Relation::ShadowSlotted:
             break;
         }
         return previousSelector->selectorText(separator, builder);
+    } else if (auto separatorText = separatorTextForNestingRelative(); !separatorText.isNull()) {
+        // We have a separator but no tag history which can happen with implicit relative nesting selector
+        return separatorText + builder.toString();
     }
 
     return builder.toString();
 }
 
-void CSSSelector::setAttribute(const QualifiedName& value, bool convertToLowercase, AttributeMatchType matchType)
+void CSSSelector::setAttribute(const QualifiedName& value, AttributeMatchType matchType)
 {
     createRareData();
     m_data.rareData->attribute = value;
-    m_data.rareData->attributeCanonicalLocalName = convertToLowercase ? value.localName().convertToASCIILowercase() : value.localName();
     m_caseInsensitiveAttributeValueMatching = matchType == CaseInsensitive;
 }
 
@@ -942,7 +746,6 @@ CSSSelector::RareData::RareData(const RareData& other)
     , a(other.a)
     , b(other.b)
     , attribute(other.attribute)
-    , attributeCanonicalLocalName(other.attributeCanonicalLocalName)
     , argument(other.argument)
     , argumentList(other.argumentList)
 {
@@ -979,19 +782,15 @@ CSSSelector::CSSSelector(const CSSSelector& other)
     , m_isFirstInTagHistory(other.m_isFirstInTagHistory)
     , m_isLastInTagHistory(other.m_isLastInTagHistory)
     , m_hasRareData(other.m_hasRareData)
-    , m_hasNameWithCase(other.m_hasNameWithCase)
     , m_isForPage(other.m_isForPage)
     , m_tagIsForNamespaceRule(other.m_tagIsForNamespaceRule)
     , m_caseInsensitiveAttributeValueMatching(other.m_caseInsensitiveAttributeValueMatching)
+    , m_isImplicit(other.m_isImplicit)
 {
-    if (other.m_hasRareData) {
-        auto copied = other.m_data.rareData->deepCopy();
-        m_data.rareData = &copied.leakRef();
-        m_data.rareData->ref();
-    } else if (other.m_hasNameWithCase) {
-        m_data.nameWithCase = other.m_data.nameWithCase;
-        m_data.nameWithCase->ref();
-    } else if (other.match() == Tag) {
+    // Manually ref count the m_data union because they are stored as raw ptr, not as Ref.
+    if (other.m_hasRareData)
+        m_data.rareData = &other.m_data.rareData->deepCopy().leakRef();
+    else if (other.match() == Match::Tag) {
         m_data.tagQName = other.m_data.tagQName;
         m_data.tagQName->ref();
     } else if (other.m_data.value) {
@@ -1000,52 +799,58 @@ CSSSelector::CSSSelector(const CSSSelector& other)
     }
 }
 
-void CSSSelector::visitAllSimpleSelectors(auto& apply) const
+bool CSSSelector::visitAllSimpleSelectors(auto& apply) const
 {
+    std::queue<const CSSSelector*> worklist;
+    worklist.push(this);
+    while (!worklist.empty()) {
+        auto current = worklist.front();
+        worklist.pop();
+
     // Effective C++ advices for this cast to deal with generic const/non-const member function.
-    apply(*const_cast<CSSSelector*>(this));
+        if (apply(*const_cast<CSSSelector*>(current)))
+            return true;
 
     // Visit the selector list member (if any) recursively (such as: :has(<list>), :is(<list>),...)
-    if (auto selectorList = this->selectorList()) {
+        if (auto selectorList = current->selectorList()) {
         auto next = selectorList->first();
         while (next) {
-            next->visitAllSimpleSelectors(apply);
+                worklist.push(next);
             next = CSSSelectorList::next(next);
         }
     }
 
-    // Visit the next simple selector recursively
-    if (auto next = tagHistory())
-        next->visitAllSimpleSelectors(apply);
+        // Visit the next simple selector
+        if (auto next = current->tagHistory())
+            worklist.push(next);
+    }
+    return false;
 }
 
 void CSSSelector::resolveNestingParentSelectors(const CSSSelectorList& parent)
 {
     auto replaceParentSelector = [&parent] (CSSSelector& selector) {
-        if (selector.match() == CSSSelector::PseudoClass && selector.pseudoClassType() == CSSSelector::PseudoClassNestingParent) {
-            selector.setMatch(Match::PseudoClass);
+        if (selector.match() == CSSSelector::Match::NestingParent) {
             // FIXME: Optimize cases where we can include the parent selector directly instead of wrapping it in a ":is" pseudo class.
-            selector.setPseudoClassType(PseudoClassType::PseudoClassIs);
+            selector.setMatch(Match::PseudoClass);
+            selector.setPseudoClass(PseudoClass::Is);
             selector.setSelectorList(makeUnique<CSSSelectorList>(parent));
         }
+        return false;
     };
 
     visitAllSimpleSelectors(replaceParentSelector);
 }
 
-void CSSSelector::replaceNestingParentByNotAll()
+void CSSSelector::replaceNestingParentByPseudoClassScope()
 {
     auto replaceParentSelector = [] (CSSSelector& selector) {
-        if (selector.match() == CSSSelector::PseudoClass && selector.pseudoClassType() == CSSSelector::PseudoClassNestingParent) {
-            // We replace by :not(*)
-            auto allSelector = makeUnique<CSSParserSelector>(CSSSelector(anyQName()));
-            Vector<std::unique_ptr<CSSParserSelector>> vector;
-            vector.append(WTFMove(allSelector));
-            auto selectorList = makeUnique<CSSSelectorList>(WTFMove(vector));
+        if (selector.match() == Match::NestingParent) {
+            // Replace by :scope
             selector.setMatch(Match::PseudoClass);
-            selector.setPseudoClassType(PseudoClassType::PseudoClassNot);
-            selector.setSelectorList(WTFMove(selectorList));
+            selector.setPseudoClass(PseudoClass::Scope);
         }
+        return false;
     };
 
     visitAllSimpleSelectors(replaceParentSelector);
@@ -1053,16 +858,29 @@ void CSSSelector::replaceNestingParentByNotAll()
 
 bool CSSSelector::hasExplicitNestingParent() const
 {
-    bool result = false;
+    auto checkForExplicitParent = [] (const CSSSelector& selector) {
+        if (selector.match() == Match::NestingParent)
+            return true;
 
-    auto checkForExplicitParent = [&result] (const CSSSelector& selector) {
-        if (selector.match() == CSSSelector::PseudoClass && selector.pseudoClassType() == CSSSelector::PseudoClassNestingParent)
-            result = true;
+        if (selector.match() == Match::ForgivingUnknownNestContaining)
+            return true;
+
+        return false;
     };
 
-    visitAllSimpleSelectors(checkForExplicitParent);
+    return visitAllSimpleSelectors(checkForExplicitParent);
+}
 
-    return result;
+bool CSSSelector::hasExplicitPseudoClassScope() const
+{
+    auto check = [] (const CSSSelector& selector) {
+        if (selector.match() == Match::PseudoClass && selector.pseudoClass() == PseudoClass::Scope)
+            return true;
+
+        return false;
+    };
+
+    return visitAllSimpleSelectors(check);
 }
 
 } // namespace WebCore

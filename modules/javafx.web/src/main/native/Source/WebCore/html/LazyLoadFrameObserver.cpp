@@ -26,9 +26,10 @@
 #include "config.h"
 #include "LazyLoadFrameObserver.h"
 
-#include "Frame.h"
 #include "HTMLIFrameElement.h"
 #include "IntersectionObserverCallback.h"
+#include "IntersectionObserverEntry.h"
+#include "LocalFrame.h"
 #include "RenderStyle.h"
 
 #include <limits>
@@ -52,10 +53,9 @@ private:
         for (auto& entry : entries) {
             if (!entry->isIntersecting())
                 continue;
-            auto* element = entry->target();
-            if (is<HTMLIFrameElement>(element)) {
-                downcast<HTMLIFrameElement>(*element).lazyLoadFrameObserver().unobserve();
-                downcast<HTMLIFrameElement>(*element).loadDeferredFrame();
+            if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(entry->target())) {
+                iframe->lazyLoadFrameObserver().unobserve();
+                iframe->loadDeferredFrame();
             }
         }
         return { };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -736,6 +736,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
     /**
      * An event that is fired when a user performs an edit on a table cell.
+     *
+     * @param <S> the type of the TreeItem instances contained within the TreeTableView
+     * @param <T> the type of the items contained within the TreeTableColumn
      * @since JavaFX 8.0
      */
     public static class CellEditEvent<S,T> extends Event {
@@ -750,6 +753,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         // to go back into the TableView.items list - this new value represents
         // just the input for a single cell, so it is likely that it needs to go
         // back into a property within an item in the TableView.items list.
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
 
         // The location of the edit event

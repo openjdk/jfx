@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -627,6 +627,12 @@ String validationMessagePatternMismatchText()
     return getLocalizedProperty("validationMessagePatternMismatchText"_s);
 }
 
+String validationMessagePatternMismatchText(const String& title)
+{
+    UNUSED_PARAM(title);
+    return validationMessagePatternMismatchText();
+}
+
 String validationMessageTooShortText(int, int)
 {
     notImplemented();
@@ -744,19 +750,6 @@ String pluginTooSmallText()
     return String::fromUTF8("Plug-In too small");
 }
 
-#if USE(CF) && !PLATFORM(WIN)
-String localizedString(CFStringRef key)
-{
-     UNUSED_PARAM(key);
-         notImplemented();
-     return String::fromUTF8("localizedString(CFStringRef key)"); //Need to add implementation
-}
-#else
-String localizedString(const char* key)
-{
-    return String::fromUTF8(key, strlen(key));
-}
-#endif
 
 String pdfDocumentTypeDescription()
 {
@@ -766,6 +759,31 @@ String pdfDocumentTypeDescription()
 String contextMenuItemTagShowMediaStats()
 {
     return WEB_UI_STRING("Show Media Stats", "Media stats context menu item");
+}
+
+#if USE(CF) && !PLATFORM(JAVA)
+String localizedString(CFStringRef key)
+{
+     UNUSED_PARAM(key);
+     notImplemented();
+     return String::fromUTF8("localizedString(CFStringRef key)"); //Need to add implementation
+}
+#else
+String localizedString(const char* key)
+{
+    return String::fromUTF8(key, strlen(key));
+}
+#endif
+
+String formatLocalizedString(const char* format, ...)
+{
+    notImplemented();
+    return String::fromUTF8(format);
+}
+
+String validationMessageValueMissingForSwitchText()
+{
+    return WEB_UI_STRING("Tap this switch", "Validation message for required switches that are not on");
 }
 
 } // namespace WebCore

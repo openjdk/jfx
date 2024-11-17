@@ -44,11 +44,6 @@ Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t len
     return { byteArray, length };
 }
 
-Vector<uint8_t> convertArrayBufferToVector(ArrayBuffer* buffer)
-{
-    return convertBytesToVector(static_cast<uint8_t*>(buffer->data()), buffer->byteLength());
-}
-
 Vector<uint8_t> produceRpIdHash(const String& rpId)
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
@@ -133,7 +128,7 @@ Vector<uint8_t> buildAuthData(const String& rpId, const uint8_t flags, const uin
     return authData;
 }
 
-cbor::CBORValue::MapValue buildAttestationMap(Vector<uint8_t>&& authData, String&& format, cbor::CBORValue::MapValue&& statementMap, const AttestationConveyancePreference& attestation)
+cbor::CBORValue::MapValue buildAttestationMap(Vector<uint8_t>&& authData, String&& format, cbor::CBORValue::MapValue&& statementMap, const AttestationConveyancePreference& attestation, ShouldZeroAAGUID shouldZero)
 {
     cbor::CBORValue::MapValue attestationObjectMap;
     // The following implements Step 20 with regard to AttestationConveyancePreference
@@ -142,7 +137,7 @@ cbor::CBORValue::MapValue buildAttestationMap(Vector<uint8_t>&& authData, String
     // step to return self attestation.
     if (attestation == AttestationConveyancePreference::None) {
         const size_t aaguidOffset = rpIdHashLength + flagsLength + signCounterLength;
-        if (authData.size() >= aaguidOffset + aaguidLength)
+        if (authData.size() >= aaguidOffset + aaguidLength && shouldZero == ShouldZeroAAGUID::Yes)
             memset(authData.data() + aaguidOffset, 0, aaguidLength);
         format = String::fromLatin1(noneAttestationValue);
         statementMap.clear();
@@ -153,9 +148,9 @@ cbor::CBORValue::MapValue buildAttestationMap(Vector<uint8_t>&& authData, String
     return attestationObjectMap;
 }
 
-Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& format, cbor::CBORValue::MapValue&& statementMap, const AttestationConveyancePreference& attestation)
+Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& format, cbor::CBORValue::MapValue&& statementMap, const AttestationConveyancePreference& attestation, ShouldZeroAAGUID shouldZero)
 {
-    cbor::CBORValue::MapValue attestationObjectMap = buildAttestationMap(WTFMove(authData), WTFMove(format), WTFMove(statementMap), attestation);
+    cbor::CBORValue::MapValue attestationObjectMap = buildAttestationMap(WTFMove(authData), WTFMove(format), WTFMove(statementMap), attestation, shouldZero);
 
     auto attestationObject = cbor::CBORWriter::write(cbor::CBORValue(WTFMove(attestationObjectMap)));
     ASSERT(attestationObject);
@@ -163,7 +158,7 @@ Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& form
 }
 
 // FIXME(181948): Add token binding ID.
-Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& challenge, const SecurityOrigin& origin, WebAuthn::Scope scope)
+Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& challenge, const SecurityOrigin& origin, WebAuthn::Scope scope, const String& topOrigin)
 {
     auto object = JSON::Object::create();
     switch (type) {
@@ -176,6 +171,10 @@ Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& ch
     }
     object->setString("challenge"_s, base64URLEncodeToString(challenge.data(), challenge.length()));
     object->setString("origin"_s, origin.toRawString());
+
+    if (!topOrigin.isNull())
+        object->setString("topOrigin"_s, topOrigin);
+
     if (scope != WebAuthn::Scope::SameOrigin)
         object->setBoolean("crossOrigin"_s, scope != WebAuthn::Scope::SameOrigin);
 
@@ -195,7 +194,7 @@ Vector<uint8_t> encodeRawPublicKey(const Vector<uint8_t>& x, const Vector<uint8_
 {
     Vector<uint8_t> rawKey;
     rawKey.reserveInitialCapacity(1 + x.size() + y.size());
-    rawKey.uncheckedAppend(0x04);
+    rawKey.append(0x04);
     rawKey.appendVector(x);
     rawKey.appendVector(y);
     return rawKey;

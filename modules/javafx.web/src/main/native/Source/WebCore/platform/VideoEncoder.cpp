@@ -65,6 +65,10 @@ void VideoEncoder::createLocalEncoder(const String& codecName, const Config& con
         LibWebRTCVPXVideoEncoder::create(LibWebRTCVPXVideoEncoder::Type::VP9, config, WTFMove(callback), WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(postCallback));
         return;
     }
+    if (codecName.startsWith("vp09.02"_s)) {
+        LibWebRTCVPXVideoEncoder::create(LibWebRTCVPXVideoEncoder::Type::VP9_P2, config, WTFMove(callback), WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(postCallback));
+        return;
+    }
     if (codecName.startsWith("av01."_s)) {
         LibWebRTCVPXVideoEncoder::create(LibWebRTCVPXVideoEncoder::Type::AV1, config, WTFMove(callback), WTFMove(descriptionCallback), WTFMove(outputCallback), WTFMove(postCallback));
         return;
@@ -74,6 +78,8 @@ void VideoEncoder::createLocalEncoder(const String& codecName, const Config& con
     return;
 #else
     UNUSED_PARAM(codecName);
+    UNUSED_PARAM(config);
+    UNUSED_PARAM(descriptionCallback);
     UNUSED_PARAM(outputCallback);
     UNUSED_PARAM(postCallback);
 #endif

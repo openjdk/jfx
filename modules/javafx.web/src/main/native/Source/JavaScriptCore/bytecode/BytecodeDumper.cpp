@@ -279,8 +279,7 @@ void CodeBlockBytecodeDumper<Block>::dumpGraph(Block* block, const JSInstruction
 
     out.printf("\n");
 
-    Vector<Vector<unsigned>> predecessors;
-    predecessors.resize(graph.size());
+    Vector<Vector<unsigned>> predecessors(graph.size());
     for (auto& block : graph) {
         if (block.isEntryBlock() || block.isExitBlock())
             continue;
@@ -429,7 +428,10 @@ CString BytecodeDumper::formatConstant(Type type, uint64_t constant) const
         return toCString(constant);
         break;
     default: {
-        if (isFuncref(type) || isExternref(type)) {
+        // This is necessary to handle all cases, since when typed function
+        // references are enabled, if type.isFuncref() is true, then
+        // isRefType(type) is false (likewise for externref)
+        if (isRefType(type) || type.isFuncref() || type.isExternref()) {
             if (JSValue::decode(constant) == jsNull())
                 return "null";
             return toCString(RawHex(constant));

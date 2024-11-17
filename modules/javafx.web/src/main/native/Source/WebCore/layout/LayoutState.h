@@ -28,51 +28,44 @@
 #include "LayoutElementBox.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class Document;
+
 namespace Layout {
 
 class BlockFormattingState;
-class FlexFormattingState;
+class BoxGeometry;
 class FormattingContext;
 class FormattingState;
-class BoxGeometry;
-class InlineFormattingState;
+class InlineContentCache;
 class TableFormattingState;
 
 class LayoutState : public CanMakeWeakPtr<LayoutState> {
     WTF_MAKE_NONCOPYABLE(LayoutState);
     WTF_MAKE_ISO_ALLOCATED(LayoutState);
 public:
-    enum class FormattingContextIntegrationType {
-        Inline,
-        Flex
-    };
-    LayoutState(const Document&, const ElementBox& rootContainer, std::optional<FormattingContextIntegrationType> = std::nullopt);
+    LayoutState(const Document&, const ElementBox& rootContainer);
     ~LayoutState();
 
     void updateQuirksMode(const Document&);
 
-    InlineFormattingState& ensureInlineFormattingState(const ElementBox& formattingContextRoot);
+    InlineContentCache& inlineContentCache(const ElementBox& formattingContextRoot);
+
     BlockFormattingState& ensureBlockFormattingState(const ElementBox& formattingContextRoot);
     TableFormattingState& ensureTableFormattingState(const ElementBox& formattingContextRoot);
-    FlexFormattingState& ensureFlexFormattingState(const ElementBox& formattingContextRoot);
 
-    InlineFormattingState& formattingStateForInlineFormattingContext(const ElementBox& inlineFormattingContextRoot) const;
     BlockFormattingState& formattingStateForBlockFormattingContext(const ElementBox& blockFormattingContextRoot) const;
     TableFormattingState& formattingStateForTableFormattingContext(const ElementBox& tableFormattingContextRoot) const;
-    FlexFormattingState& formattingStateForFlexFormattingContext(const ElementBox& flexFormattingContextRoot) const;
 
     FormattingState& formattingStateForFormattingContext(const ElementBox& formattingRoot) const;
 
     void destroyBlockFormattingState(const ElementBox& formattingContextRoot);
-    void destroyInlineFormattingState(const ElementBox& formattingContextRoot);
+    void destroyInlineContentCache(const ElementBox& formattingContextRoot);
 
     bool hasFormattingState(const ElementBox& formattingRoot) const;
-    bool hasInlineFormattingState(const ElementBox& formattingRoot) const { return m_inlineFormattingStates.contains(&formattingRoot); }
 
 #ifndef NDEBUG
     void registerFormattingContext(const FormattingContext&);
@@ -92,26 +85,14 @@ public:
 
     const ElementBox& root() const { return m_rootContainer; }
 
-    // LFC integration only. Full LFC has proper ICB access.
-    bool isInlineFormattingContextIntegration() const { return m_formattingContextIntegrationType && *m_formattingContextIntegrationType == FormattingContextIntegrationType::Inline; }
-    bool isFlexFormattingContextIntegration() const { return m_formattingContextIntegrationType && *m_formattingContextIntegrationType == FormattingContextIntegrationType::Flex; }
-
-    void setViewportSize(const LayoutSize&);
-    LayoutSize viewportSize() const;
-    bool shouldIgnoreTrailingLetterSpacing() const;
-    bool shouldNotSynthesizeInlineBlockBaseline() const;
-
 private:
     void setQuirksMode(QuirksMode quirksMode) { m_quirksMode = quirksMode; }
     BoxGeometry& ensureGeometryForBoxSlow(const Box&);
 
-    HashMap<const ElementBox*, std::unique_ptr<InlineFormattingState>> m_inlineFormattingStates;
+    HashMap<const ElementBox*, std::unique_ptr<InlineContentCache>> m_inlineContentCaches;
+
     HashMap<const ElementBox*, std::unique_ptr<BlockFormattingState>> m_blockFormattingStates;
     HashMap<const ElementBox*, std::unique_ptr<TableFormattingState>> m_tableFormattingStates;
-    HashMap<const ElementBox*, std::unique_ptr<FlexFormattingState>> m_flexFormattingStates;
-
-    std::unique_ptr<InlineFormattingState> m_rootInlineFormattingStateForIntegration;
-    std::unique_ptr<FlexFormattingState> m_rootFlexFormattingStateForIntegration;
 
 #ifndef NDEBUG
     HashSet<const FormattingContext*> m_formattingContextList;
@@ -120,10 +101,6 @@ private:
     QuirksMode m_quirksMode { QuirksMode::No };
 
     CheckedRef<const ElementBox> m_rootContainer;
-
-    // LFC integration only.
-    std::optional<FormattingContextIntegrationType> m_formattingContextIntegrationType;
-    LayoutSize m_viewportSize;
 };
 
 inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const

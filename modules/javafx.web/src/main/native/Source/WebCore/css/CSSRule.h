@@ -30,6 +30,8 @@ namespace WebCore {
 
 class CSSStyleSheet;
 class StyleRuleBase;
+class StyleRule;
+class StyleRuleWithNesting;
 
 struct CSSParserContext;
 
@@ -41,12 +43,16 @@ public:
 
     virtual StyleRuleType styleRuleType() const = 0;
     virtual String cssText() const = 0;
+    virtual String cssTextWithReplacementURLs(const HashMap<String, String>&, const HashMap<RefPtr<CSSStyleSheet>, String>&) const { return cssText(); }
     virtual void reattach(StyleRuleBase&) = 0;
 
     void setParentStyleSheet(CSSStyleSheet*);
     void setParentRule(CSSRule*);
     CSSStyleSheet* parentStyleSheet() const;
     CSSRule* parentRule() const { return m_parentIsRule ? m_parentRule : nullptr; }
+    bool hasStyleRuleAncestor() const;
+    virtual RefPtr<StyleRuleWithNesting> prepareChildStyleRuleForNesting(StyleRule&);
+    virtual void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&) { }
 
     WEBCORE_EXPORT ExceptionOr<void> setCssText(const String&);
 

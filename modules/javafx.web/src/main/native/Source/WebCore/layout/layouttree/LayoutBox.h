@@ -27,10 +27,13 @@
 
 #include "LayoutUnits.h"
 #include "RenderStyle.h"
+#include "RenderStyleConstants.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
+
+class Shape;
 
 namespace Layout {
 
@@ -95,8 +98,8 @@ public:
     bool isFloatingOrOutOfFlowPositioned() const { return isFloatingPositioned() || isOutOfFlowPositioned(); }
 
     bool isContainingBlockForInFlow() const;
-    bool isContainingBlockForFixedPosition() const;
-    bool isContainingBlockForOutOfFlowPosition() const;
+    inline bool isContainingBlockForFixedPosition() const;
+    inline bool isContainingBlockForOutOfFlowPosition() const;
 
     bool isAnonymous() const { return m_isAnonymous; }
 
@@ -114,9 +117,15 @@ public:
     bool isInitialContainingBlock() const { return baseTypeFlags().contains(InitialContainingBlockFlag); }
     bool isLayoutContainmentBox() const;
     bool isSizeContainmentBox() const;
+    bool isInternalRubyBox() const;
+    bool isRubyAnnotationBox() const;
+    bool isInterlinearRubyAnnotationBox() const;
 
     bool isDocumentBox() const { return m_nodeType == NodeType::DocumentElement; }
     bool isBodyBox() const { return m_nodeType == NodeType::Body; }
+    bool isRuby() const { return style().display() == DisplayType::Ruby; }
+    bool isRubyBase() const { return style().display() == DisplayType::RubyBase; }
+    bool isRubyInlineBox() const { return isRuby() || isRubyBase(); }
     bool isTableWrapperBox() const { return m_nodeType == NodeType::TableWrapperBox; }
     bool isTableBox() const { return m_nodeType == NodeType::TableBox; }
     bool isTableCaption() const { return style().display() == DisplayType::TableCaption; }
@@ -132,7 +141,6 @@ public:
     bool isFlexItem() const;
     bool isIFrame() const { return m_nodeType == NodeType::IFrame; }
     bool isImage() const { return m_nodeType == NodeType::Image; }
-    bool isInternalRubyBox() const { return false; }
     bool isLineBreakBox() const { return m_nodeType == NodeType::LineBreak || m_nodeType == NodeType::WordBreakOpportunity; }
     bool isWordBreakOpportunity() const { return m_nodeType == NodeType::WordBreakOpportunity; }
     bool isListMarkerBox() const { return m_nodeType == NodeType::ListMarker; }
@@ -176,6 +184,11 @@ public:
     void setIsInlineIntegrationRoot() { m_isInlineIntegrationRoot = true; }
     void setIsFirstChildForIntegration(bool value) { m_isFirstChildForIntegration = value; }
 
+    const Shape* shape() const;
+    void setShape(RefPtr<const Shape>);
+
+    const ElementBox* associatedRubyAnnotationBox() const;
+
     bool canCacheForLayoutState(const LayoutState&) const;
     BoxGeometry* cachedGeometryForLayoutState(const LayoutState&) const;
     void setCachedGeometryForLayoutState(LayoutState&, std::unique_ptr<BoxGeometry>) const;
@@ -199,6 +212,7 @@ private:
         CellSpan tableCellSpan;
         std::optional<LayoutUnit> columnWidth;
         std::unique_ptr<RenderStyle> firstLineStyle;
+        RefPtr<const Shape> shape;
     };
 
     bool hasRareData() const { return m_hasRareData; }
@@ -239,21 +253,11 @@ inline bool Box::isContainingBlockForInFlow() const
     return isBlockContainer() || establishesFormattingContext();
 }
 
-inline bool Box::isContainingBlockForFixedPosition() const
-{
-    return isInitialContainingBlock() || isLayoutContainmentBox() || style().hasTransform();
 }
 
-inline bool Box::isContainingBlockForOutOfFlowPosition() const
-{
-    return isInitialContainingBlock() || isPositioned() || isLayoutContainmentBox() || style().hasTransform();
-}
-
-}
 }
 
 #define SPECIALIZE_TYPE_TRAITS_LAYOUT_BOX(ToValueTypeName, predicate) \
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Layout::ToValueTypeName) \
     static bool isType(const WebCore::Layout::Box& box) { return box.predicate; } \
 SPECIALIZE_TYPE_TRAITS_END()
-

@@ -40,9 +40,9 @@ enum AnimatedPropertyValueType { RegularPropertyValue, CurrentColorValue, Inheri
 class SVGAnimationElement : public SVGSMILElement, public SVGTests {
     WTF_MAKE_ISO_ALLOCATED(SVGAnimationElement);
 public:
-    float getStartTime() const;
+    ExceptionOr<float> getStartTime() const;
     float getCurrentTime() const;
-    float getSimpleDuration() const;
+    ExceptionOr<float> getSimpleDuration() const;
 
     void beginElement();
     void beginElementAt(float offset);
@@ -88,14 +88,12 @@ protected:
 
     static bool isSupportedAttribute(const QualifiedName&);
     bool attributeContainsJavaScriptURL(const Attribute&) const final;
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
     String toValue() const;
     String byValue() const;
     String fromValue() const;
-
-    String targetAttributeBaseValue();
 
     // from SVGSMILElement
     void startedActiveInterval() override;

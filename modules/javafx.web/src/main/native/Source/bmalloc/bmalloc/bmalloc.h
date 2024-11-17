@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AllocationCounts.h"
 #include "AvailableMemory.h"
 #include "Cache.h"
 #include "DebugHeap.h"
@@ -73,6 +74,34 @@ BINLINE void* malloc(size_t size, HeapKind kind = HeapKind::Primary)
     return bmalloc_allocate_auxiliary_inline(&heapForKind(gigacageKind(kind)), size);
 #else
     return Cache::allocate(kind, size);
+#endif
+}
+
+BINLINE void* tryZeroedMalloc(size_t size, HeapKind kind = HeapKind::Primary)
+{
+#if BUSE(LIBPAS)
+    if (!isGigacage(kind))
+        return bmalloc_try_allocate_zeroed_inline(size);
+    return bmalloc_try_allocate_auxiliary_zeroed_inline(&heapForKind(gigacageKind(kind)), size);
+#else
+    auto* mem = Cache::tryAllocate(kind, size);
+    if (mem)
+        memset(mem, 0, size);
+    return mem;
+#endif
+}
+
+// Crashes on failure.
+BINLINE void* zeroedMalloc(size_t size, HeapKind kind = HeapKind::Primary)
+{
+#if BUSE(LIBPAS)
+    if (!isGigacage(kind))
+        return bmalloc_allocate_zeroed_inline(size);
+    return bmalloc_allocate_auxiliary_zeroed_inline(&heapForKind(gigacageKind(kind)), size);
+#else
+    auto* mem = Cache::allocate(kind, size);
+    memset(mem, 0, size);
+    return mem;
 #endif
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,52 +25,48 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.SceneHelper;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.skin.MenuBarSkin;
 import javafx.scene.control.skin.MenuBarSkinShim;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.MenuBarMenuButtonShim;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
-import com.sun.javafx.scene.control.ContextMenuContent;
-import com.sun.javafx.scene.control.MenuBarMenuButtonShim;
-import javafx.scene.control.skin.MenuBarSkin;
-import com.sun.javafx.tk.Toolkit;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
-
 
 /**
  *
  * @author lubermud
  */
-
 public class MenuBarTest {
     private MenuBar menuBar;
     private Toolkit tk;
     private Scene scene;
     private Stage stage;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         setUncaughtExceptionHandler();
 
         tk = Toolkit.getToolkit();
@@ -81,7 +77,8 @@ public class MenuBarTest {
         menuBar.setUseSystemMenuBar(false);
     }
 
-    @After public void cleanup() {
+    @AfterEach
+    public void cleanup() {
         if (stage != null) {
             stage.hide();
         }
@@ -715,5 +712,69 @@ public class MenuBarTest {
         // check if focusedMenuIndex is 0 (menu1 is still in selected state).
         int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
         assertEquals(0, focusedIndex);
+    }
+
+    /** Tests keyboard navigation with invisible menu JDK-8330304 */
+    @Test
+    public void testKeyNavigationWithInvisibleMenuItem() {
+        Menu menu1 = mkMenu("1", 3);
+        Menu menu2 = mkMenu("2", 3);
+        Menu menu3 = mkMenu("3", 3);
+        Menu menu4 = mkMenu("4", 3);
+        menuBar.getMenus().setAll(menu1, menu2, menu3, menu4);
+
+        menu2.setVisible(false);
+
+        VBox root = new VBox(menuBar);
+        startApp(root);
+        tk.firePulse();
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        double x = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
+        double y = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
+
+        // show menu1 using mouse
+        MenuButton mb = MenuBarSkinShim.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, x+20, y+20));
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, x+20, y+20));
+        assertTrue(menu1.isShowing());
+
+        // show menu3 with RIGHT key press, menu2 is hidden and should be skipped
+        KeyEventFirer keyboard = new KeyEventFirer(mb.getScene());
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        tk.firePulse();
+
+        assertTrue(menu3.isShowing());
+
+        // show menu4
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        tk.firePulse();
+
+        assertTrue(menu4.isShowing());
+
+        // show menu3
+        keyboard.doKeyPress(KeyCode.LEFT);
+        tk.firePulse();
+
+        assertTrue(menu3.isShowing());
+
+        // show menu1 (menu2 is hidden)
+        keyboard.doKeyPress(KeyCode.LEFT);
+        tk.firePulse();
+
+        assertTrue(menu1.isShowing());
+    }
+
+    private Menu mkMenu(String name, int itemCount) {
+        Menu m = new Menu("Menu" + name);
+        for (int i = 0; i < itemCount; i++) {
+            m.getItems().add(new MenuItem("Menu" + name + "Item" + i));
+        }
+        return m;
     }
 }

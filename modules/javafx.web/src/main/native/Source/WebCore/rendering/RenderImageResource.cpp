@@ -33,6 +33,7 @@
 #include "RenderElement.h"
 #include "RenderImage.h"
 #include "RenderImageResourceStyleImage.h"
+#include "RenderStyleInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -109,8 +110,8 @@ LayoutSize RenderImageResource::imageSize(float multiplier, CachedImage::SizeTyp
     if (!m_cachedImage)
         return LayoutSize();
     LayoutSize size = m_cachedImage->imageSizeForRenderer(m_renderer.get(), multiplier, type);
-    if (is<RenderImage>(m_renderer))
-        size.scale(downcast<RenderImage>(*m_renderer).imageDevicePixelRatio());
+    if (auto* renderImage = dynamicDowncast<RenderImage>(m_renderer.get()))
+        size.scale(renderImage->imageDevicePixelRatio());
     return size;
 }
 

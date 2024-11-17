@@ -40,7 +40,7 @@
 #include "JSAudioWorkletProcessor.h"
 #include "JSAudioWorkletProcessorConstructor.h"
 #include "JSDOMConvert.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/IsoMallocInlines.h>
@@ -74,10 +74,10 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     ASSERT(!isMainThread());
 
     if (name.isEmpty())
-        return Exception { NotSupportedError, "Name cannot be the empty string"_s };
+        return Exception { ExceptionCode::NotSupportedError, "Name cannot be the empty string"_s };
 
     if (m_processorConstructorMap.contains(name))
-        return Exception { NotSupportedError, "A processor was already registered with this name"_s };
+        return Exception { ExceptionCode::NotSupportedError, "A processor was already registered with this name"_s };
 
     JSC::JSObject* jsConstructor = processorContructor->callbackData()->callback();
     auto* globalObject = jsConstructor->globalObject();
@@ -85,31 +85,31 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!jsConstructor->isConstructor())
-        return Exception { TypeError, "Class definition passed to registerProcessor() is not a constructor"_s };
+        return Exception { ExceptionCode::TypeError, "Class definition passed to registerProcessor() is not a constructor"_s };
 
     auto prototype = jsConstructor->getPrototype(vm, globalObject);
-    RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
+    RETURN_IF_EXCEPTION(scope, Exception { ExceptionCode::ExistingExceptionError });
 
     if (!prototype.isObject())
-        return Exception { TypeError, "Class definition passed to registerProcessor() has invalid prototype"_s };
+        return Exception { ExceptionCode::TypeError, "Class definition passed to registerProcessor() has invalid prototype"_s };
 
     auto parameterDescriptorsValue = jsConstructor->get(globalObject, JSC::Identifier::fromString(vm, "parameterDescriptors"_s));
-    RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
+    RETURN_IF_EXCEPTION(scope, Exception { ExceptionCode::ExistingExceptionError });
 
     Vector<AudioParamDescriptor> parameterDescriptors;
     if (!parameterDescriptorsValue.isUndefined()) {
         parameterDescriptors = convert<IDLSequence<IDLDictionary<AudioParamDescriptor>>>(*globalObject, parameterDescriptorsValue);
-        RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
+        RETURN_IF_EXCEPTION(scope, Exception { ExceptionCode::ExistingExceptionError });
         UNUSED_PARAM(parameterDescriptors);
         HashSet<String> paramNames;
         for (auto& descriptor : parameterDescriptors) {
             auto addResult = paramNames.add(descriptor.name);
             if (!addResult.isNewEntry)
-                return Exception { NotSupportedError, makeString("parameterDescriptors contain duplicate AudioParam name: ", name) };
+                return Exception { ExceptionCode::NotSupportedError, makeString("parameterDescriptors contain duplicate AudioParam name: ", name) };
             if (descriptor.defaultValue < descriptor.minValue)
-                return Exception { InvalidStateError, makeString("AudioParamDescriptor with name '", name, "' has a defaultValue that is less than the minValue") };
+                return Exception { ExceptionCode::InvalidStateError, makeString("AudioParamDescriptor with name '", name, "' has a defaultValue that is less than the minValue") };
             if (descriptor.defaultValue > descriptor.maxValue)
-                return Exception { InvalidStateError, makeString("AudioParamDescriptor with name '", name, "' has a defaultValue that is greater than the maxValue") };
+                return Exception { ExceptionCode::InvalidStateError, makeString("AudioParamDescriptor with name '", name, "' has a defaultValue that is greater than the maxValue") };
         }
     }
 
@@ -117,11 +117,15 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
 
     // We've already checked at the beginning of this function but then we ran some JS so we need to check again.
     if (!addResult.isNewEntry)
-        return Exception { NotSupportedError, "A processor was already registered with this name"_s };
+        return Exception { ExceptionCode::NotSupportedError, "A processor was already registered with this name"_s };
 
-    thread().messagingProxy().postTaskToAudioWorklet([name = WTFMove(name).isolatedCopy(), parameterDescriptors = crossThreadCopy(WTFMove(parameterDescriptors))](AudioWorklet& worklet) mutable {
+    auto* messagingProxy = thread().messagingProxy();
+    if (!messagingProxy)
+        return Exception { ExceptionCode::InvalidStateError };
+
+    messagingProxy->postTaskToAudioWorklet([name = WTFMove(name).isolatedCopy(), parameterDescriptors = crossThreadCopy(WTFMove(parameterDescriptors))](AudioWorklet& worklet) mutable {
         ASSERT(isMainThread());
-        if (auto* audioContext = worklet.audioContext())
+        if (RefPtr audioContext = worklet.audioContext())
             audioContext->addAudioParamDescriptors(name, WTFMove(parameterDescriptors));
     });
 
@@ -144,8 +148,11 @@ RefPtr<AudioWorkletProcessor> AudioWorkletGlobalScope::createProcessor(const Str
     m_pendingProcessorConstructionData = makeUnique<AudioWorkletProcessorConstructionData>(String { name }, MessagePort::entangle(*this, WTFMove(port)));
 
     JSC::MarkedArgumentBuffer args;
-    auto arg = options->deserialize(*globalObject, globalObject, SerializationErrorMode::NonThrowing);
+    bool didFail = false;
+    auto arg = options->deserialize(*globalObject, globalObject, SerializationErrorMode::NonThrowing, &didFail);
     RETURN_IF_EXCEPTION(scope, nullptr);
+    if (didFail)
+        return nullptr;
     args.append(arg);
     ASSERT(!args.hasOverflowed());
 
@@ -180,12 +187,10 @@ AudioWorkletThread& AudioWorkletGlobalScope::thread() const
 
 void AudioWorkletGlobalScope::handlePreRenderTasks()
 {
-    // We grab the JS API lock at the beginning of rendering and release it at the end of rendering.
     // This makes sure that we only drain the MicroTask queue after each render quantum.
-    // It is only safe to grab the lock if we are on the context thread. We might get called on
-    // another thread if audio rendering started before the audio worklet got started.
-    if (isContextThread())
-        m_lockDuringRendering.emplace(script()->vm());
+    // It is only safe to grab the lock if we are on the context thread.
+    RELEASE_ASSERT(isContextThread());
+        m_delayMicrotaskDrainingDuringRendering = script()->vm().drainMicrotaskDelayScope();
 }
 
 void AudioWorkletGlobalScope::handlePostRenderTasks(size_t currentFrame)
@@ -197,7 +202,7 @@ void AudioWorkletGlobalScope::handlePostRenderTasks(size_t currentFrame)
         // explicitly allow the following allocation(s).
         DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
         // This takes care of processing the MicroTask queue after rendering.
-        m_lockDuringRendering = std::nullopt;
+        m_delayMicrotaskDrainingDuringRendering = std::nullopt;
     }
 }
 

@@ -36,7 +36,7 @@
     readonly attribute long height;
     readonly attribute long width;
     readonly attribute unsigned long colorDepth;
-    readonly attribute unsigned long pixelDepth;
+    [ImplementedAs=colorDepth] readonly attribute unsigned long pixelDepth;
     readonly attribute long availLeft;
     readonly attribute long availTop;
     readonly attribute long availHeight;

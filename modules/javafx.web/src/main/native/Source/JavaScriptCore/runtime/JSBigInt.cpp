@@ -65,7 +65,7 @@ const ClassInfo JSBigInt::s_info = { "BigInt"_s, nullptr, nullptr, nullptr, CREA
 JSBigInt::JSBigInt(VM& vm, Structure* structure, Digit* data, unsigned length)
     : Base(vm, structure)
     , m_length(length)
-    , m_data(vm, this, data, length)
+    , m_data(vm, this, data)
 { }
 
 template<typename Visitor>
@@ -2322,7 +2322,7 @@ JSBigInt* JSBigInt::rightTrim(JSGlobalObject* nullOrGlobalObjectForOOM, VM& vm)
     JSBigInt* trimmedBigInt = createWithLength(nullOrGlobalObjectForOOM, vm, newLength);
     if (UNLIKELY(!trimmedBigInt))
         return nullptr;
-    std::copy(dataStorage(), dataStorage() + newLength, trimmedBigInt->dataStorage());
+    std::copy_n(dataStorage(), newLength, trimmedBigInt->dataStorage());
 
     trimmedBigInt->setSign(this->sign());
 

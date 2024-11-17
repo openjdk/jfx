@@ -1,6 +1,6 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -41,29 +41,25 @@ using namespace Unicode;
 
 // Construct a string with UTF-16 data.
 String::String(const UChar* characters, unsigned length)
+    : m_impl(characters ? RefPtr { StringImpl::create(characters, length) } : nullptr)
 {
-    if (characters)
-        m_impl = StringImpl::create(characters, length);
 }
 
 // Construct a string with latin1 data.
 String::String(const LChar* characters, unsigned length)
+    : m_impl(characters ? RefPtr { StringImpl::create(characters, length) } : nullptr)
 {
-    if (characters)
-        m_impl = StringImpl::create(characters, length);
 }
 
 String::String(const char* characters, unsigned length)
+    : m_impl(characters ? RefPtr { StringImpl::create(reinterpret_cast<const LChar*>(characters), length) } : nullptr)
 {
-    if (characters)
-        m_impl = StringImpl::create(reinterpret_cast<const LChar*>(characters), length);
 }
 
 // Construct a string with Latin-1 data, from a null-terminated source.
 String::String(const char* nullTerminatedString)
+    : m_impl(nullTerminatedString ? RefPtr { StringImpl::createFromCString(nullTerminatedString) } : nullptr)
 {
-    if (nullTerminatedString)
-        m_impl = StringImpl::createFromCString(nullTerminatedString);
 }
 
 int codePointCompare(const String& a, const String& b)
@@ -71,14 +67,14 @@ int codePointCompare(const String& a, const String& b)
     return codePointCompare(a.impl(), b.impl());
 }
 
-UChar32 String::characterStartingAt(unsigned i) const
+char32_t String::characterStartingAt(unsigned i) const
 {
     if (!m_impl || i >= m_impl->length())
         return 0;
     return m_impl->characterStartingAt(i);
 }
 
-String makeStringByJoining(Span<const String> strings, const String& separator)
+String makeStringByJoining(std::span<const String> strings, const String& separator)
 {
     StringBuilder builder;
     for (const auto& string : strings) {
@@ -157,30 +153,10 @@ String String::convertToUppercaseWithLocale(const AtomString& localeIdentifier) 
     return m_impl ? m_impl->convertToUppercaseWithLocale(localeIdentifier) : String { };
 }
 
-String String::stripWhiteSpace() const
+String String::trim(CodeUnitMatchFunction predicate) const
 {
     // FIXME: Should this function, and the many others like it, be inlined?
-    // FIXME: This function needs a new name. For one thing, "whitespace" is a single
-    // word so the "s" should be lowercase. For another, it's not clear from this name
-    // that the function uses the Unicode definition of whitespace. Most WebKit callers
-    // don't want that and eventually we should consider deleting this.
-    return m_impl ? m_impl->stripWhiteSpace() : String { };
-}
-
-String String::stripLeadingAndTrailingCharacters(CodeUnitMatchFunction predicate) const
-{
-    // FIXME: Should this function, and the many others like it, be inlined?
-    return m_impl ? m_impl->stripLeadingAndTrailingCharacters(predicate) : String { };
-}
-
-String String::simplifyWhiteSpace() const
-{
-    // FIXME: Should this function, and the many others like it, be inlined?
-    // FIXME: This function needs a new name. For one thing, "whitespace" is a single
-    // word so the "s" should be lowercase. For another, it's not clear from this name
-    // that the function uses the Unicode definition of whitespace. Most WebKit callers
-    // don't want that and eventually we should consider deleting this.
-    return m_impl ? m_impl->simplifyWhiteSpace() : String { };
+    return m_impl ? m_impl->trim(predicate) : String { };
 }
 
 String String::simplifyWhiteSpace(CodeUnitMatchFunction isWhiteSpace) const
@@ -195,17 +171,17 @@ String String::foldCase() const
     return m_impl ? m_impl->foldCase() : String { };
 }
 
-Vector<UChar> String::charactersWithoutNullTermination() const
+Expected<Vector<UChar>, UTF8ConversionError> String::charactersWithoutNullTermination() const
 {
     Vector<UChar> result;
 
     if (m_impl) {
-        result.reserveInitialCapacity(length() + 1);
+        if (!result.tryReserveInitialCapacity(length() + 1))
+            return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
         if (is8Bit()) {
             const LChar* characters8 = m_impl->characters8();
-            for (unsigned i = 0; i < length(); ++i)
-                result.uncheckedAppend(characters8[i]);
+            result.append(characters8, m_impl->length());
         } else {
             const UChar* characters16 = m_impl->characters16();
             result.append(characters16, m_impl->length());
@@ -215,10 +191,11 @@ Vector<UChar> String::charactersWithoutNullTermination() const
     return result;
 }
 
-Vector<UChar> String::charactersWithNullTermination() const
+Expected<Vector<UChar>, UTF8ConversionError> String::charactersWithNullTermination() const
 {
     auto result = charactersWithoutNullTermination();
-    result.append(0);
+    if (result)
+        result.value().append(0);
     return result;
 }
 
@@ -252,16 +229,16 @@ String String::number(unsigned long long number)
     return numberToStringUnsigned<String>(number);
 }
 
-String String::numberToStringFixedPrecision(float number, unsigned precision, TrailingZerosTruncatingPolicy trailingZerosTruncatingPolicy)
+String String::numberToStringFixedPrecision(float number, unsigned precision, TrailingZerosPolicy trailingZerosTruncatingPolicy)
 {
     NumberToStringBuffer buffer;
-    return String { numberToFixedPrecisionString(number, precision, buffer, trailingZerosTruncatingPolicy == TruncateTrailingZeros) };
+    return String { numberToFixedPrecisionString(number, precision, buffer, trailingZerosTruncatingPolicy == TrailingZerosPolicy::Truncate) };
 }
 
-String String::numberToStringFixedPrecision(double number, unsigned precision, TrailingZerosTruncatingPolicy trailingZerosTruncatingPolicy)
+String String::numberToStringFixedPrecision(double number, unsigned precision, TrailingZerosPolicy trailingZerosTruncatingPolicy)
 {
     NumberToStringBuffer buffer;
-    return String { numberToFixedPrecisionString(number, precision, buffer, trailingZerosTruncatingPolicy == TruncateTrailingZeros) };
+    return String { numberToFixedPrecisionString(number, precision, buffer, trailingZerosTruncatingPolicy == TrailingZerosPolicy::Truncate) };
 }
 
 String String::number(float number)
@@ -563,7 +540,7 @@ String String::fromUTF8WithLatin1Fallback(const LChar* string, size_t size)
     return utf8;
 }
 
-String String::fromCodePoint(UChar32 codePoint)
+String String::fromCodePoint(char32_t codePoint)
 {
     UChar buffer[2];
     uint8_t length = 0;
@@ -578,7 +555,7 @@ template<typename CharacterType, TrailingJunkPolicy policy>
 static inline double toDoubleType(const CharacterType* data, size_t length, bool* ok, size_t& parsedLength)
 {
     size_t leadingSpacesLength = 0;
-    while (leadingSpacesLength < length && isASCIISpace(data[leadingSpacesLength]))
+    while (leadingSpacesLength < length && isUnicodeCompatibleASCIIWhitespace(data[leadingSpacesLength]))
         ++leadingSpacesLength;
 
     double number = parseDouble(data + leadingSpacesLength, length - leadingSpacesLength, parsedLength);

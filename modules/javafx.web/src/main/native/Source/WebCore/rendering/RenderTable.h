@@ -45,8 +45,8 @@ enum class TableIntrinsics : uint8_t { ForLayout, ForKeyword };
 class RenderTable : public RenderBlock {
     WTF_MAKE_ISO_ALLOCATED(RenderTable);
 public:
-    RenderTable(Element&, RenderStyle&&);
-    RenderTable(Document&, RenderStyle&&);
+    RenderTable(Type, Element&, RenderStyle&&);
+    RenderTable(Type, Document&, RenderStyle&&);
     virtual ~RenderTable();
 
     // Per CSS 3 writing-mode: "The first and second values of the 'border-spacing' property represent spacing between columns
@@ -61,33 +61,10 @@ public:
     LayoutUnit borderBefore() const override;
     LayoutUnit borderAfter() const override;
 
-    LayoutUnit borderLeft() const override
-    {
-        if (style().isHorizontalWritingMode())
-            return style().isLeftToRightDirection() ? borderStart() : borderEnd();
-        return style().isFlippedBlocksWritingMode() ? borderAfter() : borderBefore();
-    }
-
-    LayoutUnit borderRight() const override
-    {
-        if (style().isHorizontalWritingMode())
-            return style().isLeftToRightDirection() ? borderEnd() : borderStart();
-        return style().isFlippedBlocksWritingMode() ? borderBefore() : borderAfter();
-    }
-
-    LayoutUnit borderTop() const override
-    {
-        if (style().isHorizontalWritingMode())
-            return style().isFlippedBlocksWritingMode() ? borderAfter() : borderBefore();
-        return style().isLeftToRightDirection() ? borderStart() : borderEnd();
-    }
-
-    LayoutUnit borderBottom() const override
-    {
-        if (style().isHorizontalWritingMode())
-            return style().isFlippedBlocksWritingMode() ? borderBefore() : borderAfter();
-        return style().isLeftToRightDirection() ? borderEnd() : borderStart();
-    }
+    inline LayoutUnit borderLeft() const override;
+    inline LayoutUnit borderRight() const override;
+    inline LayoutUnit borderTop() const override;
+    inline LayoutUnit borderBottom() const override;
 
     Color bgColor() const { return style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor); }
 
@@ -96,46 +73,14 @@ public:
     LayoutUnit outerBorderStart() const;
     LayoutUnit outerBorderEnd() const;
 
-    LayoutUnit outerBorderLeft() const
-    {
-        if (style().isHorizontalWritingMode())
-            return style().isLeftToRightDirection() ? outerBorderStart() : outerBorderEnd();
-        return style().isFlippedBlocksWritingMode() ? outerBorderAfter() : outerBorderBefore();
-    }
-
-    LayoutUnit outerBorderRight() const
-    {
-        if (style().isHorizontalWritingMode())
-            return style().isLeftToRightDirection() ? outerBorderEnd() : outerBorderStart();
-        return style().isFlippedBlocksWritingMode() ? outerBorderBefore() : outerBorderAfter();
-    }
-
-    LayoutUnit outerBorderTop() const
-    {
-        if (style().isHorizontalWritingMode())
-            return style().isFlippedBlocksWritingMode() ? outerBorderAfter() : outerBorderBefore();
-        return style().isLeftToRightDirection() ? outerBorderStart() : outerBorderEnd();
-    }
-
-    LayoutUnit outerBorderBottom() const
-    {
-        if (style().isHorizontalWritingMode())
-            return style().isFlippedBlocksWritingMode() ? outerBorderBefore() : outerBorderAfter();
-        return style().isLeftToRightDirection() ? outerBorderEnd() : outerBorderStart();
-    }
+    inline LayoutUnit outerBorderLeft() const;
+    inline LayoutUnit outerBorderRight() const;
+    inline LayoutUnit outerBorderTop() const;
+    inline LayoutUnit outerBorderBottom() const;
 
     LayoutUnit calcBorderStart() const;
     LayoutUnit calcBorderEnd() const;
     void recalcBordersInRowDirection();
-
-    struct ColumnStruct {
-        explicit ColumnStruct(unsigned initialSpan = 1)
-            : span(initialSpan)
-        {
-        }
-
-        unsigned span;
-    };
 
     void forceSectionsRecalc()
     {
@@ -143,6 +88,9 @@ public:
         recalcSections();
     }
 
+    struct ColumnStruct {
+        unsigned span { 1 };
+    };
     const Vector<ColumnStruct>& columns() const { return m_columns; }
     const Vector<LayoutUnit>& columnPositions() const { return m_columnPos; }
     void setColumnPosition(unsigned index, LayoutUnit position)
@@ -203,11 +151,7 @@ public:
         return 0;
     }
 
-    LayoutUnit bordersPaddingAndSpacingInRowDirection() const
-    {
-        // 'border-spacing' only applies to separate borders (see 17.6.1 The separated borders model).
-        return borderStart() + borderEnd() + (collapseBorders() ? 0_lu : (paddingStart() + paddingEnd() + borderSpacingInRowDirection()));
-    }
+    inline LayoutUnit bordersPaddingAndSpacingInRowDirection() const;
 
     // Return the first column or column-group.
     RenderTableCol* firstColumn() const;
@@ -260,7 +204,7 @@ public:
     void addCaption(RenderTableCaption&);
     void removeCaption(RenderTableCaption&);
     void addColumn(const RenderTableCol*);
-    void removeColumn(const RenderTableCol*);
+    void invalidateColumns();
 
     LayoutUnit offsetTopForColumn(const RenderTableCol&) const;
     LayoutUnit offsetLeftForColumn(const RenderTableCol&) const;
@@ -282,8 +226,6 @@ private:
     static RenderPtr<RenderTable> createTableWithStyle(Document&, const RenderStyle&);
 
     ASCIILiteral renderName() const override { return "RenderTable"_s; }
-
-    bool isTable() const final { return true; }
 
     bool avoidsFloats() const final { return true; }
 
@@ -324,7 +266,7 @@ private:
 
     void recalcCollapsedBorders();
     void recalcSections() const;
-    enum class BottomCaptionLayoutPhase { Yes, No };
+    enum class BottomCaptionLayoutPhase : bool { No, Yes };
     void layoutCaptions(BottomCaptionLayoutPhase = BottomCaptionLayoutPhase::No);
     void layoutCaption(RenderTableCaption&);
 
@@ -332,16 +274,16 @@ private:
 
     mutable Vector<LayoutUnit> m_columnPos;
     mutable Vector<ColumnStruct> m_columns;
-    mutable Vector<WeakPtr<RenderTableCaption>> m_captions;
-    mutable Vector<WeakPtr<RenderTableCol>> m_columnRenderers;
+    mutable Vector<SingleThreadWeakPtr<RenderTableCaption>> m_captions;
+    mutable Vector<SingleThreadWeakPtr<RenderTableCol>> m_columnRenderers;
 
     unsigned effectiveIndexOfColumn(const RenderTableCol&) const;
-    typedef HashMap<const RenderTableCol*, unsigned> EffectiveColumnIndexMap;
+    using EffectiveColumnIndexMap = HashMap<SingleThreadWeakRef<const RenderTableCol>, unsigned>;
     mutable EffectiveColumnIndexMap m_effectiveColumnIndexMap;
 
-    mutable WeakPtr<RenderTableSection> m_head;
-    mutable WeakPtr<RenderTableSection> m_foot;
-    mutable WeakPtr<RenderTableSection> m_firstBody;
+    mutable SingleThreadWeakPtr<RenderTableSection> m_head;
+    mutable SingleThreadWeakPtr<RenderTableSection> m_foot;
+    mutable SingleThreadWeakPtr<RenderTableSection> m_firstBody;
 
     std::unique_ptr<TableLayout> m_tableLayout;
 
@@ -386,4 +328,4 @@ inline RenderPtr<RenderBox> RenderTable::createAnonymousBoxWithSameTypeAs(const 
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTable, isTable())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTable, isRenderTable())

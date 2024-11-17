@@ -29,7 +29,9 @@
 #include "config.h"
 #include "HTMLTableRowsCollection.h"
 
+#include "CachedHTMLCollectionInlines.h"
 #include "ElementIterator.h"
+#include "ElementTraversal.h"
 #include "HTMLNames.h"
 #include "HTMLTableElement.h"
 #include "HTMLTableRowElement.h"
@@ -100,8 +102,8 @@ HTMLTableRowElement* HTMLTableRowsCollection::rowAfter(HTMLTableElement& table, 
     else if (isInSection(*previous, tbodyTag))
         child = ElementTraversal::nextSibling(*previous->parentNode());
     for (; child; child = ElementTraversal::nextSibling(*child)) {
-        if (is<HTMLTableRowElement>(*child))
-            return downcast<HTMLTableRowElement>(child.get());
+        if (auto* row = dynamicDowncast<HTMLTableRowElement>(*child))
+            return row;
         if (child->hasTagName(tbodyTag)) {
             if (auto row = childrenOfType<HTMLTableRowElement>(*child).first())
                 return row;
@@ -133,8 +135,8 @@ HTMLTableRowElement* HTMLTableRowsCollection::lastRow(HTMLTableElement& table)
     }
 
     for (auto* child = ElementTraversal::lastChild(table); child; child = ElementTraversal::previousSibling(*child)) {
-        if (is<HTMLTableRowElement>(*child))
-            return downcast<HTMLTableRowElement>(child);
+        if (auto* row = dynamicDowncast<HTMLTableRowElement>(*child))
+            return row;
         if (child->hasTagName(tbodyTag)) {
             if (auto* row = childrenOfType<HTMLTableRowElement>(*child).last())
                 return row;
@@ -152,13 +154,13 @@ HTMLTableRowElement* HTMLTableRowsCollection::lastRow(HTMLTableElement& table)
 }
 
 HTMLTableRowsCollection::HTMLTableRowsCollection(HTMLTableElement& table)
-    : CachedHTMLCollection(table, TableRows)
+    : CachedHTMLCollection(table, CollectionType::TableRows)
 {
 }
 
 Ref<HTMLTableRowsCollection> HTMLTableRowsCollection::create(HTMLTableElement& table, CollectionType type)
 {
-    ASSERT_UNUSED(type, type == TableRows);
+    ASSERT_UNUSED(type, type == CollectionType::TableRows);
     return adoptRef(*new HTMLTableRowsCollection(table));
 }
 

@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -76,7 +76,21 @@ template<typename T> void* tryAllocateCell(VM&, GCDeferralContext*, size_t = siz
     public:                                                                  \
         static constexpr const ::JSC::ClassInfo* info() { return &s_info; }
 
+#if ASSERT_ENABLED
+#define DECLARE_DEFAULT_FINISH_CREATION \
+    ALWAYS_INLINE void finishCreation(JSC::VM& vm) \
+    { \
+        Base::finishCreation(vm); \
+        ASSERT(inherits(info())); \
+    } \
+    static constexpr int __unusedFooterAfterDefaultFinishCreation = 0
+#else
+#define DECLARE_DEFAULT_FINISH_CREATION \
+    using Base::finishCreation
+#endif
+
 class JSCell : public HeapCell {
+    WTF_ALLOW_COMPACT_POINTERS;
     friend class JSValue;
     friend class MarkedBlock;
     template<typename T>
@@ -97,6 +111,8 @@ public:
 
     enum CreatingEarlyCellTag { CreatingEarlyCell };
     JSCell(CreatingEarlyCellTag);
+    enum CreatingWellDefinedBuiltinCellTag { CreatingWellDefinedBuiltinCell };
+    JSCell(CreatingWellDefinedBuiltinCellTag, StructureID, int32_t typeInfoBlob);
 
     JS_EXPORT_PRIVATE static void destroy(JSCell*);
 
@@ -165,6 +181,9 @@ public:
     TriState pureToBoolean() const;
     JS_EXPORT_PRIVATE double toNumber(JSGlobalObject*) const;
     JSObject* toObject(JSGlobalObject*) const;
+
+    JSString* toStringInline(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE JSString* toStringSlowCase(JSGlobalObject*) const;
 
     void dump(PrintStream&) const;
     JS_EXPORT_PRIVATE static void dumpToStream(const JSCell*, PrintStream&);

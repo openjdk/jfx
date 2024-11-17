@@ -65,21 +65,21 @@ ExceptionOr<Ref<PeriodicWave>> PeriodicWave::create(BaseAudioContext& context, P
 
     if (options.real && options.imag) {
         if (options.real->size() != options.imag->size())
-            return Exception { IndexSizeError, "real and imag have different lengths"_s };
+            return Exception { ExceptionCode::IndexSizeError, "real and imag have different lengths"_s };
         if (options.real->size() < 2)
-            return Exception { IndexSizeError, "real's length cannot be less than 2"_s };
+            return Exception { ExceptionCode::IndexSizeError, "real's length cannot be less than 2"_s };
         if (options.imag->size() < 2)
-            return Exception { IndexSizeError, "imag's length cannot be less than 2"_s };
+            return Exception { ExceptionCode::IndexSizeError, "imag's length cannot be less than 2"_s };
         real = WTFMove(*options.real);
         imag = WTFMove(*options.imag);
     } else if (options.real) {
         if (options.real->size() < 2)
-            return Exception { IndexSizeError, "real's length cannot be less than 2"_s };
+            return Exception { ExceptionCode::IndexSizeError, "real's length cannot be less than 2"_s };
         real = WTFMove(*options.real);
         imag.fill(0, real.size());
     } else if (options.imag) {
         if (options.imag->size() < 2)
-            return Exception { IndexSizeError, "imag's length cannot be less than 2"_s };
+            return Exception { ExceptionCode::IndexSizeError, "imag's length cannot be less than 2"_s };
         imag = WTFMove(*options.imag);
         real.fill(0, imag.size());
     } else {
@@ -136,7 +136,7 @@ PeriodicWave::PeriodicWave(float sampleRate)
 void PeriodicWave::waveDataForFundamentalFrequency(float fundamentalFrequency, float* &lowerWaveData, float* &higherWaveData, float& tableInterpolationFactor)
 {
     // Negative frequencies are allowed, in which case we alias to the positive frequency.
-    fundamentalFrequency = fabsf(fundamentalFrequency);
+    fundamentalFrequency = std::abs(fundamentalFrequency);
 
     // Calculate the pitch range.
     float ratio = fundamentalFrequency > 0 ? fundamentalFrequency / m_lowestFundamentalFrequency : 0.5;

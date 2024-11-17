@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -44,18 +44,22 @@ public class MStringImpl extends MDataImpl implements MString {
         super(type);
     }
 
+    @Override
     public void set(String str) {
         value = str;
     }
 
+    @Override
     public String get() {
         return value;
     }
 
+    @Override
     public void parse(Iterator<String> values) {
         value = values.next();
     }
 
+    @Override
     public String toString() {
         String result = getType().getName();
         result += " " + value;

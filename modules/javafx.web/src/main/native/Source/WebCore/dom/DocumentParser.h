@@ -23,22 +23,24 @@
 
 #pragma once
 
-#include "Document.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class Document;
 class DocumentWriter;
 class SegmentedString;
 class ScriptableDocumentParser;
+class WeakPtrImplWithEventTargetData;
 
 class DocumentParser : public RefCounted<DocumentParser> {
 public:
     virtual ~DocumentParser();
 
-    virtual ScriptableDocumentParser* asScriptableDocumentParser() { return 0; }
+    virtual ScriptableDocumentParser* asScriptableDocumentParser() { return nullptr; }
 
     // http://www.whatwg.org/specs/web-apps/current-work/#insertion-point
     virtual bool hasInsertionPoint() { return true; }
@@ -62,6 +64,7 @@ public:
 
     // document() will return 0 after detach() is called.
     Document* document() const { ASSERT(m_document); return m_document.get(); }
+    RefPtr<Document> protectedDocument() const;
 
     bool isParsing() const { return m_state == ParserState::Parsing; }
     bool isStopping() const { return m_state == ParserState::Stopping; }
@@ -112,7 +115,7 @@ private:
     bool m_documentWasLoadedAsPartOfNavigation;
 
     // Every DocumentParser needs a pointer back to the document.
-    // m_document will be 0 after the parser is stopped.
+    // m_document will be nullptr after the parser is stopped.
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,29 @@
 package test.com.sun.javafx.runtime;
 
 import com.sun.javafx.runtime.VersionInfo;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Properties;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
 public class VersionInfoTest {
+
+    // Increment this feature-release counter for every major release.
+    private static final String FEATURE = "24";
+
+    // The working directory at runtime is 'modules/javafx.base'.
+    private static final String PROPERTIES_FILE = "build/module-lib/javafx.properties";
+    private static final String VERSION_KEY = "javafx.version";
+    private static final String RUNTIME_VERSION_KEY = "javafx.runtime.version";
+
+    // See 'java.lang.Runtime.Version' for the format of a short version string.
+    private static final String VNUM = "[1-9][0-9]*((\\.0)*\\.[1-9][0-9]*)*";
+    private static final String PRE = "([a-zA-Z0-9]+)";
+    private static final String SVSTR = String.format("%s(-%s)?", VNUM, PRE);
 
     private static class Version {
         private String vnum = "";
@@ -84,12 +101,23 @@ public class VersionInfoTest {
         }
     }
 
+    private final Properties properties;
+
+    public VersionInfoTest() {
+        properties = new Properties();
+    }
+
+    @BeforeEach
+    public void setup() throws IOException {
+        try (var reader = new FileReader(PROPERTIES_FILE)) {
+            properties.load(reader);
+        }
+    }
+
     @Test
     public void testMajorVersion() {
         String version = VersionInfo.getVersion();
-        // Need to update major version number when we develop the next
-        // major release.
-        assertTrue(version.startsWith("22"));
+        assertTrue(version.startsWith(FEATURE));
         String runtimeVersion = VersionInfo.getRuntimeVersion();
         assertTrue(runtimeVersion.startsWith(version));
     }
@@ -148,4 +176,34 @@ public class VersionInfoTest {
         }
     }
 
+    @Test
+    public void testVersionFormat() {
+        String version = VersionInfo.getVersion();
+        String message = String.format("Wrong short version string: '%s'", version);
+        assertTrue(version.matches(SVSTR), message);
+    }
+
+    @Test
+    public void testRuntimeVersionFormat() {
+        String runtimeVersion = VersionInfo.getRuntimeVersion();
+        try {
+            Runtime.Version.parse(runtimeVersion);
+        } catch (IllegalArgumentException e) {
+            fail(e.getMessage());
+        }
+    }
+
+    @Test
+    public void testVersionInFile() {
+        String versionLive = VersionInfo.getVersion();
+        String versionFile = properties.getProperty(VERSION_KEY);
+        assertEquals(versionLive, versionFile);
+    }
+
+    @Test
+    public void testRuntimeVersionInFile() {
+        String runtimeVersionLive = VersionInfo.getRuntimeVersion();
+        String runtimeVersionFile = properties.getProperty(RUNTIME_VERSION_KEY);
+        assertEquals(runtimeVersionLive, runtimeVersionFile);
+    }
 }

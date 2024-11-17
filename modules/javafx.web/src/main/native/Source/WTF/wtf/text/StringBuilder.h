@@ -70,11 +70,6 @@ public:
     // FIXME: Add a StringTypeAdapter so we can append one string builder to another with variadic append.
     void append(const StringBuilder&);
 
-    void appendCharacter(UChar) = delete;
-    void appendCharacter(LChar) = delete;
-    void appendCharacter(char) = delete;
-    void appendCharacter(UChar32);
-
     void appendSubstring(const String&, unsigned offset, unsigned length = String::MaxLength);
     WTF_EXPORT_PRIVATE void appendQuotedJSONString(const String&);
 
@@ -93,7 +88,7 @@ public:
     template<typename CharacterType> const CharacterType* characters() const;
     const LChar* characters8() const { return characters<LChar>(); }
     const UChar* characters16() const { return characters<UChar>(); }
-    template<typename CharacterType> Span<const CharacterType> span() const { return Span { characters<CharacterType>(), length() }; }
+    template<typename CharacterType> std::span<const CharacterType> span() const { return std::span(characters<CharacterType>(), length()); }
 
     unsigned capacity() const;
     WTF_EXPORT_PRIVATE void reserveCapacity(unsigned newCapacity);
@@ -102,7 +97,7 @@ public:
     WTF_EXPORT_PRIVATE bool shouldShrinkToFit() const;
     WTF_EXPORT_PRIVATE void shrinkToFit();
 
-    WTF_EXPORT_PRIVATE bool isAllASCII() const;
+    WTF_EXPORT_PRIVATE bool containsOnlyASCII() const;
 
 private:
     static unsigned expandedCapacity(unsigned capacity, unsigned requiredCapacity);
@@ -236,16 +231,6 @@ inline void StringBuilder::appendSubstring(const String& string, unsigned offset
 inline void StringBuilder::append(const char* characters)
 {
     append(StringView::fromLatin1(characters));
-}
-
-inline void StringBuilder::appendCharacter(UChar32 c)
-{
-    if (U_IS_BMP(c)) {
-        append(static_cast<UChar>(c));
-        return;
-    }
-    append(U16_LEAD(c));
-    append(U16_TRAIL(c));
 }
 
 inline String StringBuilder::toString()

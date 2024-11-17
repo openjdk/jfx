@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,16 +58,8 @@ HRESULT D3DContext::InitContext(bool isVsyncEnabled) {
 
     RlsTraceLn(NWT_TRACE_VERBOSE, (hwVertexProcessing ? "\tHARDWARE_VERTEXPROCESSING": "\tSOFTWARE_VERTEXPROCESSING"));
 
-    if (pd3dObjectEx) {
-        hr = pd3dObjectEx->CreateDeviceEx(adapterOrdinal, devType, 0,
-            dwBehaviorFlags, &params, 0, &pd3dDeviceEx);
-        if (SUCCEEDED(hr)) {
-            pd3dDevice = addRef<IDirect3DDevice9>(pd3dDeviceEx);
-        }
-    } else {
-        hr = pd3dObject->CreateDevice(adapterOrdinal, devType, 0,
-            dwBehaviorFlags, &params, &pd3dDevice);
-    }
+    hr = pd3dObject->CreateDeviceEx(adapterOrdinal, devType, 0,
+        dwBehaviorFlags, &params, 0, &pd3dDevice);
 
     if (FAILED(hr)) {
         DebugPrintD3DError(hr, "D3DContext::InitContext: error creating d3d device");
@@ -75,7 +67,7 @@ HRESULT D3DContext::InitContext(bool isVsyncEnabled) {
     }
 
     // we do not care about D3DPOOL_SYSTEMMEM if pCtx->IsHWRasterizer()
-    defaulResourcePool = pd3dObjectEx ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED;
+    defaulResourcePool = D3DPOOL_DEFAULT;
 
     RlsTraceLn1(NWT_TRACE_INFO, "D3DContext::InitContext: successfully created device: %d", adapterOrdinal);
     bIsHWRasterizer = (devType == D3DDEVTYPE_HAL);

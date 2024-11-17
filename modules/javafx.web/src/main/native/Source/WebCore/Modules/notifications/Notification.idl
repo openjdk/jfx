@@ -48,6 +48,7 @@
     attribute EventHandler onclick;
     attribute EventHandler onerror;
 
+    [Conditional=DECLARATIVE_WEB_PUSH, EnabledBySetting=DeclarativeWebPush] readonly attribute USVString defaultAction;
     readonly attribute DOMString title;
     readonly attribute NotificationDirection dir;
     readonly attribute DOMString lang;
@@ -60,7 +61,7 @@
     // [SameObject] readonly attribute FrozenArray<unsigned long> vibrate;
     // readonly attribute EpochTimeStamp timestamp;
     // readonly attribute boolean renotify;
-    // readonly attribute boolean silent;
+    readonly attribute boolean? silent;
     // readonly attribute boolean requireInteraction;
     [CallWith=CurrentGlobalObject, CachedAttribute, ImplementedAs=dataForBindings] readonly attribute any data;
     // [SameObject] readonly attribute FrozenArray<NotificationAction> actions;

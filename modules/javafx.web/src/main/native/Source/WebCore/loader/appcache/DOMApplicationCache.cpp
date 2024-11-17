@@ -29,16 +29,16 @@
 #include "ApplicationCacheHost.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
+#include "LocalFrame.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(DOMApplicationCache);
 
-DOMApplicationCache::DOMApplicationCache(DOMWindow& window)
-    : DOMWindowProperty(&window)
+DOMApplicationCache::DOMApplicationCache(LocalDOMWindow& window)
+    : LocalDOMWindowProperty(&window)
 {
     if (auto* host = applicationCacheHost())
         host->setDOMApplicationCache(this);
@@ -67,7 +67,7 @@ ExceptionOr<void> DOMApplicationCache::update()
 {
     auto* host = applicationCacheHost();
     if (!host || !host->update())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
     return { };
 }
 
@@ -75,7 +75,7 @@ ExceptionOr<void> DOMApplicationCache::swapCache()
 {
     auto* host = applicationCacheHost();
     if (!host || !host->swapCache())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
     return { };
 }
 

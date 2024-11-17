@@ -3,6 +3,7 @@
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2023 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,9 +24,11 @@
 #include "config.h"
 #include "SVGGradientElement.h"
 
-#include "ElementIterator.h"
-#include "RenderSVGResourceLinearGradient.h"
-#include "RenderSVGResourceRadialGradient.h"
+#include "ElementChildIteratorInlines.h"
+#include "LegacyRenderSVGResourceLinearGradient.h"
+#include "LegacyRenderSVGResourceRadialGradient.h"
+#include "NodeName.h"
+#include "RenderSVGResourceGradient.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGStopElement.h"
 #include "SVGTransformable.h"
@@ -49,36 +52,50 @@ SVGGradientElement::SVGGradientElement(const QualifiedName& tagName, Document& d
     });
 }
 
-void SVGGradientElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGGradientElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::gradientUnitsAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
+    switch (name.nodeName()) {
+    case AttributeNames::gradientUnitsAttr: {
+        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
             m_gradientUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
-        return;
+        break;
     }
-
-    if (name == SVGNames::gradientTransformAttr) {
-        m_gradientTransform->baseVal()->parse(value);
-        return;
-    }
-
-    if (name == SVGNames::spreadMethodAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGSpreadMethodType>::fromString(value);
+    case AttributeNames::gradientTransformAttr:
+        m_gradientTransform->baseVal()->parse(newValue);
+        break;
+    case AttributeNames::spreadMethodAttr: {
+        auto propertyValue = SVGPropertyTraits<SVGSpreadMethodType>::fromString(newValue);
         if (propertyValue > 0)
             m_spreadMethod->setBaseValInternal<SVGSpreadMethodType>(propertyValue);
-        return;
+        break;
+    }
+    default:
+        break;
     }
 
-    SVGElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+}
+
+void SVGGradientElement::invalidateGradientResource()
+{
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled()) {
+        if (auto* gradientRenderer = dynamicDowncast<RenderSVGResourceGradient>(renderer()))
+            gradientRenderer->invalidateGradient();
+        return;
+    }
+#endif
+
+    updateSVGRendererForElementChange();
 }
 
 void SVGGradientElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName) || SVGURIReference::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        updateSVGRendererForElementChange();
+        invalidateGradientResource();
         return;
     }
 
@@ -88,11 +105,10 @@ void SVGGradientElement::svgAttributeChanged(const QualifiedName& attrName)
 void SVGGradientElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
-
     if (change.source == ChildChange::Source::Parser)
         return;
 
-    updateSVGRendererForElementChange();
+    invalidateGradientResource();
 }
 
 GradientColorStops SVGGradientElement::buildStops()

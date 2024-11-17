@@ -28,7 +28,7 @@
 
 #include "CSSSelectorList.h"
 #include "Document.h"
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "ElementRuleCollector.h"
 #include "HTMLSlotElement.h"
@@ -40,21 +40,27 @@
 #include "StyleScope.h"
 #include "StyleScopeRuleSets.h"
 #include "StyleSheetContents.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/SetForScope.h>
 
 namespace WebCore {
 namespace Style {
 
-static bool shouldDirtyAllStyle(const Vector<RefPtr<StyleRuleBase>>& rules)
+static bool shouldDirtyAllStyle(const Vector<Ref<StyleRuleBase>>& rules)
 {
     for (auto& rule : rules) {
-        if (is<StyleRuleMedia>(*rule)) {
-            if (shouldDirtyAllStyle(downcast<StyleRuleMedia>(*rule).childRules()))
+        if (auto* styleRuleMedia = dynamicDowncast<StyleRuleMedia>(rule.get())) {
+            if (shouldDirtyAllStyle(styleRuleMedia->childRules()))
+                return true;
+            continue;
+        }
+        if (auto* styleRuleWithNesting = dynamicDowncast<StyleRuleWithNesting>(rule.get())) {
+            if (shouldDirtyAllStyle(styleRuleWithNesting->nestedRules()))
                 return true;
             continue;
         }
         // FIXME: At least font faces don't need full recalc in all cases.
-        if (!is<StyleRule>(*rule))
+        if (!is<StyleRule>(rule))
             return true;
     }
     return false;
@@ -73,16 +79,16 @@ static bool shouldDirtyAllStyle(const StyleSheetContents& sheet)
     return false;
 }
 
-static bool shouldDirtyAllStyle(const Vector<StyleSheetContents*>& sheets)
+static bool shouldDirtyAllStyle(const Vector<Ref<StyleSheetContents>>& sheets)
 {
     for (auto& sheet : sheets) {
-        if (shouldDirtyAllStyle(*sheet))
+        if (shouldDirtyAllStyle(sheet))
             return true;
     }
     return false;
 }
 
-Invalidator::Invalidator(const Vector<StyleSheetContents*>& sheets, const MQ::MediaQueryEvaluator& mediaQueryEvaluator)
+Invalidator::Invalidator(const Vector<Ref<StyleSheetContents>>& sheets, const MQ::MediaQueryEvaluator& mediaQueryEvaluator)
     : m_ownedRuleSet(RuleSet::create())
     , m_ruleSets({ m_ownedRuleSet })
     , m_dirtiesAllStyle(shouldDirtyAllStyle(sheets))
@@ -93,7 +99,7 @@ Invalidator::Invalidator(const Vector<StyleSheetContents*>& sheets, const MQ::Me
     RuleSetBuilder ruleSetBuilder(*m_ownedRuleSet, mediaQueryEvaluator, nullptr, RuleSetBuilder::ShrinkToFit::Disable);
 
     for (auto& sheet : sheets)
-        ruleSetBuilder.addRulesFromSheet(*sheet);
+        ruleSetBuilder.addRulesFromSheet(sheet);
 
     m_ruleInformation = collectRuleInformation();
 }
@@ -115,8 +121,10 @@ Invalidator::RuleInformation Invalidator::collectRuleInformation()
             information.hasSlottedPseudoElementRules = true;
         if (!ruleSet->hostPseudoClassRules().isEmpty())
             information.hasHostPseudoClassRules = true;
-        if (ruleSet->hasShadowPseudoElementRules())
-            information.hasShadowPseudoElementRules = true;
+        if (ruleSet->hasHostPseudoClassRulesMatchingInShadowTree())
+            information.hasHostPseudoClassRulesMatchingInShadowTree = true;
+        if (ruleSet->hasUserAgentPartRules())
+            information.hasUserAgentPartRules = true;
 #if ENABLE(VIDEO)
         if (!ruleSet->cuePseudoRules().isEmpty())
             information.hasCuePseudoElementRules = true;
@@ -133,13 +141,14 @@ static void invalidateAssignedElements(HTMLSlotElement& slot)
     if (!assignedNodes)
         return;
     for (auto& node : *assignedNodes) {
-        if (!is<Element>(node.get()))
+        auto* element = dynamicDowncast<Element>(node.get());
+        if (!element)
             continue;
-        if (is<HTMLSlotElement>(*node) && node->containingShadowRoot()) {
-            invalidateAssignedElements(downcast<HTMLSlotElement>(*node));
+        if (auto* slotElement = dynamicDowncast<HTMLSlotElement>(*element); slotElement && node->containingShadowRoot()) {
+            invalidateAssignedElements(*slotElement);
             continue;
         }
-        downcast<Element>(*node).invalidateStyleInternal();
+        element->invalidateStyleInternal();
     }
 }
 
@@ -147,11 +156,14 @@ Invalidator::CheckDescendants Invalidator::invalidateIfNeeded(Element& element, 
 {
     invalidateInShadowTreeIfNeeded(element);
 
-    if (m_ruleInformation.hasSlottedPseudoElementRules && is<HTMLSlotElement>(element))
-        invalidateAssignedElements(downcast<HTMLSlotElement>(element));
+    if (m_ruleInformation.hasSlottedPseudoElementRules) {
+        if (auto* slotElement = dynamicDowncast<HTMLSlotElement>(element))
+            invalidateAssignedElements(*slotElement);
+    }
 
     switch (element.styleValidity()) {
-    case Style::Validity::Valid: {
+    case Validity::Valid:
+    case Validity::AnimationInvalid: {
         for (auto& ruleSet : m_ruleSets) {
             ElementRuleCollector ruleCollector(element, *ruleSet, selectorMatchingState);
             ruleCollector.setMode(SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements);
@@ -164,10 +176,9 @@ Invalidator::CheckDescendants Invalidator::invalidateIfNeeded(Element& element, 
 
         return CheckDescendants::Yes;
     }
-    case Style::Validity::ElementInvalid:
+    case Validity::ElementInvalid:
         return CheckDescendants::Yes;
-    case Style::Validity::SubtreeInvalid:
-    case Style::Validity::SubtreeAndRenderersInvalid:
+    case Validity::SubtreeInvalid:
         return CheckDescendants::No;
     }
     ASSERT_NOT_REACHED();
@@ -303,6 +314,21 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         }
         break;
     }
+    case MatchElement::ParentAnySibling:
+        for (auto& sibling : childrenOfType<Element>(*element.parentNode())) {
+            auto siblingChildren = childrenOfType<Element>(sibling);
+            for (auto& siblingChild : siblingChildren)
+                invalidateIfNeeded(siblingChild, nullptr);
+        }
+        break;
+    case MatchElement::AncestorAnySibling: {
+        SelectorMatchingState selectorMatchingState;
+        for (auto& sibling : childrenOfType<Element>(*element.parentNode())) {
+            selectorMatchingState.selectorFilter.popParentsUntil(element.parentElement());
+            invalidateStyleForDescendants(sibling, &selectorMatchingState);
+        }
+        break;
+    }
     case MatchElement::HasChild: {
         if (auto* parent = element.parentElement())
             invalidateIfNeeded(*parent, nullptr);
@@ -314,20 +340,29 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
             ancestors.append(parent);
 
         SelectorMatchingState selectorMatchingState;
+        selectorMatchingState.selectorFilter.parentStackReserveInitialCapacity(ancestors.size());
         for (auto* ancestor : makeReversedRange(ancestors)) {
             invalidateIfNeeded(*ancestor, &selectorMatchingState);
             selectorMatchingState.selectorFilter.pushParent(ancestor);
         }
         break;
     }
-    case MatchElement::HasSibling: {
+    case MatchElement::HasSibling:
         if (auto* sibling = element.previousElementSibling()) {
             SelectorMatchingState selectorMatchingState;
-            selectorMatchingState.selectorFilter.pushParentInitializingIfNeeded(*element.parentElement());
+            if (RefPtr parent = element.parentElement())
+                selectorMatchingState.selectorFilter.pushParentInitializingIfNeeded(*parent);
 
             for (; sibling; sibling = sibling->previousElementSibling())
                 invalidateIfNeeded(*sibling, &selectorMatchingState);
         }
+        break;
+    case MatchElement::HasAnySibling: {
+        SelectorMatchingState selectorMatchingState;
+        if (auto* parent = element.parentElement())
+            selectorMatchingState.selectorFilter.pushParentInitializingIfNeeded(*parent);
+        for (auto& sibling : childrenOfType<Element>(*element.parentNode()))
+            invalidateIfNeeded(sibling, &selectorMatchingState);
         break;
     }
     case MatchElement::HasSiblingDescendant: {
@@ -337,6 +372,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
             elementAndAncestors.append(parent);
 
         SelectorMatchingState selectorMatchingState;
+        selectorMatchingState.selectorFilter.parentStackReserveInitialCapacity(elementAndAncestors.size());
         for (auto* elementOrAncestor : makeReversedRange(elementAndAncestors)) {
             for (auto* sibling = elementOrAncestor->previousElementSibling(); sibling; sibling = sibling->previousElementSibling())
                 invalidateIfNeeded(*sibling, &selectorMatchingState);
@@ -345,13 +381,20 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         }
         break;
     }
-    case MatchElement::HasNonSubjectOrScopeBreaking: {
+    case MatchElement::HasNonSubject:
+    case MatchElement::HasScopeBreaking: {
         SelectorMatchingState selectorMatchingState;
         invalidateStyleForDescendants(*element.document().documentElement(), &selectorMatchingState);
         break;
     }
     case MatchElement::Host:
         invalidateInShadowTreeIfNeeded(element);
+        break;
+    case MatchElement::HostChild:
+        if (auto* host = element.shadowHost()) {
+            for (auto& hostChild : childrenOfType<Element>(*host))
+                invalidateIfNeeded(hostChild, nullptr);
+    }
         break;
     }
 }
@@ -372,17 +415,17 @@ void Invalidator::invalidateShadowParts(ShadowRoot& shadowRoot)
     }
 }
 
-void Invalidator::invalidateShadowPseudoElements(ShadowRoot& shadowRoot)
+void Invalidator::invalidateUserAgentParts(ShadowRoot& shadowRoot)
 {
     if (shadowRoot.mode() != ShadowRootMode::UserAgent)
         return;
 
     for (auto& descendant : descendantsOfType<Element>(shadowRoot)) {
-        auto& shadowPseudoId = descendant.shadowPseudoId();
-        if (!shadowPseudoId)
+        auto& part = descendant.userAgentPart();
+        if (!part)
             continue;
         for (auto& ruleSet : m_ruleSets) {
-            if (ruleSet->shadowPseudoElementRules(shadowPseudoId))
+            if (ruleSet->userAgentPartRules(part))
                 descendant.invalidateStyleInternal();
         }
     }
@@ -394,8 +437,15 @@ void Invalidator::invalidateInShadowTreeIfNeeded(Element& element)
     if (!shadowRoot)
         return;
 
-    if (m_ruleInformation.hasShadowPseudoElementRules)
-        invalidateShadowPseudoElements(*shadowRoot);
+    if (m_ruleInformation.hasUserAgentPartRules)
+        invalidateUserAgentParts(*shadowRoot);
+
+    if (m_ruleInformation.hasHostPseudoClassRulesMatchingInShadowTree) {
+        for (auto& child : childrenOfType<Element>(*shadowRoot)) {
+            SelectorMatchingState selectorMatchingState;
+            invalidateStyleForTree(child, &selectorMatchingState);
+        }
+    }
 
 #if ENABLE(VIDEO)
     if (m_ruleInformation.hasCuePseudoElementRules && element.isMediaElement())
@@ -422,6 +472,13 @@ void Invalidator::invalidateWithMatchElementRuleSets(Element& element, const Mat
         Invalidator invalidator(matchElementAndRuleSet.value);
         invalidator.invalidateStyleWithMatchElement(element, matchElementAndRuleSet.key);
     }
+}
+
+void Invalidator::invalidateWithScopeBreakingHasPseudoClassRuleSet(Element& element, const RuleSet* ruleSet)
+{
+    SetForScope isInvalidating(element.styleResolver().ruleSets().isInvalidatingStyleWithRuleSets(), true);
+    Invalidator invalidator({ ruleSet });
+    invalidator.invalidateStyleWithMatchElement(element, MatchElement::HasScopeBreaking);
 }
 
 void Invalidator::invalidateAllStyle(Scope& scope)

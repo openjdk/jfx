@@ -15,7 +15,9 @@ if (WIN32)
         win/MainThreadWin.cpp
         win/OSAllocatorWin.cpp
         win/PathWalker.cpp
+        win/SignalsWin.cpp
         win/ThreadingWin.cpp
+        win/Win32Handle.cpp
     )
     list(APPEND WTF_PUBLIC_HEADERS
         text/win/WCharStringExtras.h
@@ -82,7 +84,7 @@ elseif (APPLE)
             ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
         MAIN_DEPENDENCY mac/MachExceptions.defs
         WORKING_DIRECTORY ${WTF_DERIVED_SOURCES_DIR}
-        COMMAND mig -DMACH_EXC_SERVER_TASKIDTOKEN -sheader MachExceptionsServer.h MachExceptions.defs
+        COMMAND mig -sheader MachExceptionsServer.h MachExceptions.defs
         VERBATIM)
     list(APPEND WTF_SOURCES
         cocoa/MemoryFootprintCocoa.cpp
@@ -93,6 +95,7 @@ elseif (APPLE)
         ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
     )
     list(APPEND WTF_PUBLIC_HEADERS
+        spi/darwin/AbortWithReasonSPI.h
         spi/darwin/ProcessMemoryFootprint.h
     )
 elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")

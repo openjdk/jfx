@@ -31,14 +31,14 @@
 namespace WebCore {
 
 WebCodecsEncodedVideoChunk::WebCodecsEncodedVideoChunk(Init&& init)
-    : m_storage { WebCodecsEncodedVideoChunkStorage::create(init.type, init.timestamp, init.duration, Span<const uint8_t> { init.data.data(), init.data.length() }) }
+    : m_storage { WebCodecsEncodedVideoChunkStorage::create(init.type, init.timestamp, init.duration, std::span<const uint8_t> { init.data.data(), init.data.length() }) }
 {
 }
 
 ExceptionOr<void> WebCodecsEncodedVideoChunk::copyTo(BufferSource&& source)
 {
     if (source.length() < byteLength())
-        return Exception { TypeError, "buffer is too small"_s };
+        return Exception { ExceptionCode::TypeError, "buffer is too small"_s };
 
     std::memcpy(source.mutableData(), data(), byteLength());
     return { };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,9 @@
 #pragma once
 
 #include "CanvasBase.h"
-#include "GraphicsLayer.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "ScriptWrappable.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/Lock.h>
@@ -41,6 +41,7 @@ class CSSStyleImageValue;
 class CachedImage;
 class CanvasPattern;
 class DestinationColorSpace;
+class GraphicsLayer;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
@@ -49,7 +50,7 @@ class SVGImageElement;
 class WebGLObject;
 enum class PixelFormat : uint8_t;
 
-class CanvasRenderingContext : public ScriptWrappable {
+class CanvasRenderingContext : public ScriptWrappable, public CanMakeWeakPtr<CanvasRenderingContext> {
     WTF_MAKE_NONCOPYABLE(CanvasRenderingContext);
     WTF_MAKE_ISO_ALLOCATED(CanvasRenderingContext);
 public:
@@ -63,6 +64,7 @@ public:
 
     CanvasBase& canvasBase() const { return m_canvas; }
 
+    virtual bool is2dBase() const { return false; }
     virtual bool is2d() const { return false; }
     virtual bool isWebGL1() const { return false; }
     virtual bool isWebGL2() const { return false; }
@@ -77,22 +79,41 @@ public:
 
     virtual void clearAccumulatedDirtyRect() { }
 
-    // Called before paintRenderingResultsToCanvas if paintRenderingResultsToCanvas is
-    // used for compositing purposes.
-    virtual void prepareForDisplayWithPaint() { }
-    virtual void paintRenderingResultsToCanvas() { }
+    // Canvas 2DContext drawing buffer is the same as display buffer.
+    // WebGL, WebGPU draws to drawing buffer. The draw buffer is then swapped to
+    // display buffer during preparation and compositor composites the display buffer.
+    // toDataURL and similar functions from JS execution reads the drawing buffer.
+    // Web Inspector and similar reads from the engine reads both.
+    enum class SurfaceBuffer : uint8_t {
+        DrawingBuffer,
+        DisplayBuffer
+    };
+
+    // Draws the source buffer to the canvasBase().buffer().
+    virtual void drawBufferToCanvas(SurfaceBuffer) { }
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate();
     virtual void setContentsToLayer(GraphicsLayer&);
 
     bool hasActiveInspectorCanvasCallTracer() const { return m_hasActiveInspectorCanvasCallTracer; }
     void setHasActiveInspectorCanvasCallTracer(bool hasActiveInspectorCanvasCallTracer) { m_hasActiveInspectorCanvasCallTracer = hasActiveInspectorCanvasCallTracer; }
 
+    // Returns true if there are pending deferred operations that might consume memory.
+    virtual bool hasDeferredOperations() const { return false; }
+
+    // Called periodically if needsFlush() was true when canvas change happened.
+    virtual void flushDeferredOperations() { }
+
     virtual bool compositingResultsNeedUpdating() const { return false; }
     virtual bool needsPreparationForDisplay() const { return false; }
+    // Swaps the current drawing buffer to display buffer.
     virtual void prepareForDisplay() { }
 
     virtual PixelFormat pixelFormat() const;
     virtual DestinationColorSpace colorSpace() const;
+    virtual OptionSet<ImageBufferOptions> adjustImageBufferOptionsForTesting(OptionSet<ImageBufferOptions> bufferOptions) { return bufferOptions; }
+
+    void setIsInPreparationForDisplayOrFlush(bool flag) { m_isInPreparationForDisplayOrFlush = flag; }
+    bool isInPreparationForDisplayOrFlush() const { return m_isInPreparationForDisplayOrFlush; }
 
 protected:
     explicit CanvasRenderingContext(CanvasBase&);
@@ -107,12 +128,13 @@ protected:
 
     template<class T> void checkOrigin(const T* arg)
     {
-        if (taintsOrigin(arg))
+        if (m_canvas.originClean() && taintsOrigin(arg))
             m_canvas.setOriginTainted();
     }
     void checkOrigin(const URL&);
     void checkOrigin(const CSSStyleImageValue&);
 
+    bool m_isInPreparationForDisplayOrFlush { false };
     bool m_hasActiveInspectorCanvasCallTracer { false };
 
 private:

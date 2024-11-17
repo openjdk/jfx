@@ -28,7 +28,6 @@
 
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
 #include "HTMLPlugInElement.h"
 #include "RenderElement.h"
 #include "Settings.h"
@@ -66,6 +65,8 @@ YouTubePluginReplacement::YouTubePluginReplacement(HTMLPlugInElement& plugin, co
     for (size_t i = 0; i < paramNames.size(); ++i)
         m_attributes.add(paramNames[i], paramValues[i]);
 }
+
+YouTubePluginReplacement::~YouTubePluginReplacement() = default;
 
 RenderPtr<RenderElement> YouTubePluginReplacement::createElementRenderer(HTMLPlugInElement& plugin, RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
@@ -277,7 +278,7 @@ static URL processAndCreateYouTubeURL(const URL& url, bool& isYouTubeShortenedUR
 
 AtomString YouTubePluginReplacement::youTubeURL(const AtomString& srcString)
 {
-    URL srcURL = m_parentElement->document().completeURL(stripLeadingAndTrailingHTMLSpaces(srcString));
+    URL srcURL = m_parentElement->document().completeURL(srcString);
     return youTubeURLFromAbsoluteURL(srcURL, srcString);
 }
 

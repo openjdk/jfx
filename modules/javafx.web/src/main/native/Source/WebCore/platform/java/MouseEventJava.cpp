@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,13 +35,13 @@ MouseButton getWebCoreMouseButton(jint javaButton)
     // This code assumes that we have three-buttons mouse
     // otherwise BUTTON2 is a right button.
     if (javaButton == com_sun_webkit_event_WCMouseEvent_BUTTON1) {
-        return LeftButton;
+        return MouseButton::Left;
     } else if (javaButton == com_sun_webkit_event_WCMouseEvent_BUTTON2) {
-        return MiddleButton;
+        return MouseButton::Middle;
     } else if (javaButton == com_sun_webkit_event_WCMouseEvent_BUTTON3) {
-        return RightButton;
+        return MouseButton::Right;
     } else {
-        return NoButton;
+        return MouseButton::None;
     }
 }
 

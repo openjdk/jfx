@@ -32,14 +32,14 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleMapProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class MapExpressionTest {
 
@@ -57,7 +57,7 @@ public class MapExpressionTest {
     private MapProperty<Number, Integer> op1;
     private MapProperty<Number, Integer> op2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         opNull = new SimpleMapProperty<>();
         opEmpty = new SimpleMapProperty<>(FXCollections.observableMap(Collections.<Number, Integer>emptyMap()));

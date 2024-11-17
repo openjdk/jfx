@@ -26,6 +26,7 @@
 #pragma once
 
 #include "FontPlatformData.h"
+#include "RenderingResourceIdentifier.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
@@ -52,12 +53,20 @@ namespace WebCore {
 class SharedBuffer;
 class FontDescription;
 class FontCreationContext;
-class FragmentedSharedBuffer;
+enum class FontTechnology : uint8_t;
 
 template <typename T> class FontTaggedSettings;
 typedef FontTaggedSettings<int> FontFeatureSettings;
 
-struct FontCustomPlatformData {
+#if USE(CORE_TEXT)
+struct FontCustomPlatformSerializedData {
+    Vector<uint8_t> fontFaceData;
+    String itemInCollection;
+    RenderingResourceIdentifier renderingResourceIdentifier;
+};
+#endif
+
+struct FontCustomPlatformData : public RefCounted<FontCustomPlatformData> {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(FontCustomPlatformData);
 public:
@@ -67,18 +76,24 @@ public:
     FontCustomPlatformData(CTFontDescriptorRef fontDescriptor, FontPlatformData::CreationData&& creationData)
         : fontDescriptor(fontDescriptor)
         , creationData(WTFMove(creationData))
+        , m_renderingResourceIdentifier(RenderingResourceIdentifier::generate())
     {
     }
 #elif PLATFORM(JAVA)
     FontCustomPlatformData(const JLObject& data);
 #else
-    FontCustomPlatformData(FT_Face, FragmentedSharedBuffer&);
+    FontCustomPlatformData(FT_Face, FontPlatformData::CreationData&&);
 #endif
     WEBCORE_EXPORT ~FontCustomPlatformData();
 
     FontPlatformData fontPlatformData(const FontDescription&, bool bold, bool italic, const FontCreationContext&);
 
+#if USE(CORE_TEXT)
+    WEBCORE_EXPORT FontCustomPlatformSerializedData serializedData() const;
+    WEBCORE_EXPORT static std::optional<Ref<FontCustomPlatformData>> tryMakeFromSerializationData(FontCustomPlatformSerializedData&&);
+#endif
     static bool supportsFormat(const String&);
+    static bool supportsTechnology(const FontTechnology&);
 
 #if PLATFORM(WIN)
     String name;
@@ -91,8 +106,10 @@ public:
 #else
     RefPtr<cairo_font_face_t> m_fontFace;
 #endif
+
+    RenderingResourceIdentifier m_renderingResourceIdentifier;
 };
 
-WEBCORE_EXPORT std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&, const String&);
+WEBCORE_EXPORT RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&, const String&);
 
 } // namespace WebCore

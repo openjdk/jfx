@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,14 +36,23 @@ static NSMutableDictionary * rolesMap;
 
 + (void) initializeRolesMap {
     /*
-     * Here we should keep all the mapping between the accessibility roles and implementing classes
+     * Here we should keep all the mapping between the accessibility roles and implementing classes.
+     * All JavaFX roles and corresponding available properties are defined in
+     * enum javafx.scene.AccessibleRole
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:4];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:9];
 
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
+    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"RADIO_BUTTON"];
+//  Requires TAB_GROUP to be implemented first
+//  [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"TAB_ITEM"];
+    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"PAGE_ITEM"];
+    [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"CHECK_BOX"];
+    [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
+    [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
 
 }
 
@@ -162,6 +171,27 @@ static NSMutableDictionary * rolesMap;
     parent = nil;
 }
 
+- (BOOL)isAccessibilityFocused
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NO;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue, (jlong)@"AXFocused");
+    GLASS_CHECK_EXCEPTION(env);
+
+    return [variantToID(env, jresult) boolValue];
+}
+
+- (void)setAccessibilityFocused:(BOOL)value
+{
+    GET_MAIN_JENV;
+    if (env == NULL) return;
+    (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilitySetValue,
+                           (jlong)[NSNumber numberWithBool:value],
+                           (jlong)@"AXFocused");
+    GLASS_CHECK_EXCEPTION(env);
+}
+
 @end
 
 /*
@@ -214,7 +244,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1invalidateParen
 (JNIEnv *env, jobject jAccessible, long macAccessible)
 {
     NSObject* accessible = (NSObject*)jlong_to_ptr(macAccessible);
-    if ([accessible respondsToSelector:@selector(clearParent)]) {
-        [accessible clearParent];
+    if ([accessible isKindOfClass: [AccessibleBase class]]) {
+        [((AccessibleBase*) accessible) clearParent];
     }
 }

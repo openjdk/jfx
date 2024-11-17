@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,12 +29,14 @@
 #include "CachedImage.h"
 #include "CanvasPattern.h"
 #include "DestinationColorSpace.h"
+#include "GraphicsLayer.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLVideoElement.h"
 #include "Image.h"
 #include "ImageBitmap.h"
+#include "OriginAccessPatterns.h"
 #include "PixelFormat.h"
 #include "SVGImageElement.h"
 #include "SecurityOrigin.h"
@@ -107,21 +109,17 @@ DestinationColorSpace CanvasRenderingContext::colorSpace() const
 
 bool CanvasRenderingContext::taintsOrigin(const CanvasPattern* pattern)
 {
-    if (m_canvas.originClean() && pattern && !pattern->originClean())
-        return true;
-    return false;
+    return pattern && !pattern->originClean();
 }
 
 bool CanvasRenderingContext::taintsOrigin(const CanvasBase* sourceCanvas)
 {
-    if (m_canvas.originClean() && sourceCanvas && !sourceCanvas->originClean())
-        return true;
-    return false;
+    return sourceCanvas && !sourceCanvas->originClean();
 }
 
 bool CanvasRenderingContext::taintsOrigin(const CachedImage* cachedImage)
 {
-    if (!m_canvas.originClean() || !cachedImage)
+    if (!cachedImage)
         return false;
 
     RefPtr image = cachedImage->image();
@@ -145,23 +143,18 @@ bool CanvasRenderingContext::taintsOrigin(const CachedImage* cachedImage)
 
 bool CanvasRenderingContext::taintsOrigin(const HTMLImageElement* element)
 {
-    return m_canvas.originClean() && element && !element->originClean(*m_canvas.securityOrigin());
+    return element && taintsOrigin(element->cachedImage());
 }
 
 bool CanvasRenderingContext::taintsOrigin(const SVGImageElement* element)
 {
-    if (!element)
-        return false;
-    return taintsOrigin(element->cachedImage());
+    return element && taintsOrigin(element->cachedImage());
 }
 
 bool CanvasRenderingContext::taintsOrigin(const HTMLVideoElement* video)
 {
 #if ENABLE(VIDEO)
-    if (!video || !m_canvas.originClean())
-        return false;
-
-    return video->taintsOrigin(*m_canvas.securityOrigin());
+    return video && video->taintsOrigin(*m_canvas.securityOrigin());
 #else
     UNUSED_PARAM(video);
     return false;
@@ -170,26 +163,17 @@ bool CanvasRenderingContext::taintsOrigin(const HTMLVideoElement* video)
 
 bool CanvasRenderingContext::taintsOrigin(const ImageBitmap* imageBitmap)
 {
-    if (!imageBitmap || !m_canvas.originClean())
-        return false;
-
-    return !imageBitmap->originClean();
+    return imageBitmap && !imageBitmap->originClean();
 }
 
 bool CanvasRenderingContext::taintsOrigin(const URL& url)
 {
-    if (!m_canvas.originClean())
-        return false;
-
-    if (url.protocolIsData())
-        return false;
-
-    return !m_canvas.securityOrigin()->canRequest(url);
+    return !url.protocolIsData() && !m_canvas.securityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
 }
 
 void CanvasRenderingContext::checkOrigin(const URL& url)
 {
-    if (taintsOrigin(url))
+    if (m_canvas.originClean() && taintsOrigin(url))
         m_canvas.setOriginTainted();
 }
 

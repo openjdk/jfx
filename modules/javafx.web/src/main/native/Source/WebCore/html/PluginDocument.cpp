@@ -26,18 +26,23 @@
 #include "PluginDocument.h"
 
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
-#include "FrameView.h"
 #include "HTMLBodyElement.h"
 #include "HTMLEmbedElement.h"
+#include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
+#include "HTMLStyleElement.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
+#include "Logging.h"
 #include "PluginViewBase.h"
 #include "RawDataDocumentParser.h"
 #include "RenderEmbeddedObject.h"
+#include "StyleSheetContents.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -61,45 +66,53 @@ private:
 
     void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void createDocumentStructure();
+    static Ref<HTMLStyleElement> createStyleElement(Document&);
 
     WeakPtr<HTMLEmbedElement, WeakPtrImplWithEventTargetData> m_embedElement;
 };
+
+Ref<HTMLStyleElement> PluginDocumentParser::createStyleElement(Document& document)
+{
+    auto styleElement = HTMLStyleElement::create(document);
+
+    constexpr auto styleSheetContents = "html, body, embed { width: 100%; height: 100%; }\nbody { margin: 0; overflow: hidden; }\n"_s;
+#if PLATFORM(IOS_FAMILY)
+    constexpr auto bodyBackgroundColorStyle = "body { background-color: rgb(217, 224, 233) }"_s;
+#else
+    constexpr auto bodyBackgroundColorStyle = "body { background-color: rgb(38, 38, 38) }"_s;
+#endif
+    styleElement->setTextContent(makeString(styleSheetContents, bodyBackgroundColorStyle));
+    return styleElement;
+}
 
 void PluginDocumentParser::createDocumentStructure()
 {
     auto& document = downcast<PluginDocument>(*this->document());
 
+    LOG_WITH_STREAM(Plugins, stream << "PluginDocumentParser::createDocumentStructure() for document " << document);
+
     auto rootElement = HTMLHtmlElement::create(document);
     document.appendChild(rootElement);
     rootElement->insertedByParser();
-    rootElement->setInlineStyleProperty(CSSPropertyHeight, 100, CSSUnitType::CSS_PERCENTAGE);
-    rootElement->setInlineStyleProperty(CSSPropertyWidth, 100, CSSUnitType::CSS_PERCENTAGE);
+
+    auto headElement = HTMLHeadElement::create(document);
+    auto styleElement = createStyleElement(document);
+    headElement->appendChild(styleElement);
+    rootElement->appendChild(headElement);
 
     if (document.frame())
         document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
 #if PLATFORM(IOS_FAMILY)
     // Should not be able to zoom into standalone plug-in documents.
-    document.processViewport("user-scalable=no"_s, ViewportArguments::PluginDocument);
+    document.processViewport("user-scalable=no"_s, ViewportArguments::Type::PluginDocument);
 #endif
 
     auto body = HTMLBodyElement::create(document);
-    body->setAttributeWithoutSynchronization(marginwidthAttr, "0"_s);
-    body->setAttributeWithoutSynchronization(marginheightAttr, "0"_s);
-#if PLATFORM(IOS_FAMILY)
-    body->setAttribute(styleAttr, "background-color: rgb(217,224,233); height: 100%; width: 100%; overflow:hidden; margin: 0"_s);
-#else
-    body->setAttribute(styleAttr, "background-color: rgb(38,38,38); height: 100%; width: 100%; overflow:hidden; margin: 0"_s);
-#endif
-
     rootElement->appendChild(body);
 
     auto embedElement = HTMLEmbedElement::create(document);
-
     m_embedElement = embedElement.get();
-    embedElement->setAttributeWithoutSynchronization(widthAttr, "100%"_s);
-    embedElement->setAttributeWithoutSynchronization(heightAttr, "100%"_s);
-
     embedElement->setAttributeWithoutSynchronization(nameAttr, "plugin"_s);
     embedElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document.url().string() });
 
@@ -146,12 +159,14 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
     }
 }
 
-PluginDocument::PluginDocument(Frame& frame, const URL& url)
+PluginDocument::PluginDocument(LocalFrame& frame, const URL& url)
     : HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::Plugin })
 {
     setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
     lockCompatibilityMode();
 }
+
+PluginDocument::~PluginDocument() = default;
 
 Ref<DocumentParser> PluginDocument::createParser()
 {
@@ -177,19 +192,6 @@ void PluginDocument::detachFromPluginElement()
 {
     // Release the plugin Element so that we don't have a circular reference.
     m_pluginElement = nullptr;
-}
-
-void PluginDocument::cancelManualPluginLoad()
-{
-    // PluginDocument::cancelManualPluginLoad should only be called once, but there are issues
-    // with how many times we call beforeload on object elements. <rdar://problem/8441094>.
-    if (!shouldLoadPluginManually())
-        return;
-
-    auto& frameLoader = frame()->loader();
-    if (auto documentLoader = frameLoader.activeDocumentLoader())
-        documentLoader->cancelMainResourceLoad(frameLoader.cancelledError(documentLoader->request()));
-    m_shouldLoadPluginManually = false;
 }
 
 }

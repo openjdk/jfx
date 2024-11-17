@@ -180,6 +180,8 @@ typedef struct _GstAudioDecoderContext
   /* MT-protected (with LOCK) */
   GstClockTime min_latency;
   GstClockTime max_latency;
+  /* Tracks whether the latency message was posted at least once */
+  gboolean posted_latency_msg;
 
   GstAllocator *allocator;
   GstAllocationParams params;
@@ -555,6 +557,7 @@ gst_audio_decoder_reset (GstAudioDecoder * dec, gboolean full)
     memset (&dec->priv->ctx, 0, sizeof (dec->priv->ctx));
 
     gst_audio_info_init (&dec->priv->ctx.info);
+    dec->priv->ctx.posted_latency_msg = FALSE;
     GST_OBJECT_UNLOCK (dec);
     dec->priv->ctx.had_output_data = FALSE;
     dec->priv->ctx.had_input_data = FALSE;
@@ -954,7 +957,7 @@ gst_audio_decoder_setup (GstAudioDecoder * dec)
   gst_query_unref (query);
 
   /* normalize to bool */
-  dec->priv->agg = ! !res;
+  dec->priv->agg = !!res;
 }
 
 static GstFlowReturn
@@ -1245,7 +1248,8 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
   const GstMetaInfo *info = (*meta)->info;
   gboolean do_copy = FALSE;
 
-  if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)) {
+  if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)
+      || gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory_reference)) {
     /* never call the transform_meta with memory specific metadata */
     GST_DEBUG_OBJECT (decoder, "not copying memory specific metadata %s",
         g_type_name (info->api));
@@ -1271,7 +1275,7 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
 /**
  * gst_audio_decoder_finish_subframe:
  * @dec: a #GstAudioDecoder
- * @buf: (transfer full) (allow-none): decoded data
+ * @buf: (transfer full) (nullable): decoded data
  *
  * Collects decoded data and pushes it downstream. This function may be called
  * multiple times for a given input frame.
@@ -1305,7 +1309,7 @@ gst_audio_decoder_finish_subframe (GstAudioDecoder * dec, GstBuffer * buf)
 /**
  * gst_audio_decoder_finish_frame:
  * @dec: a #GstAudioDecoder
- * @buf: (transfer full) (allow-none): decoded data
+ * @buf: (transfer full) (nullable): decoded data
  * @frames: number of decoded frames represented by decoded data
  *
  * Collects decoded data and pushes it downstream.
@@ -1419,9 +1423,23 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
     frames = priv->frames.length;
   }
 
-  if (G_LIKELY (priv->frames.length))
+  if (G_LIKELY (buf))
+    buf = gst_buffer_make_writable (buf);
+
+  if (G_LIKELY (priv->frames.length)) {
     ts = GST_BUFFER_PTS (priv->frames.head->data);
-  else
+    if (G_LIKELY (buf)) {
+      /* propagate RESYNC flag to output buffer */
+      if (GST_BUFFER_FLAG_IS_SET (priv->frames.head->data,
+              GST_BUFFER_FLAG_RESYNC))
+        GST_BUFFER_FLAG_SET (buf, GST_BUFFER_FLAG_RESYNC);
+      if (is_subframe) {
+        priv->frames.head->data =
+            gst_buffer_make_writable (priv->frames.head->data);
+        GST_BUFFER_FLAG_UNSET (priv->frames.head->data, GST_BUFFER_FLAG_RESYNC);
+      }
+    }
+  } else
     ts = GST_CLOCK_TIME_NONE;
 
   GST_DEBUG_OBJECT (dec, "leading frame ts %" GST_TIME_FORMAT,
@@ -1473,7 +1491,8 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
        * discard buffer ts and carry on producing perfect stream,
        * otherwise resync to ts */
       if (G_UNLIKELY (diff < (gint64) - dec->priv->tolerance ||
-              diff > (gint64) dec->priv->tolerance)) {
+              diff > (gint64) dec->priv->tolerance ||
+              GST_BUFFER_FLAG_IS_SET (buf, GST_BUFFER_FLAG_RESYNC))) {
         GST_DEBUG_OBJECT (dec, "base_ts resync");
         priv->base_ts = ts;
         priv->samples = 0;
@@ -1497,7 +1516,6 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
     priv->taglist_changed = FALSE;
   }
 
-  buf = gst_buffer_make_writable (buf);
   if (G_LIKELY (GST_CLOCK_TIME_IS_VALID (priv->base_ts))) {
     GST_BUFFER_PTS (buf) =
         priv->base_ts +
@@ -2761,8 +2779,8 @@ gst_audio_decoder_propose_allocation_default (GstAudioDecoder * dec,
 /**
  * gst_audio_decoder_proxy_getcaps:
  * @decoder: a #GstAudioDecoder
- * @caps: (allow-none): initial caps
- * @filter: (allow-none): filter caps
+ * @caps: (nullable): initial caps
+ * @filter: (nullable): filter caps
  *
  * Returns caps that express @caps (or sink template caps if @caps == NULL)
  * restricted to rate/channels/... combinations supported by downstream
@@ -3390,31 +3408,50 @@ gst_audio_decoder_get_max_errors (GstAudioDecoder * dec)
  * @min: minimum latency
  * @max: maximum latency
  *
- * Sets decoder latency.
+ * Sets decoder latency. If the provided values changed from
+ * previously provided ones, this will also post a LATENCY message on the bus
+ * so the pipeline can reconfigure its global latency.
  */
 void
 gst_audio_decoder_set_latency (GstAudioDecoder * dec,
     GstClockTime min, GstClockTime max)
 {
+  gboolean post_message = FALSE;
+
   g_return_if_fail (GST_IS_AUDIO_DECODER (dec));
   g_return_if_fail (GST_CLOCK_TIME_IS_VALID (min));
   g_return_if_fail (min <= max);
 
+  GST_DEBUG_OBJECT (dec,
+      "min_latency:%" GST_TIME_FORMAT " max_latency:%" GST_TIME_FORMAT,
+      GST_TIME_ARGS (min), GST_TIME_ARGS (max));
+
   GST_OBJECT_LOCK (dec);
-  dec->priv->ctx.min_latency = min;
-  dec->priv->ctx.max_latency = max;
+  if (dec->priv->ctx.min_latency != min) {
+    dec->priv->ctx.min_latency = min;
+    post_message = TRUE;
+  }
+  if (dec->priv->ctx.max_latency != max) {
+    dec->priv->ctx.max_latency = max;
+    post_message = TRUE;
+  }
+  if (!dec->priv->ctx.posted_latency_msg) {
+    dec->priv->ctx.posted_latency_msg = TRUE;
+    post_message = TRUE;
+  }
   GST_OBJECT_UNLOCK (dec);
 
   /* post latency message on the bus */
-  gst_element_post_message (GST_ELEMENT (dec),
-      gst_message_new_latency (GST_OBJECT (dec)));
+  if (post_message)
+    gst_element_post_message (GST_ELEMENT (dec),
+        gst_message_new_latency (GST_OBJECT (dec)));
 }
 
 /**
  * gst_audio_decoder_get_latency:
  * @dec: a #GstAudioDecoder
- * @min: (out) (allow-none): a pointer to storage to hold minimum latency
- * @max: (out) (allow-none): a pointer to storage to hold maximum latency
+ * @min: (out) (optional): a pointer to storage to hold minimum latency
+ * @max: (out) (optional): a pointer to storage to hold maximum latency
  *
  * Sets the variables pointed to by @min and @max to the currently configured
  * latency.
@@ -3456,7 +3493,7 @@ gst_audio_decoder_get_parse_state (GstAudioDecoder * dec,
 /**
  * gst_audio_decoder_set_allocation_caps:
  * @dec: a #GstAudioDecoder
- * @allocation_caps: (allow-none): a #GstCaps or %NULL
+ * @allocation_caps: (nullable): a #GstCaps or %NULL
  *
  * Sets a caps in allocation query which are different from the set
  * pad's caps. Use this function before calling
@@ -3705,7 +3742,7 @@ gst_audio_decoder_get_needs_format (GstAudioDecoder * dec)
 /**
  * gst_audio_decoder_merge_tags:
  * @dec: a #GstAudioDecoder
- * @tags: (allow-none): a #GstTagList to merge, or NULL
+ * @tags: (nullable): a #GstTagList to merge, or NULL
  * @mode: the #GstTagMergeMode to use, usually #GST_TAG_MERGE_REPLACE
  *
  * Sets the audio decoder tags and how they should be merged with any
@@ -3795,9 +3832,9 @@ fallback:
 /**
  * gst_audio_decoder_get_allocator:
  * @dec: a #GstAudioDecoder
- * @allocator: (out) (allow-none) (transfer full): the #GstAllocator
+ * @allocator: (out) (optional) (nullable) (transfer full): the #GstAllocator
  * used
- * @params: (out) (allow-none) (transfer full): the
+ * @params: (out) (optional) (transfer full): the
  * #GstAllocationParams of @allocator
  *
  * Lets #GstAudioDecoder sub-classes to know the memory @allocator

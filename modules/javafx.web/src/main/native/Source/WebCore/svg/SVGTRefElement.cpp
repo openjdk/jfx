@@ -27,10 +27,10 @@
 #include "ElementRareData.h"
 #include "EventListener.h"
 #include "EventNames.h"
+#include "LegacyRenderSVGResource.h"
 #include "MutationEvent.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGInlineText.h"
-#include "RenderSVGResource.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
@@ -169,30 +169,29 @@ void SVGTRefElement::detachTarget()
     // Mark the referenced ID as pending.
     auto target = SVGURIReference::targetElementFromIRIString(href(), document());
     if (!target.identifier.isEmpty())
-        document().accessSVGExtensions().addPendingResource(target.identifier, *this);
+        treeScopeForSVGReferences().addPendingSVGResource(target.identifier, *this);
 }
 
-void SVGTRefElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGTRefElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGTextPositioningElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGTextPositioningElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGTRefElement::svgAttributeChanged(const QualifiedName& attrName)
 {
+    SVGTextPositioningElement::svgAttributeChanged(attrName);
+
     if (SVGURIReference::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
         buildPendingResource();
         updateSVGRendererForElementChange();
-        return;
     }
-
-    SVGTextPositioningElement::svgAttributeChanged(attrName);
 }
 
 RenderPtr<RenderElement> SVGTRefElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGInline>(*this, WTFMove(style));
+    return createRenderer<RenderSVGInline>(RenderObject::Type::SVGInline, *this, WTFMove(style));
 }
 
 bool SVGTRefElement::childShouldCreateRenderer(const Node& child) const
@@ -227,12 +226,12 @@ void SVGTRefElement::buildPendingResource()
     if (!isConnected())
         return;
 
-    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScope());
+    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScopeForSVGReferences());
     if (!target.element) {
         if (target.identifier.isEmpty())
             return;
 
-        document().accessSVGExtensions().addPendingResource(target.identifier, *this);
+        treeScopeForSVGReferences().addPendingSVGResource(target.identifier, *this);
         ASSERT(hasPendingResources());
         return;
     }
@@ -249,14 +248,15 @@ void SVGTRefElement::buildPendingResource()
 
 Node::InsertedIntoAncestorResult SVGTRefElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result = SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument)
         return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
-    return InsertedIntoAncestorResult::Done;
+    return result;
 }
 
 void SVGTRefElement::didFinishInsertingNode()
 {
+    SVGTextPositioningElement::didFinishInsertingNode();
     buildPendingResource();
 }
 

@@ -25,11 +25,13 @@
 
 #pragma once
 
-#if ENABLE(MANAGED_MEDIA_SOURCE)
+#if ENABLE(MEDIA_SOURCE)
 
 #include "SourceBuffer.h"
 
 namespace WebCore {
+
+class ManagedMediaSource;
 
 class ManagedSourceBuffer final : public SourceBuffer {
     WTF_MAKE_ISO_ALLOCATED(ManagedSourceBuffer);
@@ -49,4 +51,4 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ManagedSourceBuffer)
     static bool isType(const WebCore::SourceBuffer& buffer) { return buffer.isManaged(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
-#endif
+#endif // ENABLE(MEDIA_SOURCE)

@@ -29,18 +29,19 @@
 
 namespace WebCore {
 
-class HTMLOptionsCollection final : public CachedHTMLCollection<HTMLOptionsCollection, CollectionTypeTraits<SelectOptions>::traversalType> {
+class HTMLOptionsCollection final : public CachedHTMLCollection<HTMLOptionsCollection, CollectionTypeTraits<CollectionType::SelectOptions>::traversalType> {
     WTF_MAKE_ISO_ALLOCATED_EXPORT(HTMLOptionsCollection, WEBCORE_EXPORT);
 public:
-    using Base = CachedHTMLCollection<HTMLOptionsCollection, CollectionTypeTraits<SelectOptions>::traversalType>;
+    using Base = CachedHTMLCollection<HTMLOptionsCollection, CollectionTypeTraits<CollectionType::SelectOptions>::traversalType>;
 
     static Ref<HTMLOptionsCollection> create(HTMLSelectElement&, CollectionType);
 
-    HTMLSelectElement& selectElement() { return downcast<HTMLSelectElement>(ownerNode()); }
-    const HTMLSelectElement& selectElement() const { return downcast<HTMLSelectElement>(ownerNode()); }
+    inline HTMLSelectElement& selectElement();
+    inline const HTMLSelectElement& selectElement() const;
 
-    HTMLOptionElement* item(unsigned offset) const final;
-    HTMLOptionElement* namedItem(const AtomString& name) const final;
+    WEBCORE_EXPORT unsigned length() const final;
+    WEBCORE_EXPORT HTMLOptionElement* item(unsigned offset) const final;
+    WEBCORE_EXPORT HTMLOptionElement* namedItem(const AtomString& name) const final;
 
     ExceptionOr<void> setItem(unsigned index, HTMLOptionElement*);
 
@@ -58,39 +59,12 @@ public:
     WEBCORE_EXPORT ExceptionOr<void> setLength(unsigned);
 
     // For CachedHTMLCollection.
-    bool elementMatches(Element&) const;
+    inline bool elementMatches(Element&) const;
 
 private:
     explicit HTMLOptionsCollection(HTMLSelectElement&);
 };
 
-inline HTMLOptionElement* HTMLOptionsCollection::item(unsigned offset) const
-{
-    return downcast<HTMLOptionElement>(Base::item(offset));
-}
-
-inline HTMLOptionElement* HTMLOptionsCollection::namedItem(const AtomString& name) const
-{
-    return downcast<HTMLOptionElement>(Base::namedItem(name));
-}
-
-inline ExceptionOr<void> HTMLOptionsCollection::setItem(unsigned index, HTMLOptionElement* optionElement)
-{
-    return selectElement().setItem(index, optionElement);
-}
-
-inline bool HTMLOptionsCollection::elementMatches(Element& element) const
-{
-    if (!element.hasTagName(HTMLNames::optionTag))
-        return false;
-
-    if (element.parentNode() == &selectElement())
-        return true;
-
-    ASSERT(element.parentNode());
-    return element.parentNode()->hasTagName(HTMLNames::optgroupTag) && element.parentNode()->parentNode() == &selectElement();
-}
-
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(HTMLOptionsCollection, SelectOptions)
+SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(HTMLOptionsCollection, CollectionType::SelectOptions)

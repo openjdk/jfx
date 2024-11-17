@@ -32,22 +32,17 @@ namespace WebCore {
 class XMLDocument : public Document {
     WTF_MAKE_ISO_ALLOCATED(XMLDocument);
 public:
-    static Ref<XMLDocument> create(Frame* frame, const Settings& settings, const URL& url)
+    static Ref<XMLDocument> create(LocalFrame* frame, const Settings& settings, const URL& url)
     {
         auto document = adoptRef(*new XMLDocument(frame, settings, url, { DocumentClass::XML }));
         document->addToContextsMap();
         return document;
     }
 
-    static Ref<XMLDocument> createXHTML(Frame* frame, const Settings& settings, const URL& url)
-    {
-        auto document = adoptRef(*new XMLDocument(frame, settings, url, { DocumentClass::XML, DocumentClass::XHTML }));
-        document->addToContextsMap();
-        return document;
-    }
+    WEBCORE_EXPORT static Ref<XMLDocument> createXHTML(LocalFrame*, const Settings&, const URL&);
 
 protected:
-    XMLDocument(Frame* frame, const Settings& settings, const URL& url, DocumentClasses documentClasses = { })
+    XMLDocument(LocalFrame* frame, const Settings& settings, const URL& url, DocumentClasses documentClasses = { })
         : Document(frame, settings, url, documentClasses | DocumentClasses(DocumentClass::XML))
     {
     }
@@ -57,5 +52,9 @@ protected:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::XMLDocument)
     static bool isType(const WebCore::Document& document) { return document.isXMLDocument(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* document = dynamicDowncast<WebCore::Document>(node);
+        return document && isType(*document);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -30,6 +30,12 @@
 #include <JavaScriptCore/WeakGCMap.h>
 #include <wtf/Forward.h>
 
+namespace JSC {
+
+enum class JSPromiseRejectionOperation : unsigned;
+
+}
+
 namespace WebCore {
 
 class DOMConstructors;
@@ -93,7 +99,7 @@ public:
 
     void clearDOMGuardedObjects() const;
 
-    JSC::JSProxy& proxy() const { ASSERT(m_proxy); return *m_proxy.get(); }
+    JSC::JSGlobalProxy& proxy() const { ASSERT(m_proxy); return *m_proxy.get(); }
 
     JSC::JSFunction* createCrossOriginFunction(JSC::JSGlobalObject*, JSC::PropertyName, JSC::NativeFunction, unsigned length);
     JSC::GetterSetter* createCrossOriginGetterSetter(JSC::JSGlobalObject*, JSC::PropertyName, JSC::GetValueFunc, JSC::PutValueFunc);
@@ -103,10 +109,7 @@ public:
 
     static constexpr const JSC::ClassInfo* info() { return &s_info; }
 
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::GlobalObjectType, StructureFlags), info());
-    }
+    inline static JSC::Structure* createStructure(JSC::VM&, JSC::JSValue);
 
 protected:
     JSDOMGlobalObject(JSC::VM&, JSC::Structure*, Ref<DOMWrapperWorld>&&, const JSC::GlobalObjectMethodTable* = nullptr);
@@ -133,7 +136,7 @@ protected:
     Ref<DOMWrapperWorld> m_world;
     uint8_t m_worldIsNormal;
     Lock m_gcLock;
-    JSC::WriteBarrier<JSC::JSProxy> m_proxy;
+    JSC::WriteBarrier<JSC::JSGlobalProxy> m_proxy;
 
 private:
     void addBuiltinGlobals(JSC::VM&);

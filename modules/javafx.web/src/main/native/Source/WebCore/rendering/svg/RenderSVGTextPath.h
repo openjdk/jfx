@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "Path.h"
 #include "RenderSVGInline.h"
 
 namespace WebCore {
@@ -37,13 +38,10 @@ public:
 
     Path layoutPath() const;
     const SVGLengthValue& startOffset() const;
-    bool exactAlignment() const;
-    bool stretchMethod() const;
 
 private:
     void graphicsElement() const = delete;
 
-    bool isSVGTextPath() const override { return true; }
     ASCIILiteral renderName() const override { return "RenderSVGTextPath"_s; }
 
     Path m_layoutPath;
@@ -51,4 +49,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTextPath, isSVGTextPath())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTextPath, isRenderSVGTextPath())

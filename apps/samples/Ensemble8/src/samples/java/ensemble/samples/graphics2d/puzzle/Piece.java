@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,7 +31,6 @@
  */
 package ensemble.samples.graphics2d.puzzle;
 
-import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.Parent;
 import javafx.scene.effect.DropShadow;
@@ -43,9 +42,10 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Shape;
-   /**
-     * Node that represents a puzzle piece
-     */
+
+/**
+ * Node that represents a puzzle piece
+ */
 public class Piece extends Parent{
         public static final int SIZE = 100;
         private final double correctX;

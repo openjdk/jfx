@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.javafx.util;
 
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -103,7 +101,6 @@ public class DataURI {
         }
 
         String data = uri.substring(dataSeparator + 1);
-        Charset charset = Charset.defaultCharset();
 
         return new DataURI(
             uri,
@@ -112,9 +109,7 @@ public class DataURI {
             mimeSubtype,
             nameValuePairs,
             base64,
-            base64 ?
-                Base64.getDecoder().decode(data) :
-                URLDecoder.decode(data.replace("+", "%2B"), charset).getBytes(charset));
+            base64 ? Base64.getDecoder().decode(data) : decodePercentEncoding(data));
     }
 
     private final String originalUri;
@@ -206,6 +201,85 @@ public class DataURI {
         int result = Objects.hash(mimeType, mimeSubtype, base64);
         result = 31 * result + Arrays.hashCode(data);
         return result;
+    }
+
+    /**
+     * Decodes percent-encoded text as specified by RFC 3986, section 2.1
+     * This method does not make any assumptions about the allowed character set.
+     *
+     * @param input the input string
+     * @return the decoded byte array
+     */
+    private static byte[] decodePercentEncoding(String input) {
+        enum ExpectedCharacter {
+            DEFAULT,
+            FIRST_HEX_DIGIT,
+            SECOND_HEX_DIGIT
+        }
+
+        ExpectedCharacter expectedCharacter = ExpectedCharacter.DEFAULT;
+        byte[] output = new byte[computePayloadSize(input)];
+        int firstDigit = 0;
+
+        for (int i = 0, j = 0; i < input.length(); ++i) {
+            char c = input.charAt(i);
+
+            expectedCharacter = switch (expectedCharacter) {
+                case DEFAULT -> {
+                    if (c == '%') {
+                        yield ExpectedCharacter.FIRST_HEX_DIGIT;
+                    } else {
+                        output[j++] = (byte)c;
+                        yield ExpectedCharacter.DEFAULT;
+                    }
+                }
+
+                case FIRST_HEX_DIGIT -> {
+                    firstDigit = hexDigit(c);
+                    yield ExpectedCharacter.SECOND_HEX_DIGIT;
+                }
+
+                case SECOND_HEX_DIGIT -> {
+                    output[j++] = (byte)(firstDigit << 4 | hexDigit(c));
+                    yield ExpectedCharacter.DEFAULT;
+                }
+            };
+        }
+
+        if (expectedCharacter != ExpectedCharacter.DEFAULT) {
+            throw new IllegalArgumentException("Incomplete character escape sequence");
+        }
+
+        return output;
+    }
+
+    /**
+     * Computes the payload size of the percent-encoded string.
+     *
+     * @param input the input string
+     * @return the payload size in bytes
+     */
+    private static int computePayloadSize(String input) {
+        int count = 0;
+
+        for (int i = 0, max = input.length(); i < max; ++i) {
+            if (input.charAt(i) == '%') {
+                i += 2;
+            }
+
+            ++count;
+        }
+
+        return count;
+    }
+
+    private static int hexDigit(char c) {
+        int digit = Character.digit(c, 16);
+        if (digit < 0) {
+            throw new IllegalArgumentException("Invalid symbol in character escape sequence");
+        }
+
+        return digit;
     }
 
 }

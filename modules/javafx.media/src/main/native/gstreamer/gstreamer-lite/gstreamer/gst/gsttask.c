@@ -89,6 +89,21 @@ GST_DEBUG_CATEGORY_STATIC (task_debug);
 #define SET_TASK_STATE(t,s) (g_atomic_int_set (&GST_TASK_STATE(t), (s)))
 #define GET_TASK_STATE(t)   ((GstTaskState) g_atomic_int_get (&GST_TASK_STATE(t)))
 
+static const char *
+task_state_to_string (GstTaskState state)
+{
+  switch (state) {
+    case GST_TASK_STARTED:
+      return "started";
+    case GST_TASK_PAUSED:
+      return "paused";
+    case GST_TASK_STOPPED:
+      return "stopped";
+    default:
+      return "(unknown)";
+  }
+}
+
 struct _GstTaskPrivate
 {
   /* callbacks for managing the thread of this task */
@@ -162,7 +177,7 @@ gst_task_win32_load_library (void)
   }
 #endif
 
-  return ! !SetThreadDescriptionFunc;
+  return !!SetThreadDescriptionFunc;
 }
 
 static gboolean
@@ -726,7 +741,8 @@ gst_task_set_state_unlocked (GstTask * task, GstTaskState state)
   GstTaskState old;
   gboolean res = TRUE;
 
-  GST_DEBUG_OBJECT (task, "Changing task %p to state %d", task, state);
+  GST_DEBUG_OBJECT (task, "Changing task %p to state %s", task,
+      task_state_to_string (state));
 
   if (state != GST_TASK_STOPPED)
     if (G_UNLIKELY (GST_TASK_GET_LOCK (task) == NULL))
@@ -759,8 +775,10 @@ gst_task_set_state_unlocked (GstTask * task, GstTaskState state)
   /* ERRORS */
 no_lock:
   {
-    GST_WARNING_OBJECT (task, "state %d set on task without a lock", state);
-    g_warning ("task without a lock can't be set to state %d", state);
+    GST_WARNING_OBJECT (task, "state %s set on task without a lock",
+        task_state_to_string (state));
+    g_warning ("task without a lock can't be set to state %s",
+        task_state_to_string (state));
     return FALSE;
   }
 }

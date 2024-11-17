@@ -46,7 +46,7 @@
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-#include "Device.h"
+#import <pal/system/ios/Device.h>
 #endif
 
 #ifndef WEBCORE_NAVIGATOR_PRODUCT
@@ -97,7 +97,7 @@ String NavigatorBase::platform() const
     });
     return platformName->isolatedCopy();
 #elif PLATFORM(IOS_FAMILY)
-    return deviceName();
+    return PAL::deviceName();
 #elif OS(MACOS)
     return "MacIntel"_s;
 #elif OS(WINDOWS)
@@ -159,22 +159,20 @@ WebLockManager& NavigatorBase::locks()
     return *m_webLockManager;
 }
 
-#if ENABLE(SERVICE_WORKER)
 ServiceWorkerContainer& NavigatorBase::serviceWorker()
 {
     ASSERT(!scriptExecutionContext() || scriptExecutionContext()->settingsValues().serviceWorkersEnabled);
     if (!m_serviceWorkerContainer)
-        m_serviceWorkerContainer = ServiceWorkerContainer::create(scriptExecutionContext(), *this).moveToUniquePtr();
+        m_serviceWorkerContainer = ServiceWorkerContainer::create(protectedScriptExecutionContext().get(), *this).moveToUniquePtr();
     return *m_serviceWorkerContainer;
 }
 
 ExceptionOr<ServiceWorkerContainer&> NavigatorBase::serviceWorker(ScriptExecutionContext& context)
 {
-    if (is<Document>(context) && downcast<Document>(context).isSandboxed(SandboxOrigin))
-        return Exception { SecurityError, "Service Worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag"_s };
+    if (RefPtr document = dynamicDowncast<Document>(context); document && document->isSandboxed(SandboxOrigin))
+        return Exception { ExceptionCode::SecurityError, "Service Worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag"_s };
     return serviceWorker();
 }
-#endif
 
 int NavigatorBase::hardwareConcurrency()
 {

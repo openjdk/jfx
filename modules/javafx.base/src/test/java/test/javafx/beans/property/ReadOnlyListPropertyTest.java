@@ -32,16 +32,16 @@ import javafx.beans.property.ReadOnlyListProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ReadOnlyListPropertyTest {
 
     private static final Object DEFAULT = null;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
     }
 

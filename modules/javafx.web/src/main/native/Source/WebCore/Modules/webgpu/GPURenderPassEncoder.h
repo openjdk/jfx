@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,13 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
 #include "GPUColorDict.h"
 #include "GPUIndexFormat.h"
 #include "GPUIntegralTypes.h"
+#include "WebGPURenderPassEncoder.h"
 #include <JavaScriptCore/Uint32Array.h>
 #include <optional>
-#include <pal/graphics/WebGPU/WebGPURenderPassEncoder.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -47,7 +48,7 @@ class GPURenderPipeline;
 
 class GPURenderPassEncoder : public RefCounted<GPURenderPassEncoder> {
 public:
-    static Ref<GPURenderPassEncoder> create(Ref<PAL::WebGPU::RenderPassEncoder>&& backing)
+    static Ref<GPURenderPassEncoder> create(Ref<WebGPU::RenderPassEncoder>&& backing)
     {
         return adoptRef(*new GPURenderPassEncoder(WTFMove(backing)));
     }
@@ -58,7 +59,7 @@ public:
     void setPipeline(const GPURenderPipeline&);
 
     void setIndexBuffer(const GPUBuffer&, GPUIndexFormat, std::optional<GPUSize64> offset, std::optional<GPUSize64>);
-    void setVertexBuffer(GPUIndex32 slot, const GPUBuffer&, std::optional<GPUSize64> offset, std::optional<GPUSize64>);
+    void setVertexBuffer(GPUIndex32 slot, const GPUBuffer*, std::optional<GPUSize64> offset, std::optional<GPUSize64>);
 
     void draw(GPUSize32 vertexCount, std::optional<GPUSize32> instanceCount,
         std::optional<GPUSize32> firstVertex, std::optional<GPUSize32> firstInstance);
@@ -73,7 +74,7 @@ public:
     void setBindGroup(GPUIndex32, const GPUBindGroup&,
         std::optional<Vector<GPUBufferDynamicOffset>>&& dynamicOffsets);
 
-    void setBindGroup(GPUIndex32, const GPUBindGroup&,
+    ExceptionOr<void> setBindGroup(GPUIndex32, const GPUBindGroup&,
         const Uint32Array& dynamicOffsetsData,
         GPUSize64 dynamicOffsetsDataStart,
         GPUSize32 dynamicOffsetsDataLength);
@@ -98,16 +99,16 @@ public:
     void executeBundles(Vector<RefPtr<GPURenderBundle>>&&);
     void end();
 
-    PAL::WebGPU::RenderPassEncoder& backing() { return m_backing; }
-    const PAL::WebGPU::RenderPassEncoder& backing() const { return m_backing; }
+    WebGPU::RenderPassEncoder& backing() { return m_backing; }
+    const WebGPU::RenderPassEncoder& backing() const { return m_backing; }
 
 private:
-    GPURenderPassEncoder(Ref<PAL::WebGPU::RenderPassEncoder>&& backing)
+    GPURenderPassEncoder(Ref<WebGPU::RenderPassEncoder>&& backing)
         : m_backing(WTFMove(backing))
     {
     }
 
-    Ref<PAL::WebGPU::RenderPassEncoder> m_backing;
+    Ref<WebGPU::RenderPassEncoder> m_backing;
 };
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -660,11 +660,11 @@ public class TableColumnHeader extends Region {
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
+        cell.updateTableColumn(tc);
+        cell.updateTableView(tv);
         for (int row = 0; row < rows; row++) {
             tableRow.updateIndex(row);
 
-            cell.updateTableColumn(tc);
-            cell.updateTableView(tv);
             cell.updateTableRow(tableRow);
             cell.updateIndex(row);
 
@@ -682,10 +682,8 @@ public class TableColumnHeader extends Region {
         // RT-36855 - take into account the column header text / graphic widths.
         // Magic 10 is to allow for sort arrow to appear without text truncation.
         TableColumnHeader header = tableSkin.getTableHeaderRow().getColumnHeaderFor(tc);
-        double headerTextWidth = Utils.computeTextWidth(header.label.getFont(), tc.getText(), -1);
-        Node graphic = header.label.getGraphic();
-        double headerGraphicWidth = graphic == null ? 0 : graphic.prefWidth(-1) + header.label.getGraphicTextGap();
-        double headerWidth = headerTextWidth + headerGraphicWidth + 10 + header.snappedLeftInset() + header.snappedRightInset();
+        header.applyCss();
+        double headerWidth = header.snappedLeftInset() + header.snappedRightInset() + header.label.prefWidth(-1) + 10;
         maxWidth = Math.max(maxWidth, headerWidth);
 
         // RT-23486
@@ -754,12 +752,12 @@ public class TableColumnHeader extends Region {
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
+        cell.updateTableColumn(tc);
+        cell.updateTreeTableView(ttv);
         for (int row = 0; row < rows; row++) {
             treeTableRow.updateIndex(row);
             treeTableRow.updateTreeItem(ttv.getTreeItem(row));
 
-            cell.updateTableColumn(tc);
-            cell.updateTreeTableView(ttv);
             cell.updateTableRow(treeTableRow);
             cell.updateIndex(row);
 
@@ -780,10 +778,8 @@ public class TableColumnHeader extends Region {
         // RT-36855 - take into account the column header text / graphic widths.
         // Magic 10 is to allow for sort arrow to appear without text truncation.
         TableColumnHeader header = tableSkin.getTableHeaderRow().getColumnHeaderFor(tc);
-        double headerTextWidth = Utils.computeTextWidth(header.label.getFont(), tc.getText(), -1);
-        Node graphic = header.label.getGraphic();
-        double headerGraphicWidth = graphic == null ? 0 : graphic.prefWidth(-1) + header.label.getGraphicTextGap();
-        double headerWidth = headerTextWidth + headerGraphicWidth + 10 + header.snappedLeftInset() + header.snappedRightInset();
+        header.applyCss();
+        double headerWidth = header.snappedLeftInset() + header.snappedRightInset() + header.label.prefWidth(-1) + 10;
         maxWidth = Math.max(maxWidth, headerWidth);
 
         // RT-23486
@@ -1192,7 +1188,8 @@ public class TableColumnHeader extends Region {
         final double x = getParentHeader().sceneToLocal(sceneX, sceneY).getX();
 
         // calculate where the ghost column header should be
-        double dragX = getTableSkin().getSkinnable().sceneToLocal(sceneX, sceneY).getX() - dragOffset;
+        double headerX = getTableHeaderRow().sceneToLocal(sceneX, sceneY).getX();
+        double dragX = headerX - dragOffset;
         getTableHeaderRow().setDragHeaderX(dragX);
 
         double startX = 0;

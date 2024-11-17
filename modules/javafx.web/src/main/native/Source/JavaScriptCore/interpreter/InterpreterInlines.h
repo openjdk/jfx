@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "CallFrameClosure.h"
+#include "CachedCall.h"
 #include "Exception.h"
 #include "FunctionCodeBlock.h"
 #include "FunctionExecutable.h"
@@ -43,6 +43,11 @@
 
 namespace JSC {
 
+ALWAYS_INLINE VM& Interpreter::vm()
+{
+    return *bitwise_cast<VM*>(bitwise_cast<uint8_t*>(this) - OBJECT_OFFSETOF(VM, interpreter));
+}
+
 inline CallFrame* calleeFrameForVarargs(CallFrame* callFrame, unsigned numUsedStackSlots, unsigned argumentCountIncludingThis)
 {
     // We want the new frame to be allocated on a stack aligned offset with a stack
@@ -58,7 +63,7 @@ inline CallFrame* calleeFrameForVarargs(CallFrame* callFrame, unsigned numUsedSt
     return CallFrame::create(callFrame->registers() - paddedCalleeFrameOffset);
 }
 
-inline Opcode Interpreter::getOpcode(OpcodeID id)
+inline JSC::Opcode Interpreter::getOpcode(OpcodeID id)
 {
     return LLInt::getOpcode(id);
 }
@@ -66,7 +71,7 @@ inline Opcode Interpreter::getOpcode(OpcodeID id)
 // This function is only available as a debugging tool for development work.
 // It is not currently used except in a RELEASE_ASSERT to ensure that it is
 // working properly.
-inline OpcodeID Interpreter::getOpcodeID(Opcode opcode)
+inline OpcodeID Interpreter::getOpcodeID(JSC::Opcode opcode)
 {
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     ASSERT(isOpcode(opcode));
@@ -88,9 +93,9 @@ inline OpcodeID Interpreter::getOpcodeID(Opcode opcode)
 #endif
 }
 
-ALWAYS_INLINE JSValue Interpreter::executeCachedCall(CallFrameClosure& closure)
+ALWAYS_INLINE JSValue Interpreter::executeCachedCall(CachedCall& cachedCall)
 {
-    VM& vm = *closure.vm;
+    VM& vm = this->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(!vm.isCollectorBusyOnCurrentThread());
@@ -107,25 +112,15 @@ ALWAYS_INLINE JSValue Interpreter::executeCachedCall(CallFrameClosure& closure)
             return throwScope.exception();
     }
 
-    {
+    if (UNLIKELY(!cachedCall.m_addressForCall)) {
         DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
-
-        // Reload CodeBlock since GC can replace CodeBlock owned by Executable.
-        CodeBlock* codeBlock;
-        closure.functionExecutable->prepareForExecution<FunctionExecutable>(vm, closure.function, closure.scope, CodeForCall, codeBlock);
+        cachedCall.relink();
         RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
-
-        ASSERT(codeBlock);
-        codeBlock->m_shouldAlwaysBeInlined = false;
-        {
-            DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
-            closure.protoCallFrame->setCodeBlock(codeBlock);
-        }
     }
 
     // Execute the code:
     throwScope.release();
-    return JSValue::decode(vmEntryToJavaScript(closure.functionExecutable->generatedJITCodeForCall()->addressForCall(), &vm, closure.protoCallFrame));
+    return JSValue::decode(vmEntryToJavaScript(cachedCall.m_addressForCall, &vm, &cachedCall.m_protoCallFrame));
 }
 
 } // namespace JSC

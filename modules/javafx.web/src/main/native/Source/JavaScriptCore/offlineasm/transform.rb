@@ -267,6 +267,7 @@ class Label
             }
             result = Label.forName(codeOrigin, name, @definedInFile)
             result.setGlobal() if global?
+            result.setUnalignedGlobal() unless aligned?
             result.clearExtern unless extern?
             result
         else
@@ -286,6 +287,7 @@ class Label
             }
             result = Label.forName(codeOrigin, name, @definedInFile)
             result.setGlobal() if global?
+            result.setUnalignedGlobal() unless aligned?
             result.clearExtern unless extern?
             result
         else
@@ -673,6 +675,11 @@ class RegisterID
 end
 
 class FPRegisterID
+    def validate
+    end
+end
+
+class VecRegisterID
     def validate
     end
 end

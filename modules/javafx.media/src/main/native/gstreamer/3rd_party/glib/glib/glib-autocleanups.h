@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2015 Canonical Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -20,6 +22,8 @@
 #if !defined (__GLIB_H_INSIDE__) && !defined (GLIB_COMPILATION)
 #error "Only <glib.h> can be included directly."
 #endif
+
+#ifndef __GI_SCANNER__
 
 static inline void
 g_autoptr_cleanup_generic_gfree (void *p)
@@ -43,7 +47,9 @@ G_GNUC_BEGIN_IGNORE_DEPRECATIONS
  * glib/tests/autoptr.c
  */
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GAsyncQueue, g_async_queue_unref)
+#ifndef GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GBookmarkFile, g_bookmark_file_free)
+#endif // GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GBytes, g_bytes_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GChecksum, g_checksum_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GDateTime, g_date_time_unref)
@@ -105,5 +111,9 @@ G_DEFINE_AUTO_CLEANUP_FREE_FUNC(GStrv, g_strfreev, NULL)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GRefString, g_ref_string_release)
 #endif // GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GUri, g_uri_unref)
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (GPathBuf, g_path_buf_free)
+G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (GPathBuf, g_path_buf_clear)
 
 G_GNUC_END_IGNORE_DEPRECATIONS
+
+#endif /* __GI_SCANNER__ */

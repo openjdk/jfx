@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -998,14 +998,21 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         public static final EventType<?> ANY = TREE_NOTIFICATION_EVENT;
 
         private transient final TreeItem<T> treeItem;
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
 
+        @SuppressWarnings("doclint:missing")
         private final List<? extends TreeItem<T>> added;
+        @SuppressWarnings("doclint:missing")
         private final List<? extends TreeItem<T>> removed;
+        @SuppressWarnings("doclint:missing")
         private final ListChangeListener.Change<? extends TreeItem<T>> change;
 
+        @SuppressWarnings("doclint:missing")
         private final boolean wasExpanded;
+        @SuppressWarnings("doclint:missing")
         private final boolean wasCollapsed;
+        @SuppressWarnings("doclint:missing")
         private boolean wasPermutated;
 
         /**

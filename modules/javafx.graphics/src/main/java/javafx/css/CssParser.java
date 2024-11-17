@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,16 @@
 package javafx.css;
 
 import com.sun.javafx.css.Combinator;
+import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.FontFaceImpl;
+import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
+import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.util.Utils;
+import javafx.animation.Interpolator;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.DurationConverter;
 import javafx.css.converter.EffectConverter;
@@ -82,6 +88,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import javafx.util.Duration;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
@@ -98,6 +105,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -639,6 +647,43 @@ final public class CssParser {
         );
     }
 
+    // Return true if the token is a time type or an identifier
+    // (which would indicate a lookup).
+    private boolean isTime(Token token) {
+        switch (token.getType()) {
+            case CssLexer.SECONDS:
+            case CssLexer.MS:
+                return true;
+            default:
+                return token.getType() == CssLexer.IDENT;
+        }
+    }
+
+    private Size time(Token token) throws ParseException {
+        return switch (token.getType()) {
+            case CssLexer.SECONDS -> {
+                String sval = token.getText().trim();
+                double v = Double.parseDouble(sval.substring(0, sval.length() - 1).trim());
+                yield new Size(v, SizeUnits.S);
+            }
+
+            case CssLexer.MS -> {
+                String sval = token.getText().trim();
+                double v = Double.parseDouble(sval.substring(0, sval.length() - 2).trim());
+                yield new Size(v, SizeUnits.MS);
+            }
+
+            default -> {
+                if (LOGGER.isLoggable(Level.FINEST)) {
+                    LOGGER.finest("Expected \'<duration>\'");
+                }
+                ParseException re = new ParseException("Expected \'<duration>\'", token, this);
+                reportError(createError(re.toString()));
+                throw re;
+            }
+        };
+    }
+
     // Count the number of terms in a series
     private int numberOfTerms(final Term root) {
         if (root == null) return 0;
@@ -692,11 +737,11 @@ final public class CssParser {
         return term.nextLayer;
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // Parsing routines
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     ParsedValueImpl valueFor(String property, Term root, CssLexer lexer) throws ParseException {
         final String prop = property.toLowerCase(Locale.ROOT);
@@ -827,6 +872,16 @@ final public class CssParser {
                 error(root,  "Expected STRING or IDENT");
             }
             return new ParsedValueImpl<String, String>(stripQuotes(str), null, false);
+        } else if ("transition".equals(prop)) {
+            return parseTransitionLayers(root);
+        } else if ("transition-duration".equals(prop)) {
+            return parseDurationLayers(root, false);
+        } else if ("transition-delay".equals(prop)) {
+            return parseDurationLayers(root, true);
+        } else if ("transition-timing-function".equals(prop)) {
+            return parseEasingFunctionLayers(root);
+        } else if ("transition-property".equals(prop)) {
+            return parseTransitionPropertyLayers(root);
         }
         return parse(root);
     }
@@ -949,6 +1004,48 @@ final public class CssParser {
         }
 
         return value;
+    }
+
+    private ParsedValueImpl<?, Size> parseTime(final Term root) throws ParseException {
+        if (root.token == null || !isTime(root.token)) {
+            error(root, "Expected \'<duration>\'");
+        }
+
+        if (root.token.getType() != CssLexer.IDENT) {
+            Size time = time(root.token);
+            return new ParsedValueImpl<>(time, null);
+        }
+
+        String key = root.token.getText();
+        return switch (key) {
+            case "initial", "inherit" -> new ParsedValueImpl<>(new Size(0, SizeUnits.S), null);
+            case "indefinite" -> new ParsedValueImpl<>(new Size(Double.POSITIVE_INFINITY, SizeUnits.S), null);
+            default -> new ParsedValueImpl<>(key, null, true);
+        };
+    }
+
+    private ParsedValueImpl<ParsedValue<?, Size>, Duration> parseDuration(
+            Term term, boolean allowNegative) throws ParseException {
+        ParsedValue<?, Size> time = parseTime(term);
+        if (!allowNegative && time.getValue() instanceof Size size && size.getValue() < 0) {
+            error(term, "Invalid \'<duration>\'");
+        }
+
+        return new ParsedValueImpl<>(time, DurationConverter.getInstance());
+    }
+
+    private ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>
+            parseDurationLayers(Term term, boolean allowNegative) throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<ParsedValue<?, Size>, Duration>[] layers = new ParsedValueImpl[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseDuration(term, allowNegative);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]>(
+                layers, DurationConverter.SequenceConverter.getInstance());
     }
 
     private ParsedValueImpl<?,Color> parseColor(final Term root) throws ParseException {
@@ -3615,11 +3712,11 @@ final public class CssParser {
         return new ParsedValueImpl<>(layers, URLConverter.SequenceConverter.getInstance());
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // http://www.w3.org/TR/css3-fonts
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /* http://www.w3.org/TR/css3-fonts/#font-size-the-font-size-property */
     private ParsedValueImpl<ParsedValue<?,Size>,Number> parseFontSize(final Term root) throws ParseException {
@@ -3833,6 +3930,198 @@ final public class CssParser {
 
         ParsedValueImpl[] values = new ParsedValueImpl[]{ ffamily, fsize, fweight, fstyle };
         return new ParsedValueImpl<>(values, FontConverter.getInstance());
+    }
+
+    // https://www.w3.org/TR/css-transitions-1/#transition-shorthand-property
+    private ParsedValueImpl<ParsedValue<ParsedValue[], TransitionDefinition>[], TransitionDefinition[]>
+            parseTransitionLayers(Term term) throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<ParsedValue[], TransitionDefinition>[] layers = new ParsedValue[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseTransition(term);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<ParsedValue[], TransitionDefinition>[], TransitionDefinition[]>(
+            layers, TransitionDefinitionConverter.SequenceConverter.getInstance());
+    }
+
+    private ParsedValueImpl<ParsedValue[], TransitionDefinition> parseTransition(Term term)
+            throws ParseException {
+        ParsedValue<?, String> parsedProperty = null;
+        ParsedValue<ParsedValue<?, Size>, Duration> parsedDuration = null;
+        ParsedValue<ParsedValue<?, Size>, Duration> parsedDelay = null;
+        ParsedValue<?, Interpolator> parsedTimingFunction = null;
+
+        for (int i = 0; i < 4; ++i) {
+            if (term == null) {
+                break;
+            }
+
+            if (isEasingFunction(term.token)) {
+                if (parsedTimingFunction != null) {
+                    error(term, "Expected \'<single-transition-property>\' or \'<duration>\'");
+                }
+
+                parsedTimingFunction = parseEasingFunction(term);
+            } else if (isTransitionProperty(term.token)) {
+                if (parsedProperty != null) {
+                    error(term, "Expected \'<easing-function>\' or \'<duration>\'");
+                }
+
+                parsedProperty = parseTransitionProperty(term);
+            } else if (isTime(term.token)) {
+                if (parsedDuration == null) {
+                    parsedDuration = parseDuration(term, false);
+                } else if (parsedDelay == null) {
+                    parsedDelay = parseDuration(term, true);
+                }
+            } else {
+                List<String> args = new ArrayList<>();
+                if (parsedTimingFunction == null) args.add("\'<easing-function>\'");
+                if (parsedProperty == null) args.add("\'<single-transition-property>\'");
+                if (parsedDuration == null || parsedDelay == null) args.add("\'<duration>\'");
+                error(term, "Expected " + String.join(" or ", args));
+            }
+
+            term = term.nextInSeries;
+        }
+
+        if (parsedProperty == null && parsedDuration == null && parsedTimingFunction == null) {
+            error(term, "Expected \'<single-transition>#\'");
+        }
+
+        return new ParsedValueImpl<ParsedValue[], TransitionDefinition>(new ParsedValue[] {
+            parsedProperty, parsedDuration, parsedDelay, parsedTimingFunction
+        }, TransitionDefinitionConverter.getInstance());
+    }
+
+    /*
+     * https://www.w3.org/TR/css-transitions-1/#transition-property-property
+     */
+    private ParsedValueImpl<ParsedValue<String, String>[], String[]> parseTransitionPropertyLayers(Term term)
+            throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<String, String>[] layers = new ParsedValue[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseTransitionProperty(term);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<String, String>[], String[]>(
+            layers, StringConverter.SequenceConverter.getInstance());
+    }
+
+    private ParsedValueImpl<String, String> parseTransitionProperty(Term term) throws ParseException {
+        if (term == null || !isTransitionProperty(term.token)) {
+            error(term,  "Expected \'<transition-property>\'");
+        }
+
+        return new ParsedValueImpl<String, String>(term.token.getText(), null);
+    }
+
+    private boolean isTransitionProperty(Token token) {
+        int ttype;
+        String str;
+        return token != null
+            && ((ttype = token.getType()) == CssLexer.STRING || ttype == CssLexer.IDENT)
+            && (str = token.getText()) != null
+            && !str.isEmpty();
+    }
+
+    /*
+     * https://www.w3.org/TR/css-easing-1/#easing-functions
+     */
+    private ParsedValueImpl<ParsedValue<?, Interpolator>[], Interpolator[]>
+            parseEasingFunctionLayers(Term term) throws ParseException {
+        int nLayers = numberOfLayers(term);
+        ParsedValue<?, Interpolator>[] layers = new ParsedValue[nLayers];
+
+        for (int i = 0; i < nLayers; ++i) {
+            layers[i] = parseEasingFunction(term);
+            term = nextLayer(term);
+        }
+
+        return new ParsedValueImpl<ParsedValue<?, Interpolator>[], Interpolator[]>(
+            layers, InterpolatorConverter.SequenceConverter.getInstance());
+    }
+
+    private ParsedValueImpl<?, Interpolator> parseEasingFunction(Term term) throws ParseException {
+        if (term == null || !isEasingFunction(term.token)) {
+            error(term,  "Expected \'<easing-function>\'");
+        }
+
+        return switch (term.token.getText()) {
+            case "cubic-bezier(" -> {
+                Double[] args = new Double[4];
+                Term arg = term.firstArg;
+
+                for (int j = 0; j < 4; ++j, arg = arg.nextArg) {
+                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER
+                            || (args[j] = Double.parseDouble(arg.token.getText())) < 0 || args[j] > 1) {
+                        error(arg != null ? arg : term,  "Expected \'<number [0,1]>\'");
+                    }
+                }
+
+                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
+                        new ParsedValueImpl(term.token.getText(), null),
+                        new ParsedValueImpl(Arrays.asList(args), null)
+                    }, InterpolatorConverter.getInstance());
+            }
+
+            case "steps(" -> {
+                Object[] args = new Object[2];
+                Term arg = term.firstArg;
+                if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
+                    error(arg,  "Expected \'<integer>\'");
+                } else {
+                    args[0] = Integer.parseInt(arg.token.getText());
+                }
+
+                arg = arg.nextArg;
+                if (arg != null) {
+                    if (isStepPosition(arg.token)) {
+                        args[1] = arg.token.getText();
+                    } else {
+                        error(arg != null ? arg : term, "Expected \'<step-position>\'");
+                    }
+                }
+
+                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
+                        new ParsedValueImpl(term.token.getText(), null),
+                        new ParsedValueImpl(Arrays.asList(args), null)
+                    }, InterpolatorConverter.getInstance());
+            }
+
+            default -> {
+                yield new ParsedValueImpl<>(
+                    new ParsedValueImpl(term.token.getText(), null),
+                    InterpolatorConverter.getInstance());
+            }
+        };
+    }
+
+    // https://www.w3.org/TR/css-easing-1/#easing-functions
+    // <easing-function> = linear | <cubic-bezier-easing-function> | <step-easing-function>
+    private boolean isEasingFunction(Token token) throws ParseException {
+        return token != null && switch (token.getText()) {
+            case "linear" -> true;
+            case "ease", "ease-in", "ease-out", "ease-in-out", "cubic-bezier(" -> true;
+            case "step-start", "step-end", "steps(" -> true;
+            case "-fx-ease-in", "-fx-ease-out", "-fx-ease-both" -> true;
+            default -> false;
+        };
+    }
+
+    // https://www.w3.org/TR/css-easing-1/#step-easing-functions
+    // <step-position> = jump-start | jump-end | jump-none | jump-both | start | end
+    private boolean isStepPosition(Token token) throws ParseException {
+        return token != null && switch (token.getText()) {
+            case "jump-start", "jump-end", "jump-none", "jump-both", "start", "end" -> true;
+            default -> false;
+        };
     }
 
     //
@@ -4249,6 +4538,7 @@ final public class CssParser {
         return selectors;
     }
 
+    @SuppressWarnings("removal")
     private Selector selector(CssLexer lexer) {
 
         List<Combinator> combinators = null;
@@ -4292,6 +4582,7 @@ final public class CssParser {
 
     }
 
+    @SuppressWarnings("removal")
     private SimpleSelector simpleSelector(CssLexer lexer) {
 
         String esel = "*"; // element selector. default to universal

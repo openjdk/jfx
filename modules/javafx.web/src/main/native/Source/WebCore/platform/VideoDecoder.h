@@ -25,12 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEB_CODECS)
-
+#include <span>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Expected.h>
 #include <wtf/Ref.h>
-#include <wtf/Span.h>
 
 namespace WebCore {
 
@@ -41,14 +39,18 @@ public:
     WEBCORE_EXPORT VideoDecoder();
     WEBCORE_EXPORT virtual ~VideoDecoder();
 
+    enum class HardwareAcceleration { Yes, No };
+    enum class HardwareBuffer { Yes, No };
     struct Config {
-        Span<const uint8_t> description;
+        std::span<const uint8_t> description;
         uint64_t width { 0 };
         uint64_t height { 0 };
+        HardwareAcceleration decoding { HardwareAcceleration::No };
+        HardwareBuffer pixelBuffer { HardwareBuffer::No };
     };
 
     struct EncodedFrame {
-        Span<const uint8_t> data;
+        std::span<const uint8_t> data;
         bool isKeyFrame { false };
         int64_t timestamp { 0 };
         std::optional<uint64_t> duration;
@@ -77,9 +79,9 @@ public:
     virtual void reset() = 0;
     virtual void close() = 0;
 
+    static String fourCCToCodecString(uint32_t fourCC);
+
     static CreatorFunction s_customCreator;
 };
 
 }
-
-#endif // ENABLE(WEB_CODECS)

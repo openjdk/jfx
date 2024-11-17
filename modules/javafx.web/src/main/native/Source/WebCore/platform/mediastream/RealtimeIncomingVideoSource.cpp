@@ -37,19 +37,40 @@
 
 namespace WebCore {
 
+static RealtimeMediaSourceSupportedConstraints supportedRealtimeIncomingVideoSourceSettingConstraints()
+{
+    RealtimeMediaSourceSupportedConstraints constraints;
+    constraints.setSupportsWidth(true);
+    constraints.setSupportsHeight(true);
+    constraints.setSupportsFrameRate(true);
+    constraints.setSupportsAspectRatio(true);
+    return constraints;
+}
+
 RealtimeIncomingVideoSource::RealtimeIncomingVideoSource(rtc::scoped_refptr<webrtc::VideoTrackInterface>&& videoTrack, String&& videoTrackId)
     : RealtimeMediaSource(CaptureDevice { WTFMove(videoTrackId), CaptureDevice::DeviceType::Camera, "remote video"_s })
     , m_videoTrack(WTFMove(videoTrack))
 {
     ASSERT(m_videoTrack);
 
-    RealtimeMediaSourceSupportedConstraints constraints;
-    constraints.setSupportsWidth(true);
-    constraints.setSupportsHeight(true);
     m_currentSettings = RealtimeMediaSourceSettings { };
-    m_currentSettings->setSupportedConstraints(WTFMove(constraints));
+    m_currentSettings->setSupportedConstraints(supportedRealtimeIncomingVideoSourceSettingConstraints());
 
     m_videoTrack->RegisterObserver(this);
+
+    m_frameRateMonitor = makeUnique<FrameRateMonitor>([this](auto info) {
+#if RELEASE_LOG_DISABLED
+        UNUSED_PARAM(this);
+        UNUSED_PARAM(info);
+#else
+        if (!m_enableFrameRatedMonitoringLogging)
+            return;
+
+        auto frameTime = info.frameTime.secondsSinceEpoch().value();
+        auto lastFrameTime = info.lastFrameTime.secondsSinceEpoch().value();
+        ALWAYS_LOG_IF(loggerPtr(), LOGIDENTIFIER, "frame at ", frameTime, " previous frame was at ", lastFrameTime, ", observed frame rate is ", info.observedFrameRate, ", delay since last frame is ", (frameTime - lastFrameTime) * 1000, " ms, frame count is ", info.frameCount);
+#endif
+    });
 }
 
 RealtimeIncomingVideoSource::~RealtimeIncomingVideoSource()
@@ -61,15 +82,8 @@ RealtimeIncomingVideoSource::~RealtimeIncomingVideoSource()
 void RealtimeIncomingVideoSource::enableFrameRatedMonitoring()
 {
 #if !RELEASE_LOG_DISABLED
-    if (m_frameRateMonitor)
-        return;
-    m_frameRateMonitor = makeUnique<FrameRateMonitor>([this](auto info) {
-        auto frameTime = info.frameTime.secondsSinceEpoch().value();
-        auto lastFrameTime = info.lastFrameTime.secondsSinceEpoch().value();
-        ALWAYS_LOG_IF(loggerPtr(), LOGIDENTIFIER, "frame at ", frameTime, " previous frame was at ", lastFrameTime, ", observed frame rate is ", info.observedFrameRate, ", delay since last frame is ", (frameTime - lastFrameTime) * 1000, " ms, frame count is ", info.frameCount);
-    });
+    m_enableFrameRatedMonitoringLogging = true;
 #endif
-
 }
 
 void RealtimeIncomingVideoSource::startProducingData()
@@ -100,15 +114,13 @@ const RealtimeMediaSourceSettings& RealtimeIncomingVideoSource::settings()
     if (m_currentSettings)
         return m_currentSettings.value();
 
-    RealtimeMediaSourceSupportedConstraints constraints;
-    constraints.setSupportsWidth(true);
-    constraints.setSupportsHeight(true);
-
     RealtimeMediaSourceSettings settings;
-    auto& size = this->size();
+    settings.setSupportedConstraints(supportedRealtimeIncomingVideoSourceSettingConstraints());
+
+    auto size = this->size();
     settings.setWidth(size.width());
     settings.setHeight(size.height());
-    settings.setSupportedConstraints(constraints);
+    settings.setFrameRate(frameRate());
 
     m_currentSettings = WTFMove(settings);
     return m_currentSettings.value();
@@ -116,7 +128,7 @@ const RealtimeMediaSourceSettings& RealtimeIncomingVideoSource::settings()
 
 void RealtimeIncomingVideoSource::settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag> settings)
 {
-    if (settings.containsAny({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height }))
+    if (settings.containsAny({ RealtimeMediaSourceSettings::Flag::FrameRate, RealtimeMediaSourceSettings::Flag::Height, RealtimeMediaSourceSettings::Flag::Width }))
         m_currentSettings = std::nullopt;
 }
 
@@ -139,10 +151,19 @@ VideoFrameTimeMetadata RealtimeIncomingVideoSource::metadataFromVideoFrame(const
 
 void RealtimeIncomingVideoSource::notifyNewFrame()
 {
-#if !RELEASE_LOG_DISABLED
-    if (m_frameRateMonitor)
+    if (!m_frameRateMonitor)
+        return;
+
         m_frameRateMonitor->update();
-#endif
+
+    auto observedFrameRate = m_frameRateMonitor->observedFrameRate();
+    if (m_currentFrameRate > 0 && fabs(m_currentFrameRate - observedFrameRate) < 1)
+        return;
+
+    m_currentFrameRate = observedFrameRate;
+    callOnMainThread([protectedThis = Ref { *this }, observedFrameRate] {
+        protectedThis->setFrameRate(observedFrameRate);
+    });
 }
 
 } // namespace WebCore

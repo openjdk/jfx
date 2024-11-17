@@ -63,9 +63,6 @@ typedef enum GestureMaskType {
 
     NSEvent                 *lastEvent;
 
-    // The last processed key event
-    NSEvent                 *s_lastKeyEvent;
-
     GlassDraggingSource     *draggingSource;
     NSInteger               lastTrackingNumber;
 
@@ -86,7 +83,7 @@ typedef enum GestureMaskType {
 - (void)sendJavaMouseEvent:(NSEvent *)theEvent;
 - (void)resetMouseTracking;
 - (void)sendJavaMenuEvent:(NSEvent *)theEvent;
-- (void)sendJavaKeyEvent:(NSEvent *)event isDown:(BOOL)isDown;
+- (BOOL)sendJavaKeyEvent:(NSEvent *)event isDown:(BOOL)isDown;
 - (void)sendJavaModifierKeyEvent:(NSEvent *)theEvent;
 - (void)sendJavaGestureEvent:(NSEvent *)theEvent type:(int)type;
 - (void)sendJavaGestureBeginEvent:(NSEvent *)theEvent;

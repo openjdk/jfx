@@ -1,6 +1,8 @@
 /* GLIB sliced memory - fast threaded memory chunk allocator
  * Copyright (C) 2005 Tim Janik
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -105,9 +107,11 @@ gint64   g_slice_get_config    (GSliceConfig ckey);
 GLIB_DEPRECATED_IN_2_34
 gint64*  g_slice_get_config_state  (GSliceConfig ckey, gint64 address, guint *n_values);
 
+#ifndef __GI_SCANNER__
 #ifdef G_ENABLE_DEBUG
 GLIB_AVAILABLE_IN_ALL
 void     g_slice_debug_tree_statistics (void);
+#endif
 #endif
 
 G_END_DECLS

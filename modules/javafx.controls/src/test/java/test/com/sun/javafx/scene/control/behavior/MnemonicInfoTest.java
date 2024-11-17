@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,12 @@
 
 package test.com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.control.behavior.MnemonicInfo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import javafx.scene.input.KeyCombination;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.behavior.MnemonicInfo;
 
 public class MnemonicInfoTest {
 
@@ -141,5 +142,4 @@ public class MnemonicInfoTest {
         assertKeyCombination("x", mnemonicInfo.getMnemonicKeyCombination());
         assertEquals(0, mnemonicInfo.getMnemonicIndex());
     }
-
 }

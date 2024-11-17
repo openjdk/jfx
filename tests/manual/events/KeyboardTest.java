@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,7 +83,7 @@ import javafx.stage.Stage;
 public class KeyboardTest extends Application {
 
     public static void main(String[] args) {
-        Application.launch(args);
+        Application.launch(KeyboardTest.class, args);
     }
 
     private static final String os = System.getProperty("os.name");
@@ -167,7 +167,7 @@ public class KeyboardTest extends Application {
             list.add(new KeyData(cd, null, null, null));
         }
 
-        /* Add a key with unshifted, shifted, and AltGr/Option characters */
+        /* Add a key with unshifted, shifted, and AltGr characters */
         private void add(KeyCode cd, String base, String shifted, String altGr) {
             list.add(new KeyData(cd, base, shifted, altGr));
         }
@@ -249,9 +249,9 @@ public class KeyboardTest extends Application {
 
             /*
              * ENTER is assigned to both Return and Enter which generate
-             * different characters.
+             * different characters. Platforms should always target Return.
              */
-            add(KeyCode.ENTER, "wild");
+            add(KeyCode.ENTER, "\r");
 
             if (onMac) {
                 add(KeyCode.COMMAND);
@@ -263,6 +263,7 @@ public class KeyboardTest extends Application {
                 add(KeyCode.DELETE,     "\u007F");
                 add(KeyCode.ESCAPE,     "\u001B");
                 add(KeyCode.INSERT);
+                add(KeyCode.ALT_GRAPH);
 
                 // Sent twice to toggle off and back on
                 add(KeyCode.NUM_LOCK);
@@ -334,8 +335,8 @@ public class KeyboardTest extends Application {
             builder.addCommon();
             builder.addLetters();
 
-            /* Include one combination that involves AltGr/Option. */
-            final String altGrFive = (onMac ? "{" : "[");
+            /* Include one combination that involves AltGr. */
+            final String altGrFive = "[";
 
             /*
              * On a French layout the unshifted top-row keys (which generate
@@ -356,15 +357,16 @@ public class KeyboardTest extends Application {
                 builder.add(KeyCode.DIGIT2, E_ACUTE,      "2");
                 builder.add(KeyCode.DIGIT3, DOUBLE_QUOTE, "3");
                 builder.add(KeyCode.DIGIT4, QUOTE,        "4");
-                builder.add(KeyCode.DIGIT5, "(",          "5", altGrFive);
-                /* Six and eight require some tweaking, below */
+                /* Five, six, and eight require some tweaking, below */
                 builder.add(KeyCode.DIGIT7, E_GRAVE,      "7");
                 builder.add(KeyCode.DIGIT9, C_CEDILLA,    "9");
 
                 if (onMac) {
+                    builder.add(KeyCode.DIGIT5, "(",      "5");
                     builder.add(KeyCode.DIGIT6, SECTION,  "6");
                     builder.add(KeyCode.DIGIT8, "!",      "8");
                 } else {
+                    builder.add(KeyCode.DIGIT5, "(",      "5", altGrFive);
                     builder.add(KeyCode.DIGIT6, "-",      "6");
                     builder.add(KeyCode.DIGIT8, "_",      "8");
                 }
@@ -398,10 +400,6 @@ public class KeyboardTest extends Application {
             builder.addCommon();
             builder.addLetters();
 
-            /* Include one combination that involves Option/AltGr */
-            final String altGrSeven = (onMac ? "|" : "{");
-            final String decimalCharacter = (onLinux ? "." : ",");
-
             builder.add(KeyCode.DIGIT0, "0", "=");
             builder.add(KeyCode.DIGIT1, "1", "!");
             builder.add(KeyCode.DIGIT2, "2", DOUBLE_QUOTE);
@@ -409,7 +407,14 @@ public class KeyboardTest extends Application {
             builder.add(KeyCode.DIGIT4, "4", "$");
             builder.add(KeyCode.DIGIT5, "5", "%");
             builder.add(KeyCode.DIGIT6, "6", "&");
-            builder.add(KeyCode.DIGIT7, "7", "/", altGrSeven);
+
+            if (onMac) {
+                builder.add(KeyCode.DIGIT7, "7", "/");
+            }
+            else {
+                builder.add(KeyCode.DIGIT7, "7", "/", "{");
+            }
+
             builder.add(KeyCode.DIGIT8, "8", "(");
             builder.add(KeyCode.DIGIT9, "9", ")");
 
@@ -420,7 +425,14 @@ public class KeyboardTest extends Application {
             builder.add(KeyCode.PERIOD,      ".", ":");
             builder.add(KeyCode.MINUS,       "-", "_");
 
-            builder.add(KeyCode.DECIMAL,     decimalCharacter);
+            // On Linux the German keypad produces a comma and is encoded by
+            // both the OS and JavaFX as SEPARATOR. There is a DECIMAL key but
+            // it doesn't correspond to the physical key on the keyboard.
+            if (onLinux) {
+                builder.add(KeyCode.SEPARATOR, ",");
+            } else {
+                builder.add(KeyCode.DECIMAL, ",");
+            }
 
             builder.addAbsent(KeyCode.COLON);
 
@@ -448,7 +460,7 @@ public class KeyboardTest extends Application {
 
             builder.add(KeyCode.QUOTE,        QUOTE, "?");
             builder.add(KeyCode.INVERTED_EXCLAMATION_MARK, INV_EXCLAMATION_MARK, INV_QUESTION_MARK);
-            builder.add(KeyCode.PLUS,         "+", "*", "]");
+            builder.add(KeyCode.PLUS,         "+", "*");
             builder.add(KeyCode.LESS,         "<", ">");
             builder.add(KeyCode.COMMA,        ",", ";");
             builder.add(KeyCode.PERIOD,       ".", ":");
@@ -507,6 +519,7 @@ public class KeyboardTest extends Application {
             this.keys = k;
         }
 
+        @Override
         public String toString() {
             return label;
         }
@@ -533,6 +546,7 @@ public class KeyboardTest extends Application {
             this.label = l;
         }
 
+        @Override
         public String toString() {
             return label;
         }
@@ -671,6 +685,7 @@ public class KeyboardTest extends Application {
             * This timer is cleared when the RELEASED event calls advance().
             */
             TimerTask task = new TimerTask() {
+                @Override
                 public void run() {
                     Platform.runLater(() -> keyTimedOut());
                 }
@@ -695,7 +710,7 @@ public class KeyboardTest extends Application {
 
         private static boolean isOnKeypad(KeyCode code) {
             switch (code) {
-                case DIVIDE, MULTIPLY, SUBTRACT, ADD, DECIMAL:
+                case DIVIDE, MULTIPLY, SUBTRACT, ADD, DECIMAL, SEPARATOR:
                 case NUMPAD0, NUMPAD1, NUMPAD2, NUMPAD3, NUMPAD4:
                 case NUMPAD5, NUMPAD6, NUMPAD7, NUMPAD8, NUMPAD9:
                     return true;
@@ -799,10 +814,12 @@ public class KeyboardTest extends Application {
             textArea = ta;
         }
 
+        @Override
         public void clear() {
             textArea.setText("");
         }
 
+        @Override
         public void addLine(String s) {
             textArea.appendText(s + "\n");
         }

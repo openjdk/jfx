@@ -37,6 +37,7 @@
 #include "SpeechSynthesisUtterance.h"
 #include "TextTrackCue.h"
 #include "VTTRegion.h"
+#include <wtf/LoggerHelper.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
@@ -48,6 +49,44 @@ class VTTCue;
 class VTTScanner;
 class WebVTTCueData;
 
+enum class VTTDirectionSetting : uint8_t {
+    Horizontal,
+    VerticalGrowingLeft,
+    VerticalGrowingRight,
+
+    // IDL equivalents:
+    EmptyString = Horizontal,
+    Rl = VerticalGrowingLeft,
+    Lr = VerticalGrowingRight,
+
+    // For static-assert convenience.
+    MaxValue = VerticalGrowingRight,
+};
+
+enum class VTTLineAlignSetting : uint8_t {
+    Start,
+    Center,
+    End,
+};
+
+enum class VTTPositionAlignSetting : uint8_t {
+    LineLeft,
+    Center,
+    LineRight,
+    Auto,
+};
+
+enum class VTTAlignSetting : uint8_t {
+    Start,
+    Center,
+    End,
+    Left,
+    Right,
+
+    // For static-assert convenience.
+    MaxValue = Right,
+};
+
 // ----------------------------
 
 class VTTCueBox : public TextTrackCueBox {
@@ -55,25 +94,26 @@ class VTTCueBox : public TextTrackCueBox {
 public:
     static Ref<VTTCueBox> create(Document&, VTTCue&);
 
-    void applyCSSProperties(const IntSize&) override;
-
-    void setFontSizeFromCaptionUserPrefs(int fontSize) { m_fontSizeFromCaptionUserPrefs = fontSize; }
+    void applyCSSProperties() override;
+    void applyCSSPropertiesWithRegion();
 
 protected:
     VTTCueBox(Document&, VTTCue&);
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
-    int fontSizeFromCaptionUserPrefs() const { return m_fontSizeFromCaptionUserPrefs; }
-
 private:
     WeakPtr<VTTCue> m_cue;
-    int m_fontSizeFromCaptionUserPrefs;
 };
 
 // ----------------------------
 
-class VTTCue : public TextTrackCue {
+class VTTCue
+    : public TextTrackCue
+#if !RELEASE_LOG_DISABLED
+    , private LoggerHelper
+#endif
+{
     WTF_MAKE_ISO_ALLOCATED(VTTCue);
 public:
     static Ref<VTTCue> create(Document&, double start, double end, String&& content);
@@ -84,31 +124,40 @@ public:
     enum AutoKeyword { Auto };
     using LineAndPositionSetting = std::variant<double, AutoKeyword>;
 
+    using DirectionSetting = VTTDirectionSetting;
+    static constexpr size_t DirectionSettingCount = static_cast<size_t>(DirectionSetting::VerticalGrowingRight) + 1;
+
+    using LineAlignSetting = VTTLineAlignSetting;
+    static constexpr size_t LineAlignSettingCount = static_cast<size_t>(LineAlignSetting::End) + 1;
+
+    using PositionAlignSetting = VTTPositionAlignSetting;
+    using AlignSetting = VTTAlignSetting;
+
     void setTrack(TextTrack*);
 
-    const String& vertical() const;
-    ExceptionOr<void> setVertical(const String&);
+    DirectionSetting vertical() const { return m_writingDirection; }
+    void setVertical(DirectionSetting);
 
     bool snapToLines() const { return m_snapToLines; }
     void setSnapToLines(bool);
 
     LineAndPositionSetting line() const;
-    virtual ExceptionOr<void> setLine(const LineAndPositionSetting&);
+    void setLine(const LineAndPositionSetting&);
 
-    const String& lineAlign() const;
-    ExceptionOr<void> setLineAlign(const String&);
+    LineAlignSetting lineAlign() const { return m_lineAlignment; }
+    void setLineAlign(LineAlignSetting);
 
     LineAndPositionSetting position() const;
     virtual ExceptionOr<void> setPosition(const LineAndPositionSetting&);
 
-    const String& positionAlign() const;
-    ExceptionOr<void> setPositionAlign(const String&);
+    PositionAlignSetting positionAlign() const { return m_positionAlignment; }
+    void setPositionAlign(PositionAlignSetting);
 
-    int size() const { return m_cueSize; }
-    ExceptionOr<void> setSize(int);
+    double size() const { return m_cueSize; }
+    ExceptionOr<void> setSize(double);
 
-    const String& align() const;
-    ExceptionOr<void> setAlign(const String&);
+    AlignSetting align() const { return m_cueAlignment; }
+    void setAlign(AlignSetting);
 
     const String& text() const final { return m_content; }
     void setText(const String&);
@@ -129,8 +178,9 @@ public:
     void setIsActive(bool) override;
 
     bool hasDisplayTree() const { return m_displayTree; }
-    RefPtr<TextTrackCueBox> getDisplayTree(const IntSize& videoSize, int fontSize) final;
-    HTMLSpanElement& element() const { return *m_cueHighlightBox; }
+    RefPtr<TextTrackCueBox> getDisplayTree() final;
+    HTMLSpanElement& element() const { return m_cueHighlightBox; }
+    HTMLDivElement& backdrop() const { return m_cueBackdropBox; }
 
     void updateDisplayTree(const MediaTime&) final;
     void removeDisplayTree() final;
@@ -147,52 +197,28 @@ public:
     CSSValueID getCSSWritingDirection() const;
     CSSValueID getCSSWritingMode() const;
 
-    enum WritingDirection {
-        Horizontal,
-        VerticalGrowingLeft,
-        VerticalGrowingRight,
-        NumberOfWritingDirections
-    };
-    WritingDirection getWritingDirection() const { return m_writingDirection; }
-
-    enum CueAlignment {
-        Start,
-        Center,
-        End,
-        Left,
-        Right,
-        NumberOfAlignments
-    };
-    CueAlignment getAlignment() const { return m_cueAlignment; }
-
-    enum CueLignAlignment {
-        LignAlignmentStart,
-        LignAlignmentCenter,
-        LignAlignmentEnd,
-        NumberOfCueLineAlignments
-    };
-
-    enum CuePositionAlignment {
-        PositionAlignmentLignLeft,
-        PositionAlignmentLignCenter,
-        PositionAlignmentLignRight,
-        PositionAlignmentLignAuto,
-        NumberOfCuePositionAlignments
-    };
-
     void recalculateStyles() final { m_displayTreeShouldChange = true; }
-    void setFontSize(int, const IntSize&, bool important) override;
+    void setFontSize(int, bool important) override;
+    int fontSize() const { return m_fontSize; }
+    bool fontSizeIsImportant() const { return m_fontSizeIsImportant; }
 
     CueType cueType() const override { return WebVTT; }
     bool isRenderable() const final { return !m_content.isEmpty(); }
 
-    void didChange() final;
+    void didChange(bool = false) final;
 
     double calculateComputedTextPosition() const;
+    PositionAlignSetting calculateComputedPositionAlignment() const;
+    double calculateMaximumSize() const;
 
 #if ENABLE(SPEECH_SYNTHESIS)
     RefPtr<SpeechSynthesisUtterance> speechUtterance() const { return m_speechUtterance; }
 #endif
+
+    const LineAndPositionSetting& left() const { return m_left; }
+    const LineAndPositionSetting& top() const { return m_top; }
+    const LineAndPositionSetting& width() const { return m_width; }
+    const LineAndPositionSetting& height() const { return m_height; }
 
 protected:
     VTTCue(Document&, const MediaTime& start, const MediaTime& end, String&& content);
@@ -207,13 +233,14 @@ protected:
 private:
     VTTCue(Document&, const WebVTTCueData&);
 
-    void initialize(Document&);
     void createWebVTTNodeTree();
 
     void parseSettings(const String&);
 
     void determineTextDirection();
     void calculateDisplayParameters();
+    void calculateDisplayParametersWithRegion();
+    void obtainCSSBoxes();
 
     enum CueSetting {
         None,
@@ -231,22 +258,29 @@ private:
     void pauseSpeaking() final;
     void cancelSpeaking() final;
 
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return *m_logger; }
+    const void* logIdentifier() const final;
+    WTFLogChannel& logChannel() const final;
+    const char* logClassName() const final { return "VTTCue"; }
+#endif
+
     String m_content;
     String m_settings;
     std::optional<double> m_linePosition;
     std::optional<double> m_computedLinePosition;
     std::optional<double> m_textPosition;
-    int m_cueSize { 100 };
+    double m_cueSize { 100 };
 
-    WritingDirection m_writingDirection { Horizontal };
-    CueAlignment m_cueAlignment { Center };
+    DirectionSetting m_writingDirection { DirectionSetting::Horizontal };
+    AlignSetting m_cueAlignment { AlignSetting::Center };
 
     RefPtr<VTTRegion> m_region;
     String m_parsedRegionId;
 
     RefPtr<DocumentFragment> m_webVTTNodeTree;
-    RefPtr<HTMLSpanElement> m_cueHighlightBox;
-    RefPtr<HTMLDivElement> m_cueBackdropBox;
+    Ref<HTMLSpanElement> m_cueHighlightBox;
+    Ref<HTMLDivElement> m_cueBackdropBox;
     RefPtr<VTTCueBox> m_displayTree;
 #if ENABLE(SPEECH_SYNTHESIS)
     RefPtr<SpeechSynthesis> m_speechSynthesis;
@@ -254,7 +288,7 @@ private:
 #endif
 
     CSSValueID m_displayDirection { CSSValueLtr };
-    int m_displaySize { 0 };
+    double m_displaySize { 0 };
     DisplayPosition m_displayPosition;
 
     MediaTime m_originalStartTime;
@@ -266,8 +300,18 @@ private:
     bool m_displayTreeShouldChange : 1;
     bool m_notifyRegion : 1;
 
-    CuePositionAlignment m_positionAlignment { PositionAlignmentLignAuto };
-    CueLignAlignment m_lineAlignment { LignAlignmentStart };
+    PositionAlignSetting m_positionAlignment { PositionAlignSetting::Auto };
+    LineAlignSetting m_lineAlignment { LineAlignSetting::Start };
+
+    LineAndPositionSetting m_left { Auto };
+    LineAndPositionSetting m_top { Auto };
+    LineAndPositionSetting m_width { Auto };
+    LineAndPositionSetting m_height { Auto };
+
+#if !RELEASE_LOG_DISABLED
+    mutable RefPtr<Logger> m_logger;
+    mutable const void* m_logIdentifier { nullptr };
+#endif
 };
 
 } // namespace WebCore

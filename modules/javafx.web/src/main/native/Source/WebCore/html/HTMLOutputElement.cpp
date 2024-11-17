@@ -34,6 +34,7 @@
 
 #include "DOMTokenList.h"
 #include "Document.h"
+#include "ElementInlines.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -69,15 +70,16 @@ bool HTMLOutputElement::supportsFocus() const
     return HTMLElement::supportsFocus();
 }
 
-void HTMLOutputElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLOutputElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == HTMLNames::forAttr && m_forTokens)
-        m_forTokens->associatedAttributeValueChanged(value);
-    HTMLFormControlElement::parseAttribute(name, value);
+        m_forTokens->associatedAttributeValueChanged(newValue);
+    HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void HTMLOutputElement::reset()
 {
+    setInteractedWithSinceLastFormSubmitEvent(false);
     stringReplaceAll(defaultValue());
     m_defaultValueOverride = { };
 }
@@ -109,7 +111,7 @@ void HTMLOutputElement::setDefaultValue(String&& value)
 DOMTokenList& HTMLOutputElement::htmlFor()
 {
     if (!m_forTokens)
-        m_forTokens = makeUnique<DOMTokenList>(*this, HTMLNames::forAttr);
+        m_forTokens = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::forAttr);
     return *m_forTokens;
 }
 

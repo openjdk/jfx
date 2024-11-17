@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "Document.h"
 #include "DocumentParser.h"
 
 namespace WebCore {
@@ -39,7 +40,7 @@ protected:
     void finish() override
     {
         if (!isStopped())
-            document()->finishedParsing();
+            protectedDocument()->finishedParsing();
     }
 
 private:

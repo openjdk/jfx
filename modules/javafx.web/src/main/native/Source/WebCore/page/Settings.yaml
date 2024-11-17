@@ -29,6 +29,12 @@ AcceleratedCompositedAnimationsEnabled:
     WebCore:
       default: true
 
+AllowAnimationControlsOverride:
+  type: bool
+  defaultValue:
+    WebCore:
+      default: false
+
 AnimatedImageDebugCanvasDrawingEnabled:
   type: bool
   defaultValue:
@@ -139,13 +145,6 @@ FontLoadTimingOverride:
     WebCore:
       default: FontLoadTimingOverride::None
 
-FontRenderingMode:
-  type: uint32_t
-  refinedType: FontRenderingMode
-  defaultValue:
-    WebCore:
-      default: FontRenderingMode::Normal
-
 ForceCompositingMode:
   type: bool
   defaultValue:
@@ -188,14 +187,6 @@ ForcedSupportsHighDynamicRangeValue:
     WebCore:
       default: ForcedAccessibilityValue::System
 
-FrameFlattening:
-  type: uint32_t
-  refinedType: FrameFlattening
-  webcoreOnChange: setNeedsRelayoutAllFrames
-  defaultValue:
-    WebCore:
-      default: FrameFlattening::Disabled
-
 GeolocationFloorLevelEnabled:
   type: bool
   defaultValue:
@@ -220,7 +211,7 @@ ImageSubsamplingEnabled:
   type: bool
   defaultValue:
     WebCore:
-      PLATFORM(IOS_FAMILY): true
+      PLATFORM(COCOA): true
       default: false
 
 ImagesEnabled:
@@ -279,12 +270,6 @@ LocalStorageDatabasePath:
     WebCore:
       default: '{ }'
 
-MaximumAccelerated2dCanvasSize:
-  type: uint32_t
-  defaultValue:
-    WebCore:
-      default: 5120*2880
-
 MaximumHTMLParserDOMTreeDepth:
   type: uint32_t
   defaultValue:
@@ -299,7 +284,7 @@ MaximumSourceBufferSize:
   condition: ENABLE(MEDIA_SOURCE)
   defaultValue:
     WebCore:
-      default: 318767104
+      default: SettingsBase::defaultMaximumSourceBufferSize()
 
 MediaKeysStorageDirectory:
   type: String
@@ -314,9 +299,9 @@ MediaTypeOverride:
     WebCore:
       default: '"screen"'
 
-MinimumAccelerated2dCanvasSize:
+MinimumAccelerated2DContextArea:
   comment: >-
-    Number of pixels below which 2D canvas is rendered in software
+    Number of pixels below which Canvas 2D Context is rendered in software
     even if hardware acceleration is enabled.
     Hardware acceleration is useful for large canvases where it can avoid the
     pixel bandwidth between the CPU and GPU. But GPU acceleration comes at
@@ -324,10 +309,10 @@ MinimumAccelerated2dCanvasSize:
     widely used for stylized fonts. Anti-aliasing text in hardware at that
     scale is generally slower. So below a certain size it is better to
     draw canvas in software.
-  type: uint32_t
+  type: uint64_t
   defaultValue:
     WebCore:
-      default: 257*256
+      default: 0
 
 NeedsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk:
   comment: >-
@@ -363,12 +348,6 @@ PreferMIMETypeForImages:
       default: false
 
 PreventKeyboardDOMEventDispatch:
-  type: bool
-  defaultValue:
-    WebCore:
-      default: false
-
-RepaintOutsideLayoutEnabled:
   type: bool
   defaultValue:
     WebCore:
@@ -530,7 +509,6 @@ WebGLErrorsToConsoleEnabled:
 
 WebRTCEncryptionEnabled:
   type: bool
-  inspectorOverride: true
   defaultValue:
     WebCore:
       default: true

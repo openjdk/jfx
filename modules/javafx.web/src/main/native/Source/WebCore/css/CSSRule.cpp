@@ -44,7 +44,7 @@ unsigned short CSSRule::typeForCSSOM() const
     if (styleRuleType() >= firstUnexposedStyleRuleType)
         return 0;
 
-    return static_cast<unsigned short>(styleRuleType());
+    return enumToUnderlyingType(styleRuleType());
 }
 
 ExceptionOr<void> CSSRule::setCssText(const String&)
@@ -56,6 +56,23 @@ const CSSParserContext& CSSRule::parserContext() const
 {
     CSSStyleSheet* styleSheet = parentStyleSheet();
     return styleSheet ? styleSheet->contents().parserContext() : strictCSSParserContext();
+}
+
+bool CSSRule::hasStyleRuleAncestor() const
+{
+    auto current = this->parentRule();
+    while (current) {
+        if (current->styleRuleType() == StyleRuleType::Style)
+            return true;
+
+        current = current->parentRule();
+    }
+    return false;
+}
+
+RefPtr<StyleRuleWithNesting> CSSRule::prepareChildStyleRuleForNesting(StyleRule&)
+{
+    return nullptr;
 }
 
 } // namespace WebCore

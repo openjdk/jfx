@@ -53,7 +53,7 @@ public:
     static void mapFillComposite(CSSPropertyID, FillLayer&, const CSSValue&);
     static void mapFillBlendMode(CSSPropertyID, FillLayer&, const CSSValue&);
     static void mapFillOrigin(CSSPropertyID, FillLayer&, const CSSValue&);
-    void mapFillImage(CSSPropertyID, FillLayer&, CSSValue&);
+    void mapFillImage(CSSPropertyID, FillLayer&, const CSSValue&);
     static void mapFillRepeat(CSSPropertyID, FillLayer&, const CSSValue&);
     void mapFillSize(CSSPropertyID, FillLayer&, const CSSValue&);
     void mapFillXPosition(CSSPropertyID, FillLayer&, const CSSValue&);
@@ -68,8 +68,10 @@ public:
     void mapAnimationName(Animation&, const CSSValue&);
     static void mapAnimationPlayState(Animation&, const CSSValue&);
     static void mapAnimationProperty(Animation&, const CSSValue&);
+    static void mapAnimationTimeline(Animation&, const CSSValue&);
     static void mapAnimationTimingFunction(Animation&, const CSSValue&);
     static void mapAnimationCompositeOperation(Animation&, const CSSValue&);
+    static void mapAnimationAllowsDiscreteTransitions(Animation&, const CSSValue&);
 
     void mapNinePieceImage(const CSSValue*, NinePieceImage&);
     static void mapNinePieceImageSlice(const CSSValue&, NinePieceImage&);

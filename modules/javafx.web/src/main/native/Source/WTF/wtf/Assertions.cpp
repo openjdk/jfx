@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2011 University of Szeged. All rights reserved.
  *
@@ -78,9 +78,9 @@ static String createWithFormatAndArguments(const char* format, va_list args)
     va_list argsCopy;
     va_copy(argsCopy, args);
 
-    ALLOW_NONLITERAL_FORMAT_BEGIN
+ALLOW_NONLITERAL_FORMAT_BEGIN
 
-#if USE(CF) && !OS(WINDOWS)
+#if USE(CF)
     if (strstr(format, "%@")) {
         auto cfFormat = adoptCF(CFStringCreateWithCString(kCFAllocatorDefault, format, kCFStringEncodingUTF8));
         auto result = adoptCF(CFStringCreateWithFormatAndArguments(kCFAllocatorDefault, nullptr, cfFormat.get(), args));
@@ -114,7 +114,7 @@ static String createWithFormatAndArguments(const char* format, va_list args)
     vsnprintf(buffer.data(), buffer.size(), format, argsCopy);
     va_end(argsCopy);
 
-    ALLOW_NONLITERAL_FORMAT_END
+ALLOW_NONLITERAL_FORMAT_END
 
     return StringImpl::create(reinterpret_cast<const LChar*>(buffer.data()), length);
 }
@@ -141,13 +141,13 @@ static void logToStderr(const char* buffer)
 WTF_ATTRIBUTE_PRINTF(1, 0)
 static void vprintf_stderr_common(const char* format, va_list args)
 {
-#if USE(CF) && !OS(WINDOWS)
+#if USE(CF)
     if (strstr(format, "%@")) {
         auto cfFormat = adoptCF(CFStringCreateWithCString(nullptr, format, kCFStringEncodingUTF8));
 
-        ALLOW_NONLITERAL_FORMAT_BEGIN
+ALLOW_NONLITERAL_FORMAT_BEGIN
         auto str = adoptCF(CFStringCreateWithFormatAndArguments(nullptr, nullptr, cfFormat.get(), args));
-        ALLOW_NONLITERAL_FORMAT_END
+ALLOW_NONLITERAL_FORMAT_END
         CFIndex length = CFStringGetMaximumSizeForEncoding(CFStringGetLength(str.get()), kCFStringEncodingUTF8);
         constexpr unsigned InitialBufferSize { 256 };
         Vector<char, InitialBufferSize> buffer(length + 1);
@@ -196,9 +196,9 @@ static void vprintf_stderr_with_prefix(const char* prefix, const char* format, v
     memcpy(formatWithPrefix.data() + prefixLength, format, formatLength);
     formatWithPrefix[prefixLength + formatLength] = 0;
 
-    ALLOW_NONLITERAL_FORMAT_BEGIN
+ALLOW_NONLITERAL_FORMAT_BEGIN
     vprintf_stderr_common(formatWithPrefix.data(), args);
-    ALLOW_NONLITERAL_FORMAT_END
+ALLOW_NONLITERAL_FORMAT_END
 }
 
 WTF_ATTRIBUTE_PRINTF(1, 0)
@@ -215,9 +215,9 @@ static void vprintf_stderr_with_trailing_newline(const char* format, va_list arg
     formatWithNewline[formatLength] = '\n';
     formatWithNewline[formatLength + 1] = 0;
 
-    ALLOW_NONLITERAL_FORMAT_BEGIN
+ALLOW_NONLITERAL_FORMAT_BEGIN
     vprintf_stderr_common(formatWithNewline.data(), args);
-    ALLOW_NONLITERAL_FORMAT_END
+ALLOW_NONLITERAL_FORMAT_END
 }
 
 WTF_ATTRIBUTE_PRINTF(1, 2)
@@ -287,31 +287,55 @@ void WTFReportBacktraceWithPrefix(const char* prefix)
     WTFReportBacktraceWithPrefixAndPrintStream(out, prefix);
 }
 
+static constexpr int kDefaultFramesToShow = 31;
+static constexpr int kDefaultFramesToSkip = 2;
+
+void WTFReportBacktraceWithStackDepth(int framesToShow)
+{
+    WTFReportBacktraceWithPrefixAndStackDepth("", framesToShow);
+}
+
+void WTFReportBacktraceWithPrefixAndStackDepth(const char* prefix, int framesToShow)
+{
+    int frames = framesToShow + kDefaultFramesToSkip;
+    Vector<void*> samples;
+    samples.reserveInitialCapacity(frames);
+
+    WTFGetBacktrace(samples.data(), &frames);
+    CrashLogPrintStream out;
+    if (frames > kDefaultFramesToSkip)
+        WTFPrintBacktraceWithPrefixAndPrintStream(out, samples.data() + kDefaultFramesToSkip, framesToShow, prefix);
+    else
+        out.print("%sno stacktrace available", prefix);
+}
+
 void WTFReportBacktraceWithPrefixAndPrintStream(PrintStream& out, const char* prefix)
 {
-    static constexpr int framesToShow = 31;
-    static constexpr int framesToSkip = 2;
-    void* samples[framesToShow + framesToSkip];
-    int frames = framesToShow + framesToSkip;
+    void* samples[kDefaultFramesToShow + kDefaultFramesToSkip];
+    int frames = kDefaultFramesToShow + kDefaultFramesToSkip;
 
     WTFGetBacktrace(samples, &frames);
-    WTFPrintBacktraceWithPrefixAndPrintStream(out, samples + framesToSkip, frames - framesToSkip, prefix);
+    if (frames > kDefaultFramesToSkip)
+        WTFPrintBacktraceWithPrefixAndPrintStream(out, samples + kDefaultFramesToSkip, frames - kDefaultFramesToSkip, prefix);
+    else
+        out.print("%sno stacktrace available", prefix);
 }
 
 void WTFReportBacktrace()
 {
-    static constexpr int framesToShow = 31;
-    static constexpr int framesToSkip = 2;
-    void* samples[framesToShow + framesToSkip];
-    int frames = framesToShow + framesToSkip;
+    void* samples[kDefaultFramesToShow + kDefaultFramesToSkip];
+    int frames = kDefaultFramesToShow + kDefaultFramesToSkip;
 
     WTFGetBacktrace(samples, &frames);
-    WTFPrintBacktrace(samples + framesToSkip, frames - framesToSkip);
+    if (frames > kDefaultFramesToSkip)
+        WTFPrintBacktrace(samples + kDefaultFramesToSkip, frames - kDefaultFramesToSkip);
+    else
+        CrashLogPrintStream { }.print("no stacktrace available");
 }
 
 void WTFPrintBacktraceWithPrefixAndPrintStream(PrintStream& out, void** stack, int size, const char* prefix)
 {
-    out.print(StackTracePrinter { { stack, static_cast<size_t>(size) }, prefix });
+    out.print(StackTracePrinter { { stack, static_cast<size_t>(std::max(0, size)) }, prefix });
 }
 
 void WTFPrintBacktrace(void** stack, int size)
@@ -332,7 +356,7 @@ void WTFCrash()
 #else
     *(int *)(uintptr_t)0xbbadbeef = 0;
     // More reliable, but doesn't say BBADBEEF.
-#if COMPILER(GCC_COMPATIBLE)
+#if COMPILER(GCC) || COMPILER(CLANG)
     __builtin_trap();
 #else
     ((void(*)())nullptr)();
@@ -453,9 +477,9 @@ void WTFLogWithLevel(WTFLogChannel* channel, WTFLogLevel level, const char* form
     va_list args;
     va_start(args, format);
 
-    ALLOW_NONLITERAL_FORMAT_BEGIN
+ALLOW_NONLITERAL_FORMAT_BEGIN
     WTFLog(channel, format, args);
-    ALLOW_NONLITERAL_FORMAT_END
+ALLOW_NONLITERAL_FORMAT_END
 
     va_end(args);
 }
@@ -473,9 +497,9 @@ static void WTFLogVaList(WTFLogChannel* channel, const char* format, va_list arg
 
     ASSERT(channel->state == WTFLogChannelState::OnWithAccumulation);
 
-    ALLOW_NONLITERAL_FORMAT_BEGIN
+ALLOW_NONLITERAL_FORMAT_BEGIN
     String loggingString = WTF::createWithFormatAndArguments(format, args);
-    ALLOW_NONLITERAL_FORMAT_END
+ALLOW_NONLITERAL_FORMAT_END
 
     if (!loggingString.endsWith('\n'))
         loggingString = makeString(loggingString, '\n');
@@ -503,9 +527,9 @@ void WTFLogVerbose(const char* file, int line, const char* function, WTFLogChann
     va_list args;
     va_start(args, format);
 
-    ALLOW_NONLITERAL_FORMAT_BEGIN
+ALLOW_NONLITERAL_FORMAT_BEGIN
     WTFLogVaList(channel, format, args);
-    ALLOW_NONLITERAL_FORMAT_END
+ALLOW_NONLITERAL_FORMAT_END
 
     va_end(args);
 
@@ -566,7 +590,7 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
         if (it == componentInfo.end())
             continue;
 
-        auto component = (*it).stripWhiteSpace();
+        auto component = (*it).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
 
         WTFLogChannelState logChannelState = WTFLogChannelState::On;
         if (component.startsWith('-')) {
@@ -581,7 +605,7 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
 
         WTFLogLevel logChannelLevel = WTFLogLevel::Error;
         if (++it != componentInfo.end()) {
-            auto level = (*it).stripWhiteSpace();
+            auto level = (*it).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
             if (equalLettersIgnoringASCIICase(level, "error"_s))
                 logChannelLevel = WTFLogLevel::Error;
             else if (equalLettersIgnoringASCIICase(level, "warning"_s))
@@ -605,10 +629,8 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
 #if !RELEASE_LOG_DISABLED
 void WTFReleaseLogStackTrace(WTFLogChannel* channel)
 {
-    static constexpr int framesToShow = 32;
-    static constexpr int framesToSkip = 2;
-    void* stack[framesToShow + framesToSkip];
-    int frames = framesToShow + framesToSkip;
+    void* stack[kDefaultFramesToShow + kDefaultFramesToSkip];
+    int frames = kDefaultFramesToShow + kDefaultFramesToSkip;
     WTFGetBacktrace(stack, &frames);
     StackTraceSymbolResolver { { stack, static_cast<size_t>(frames) } }.forEach([&](int frameNumber, void* stackFrame, const char* name) {
 #if USE(OS_LOG)
@@ -657,11 +679,11 @@ void WTFReleaseLogStackTrace(WTFLogChannel* channel)
 // See comment above on the ordering.
 #define CRASH_GPR0 "x16"
 #define CRASH_GPR1 "x17"
-#define CRASH_GPR2 "x18"
-#define CRASH_GPR3 "x19"
-#define CRASH_GPR4 "x20"
-#define CRASH_GPR5 "x21"
-#define CRASH_GPR6 "x22"
+#define CRASH_GPR2 "x19" // We skip x18, which is reserved on ARM64 for platform use.
+#define CRASH_GPR3 "x20"
+#define CRASH_GPR4 "x21"
+#define CRASH_GPR5 "x22"
+#define CRASH_GPR6 "x23"
 
 #endif // CPU(ARM64)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Canon Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,9 +52,9 @@ namespace WTF::FileSystemImpl {
 static std::filesystem::path toStdFileSystemPath(StringView path)
 {
 #if HAVE(MISSING_STD_FILESYSTEM_PATH_CONSTRUCTOR)
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return std::filesystem::u8path(path.utf8().data());
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 #else
     return { std::u8string(reinterpret_cast<const char8_t*>(path.utf8().data())) };
 #endif
@@ -473,7 +473,7 @@ void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)
 #endif
 }
 
-MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(Span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
+MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(std::span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
 {
     auto mappedFile = createMappedFileData(path, bytesSize, outputHandle);
     if (!mappedFile)
@@ -482,7 +482,7 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
     void* map = const_cast<void*>(mappedFile.data());
     uint8_t* mapData = static_cast<uint8_t*>(map);
 
-    apply([&mapData](Span<const uint8_t> chunk) {
+    apply([&mapData](std::span<const uint8_t> chunk) {
         memcpy(mapData, chunk.data(), chunk.size());
         mapData += chunk.size();
         return true;
@@ -564,7 +564,7 @@ std::optional<Vector<uint8_t>> readEntireFile(const String& path)
     return contents;
 }
 
-int overwriteEntireFile(const String& path, Span<uint8_t> span)
+int overwriteEntireFile(const String& path, std::span<uint8_t> span)
 {
     auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate);
     auto closeFile = makeScopeExit([&] {
@@ -703,6 +703,15 @@ std::optional<uint64_t> volumeFreeSpace(const String& path)
         return std::nullopt;
     return spaceInfo.available;
 }
+
+std::optional<uint64_t> volumeCapacity(const String& path)
+{
+    std::error_code ec;
+    auto spaceInfo = std::filesystem::space(toStdFileSystemPath(path), ec);
+    if (ec)
+        return std::nullopt;
+    return spaceInfo.capacity;
+}
 #endif
 
 bool createSymbolicLink(const String& targetPath, const String& symbolicLinkPath)
@@ -777,7 +786,7 @@ bool isHiddenFile(const String& path)
 #endif
 }
 
-enum class ShouldFollowSymbolicLinks { No, Yes };
+enum class ShouldFollowSymbolicLinks : bool { No, Yes };
 static std::optional<FileType> fileTypePotentiallyFollowingSymLinks(const String& path, ShouldFollowSymbolicLinks shouldFollowSymbolicLinks)
 {
     std::error_code ec;

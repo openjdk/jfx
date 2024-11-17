@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2019 the V8 project authors. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,9 +34,10 @@
 #include "Yarr.h"
 #include "YarrPattern.h"
 #include <wtf/Atomics.h>
-#include <wtf/Bitmap.h>
+#include <wtf/BitSet.h>
 #include <wtf/FixedVector.h>
 #include <wtf/StackCheck.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 #define YARR_CALL
@@ -67,10 +68,10 @@ enum class JITFailureReason : uint8_t {
 };
 
 class BoyerMooreFastCandidates {
-    WTF_MAKE_FAST_ALLOCATED(BoyerMooreFastCandidates);
+    WTF_MAKE_TZONE_ALLOCATED(BoyerMooreFastCandidates);
 public:
     static constexpr unsigned maxSize = 2;
-    using CharacterVector = Vector<UChar32, maxSize>;
+    using CharacterVector = Vector<char32_t, maxSize>;
 
     BoyerMooreFastCandidates() = default;
 
@@ -83,9 +84,9 @@ public:
 
     bool isEmpty() const { return m_characters.isEmpty(); }
     unsigned size() const { return m_characters.size(); }
-    UChar32 at(unsigned index) const { return m_characters.at(index); }
+    char32_t at(unsigned index) const { return m_characters.at(index); }
 
-    void add(UChar32 character)
+    void add(char32_t character)
     {
         if (!isValid())
             return;
@@ -118,11 +119,11 @@ private:
 
 class BoyerMooreBitmap {
     WTF_MAKE_NONCOPYABLE(BoyerMooreBitmap);
-    WTF_MAKE_FAST_ALLOCATED(BoyerMooreBitmap);
+    WTF_MAKE_TZONE_ALLOCATED(BoyerMooreBitmap);
 public:
     static constexpr unsigned mapSize = 128;
     static constexpr unsigned mapMask = 128 - 1;
-    using Map = Bitmap<mapSize>;
+    using Map = WTF::BitSet<mapSize>;
 
     BoyerMooreBitmap() = default;
 
@@ -130,7 +131,7 @@ public:
     const Map& map() const { return m_map; }
     const BoyerMooreFastCandidates& charactersFastPath() const { return m_charactersFastPath; }
 
-    bool add(CharSize charSize, UChar32 character)
+    bool add(CharSize charSize, char32_t character)
     {
         if (isAllSet())
             return false;
@@ -145,12 +146,12 @@ public:
         return !isAllSet();
     }
 
-    void addCharacters(CharSize charSize, const Vector<UChar32>& characters)
+    void addCharacters(CharSize charSize, const Vector<char32_t>& characters)
     {
         if (isAllSet())
             return;
         ASSERT(std::is_sorted(characters.begin(), characters.end()));
-        for (UChar32 character : characters) {
+        for (auto character : characters) {
             // Early return since characters are sorted.
             if (charSize == CharSize::Char8 && character > 0xff)
                 return;
@@ -180,7 +181,7 @@ public:
                 setAll();
                 return;
             }
-            for (UChar32 character = begin; character <= end; ++character) {
+            for (auto character = begin; character <= end; ++character) {
                 if (!add(charSize, character))
                     return;
             }
@@ -203,22 +204,20 @@ private:
 };
 
 #if CPU(ARM64E)
-extern "C" SlowPathReturnType vmEntryToYarrJIT(const void* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder* matchingContext, const void* codePtr);
+extern "C" UGPRPair vmEntryToYarrJIT(const void* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder* matchingContext, const void* codePtr);
 extern "C" void vmEntryToYarrJITAfter(void);
 #endif
 
 class YarrBoyerMooreData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(YarrBoyerMooreData);
     WTF_MAKE_NONCOPYABLE(YarrBoyerMooreData);
 
 public:
     YarrBoyerMooreData() = default;
 
-    void saveMaps(Vector<UniqueRef<BoyerMooreBitmap::Map>> maps)
+    void saveMaps(Vector<UniqueRef<BoyerMooreBitmap::Map>>&& maps)
     {
-        m_maps.reserveCapacity(m_maps.size() + maps.size());
-        for (unsigned index = 0; index < maps.size(); ++index)
-            m_maps.uncheckedAppend(WTFMove(maps[index]));
+        m_maps.appendVector(WTFMove(maps));
     }
 
     void clearMaps()
@@ -273,14 +272,14 @@ class YarrCodeBlock : public YarrBoyerMooreData {
         bool m_canInline : 1;
     };
 
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(YarrCodeBlock);
     WTF_MAKE_NONCOPYABLE(YarrCodeBlock);
 
 public:
-    using YarrJITCode8 = SlowPathReturnType (*)(const LChar* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
-    using YarrJITCode16 = SlowPathReturnType (*)(const UChar* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
-    using YarrJITCodeMatchOnly8 = SlowPathReturnType (*)(const LChar* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
-    using YarrJITCodeMatchOnly16 = SlowPathReturnType (*)(const UChar* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCode8 = UGPRPair (*)(const LChar* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCode16 = UGPRPair (*)(const UChar* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCodeMatchOnly8 = UGPRPair (*)(const LChar* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCodeMatchOnly16 = UGPRPair (*)(const UChar* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
 
     YarrCodeBlock() = default;
 

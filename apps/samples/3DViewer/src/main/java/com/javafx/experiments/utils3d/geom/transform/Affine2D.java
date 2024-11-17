@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 1996, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -764,6 +764,7 @@ public class Affine2D extends AffineBase {
      * @param Tx the <code>BaseTransform</code> object from which to
      *           copy the transform
      */
+    @Override
     public void setTransform(BaseTransform Tx) {
         switch (Tx.getDegree()) {
             case IDENTITY:
@@ -1066,6 +1067,7 @@ public class Affine2D extends AffineBase {
      * @throws NoninvertibleTransformException if the matrix cannot be inverted.
      * @see #getDeterminant
      */
+    @Override
     public Affine2D createInverse()
             throws NoninvertibleTransformException {
         double det;

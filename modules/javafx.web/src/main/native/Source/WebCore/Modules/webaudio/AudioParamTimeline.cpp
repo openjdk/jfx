@@ -163,16 +163,16 @@ ExceptionOr<void> AudioParamTimeline::insertEvent(ParamEvent&& event)
                         || (paramEventEndTime > event.time() && paramEventEndTime < endTime)
                         || (event.time() >= paramEvent.time() && event.time() < paramEventEndTime)
                         || (endTime >= paramEvent.time() && endTime < paramEventEndTime)) {
-                        return Exception { NotSupportedError, "Events are overlapping"_s };
+                        return Exception { ExceptionCode::NotSupportedError, "Events are overlapping"_s };
                     }
                 } else if (paramEvent.time() > event.time() && paramEvent.time() < endTime)
-                    return Exception { NotSupportedError, "Events are overlapping"_s };
+                    return Exception { ExceptionCode::NotSupportedError, "Events are overlapping"_s };
             }
         } else if (paramEvent.type() == ParamEvent::SetValueCurve) {
             // Otherwise, make sure this event doesn't overlap any existing SetValueCurve event.
             auto parentEventEndTime = paramEvent.time() + paramEvent.duration();
             if (event.time() >= paramEvent.time() && event.time() < parentEventEndTime)
-                return Exception { NotSupportedError, "Events are overlapping"_s };
+                return Exception { ExceptionCode::NotSupportedError, "Events are overlapping"_s };
         }
 
         if (paramEvent.time() > insertTime)
@@ -807,9 +807,9 @@ void AudioParamTimeline::processSetTargetFollowedByRamp(int eventIndex, ParamEve
     //    2 * f - 2 <= 2 * Fs * t0 <= 2 * f
     //    -2 <= 2 * Fs * t0 - 2 * f <= 0
     //    -1 <= 2 * Fs * t0 - 2 * f + 1 <= 1
-    //     abs(2 * Fs * t0 - 2 * f + 1) <= 1
+    //     std::abs(2 * Fs * t0 - 2 * f + 1) <= 1
 
-    if (fabs(2 * sampleRate * event->time().value() - 2 * currentFrame + 1) <= 1) {
+    if (std::abs(2 * sampleRate * event->time().value() - 2 * currentFrame + 1) <= 1) {
         // SetTarget is starting somewhere between currentFrame - 1 and currentFrame. Compute the value
         // the SetTarget would have at the currentFrame.
         value = event->value() + (value - event->value()) * exp(-(currentFrame / sampleRate - event->time().value()) / event->timeConstant());

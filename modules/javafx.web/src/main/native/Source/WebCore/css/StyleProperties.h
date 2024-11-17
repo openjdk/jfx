@@ -86,7 +86,6 @@ public:
         PropertyReference operator*() const { return properties.propertyAt(index); }
         Iterator& operator++() { ++index; return *this; }
         bool operator==(std::nullptr_t) const { return index >= properties.propertyCount(); }
-        bool operator!=(std::nullptr_t) const { return index < properties.propertyCount(); }
 
     private:
         const T& properties;
@@ -122,7 +121,7 @@ public:
     WEBCORE_EXPORT Ref<MutableStyleProperties> mutableCopy() const;
     Ref<ImmutableStyleProperties> immutableCopyIfNeeded() const;
 
-    Ref<MutableStyleProperties> copyProperties(Span<const CSSPropertyID>) const;
+    Ref<MutableStyleProperties> copyProperties(std::span<const CSSPropertyID>) const;
 
     String asText() const;
     AtomString asTextAtom() const;
@@ -131,6 +130,8 @@ public:
     bool isMutable() const { return m_isMutable; }
 
     bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
+    void setReplacementURLForSubresources(const HashMap<String, String>&);
+    void clearReplacementURLForSubresources();
 
     static unsigned averageSizeInBytes();
 

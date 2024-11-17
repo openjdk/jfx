@@ -39,7 +39,7 @@
 #include "SharedBuffer.h"
 #include "SubresourceLoader.h"
 #include "TextResourceDecoder.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "WOFFFileFormat.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/Vector.h>
@@ -81,8 +81,10 @@ bool CachedFont::shouldAllowCustomFont(const Ref<SharedBuffer>& data)
 void CachedFont::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
 {
     if (data) {
-        auto dataContiguous = data->makeContiguous();
+        Ref dataContiguous = data->makeContiguous();
         if (!shouldAllowCustomFont(dataContiguous)) {
+            // fonts are blocked, we set a flag to signal it in CachedFontLoadRequest.h
+            m_didRefuseToLoadCustomFont = true;
             setErrorAndDeleteData();
             return;
         }
@@ -98,12 +100,13 @@ void CachedFont::finishLoading(const FragmentedSharedBuffer* data, const Network
 
 void CachedFont::setErrorAndDeleteData()
 {
+    CachedResourceHandle protectedThis { *this };
     setEncodedSize(0);
     error(Status::DecodeError);
     if (inCache())
         MemoryCache::singleton().remove(*this);
-    if (m_loader)
-        m_loader->cancel();
+    if (RefPtr loader = m_loader)
+        loader->cancel();
 }
 
 void CachedFont::beginLoadIfNeeded(CachedResourceLoader& loader)
@@ -118,9 +121,9 @@ bool CachedFont::ensureCustomFontData()
 {
     if (!m_data)
         return ensureCustomFontData(nullptr);
-    if (!m_data->isContiguous())
-        m_data = m_data->makeContiguous();
-    return ensureCustomFontData(downcast<SharedBuffer>(m_data.get()));
+    if (RefPtr data = m_data; !data->isContiguous())
+        m_data = data->makeContiguous();
+    return ensureCustomFontData(downcast<SharedBuffer>(m_data).get());
 }
 
 String CachedFont::calculateItemInCollection() const
@@ -141,7 +144,7 @@ bool CachedFont::ensureCustomFontData(SharedBuffer* data)
     return m_fontCustomPlatformData.get();
 }
 
-std::unique_ptr<FontCustomPlatformData> CachedFont::createCustomFontData(SharedBuffer& bytes, const String& itemInCollection, bool& wrapping)
+RefPtr<FontCustomPlatformData> CachedFont::createCustomFontData(SharedBuffer& bytes, const String& itemInCollection, bool& wrapping)
 {
     RefPtr buffer = { &bytes };
 #if PLATFORM(JAVA)
@@ -159,8 +162,9 @@ RefPtr<Font> CachedFont::createFont(const FontDescription& fontDescription, bool
 
 FontPlatformData CachedFont::platformDataFromCustomData(const FontDescription& fontDescription, bool bold, bool italic, const FontCreationContext& fontCreationContext)
 {
-    ASSERT(m_fontCustomPlatformData);
-    return platformDataFromCustomData(*m_fontCustomPlatformData, fontDescription, bold, italic, fontCreationContext);
+    RefPtr fontCustomPlatformData = m_fontCustomPlatformData;
+    ASSERT(fontCustomPlatformData);
+    return platformDataFromCustomData(*fontCustomPlatformData, fontDescription, bold, italic, fontCreationContext);
 }
 
 FontPlatformData CachedFont::platformDataFromCustomData(FontCustomPlatformData& fontCustomPlatformData, const FontDescription& fontDescription, bool bold, bool italic, const FontCreationContext& fontCreationContext)

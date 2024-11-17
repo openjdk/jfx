@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Objects;
 import java.util.function.Predicate;
 import javafx.beans.NamedArg;
 import javafx.beans.property.ObjectProperty;
@@ -44,6 +45,7 @@ import javafx.collections.ObservableList;
  * All changes in the ObservableList are propagated immediately
  * to the FilteredList.
  *
+ * @param <E> the list element type
  * @see TransformationList
  * @since JavaFX 8.0
  */
@@ -161,7 +163,6 @@ public final class FilteredList<E> extends TransformationList<E, E>{
      *
      * @param  index index of the element to return
      * @return the element at the specified position in this list
-     * @throws IndexOutOfBoundsException {@inheritDoc}
      */
     @Override
     public E get(int index) {
@@ -173,14 +174,13 @@ public final class FilteredList<E> extends TransformationList<E, E>{
 
     @Override
     public int getSourceIndex(int index) {
-        if (index >= size) {
-            throw new IndexOutOfBoundsException();
-        }
+        Objects.checkIndex(index, size);
         return filtered[index];
     }
 
     @Override
     public int getViewIndex(int index) {
+        Objects.checkIndex(index, getSource().size());
         return Arrays.binarySearch(filtered, 0, size, index);
     }
 

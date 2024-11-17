@@ -26,8 +26,7 @@
 #include "config.h"
 #include "ServiceWorkerRegistrationKey.h"
 
-#if ENABLE(SERVICE_WORKER)
-
+#include "ClientOrigin.h"
 #include "RegistrableDomain.h"
 #include "SecurityOrigin.h"
 #include <wtf/URLHash.h>
@@ -45,11 +44,6 @@ ServiceWorkerRegistrationKey::ServiceWorkerRegistrationKey(SecurityOriginData&& 
 ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::emptyKey()
 {
     return { };
-}
-
-bool ServiceWorkerRegistrationKey::operator==(const ServiceWorkerRegistrationKey& other) const
-{
-    return m_topOrigin == other.m_topOrigin && m_scope == other.m_scope;
 }
 
 ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() const &
@@ -135,6 +129,11 @@ std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::fromDa
     return ServiceWorkerRegistrationKey { WTFMove(topOrigin), WTFMove(scope) };
 }
 
+ClientOrigin ServiceWorkerRegistrationKey::clientOrigin() const
+{
+    return ClientOrigin { m_topOrigin, SecurityOriginData::fromURL(m_scope) };
+}
+
 #if !LOG_DISABLED
 String ServiceWorkerRegistrationKey::loggingString() const
 {
@@ -143,5 +142,3 @@ String ServiceWorkerRegistrationKey::loggingString() const
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -47,7 +47,7 @@ class DOMMatrixReadOnly : public ScriptWrappable, public RefCounted<DOMMatrixRea
 public:
     static ExceptionOr<Ref<DOMMatrixReadOnly>> create(ScriptExecutionContext&, std::optional<std::variant<String, Vector<double>>>&&);
 
-    enum class Is2D { No, Yes };
+    enum class Is2D : bool { No, Yes };
     static Ref<DOMMatrixReadOnly> create(const TransformationMatrix& matrix, Is2D is2D)
     {
         return adoptRef(*new DOMMatrixReadOnly(matrix, is2D));
@@ -102,6 +102,7 @@ public:
     Ref<DOMMatrix> flipY();
     Ref<DOMMatrix> scale(double scaleX = 1, std::optional<double> scaleY = std::nullopt, double scaleZ = 1, double originX = 0, double originY = 0, double originZ = 0);
     Ref<DOMMatrix> scale3d(double scale = 1, double originX = 0, double originY = 0, double originZ = 0);
+    Ref<DOMMatrix> scaleNonUniform(double scaleX = 1, double scaleY = 1);
     Ref<DOMMatrix> rotate(double rotX = 0, std::optional<double> rotY = std::nullopt, std::optional<double> rotZ = std::nullopt); // Angles are in degrees.
     Ref<DOMMatrix> rotateFromVector(double x = 0, double y = 0);
     Ref<DOMMatrix> rotateAxisAngle(double x = 0, double y = 0, double z = 0, double angle = 0); // Angle is in degrees.

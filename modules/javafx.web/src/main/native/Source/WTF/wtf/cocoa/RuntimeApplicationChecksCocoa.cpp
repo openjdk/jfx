@@ -164,13 +164,47 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
     if (linkedBefore(dyld_fall_2021_os_versions, DYLD_IOS_VERSION_15_0, DYLD_MACOSX_VERSION_12_00)) {
         disableBehavior(SDKAlignedBehavior::NullOriginForNonSpecialSchemedURLs);
         disableBehavior(SDKAlignedBehavior::DOMWindowReuseRestriction);
-        disableBehavior(SDKAlignedBehavior::ApplicationCacheDisabledByDefault);
         disableBehavior(SDKAlignedBehavior::NoExpandoIndexedPropertiesOnWindow);
         disableBehavior(SDKAlignedBehavior::DoesNotDrainTheMicrotaskQueueWhenCallingObjC);
     }
 
     if (linkedBefore(dyld_spring_2022_os_versions, DYLD_IOS_VERSION_15_4, DYLD_MACOSX_VERSION_12_3))
         disableBehavior(SDKAlignedBehavior::AuthorizationHeaderOnSameOriginRedirects);
+
+    if (linkedBefore(dyld_fall_2022_os_versions, DYLD_IOS_VERSION_16_0, DYLD_MACOSX_VERSION_13_0)) {
+        disableBehavior(SDKAlignedBehavior::NoTypedArrayAPIQuirk);
+        disableBehavior(SDKAlignedBehavior::ForbidsDotPrefixedFonts);
+        disableBehavior(SDKAlignedBehavior::ContextMenuTriggersLinkActivationNavigationType);
+        disableBehavior(SDKAlignedBehavior::DoesNotParseStringEndingWithFullStopAsFloatingPointNumber);
+        disableBehavior(SDKAlignedBehavior::UIBackForwardSkipsHistoryItemsWithoutUserGesture);
+    }
+
+    if (linkedBefore(dyld_spring_2023_os_versions, DYLD_IOS_VERSION_16_4, DYLD_MACOSX_VERSION_13_3)) {
+        disableBehavior(SDKAlignedBehavior::NoShowModalDialog);
+        disableBehavior(SDKAlignedBehavior::DoesNotAddIntrinsicMarginsToFormControls);
+        disableBehavior(SDKAlignedBehavior::ProgrammaticFocusDuringUserScriptShowsInputViews);
+        disableBehavior(SDKAlignedBehavior::DefaultsToExcludingBackgroundsWhenPrinting);
+        disableBehavior(SDKAlignedBehavior::InspectableDefaultsToDisabled);
+        disableBehavior(SDKAlignedBehavior::PushStateFilePathRestriction);
+        disableBehavior(SDKAlignedBehavior::NoUNIQLOLazyIframeLoadingQuirk);
+        disableBehavior(SDKAlignedBehavior::UsesGameControllerPhysicalInputProfile);
+        disableBehavior(SDKAlignedBehavior::ScreenOrientationAPIEnabled);
+    }
+
+    if (linkedBefore(dyld_fall_2023_os_versions, DYLD_IOS_VERSION_17_0, DYLD_MACOSX_VERSION_14_0)) {
+        disableBehavior(SDKAlignedBehavior::FullySuspendsBackgroundContent);
+        disableBehavior(SDKAlignedBehavior::RunningBoardThrottling);
+        disableBehavior(SDKAlignedBehavior::PopoverAttributeEnabled);
+        disableBehavior(SDKAlignedBehavior::LiveRangeSelectionEnabledForAllApps);
+        disableBehavior(SDKAlignedBehavior::DoesNotOverrideUAFromNSUserDefault);
+        disableBehavior(SDKAlignedBehavior::EvaluateJavaScriptWithoutTransientActivation);
+        disableBehavior(SDKAlignedBehavior::ResettingTransitionCancelsRunningTransitionQuirk);
+    }
+
+    if (linkedBefore(dyld_2023_SU_C_os_versions, DYLD_IOS_VERSION_17_2, DYLD_MACOSX_VERSION_14_2)) {
+        disableBehavior(SDKAlignedBehavior::OnlyLoadWellKnownAboutURLs);
+        disableBehavior(SDKAlignedBehavior::ThrowIfCanDeclareGlobalFunctionFails);
+    }
 
     disableAdditionalSDKAlignedBehaviors(behaviors);
 
@@ -219,4 +253,20 @@ bool linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior behavior)
     return sdkAlignedBehaviors().get(static_cast<size_t>(behavior));
 }
 
+static bool& processIsExtensionValue()
+{
+    static bool processIsExtension;
+    return processIsExtension;
 }
+
+bool processIsExtension()
+{
+    return processIsExtensionValue();
+}
+
+void setProcessIsExtension(bool processIsExtension)
+{
+    processIsExtensionValue() = processIsExtension;
+}
+
+} // namespace WTF

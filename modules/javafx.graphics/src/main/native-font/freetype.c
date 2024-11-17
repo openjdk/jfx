@@ -30,11 +30,19 @@
 #include <com_sun_javafx_font_freetype_OSFreetype.h>
 #include <dlfcn.h>
 #include <ft2build.h>
+#include <stdint.h>
+#include <errno.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
 #include FT_LCD_FILTER_H
 
 #define OS_NATIVE(func) Java_com_sun_javafx_font_freetype_OSFreetype_##func
+
+#define SAFE_FREE(PTR)  \
+    if ((PTR) != NULL) {  \
+        free(PTR);     \
+        (PTR) = NULL;     \
+    }
 
 extern jboolean checkAndClearException(JNIEnv *env);
 #ifdef STATIC_BUILD
@@ -375,6 +383,8 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(getBitmapData)(JNIEnv *env, jclass that, 
     FT_Bitmap bitmap = slot->bitmap;
     unsigned char* src = bitmap.buffer;
     if (!src) return NULL;
+    if (bitmap.pitch <= 0) return NULL;
+    if (bitmap.rows > INT_MAX / bitmap.pitch) return NULL;
     size_t size = bitmap.pitch * bitmap.rows;
     jbyteArray result = (*env)->NewByteArray(env, size);
     if (result) {
@@ -482,35 +492,54 @@ JNIEXPORT jint JNICALL OS_NATIVE(FT_1Set_1Char_1Size)
 /***********************************************/
 
 #define F26DOT6TOFLOAT(n) (float)n/64.0;
-static const int DEFAULT_LEN_TYPES = 10;
-static const int DEFAULT_LEN_COORDS = 50;
+static const size_t DEFAULT_LEN_TYPES = 10;
+static const size_t DEFAULT_LEN_COORDS = 50;
 typedef struct _PathData {
     jbyte* pointTypes;
-    int numTypes;
-    int lenTypes;
+    size_t numTypes;
+    size_t lenTypes;
     jfloat* pointCoords;
-    int numCoords;
-    int lenCoords;
+    size_t numCoords;
+    size_t lenCoords;
 } PathData;
 
 static PathData* checkSize(void* user, int coordCount)
 {
     PathData* info = (PathData *)user;
+
     if (info->numTypes == info->lenTypes) {
+        if (info->lenTypes > SIZE_MAX - DEFAULT_LEN_TYPES) goto fail;
         info->lenTypes += DEFAULT_LEN_TYPES;
-        info->pointTypes = (jbyte*)realloc(info->pointTypes, info->lenTypes * sizeof(jbyte));
+
+        jbyte* newPointTypes = (jbyte*)realloc(info->pointTypes, info->lenTypes * sizeof(jbyte));
+        if (newPointTypes == NULL) goto fail;
+        info->pointTypes = newPointTypes;
     }
+
     if (info->numCoords + (coordCount * 2) > info->lenCoords) {
+        if (info->lenCoords > SIZE_MAX - DEFAULT_LEN_COORDS) goto fail;
         info->lenCoords += DEFAULT_LEN_COORDS;
-        info->pointCoords = (jfloat*)realloc(info->pointCoords, info->lenCoords * sizeof(jfloat));
+
+        jbyte* newPointCoords = (jfloat*)realloc(info->pointCoords, info->lenCoords * sizeof(jfloat));
+        if (newPointCoords == NULL) goto fail;
+        info->pointCoords = newPointCoords;
     }
+
     return info;
+
+fail:
+    SAFE_FREE(info->pointTypes);
+    SAFE_FREE(info->pointCoords);
+    return NULL;
 }
 
 static int JFX_Outline_MoveToFunc(const FT_Vector*   to,
                                   void*              user)
 {
     PathData *info = checkSize(user, 1);
+    if (info == NULL) {
+        return FT_Err_Array_Too_Large;
+    }
     info->pointTypes[info->numTypes++] = 0;
     info->pointCoords[info->numCoords++] = F26DOT6TOFLOAT(to->x);
     info->pointCoords[info->numCoords++] = -F26DOT6TOFLOAT(to->y);
@@ -521,6 +550,9 @@ static int JFX_Outline_LineToFunc(const FT_Vector*   to,
                                   void*              user)
 {
     PathData *info =  checkSize(user, 1);
+    if (info == NULL) {
+        return FT_Err_Array_Too_Large;
+    }
     info->pointTypes[info->numTypes++] = 1;
     info->pointCoords[info->numCoords++] = F26DOT6TOFLOAT(to->x);
     info->pointCoords[info->numCoords++] = -F26DOT6TOFLOAT(to->y);
@@ -532,6 +564,9 @@ static int JFX_Outline_ConicToFunc(const FT_Vector*  control,
                                    void*             user )
 {
     PathData *info = checkSize(user, 2);
+    if (info == NULL) {
+        return FT_Err_Array_Too_Large;
+    }
     info->pointTypes[info->numTypes++] = 2;
     info->pointCoords[info->numCoords++] = F26DOT6TOFLOAT(control->x);
     info->pointCoords[info->numCoords++] = -F26DOT6TOFLOAT(control->y);
@@ -546,6 +581,9 @@ static int JFX_Outline_CubicToFunc(const FT_Vector*  control1,
                                    void*             user)
 {
     PathData *info = checkSize(user, 3);
+    if (info == NULL) {
+        return FT_Err_Array_Too_Large;
+    }
     info->pointTypes[info->numTypes++] = 3;
     info->pointCoords[info->numCoords++] = F26DOT6TOFLOAT(control1->x);
     info->pointCoords[info->numCoords++] = -F26DOT6TOFLOAT(control1->y);
@@ -580,12 +618,16 @@ JNIEXPORT jobject JNICALL OS_NATIVE(FT_1Outline_1Decompose)
     data.pointTypes = (jbyte*)malloc(sizeof(jbyte) * DEFAULT_LEN_TYPES);
     data.numTypes = 0;
     data.lenTypes = DEFAULT_LEN_TYPES;
+    if (data.pointTypes == NULL) goto fail;
+
     data.pointCoords = (jfloat*)malloc(sizeof(jfloat) * DEFAULT_LEN_COORDS);
     data.numCoords = 0;
     data.lenCoords = DEFAULT_LEN_COORDS;
+    if (data.pointCoords == NULL) goto fail;
 
     /* Decompose outline */
-    FT_Outline_Decompose(outline, &JFX_Outline_Funcs, &data);
+    FT_Error ftError = FT_Outline_Decompose(outline, &JFX_Outline_Funcs, &data);
+    if (ftError != FT_Err_Ok) goto fail;
 
     static jclass path2DClass = NULL;
     static jmethodID path2DCtr = NULL;
@@ -625,9 +667,10 @@ JNIEXPORT jobject JNICALL OS_NATIVE(FT_1Outline_1Decompose)
             goto fail;
         }
     }
+
 fail:
-    free(data.pointTypes);
-    free(data.pointCoords);
+    SAFE_FREE(data.pointTypes);
+    SAFE_FREE(data.pointCoords);
     return path2D;
 }
 

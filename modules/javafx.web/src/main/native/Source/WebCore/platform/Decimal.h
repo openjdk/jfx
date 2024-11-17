@@ -62,8 +62,7 @@ public:
     public:
         EncodedData(Sign, int exponent, uint64_t coefficient);
 
-        bool operator==(const EncodedData&) const;
-        bool operator!=(const EncodedData& another) const { return !operator==(another); }
+        friend bool operator==(const EncodedData&, const EncodedData&) = default;
 
         uint64_t coefficient() const { return m_coefficient; }
         int countDigits() const;
@@ -132,7 +131,7 @@ public:
     bool isZero() const { return m_data.isZero(); }
 
     Decimal abs() const;
-    Decimal ceiling() const;
+    Decimal ceil() const;
     Decimal floor() const;
     Decimal remainder(const Decimal&) const;
     Decimal round() const;

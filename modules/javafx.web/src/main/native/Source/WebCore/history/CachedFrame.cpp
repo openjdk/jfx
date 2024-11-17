@@ -29,16 +29,19 @@
 #include "BackForwardCache.h"
 #include "CachedFramePlatformData.h"
 #include "CachedPage.h"
-#include "DOMWindow.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
-#include "FrameView.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "NavigationDisabler.h"
 #include "Page.h"
+#include "RemoteFrame.h"
+#include "RemoteFrameView.h"
 #include "RenderWidget.h"
 #include "SVGDocumentExtensions.h"
 #include "ScriptController.h"
@@ -58,10 +61,10 @@ namespace WebCore {
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, cachedFrameCounter, ("CachedFrame"));
 
 CachedFrameBase::CachedFrameBase(Frame& frame)
-    : m_document(frame.document())
-    , m_documentLoader(frame.loader().documentLoader())
-    , m_view(frame.view())
-    , m_url(frame.document()->url())
+    : m_document(is<LocalFrame>(frame) ? downcast<LocalFrame>(frame).document() : nullptr)
+    , m_documentLoader(is<LocalFrame>(frame) ? downcast<LocalFrame>(frame).loader().documentLoader() : nullptr)
+    , m_view(frame.virtualView())
+    , m_url(is<LocalFrame>(frame) ? downcast<LocalFrame>(frame).document()->url() : URL())
     , m_isMainFrame(!frame.tree().parent())
 {
 }
@@ -73,6 +76,11 @@ CachedFrameBase::~CachedFrameBase()
 #endif
     // CachedFrames should always have had destroy() called by their parent CachedPage
     ASSERT(!m_document);
+}
+
+RefPtr<FrameView> CachedFrameBase::protectedView() const
+{
+    return m_view;
 }
 
 void CachedFrameBase::pruneDetachedChildFrames()
@@ -87,31 +95,34 @@ void CachedFrameBase::pruneDetachedChildFrames()
 
 void CachedFrameBase::restore()
 {
-    ASSERT(m_document->view() == m_view);
+    RefPtr view = m_view;
+    ASSERT(m_document->view() == view);
 
     if (m_isMainFrame)
-        m_view->setParentVisible(true);
+        view->setParentVisible(true);
 
-    RefPtr frame = dynamicDowncast<LocalFrame>(m_view->frame());
-    if (!frame)
-        return;
+    Ref frame = view->frame();
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get());
     {
-        Style::PostResolutionCallbackDisabler disabler(*m_document);
+        Ref document = *m_document;
+        Style::PostResolutionCallbackDisabler disabler(document);
         WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
         NavigationDisabler disableNavigation { nullptr }; // Disable navigation globally.
 
-        m_cachedFrameScriptData->restore(*frame);
+        if (localFrame)
+            m_cachedFrameScriptData->restore(*localFrame);
 
-        if (m_document->svgExtensions())
-            m_document->accessSVGExtensions().unpauseAnimations();
+        if (document->svgExtensions())
+            document->accessSVGExtensions().unpauseAnimations();
 
-        m_document->resume(ReasonForSuspension::BackForwardCache);
+        document->resume(ReasonForSuspension::BackForwardCache);
 
         // It is necessary to update any platform script objects after restoring the
         // cached page.
-        frame->script().updatePlatformScriptObjects();
-
-        frame->loader().client().didRestoreFromBackForwardCache();
+        if (localFrame) {
+            localFrame->checkedScript()->updatePlatformScriptObjects();
+            localFrame->loader().client().didRestoreFromBackForwardCache();
+        }
 
         pruneDetachedChildFrames();
 
@@ -120,24 +131,27 @@ void CachedFrameBase::restore()
             ASSERT(childFrame->view()->frame().page());
             frame->tree().appendChild(childFrame->view()->frame());
             childFrame->open();
-            ASSERT_WITH_SECURITY_IMPLICATION(m_document == frame->document());
+            if (localFrame)
+                RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(m_document == localFrame->document());
+            else
+                RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_document);
         }
     }
 
 #if PLATFORM(IOS_FAMILY)
-    if (m_isMainFrame) {
-        frame->loader().client().didRestoreFrameHierarchyForCachedFrame();
+    if (m_isMainFrame && localFrame) {
+        localFrame->loader().client().didRestoreFrameHierarchyForCachedFrame();
 
-        if (DOMWindow* domWindow = m_document->domWindow()) {
-            // FIXME: Add SCROLL_LISTENER to the list of event types on Document, and use m_document->hasListenerType(). See <rdar://problem/9615482>.
-            // FIXME: Can use Document::hasListenerType() now.
-            if (domWindow->scrollEventListenerCount() && frame->page())
-                frame->page()->chrome().client().setNeedsScrollNotifications(*frame, true);
+        if (RefPtr domWindow = m_document->domWindow(); domWindow && domWindow->scrollEventListenerCount()) {
+            // FIXME: Use Document::hasListenerType(). See <rdar://problem/9615482>.
+            if (RefPtr page = frame->page())
+                page->chrome().client().setNeedsScrollNotifications(*localFrame, true);
         }
     }
 #endif
 
-    frame->view()->didRestoreFromBackForwardCache();
+    if (localFrame)
+        localFrame->protectedView()->didRestoreFromBackForwardCache();
 }
 
 CachedFrame::CachedFrame(Frame& frame)
@@ -146,48 +160,56 @@ CachedFrame::CachedFrame(Frame& frame)
 #ifndef NDEBUG
     cachedFrameCounter.increment();
 #endif
-    ASSERT(m_document);
-    ASSERT(m_documentLoader);
+    RefPtr document = m_document;
+    ASSERT(document || is<RemoteFrame>(frame));
+    ASSERT(m_documentLoader || is<RemoteFrame>(frame));
     ASSERT(m_view);
-    ASSERT(m_document->backForwardCacheState() == Document::InBackForwardCache);
+    ASSERT(!document || document->backForwardCacheState() == Document::InBackForwardCache);
 
     // Create the CachedFrames for all Frames in the FrameTree.
-    for (auto* child = frame.tree().firstChild(); child; child = child->tree().nextSibling()) {
-        auto* localChild = downcast<LocalFrame>(child);
-        if (!localChild)
-            continue;
-        m_childFrames.append(makeUniqueRef<CachedFrame>(*localChild));
-    }
+    for (RefPtr child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
+        m_childFrames.append(makeUniqueRef<CachedFrame>(*child));
 
-    RELEASE_ASSERT(m_document->domWindow());
-    RELEASE_ASSERT(m_document->domWindow()->frame());
+    if (document) {
+        RELEASE_ASSERT(document->domWindow());
+        RELEASE_ASSERT(document->domWindow()->frame());
 
     // Active DOM objects must be suspended before we cache the frame script data.
-    m_document->suspend(ReasonForSuspension::BackForwardCache);
+        document->suspend(ReasonForSuspension::BackForwardCache);
+    }
 
-    m_cachedFrameScriptData = makeUnique<ScriptCachedFrameData>(frame);
+    m_cachedFrameScriptData = is<LocalFrame>(frame) ? makeUnique<ScriptCachedFrameData>(downcast<LocalFrame>(frame)) : nullptr;
 
-    m_document->domWindow()->suspendForBackForwardCache();
+    if (document)
+        document->protectedWindow()->suspendForBackForwardCache();
 
     // Clear FrameView to reset flags such as 'firstVisuallyNonEmptyLayoutCallbackPending' so that the
     // 'DidFirstVisuallyNonEmptyLayout' callback gets called against when restoring from the BackForwardCache.
-    m_view->resetLayoutMilestones();
+    if (RefPtr localFrameView = dynamicDowncast<LocalFrameView>(m_view.get()))
+        localFrameView->resetLayoutMilestones();
 
     // The main frame is reused for the navigation and the opener link to its should thus persist.
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
+    if (localFrame) {
+        CheckedRef frameLoader = localFrame->loader();
     if (!frame.isMainFrame())
-        frame.loader().detachFromAllOpenedFrames();
+            frameLoader->detachFromAllOpenedFrames();
 
-    frame.loader().client().savePlatformDataToCachedFrame(this);
+        frameLoader->client().savePlatformDataToCachedFrame(this);
 
     // documentWillSuspendForBackForwardCache() can set up a layout timer on the FrameView, so clear timers after that.
-    frame.clearTimers();
+        localFrame->clearTimers();
+    }
 
     // Deconstruct the FrameTree, to restore it later.
     // We do this for two reasons:
     // 1 - We reuse the main frame, so when it navigates to a new page load it needs to start with a blank FrameTree.
     // 2 - It's much easier to destroy a CachedFrame while it resides in the BackForwardCache if it is disconnected from its parent.
-    for (unsigned i = 0; i < m_childFrames.size(); ++i)
-        frame.tree().removeChild(m_childFrames[i]->view()->frame());
+    Vector<Ref<Frame>> children;
+    for (auto* child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
+        children.append(*child);
+    for (auto& child : children)
+        frame.tree().removeChild(child);
 
 #ifndef NDEBUG
     if (m_isMainFrame)
@@ -197,26 +219,27 @@ CachedFrame::CachedFrame(Frame& frame)
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    if (m_isMainFrame) {
-        if (DOMWindow* domWindow = m_document->domWindow()) {
-            if (domWindow->scrollEventListenerCount() && frame.page())
-                frame.page()->chrome().client().setNeedsScrollNotifications(frame, false);
+    if (m_isMainFrame && localFrame) {
+        if (RefPtr domWindow = document->domWindow(); domWindow && domWindow->scrollEventListenerCount()) {
+            if (RefPtr page = frame.page())
+                page->chrome().client().setNeedsScrollNotifications(*localFrame, false);
         }
     }
 #endif
 
-    m_document->detachFromCachedFrame(*this);
+    if (document)
+        document->detachFromCachedFrame(*this);
 
-    ASSERT_WITH_SECURITY_IMPLICATION(!m_documentLoader->isLoading());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_documentLoader || !m_documentLoader->isLoading());
 }
 
 void CachedFrame::open()
 {
     ASSERT(m_view);
-    ASSERT(m_document);
+    ASSERT(m_document || is<RemoteFrameView>(m_view.get()));
 
-    if (auto* localFrame = dynamicDowncast<LocalFrame>(m_view->frame()))
-        localFrame->loader().open(*this);
+    if (RefPtr localFrameView = dynamicDowncast<LocalFrameView>(m_view.get()))
+        localFrameView->protectedFrame()->checkedLoader()->open(*this);
 }
 
 void CachedFrame::clear()
@@ -245,20 +268,22 @@ void CachedFrame::clear()
 
 void CachedFrame::destroy()
 {
-    if (!m_document)
+    RefPtr document = m_document;
+    if (!document)
         return;
 
     // Only CachedFrames that are still in the BackForwardCache should be destroyed in this manner
-    ASSERT(m_document->backForwardCacheState() == Document::InBackForwardCache);
+    ASSERT(document->backForwardCacheState() == Document::InBackForwardCache);
     ASSERT(m_view);
-    ASSERT(!m_document->frame());
+    ASSERT(!document->frame());
 
-    m_document->domWindow()->willDestroyCachedFrame();
+    document->protectedWindow()->willDestroyCachedFrame();
 
-    auto* localFrame = dynamicDowncast<LocalFrame>(m_view->frame());
-    if (!m_isMainFrame && m_view->frame().page() && localFrame) {
-        localFrame->loader().detachViewsAndDocumentLoader();
-        localFrame->detachFromPage();
+    Ref frame = m_view->frame();
+    if (!m_isMainFrame && m_view->frame().page()) {
+        if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get()))
+            localFrame->checkedLoader()->detachViewsAndDocumentLoader();
+        frame->detachFromPage();
     }
 
     for (int i = m_childFrames.size() - 1; i >= 0; --i)
@@ -267,14 +292,15 @@ void CachedFrame::destroy()
     if (m_cachedFramePlatformData)
         m_cachedFramePlatformData->clear();
 
-    Frame::clearTimers(m_view.get(), m_document.get());
+    if (RefPtr localFrameView = dynamicDowncast<LocalFrameView>(m_view.get()); localFrameView)
+        LocalFrame::clearTimers(localFrameView.get(), document.get());
 
     // FIXME: Why do we need to call removeAllEventListeners here? When the document is in back/forward cache, this method won't work
-    // fully anyway, because the document won't be able to access its DOMWindow object (due to being frameless).
-    m_document->removeAllEventListeners();
+    // fully anyway, because the document won't be able to access its LocalDOMWindow object (due to being frameless).
+    document->removeAllEventListeners();
 
-    m_document->setBackForwardCacheState(Document::NotInBackForwardCache);
-    m_document->willBeRemovedFromFrame();
+    document->setBackForwardCacheState(Document::NotInBackForwardCache);
+    document->willBeRemovedFromFrame();
 
     clear();
 }

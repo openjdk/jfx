@@ -181,10 +181,16 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
             return false;
         }
 
-        T t = cast(o);
+        Class<T> elementType = getElementType();
 
-        final int element = getIndex(t) / Long.SIZE;
-        final long bit = 1l << (getIndex(t) % Long.SIZE);
+        if (!elementType.isInstance(o)) {  // if cast failed, it can't be part of this set, so not modified
+            return false;
+        }
+
+        T t = elementType.cast(o);
+        int index = getIndex(t);
+        int element = index / Long.SIZE;
+        long bit = 1l << (index % Long.SIZE);
 
         if (element >= bits.length) {
             // not in this Set!
@@ -219,18 +225,22 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
             return false;
         }
 
-        final T t = cast(o);
+        Class<T> elementType = getElementType();
 
-        final int element = getIndex(t) / Long.SIZE;
-        final long bit = 1l << (getIndex(t) % Long.SIZE);
+        if (!elementType.isInstance(o)) {
+            return false;
+        }
+
+        int index = getIndex(elementType.cast(o));
+        int element = index / Long.SIZE;
+        long bit = 1L << (index % Long.SIZE);
 
         return (element < bits.length) && (bits[element] & bit) == bit;
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean containsAll(Collection<?> c) {
-        if (this.getClass() != c.getClass()) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
             for (Object obj : c) {
                 if (!contains(obj)) {
                     return false;
@@ -259,11 +269,9 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         return true;
     }
 
-
-    /** {@inheritDoc} */
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        if (this.getClass() != c.getClass()) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
             boolean modified = false;
 
             for (T obj : c) {
@@ -336,10 +344,9 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
 
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean retainAll(Collection<?> c) {
-        if (this.getClass() != c.getClass()) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
             boolean modified = false;
 
             for (Iterator<T> iterator = this.iterator(); iterator.hasNext();) {
@@ -426,11 +433,9 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         return modified;
     }
 
-
-    /** {@inheritDoc} */
     @Override
     public boolean removeAll(Collection<?> c) {
-        if (this.getClass() != c.getClass()) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
             boolean modified = false;
 
             for (Object obj : c) {
@@ -495,7 +500,6 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         return modified;
     }
 
-    /** {@inheritDoc} */
     @Override
     public void clear() {
 
@@ -539,31 +543,31 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
     private boolean equalsBitSet(BitSet<?> other) {
         int a = this.bits != null ? this.bits.length : 0;
         int b = other.bits != null ? other.bits.length : 0;
+        int max = Math.max(a, b);
 
-        if (a != b) return false;
+        for (int i = 0; i < max; i++) {
+            long m0 = i >= a ? 0 : this.bits[i];
+            long m1 = i >= b ? 0 : other.bits[i];
 
-        for(int m=0; m<a; m++) {
-            final long m0 = this.bits[m];
-            final long m1 = other.bits[m];
             if (m0 != m1) {
                 return false;
             }
         }
+
         return true;
     }
 
-    abstract protected T getT(int index);
-    abstract protected int getIndex(T t);
+    protected abstract T getT(int index);
+    protected abstract int getIndex(T t);
 
-    /*
-     * Try to cast the arg to a T.
-     * @throws ClassCastException if the class of the argument is
-     *         is not a T
-     * @throws NullPointerException if the argument is null
+    /**
+     * Returns the element type.
+     *
+     * @return a {@link Class} of type {@code T}, never {@code null}
      */
-    abstract protected T cast(Object o);
+    protected abstract Class<T> getElementType();
 
-    protected long[] getBits() {
+    long[] getBits() {
         return bits;
     }
 

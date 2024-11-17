@@ -73,8 +73,8 @@ WEBCORE_EXPORT DestinationColorSpace screenColorSpace(Widget* = nullptr);
 bool screenHasInvertedColors();
 
 #if USE(GLIB)
-double screenDPI();
-void setScreenDPIObserverHandler(Function<void()>&&, void*);
+double fontDPI(); // dpi to use for font scaling
+double screenDPI(PlatformDisplayID); // dpi of the display device, corrected for device scaling
 #endif
 
 FloatRect screenRect(Widget*);
@@ -107,7 +107,7 @@ struct ScreenData;
 WEBCORE_EXPORT ScreenProperties collectScreenProperties();
 WEBCORE_EXPORT void setScreenProperties(const ScreenProperties&);
 const ScreenProperties& getScreenProperties();
-const ScreenData* screenData(PlatformDisplayID screendisplayID);
+WEBCORE_EXPORT const ScreenData* screenData(PlatformDisplayID screendisplayID);
 WEBCORE_EXPORT PlatformDisplayID primaryScreenDisplayID();
 
 #if PLATFORM(MAC)
@@ -161,18 +161,3 @@ constexpr bool screenIsTouchPrimaryInputDevice() { return true; }
 #endif
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::DynamicRangeMode> {
-    using values = EnumValues<
-        WebCore::DynamicRangeMode,
-        WebCore::DynamicRangeMode::None,
-        WebCore::DynamicRangeMode::Standard,
-        WebCore::DynamicRangeMode::HLG,
-        WebCore::DynamicRangeMode::HDR10,
-        WebCore::DynamicRangeMode::DolbyVisionPQ
-    >;
-};
-
-} // namespace WTF

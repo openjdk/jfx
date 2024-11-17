@@ -33,7 +33,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAnimateTransformElement);
 
 inline SVGAnimateTransformElement::SVGAnimateTransformElement(const QualifiedName& tagName, Document& document)
     : SVGAnimateElementBase(tagName, document)
-    , m_type(SVGTransformValue::SVG_TRANSFORM_UNKNOWN)
+    , m_type(SVGTransformValue::SVG_TRANSFORM_TRANSLATE)
 {
     ASSERT(hasTagName(SVGNames::animateTransformTag));
 }
@@ -54,21 +54,20 @@ bool SVGAnimateTransformElement::hasValidAttributeType() const
     return SVGAnimateElementBase::hasValidAttributeType();
 }
 
-void SVGAnimateTransformElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGAnimateTransformElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::typeAttr) {
-        m_type = SVGTransformable::parseTransformType(value).value_or(SVGTransformValue::SVG_TRANSFORM_UNKNOWN);
+        m_type = SVGTransformable::parseTransformType(newValue).value_or(SVGTransformValue::SVG_TRANSFORM_UNKNOWN);
         if (m_type == SVGTransformValue::SVG_TRANSFORM_MATRIX)
             m_type = SVGTransformValue::SVG_TRANSFORM_UNKNOWN;
-        return;
     }
 
-    SVGAnimateElementBase::parseAttribute(name, value);
+    SVGAnimateElementBase::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 String SVGAnimateTransformElement::animateRangeString(const String& string) const
 {
-    return SVGTransformValue::prefixForTransfromType(m_type) + string + ')';
+    return SVGTransformValue::prefixForTransformType(m_type) + string + ')';
 }
 
 }

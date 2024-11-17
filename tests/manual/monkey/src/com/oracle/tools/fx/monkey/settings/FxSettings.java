@@ -48,6 +48,7 @@ import javafx.util.Duration;
  * TODO handle i/o errors - set handler?
  */
 public class FxSettings {
+    public static final boolean LOG = Boolean.getBoolean("FxSettings.LOG");
     private static final Duration SAVE_DELAY = Duration.millis(100);
     private static ISettingsProvider provider;
     private static boolean save;
@@ -139,7 +140,7 @@ public class FxSettings {
             FxSettingsSchema.storeWindow(m, w);
 
             Node p = w.getScene().getRoot();
-            FxSettingsSchema.storeNode(m, p);
+            FxSettingsSchema.storeNode(p);
         }
     }
 
@@ -224,9 +225,6 @@ public class FxSettings {
     }
 
     public static void store(Node n) {
-        WindowMonitor m = WindowMonitor.getFor(n);
-        if (m != null) {
-            FxSettingsSchema.storeNode(m, n);
-        }
+        FxSettingsSchema.storeNode(n);
     }
 }

@@ -151,7 +151,7 @@ class Preference
   end
 
   def webFeatureCategory
-    if %w{ css dom }.include?(@category)
+    if %w{ css dom html }.include?(@category)
       "WebFeatureCategory" + @category.upcase
     else
       "WebFeatureCategory" + @category.capitalize
@@ -159,11 +159,11 @@ class Preference
   end
 
   def apiStatus
-    "API::FeatureStatus::" + @status.capitalize
+    "API::FeatureConstant<API::FeatureStatus::#{@status.capitalize}>{}"
   end
 
   def apiCategory
-      if %w{ css dom }.include?(@category)
+      if %w{ css dom html }.include?(@category)
         "API::FeatureCategory::" + @category.upcase
       else
         "API::FeatureCategory::" + @category.capitalize
@@ -260,7 +260,7 @@ class Preferences
   STATUSES = %w{ embedder unstable internal developer testable preview stable mature }
 
   # Corresponds to WebFeatureCategory enum cases.
-  CATEGORIES = %w{ css dom javascript media networking privacy security }
+  CATEGORIES = %w{ animation css dom html javascript media networking privacy security }
 
   def initializeParsedPreferences(parsedPreferences)
     result = []
@@ -334,6 +334,17 @@ class Preferences
     else
       FileUtils.remove_file(tempResultFile)
       FileUtils.uptodate?(resultFile, [templateFile]) or FileUtils.touch(resultFile)
+    end
+  end
+
+  def constantize(value)
+    case value
+    when true
+      "std::true_type{}"
+    when false
+      "std::false_type{}"
+    else
+      value
     end
   end
 end

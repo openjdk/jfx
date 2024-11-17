@@ -3,6 +3,8 @@
  * Copyright (C) 1999 Tom Tromey
  * Copyright (C) 2000 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -475,6 +477,14 @@ g_unichar_iswide_bsearch (gunichar ch)
   return FALSE;
 }
 
+static const struct Interval default_wide_blocks[] = {
+  { 0x3400, 0x4dbf },
+  { 0x4e00, 0x9fff },
+  { 0xf900, 0xfaff },
+  { 0x20000, 0x2fffd },
+  { 0x30000, 0x3fffd }
+};
+
 /**
  * g_unichar_iswide:
  * @c: a Unicode character
@@ -489,8 +499,17 @@ g_unichar_iswide (gunichar c)
 {
   if (c < g_unicode_width_table_wide[0].start)
     return FALSE;
-  else
-    return g_unichar_iswide_bsearch (c);
+  else if (g_unichar_iswide_bsearch (c))
+    return TRUE;
+  else if (g_unichar_type (c) == G_UNICODE_UNASSIGNED &&
+           bsearch (GUINT_TO_POINTER (c),
+                    default_wide_blocks,
+                    G_N_ELEMENTS (default_wide_blocks),
+                    sizeof default_wide_blocks[0],
+                    interval_compare))
+    return TRUE;
+
+  return FALSE;
 }
 
 
@@ -553,10 +572,10 @@ g_unichar_toupper (gunichar c)
     {
       gunichar val = ATTTABLE (c >> 8, c & 0xff);
       if (val >= 0x1000000)
-  {
-    const gchar *p = special_case_table + val - 0x1000000;
+        {
+          const gchar *p = special_case_table + (val - 0x1000000);
           val = g_utf8_get_char (p);
-  }
+        }
       /* Some lowercase letters, e.g., U+000AA, FEMININE ORDINAL INDICATOR,
        * do not have an uppercase equivalent, in which case val will be
        * zero.
@@ -567,10 +586,10 @@ g_unichar_toupper (gunichar c)
     {
       unsigned int i;
       for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
-  {
-    if (title_table[i][0] == c)
-      return title_table[i][1] ? title_table[i][1] : c;
-  }
+        {
+          if (title_table[i][0] == c)
+            return title_table[i][1] ? title_table[i][1] : c;
+        }
     }
   return c;
 }
@@ -593,25 +612,25 @@ g_unichar_tolower (gunichar c)
     {
       gunichar val = ATTTABLE (c >> 8, c & 0xff);
       if (val >= 0x1000000)
-  {
-    const gchar *p = special_case_table + val - 0x1000000;
-    return g_utf8_get_char (p);
-  }
+        {
+          const gchar *p = special_case_table + (val - 0x1000000);
+          return g_utf8_get_char (p);
+        }
       else
-  {
-    /* Not all uppercase letters are guaranteed to have a lowercase
-     * equivalent.  If this is the case, val will be zero. */
-    return val ? val : c;
-  }
+        {
+          /* Not all uppercase letters are guaranteed to have a lowercase
+           * equivalent.  If this is the case, val will be zero. */
+          return val ? val : c;
+        }
     }
   else if (t == G_UNICODE_TITLECASE_LETTER)
     {
       unsigned int i;
       for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
-  {
-    if (title_table[i][0] == c)
-      return title_table[i][2];
-  }
+        {
+          if (title_table[i][0] == c)
+            return title_table[i][2];
+        }
     }
   return c;
 }
@@ -639,8 +658,8 @@ g_unichar_totitle (gunichar c)
   for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
     {
       if (title_table[i][0] == c || title_table[i][1] == c
-    || title_table[i][2] == c)
-  return title_table[i][0];
+        || title_table[i][2] == c)
+      return title_table[i][0];
     }
 
   if (TYPE (c) == G_UNICODE_LOWERCASE_LETTER)
@@ -766,13 +785,13 @@ output_marks (const char **p_inout,
       gunichar c = g_utf8_get_char (p);
 
       if (ISMARK (TYPE (c)))
-  {
-    if (!remove_dot || c != 0x307 /* COMBINING DOT ABOVE */)
-      len += g_unichar_to_utf8 (c, out_buffer ? out_buffer + len : NULL);
-    p = g_utf8_next_char (p);
-  }
+        {
+          if (!remove_dot || c != 0x307 /* COMBINING DOT ABOVE */)
+            len += g_unichar_to_utf8 (c, out_buffer ? out_buffer + len : NULL);
+          p = g_utf8_next_char (p);
+        }
       else
-  break;
+        break;
     }
 
   *p_inout = p;
@@ -1234,7 +1253,7 @@ g_utf8_casefold (const gchar *str,
 /**
  * g_unichar_get_mirror_char:
  * @ch: a Unicode character
- * @mirrored_ch: location to store the mirrored character
+ * @mirrored_ch: (out): location to store the mirrored character
  *
  * In Unicode, some characters are "mirrored". This means that their
  * images are mirrored horizontally in text that is laid out from right
@@ -1520,6 +1539,10 @@ static const guint32 iso15924_tags[] =
 
   /* not really a Unicode script, but part of ISO 15924 */
     PACK ('Z', 'm', 't', 'h'), /* G_UNICODE_SCRIPT_MATH */
+
+    /* Unicode 15.0 additions */
+    PACK ('K', 'a', 'w', 'i'), /* G_UNICODE_SCRIPT_KAWI */
+    PACK ('N', 'a', 'g', 'm'), /* G_UNICODE_SCRIPT_NAG_MUNDARI */
 
 #undef PACK
 };

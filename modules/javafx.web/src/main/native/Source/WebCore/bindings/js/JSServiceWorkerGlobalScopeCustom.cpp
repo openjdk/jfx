@@ -24,14 +24,12 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SERVICE_WORKER)
 #include "JSServiceWorkerGlobalScope.h"
 
 #include "JSDOMPromiseDeferred.h"
 #include "ServiceWorkerClients.h"
 #include "ServiceWorkerGlobalScope.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 
 namespace WebCore {
 
@@ -47,5 +45,3 @@ void JSServiceWorkerGlobalScope::visitAdditionalChildren(Visitor& visitor)
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSServiceWorkerGlobalScope);
 
 } // namespace WebCore
-
-#endif

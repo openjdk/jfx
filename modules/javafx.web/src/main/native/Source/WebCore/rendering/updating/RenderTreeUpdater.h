@@ -46,7 +46,7 @@ public:
     RenderTreeUpdater(Document&, Style::PostResolutionCallbackDisabler&);
     ~RenderTreeUpdater();
 
-    void commit(std::unique_ptr<const Style::Update>);
+    void commit(std::unique_ptr<Style::Update>);
 
     static void tearDownRenderers(Element&);
     static void tearDownRenderersAfterSlotChange(Element& host);
@@ -54,6 +54,7 @@ public:
 
 private:
     class GeneratedContent;
+    class ViewTransition;
 
     void updateRenderTree(ContainerNode& root);
     void updateTextRenderer(Text&, const Style::TextUpdate*);
@@ -84,6 +85,7 @@ private:
     RenderTreePosition& renderTreePosition();
 
     GeneratedContent& generatedContent() { return *m_generatedContent; }
+    ViewTransition& viewTransition() { return *m_viewTransition; }
 
     void pushParent(Element&, const Style::ElementUpdate*);
     void popParent();
@@ -96,14 +98,17 @@ private:
     static void tearDownLeftoverChildrenOfComposedTree(Element&, RenderTreeBuilder&);
     static void tearDownLeftoverPaginationRenderersIfNeeded(Element&, RenderTreeBuilder&);
 
+    void updateRebuildRoots();
+
     RenderView& renderView();
 
     Document& m_document;
-    std::unique_ptr<const Style::Update> m_styleUpdate;
+    std::unique_ptr<Style::Update> m_styleUpdate;
 
     Vector<Parent> m_parentStack;
 
     std::unique_ptr<GeneratedContent> m_generatedContent;
+    std::unique_ptr<ViewTransition> m_viewTransition;
 
     RenderTreeBuilder m_builder;
 };

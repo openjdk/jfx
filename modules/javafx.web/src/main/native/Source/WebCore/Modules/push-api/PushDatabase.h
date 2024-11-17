@@ -25,18 +25,16 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "EpochTimeStamp.h"
 #include "PushSubscriptionIdentifier.h"
 #include "SQLiteDatabase.h"
 #include "SQLiteStatement.h"
 #include "SQLiteStatementAutoResetScope.h"
+#include <span>
 #include <wtf/CompletionHandler.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/Span.h>
 #include <wtf/UUID.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
@@ -87,7 +85,7 @@ public:
     WEBCORE_EXPORT ~PushDatabase();
 
     enum class PublicTokenChanged : bool { No, Yes };
-    WEBCORE_EXPORT void updatePublicToken(Span<const uint8_t>, CompletionHandler<void(PublicTokenChanged)>&&);
+    WEBCORE_EXPORT void updatePublicToken(std::span<const uint8_t>, CompletionHandler<void(PublicTokenChanged)>&&);
     WEBCORE_EXPORT void getPublicToken(CompletionHandler<void(Vector<uint8_t>&&)>&&);
 
     WEBCORE_EXPORT void insertRecord(const PushRecord&, CompletionHandler<void(std::optional<PushRecord>&&)>&&);
@@ -120,5 +118,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

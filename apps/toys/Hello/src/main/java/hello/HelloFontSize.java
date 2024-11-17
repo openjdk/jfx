@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package hello;
 
-import java.util.Set;
 import javafx.application.Application;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
@@ -34,9 +33,13 @@ import javafx.beans.value.ObservableValue;
 import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Skin;
+import javafx.scene.control.Slider;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -96,7 +99,8 @@ public class HelloFontSize extends Application {
         t6.setToggleGroup(tg);
         t6.fontProperty().addListener(new ChangeListener<Font>(){
 
-            public void changed(ObservableValue<? extends Font> ov, Font t, Font t1) {
+            @Override
+           public void changed(ObservableValue<? extends Font> ov, Font t, Font t1) {
                 double fsize = t1.getSize();
                 fsize = Math.round(fsize*10.0)/10.0;
                 t6.setText(fsize + "px");
@@ -136,6 +140,7 @@ public class HelloFontSize extends Application {
 
         slider.skinProperty().addListener(new ChangeListener<Skin>() {
 
+            @Override
             public void changed(ObservableValue<? extends Skin> ov, Skin t, Skin t1) {
                 if (t1 != null) {
                     slider.setValue(14);
@@ -145,6 +150,7 @@ public class HelloFontSize extends Application {
 
         slider.valueProperty().addListener(new ChangeListener<Number>() {
 
+            @Override
             public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
                 hbox.setStyle("-fx-font: " + t1.toString() + "px \"Comic Sans MS\";");
             }
@@ -152,6 +158,7 @@ public class HelloFontSize extends Application {
 
         hbox.styleProperty().addListener(new ChangeListener<String>() {
 
+            @Override
             public void changed(ObservableValue<? extends String> ov, String t, String t1) {
                 lbl.setText(hbox.getStyle());
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,21 +40,19 @@ import static javafx.scene.control.skin.TextInputSkinShim.getTextTranslateX;
 import static javafx.scene.control.skin.TextInputSkinShim.setHandlePressed;
 import static javafx.scene.layout.Region.USE_COMPUTED_SIZE;
 import static javafx.scene.layout.Region.USE_PREF_SIZE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.replaceSkin;
 import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.getCell;
-
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -77,7 +75,6 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TableViewShim;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
@@ -102,14 +99,11 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
-
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
@@ -127,15 +121,16 @@ public class SkinCleanupTest {
     /**
      * Test access to fixedCellSize via lookup (not listener)
      */
-    @Ignore("JDK-8277000")
+    @Disabled("JDK-8277000")
     @Test
     public void testTreeTableRowFixedCellSizeListener() {
         TreeTableView<Person> tableView = createPersonTreeTable(false);
         showControl(tableView, true);
         TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
         TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
-        assertNull("row skin must not have listener to fixedCellSize",
-                unregisterChangeListeners(rowSkin, tableView.fixedCellSizeProperty()));
+        assertNull(
+                unregisterChangeListeners(rowSkin, tableView.fixedCellSizeProperty()),
+                "row skin must not have listener to fixedCellSize");
     }
 
     /**
@@ -150,7 +145,7 @@ public class SkinCleanupTest {
                 .mapToDouble(col -> col.getWidth())
                 .sum();
         TreeTableRow<?> tableRow = (TreeTableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
-        assertEquals("pref row width for fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+        assertEquals(totalColumnWidth, tableRow.prefWidth(-1), .1, "pref row width for fixed cell size");
     }
 
     /**
@@ -164,7 +159,7 @@ public class SkinCleanupTest {
                 .mapToDouble(col -> col.getWidth())
                 .sum();
         TreeTableRow<?> tableRow = (TreeTableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
-        assertEquals("sanity: pref row witdh for not fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+        assertEquals(totalColumnWidth, tableRow.prefWidth(-1), .1, "sanity: pref row witdh for not fixed cell size");
     }
 
     /**
@@ -179,7 +174,7 @@ public class SkinCleanupTest {
         replaceSkin(tableRow);
         tableView.setTreeColumn(tableView.getColumns().get(1));
         // note: the actual update happens only in layout, test the marker here
-        assertTrue("dirty marker must have been set", isDirty(tableRow));
+        assertTrue(isDirty(tableRow), "dirty marker must have been set");
     }
 
     /**
@@ -192,7 +187,7 @@ public class SkinCleanupTest {
         TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
         tableView.setTreeColumn(tableView.getColumns().get(1));
         // note: the actual update happens only in layout, test the marker here
-        assertTrue("dirty marker must have been set", isDirty(tableRow));
+        assertTrue(isDirty(tableRow), "dirty marker must have been set");
     }
 
     @Test
@@ -234,7 +229,7 @@ public class SkinCleanupTest {
         replaceSkin(tableRow);
         double fixed = 200;
         tableView.setFixedCellSize(fixed);
-        assertEquals("fixed cell size: ", fixed, tableRow.prefHeight(-1), 1);
+        assertEquals(fixed, tableRow.prefHeight(-1), 1, "fixed cell size: ");
     }
 
     /**
@@ -247,7 +242,7 @@ public class SkinCleanupTest {
         TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
         double fixed = 200;
         tableView.setFixedCellSize(fixed);
-        assertEquals("fixed cell size: ", fixed, tableRow.prefHeight(-1), 1);
+        assertEquals(fixed, tableRow.prefHeight(-1), 1, "fixed cell size: ");
     }
 
     @Test
@@ -256,10 +251,10 @@ public class SkinCleanupTest {
         showControl(tableView, true);
         TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
         replaceSkin(tableRow);
-        assertFalse("fixed cell size disabled initially", isFixedCellSizeEnabled(tableRow));
+        assertFalse(isFixedCellSizeEnabled(tableRow), "fixed cell size disabled initially");
         double fixed = 200;
         tableView.setFixedCellSize(fixed);
-        assertTrue("fixed cell size enabled", isFixedCellSizeEnabled(tableRow));
+        assertTrue(isFixedCellSizeEnabled(tableRow), "fixed cell size enabled");
     }
 
     /**
@@ -270,10 +265,10 @@ public class SkinCleanupTest {
         TreeTableView<Person> tableView = createPersonTreeTable(false);
         showControl(tableView, true);
         TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
-        assertFalse("fixed cell size disabled initially", isFixedCellSizeEnabled(tableRow));
+        assertFalse(isFixedCellSizeEnabled(tableRow), "fixed cell size disabled initially");
         double fixed = 200;
         tableView.setFixedCellSize(fixed);
-        assertTrue("fixed cell size enabled", isFixedCellSizeEnabled(tableRow));
+        assertTrue(isFixedCellSizeEnabled(tableRow), "fixed cell size enabled");
     }
 
     @Test
@@ -313,7 +308,7 @@ public class SkinCleanupTest {
         // since we are dealing with tree/tables with unconstrained resize policies,
         // the row skin may not follow the width exactly. we'll check that the width
         // simply changes.
-        assertTrue("TreeTableRowSkin must follow the VirtualFlow width", widthAfter < (widthBefore - 10));
+        assertTrue(widthAfter < (widthBefore - 10), "TreeTableRowSkin must follow the VirtualFlow width");
     }
 
     /**
@@ -370,7 +365,7 @@ public class SkinCleanupTest {
     /**
      * Here we configure a tableRow with table and install the row's skin.
      */
-    @Ignore("JDK-8274065")
+    @Disabled("JDK-8274065")
     @Test
     public void testTreeTableRowVirtualFlowInstallSkin() {
         TreeTableRow<?> tableRow = createTreeTableRow(1);
@@ -389,13 +384,13 @@ public class SkinCleanupTest {
         WeakReference<?> weakRef = new WeakReference<>(replaceSkin(tableRow));
         assertNotNull(weakRef.get());
         attemptGC(weakRef);
-        assertEquals("Skin must be gc'ed", null, weakRef.get());
+        assertEquals(null, weakRef.get(), "Skin must be gc'ed");
     }
 
     /**
      * Fails in install skin NPE
      */
-    @Ignore("JDK-8274065")
+    @Disabled("JDK-8274065")
     @Test
     public void testTreeTableRowWithGraphicMemoryLeakInstallSkin() {
         TreeTableRow<?> tableRow = createTreeTableRow(1);
@@ -404,7 +399,7 @@ public class SkinCleanupTest {
         WeakReference<?> weakRef = new WeakReference<>(replaceSkin(tableRow));
         assertNotNull(weakRef.get());
         attemptGC(weakRef);
-        assertEquals("Skin must be gc'ed", null, weakRef.get());
+        assertEquals(null, weakRef.get(), "Skin must be gc'ed");
     }
 
 
@@ -420,7 +415,7 @@ public class SkinCleanupTest {
         TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
         replaceSkin(tableRow);
         tableView.getColumns().get(0).setVisible(false);
-        assertTrue("dirty marker must have been set", isDirty(tableRow));
+        assertTrue(isDirty(tableRow), "dirty marker must have been set");
     }
 
     /**
@@ -432,7 +427,7 @@ public class SkinCleanupTest {
         showControl(tableView, true);
         TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
         tableView.getColumns().get(0).setVisible(false);
-        assertTrue("dirty marker must have been set", isDirty(tableRow));
+        assertTrue(isDirty(tableRow), "dirty marker must have been set");
     }
 
     /**
@@ -449,7 +444,7 @@ public class SkinCleanupTest {
         tableRow.updateIndex(index);
         List<IndexedCell<?>> cells = getCells(tableRow);
         assertEquals(tableView.getVisibleLeafColumns().size(), cells.size());
-        assertEquals("cell index must be updated", index, cells.get(0).getIndex());
+        assertEquals(index, cells.get(0).getIndex(), "cell index must be updated");
     }
 
     /**
@@ -465,7 +460,7 @@ public class SkinCleanupTest {
         tableRow.updateIndex(index);
         List<IndexedCell<?>> cells = getCells(tableRow);
         assertEquals(tableView.getVisibleLeafColumns().size(), cells.size());
-        assertEquals("cell index must be updated", index, cells.get(0).getIndex());
+        assertEquals(index, cells.get(0).getIndex(), "cell index must be updated");
    }
 
 
@@ -522,7 +517,7 @@ public class SkinCleanupTest {
         // note: must updateTable before updateIndex
         tableRow.updateTreeTableView(table);
         tableRow.updateIndex(index);
-        assertFalse("sanity: row must not be empty at index: " + index, tableRow.isEmpty());
+        assertFalse(tableRow.isEmpty(), "sanity: row must not be empty at index: " + index);
         return tableRow;
     }
 
@@ -555,15 +550,16 @@ public class SkinCleanupTest {
     /**
      * Test access to fixedCellSize via lookup (not listener)
      */
-    @Ignore("JDK-8277000")
+    @Disabled("JDK-8277000")
     @Test
     public void testTableRowFixedCellSizeListener() {
         TableView<Person> tableView = createPersonTable(false);
         showControl(tableView, true);
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
         TableRowSkin<?> rowSkin = (TableRowSkin<?>) tableRow.getSkin();
-        assertNull("row skin must not have listener to fixedCellSize",
-                unregisterChangeListeners(rowSkin, tableView.fixedCellSizeProperty()));
+        assertNull(
+                unregisterChangeListeners(rowSkin, tableView.fixedCellSizeProperty()),
+                "row skin must not have listener to fixedCellSize");
     }
 
     /**
@@ -578,7 +574,7 @@ public class SkinCleanupTest {
                 .mapToDouble(col -> col.getWidth())
                 .sum();
         TableRow<?> tableRow = (TableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
-        assertEquals("pref row width for fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+        assertEquals(totalColumnWidth, tableRow.prefWidth(-1), .1, "pref row width for fixed cell size");
     }
 
     /**
@@ -592,7 +588,7 @@ public class SkinCleanupTest {
                 .mapToDouble(col -> col.getWidth())
                 .sum();
         TableRow<?> tableRow = (TableRow<?>) VirtualFlowTestUtils.getCell(table, 2);
-        assertEquals("sanity: pref row witdh for not fixed cell size", totalColumnWidth, tableRow.prefWidth(-1), .1);
+        assertEquals(totalColumnWidth, tableRow.prefWidth(-1), .1, "sanity: pref row witdh for not fixed cell size");
     }
 
     @Test
@@ -603,7 +599,7 @@ public class SkinCleanupTest {
         replaceSkin(tableRow);
         double fixed = 200;
         tableView.setFixedCellSize(fixed);
-        assertEquals("fixed cell size: ", fixed, tableRow.prefHeight(-1), 1);
+        assertEquals(fixed, tableRow.prefHeight(-1), 1, "fixed cell size: ");
     }
 
     /**
@@ -616,7 +612,7 @@ public class SkinCleanupTest {
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
         double fixed = 200;
         tableView.setFixedCellSize(fixed);
-        assertEquals("fixed cell size: ", fixed, tableRow.prefHeight(-1), 1);
+        assertEquals(fixed, tableRow.prefHeight(-1), 1, "fixed cell size: ");
     }
 
     @Test
@@ -625,10 +621,10 @@ public class SkinCleanupTest {
         showControl(tableView, true);
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
         replaceSkin(tableRow);
-        assertFalse("fixed cell size disabled initially", isFixedCellSizeEnabled(tableRow));
+        assertFalse(isFixedCellSizeEnabled(tableRow), "fixed cell size disabled initially");
         double fixed = 200;
         tableView.setFixedCellSize(fixed);
-        assertTrue("fixed cell size enabled", isFixedCellSizeEnabled(tableRow));
+        assertTrue(isFixedCellSizeEnabled(tableRow), "fixed cell size enabled");
     }
 
     /**
@@ -639,10 +635,10 @@ public class SkinCleanupTest {
         TableView<Person> tableView = createPersonTable(false);
         showControl(tableView, true);
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
-        assertFalse("fixed cell size disabled initially", isFixedCellSizeEnabled(tableRow));
+        assertFalse(isFixedCellSizeEnabled(tableRow), "fixed cell size disabled initially");
         double fixed = 200;
         tableView.setFixedCellSize(fixed);
-        assertTrue("fixed cell size enabled", isFixedCellSizeEnabled(tableRow));
+        assertTrue(isFixedCellSizeEnabled(tableRow), "fixed cell size enabled");
     }
 
     @Test
@@ -654,8 +650,9 @@ public class SkinCleanupTest {
         replaceSkin(tableRow);
         Toolkit.getToolkit().firePulse();
         TableRowSkin<?> rowSkin = (TableRowSkin<?>) tableRow.getSkin();
-        assertNotNull("row skin must have listener to virtualFlow width",
-                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+        assertNotNull(
+                unregisterChangeListeners(rowSkin, flow.widthProperty()),
+                "row skin must have listener to virtualFlow width");
     }
 
     /**
@@ -668,8 +665,9 @@ public class SkinCleanupTest {
         VirtualFlow<?> flow = getVirtualFlow(tableView);
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
         TableRowSkin<?> rowSkin = (TableRowSkin<?>) tableRow.getSkin();
-        assertNotNull("row skin must have listener to virtualFlow width",
-                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+        assertNotNull(
+                unregisterChangeListeners(rowSkin, flow.widthProperty()),
+                "row skin must have listener to virtualFlow width");
     }
 
     /**
@@ -728,7 +726,7 @@ public class SkinCleanupTest {
     /**
      * Here we configure a tableRow with table and install the row's skin.
      */
-    @Ignore("JDK-8274065")
+    @Disabled("JDK-8274065")
     @Test
     public void testTableRowVirtualFlowInstallSkin() {
         TableRow<?> tableRow = createTableRow(0);
@@ -752,7 +750,7 @@ public class SkinCleanupTest {
         replaceSkin(tableRow);
         tableView.getColumns().get(0).setVisible(false);
         // note: the actual update happens only in layout, test the marker here
-        assertTrue("dirty marker must have been set", isDirty(tableRow));
+        assertTrue(isDirty(tableRow), "dirty marker must have been set");
     }
 
     /**
@@ -765,7 +763,7 @@ public class SkinCleanupTest {
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
         tableView.getColumns().get(0).setVisible(false);
         // note: the actual update happens only in layout, test the marker here
-        assertTrue("dirty marker must have been set", isDirty(tableRow));
+        assertTrue(isDirty(tableRow), "dirty marker must have been set");
     }
 
     /**
@@ -782,7 +780,7 @@ public class SkinCleanupTest {
         tableRow.updateIndex(index);
         List<IndexedCell<?>> cells = getCells(tableRow);
         assertEquals(tableView.getVisibleLeafColumns().size(), cells.size());
-        assertEquals("cell index must be updated", index, cells.get(0).getIndex());
+        assertEquals(index, cells.get(0).getIndex(), "cell index must be updated");
     }
 
     /**
@@ -799,7 +797,7 @@ public class SkinCleanupTest {
         Toolkit.getToolkit().firePulse();
         List<IndexedCell<?>> cells = getCells(tableRow);
         assertEquals(tableView.getVisibleLeafColumns().size(), cells.size());
-        assertEquals("cell index must be updated", index, cells.get(0).getIndex());
+        assertEquals(index, cells.get(0).getIndex(), "cell index must be updated");
    }
 
 //-------------- helpers for TableRow tests
@@ -858,7 +856,7 @@ public class SkinCleanupTest {
         // note: must updateTable before updateIndex
         tableRow.updateTableView(table);
         tableRow.updateIndex(index);
-        assertFalse("sanity: row must not be empty at index: " + index, tableRow.isEmpty());
+        assertFalse(tableRow.isEmpty(), "sanity: row must not be empty at index: " + index);
         return tableRow;
     }
 
@@ -893,11 +891,11 @@ public class SkinCleanupTest {
         ScrollEvent scrollEvent = new ScrollEvent(ScrollEvent.ANY, 0, 0, 0, 0, false, false, false, false,
                 true, // direct
                 false, 0, 0, 0, USE_PREF_SIZE, null, USE_COMPUTED_SIZE, null, 0, 0, null);
-        assertTrue("sanity: created a fake direct event", scrollEvent.isDirect());
+        assertTrue(scrollEvent.isDirect(), "sanity: created a fake direct event");
         // must use copy to detect change in consume
         ScrollEvent copy = scrollEvent.copyFor(area, area);
         Event.fireEvent(area, copy);
-        assertTrue("scrollEvent must be consumed", copy.isConsumed());
+        assertTrue(copy.isConsumed(), "scrollEvent must be consumed");
     }
 
     /**
@@ -911,9 +909,9 @@ public class SkinCleanupTest {
         area.selectAll();
         textNode.getParent().getParent().layout();
         int end = area.getLength();
-        assertEquals("sanity: area caret moved to end", end, area.getCaretPosition());
-        assertEquals("sanity: area selection updated", end, area.getSelection().getEnd());
-        assertEquals("textNode end", end, textNode.getSelectionEnd());
+        assertEquals(end, area.getCaretPosition(), "sanity: area caret moved to end");
+        assertEquals(end, area.getSelection().getEnd(), "sanity: area selection updated");
+        assertEquals(end, textNode.getSelectionEnd(), "textNode end");
     }
 
     /**
@@ -937,7 +935,7 @@ public class SkinCleanupTest {
     public void testTextAreaSetColumnCount() {
         TextArea area = new TextArea("some text");
         int prefColumn = area.getPrefColumnCount();
-        assertEquals("sanity: initial count", TextArea.DEFAULT_PREF_COLUMN_COUNT, prefColumn);
+        assertEquals(TextArea.DEFAULT_PREF_COLUMN_COUNT, prefColumn, "sanity: initial count");
         installDefaultSkin(area);
         replaceSkin(area);
         area.setPrefColumnCount(prefColumn * 2);
@@ -950,12 +948,12 @@ public class SkinCleanupTest {
     public void testTextAreaSetColumnCountUpdate() {
         TextArea area = new TextArea("some text");
         int prefColumn = area.getPrefColumnCount();
-        assertEquals("sanity: initial count", TextArea.DEFAULT_PREF_COLUMN_COUNT, prefColumn);
+        assertEquals(TextArea.DEFAULT_PREF_COLUMN_COUNT, prefColumn, "sanity: initial count");
         installDefaultSkin(area);
         ScrollPane scrollPane = getScrollPane(area);
         double prefViewportWidth = scrollPane.getPrefViewportWidth();
         area.setPrefColumnCount(prefColumn * 2);
-        assertEquals("prefViewportWidth must be updated", prefViewportWidth * 2, scrollPane.getPrefViewportWidth(), 1);
+        assertEquals(prefViewportWidth * 2, scrollPane.getPrefViewportWidth(), 1, "prefViewportWidth must be updated");
     }
 
     /**
@@ -977,12 +975,12 @@ public class SkinCleanupTest {
     public void testTextAreaSetRowCountUpdate() {
         TextArea area = new TextArea("some text");
         int prefRows = area.getPrefRowCount();
-        assertEquals("sanity: initial row count", TextArea.DEFAULT_PREF_ROW_COUNT, prefRows);
+        assertEquals(TextArea.DEFAULT_PREF_ROW_COUNT, prefRows, "sanity: initial row count");
         installDefaultSkin(area);
         ScrollPane scrollPane = getScrollPane(area);
         double prefViewportHeight = scrollPane.getPrefViewportHeight();
         area.setPrefRowCount(prefRows * 2);
-        assertEquals("prefViewportHeight must be updated", prefViewportHeight * 2, scrollPane.getPrefViewportHeight(), 1);
+        assertEquals(prefViewportHeight * 2, scrollPane.getPrefViewportHeight(), 1, "prefViewportHeight must be updated");
     }
 
     /**
@@ -994,7 +992,7 @@ public class SkinCleanupTest {
         TextArea area = new TextArea(initial);
         installDefaultSkin(area);
         Text textNode = getTextNode(area);
-        assertEquals("sanity initial text sync'ed to textNode", initial, textNode.getText());
+        assertEquals(initial, textNode.getText(), "sanity initial text sync'ed to textNode");
         String replaced = "replaced text";
         area.setText(replaced);
         assertEquals(replaced, textNode.getText());
@@ -1018,9 +1016,9 @@ public class SkinCleanupTest {
     public void testTextAreaPromptUpdate() {
         TextArea area = new TextArea();
         installDefaultSkin(area);
-        assertNull("sanity: default prompt is null", getPromptNode(area));
+        assertNull(getPromptNode(area), "sanity: default prompt is null");
         area.setPromptText("prompt");
-        assertNotNull("prompt node must be created", getPromptNode(area));
+        assertNotNull(getPromptNode(area), "prompt node must be created");
     }
 
     @Test
@@ -1029,7 +1027,7 @@ public class SkinCleanupTest {
         installDefaultSkin(area);
         int children = area.getChildrenUnmodifiable().size();
         replaceSkin(area);
-        assertEquals("children size must be unchanged: ", children, area.getChildrenUnmodifiable().size());
+        assertEquals(children, area.getChildrenUnmodifiable().size(), "children size must be unchanged: ");
     }
 
     /**
@@ -1054,8 +1052,8 @@ public class SkinCleanupTest {
         double scrollLeft = 500;
         area.setScrollLeft(scrollLeft);
         Toolkit.getToolkit().firePulse();
-        assertEquals("sanity: scrollLeft updated", scrollLeft, area.getScrollLeft(), 0.1);
-        assertTrue("scrollPane hValue > 0", scrollPane.getHvalue() > 0.0);
+        assertEquals(scrollLeft, area.getScrollLeft(), 0.1, "sanity: scrollLeft updated");
+        assertTrue(scrollPane.getHvalue() > 0.0, "scrollPane hValue > 0");
     }
 
     /**
@@ -1073,7 +1071,7 @@ public class SkinCleanupTest {
     /**
      * Sanity: change of scrollTop must update scrollPane's vValue.
      */
-    @Ignore("8272082")
+    @Disabled("8272082")
     @Test
     public void testTextAreaSetScrollTopUpdate() {
         TextArea area = new TextArea(LOREM_IPSUM + LOREM_IPSUM);
@@ -1083,8 +1081,8 @@ public class SkinCleanupTest {
         double scrollTop = 100;
         area.setScrollTop(scrollTop);
         Toolkit.getToolkit().firePulse();
-        assertEquals("sanity: scrollTop updated", scrollTop, area.getScrollTop(), 0.1);
-        assertTrue("scrollPane vValue > 0", scrollPane.getVvalue() > 0.0);
+        assertEquals(scrollTop, area.getScrollTop(), 0.1, "sanity: scrollTop updated");
+        assertTrue(scrollPane.getVvalue() > 0.0, "scrollPane vValue > 0");
     }
 
     public static final String LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
@@ -1119,7 +1117,7 @@ public class SkinCleanupTest {
         showControl(field, true);
         Text textNode = getTextNode(field);
         field.positionCaret(2);
-        assertEquals("textNode caret", field.getCaretPosition(), textNode.getCaretPosition());
+        assertEquals(field.getCaretPosition(), textNode.getCaretPosition(), "textNode caret");
     }
 
     /**
@@ -1143,9 +1141,9 @@ public class SkinCleanupTest {
         Text textNode = getTextNode(field);
         field.selectAll();
         int end = field.getLength();
-        assertEquals("sanity: field caret moved to end", end, field.getCaretPosition());
-        assertEquals("sanity: field selection updated", end, field.getSelection().getEnd());
-        assertEquals("textNode end", end, textNode.getSelectionEnd());
+        assertEquals(end, field.getCaretPosition(), "sanity: field caret moved to end");
+        assertEquals(end, field.getSelection().getEnd(), "sanity: field selection updated");
+        assertEquals(end, textNode.getSelectionEnd(), "textNode end");
     }
 
     /**
@@ -1196,13 +1194,13 @@ public class SkinCleanupTest {
         // field to test: start with left, then change to right align while showing
         TextField field = new TextField("dummy");
         field.setPrefColumnCount(50);
-        assertEquals("sanity: ", Pos.CENTER_LEFT, field.getAlignment());
+        assertEquals(Pos.CENTER_LEFT, field.getAlignment(), "sanity: ");
         showControl(field, true);
         Toolkit.getToolkit().firePulse();
         double textTranslate = getTextTranslateX(field);
-        assertEquals("sanity:", 0, textTranslate, 1);
+        assertEquals(0, textTranslate, 1, "sanity:");
         field.setAlignment(Pos.CENTER_RIGHT);
-        assertEquals("translateX must be updated", rightTranslate, getTextTranslateX(field), 1);
+        assertEquals(rightTranslate, getTextTranslateX(field), 1, "translateX must be updated");
     }
 
     /**
@@ -1223,9 +1221,9 @@ public class SkinCleanupTest {
     public void testTextFieldPromptUpdate() {
         TextField field = new TextField();
         installDefaultSkin(field);
-        assertNull("sanity: default prompt is null", getPromptNode(field));
+        assertNull(getPromptNode(field), "sanity: default prompt is null");
         field.setPromptText("prompt");
-        assertNotNull("prompt node must be created", getPromptNode(field));
+        assertNotNull(getPromptNode(field), "prompt node must be created");
     }
 
     @Test
@@ -1234,7 +1232,7 @@ public class SkinCleanupTest {
         installDefaultSkin(field);
         int children = field.getChildrenUnmodifiable().size();
         replaceSkin(field);
-        assertEquals("children size must be unchanged: ", children, field.getChildrenUnmodifiable().size());
+        assertEquals(children, field.getChildrenUnmodifiable().size(), "children size must be unchanged: ");
     }
 
 //--------------- TextInputControl
@@ -1251,7 +1249,7 @@ public class SkinCleanupTest {
         field.selectRange(2, 5);
         String selected = field.getSelectedText();
         installDefaultSkin(field);
-        assertEquals("sanity: skin has set requests", selected, field.getInputMethodRequests().getSelectedText());
+        assertEquals(selected, field.getInputMethodRequests().getSelectedText(), "sanity: skin has set requests");
         field.getSkin().dispose();
         if (field.getInputMethodRequests() != null) {
             assertEquals(selected, field.getInputMethodRequests().getSelectedText());
@@ -1264,7 +1262,7 @@ public class SkinCleanupTest {
         field.setOnInputMethodTextChanged(null);
         installDefaultSkin(field);
         field.getSkin().dispose();
-        assertNull("skin dispose must remove handler it has installed", field.getOnInputMethodTextChanged());
+        assertNull(field.getOnInputMethodTextChanged(), "skin dispose must remove handler it has installed");
     }
 
     @Test
@@ -1273,10 +1271,11 @@ public class SkinCleanupTest {
         EventHandler<? super InputMethodEvent> handler = e -> {};
         field.setOnInputMethodTextChanged(handler);
         installDefaultSkin(field);
-        assertSame("sanity: skin must not replace handler", handler, field.getOnInputMethodTextChanged());
+        assertSame(handler, field.getOnInputMethodTextChanged(), "sanity: skin must not replace handler");
         field.getSkin().dispose();
-        assertSame("skin dispose must not remove handler that was installed by control",
-                handler, field.getOnInputMethodTextChanged());
+        assertSame(
+                handler, field.getOnInputMethodTextChanged(),
+                "skin dispose must not remove handler that was installed by control");
     }
 
     /**
@@ -1290,8 +1289,9 @@ public class SkinCleanupTest {
         EventHandler<? super InputMethodEvent> handler = e -> {};
         field.setOnInputMethodTextChanged(handler);
         field.getSkin().dispose();
-        assertSame("skin dispose must not remove handler that was installed by control",
-                handler, field.getOnInputMethodTextChanged());
+        assertSame(
+                handler, field.getOnInputMethodTextChanged(),
+                "skin dispose must not remove handler that was installed by control");
     }
 
     /**
@@ -1307,10 +1307,10 @@ public class SkinCleanupTest {
         InputMethodEvent event = new InputMethodEvent(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED,
                 List.of(), prefix, 0);
         Event.fireEvent(field, event);
-        assertEquals("sanity: prefix must be committed", prefix + initialText, field.getText());
+        assertEquals(prefix + initialText, field.getText(), "sanity: prefix must be committed");
         replaceSkin(field);
         Event.fireEvent(field, event);
-        assertEquals(" prefix must be committed again", prefix + prefix + initialText, field.getText());
+        assertEquals(prefix + prefix + initialText, field.getText(), " prefix must be committed again");
     }
 
     /**
@@ -1328,8 +1328,8 @@ public class SkinCleanupTest {
 
         replaceSkin(field);
 
-        assertSame("user handler must not be changed", h, handler);
-        assertSame("replaced skin must not change handler", handler, field.getOnInputMethodTextChanged());
+        assertSame(h, handler, "user handler must not be changed");
+        assertSame(handler, field.getOnInputMethodTextChanged(), "replaced skin must not change handler");
     }
 
     /**
@@ -1344,7 +1344,7 @@ public class SkinCleanupTest {
         replaceSkin(t);
         InputMethodRequests im2 = t.getInputMethodRequests();
 
-        assertNotEquals("InputMethodRequests set by an old skin must be replaced by the new skin", im, im2);
+        assertNotEquals(im, im2, "InputMethodRequests set by an old skin must be replaced by the new skin");
     }
 
     /**
@@ -1358,24 +1358,24 @@ public class SkinCleanupTest {
         InputMethodRequests mr1 = t.getInputMethodRequests();
         EventHandler<? super InputMethodEvent> tc1 = t.getOnInputMethodTextChanged();
 
-        assertNotNull("InputMethodRequests must be set by a skin", mr1);
-        assertNotNull("onInputMethodTextChanged must be set by a skin", tc1);
+        assertNotNull(mr1, "InputMethodRequests must be set by a skin");
+        assertNotNull(tc1, "onInputMethodTextChanged must be set by a skin");
 
         replaceSkin(t);
         InputMethodRequests mr2 = t.getInputMethodRequests();
         EventHandler<? super InputMethodEvent> tc2 = t.getOnInputMethodTextChanged();
 
-        assertNotNull("InputMethodRequests must be set by a skin 2", mr2);
-        assertNotNull("onInputMethodTextChanged must be set by a skin 2", tc2);
+        assertNotNull(mr2, "InputMethodRequests must be set by a skin 2");
+        assertNotNull(tc2, "onInputMethodTextChanged must be set by a skin 2");
 
-        assertNotEquals("InputMethodRequests set by an old skin must be replaced by the new skin", mr1, mr2);
-        assertNotEquals("onInputMethodTextChanged set by an old skin must be replaced by the new skin", tc1, tc2);
+        assertNotEquals(mr1, mr2, "InputMethodRequests set by an old skin must be replaced by the new skin");
+        assertNotEquals(tc1, tc2, "onInputMethodTextChanged set by an old skin must be replaced by the new skin");
 
         t.setSkin(null);
         InputMethodRequests mr3 = t.getInputMethodRequests();
         EventHandler<? super InputMethodEvent> tc3 = t.getOnInputMethodTextChanged();
-        assertNull("InputMethodRequests must be cleared by uninstalling a skin", mr3);
-        assertNull("onInputMethodTextChanged must be cleared by uninstalling a skin", tc3);
+        assertNull(mr3, "InputMethodRequests must be cleared by uninstalling a skin");
+        assertNull(tc3, "onInputMethodTextChanged must be cleared by uninstalling a skin");
     }
 
     /**
@@ -1387,7 +1387,7 @@ public class SkinCleanupTest {
         TextField t = new TextField();
         t.setInputMethodRequests(im);
         installDefaultSkin(t);
-        assertEquals("skin must not alter user-set InputMethodRequests", im, t.getInputMethodRequests());
+        assertEquals(im, t.getInputMethodRequests(), "skin must not alter user-set InputMethodRequests");
     }
 
     protected static InputMethodRequests createInputMethodRequests() {
@@ -1471,7 +1471,7 @@ public class SkinCleanupTest {
         WeakReference<?> weakRef = new WeakReference<>(replaceSkin(treeView));
         assertNotNull(weakRef.get());
         attemptGC(weakRef);
-        assertEquals("Skin must be gc'ed", null, weakRef.get());
+        assertEquals(null, weakRef.get(), "Skin must be gc'ed");
     }
 
     /**
@@ -1506,9 +1506,10 @@ public class SkinCleanupTest {
         TreeView<Object> treeView = new TreeView<>();
         treeView.setFixedCellSize(100);
         cell.updateTreeView(treeView);
-        assertEquals("fixed cell set to value of new treeView",
+        assertEquals(
                 cell.getTreeView().getFixedCellSize(),
-                cell.prefHeight(-1), 1);
+                cell.prefHeight(-1), 1,
+                "fixed cell set to value of new treeView");
     }
 
 // ------------------ ListCell
@@ -1532,9 +1533,10 @@ public class SkinCleanupTest {
        ListView<Object> listView = new ListView<>();
        listView.setFixedCellSize(100);
        cell.updateListView(listView);
-       assertEquals("fixed cell set to value of new listView",
+       assertEquals(
                cell.getListView().getFixedCellSize(),
-               cell.prefHeight(-1), 1);
+               cell.prefHeight(-1), 1,
+               "fixed cell set to value of new listView");
    }
 
   //-------------- listView
@@ -1608,7 +1610,7 @@ public class SkinCleanupTest {
         Button outside = new Button("outside");
         showControl(outside, true);
         bar.requestFocus();
-        assertEquals("first item in toolbar must be focused", bar.getItems().get(0), scene.getFocusOwner());
+        assertEquals(bar.getItems().get(0), scene.getFocusOwner(), "first item in toolbar must be focused");
     }
 
 //-------- TabPane
@@ -1714,13 +1716,13 @@ public class SkinCleanupTest {
         }
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stage != null) stage.hide();
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
@@ -1730,7 +1732,4 @@ public class SkinCleanupTest {
             }
         });
     }
-
 }
-
-

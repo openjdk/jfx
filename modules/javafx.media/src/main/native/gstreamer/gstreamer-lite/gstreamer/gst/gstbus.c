@@ -97,6 +97,7 @@ enum
 };
 
 #define DEFAULT_ENABLE_ASYNC (TRUE)
+#define WARN_QUEUE_SIZE 1024
 
 enum
 {
@@ -365,10 +366,13 @@ gst_bus_post (GstBus * bus, GstMessage * message)
 
   g_clear_pointer (&sync_handler, sync_handler_unref);
 
-  /* If this is a bus without async message delivery
-   * always drop the message */
-  if (!bus->priv->poll)
+  /* If this is a bus without async message delivery always drop the message.
+   * If the sync handler returned GST_BUS_DROP it is responsible of unreffing
+   * the message, otherwise do it ourself. */
+  if (!bus->priv->poll && reply != GST_BUS_DROP) {
     reply = GST_BUS_DROP;
+    gst_message_unref (message);
+  }
 
   /* now see what we should do with the message */
   switch (reply) {
@@ -376,7 +380,14 @@ gst_bus_post (GstBus * bus, GstMessage * message)
       /* drop the message */
       GST_DEBUG_OBJECT (bus, "[msg %p] dropped", message);
       break;
-    case GST_BUS_PASS:
+    case GST_BUS_PASS:{
+      guint length = gst_atomic_queue_length (bus->priv->queue);
+      if (G_UNLIKELY (length > 0 && length % WARN_QUEUE_SIZE == 0)) {
+        GST_WARNING_OBJECT (bus, "queue overflows with %d messages. "
+            "Application is too slow or is not handling messages. "
+            "Please add a message handler, otherwise the queue will grow "
+            "infinitely.", length);
+      }
       /* pass the message to the async queue, refcount passed in the queue */
       GST_DEBUG_OBJECT (bus, "[msg %p] pushing on async queue", message);
       gst_atomic_queue_push (bus->priv->queue, message);
@@ -384,6 +395,7 @@ gst_bus_post (GstBus * bus, GstMessage * message)
       GST_DEBUG_OBJECT (bus, "[msg %p] pushed on async queue", message);
 
       break;
+    }
     case GST_BUS_ASYNC:
     {
       /* async delivery, we need a mutex and a cond to block
@@ -424,6 +436,7 @@ gst_bus_post (GstBus * bus, GstMessage * message)
     }
     default:
       g_warning ("invalid return from bus sync handler");
+      gst_message_unref (message);
       break;
   }
   return TRUE;
@@ -834,7 +847,6 @@ no_handler:
   }
 }
 
-#if GLIB_CHECK_VERSION(2,63,3)
 static void
 gst_bus_source_dispose (GSource * source)
 {
@@ -850,22 +862,17 @@ gst_bus_source_dispose (GSource * source)
     bus->priv->gsource = NULL;
   GST_OBJECT_UNLOCK (bus);
 }
-#endif
 
 static void
 gst_bus_source_finalize (GSource * source)
 {
   GstBusSource *bsource = (GstBusSource *) source;
-#if !GLIB_CHECK_VERSION(2,63,3)
-  GstBus *bus = bsource->bus;
 
-  GST_DEBUG_OBJECT (bus, "finalize source %p", source);
-
-  GST_OBJECT_LOCK (bus);
-  if (bus->priv->gsource == source)
-    bus->priv->gsource = NULL;
-  GST_OBJECT_UNLOCK (bus);
-#endif
+#ifdef GSTREAMER_LITE
+  // Use g_source_set_dispose_function() instead, once
+  // we no longer need to support older GLib.
+  gst_bus_source_dispose(source);
+#endif // GSTREAMER_LITE
 
   gst_clear_object (&bsource->bus);
 }
@@ -894,9 +901,12 @@ gst_bus_create_watch_unlocked (GstBus * bus)
   source = (GstBusSource *) bus->priv->gsource;
 
   g_source_set_name ((GSource *) source, "GStreamer message bus watch");
-#if GLIB_CHECK_VERSION(2,63,3)
+#ifndef GSTREAMER_LITE
+  // Remove usage of g_source_set_dispose_function(), so we can run on
+  // older GLib.
+  // https://gitlab.freedesktop.org/gstreamer/gstreamer/-/commit/654f3370a01dfe96f962fbbadba34b865d123a90
   g_source_set_dispose_function ((GSource *) source, gst_bus_source_dispose);
-#endif
+#endif // GSTREAMER_LITE
 
   source->bus = gst_object_ref (bus);
   g_source_add_poll ((GSource *) source, &bus->priv->pollfd);
@@ -1149,7 +1159,7 @@ poll_destroy (GstBusPollData * poll_data, gpointer unused)
   poll_data->source_running = FALSE;
   if (!poll_data->timeout_id) {
     g_main_loop_unref (poll_data->loop);
-    g_slice_free (GstBusPollData, poll_data);
+    g_free (poll_data);
   }
 }
 
@@ -1159,7 +1169,7 @@ poll_destroy_timeout (GstBusPollData * poll_data)
   poll_data->timeout_id = 0;
   if (!poll_data->source_running) {
     g_main_loop_unref (poll_data->loop);
-    g_slice_free (GstBusPollData, poll_data);
+    g_free (poll_data);
   }
 }
 
@@ -1217,7 +1227,7 @@ gst_bus_poll (GstBus * bus, GstMessageType events, GstClockTime timeout)
 
   g_return_val_if_fail (GST_IS_BUS (bus), NULL);
 
-  poll_data = g_slice_new (GstBusPollData);
+  poll_data = g_new (GstBusPollData, 1);
   poll_data->source_running = TRUE;
   poll_data->loop = g_main_loop_new (NULL, FALSE);
   poll_data->events = events;

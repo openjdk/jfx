@@ -37,7 +37,6 @@
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Deque.h>
-#include <wtf/ObjectIdentifier.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 
@@ -49,7 +48,7 @@ class WorkerScriptLoader;
 
 struct WorkletParameters;
 
-enum WorkletGlobalScopeIdentifierType { };
+enum class WorkletGlobalScopeIdentifierType { };
 using WorkletGlobalScopeIdentifier = ObjectIdentifier<WorkletGlobalScopeIdentifierType>;
 
 class WorkletGlobalScope : public WorkerOrWorkletGlobalScope {

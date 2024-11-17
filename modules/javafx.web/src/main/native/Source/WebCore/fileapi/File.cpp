@@ -53,7 +53,7 @@ Ref<File> File::create(ScriptExecutionContext* context, const String& path, cons
     computeNameAndContentType(effectivePath, nameOverride, name, type);
 
     auto internalURL = BlobURL::createInternalURL();
-    ThreadableBlobRegistry::registerFileBlobURL(internalURL, path, replacementPath, type);
+    ThreadableBlobRegistry::registerInternalFileBlobURL(internalURL, path, replacementPath, type);
 
     auto file = adoptRef(*new File(context, WTFMove(internalURL), WTFMove(type), WTFMove(effectivePath), WTFMove(name), fileID));
     file->suspendIfNeeded();
@@ -135,12 +135,7 @@ void File::computeNameAndContentType(const String& path, const String& nameOverr
     }
 #endif
 
-#if !PLATFORM(JAVA)
     effectiveName = nameOverride.isEmpty() ? FileSystem::pathFileName(path) : nameOverride;
-#else
-    // Use simple path not from std::FileSystem
-    effectiveName = nameOverride.isEmpty() ? path : nameOverride;
-#endif
     size_t index = effectiveName.reverseFind('.');
     if (index != notFound) {
         callOnMainThreadAndWait([&effectiveContentType, &effectiveName, index] {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -371,6 +371,16 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         super.commitEdit(newValue);
 
         final TreeTableView<S> table = getTreeTableView();
+        boolean tableShouldRequestFocus = false;
+
+        if (table != null) {
+            // The cell is going to be updated, and the current focus owner might be removed from it.
+            // Before that happens, check if it has the table as a parent (otherwise the user might have
+            // clicked out of the table entirely and given focus to something else), so the table can
+            // request the focus back, once the edit commit ends.
+            tableShouldRequestFocus = ControlUtils.controlShouldRequestFocusIfCurrentFocusOwnerIsChild(table);
+        }
+
         // JDK-8187307: fire the commit after updating cell's editing state
         if (getTableColumn() != null) {
             // Inform the TreeTableColumn of the edit being ready to be committed.
@@ -384,18 +394,19 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             Event.fireEvent(getTableColumn(), editEvent);
         }
 
-        // update the item within this cell, so that it represents the new value
-        updateItem(newValue, false);
+        // Update the item within this cell, so that it represents the new value
+        updateItem(-1);
 
         if (table != null) {
             // reset the editing cell on the TableView
             table.edit(-1, null);
 
             // request focus back onto the table, only if the current focus
-            // owner has the table as a parent (otherwise the user might have
-            // clicked out of the table entirely and given focus to something else.
+            // owner had the table as a parent.
             // It would be rude of us to request it back again.
-            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
+            if (tableShouldRequestFocus) {
+                table.requestFocus();
+            }
         }
     }
 
@@ -411,7 +422,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             if (updateEditingIndex) table.edit(-1, null);
             // request focus back onto the table, only if the current focus
             // owner has the table as a parent (otherwise the user might have
-            // clicked out of the table entirely and given focus to something else.
+            // clicked out of the table entirely and given focus to something else).
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
         }

@@ -29,8 +29,9 @@
 
 namespace WebCore {
 
-enum class ApplePayShippingContactEditingMode : bool {
-    Enabled,
+enum class ApplePayShippingContactEditingMode : uint8_t {
+    Available,
+    Enabled, // Deprecated in favor of `Available`.
     StorePickup,
 };
 

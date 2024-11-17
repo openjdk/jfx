@@ -34,6 +34,7 @@ public class NumberStringConverterShim {
         return nsc.numberFormat;
     }
 
+    @SuppressWarnings("removal")
     public static NumberFormat getNumberFormat(NumberStringConverter nsc) {
         return nsc.getNumberFormat();
     }

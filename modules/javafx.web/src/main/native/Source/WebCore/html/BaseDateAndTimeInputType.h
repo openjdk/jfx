@@ -51,6 +51,8 @@ class BaseDateAndTimeInputType : public InputType, private DateTimeChooserClient
 public:
     bool typeMismatchFor(const String&) const final;
     bool valueMissing(const String&) const final;
+    bool typeMismatch() const final;
+    bool hasBadInput() const final;
 
 protected:
     enum class DateTimeFormatValidationResults : uint8_t {
@@ -78,8 +80,6 @@ protected:
 
     bool shouldHaveSecondField(const DateComponents&) const;
     bool shouldHaveMillisecondField(const DateComponents&) const;
-
-    bool typeMismatch() const final;
 
 private:
     class DateTimeFormatValidator final : public DateTimeFormat::TokenHandler {
@@ -118,7 +118,7 @@ private:
 
     void handleDOMActivateEvent(Event&) override;
     void createShadowSubtree() final;
-    void destroyShadowSubtree() final;
+    void removeShadowSubtree() final;
     void updateInnerTextValue() final;
     bool hasCustomFocusLogic() const final;
     void attributeChanged(const QualifiedName&) final;
@@ -145,6 +145,8 @@ private:
 
     bool setupDateTimeChooserParameters(DateTimeChooserParameters&);
     void closeDateTimeChooser();
+
+    void showPicker() override;
 
     std::unique_ptr<DateTimeChooser> m_dateTimeChooser;
     RefPtr<DateTimeEditElement> m_dateTimeEditElement;

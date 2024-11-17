@@ -28,6 +28,7 @@
 
 #include "CodeBlock.h"
 #include "JSCInlines.h"
+#include "ProfilerDumper.h"
 #include <wtf/StringPrintStream.h>
 
 namespace JSC { namespace Profiler {
@@ -37,7 +38,7 @@ BytecodeSequence::BytecodeSequence(CodeBlock* codeBlock)
     StringPrintStream out;
 
     for (unsigned i = 0; i < codeBlock->numberOfArgumentValueProfiles(); ++i) {
-        ConcurrentJSLocker locker(codeBlock->m_lock);
+        ConcurrentJSLocker locker(codeBlock->valueProfileLock());
         CString description = codeBlock->valueProfileForArgument(i).briefDescription(locker);
         if (!description.length())
             continue;
@@ -73,25 +74,17 @@ const Bytecode& BytecodeSequence::forBytecodeIndex(unsigned bytecodeIndex) const
     return at(indexForBytecodeIndex(bytecodeIndex));
 }
 
-void BytecodeSequence::addSequenceProperties(JSGlobalObject* globalObject, JSObject* result) const
+void BytecodeSequence::addSequenceProperties(Dumper& dumper, JSON::Object& result) const
 {
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    JSArray* header = constructEmptyArray(globalObject, nullptr);
-    RETURN_IF_EXCEPTION(scope, void());
-    for (unsigned i = 0; i < m_header.size(); ++i) {
-        header->putDirectIndex(globalObject, i, jsString(vm, String::fromUTF8(m_header[i])));
-        RETURN_IF_EXCEPTION(scope, void());
-    }
-    result->putDirect(vm, vm.propertyNames->header, header);
+    auto header = JSON::Array::create();
+    for (unsigned i = 0; i < m_header.size(); ++i)
+        header->pushString(String::fromUTF8(m_header[i]));
+    result.setValue(dumper.keys().m_header, WTFMove(header));
 
-    JSArray* sequence = constructEmptyArray(globalObject, nullptr);
-    RETURN_IF_EXCEPTION(scope, void());
-    for (unsigned i = 0; i < m_sequence.size(); ++i) {
-        sequence->putDirectIndex(globalObject, i, m_sequence[i].toJS(globalObject));
-        RETURN_IF_EXCEPTION(scope, void());
-    }
-    result->putDirect(vm, vm.propertyNames->bytecode, sequence);
+    auto sequence = JSON::Array::create();
+    for (unsigned i = 0; i < m_sequence.size(); ++i)
+        sequence->pushValue(m_sequence[i].toJSON(dumper));
+    result.setValue(dumper.keys().m_bytecode, WTFMove(sequence));
 }
 
 } } // namespace JSC::Profiler

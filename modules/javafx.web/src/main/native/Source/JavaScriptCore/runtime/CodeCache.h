@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,9 @@
 #include "UnlinkedFunctionCodeBlock.h"
 #include "UnlinkedModuleProgramCodeBlock.h"
 #include "UnlinkedProgramCodeBlock.h"
+#include <wtf/ApproximateTime.h>
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -82,7 +84,7 @@ public:
     CodeCacheMap()
         : m_size(0)
         , m_sizeAtLastPrune(0)
-        , m_timeAtLastPrune(MonotonicTime::now())
+        , m_timeAtLastPrune(ApproximateTime::now())
         , m_minCapacity(0)
         , m_capacity(0)
         , m_age(0)
@@ -200,7 +202,7 @@ private:
         if (m_size <= m_capacity && canPruneQuickly())
             return;
 
-        if (MonotonicTime::now() - m_timeAtLastPrune < workingSetTime
+        if (ApproximateTime::now() - m_timeAtLastPrune < workingSetTime
             && m_size - m_sizeAtLastPrune < workingSetMaxBytes
             && canPruneQuickly())
                 return;
@@ -211,7 +213,7 @@ private:
     MapType m_map;
     int64_t m_size;
     int64_t m_sizeAtLastPrune;
-    MonotonicTime m_timeAtLastPrune;
+    ApproximateTime m_timeAtLastPrune;
     int64_t m_minCapacity;
     int64_t m_capacity;
     int64_t m_age;
@@ -219,7 +221,7 @@ private:
 
 // Caches top-level code such as <script>, window.eval(), new Function, and JSEvaluateScript().
 class CodeCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CodeCache);
 public:
     UnlinkedProgramCodeBlock* getUnlinkedProgramCodeBlock(VM&, ProgramExecutable*, const SourceCode&, JSParserStrictMode, OptionSet<CodeGenerationMode>, ParserError&);
     UnlinkedEvalCodeBlock* getUnlinkedEvalCodeBlock(VM&, IndirectEvalExecutable*, const SourceCode&, JSParserStrictMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);

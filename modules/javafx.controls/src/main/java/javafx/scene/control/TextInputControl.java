@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -810,8 +810,7 @@ public abstract class TextInputControl extends Control {
         int pos = wordIterator.preceding(Utils.clamp(0, getCaretPosition(), textLength));
 
         // Skip the non-word region, then move/select to the beginning of the word.
-        while (pos != BreakIterator.DONE &&
-               !Character.isLetterOrDigit(text.charAt(Utils.clamp(0, pos, textLength-1)))) {
+        while (pos != BreakIterator.DONE && !isLetterOrDigit(text, pos)) {
             pos = wordIterator.preceding(Utils.clamp(0, pos, textLength));
         }
 
@@ -1743,4 +1742,15 @@ public abstract class TextInputControl extends Control {
         }
     }
 
+    private static boolean isLetterOrDigit(String text, int ix) {
+        if (ix < 0) {
+            // should not happen
+            return false;
+        } else if (ix >= text.length()) {
+            return false;
+        }
+        // ignore the case when 'c' is a high surrogate without the low surrogate
+        int c = Character.codePointAt(text, ix);
+        return Character.isLetterOrDigit(c);
+    }
 }

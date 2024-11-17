@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ public:
     // The passed in UChar pointer starts at 'currentIndex'. The iterator operates on the range [currentIndex, lastIndex].
     // 'endIndex' denotes the maximum length of the UChar array, which might exceed 'lastIndex'.
     ComposedCharacterClusterTextIterator(const UChar* characters, unsigned currentIndex, unsigned lastIndex, unsigned endIndex)
-        : m_iterator(StringView(characters, endIndex - currentIndex), TextBreakIterator::Mode::Caret, nullAtom())
+        : m_iterator(StringView(characters, endIndex - currentIndex), nullptr, 0, TextBreakIterator::CaretMode { }, nullAtom())
         , m_characters(characters)
         , m_originalIndex(currentIndex)
         , m_currentIndex(currentIndex)
@@ -43,7 +43,7 @@ public:
     {
     }
 
-    bool consume(UChar32& character, unsigned& clusterLength)
+    bool consume(char32_t& character, unsigned& clusterLength)
     {
         if (m_currentIndex >= m_lastIndex)
             return false;
@@ -63,14 +63,29 @@ public:
         m_currentIndex += advanceLength;
     }
 
+    void reset(unsigned index)
+    {
+        ASSERT(index >= m_originalIndex);
+        if (index >= m_lastIndex)
+            return;
+        m_currentIndex = index;
+    }
+
+    const UChar* remainingCharacters() const
+    {
+        auto relativeIndex = m_currentIndex - m_originalIndex;
+        return m_characters + relativeIndex;
+    }
+
     unsigned currentIndex() const { return m_currentIndex; }
+    const UChar* characters() const { return m_characters; }
 
 private:
     CachedTextBreakIterator m_iterator;
-    const UChar* m_characters;
-    unsigned m_originalIndex { 0 };
+    const UChar* const m_characters;
+    const unsigned m_originalIndex { 0 };
     unsigned m_currentIndex { 0 };
-    unsigned m_lastIndex { 0 };
+    const unsigned m_lastIndex { 0 };
 };
 
-}
+} // namespace WebCore

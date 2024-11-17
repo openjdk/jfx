@@ -22,10 +22,10 @@
 #include "config.h"
 #include "SVGPolyElement.h"
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "LegacyRenderSVGPath.h"
+#include "LegacyRenderSVGResource.h"
 #include "RenderSVGPath.h"
-#include "RenderSVGResource.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGParserUtilities.h"
 #include <wtf/IsoMallocInlines.h>
@@ -43,15 +43,14 @@ SVGPolyElement::SVGPolyElement(const QualifiedName& tagName, Document& document)
     });
 }
 
-void SVGPolyElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGPolyElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::pointsAttr) {
-        if (!m_points->baseVal()->parse(value))
-            document().accessSVGExtensions().reportError("Problem parsing points=\"" + value + "\"");
-        return;
+        if (!m_points->baseVal()->parse(newValue))
+            document().accessSVGExtensions().reportError("Problem parsing points=\"" + newValue + "\"");
     }
 
-    SVGGeometryElement::parseAttribute(name, value);
+    SVGGeometryElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGPolyElement::svgAttributeChanged(const QualifiedName& attrName)

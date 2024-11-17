@@ -25,16 +25,17 @@
 #include "HTMLFrameElementBase.h"
 
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "EventLoop.h"
 #include "FocusController.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
 #include "JSDOMBindingSecurity.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
+#include "Quirks.h"
 #include "RenderWidget.h"
 #include "ScriptController.h"
 #include "Settings.h"
@@ -49,9 +50,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameElementBase);
 using namespace HTMLNames;
 
 HTMLFrameElementBase::HTMLFrameElementBase(const QualifiedName& tagName, Document& document)
-    : HTMLFrameOwnerElement(tagName, document)
+    : HTMLFrameOwnerElement(tagName, document, TypeFlag::HasCustomStyleResolveCallbacks)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 bool HTMLFrameElementBase::canLoadScriptURL(const URL& scriptURL) const
@@ -91,7 +91,7 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
     if (m_frameURL.isEmpty())
         m_frameURL = AtomString { aboutBlankURL().string() };
 
-    RefPtr<Frame> parentFrame = document().frame();
+    RefPtr parentFrame { document().frame() };
     if (!parentFrame)
         return;
 
@@ -99,26 +99,35 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
     if (frameName.isNull() && UNLIKELY(document().settings().needsFrameNameFallbackToIdQuirk()))
         frameName = getIdAttribute();
 
+    auto completeURL = document().completeURL(m_frameURL);
+    auto finishOpeningURL = [this, weakThis = WeakPtr { *this }, frameName, lockHistory, lockBackForwardList, parentFrame = WTFMove(parentFrame), completeURL] {
+        if (!weakThis)
+            return;
+        Ref protectedThis { *this };
     if (shouldLoadFrameLazily()) {
-        parentFrame->loader().subframeLoader().createFrameIfNecessary(*this, frameName);
+            parentFrame->loader().subframeLoader().createFrameIfNecessary(protectedThis.get(), frameName);
         return;
     }
 
-    document().willLoadFrameElement(document().completeURL(m_frameURL));
+        document().willLoadFrameElement(completeURL);
     parentFrame->loader().subframeLoader().requestFrame(*this, m_frameURL, frameName, lockHistory, lockBackForwardList);
+    };
+
+    document().quirks().triggerOptionalStorageAccessIframeQuirk(completeURL, WTFMove(finishOpeningURL));
 }
 
-void HTMLFrameElementBase::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLFrameElementBase::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
+    // FIXME: trimming whitespace is probably redundant with the URL parser
     if (name == srcdocAttr) {
-        if (value.isNull())
-            setLocation(stripLeadingAndTrailingHTMLSpaces(attributeWithoutSynchronization(srcAttr)));
+        if (newValue.isNull())
+            setLocation(attributeWithoutSynchronization(srcAttr).string().trim(isASCIIWhitespace));
         else
             setLocation("about:srcdoc"_s);
     } else if (name == srcAttr && !hasAttributeWithoutSynchronization(srcdocAttr))
-        setLocation(stripLeadingAndTrailingHTMLSpaces(value));
+        setLocation(newValue.string().trim(isASCIIWhitespace));
     else
-        HTMLFrameOwnerElement::parseAttribute(name, value);
+        HTMLFrameOwnerElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 Node::InsertedIntoAncestorResult HTMLFrameElementBase::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -162,8 +171,8 @@ void HTMLFrameElementBase::didFinishInsertingNode()
 void HTMLFrameElementBase::didAttachRenderers()
 {
     if (RenderWidget* part = renderWidget()) {
-        if (RefPtr frame = dynamicDowncast<LocalFrame>(contentFrame()))
-            part->setWidget(frame->view());
+        if (RefPtr frame = contentFrame())
+            part->setWidget(frame->virtualView());
     }
 }
 
@@ -180,7 +189,7 @@ void HTMLFrameElementBase::setLocation(const String& str)
 
 void HTMLFrameElementBase::setLocation(JSC::JSGlobalObject& state, const String& newLocation)
 {
-    if (WTF::protocolIsJavaScript(stripLeadingAndTrailingHTMLSpaces(newLocation))) {
+    if (WTF::protocolIsJavaScript(newLocation)) {
         if (!BindingSecurity::shouldAllowAccessToNode(state, contentDocument()))
             return;
     }
@@ -199,7 +208,7 @@ void HTMLFrameElementBase::setFocus(bool received, FocusVisibility visibility)
     if (Page* page = document().page()) {
         CheckedRef focusController { page->focusController() };
         if (received)
-            focusController->setFocusedFrame(dynamicDowncast<LocalFrame>(contentFrame()));
+            focusController->setFocusedFrame(contentFrame());
         else if (focusController->focusedFrame() == contentFrame()) // Focus may have already been given to another frame, don't take it away.
             focusController->setFocusedFrame(nullptr);
     }

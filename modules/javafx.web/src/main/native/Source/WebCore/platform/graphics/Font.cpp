@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,6 @@
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontCustomPlatformData.h"
-#include "OpenTypeMathData.h"
 #include "SharedBuffer.h"
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
@@ -59,7 +58,7 @@ const float emphasisMarkFontSizeMultiplier = 0.5f;
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Font);
 
-Ref<Font> Font::create(const FontPlatformData& platformData, Origin origin, Interstitial interstitial, Visibility visibility, OrientationFallback orientationFallback, std::optional<RenderingResourceIdentifier> identifier)
+Ref<Font> Font::create(const FontPlatformData& platformData, Origin origin, IsInterstitial interstitial, Visibility visibility, IsOrientationFallback orientationFallback, std::optional<RenderingResourceIdentifier> identifier)
 {
     return adoptRef(*new Font(platformData, origin, interstitial, visibility, orientationFallback, identifier));
 }
@@ -75,14 +74,15 @@ Ref<Font> Font::create(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, fl
     return Font::create(WTFMove(platformData), origin);
 }
 
-Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial interstitial, Visibility visibility, OrientationFallback orientationFallback, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
+Ref<Font> Font::create(FontInternalAttributes&& attributes, FontPlatformData&& platformData)
+{
+    return Font::create(platformData, attributes.origin, attributes.isInterstitial, attributes.visibility, attributes.isTextOrientationFallback, attributes.renderingResourceIdentifier);
+}
+
+Font::Font(const FontPlatformData& platformData, Origin origin, IsInterstitial interstitial, Visibility visibility, IsOrientationFallback orientationFallback, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
     : m_platformData(platformData)
-    , m_renderingResourceIdentifier(renderingResourceIdentifier)
-    , m_origin(origin)
-    , m_visibility(visibility)
+    , m_attributes({ renderingResourceIdentifier, origin, interstitial, visibility, orientationFallback })
     , m_treatAsFixedPitch(false)
-    , m_isInterstitial(interstitial == Interstitial::Yes)
-    , m_isTextOrientationFallback(orientationFallback == OrientationFallback::Yes)
     , m_isBrokenIdeographFallback(false)
     , m_hasVerticalGlyphs(false)
     , m_isUsedInSystemFallbackFontCache(false)
@@ -95,7 +95,7 @@ Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial int
     platformGlyphInit();
     platformCharWidthInit();
 #if ENABLE(OPENTYPE_VERTICAL)
-    if (platformData.orientation() == FontOrientation::Vertical && orientationFallback == OrientationFallback::No) {
+    if (platformData.orientation() == FontOrientation::Vertical && orientationFallback == IsOrientationFallback::No) {
         m_verticalData = FontCache::forCurrentThread().verticalData(platformData);
         m_hasVerticalGlyphs = m_verticalData.get() && m_verticalData->hasVerticalMetrics();
     }
@@ -105,7 +105,7 @@ Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial int
 // Estimates of avgCharWidth and maxCharWidth for platforms that don't support accessing these values from the font.
 void Font::initCharWidths()
 {
-    auto* glyphPageZero = glyphPage(GlyphPage::pageNumberForCodePoint('0'));
+    RefPtr glyphPageZero = glyphPage(GlyphPage::pageNumberForCodePoint('0'));
 
     // Treat the width of a '0' as the avgCharWidth.
     if (m_avgCharWidth <= 0.f && glyphPageZero) {
@@ -125,19 +125,19 @@ void Font::initCharWidths()
 void Font::platformGlyphInit()
 {
 #if USE(FREETYPE)
-    auto* glyphPageZeroWidthSpace = glyphPage(GlyphPage::pageNumberForCodePoint(zeroWidthSpace));
-    UChar32 zeroWidthSpaceCharacter = zeroWidthSpace;
+    RefPtr glyphPageZeroWidthSpace = glyphPage(GlyphPage::pageNumberForCodePoint(zeroWidthSpace));
+    char32_t zeroWidthSpaceCharacter = zeroWidthSpace;
 #else
     // Ask for the glyph for 0 to avoid paging in ZERO WIDTH SPACE. Control characters, including 0,
     // are mapped to the ZERO WIDTH SPACE glyph for non FreeType based ports.
-    auto* glyphPageZeroWidthSpace = glyphPage(0);
-    UChar32 zeroWidthSpaceCharacter = 0;
+    RefPtr glyphPageZeroWidthSpace = glyphPage(0);
+    char32_t zeroWidthSpaceCharacter = 0;
 #endif
 
     if (glyphPageZeroWidthSpace)
         m_zeroWidthSpaceGlyph = glyphPageZeroWidthSpace->glyphDataForCharacter(zeroWidthSpaceCharacter).glyph;
 
-    if (auto* page = glyphPage(GlyphPage::pageNumberForCodePoint(space)))
+    if (RefPtr page = glyphPage(GlyphPage::pageNumberForCodePoint(space)))
         m_spaceGlyph = page->glyphDataForCharacter(space).glyph;
 
     // Force the glyph for ZERO WIDTH SPACE to have zero width, unless it is shared with SPACE.
@@ -150,7 +150,7 @@ void Font::platformGlyphInit()
     // Therefore all calls to widthForGlyph must happen after this point.
 
     Glyph zeroGlyph = { 0 };
-    if (auto* page = glyphPage(GlyphPage::pageNumberForCodePoint('0')))
+    if (RefPtr page = glyphPage(GlyphPage::pageNumberForCodePoint('0')))
         zeroGlyph = page->glyphDataForCharacter('0').glyph;
     if (zeroGlyph)
         m_fontMetrics.setZeroWidth(widthForGlyph(zeroGlyph));
@@ -160,7 +160,7 @@ void Font::platformGlyphInit()
     // https://www.w3.org/TR/css-values-4/#ic. This is currently only used
     // to support the ic unit. If the width is not available, falls back to
     // 1em as specified.
-    if (auto* page = glyphPage(GlyphPage::pageNumberForCodePoint(cjkWater))) {
+    if (RefPtr page = glyphPage(GlyphPage::pageNumberForCodePoint(cjkWater))) {
         auto glyph = page->glyphDataForCharacter(cjkWater).glyph;
         m_fontMetrics.setIdeogramWidth(widthForGlyph(glyph));
     } else
@@ -180,9 +180,14 @@ Font::~Font()
 
 RenderingResourceIdentifier Font::renderingResourceIdentifier() const
 {
-    if (!m_renderingResourceIdentifier)
-        m_renderingResourceIdentifier = RenderingResourceIdentifier::generate();
-    return *m_renderingResourceIdentifier;
+    return m_attributes.ensureRenderingResourceIdentifier();
+}
+
+RenderingResourceIdentifier FontInternalAttributes::ensureRenderingResourceIdentifier() const
+{
+    if (!renderingResourceIdentifier)
+        renderingResourceIdentifier = RenderingResourceIdentifier::generate();
+    return *renderingResourceIdentifier;
 }
 
 static bool fillGlyphPage(GlyphPage& pageToFill, UChar* buffer, unsigned bufferLength, const Font& font)
@@ -197,7 +202,7 @@ static bool fillGlyphPage(GlyphPage& pageToFill, UChar* buffer, unsigned bufferL
     return hasGlyphs;
 }
 
-static std::optional<size_t> codePointSupportIndex(UChar32 codePoint)
+static std::optional<size_t> codePointSupportIndex(char32_t codePoint)
 {
     // FIXME: Consider reordering these so the most common ones are at the front.
     // Doing this could cause the BitVector to fit inside inline storage and therefore
@@ -273,7 +278,7 @@ static std::optional<size_t> codePointSupportIndex(UChar32 codePoint)
     }
 
 #ifndef NDEBUG
-    UChar32 codePointOrder[] = {
+    char32_t codePointOrder[] = {
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
         0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
         0x7F,
@@ -393,7 +398,7 @@ static RefPtr<GlyphPage> createAndFillGlyphPage(unsigned pageNumber, const Font&
     // routine of our glyph map for actually filling in the page with the glyphs.
     // Success is not guaranteed. For example, Times fails to fill page 260, giving glyph data
     // for only 128 out of 256 characters.
-    Ref<GlyphPage> glyphPage = GlyphPage::create(font);
+    Ref glyphPage = GlyphPage::create(font);
 
     bool haveGlyphs = fillGlyphPage(glyphPage, buffer.data(), bufferLength, font);
     if (!haveGlyphs)
@@ -404,11 +409,6 @@ static RefPtr<GlyphPage> createAndFillGlyphPage(unsigned pageNumber, const Font&
 
 const GlyphPage* Font::glyphPage(unsigned pageNumber) const
 {
-    if (!pageNumber) {
-        if (!m_glyphPageZero)
-            m_glyphPageZero = createAndFillGlyphPage(0, *this);
-        return m_glyphPageZero.get();
-    }
     auto addResult = m_glyphPages.add(pageNumber, nullptr);
     if (addResult.isNewEntry)
         addResult.iterator->value = createAndFillGlyphPage(pageNumber, *this);
@@ -416,17 +416,17 @@ const GlyphPage* Font::glyphPage(unsigned pageNumber) const
     return addResult.iterator->value.get();
 }
 
-Glyph Font::glyphForCharacter(UChar32 character) const
+Glyph Font::glyphForCharacter(char32_t character) const
 {
-    auto* page = glyphPage(GlyphPage::pageNumberForCodePoint(character));
+    RefPtr page = glyphPage(GlyphPage::pageNumberForCodePoint(character));
     if (!page)
         return 0;
     return page->glyphForCharacter(character);
 }
 
-GlyphData Font::glyphDataForCharacter(UChar32 character) const
+GlyphData Font::glyphDataForCharacter(char32_t character) const
 {
-    auto* page = glyphPage(GlyphPage::pageNumberForCodePoint(character));
+    RefPtr page = glyphPage(GlyphPage::pageNumberForCodePoint(character));
     if (!page)
         return GlyphData();
     return page->glyphDataForCharacter(character);
@@ -444,7 +444,7 @@ const Font& Font::verticalRightOrientationFont() const
     DerivedFonts& derivedFontData = ensureDerivedFontData();
     if (!derivedFontData.verticalRightOrientationFont) {
         auto verticalRightPlatformData = FontPlatformData::cloneWithOrientation(m_platformData, FontOrientation::Horizontal);
-        derivedFontData.verticalRightOrientationFont = create(verticalRightPlatformData, origin(), Interstitial::No, Visibility::Visible, OrientationFallback::Yes);
+        derivedFontData.verticalRightOrientationFont = create(verticalRightPlatformData, origin(), IsInterstitial::No, Visibility::Visible, IsOrientationFallback::Yes);
     }
     ASSERT(derivedFontData.verticalRightOrientationFont != this);
     return *derivedFontData.verticalRightOrientationFont;
@@ -454,7 +454,7 @@ const Font& Font::uprightOrientationFont() const
 {
     DerivedFonts& derivedFontData = ensureDerivedFontData();
     if (!derivedFontData.uprightOrientationFont)
-        derivedFontData.uprightOrientationFont = create(m_platformData, origin(), Interstitial::No, Visibility::Visible, OrientationFallback::Yes);
+        derivedFontData.uprightOrientationFont = create(m_platformData, origin(), IsInterstitial::No, Visibility::Visible, IsOrientationFallback::Yes);
     ASSERT(derivedFontData.uprightOrientationFont != this);
     return *derivedFontData.uprightOrientationFont;
 }
@@ -463,7 +463,7 @@ const Font& Font::invisibleFont() const
 {
     DerivedFonts& derivedFontData = ensureDerivedFontData();
     if (!derivedFontData.invisibleFont)
-        derivedFontData.invisibleFont = create(m_platformData, origin(), Interstitial::Yes, Visibility::Invisible);
+        derivedFontData.invisibleFont = create(m_platformData, origin(), IsInterstitial::Yes, Visibility::Invisible);
     ASSERT(derivedFontData.invisibleFont != this);
     return *derivedFontData.invisibleFont;
 }
@@ -503,7 +503,7 @@ const Font& Font::brokenIdeographFont() const
 {
     DerivedFonts& derivedFontData = ensureDerivedFontData();
     if (!derivedFontData.brokenIdeographFont) {
-        derivedFontData.brokenIdeographFont = create(m_platformData, origin(), Interstitial::No);
+        derivedFontData.brokenIdeographFont = create(m_platformData, origin(), IsInterstitial::No);
         derivedFontData.brokenIdeographFont->m_isBrokenIdeographFallback = true;
     }
     ASSERT(derivedFontData.brokenIdeographFont != this);
@@ -530,17 +530,19 @@ String Font::description() const
 }
 #endif
 
+#if ENABLE(MATHML)
 const OpenTypeMathData* Font::mathData() const
 {
     if (isInterstitial())
         return nullptr;
     if (!m_mathData) {
-        m_mathData = OpenTypeMathData::create(m_platformData);
-        if (!m_mathData->hasMathData())
-            m_mathData = nullptr;
+        Ref mathData = OpenTypeMathData::create(m_platformData);
+        if (mathData->hasMathData())
+            m_mathData = WTFMove(mathData);
     }
     return m_mathData.get();
 }
+#endif
 
 RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, float scaleFactor) const
 {
@@ -554,9 +556,9 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer&, unsigned, unsigned, bool,
 }
 #endif
 
-RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontDescription& description, IsForPlatformFont isForPlatformFont) const
+RefPtr<Font> Font::systemFallbackFontForCharacterCluster(StringView characterCluster, const FontDescription& description, ResolvedEmojiPolicy resolvedEmojiPolicy, IsForPlatformFont isForPlatformFont) const
 {
-    return SystemFallbackFontCache::forCurrentThread().systemFallbackFontForCharacter(this, character, description, isForPlatformFont);
+    return SystemFallbackFontCache::forCurrentThread().systemFallbackFontForCharacterCluster(this, characterCluster, description, resolvedEmojiPolicy, isForPlatformFont);
 }
 
 #if !PLATFORM(COCOA) && !USE(FREETYPE)
@@ -575,7 +577,7 @@ bool Font::variantCapsSupportedForSynthesis(FontVariantCaps fontVariantCaps) con
 }
 #endif
 
-bool Font::supportsCodePoint(UChar32 character) const
+bool Font::supportsCodePoint(char32_t character) const
 {
     // This is very similar to static_cast<bool>(glyphForCharacter(character))
     // except that glyphForCharacter() maps certain code points to ZWS (because they
@@ -595,9 +597,9 @@ bool Font::supportsCodePoint(UChar32 character) const
     return glyphForCharacter(character);
 }
 
-bool Font::canRenderCombiningCharacterSequence(const UChar* characters, size_t length) const
+bool Font::canRenderCombiningCharacterSequence(StringView stringView) const
 {
-    auto codePoints = StringView(characters, length).codePoints();
+    auto codePoints = stringView.codePoints();
     auto it = codePoints.begin();
     auto end = codePoints.end();
     while (it != end) {
@@ -632,6 +634,20 @@ Path Font::pathForGlyph(Glyph glyph) const
 
     m_glyphPathMap->setMetricsForGlyph(glyph, path);
     return *m_glyphPathMap->existingMetricsForGlyph(glyph);
+}
+
+ColorGlyphType Font::colorGlyphType(Glyph glyph) const
+{
+    if (glyph == deletedGlyph)
+        return ColorGlyphType::Outline;
+
+    return WTF::switchOn(m_emojiType, [](NoEmojiGlyphs) {
+        return ColorGlyphType::Outline;
+    }, [](AllEmojiGlyphs) {
+        return ColorGlyphType::Color;
+    }, [glyph](const SomeEmojiGlyphs& someEmojiGlyphs) {
+        return someEmojiGlyphs.colorGlyphs.get(glyph) ? ColorGlyphType::Color : ColorGlyphType::Outline;
+    });
 }
 
 #if !LOG_DISABLED

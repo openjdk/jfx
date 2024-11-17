@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-enum ChannelSelectorType {
+enum class ChannelSelectorType : uint8_t {
     CHANNEL_UNKNOWN = 0,
     CHANNEL_R = 1,
     CHANNEL_G = 2,
@@ -37,7 +37,9 @@ enum ChannelSelectorType {
 
 class FEDisplacementMap : public FilterEffect {
 public:
-    WEBCORE_EXPORT static Ref<FEDisplacementMap> create(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale);
+    WEBCORE_EXPORT static Ref<FEDisplacementMap> create(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale, DestinationColorSpace = DestinationColorSpace::SRGB());
+
+    bool operator==(const FEDisplacementMap&) const;
 
     ChannelSelectorType xChannelSelector() const { return m_xChannelSelector; }
     bool setXChannelSelector(const ChannelSelectorType);
@@ -49,11 +51,13 @@ public:
     bool setScale(float);
 
 private:
-    FEDisplacementMap(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float);
+    FEDisplacementMap(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float, DestinationColorSpace);
+
+    bool operator==(const FilterEffect& other) const override { return areEqual<FEDisplacementMap>(*this, other); }
 
     unsigned numberOfEffectInputs() const override { return 2; }
 
-    FloatRect calculateImageRect(const Filter&, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
+    FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
     const DestinationColorSpace& resultColorSpace(const FilterImageVector&) const override;
     void transformInputsColorSpace(const FilterImageVector& inputs) const override;
@@ -69,20 +73,4 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ChannelSelectorType> {
-    using values = EnumValues<
-        WebCore::ChannelSelectorType,
-
-        WebCore::CHANNEL_UNKNOWN,
-        WebCore::CHANNEL_R,
-        WebCore::CHANNEL_G,
-        WebCore::CHANNEL_B,
-        WebCore::CHANNEL_A
-    >;
-};
-
-} // namespace WTF
-
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEDisplacementMap)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEDisplacementMap)

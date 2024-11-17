@@ -46,7 +46,6 @@
 #include "File.h"
 #include "FloatRect.h"
 #include "FocusController.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLIFrameElement.h"
 #include "HitTestResult.h"
@@ -57,8 +56,10 @@
 #include "JSDOMPromiseDeferred.h"
 #include "JSExecState.h"
 #include "JSInspectorFrontendHost.h"
+#include "LocalFrame.h"
 #include "MouseEvent.h"
 #include "Node.h"
+#include "OffscreenCanvasRenderingContext2D.h"
 #include "Page.h"
 #include "PagePasteboardContext.h"
 #include "Pasteboard.h"
@@ -69,6 +70,7 @@
 #include "UserGestureIndicator.h"
 #include "WebCorePersistentCoders.h"
 #include <JavaScriptCore/ScriptFunctionCall.h>
+#include <JavaScriptCore/Strong.h>
 #include <pal/system/Sound.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/JSONValues.h>
@@ -88,21 +90,23 @@ using ValueOrException = Expected<JSC::JSValue, ExceptionDetails>;
 #if ENABLE(CONTEXT_MENUS)
 class FrontendMenuProvider : public ContextMenuProvider {
 public:
-    static Ref<FrontendMenuProvider> create(InspectorFrontendHost* frontendHost, Deprecated::ScriptObject frontendApiObject, const Vector<ContextMenuItem>& items)
+    static Ref<FrontendMenuProvider> create(InspectorFrontendHost* frontendHost, JSC::JSGlobalObject* globalObject, JSC::JSObject* frontendApiObject, const Vector<ContextMenuItem>& items)
     {
-        return adoptRef(*new FrontendMenuProvider(frontendHost, frontendApiObject, items));
+        return adoptRef(*new FrontendMenuProvider(frontendHost, globalObject, frontendApiObject, items));
     }
 
     void disconnect()
     {
         m_frontendApiObject = { };
+        m_globalObject = nullptr;
         m_frontendHost = nullptr;
     }
 
 private:
-    FrontendMenuProvider(InspectorFrontendHost* frontendHost, Deprecated::ScriptObject frontendApiObject, const Vector<ContextMenuItem>& items)
+    FrontendMenuProvider(InspectorFrontendHost* frontendHost, JSC::JSGlobalObject* globalObject, JSC::JSObject* frontendApiObject, const Vector<ContextMenuItem>& items)
         : m_frontendHost(frontendHost)
-        , m_frontendApiObject(frontendApiObject)
+        , m_globalObject(globalObject)
+        , m_frontendApiObject(globalObject->vm(), frontendApiObject)
         , m_items(items)
     {
     }
@@ -121,10 +125,10 @@ private:
     void contextMenuItemSelected(ContextMenuAction action, const String&) override
     {
         if (m_frontendHost) {
-            UserGestureIndicator gestureIndicator(ProcessingUserGesture, dynamicDowncast<Document>(executionContext(m_frontendApiObject.globalObject())));
+            UserGestureIndicator gestureIndicator(IsProcessingUserGesture::Yes, dynamicDowncast<Document>(executionContext(m_globalObject)));
             int itemNumber = action - ContextMenuItemBaseCustomTag;
 
-            Deprecated::ScriptFunctionCall function(m_frontendApiObject, "contextMenuItemSelected"_s, WebCore::functionCallHandlerFromAnyThread);
+            ScriptFunctionCall function(m_globalObject, m_frontendApiObject.get(), "contextMenuItemSelected"_s, WebCore::functionCallHandlerFromAnyThread);
             function.appendArgument(itemNumber);
             function.call();
         }
@@ -133,7 +137,7 @@ private:
     void contextMenuCleared() override
     {
         if (m_frontendHost) {
-            Deprecated::ScriptFunctionCall function(m_frontendApiObject, "contextMenuCleared"_s, WebCore::functionCallHandlerFromAnyThread);
+            ScriptFunctionCall function(m_globalObject, m_frontendApiObject.get(), "contextMenuCleared"_s, WebCore::functionCallHandlerFromAnyThread);
             function.call();
 
             m_frontendHost->m_menuProvider = nullptr;
@@ -142,7 +146,8 @@ private:
     }
 
     InspectorFrontendHost* m_frontendHost;
-    Deprecated::ScriptObject m_frontendApiObject;
+    JSC::JSGlobalObject* m_globalObject;
+    JSC::Strong<JSC::JSObject> m_frontendApiObject;
     Vector<ContextMenuItem> m_items;
 };
 #endif
@@ -175,7 +180,10 @@ void InspectorFrontendHost::addSelfToGlobalObjectInWorld(DOMWrapperWorld& world)
 {
     // FIXME: What guarantees m_frontendPage is non-null?
     // FIXME: What guarantees globalObject's return value is non-null?
-    auto& globalObject = *m_frontendPage->mainFrame().script().globalObject(world);
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame());
+    if (!localMainFrame)
+        return;
+    auto& globalObject = *localMainFrame->script().globalObject(world);
     auto& vm = globalObject.vm();
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
@@ -262,14 +270,18 @@ void InspectorFrontendHost::inspectedURLChanged(const String& newURL)
 
 void InspectorFrontendHost::setZoomFactor(float zoom)
 {
-    if (m_frontendPage)
-        m_frontendPage->mainFrame().setPageAndTextZoomFactors(zoom, 1);
+    if (m_frontendPage) {
+        if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame()))
+            localMainFrame->setPageAndTextZoomFactors(zoom, 1);
+    }
 }
 
 float InspectorFrontendHost::zoomFactor()
 {
-    if (m_frontendPage)
-        return m_frontendPage->mainFrame().pageZoomFactor();
+    if (m_frontendPage) {
+        if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame()))
+            return localMainFrame->pageZoomFactor();
+    }
 
     return 1.0;
 }
@@ -477,13 +489,13 @@ bool InspectorFrontendHost::canLoad()
 void InspectorFrontendHost::load(const String& path, Ref<DeferredPromise>&& promise)
 {
     if (!m_client) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
     m_client->load(path, [promise = WTFMove(promise)](const String& content) {
         if (!content)
-            promise->reject(NotFoundError);
+            promise->reject(ExceptionCode::NotFoundError);
         else
             promise->resolve<IDLDOMString>(content);
     });
@@ -499,7 +511,7 @@ bool InspectorFrontendHost::canPickColorFromScreen()
 void InspectorFrontendHost::pickColorFromScreen(Ref<DeferredPromise>&& promise)
 {
     if (!m_client) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
@@ -535,7 +547,7 @@ static void populateContextMenu(Vector<InspectorFrontendHost::ContextMenuItem>&&
 {
     for (auto& item : items) {
         if (item.type == "separator"_s) {
-            menu.appendItem({ SeparatorType, ContextMenuItemTagNoAction, { } });
+            menu.appendItem({ ContextMenuItemType::Separator, ContextMenuItemTagNoAction, { } });
             continue;
         }
 
@@ -543,11 +555,11 @@ static void populateContextMenu(Vector<InspectorFrontendHost::ContextMenuItem>&&
             ContextMenu subMenu;
             populateContextMenu(WTFMove(*item.subItems), subMenu);
 
-            menu.appendItem({ SubmenuType, ContextMenuItemTagNoAction, item.label, &subMenu });
+            menu.appendItem({ ContextMenuItemType::Submenu, ContextMenuItemTagNoAction, item.label, &subMenu });
             continue;
         }
 
-        auto type = item.type == "checkbox"_s ? CheckableActionType : ActionType;
+        auto type = item.type == "checkbox"_s ? ContextMenuItemType::CheckableAction : ContextMenuItemType::Action;
         auto action = static_cast<ContextMenuAction>(ContextMenuItemBaseCustomTag + item.id.value_or(0));
         ContextMenuItem menuItem = { type, action, item.label };
         if (item.enabled)
@@ -565,7 +577,10 @@ void InspectorFrontendHost::showContextMenu(Event& event, Vector<ContextMenuItem
     // FIXME: What guarantees m_frontendPage is non-null?
     // FIXME: What guarantees globalObject's return value is non-null?
     ASSERT(m_frontendPage);
-    auto& globalObject = *m_frontendPage->mainFrame().script().globalObject(debuggerWorld());
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame());
+    if (!localMainFrame)
+        return;
+    auto& globalObject = *localMainFrame->script().globalObject(debuggerWorld());
     auto& vm = globalObject.vm();
     auto value = globalObject.get(&globalObject, JSC::Identifier::fromString(vm, "InspectorFrontendAPI"_s));
     ASSERT(value);
@@ -575,7 +590,7 @@ void InspectorFrontendHost::showContextMenu(Event& event, Vector<ContextMenuItem
     ContextMenu menu;
     populateContextMenu(WTFMove(items), menu);
 
-    auto menuProvider = FrontendMenuProvider::create(this, { &globalObject, frontendAPIObject }, menu.items());
+    auto menuProvider = FrontendMenuProvider::create(this, &globalObject, frontendAPIObject, menu.items());
     m_menuProvider = menuProvider.ptr();
     m_frontendPage->contextMenuController().showContextMenu(event, menuProvider);
 #else
@@ -801,19 +816,20 @@ ExceptionOr<JSC::JSValue> InspectorFrontendHost::evaluateScriptInExtensionTab(HT
 {
     auto* frame = dynamicDowncast<LocalFrame>(extensionFrameElement.contentFrame());
     if (!frame)
-        return Exception { InvalidStateError, "Unable to find global object for <iframe>"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Unable to find global object for <iframe>"_s };
 
-    Ref<Frame> protectedFrame(*frame);
+    Ref protectedFrame(*frame);
 
     JSDOMGlobalObject* frameGlobalObject = frame->script().globalObject(mainThreadNormalWorld());
     if (!frameGlobalObject)
-        return Exception { InvalidStateError, "Unable to find global object for <iframe>"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Unable to find global object for <iframe>"_s };
+
 
     JSC::SuspendExceptionScope scope(frameGlobalObject->vm());
-    ValueOrException result = frame->script().evaluateInWorld(ScriptSourceCode(scriptSource), mainThreadNormalWorld());
+    ValueOrException result = frame->script().evaluateInWorld(ScriptSourceCode(scriptSource, JSC::SourceTaintedOrigin::Untainted), mainThreadNormalWorld());
 
     if (!result)
-        return Exception { InvalidStateError, result.error().message };
+        return Exception { ExceptionCode::InvalidStateError, result.error().message };
 
     return WTFMove(result.value());
 }
@@ -844,5 +860,29 @@ void InspectorFrontendHost::setPath(CanvasRenderingContext2D& context, Path2D& p
 {
     context.setPath(path);
 }
+
+#if ENABLE(OFFSCREEN_CANVAS)
+
+float InspectorFrontendHost::getCurrentX(const OffscreenCanvasRenderingContext2D& context) const
+{
+    return context.currentX();
+}
+
+float InspectorFrontendHost::getCurrentY(const OffscreenCanvasRenderingContext2D& context) const
+{
+    return context.currentY();
+}
+
+Ref<Path2D> InspectorFrontendHost::getPath(const OffscreenCanvasRenderingContext2D& context) const
+{
+    return context.getPath();
+}
+
+void InspectorFrontendHost::setPath(OffscreenCanvasRenderingContext2D& context, Path2D& path) const
+{
+    context.setPath(path);
+}
+
+#endif // ENABLE(OFFSCREEN_CANVAS)
 
 } // namespace WebCore

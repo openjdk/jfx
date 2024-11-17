@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,13 +33,13 @@ import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
 import javafx.scene.shape.Rectangle;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MouseEventTest {
 
@@ -50,7 +50,8 @@ public class MouseEventTest {
             11, 12, 13, 14, MouseButton.PRIMARY, 2,
             true, false, true, false, false, true, false, false, true, false, null);
 
-    @Test public void testShortConstructor() {
+    @Test
+    public void testShortConstructor() {
         Rectangle node = new Rectangle();
         node.setTranslateX(3);
         node.setTranslateY(2);
@@ -111,7 +112,8 @@ public class MouseEventTest {
         assertFalse(e.isStillSincePress());
     }
 
-    @Test public void testToStringMatchingBrackets() {
+    @Test
+    public void testToStringMatchingBrackets() {
         Rectangle node = new Rectangle();
         node.setTranslateX(3);
         node.setTranslateY(2);
@@ -142,14 +144,15 @@ public class MouseEventTest {
                     break;
                 case ']':
                     --bracketCount;
-                    assertTrue("Too many closing brackets: " + str, bracketCount >= 0);
+                    assertTrue(bracketCount >= 0, "Too many closing brackets: " + str);
                     break;
             }
         }
-        assertEquals("Too few closing brackets: " + str, 0, bracketCount);
+        assertEquals(0, bracketCount, "Too few closing brackets: " + str);
     }
 
-    @Test public void testShortConstructorWithoutPickResult() {
+    @Test
+    public void testShortConstructorWithoutPickResult() {
         MouseDragEvent e = new MouseDragEvent(MouseDragEvent.MOUSE_DRAG_OVER,
                 10, 20, 30, 40, MouseButton.MIDDLE, 3,
                 true, false, false, true,
@@ -171,7 +174,8 @@ public class MouseEventTest {
         assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
     }
 
-    @Test public void testLongConstructor() {
+    @Test
+    public void testLongConstructor() {
         Rectangle n1 = new Rectangle(10, 10);
         Rectangle n2 = new Rectangle(10, 10);
         Rectangle node = new Rectangle();
@@ -236,7 +240,8 @@ public class MouseEventTest {
         assertFalse(e.isStillSincePress());
     }
 
-    @Test public void testLongConstructorWithoutPickResult() {
+    @Test
+    public void testLongConstructorWithoutPickResult() {
         Rectangle n1 = new Rectangle(10, 10);
         Rectangle n2 = new Rectangle(10, 10);
         MouseEvent e = new MouseEvent(n1, n2, MouseEvent.MOUSE_DRAGGED,
@@ -260,7 +265,8 @@ public class MouseEventTest {
         assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
     }
 
-    @Test public void testFullConstructorWithoutPickResult() {
+    @Test
+    public void testFullConstructorWithoutPickResult() {
         Rectangle n1 = new Rectangle(10, 10);
         Rectangle n2 = new Rectangle(10, 10);
         MouseEvent e = new MouseEvent(n1, n2, MouseEvent.MOUSE_DRAGGED,

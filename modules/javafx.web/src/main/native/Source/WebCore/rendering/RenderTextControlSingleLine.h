@@ -30,11 +30,10 @@ namespace WebCore {
 class RenderTextControlSingleLine : public RenderTextControl {
     WTF_MAKE_ISO_ALLOCATED(RenderTextControlSingleLine);
 public:
-    RenderTextControlSingleLine(HTMLInputElement&, RenderStyle&&);
+    RenderTextControlSingleLine(Type, HTMLInputElement&, RenderStyle&&);
     virtual ~RenderTextControlSingleLine();
 
 protected:
-    void centerRenderer(RenderBox& renderer) const;
     HTMLElement* containerElement() const;
     HTMLElement* innerBlockElement() const;
     HTMLInputElement& inputElement() const;
@@ -44,7 +43,6 @@ private:
 
     bool hasControlClip() const override;
     LayoutRect controlClipRect(const LayoutPoint&) const override;
-    bool isTextField() const final { return true; }
 
     void layout() override;
 
@@ -87,24 +85,19 @@ inline HTMLElement* RenderTextControlSingleLine::innerBlockElement() const
 class RenderTextControlInnerBlock final : public RenderBlockFlow {
     WTF_MAKE_ISO_ALLOCATED(RenderTextControlInnerBlock);
 public:
-    RenderTextControlInnerBlock(Element& element, RenderStyle&& style)
-        : RenderBlockFlow(element, WTFMove(style))
-    {
-    }
+    RenderTextControlInnerBlock(Element&, RenderStyle&&);
 
 private:
     bool hasLineIfEmpty() const override { return true; }
-    bool isTextControlInnerBlock() const override { return true; }
     bool canBeProgramaticallyScrolled() const override
     {
-        auto* shadowHost = element()->shadowHost();
-        if (is<HTMLInputElement>(shadowHost))
-            return !downcast<HTMLInputElement>(*shadowHost).hasAutoFillStrongPasswordButton();
+        if (auto* shadowHost = dynamicDowncast<HTMLInputElement>(element()->shadowHost()))
+            return !shadowHost->hasAutoFillStrongPasswordButton();
         return true;
     }
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlSingleLine, isTextField())
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlInnerBlock, isTextControlInnerBlock())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlSingleLine, isRenderTextControlSingleLine())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlInnerBlock, isRenderTextControlInnerBlock())

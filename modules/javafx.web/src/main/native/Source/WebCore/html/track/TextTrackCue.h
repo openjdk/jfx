@@ -51,7 +51,7 @@ public:
     static Ref<TextTrackCueBox> create(Document&, TextTrackCue&);
 
     TextTrackCue* getCue() const;
-    virtual void applyCSSProperties(const IntSize&) { }
+    virtual void applyCSSProperties() { }
 
 protected:
     void initialize();
@@ -68,6 +68,8 @@ class TextTrackCue : public RefCounted<TextTrackCue>, public EventTarget, public
     WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
 public:
     static ExceptionOr<Ref<TextTrackCue>> create(Document&, double start, double end, DocumentFragment&);
+
+    void didMoveToNewDocument(Document&);
 
     TextTrack* track() const;
     void setTrack(TextTrack*);
@@ -106,9 +108,9 @@ public:
     bool isEqual(const TextTrackCue&, CueMatchRules) const;
 
     void willChange();
-    virtual void didChange();
+    virtual void didChange(bool = false);
 
-    virtual RefPtr<TextTrackCueBox> getDisplayTree(const IntSize& videoSize, int fontSize);
+    virtual RefPtr<TextTrackCueBox> getDisplayTree();
     virtual void removeDisplayTree();
 
     virtual RefPtr<DocumentFragment> getCueAsHTML();
@@ -120,7 +122,7 @@ public:
     using RefCounted::deref;
 
     virtual void recalculateStyles() { m_displayTreeNeedsUpdate = true; }
-    virtual void setFontSize(int fontSize, const IntSize& videoSize, bool important);
+    virtual void setFontSize(int fontSize, bool important);
     virtual void updateDisplayTree(const MediaTime&) { }
 
     unsigned cueIndex() const;
@@ -131,12 +133,13 @@ public:
     virtual void pauseSpeaking() { }
     virtual void cancelSpeaking() { }
 
+    virtual bool cueContentsMatch(const TextTrackCue&) const;
+
 protected:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end);
 
     Document* document() const;
 
-    virtual bool cueContentsMatch(const TextTrackCue&) const;
     virtual void toJSON(JSON::Object&) const;
 
 private:

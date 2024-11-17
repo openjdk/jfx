@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,31 +26,26 @@
 package test.robot.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
-
-import com.sun.javafx.scene.control.ContextMenuContentShim;
-import com.sun.javafx.tk.Toolkit;
-
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.Scene;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.skin.ChoiceBoxSkin;
 import javafx.scene.control.skin.ChoiceBoxSkinNodesShim;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
-import javafx.application.Platform;
 import javafx.scene.robot.Robot;
-import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.ContextMenuContentShim;
 import test.util.Util;
 
 /*
@@ -70,7 +65,6 @@ import test.util.Util;
 
 public class ChoiceBoxScrollUpOnCollectionChangeTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
-    static CountDownLatch scrollLatch = new CountDownLatch(1);
     static CountDownLatch choiceBoxDisplayLatch = new CountDownLatch(1);
     static CountDownLatch choiceBoxHiddenLatch = new CountDownLatch(1);
     static Robot robot;
@@ -92,16 +86,10 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
     }
 
     private void scrollChoiceBox(int scrollAmt) throws Exception {
-        Util.runAndWait(() -> {
-            for (int i = 0; i < scrollAmt; i++) {
-                robot.keyType(KeyCode.DOWN);
-                Toolkit.getToolkit().firePulse();
-            }
-            scrollLatch.countDown();
-        });
-
-        Util.waitForLatch(scrollLatch, 5, "Timeout waiting for choicebox to be hidden.");
-        Thread.sleep(400); // Wait for up arrow to get loaded in UI
+        for (int i = 0; i < scrollAmt; i++) {
+            Util.runAndWait(() -> robot.keyType(KeyCode.DOWN));
+            Util.waitForIdle(scene);
+        }
 
         Util.runAndWait(() -> {
             robot.keyType(KeyCode.ENTER);
@@ -136,33 +124,33 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
 
         Thread.sleep(400); // Small delay to avoid test failure due to slow UI loading.
 
-        Assert.assertFalse(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
-        Assert.assertTrue(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
+        Assertions.assertFalse(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
+        Assertions.assertTrue(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
 
         double rowHeight = ContextMenuContentShim.getContextMenuRowHeight(popup);
         double screenHeight = Screen.getPrimary().getVisualBounds().getHeight();
         scrollChoiceBox((int) Math.ceil(screenHeight / rowHeight));
 
         Util.waitForLatch(choiceBoxHiddenLatch, 5, "Timeout waiting for choicebox to be hidden.");
-        Assert.assertTrue(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
-        Assert.assertTrue(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
+        Assertions.assertTrue(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
+        Assertions.assertTrue(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
 
         addChoiceBoxItems(2);
         choiceBoxDisplayLatch = new CountDownLatch(1);
         showChoiceBox();
 
-        Assert.assertFalse(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
-        Assert.assertFalse(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
+        Assertions.assertFalse(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
+        Assertions.assertFalse(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     public static class TestApp extends Application {

@@ -40,6 +40,11 @@ public:
     bool characterStartsNewTextChunk(int position) const;
     SVGTextLayoutAttributes* layoutAttributes() { return &m_layoutAttributes; }
 
+    // computeScalingFactor() returns the font-size scaling factor, ignoring the text-rendering mode.
+    // scalingFactor() takes it into account, and thus returns 1 whenever text-rendering is set to 'geometricPrecision'.
+    // Therefore if you need access to the vanilla scaling factor, use this method directly (e.g. for non-scaling-stroke).
+    static float computeScalingFactorForRenderer(const RenderObject&);
+
     float scalingFactor() const { return m_scalingFactor; }
     const FontCascade& scaledFont() const { return m_scaledFont; }
     void updateScaledFont();
@@ -59,8 +64,6 @@ private:
 
     FloatRect objectBoundingBox() const override { return floatLinesBoundingBox(); }
 
-    bool isSVGInlineText() const override { return true; }
-
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
     IntRect linesBoundingBox() const override;
     std::unique_ptr<LegacyInlineTextBox> createTextBox() override;
@@ -72,4 +75,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGInlineText, isSVGInlineText())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGInlineText, isRenderSVGInlineText())

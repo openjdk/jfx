@@ -39,6 +39,7 @@ class BoxGeometry;
 class InlineFormattingContext;
 class LineBoxBuilder;
 class LineBoxVerticalAligner;
+class RubyFormattingContext;
 
 //   ____________________________________________________________ Line Box
 // |                                    --------------------
@@ -80,7 +81,6 @@ public:
     const InlineLevelBoxList& nonRootInlineLevelBoxes() const { return m_nonRootInlineLevelBoxList; }
 
     FontBaseline baselineType() const { return m_baselineType; }
-    bool isHorizontal() const { return m_rootInlineBox.layoutBox().style().isHorizontalWritingMode(); }
 
     const InlineRect& logicalRect() const { return m_logicalRect; }
 
@@ -89,6 +89,7 @@ public:
 private:
     friend class LineBoxBuilder;
     friend class LineBoxVerticalAligner;
+    friend class RubyFormattingContext;
 
     void addInlineLevelBox(InlineLevelBox&&);
     InlineLevelBoxList& nonRootInlineLevelBoxes() { return m_nonRootInlineLevelBoxList; }

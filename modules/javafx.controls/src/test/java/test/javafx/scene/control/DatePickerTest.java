@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,31 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import java.time.DateTimeException;
 import java.time.LocalDate;
-import java.time.chrono.*;
+import java.time.chrono.AbstractChronology;
+import java.time.chrono.ChronoLocalDate;
+import java.time.chrono.Chronology;
+import java.time.chrono.Era;
+import java.time.chrono.IsoChronology;
+import java.time.chrono.JapaneseChronology;
+import java.time.chrono.MinguoChronology;
+import java.time.chrono.MinguoDate;
+import java.time.chrono.MinguoEra;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.ValueRange;
-import java.util.*;
-
-import javafx.scene.control.Button;
-import javafx.scene.layout.HBox;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import com.sun.javafx.tk.Toolkit;
+import java.util.List;
+import java.util.Locale;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -47,25 +58,24 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.DateCell;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.skin.DatePickerSkin;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
-
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-
-import javafx.scene.control.skin.DatePickerSkin;
-
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 public class DatePickerTest {
     private DatePicker datePicker;
@@ -91,16 +101,19 @@ public class DatePickerTest {
      *                                                                   *
      ********************************************************************/
 
-    @BeforeClass public static void setupOnce() {
+    @BeforeAll
+    public static void setupOnce() {
         defaultLocale = Locale.getDefault();
         Locale.setDefault(Locale.forLanguageTag("en-US"));
     }
 
-    @AfterClass public static void tearDownOnce() {
+    @AfterAll
+    public static void tearDownOnce() {
         Locale.setDefault(defaultLocale);
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         datePicker = new DatePicker();
     }
 
@@ -373,26 +386,26 @@ public class DatePickerTest {
     @Test public void checkPromptTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         datePicker.promptTextProperty().bind(strPr);
-        assertTrue("PromptText cannot be bound", datePicker.getPromptText().equals("value"));
+        assertTrue(datePicker.getPromptText().equals("value"), "PromptText cannot be bound");
         strPr.setValue("newvalue");
-        assertTrue("PromptText cannot be bound", datePicker.getPromptText().equals("newvalue"));
+        assertTrue(datePicker.getPromptText().equals("newvalue"), "PromptText cannot be bound");
     }
 
     @Test public void checkValuePropertyBind() {
         ObjectProperty<LocalDate> objPr = new SimpleObjectProperty<>(today);
         datePicker.valueProperty().bind(objPr);
-        assertTrue("value cannot be bound", datePicker.getValue().equals(today));
+        assertTrue(datePicker.getValue().equals(today), "value cannot be bound");
         LocalDate tomorrow = today.plusDays(1);
         objPr.setValue(tomorrow);
-        assertTrue("value cannot be bound", datePicker.getValue().equals(tomorrow));
+        assertTrue(datePicker.getValue().equals(tomorrow), "value cannot be bound");
     }
 
     @Test public void checkChronologyPropertyBind() {
         ObjectProperty<Chronology> objPr = new SimpleObjectProperty<>(IsoChronology.INSTANCE);
         datePicker.chronologyProperty().bind(objPr);
-        assertTrue("Chronology cannot be bound", datePicker.getChronology().equals(IsoChronology.INSTANCE));
+        assertTrue(datePicker.getChronology().equals(IsoChronology.INSTANCE), "Chronology cannot be bound");
         objPr.setValue(JapaneseChronology.INSTANCE);
-        assertTrue("Chronology cannot be bound", datePicker.getChronology().equals(JapaneseChronology.INSTANCE));
+        assertTrue(datePicker.getChronology().equals(JapaneseChronology.INSTANCE), "Chronology cannot be bound");
     }
 
 
@@ -606,14 +619,12 @@ public class DatePickerTest {
         // dp2.isFocused() returns true as expected, the scene focus owner is
         // not the ComboBox, but the FakeFocusTextField inside it
         dp1Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
-        assertTrue("Expect dp2 to be focused, but actual focus owner is: " + scene.getFocusOwner(),
-                dp2.isFocused());
+        assertTrue(dp2.isFocused(), "Expect dp2 to be focused, but actual focus owner is: " + scene.getFocusOwner());
         // Updated with fix for RT-34602: The TextField now never gets
         // focus (it's just faking it).
         // assertEquals("Expect dp2 TextField to be focused, but actual focus owner is: " + scene.getFocusOwner(),
         //         dp2.getEditor(), scene.getFocusOwner());
-        assertEquals("Expect dp2 to be focused, but actual focus owner is: " + scene.getFocusOwner(),
-                     dp2, scene.getFocusOwner());
+        assertEquals(dp2, scene.getFocusOwner(), "Expect dp2 to be focused, but actual focus owner is: " + scene.getFocusOwner());
 
         // This is where the second half of the bug appears, as we are stuck in
         // the FakeFocusTextField of dp2, we never make it to dp1
@@ -668,14 +679,16 @@ public class DatePickerTest {
         assertEquals("11/24/2021", datePicker.getEditor().getText());
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testCommitValueWrongType() {
-        datePicker.setEditable(true);
-        datePicker.getEditor().setText("Some Date");
-        datePicker.commitValue();
+        assertThrows(RuntimeException.class, () -> {
+            datePicker.setEditable(true);
+            datePicker.getEditor().setText("Some Date");
+            datePicker.commitValue();
 
-        assertNull(datePicker.getValue());
-        assertEquals("Some Date", datePicker.getEditor().getText());
+            assertNull(datePicker.getValue());
+            assertEquals("Some Date", datePicker.getEditor().getText());
+        });
     }
 
     @Test
@@ -733,6 +746,33 @@ public class DatePickerTest {
 
         assertEquals(LocalDate.of(2021, 11, 24), datePicker.getValue());
         assertEquals("11/24/2021", datePicker.getEditor().getText());
+
+        stageLoader.dispose();
+    }
+
+    /**
+     * When DatePicker loses focus with misformatted text in the editor,
+     * checks that the value is not changed, and the text is reverted to the value
+     */
+    @Test
+    public void testFocusLostWithTypo() {
+        Button button = new Button();
+        StageLoader stageLoader = new StageLoader(new HBox(datePicker, button));
+
+        // initial value
+        datePicker.setValue(LocalDate.of(2015, 03, 25));
+        assertEquals("3/25/2015", datePicker.getEditor().getText());
+
+        // set misformatted text
+        datePicker.requestFocus();
+        datePicker.getEditor().setText("11/24/20xx");
+
+        // losing focus triggers cancelEdit() because the text cannot be parsed
+        button.requestFocus();
+
+        // check that value remains unchanged, and text is reverted
+        assertEquals(LocalDate.of(2015, 03, 25), datePicker.getValue());
+        assertEquals("3/25/2015", datePicker.getEditor().getText());
 
         stageLoader.dispose();
     }

@@ -153,9 +153,7 @@ private:
             m_workset->remove(liveIndexAtHead);
         ASSERT(!m_workset->isEmpty());
 
-        liveAtHead.reserveCapacity(liveAtHead.size() + m_workset->size());
-        for (unsigned newValue : *m_workset)
-            liveAtHead.uncheckedAppend(newValue);
+        liveAtHead.appendRange(m_workset->begin(), m_workset->end());
 
         bool changedPredecessor = false;
         for (BasicBlock* predecessor : block->predecessors) {
@@ -185,10 +183,12 @@ private:
 
 } // anonymous namespace
 
-bool performLivenessAnalysis(Graph& graph)
+bool performGraphPackingAndLivenessAnalysis(Graph& graph)
 {
     graph.packNodeIndices();
-
+#ifndef NDEBUG
+    graph.clearAbstractValues();
+#endif
     return runPhase<LivenessAnalysisPhase>(graph);
 }
 

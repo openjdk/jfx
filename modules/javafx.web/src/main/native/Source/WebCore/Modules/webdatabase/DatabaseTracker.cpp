@@ -142,10 +142,10 @@ ExceptionOr<void> DatabaseTracker::hasAdequateQuotaForOrigin(const SecurityOrigi
     auto requirement = usage + std::max<uint64_t>(1u, estimatedSize);
     if (requirement < usage) {
         // The estimated size is so big it causes an overflow; don't allow creation.
-        return Exception { SecurityError };
+        return Exception { ExceptionCode::SecurityError };
     }
     if (requirement > quotaNoLock(origin))
-        return Exception { QuotaExceededError };
+        return Exception { ExceptionCode::QuotaExceededError };
     return { };
 }
 
@@ -157,7 +157,7 @@ ExceptionOr<void> DatabaseTracker::canEstablishDatabase(DatabaseContext& context
     auto origin = context.securityOrigin();
 
     if (isDeletingDatabaseOrOriginFor(origin, name))
-        return Exception { SecurityError };
+        return Exception { ExceptionCode::SecurityError };
 
     recordCreatingDatabase(origin, name);
 
@@ -183,7 +183,7 @@ ExceptionOr<void> DatabaseTracker::canEstablishDatabase(DatabaseContext& context
     // again. Hence, we don't call doneCreatingDatabase() yet in that case.
 
     auto exception = result.releaseException();
-    if (exception.code() != QuotaExceededError)
+    if (exception.code() != ExceptionCode::QuotaExceededError)
         doneCreatingDatabase(origin, name);
 
     return exception;
@@ -214,7 +214,7 @@ ExceptionOr<void> DatabaseTracker::retryCanEstablishDatabase(DatabaseContext& co
         return { };
 
     auto exception = result.releaseException();
-    ASSERT(exception.code() == QuotaExceededError);
+    ASSERT(exception.code() == ExceptionCode::QuotaExceededError);
     doneCreatingDatabase(origin, name);
 
     return exception;
@@ -300,7 +300,7 @@ String DatabaseTracker::originPath(const SecurityOriginData& origin) const
 
 static String generateDatabaseFileName()
 {
-    return makeString(UUID::createVersion4(), ".db"_s);
+    return makeString(WTF::UUID::createVersion4(), ".db"_s);
 }
 
 String DatabaseTracker::fullPathForDatabaseNoLock(const SecurityOriginData& origin, const String& name, bool createIfNotExists)
@@ -781,7 +781,7 @@ void DatabaseTracker::deleteDatabasesModifiedSince(WallTime time)
                     continue;
             }
 
-            databaseNamesToDelete.uncheckedAppend(databaseName);
+            databaseNamesToDelete.append(databaseName);
         }
 
         if (databaseNames.size() == databaseNamesToDelete.size())
@@ -797,9 +797,7 @@ void DatabaseTracker::deleteDatabasesModifiedSince(WallTime time)
 // taking place.
 bool DatabaseTracker::deleteOrigin(const SecurityOriginData& origin)
 {
-    UNUSED_PARAM(origin);
-    //return deleteOrigin(origin, DeletionMode::Default);
-    return false;
+    return deleteOrigin(origin, DeletionMode::Default);
 }
 
 bool DatabaseTracker::deleteOrigin(const SecurityOriginData& origin, DeletionMode deletionMode)

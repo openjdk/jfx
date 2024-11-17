@@ -33,6 +33,7 @@
 namespace WebCore {
 
 class CustomEffect final : public AnimationEffect {
+    WTF_MAKE_ISO_ALLOCATED(CustomEffect);
 public:
     static ExceptionOr<Ref<CustomEffect>> create(Ref<CustomEffectCallback>&&, std::optional<std::variant<double, EffectTiming>>&&);
     ~CustomEffect() { }
@@ -43,7 +44,7 @@ private:
     // AnimationEffect
     bool isCustomEffect() const final { return true; }
     void animationDidTick() final;
-    bool ticksContinouslyWhileActive() const final { return true; }
+    bool ticksContinuouslyWhileActive() const final { return true; }
 
     Ref<CustomEffectCallback> m_callback;
 };

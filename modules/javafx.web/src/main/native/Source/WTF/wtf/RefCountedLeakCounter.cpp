@@ -59,8 +59,13 @@ void RefCountedLeakCounter::cancelMessageSuppression(const char* reason)
 }
 
 RefCountedLeakCounter::RefCountedLeakCounter(const char* description)
+#if !LOG_DISABLED
     : m_description(description)
+#endif
 {
+#if LOG_DISABLED
+    UNUSED_PARAM(description);
+#endif
 }
 
 RefCountedLeakCounter::~RefCountedLeakCounter()

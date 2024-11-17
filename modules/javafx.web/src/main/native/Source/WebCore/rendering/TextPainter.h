@@ -25,6 +25,7 @@
 #include "AffineTransform.h"
 #include "FloatRect.h"
 #include "GlyphDisplayListCache.h"
+#include "RotationDirection.h"
 #include "TextFlags.h"
 #include "TextPaintStyle.h"
 #include <wtf/text/AtomString.h>
@@ -40,17 +41,16 @@ class Text;
 
 struct TextPaintStyle;
 
-enum RotationDirection { Counterclockwise, Clockwise };
-
-static inline AffineTransform rotation(const FloatRect& boxRect, RotationDirection clockwise)
+static inline AffineTransform rotation(const FloatRect& boxRect, RotationDirection direction)
 {
-    return clockwise ? AffineTransform(0, 1, -1, 0, boxRect.x() + boxRect.maxY(), boxRect.maxY() - boxRect.x())
+    return direction == RotationDirection::Clockwise
+        ? AffineTransform(0, 1, -1, 0, boxRect.x() + boxRect.maxY(), boxRect.maxY() - boxRect.x())
         : AffineTransform(0, -1, 1, 0, boxRect.x() - boxRect.maxY(), boxRect.x() + boxRect.maxY());
 }
 
 class TextPainter {
 public:
-    TextPainter(GraphicsContext&, const FontCascade&);
+    TextPainter(GraphicsContext&, const FontCascade&, const RenderStyle&);
 
     void setStyle(const TextPaintStyle& textPaintStyle) { m_style = textPaintStyle; }
     void setShadow(const ShadowData* shadow) { m_shadow = shadow; }
@@ -64,15 +64,9 @@ public:
     void setGlyphDisplayListIfNeeded(const LayoutRun& run, const PaintInfo& paintInfo, const TextRun& textRun)
     {
         if (!TextPainter::shouldUseGlyphDisplayList(paintInfo))
-            TextPainter::removeGlyphDisplayList(run);
+            const_cast<LayoutRun&>(run).removeFromGlyphDisplayListCache();
         else
             m_glyphDisplayList = GlyphDisplayListCache::singleton().get(run, m_font, m_context, textRun);
-    }
-
-    template<typename LayoutRun>
-    static void removeGlyphDisplayList(const LayoutRun& run)
-    {
-        GlyphDisplayListCache::singleton().remove(run);
     }
 
     static bool shouldUseGlyphDisplayList(const PaintInfo&);
@@ -96,6 +90,7 @@ private:
 
     GraphicsContext& m_context;
     const FontCascade& m_font;
+    const RenderStyle& m_renderStyle;
     TextPaintStyle m_style;
     AtomString m_emphasisMark;
     const ShadowData* m_shadow { nullptr };
@@ -115,7 +110,7 @@ inline void TextPainter::setEmphasisMark(const AtomString& mark, float offset, c
 
 class ShadowApplier {
 public:
-    ShadowApplier(GraphicsContext&, const ShadowData*, const FilterOperations* colorFilter, const FloatRect& textRect, bool lastShadowIterationShouldDrawText = true, bool opaque = false, FontOrientation = FontOrientation::Horizontal);
+    ShadowApplier(const RenderStyle&, GraphicsContext&, const ShadowData*, const FilterOperations* colorFilter, const FloatRect& textRect, bool lastShadowIterationShouldDrawText = true, bool opaque = false, FontOrientation = FontOrientation::Horizontal);
     FloatSize extraOffset() const { return m_extraOffset; }
     bool nothingToDraw() const { return m_nothingToDraw; }
     bool didSaveContext() const { return m_didSaveContext; }

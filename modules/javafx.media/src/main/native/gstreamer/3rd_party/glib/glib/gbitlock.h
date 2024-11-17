@@ -2,6 +2,8 @@
  * Copyright (C) 2008 Ryan Lortie
  * Copyright (C) 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -42,6 +44,12 @@ void      g_bit_unlock                    (volatile gint *address,
 GLIB_AVAILABLE_IN_ALL
 void      g_pointer_bit_lock              (volatile void *address,
                                            gint           lock_bit);
+
+GLIB_AVAILABLE_IN_2_80
+void      g_pointer_bit_lock_and_get      (gpointer address,
+                                           guint lock_bit,
+                                           guintptr *out_ptr);
+
 GLIB_AVAILABLE_IN_ALL
 gboolean  g_pointer_bit_trylock           (volatile void *address,
                                            gint           lock_bit);
@@ -49,12 +57,31 @@ GLIB_AVAILABLE_IN_ALL
 void      g_pointer_bit_unlock            (volatile void *address,
                                            gint           lock_bit);
 
+GLIB_AVAILABLE_IN_2_80
+gpointer  g_pointer_bit_lock_mask_ptr     (gpointer ptr,
+                                           guint lock_bit,
+                                           gboolean set,
+                                           guintptr preserve_mask,
+                                           gpointer preserve_ptr);
+
+GLIB_AVAILABLE_IN_2_80
+void g_pointer_bit_unlock_and_set         (void *address,
+                                           guint lock_bit,
+                                           gpointer ptr,
+                                           guintptr preserve_mask);
+
 #ifdef __GNUC__
 
 #define g_pointer_bit_lock(address, lock_bit) \
   (G_GNUC_EXTENSION ({                                                       \
     G_STATIC_ASSERT (sizeof *(address) == sizeof (gpointer));                \
     g_pointer_bit_lock ((address), (lock_bit));                              \
+  }))
+
+#define g_pointer_bit_lock_and_get(address, lock_bit, out_ptr)     \
+  (G_GNUC_EXTENSION ({                                             \
+    G_STATIC_ASSERT (sizeof *(address) == sizeof (gpointer));      \
+    g_pointer_bit_lock_and_get ((address), (lock_bit), (out_ptr)); \
   }))
 
 #define g_pointer_bit_trylock(address, lock_bit) \
@@ -67,6 +94,12 @@ void      g_pointer_bit_unlock            (volatile void *address,
   (G_GNUC_EXTENSION ({                                                       \
     G_STATIC_ASSERT (sizeof *(address) == sizeof (gpointer));                \
     g_pointer_bit_unlock ((address), (lock_bit));                            \
+  }))
+
+#define g_pointer_bit_unlock_and_set(address, lock_bit, ptr, preserve_mask)       \
+  (G_GNUC_EXTENSION ({                                                            \
+    G_STATIC_ASSERT (sizeof *(address) == sizeof (gpointer));                     \
+    g_pointer_bit_unlock_and_set ((address), (lock_bit), (ptr), (preserve_mask)); \
   }))
 
 #endif

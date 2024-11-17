@@ -27,6 +27,7 @@
 #include "LoadableImportMap.h"
 
 #include "DefaultResourceLoadPriority.h"
+#include "Element.h"
 #include "FetchIdioms.h"
 #include "ScriptElement.h"
 #include "ScriptSourceCode.h"
@@ -42,14 +43,14 @@ Ref<LoadableImportMap> LoadableImportMap::create(const AtomString& nonce, const 
 }
 
 LoadableImportMap::LoadableImportMap(const AtomString& nonce, const AtomString& integrity, ReferrerPolicy policy, const AtomString& crossOriginMode, const AtomString& initiatorType, bool isInUserAgentShadowTree, bool isAsync)
-    : LoadableNonModuleScriptBase(nonce, integrity, policy, crossOriginMode, "utf-8"_s, initiatorType, isInUserAgentShadowTree, isAsync)
+    : LoadableNonModuleScriptBase(nonce, integrity, policy, RequestPriority::Auto, crossOriginMode, "utf-8"_s, initiatorType, isInUserAgentShadowTree, isAsync)
 {
 }
 
 void LoadableImportMap::execute(ScriptElement& scriptElement)
 {
     ASSERT(!m_error);
-    scriptElement.registerImportMap(ScriptSourceCode(m_cachedScript.get(), JSC::SourceProviderSourceType::ImportMap, *this));
+    scriptElement.registerImportMap(ScriptSourceCode(protectedCachedScript().get(), JSC::SourceProviderSourceType::ImportMap, *this));
 }
 
 }

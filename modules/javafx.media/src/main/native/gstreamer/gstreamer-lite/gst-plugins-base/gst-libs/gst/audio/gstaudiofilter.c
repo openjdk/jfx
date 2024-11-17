@@ -180,6 +180,11 @@ gst_audio_filter_submit_input_buffer (GstBaseTransform * btrans,
   GstAudioFilter *filter = GST_AUDIO_FILTER (btrans);
 
   if (btrans->segment.format == GST_FORMAT_TIME) {
+    if (!GST_AUDIO_INFO_IS_VALID (&filter->info)) {
+      GST_WARNING_OBJECT (filter, "Got buffer, but not negotiated yet!");
+      return GST_FLOW_NOT_NEGOTIATED;
+    }
+
     input =
         gst_audio_buffer_clip (input, &btrans->segment, filter->info.rate,
         filter->info.bpf);

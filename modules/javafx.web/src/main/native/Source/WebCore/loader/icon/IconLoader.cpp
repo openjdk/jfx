@@ -31,11 +31,12 @@
 #include "CachedResourceRequest.h"
 #include "CachedResourceRequestInitiatorTypes.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "ResourceRequest.h"
 #include "SharedBuffer.h"
@@ -59,7 +60,7 @@ void IconLoader::startLoading()
     if (m_resource)
         return;
 
-    auto* frame = m_documentLoader.frame();
+    RefPtr frame = m_documentLoader->frame();
     if (!frame)
         return;
 
@@ -90,18 +91,16 @@ void IconLoader::startLoading()
 
     auto cachedResource = frame->document()->cachedResourceLoader().requestIcon(WTFMove(request));
     m_resource = cachedResource.value_or(nullptr);
-    if (m_resource)
-        m_resource->addClient(*this);
+    if (CachedResourceHandle resource = m_resource)
+        resource->addClient(*this);
     else
         LOG_ERROR("Failed to start load for icon at url %s (error: %s)", resourceRequestURL.string().ascii().data(), cachedResource.error().localizedDescription().utf8().data());
 }
 
 void IconLoader::stopLoading()
 {
-    if (m_resource) {
-        m_resource->removeClient(*this);
-        m_resource = nullptr;
-    }
+    if (CachedResourceHandle resource = std::exchange(m_resource, nullptr))
+        resource->removeClient(*this);
 }
 
 void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
@@ -110,13 +109,13 @@ void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetri
 
     // If we got a status code indicating an invalid response, then lets
     // ignore the data and not try to decode the error page as an icon.
-    auto* data = m_resource->resourceBuffer();
+    RefPtr data = m_resource->resourceBuffer();
     int status = m_resource->response().httpStatusCode();
     if (status && (status < 200 || status > 299))
         data = nullptr;
 
     constexpr uint8_t pdfMagicNumber[] = { '%', 'P', 'D', 'F' };
-    if (data && data->startsWith(Span { pdfMagicNumber, std::size(pdfMagicNumber) })) {
+    if (data && data->startsWith(std::span(pdfMagicNumber, std::size(pdfMagicNumber)))) {
         LOG(IconDatabase, "IconLoader::finishLoading() - Ignoring icon at %s because it appears to be a PDF", m_resource->url().string().ascii().data());
         data = nullptr;
     }
@@ -125,7 +124,7 @@ void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetri
 
     // DocumentLoader::finishedLoadingIcon destroys this IconLoader as it finishes. This will automatically
     // trigger IconLoader::stopLoading() during destruction, so we should just return here.
-    m_documentLoader.finishedLoadingIcon(*this, data);
+    Ref { m_documentLoader.get() }->finishedLoadingIcon(*this, data.get());
 }
 
 }

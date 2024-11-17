@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,11 @@
 
 #include "VM.h"
 #include <wtf/CPUTime.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Watchdog);
 
 Watchdog::Watchdog(VM* vm)
     : m_vm(vm)
@@ -60,7 +63,17 @@ void Watchdog::setTimeLimit(Seconds limit,
 bool Watchdog::shouldTerminate(JSGlobalObject* globalObject)
 {
     ASSERT(m_vm->currentThreadIsHoldingAPILock());
-    if (MonotonicTime::now() < m_deadline)
+
+    Seconds epsilon;
+#if OS(WINDOWS)
+    // We can reach this point as much as 15ms before the deadline on Windows,
+    // in which case the watchdog will never get to do its job.
+    // Adding this leeway shouldn't cause a problem for other platforms
+    // (since the "deadline is infinity" case should be the crucial one),
+    // but it is a fact that only Windows is experiencing the issue.
+    epsilon = Seconds::fromMilliseconds(20);
+#endif
+    if (MonotonicTime::timePointFromNow(epsilon) < m_deadline)
         return false; // Just a stale timer firing. Nothing to do.
 
     // Set m_deadline to MonotonicTime::infinity() here so that we can reject all future

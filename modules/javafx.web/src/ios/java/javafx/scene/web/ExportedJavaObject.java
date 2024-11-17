@@ -172,12 +172,14 @@ class ExportedJavaObject {
     // returns JSON-encoded result
     public String call(final String methodName, final String args) throws CallException {
         try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<String>() {
+            @SuppressWarnings("removal")
+            String result = AccessController.doPrivileged(new PrivilegedExceptionAction<String>() {
                 @Override
                 public String run() throws Exception {
                     return callWorker(methodName, args);
                 }
             }, getJSBridge().getAccessControlContext());
+            return result;
         } catch (Exception e) {
             if (e instanceof CallException) {
                 throw (CallException) e;

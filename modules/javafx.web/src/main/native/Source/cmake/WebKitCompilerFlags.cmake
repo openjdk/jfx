@@ -104,16 +104,18 @@ endif ()
 if (COMPILER_IS_GCC_OR_CLANG)
     WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-fno-strict-aliasing)
 
+    # Split debug information in ".debug_types" / ".debug_info" sections - this leads
+    # to a smaller overall size of the debug information, and avoids linker relocation
+    # errors on e.g. aarch64 (relocation R_AARCH64_ABS32 out of range: 4312197985 is not in [-2147483648, 4294967295])
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-fdebug-types-section)
+
     # clang-cl.exe impersonates cl.exe so some clang arguments like -fno-rtti are
     # represented using cl.exe's options and should not be passed as flags, so
     # we do not add -fno-rtti or -fno-exceptions for clang-cl
     if (COMPILER_IS_CLANG_CL)
         # FIXME: These warnings should be addressed
-        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-undef
-                                             -Wno-macro-redefined
-                                             -Wno-unknown-pragmas
-                                             -Wno-nonportable-include-path
-                                             -Wno-unknown-argument)
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-sign-compare
+                                             -Wno-deprecated-declarations)
     else ()
         WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-fno-exceptions)
         WEBKIT_APPEND_GLOBAL_CXX_FLAGS(-fno-rtti)
@@ -282,6 +284,8 @@ endif ()
 
 if (MSVC)
     set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" /nologo /EP /TP")
+elseif (COMPILER_IS_QCC)
+    set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" -E -Wp,-P -x c++")
 else ()
     set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" -E -P -x c++")
 endif ()
@@ -435,6 +439,7 @@ endif ()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CMAKE_REQUIRED_FLAGS "--std=c++2a")
+
     set(REMOVE_CVREF_TEST_SOURCE "
         #include <type_traits>
         int main() {
@@ -442,6 +447,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         }
     ")
     check_cxx_source_compiles("${REMOVE_CVREF_TEST_SOURCE}" STD_REMOVE_CVREF_IS_AVAILABLE)
+
     unset(CMAKE_REQUIRED_FLAGS)
 endif ()
 

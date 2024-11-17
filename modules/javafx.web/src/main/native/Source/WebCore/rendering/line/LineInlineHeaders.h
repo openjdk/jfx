@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All right reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
@@ -19,17 +19,19 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #pragma once
 
 #include "LineInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 
 namespace WebCore {
 
-enum WhitespacePosition { LeadingWhitespace, TrailingWhitespace };
+enum WhitespacePosition : bool { LeadingWhitespace, TrailingWhitespace };
 
 inline bool hasInlineDirectionBordersPaddingOrMargin(const RenderInline& flow)
 {
@@ -105,11 +107,10 @@ inline bool requiresLineBox(const LegacyInlineIterator& it, const LineInfo& line
         return true;
 
     bool rendererIsEmptyInline = false;
-    if (is<RenderInline>(*it.renderer())) {
-        const auto& inlineRenderer = downcast<RenderInline>(*it.renderer());
-        if (!alwaysRequiresLineBox(inlineRenderer) && !requiresLineBoxForContent(inlineRenderer, lineInfo))
+    if (auto* inlineRenderer = dynamicDowncast<RenderInline>(*it.renderer())) {
+        if (!alwaysRequiresLineBox(*inlineRenderer) && !requiresLineBoxForContent(*inlineRenderer, lineInfo))
             return false;
-        rendererIsEmptyInline = isEmptyInline(inlineRenderer);
+        rendererIsEmptyInline = isEmptyInline(*inlineRenderer);
     }
 
     if (!shouldCollapseWhiteSpace(&it.renderer()->style(), lineInfo, whitespacePosition))
@@ -126,12 +127,12 @@ inline void setStaticPositions(RenderBlockFlow& block, RenderBox& child, IndentT
     // will work for the common cases
     RenderElement* containerBlock = child.container();
     LayoutUnit blockHeight = block.logicalHeight();
-    if (is<RenderInline>(*containerBlock)) {
+    if (auto* renderInline = dynamicDowncast<RenderInline>(*containerBlock)) {
         // A relative positioned inline encloses us. In this case, we also have to determine our
         // position as though we were an inline. Set |staticInlinePosition| and |staticBlockPosition| on the relative positioned
         // inline so that we can obtain the value later.
-        downcast<RenderInline>(*containerBlock).layer()->setStaticInlinePosition(block.startAlignedOffsetForLine(blockHeight, DoNotIndentText));
-        downcast<RenderInline>(*containerBlock).layer()->setStaticBlockPosition(blockHeight);
+        renderInline->layer()->setStaticInlinePosition(block.startAlignedOffsetForLine(blockHeight, DoNotIndentText));
+        renderInline->layer()->setStaticBlockPosition(blockHeight);
     }
     block.updateStaticInlinePositionForChild(child, blockHeight, shouldIndentText);
     child.layer()->setStaticBlockPosition(blockHeight);

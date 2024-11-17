@@ -30,14 +30,14 @@
 #include "FormData.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/JSONValues.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(DeprecationReportBody);
 
 DeprecationReportBody::DeprecationReportBody(String&& id, WallTime anticipatedRemoval, String&& message, String&& sourceFile, std::optional<unsigned> lineNumber, std::optional<unsigned> columnNumber)
-    : ReportBody(ViolationReportType::Deprecation)
-    , m_id(WTFMove(id))
+    : m_id(WTFMove(id))
     , m_anticipatedRemoval(anticipatedRemoval)
     , m_message(WTFMove(message))
     , m_sourceFile(WTFMove(sourceFile))

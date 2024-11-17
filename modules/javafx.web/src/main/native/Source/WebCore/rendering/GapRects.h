@@ -44,11 +44,7 @@ namespace WebCore {
             return result;
         }
 
-        bool operator==(const GapRects& other) const
-        {
-            return m_left == other.left() && m_center == other.center() && m_right == other.right();
-        }
-        bool operator!=(const GapRects& other) const { return !(*this == other); }
+        friend bool operator==(const GapRects&, const GapRects&) = default;
 
     private:
         LayoutRect m_left;

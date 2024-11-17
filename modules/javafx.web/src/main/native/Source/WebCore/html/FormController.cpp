@@ -26,7 +26,7 @@
 #include "HTMLInputElement.h"
 #include "HTMLMaybeFormAssociatedCustomElement.h"
 #include "ScriptDisallowedScope.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/text/StringBuilder.h>
@@ -174,10 +174,10 @@ private:
 
 static bool shouldBeUsedForFormSignature(const Element& element)
 {
-    if (is<HTMLFormControlElement>(element))
-        return downcast<HTMLFormControlElement>(element).shouldSaveAndRestoreFormControlState();
-    if (is<HTMLMaybeFormAssociatedCustomElement>(element))
-        return downcast<HTMLMaybeFormAssociatedCustomElement>(element).hasFormAssociatedInterface() || element.isCustomElementUpgradeCandidate();
+    if (auto* formControl = dynamicDowncast<HTMLFormControlElement>(element))
+        return formControl->shouldSaveAndRestoreFormControlState();
+    if (auto* customElement = dynamicDowncast<HTMLMaybeFormAssociatedCustomElement>(element))
+        return customElement->hasFormAssociatedInterface() || element.isCustomElementUpgradeCandidate();
     return false;
 }
 

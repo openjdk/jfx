@@ -30,21 +30,21 @@ class SVGSVGElement;
 class SVGDocument final : public XMLDocument {
     WTF_MAKE_ISO_ALLOCATED(SVGDocument);
 public:
-    static Ref<SVGDocument> create(Frame*, const Settings&, const URL&);
+    static Ref<SVGDocument> create(LocalFrame*, const Settings&, const URL&);
 
     bool zoomAndPanEnabled() const;
     void startPan(const FloatPoint& start);
     void updatePan(const FloatPoint& position) const;
 
 private:
-    SVGDocument(Frame*, const Settings&, const URL&);
+    SVGDocument(LocalFrame*, const Settings&, const URL&);
 
     Ref<Document> cloneDocumentWithoutChildren() const override;
 
     FloatSize m_panningOffset;
 };
 
-inline Ref<SVGDocument> SVGDocument::create(Frame* frame, const Settings& settings, const URL& url)
+inline Ref<SVGDocument> SVGDocument::create(LocalFrame* frame, const Settings& settings, const URL& url)
 {
     auto document = adoptRef(*new SVGDocument(frame, settings, url));
     document->addToContextsMap();
@@ -55,5 +55,9 @@ inline Ref<SVGDocument> SVGDocument::create(Frame* frame, const Settings& settin
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGDocument)
     static bool isType(const WebCore::Document& document) { return document.isSVGDocument(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* document = dynamicDowncast<WebCore::Document>(node);
+        return document && isType(*document);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

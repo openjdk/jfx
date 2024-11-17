@@ -57,25 +57,24 @@ static ExceptionOr<std::unique_ptr<WebXROpaqueFramebuffer>> createOpaqueFramebuf
 {
     auto device = session.device();
     if (!device)
-        return Exception { OperationError, "Cannot create an XRWebGLLayer with an XRSession that has ended."_s };
+        return Exception { ExceptionCode::OperationError, "Cannot create an XRWebGLLayer with an XRSession that has ended."_s };
 
     // 9.1. Initialize layer’s antialias to layerInit’s antialias value.
     // 9.2. Let framebufferSize be the recommended WebGL framebuffer resolution multiplied by layerInit's framebufferScaleFactor.
 
     float scaleFactor = std::clamp(init.framebufferScaleFactor, MinFramebufferScalingFactor, device->maxFramebufferScalingFactor());
 
-    IntSize recommendedSize = session.recommendedWebGLFramebufferResolution();
-    auto width = static_cast<uint32_t>(std::ceil(recommendedSize.width() * scaleFactor));
-    auto height = static_cast<uint32_t>(std::ceil(recommendedSize.height() * scaleFactor));
+    FloatSize recommendedSize = session.recommendedWebGLFramebufferResolution();
+    IntSize size = expandedIntSize(recommendedSize.scaled(scaleFactor));
 
     // 9.3. Initialize layer’s framebuffer to a new opaque framebuffer with the dimensions framebufferSize
     //      created with context, session initialized to session, and layerInit’s depth, stencil, and alpha values.
     // 9.4. Allocate and initialize resources compatible with session’s XR device, including GPU accessible memory buffers,
     //      as required to support the compositing of layer.
     // 9.5. If layer’s resources were unable to be created for any reason, throw an OperationError and abort these steps.
-    auto layerHandle = device->createLayerProjection(width, height, init.alpha);
+    auto layerHandle = device->createLayerProjection(size.width(), size.height(), init.alpha);
     if (!layerHandle)
-        return Exception { OperationError, "Unable to allocate XRWebGLLayer GPU resources."_s };
+        return Exception { ExceptionCode::OperationError, "Unable to allocate XRWebGLLayer GPU resources."_s };
 
     WebXROpaqueFramebuffer::Attributes attributes {
         .alpha = init.alpha,
@@ -84,9 +83,9 @@ static ExceptionOr<std::unique_ptr<WebXROpaqueFramebuffer>> createOpaqueFramebuf
         .stencil = init.stencil
     };
 
-    auto framebuffer = WebXROpaqueFramebuffer::create(*layerHandle, context, WTFMove(attributes), width, height);
+    auto framebuffer = WebXROpaqueFramebuffer::create(*layerHandle, context, WTFMove(attributes), size);
     if (!framebuffer)
-        return Exception { OperationError, "Unable to create a framebuffer."_s };
+        return Exception { ExceptionCode::OperationError, "Unable to create a framebuffer."_s };
 
     return framebuffer;
 }
@@ -97,7 +96,7 @@ ExceptionOr<Ref<WebXRWebGLLayer>> WebXRWebGLLayer::create(Ref<WebXRSession>&& se
     // 1. Let layer be a new XRWebGLLayer
     // 2. If session’s ended value is true, throw an InvalidStateError and abort these steps.
     if (session->ended())
-        return Exception { InvalidStateError, "Cannot create an XRWebGLLayer with an XRSession that has ended."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLLayer with an XRSession that has ended."_s };
 
     // 3. If context is lost, throw an InvalidStateError and abort these steps.
     // 4. If session is an immersive session and context’s XR compatible boolean is false, throw
@@ -106,11 +105,11 @@ ExceptionOr<Ref<WebXRWebGLLayer>> WebXRWebGLLayer::create(Ref<WebXRSession>&& se
         [&](const RefPtr<WebGLRenderingContextBase>& baseContext) -> ExceptionOr<Ref<WebXRWebGLLayer>>
         {
             if (baseContext->isContextLost())
-                return Exception { InvalidStateError, "Cannot create an XRWebGLLayer with a lost WebGL context."_s };
+                return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLLayer with a lost WebGL context."_s };
 
             auto mode = session->mode();
             if ((mode == XRSessionMode::ImmersiveAr || mode == XRSessionMode::ImmersiveVr) && !baseContext->isXRCompatible())
-                return Exception { InvalidStateError, "Cannot create an XRWebGLLayer with WebGL context not marked as XR compatible."_s };
+                return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLLayer with WebGL context not marked as XR compatible."_s };
 
 
             // 5. Initialize layer’s context to context. (see constructor)
@@ -147,7 +146,7 @@ ExceptionOr<Ref<WebXRWebGLLayer>> WebXRWebGLLayer::create(Ref<WebXRSession>&& se
         },
         [](std::monostate) {
             ASSERT_NOT_REACHED();
-            return Exception { InvalidStateError };
+            return Exception { ExceptionCode::InvalidStateError };
         }
     );
 }
@@ -220,12 +219,12 @@ ExceptionOr<RefPtr<WebXRViewport>> WebXRWebGLLayer::getViewport(WebXRView& view)
     // 2. Let frame be session’s animation frame.
     // 3. If session is not equal to layer’s session, throw an InvalidStateError and abort these steps.
     if (&view.frame().session() != m_session.ptr())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     // 4. If frame’s active boolean is false, throw an InvalidStateError and abort these steps.
     // 5. If view’s frame is not equal to frame, throw an InvalidStateError and abort these steps.
     if (!view.frame().isActive() || !view.frame().isAnimationFrame())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     auto& viewportData = view.eye() == XREye::Right ? m_rightViewportData : m_leftViewportData;
 
@@ -274,7 +273,7 @@ HTMLCanvasElement* WebXRWebGLLayer::canvas() const
 }
 
 
-void WebXRWebGLLayer::startFrame(const PlatformXR::Device::FrameData& data)
+void WebXRWebGLLayer::startFrame(const PlatformXR::FrameData& data)
 {
     ASSERT(m_framebuffer);
 

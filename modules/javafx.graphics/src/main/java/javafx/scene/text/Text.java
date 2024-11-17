@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.text.TextRun;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -356,7 +357,7 @@ public class Text extends Shape {
     BaseBounds getSpanBounds() {
         if (spanBoundsInvalid) {
             GlyphList[] runs = getRuns();
-            if (runs.length != 0) {
+            if (runs != null && runs.length != 0) {
                 float left = Float.POSITIVE_INFINITY;
                 float top = Float.POSITIVE_INFINITY;
                 float right = 0;
@@ -1020,10 +1021,33 @@ public class Text extends Shape {
     public final HitInfo hitTest(Point2D point) {
         if (point == null) return null;
         TextLayout layout = getTextLayout();
+
         double x = point.getX() - getX();
         double y = point.getY() - getY() + getYRendering();
-        TextLayout.Hit h = layout.getHitInfo((float)x, (float)y);
-        return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
+
+        int textRunStart = findFirstRunStart();
+
+        double px = x;
+        double py = y;
+
+        if (isSpan()) {
+            Point2D pPoint = localToParent(point);
+            px = pPoint.getX();
+            py = pPoint.getY();
+        }
+        TextLayout.Hit h = layout.getHitInfo((float)px, (float)py);
+        return new HitInfo(h.getCharIndex() - textRunStart, h.getInsertionIndex() - textRunStart, h.isLeading());
+    }
+
+    private int findFirstRunStart() {
+        int start = Integer.MAX_VALUE;
+        for (GlyphList r: getRuns()) {
+            int runStart = ((TextRun) r).getStart();
+            if (runStart < start) {
+                start = runStart;
+            }
+        }
+        return start;
     }
 
     private PathElement[] getRange(int start, int end, int type) {

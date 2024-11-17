@@ -52,6 +52,15 @@ Ref<AccessibilityImageMapLink> AccessibilityImageMapLink::create()
     return adoptRef(*new AccessibilityImageMapLink());
 }
 
+void AccessibilityImageMapLink::setHTMLAreaElement(HTMLAreaElement* element)
+{
+    if (element == m_areaElement)
+        return;
+    m_areaElement = element;
+    // AccessibilityImageMapLink::determineAccessibilityRole() depends on m_areaElement, so re-compute it now.
+    updateRole();
+}
+
 AccessibilityObject* AccessibilityImageMapLink::parentObject() const
 {
     if (m_parent)
@@ -63,7 +72,7 @@ AccessibilityObject* AccessibilityImageMapLink::parentObject() const
     return m_mapElement->document().axObjectCache()->getOrCreate(m_mapElement->renderer());
 }
 
-AccessibilityRole AccessibilityImageMapLink::roleValue() const
+AccessibilityRole AccessibilityImageMapLink::determineAccessibilityRole()
 {
     if (!m_areaElement)
         return AccessibilityRole::WebCoreLink;
@@ -95,7 +104,7 @@ URL AccessibilityImageMapLink::url() const
 
 void AccessibilityImageMapLink::accessibilityText(Vector<AccessibilityText>& textOrder) const
 {
-    String description = accessibilityDescription();
+    String description = this->description();
     if (!description.isEmpty())
         textOrder.append(AccessibilityText(description, AccessibilityTextSource::Alternative));
 
@@ -108,16 +117,17 @@ void AccessibilityImageMapLink::accessibilityText(Vector<AccessibilityText>& tex
         textOrder.append(AccessibilityText(summary, AccessibilityTextSource::Summary));
 }
 
-String AccessibilityImageMapLink::accessibilityDescription() const
+String AccessibilityImageMapLink::description() const
 {
-    const AtomString& ariaLabel = getAttribute(aria_labelAttr);
+    const auto& ariaLabel = getAttribute(aria_labelAttr);
     if (!ariaLabel.isEmpty())
         return ariaLabel;
-    const AtomString& alt = getAttribute(altAttr);
+
+    const auto& alt = getAttribute(altAttr);
     if (!alt.isEmpty())
         return alt;
 
-    return String();
+    return { };
 }
 
 String AccessibilityImageMapLink::title() const
@@ -169,16 +179,6 @@ LayoutRect AccessibilityImageMapLink::elementRect() const
         return LayoutRect();
 
     return m_areaElement->computeRect(renderer);
-}
-
-String AccessibilityImageMapLink::stringValueForMSAA() const
-{
-    return url().string();
-}
-
-String AccessibilityImageMapLink::nameForMSAA() const
-{
-    return accessibilityDescription();
 }
 
 } // namespace WebCore

@@ -32,16 +32,16 @@ import javafx.beans.property.ReadOnlySetProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ReadOnlySetPropertyTest {
 
     private static final Object DEFAULT = null;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
     }
 

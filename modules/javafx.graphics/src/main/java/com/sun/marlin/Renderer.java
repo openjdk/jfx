@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,9 @@ package com.sun.marlin;
 import static com.sun.marlin.OffHeapArray.SIZE_INT;
 import sun.misc.Unsafe;
 
+// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
+// memory access methods; see JDK-8334137
+@SuppressWarnings("removal")
 public final class Renderer implements MarlinRenderer, MarlinConst {
 
     static final boolean DISABLE_RENDER = MarlinProperties.isSkipRenderer();
@@ -110,9 +113,9 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
     public static final double QUAD_DEC_BND
         = 8.0d * QUAD_DEC_ERR_SUBPIX;
 
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
 //  SCAN LINE
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
     // crossings ie subpixel edge x coordinates
     private int[] crossings;
     // auxiliary storage for crossings (merge sort)
@@ -139,9 +142,9 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
     // aux_edgePtrs ref (dirty)
     private final ArrayCacheInt.Reference aux_edgePtrs_ref;
 
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
 //  EDGE LIST
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
     private int edgeMinY = Integer.MAX_VALUE;
     private int edgeMaxY = Integer.MIN_VALUE;
     private double edgeMinX = Double.POSITIVE_INFINITY;
@@ -473,7 +476,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
     }
 
 // END EDGE LIST
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
 
     // Bounds of the drawing region, at subpixel precision.
     private int boundsMinX, boundsMinY, boundsMaxX, boundsMaxY;
@@ -624,7 +627,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
         }
 
         if (edgeMinY != Integer.MAX_VALUE) {
-            // if context is maked as DIRTY:
+            // if context is marked as DIRTY:
             if (rdrCtx.dirty) {
                 // may happen if an exception if thrown in the pipeline processing:
                 // clear completely buckets arrays:
@@ -827,7 +830,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
 
         final int stroking = rdrCtx.stroking;
 
-        int lastY = -1; // last emited row
+        int lastY = -1; // last emitted row
 
         final DPQSSorterContext sorter = rdrCtx.sorterCtx;
         boolean skipISort, useDPQS;
@@ -880,7 +883,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
                             rdrCtx.stats.stat_array_renderer_edgePtrs.add(ptrEnd);
                         }
                         this.edgePtrs = _edgePtrs
-                            = edgePtrs_ref.widenArray(_edgePtrs, edgePtrsLen, // bad mark ? TODO: fix edge ptr mark
+                            = edgePtrs_ref.widenArray(_edgePtrs, edgePtrsLen,
                                                       ptrEnd);
 
                         edgePtrsLen = _edgePtrs.length;

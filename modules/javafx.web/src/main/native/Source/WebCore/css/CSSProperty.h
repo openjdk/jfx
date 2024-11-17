@@ -24,6 +24,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "WritingMode.h"
+#include <wtf/BitSet.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -45,15 +46,7 @@ struct StylePropertyMetadata {
 
     CSSPropertyID shorthandID() const;
 
-    bool operator==(const StylePropertyMetadata& other) const
-    {
-        return m_propertyID == other.m_propertyID
-            && m_isSetFromShorthand == other.m_isSetFromShorthand
-            && m_indexInShorthandsVector == other.m_indexInShorthandsVector
-            && m_important == other.m_important
-            && m_implicit == other.m_implicit
-            && m_inherited == other.m_inherited;
-    }
+    friend bool operator==(const StylePropertyMetadata&, const StylePropertyMetadata&) = default;
 
     uint16_t m_propertyID : 10;
     uint16_t m_isSetFromShorthand : 1;
@@ -78,8 +71,6 @@ public:
 
     CSSValue* value() const { return m_value.get(); }
 
-    void wrapValueInCommaSeparatedList();
-
     static CSSPropertyID resolveDirectionAwareProperty(CSSPropertyID, TextDirection, WritingMode);
     static CSSPropertyID unresolvePhysicalProperty(CSSPropertyID, TextDirection, WritingMode);
     static bool isInheritedProperty(CSSPropertyID);
@@ -88,13 +79,18 @@ public:
     static bool isInLogicalPropertyGroup(CSSPropertyID);
     static bool areInSameLogicalPropertyGroupWithDifferentMappingLogic(CSSPropertyID, CSSPropertyID);
     static bool isDescriptorOnly(CSSPropertyID);
-    static bool isColorProperty(CSSPropertyID);
     static UChar listValuedPropertySeparator(CSSPropertyID);
     static bool isListValuedProperty(CSSPropertyID propertyID) { return !!listValuedPropertySeparator(propertyID); }
-    static Ref<CSSValueList> createListForProperty(CSSPropertyID);
     static bool allowsNumberOrIntegerInput(CSSPropertyID);
 
     const StylePropertyMetadata& metadata() const { return m_metadata; }
+    static bool isColorProperty(CSSPropertyID propertyId)
+    {
+        return colorProperties.get(propertyId);
+    }
+
+    static const WEBCORE_EXPORT WTF::BitSet<numCSSProperties> colorProperties;
+    static const WEBCORE_EXPORT WTF::BitSet<numCSSProperties> physicalProperties;
 
     bool operator==(const CSSProperty& other) const
     {

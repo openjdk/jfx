@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.css;
 
+import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.StyleConverter.StringStore;
 import javafx.css.converter.EnumConverter;
@@ -49,7 +50,6 @@ import javafx.css.ParsedValue;
 import javafx.css.Rule;
 import javafx.css.RuleShim;
 import javafx.css.Selector;
-import javafx.css.SimpleSelector;
 import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
@@ -71,10 +71,12 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-import org.junit.*;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class StylesheetTest {
 
@@ -270,9 +272,9 @@ public class StylesheetTest {
             for (int n=0; n<cssRules.size(); n++) {
                 Rule expected = cssRules.get(n);
                 Rule actual = bssRules.get(n);
-                assertEquals(Integer.toString(n),
-                        RuleShim.getUnobservedDeclarationList(expected),
-                        RuleShim.getUnobservedDeclarationList(actual));
+                assertEquals(RuleShim.getUnobservedDeclarationList(expected),
+                             RuleShim.getUnobservedDeclarationList(actual),
+                             Integer.toString(n));
             }
 
         } catch (IOException ioe) {

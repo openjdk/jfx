@@ -28,6 +28,8 @@
 #if ENABLE(VIDEO)
 #include "RenderMedia.h"
 
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderView.h"
 #include <wtf/IsoMallocInlines.h>
@@ -37,14 +39,14 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMedia);
 
-RenderMedia::RenderMedia(HTMLMediaElement& element, RenderStyle&& style)
-    : RenderImage(element, WTFMove(style))
+RenderMedia::RenderMedia(Type type, HTMLMediaElement& element, RenderStyle&& style)
+    : RenderImage(type, element, WTFMove(style), ReplacedFlag::IsMedia)
 {
     setHasShadowControls(true);
 }
 
-RenderMedia::RenderMedia(HTMLMediaElement& element, RenderStyle&& style, const IntSize& intrinsicSize)
-    : RenderImage(element, WTFMove(style))
+RenderMedia::RenderMedia(Type type, HTMLMediaElement& element, RenderStyle&& style, const IntSize& intrinsicSize)
+    : RenderImage(type, element, WTFMove(style), ReplacedFlag::IsMedia)
 {
     setIntrinsicSize(intrinsicSize);
     setHasShadowControls(true);

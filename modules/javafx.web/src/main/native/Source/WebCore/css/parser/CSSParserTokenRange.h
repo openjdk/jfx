@@ -41,6 +41,8 @@ class StyleSheetContents;
 // This class refers to half-open intervals [first, last).
 class CSSParserTokenRange {
 public:
+    CSSParserTokenRange() = default;
+
     template<size_t inlineBuffer>
     CSSParserTokenRange(const Vector<CSSParserToken, inlineBuffer>& vector)
         : m_first(vector.begin())
@@ -53,6 +55,8 @@ public:
 
     bool atEnd() const { return m_first == m_last; }
     const CSSParserToken* end() const { return m_last; }
+
+    size_t size() const { return end() - begin(); }
 
     const CSSParserToken& peek(unsigned offset = 0) const
     {
@@ -101,8 +105,8 @@ private:
         , m_last(last)
     { }
 
-    const CSSParserToken* m_first;
-    const CSSParserToken* m_last;
+    const CSSParserToken* m_first { nullptr };
+    const CSSParserToken* m_last { nullptr };
 };
 
 } // namespace WebCore

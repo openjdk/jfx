@@ -62,6 +62,7 @@ private:
     void mediaElement() const = delete;
 
     void intrinsicSizeChanged() final;
+    LayoutSize calculateIntrinsicSizeInternal();
     LayoutSize calculateIntrinsicSize();
     bool updateIntrinsicSize();
 
@@ -70,11 +71,11 @@ private:
     ASCIILiteral renderName() const final { return "RenderVideo"_s; }
 
     bool requiresLayer() const final { return true; }
-    bool isVideo() const final { return true; }
 
     void paintReplaced(PaintInfo&, const LayoutPoint&) final;
 
     void layout() final;
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
 
     void visibleInViewportStateChanged() final;
 
@@ -95,6 +96,6 @@ inline RenderVideo* HTMLVideoElement::renderer() const
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderVideo, isVideo())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderVideo, isRenderVideo())
 
 #endif // ENABLE(VIDEO)

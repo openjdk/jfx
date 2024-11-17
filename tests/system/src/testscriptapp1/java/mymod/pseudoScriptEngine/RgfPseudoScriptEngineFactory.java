@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,22 +44,27 @@ public class RgfPseudoScriptEngineFactory implements ScriptEngineFactory {
     static final String       THREADING         = "MULTITHREADED";
     static final List<String> ENGINE_NAMES      = Arrays.asList(SHORT_ENGINE_NAME, "RgfPseudoSL");
 
+    @Override
     public String getEngineName() {
         return ENGINE_NAME;
     }
 
+    @Override
     public String getEngineVersion() {
         return ENGINE_VERSION;
     }
 
+    @Override
     public List<String> getExtensions() {
         return EXTENSIONS;
     }
 
+    @Override
     public String getLanguageName() {
         return LANGUAGE_NAME;
     }
 
+    @Override
     public String getLanguageVersion() {
         return LANGUAGE_VERSION;
     }
@@ -68,18 +73,22 @@ public class RgfPseudoScriptEngineFactory implements ScriptEngineFactory {
         return ENGINE_NAME;
     }
 
+    @Override
     public String getMethodCallSyntax(String obj, String m, String... args) {
         return "obj~(m, ...) /* ooRexx style */ ";
     }
 
+    @Override
     public List<String> getMimeTypes() {
         return MIME_TYPES;
     }
 
+    @Override
     public List<String> getNames() {
         return ENGINE_NAMES;
     }
 
+    @Override
     public String getOutputStatement(String toDisplay) {
         String tmpDisplay = toStringLiteral(toDisplay);
         return "say " + tmpDisplay + " /* Rexx style (duplicate quotes within string) */ ";
@@ -92,6 +101,7 @@ public class RgfPseudoScriptEngineFactory implements ScriptEngineFactory {
         return '"' + toDisplay.replace("\"","\"\"") + '"';
     }
 
+    @Override
     public Object getParameter(final String key) {
         switch (key) {
             case "THREADING":
@@ -117,6 +127,7 @@ public class RgfPseudoScriptEngineFactory implements ScriptEngineFactory {
         }
     }
 
+    @Override
     public String getProgram(String... statements) {
         if (statements == null) {
             return "";
@@ -134,6 +145,7 @@ public class RgfPseudoScriptEngineFactory implements ScriptEngineFactory {
         return sb.toString();
     }
 
+    @Override
     public ScriptEngine getScriptEngine() {
         return new RgfPseudoScriptEngine();
     }

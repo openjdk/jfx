@@ -18,10 +18,12 @@
  Boston, MA 02110-1301, USA.
  */
 
-#ifndef TextureMapperShaderProgram_h
-#define TextureMapperShaderProgram_h
-
+#pragma once
+#if PLATFORM(JAVA)
 #if USE(TEXTURE_MAPPER_GL)
+#endif
+
+#if USE(TEXTURE_MAPPER)
 
 #include "TextureMapperGLHeaders.h"
 #include "TransformationMatrix.h"
@@ -45,9 +47,11 @@ namespace WebCore {
     macro(color) \
     macro(yuvToRgb) \
     macro(filterAmount) \
+    macro(texelSize) \
     macro(gaussianKernel) \
-    macro(blurRadius) \
-    macro(shadowOffset) \
+    macro(gaussianKernelOffset) \
+    macro(gaussianKernelHalfSize) \
+    macro(blurDirection) \
     macro(roundedRectNumber) \
     macro(roundedRect) \
     macro(roundedRectInverseTransformMatrix)
@@ -105,6 +109,8 @@ public:
         RoundedRectClip  = 1L << 23,
         Premultiply      = 1L << 24,
         TextureYUVA      = 1L << 25,
+        TextureCopy      = 1L << 26,
+        AlphaToShadow    = 1L << 27,
     };
 
     enum class VariableID {
@@ -140,40 +146,7 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::TextureMapperShaderProgram::Option> {
-    using values = EnumValues<
-        WebCore::TextureMapperShaderProgram::Option,
-        WebCore::TextureMapperShaderProgram::TextureRGB,
-        WebCore::TextureMapperShaderProgram::SolidColor,
-        WebCore::TextureMapperShaderProgram::Opacity,
-        WebCore::TextureMapperShaderProgram::Antialiasing,
-        WebCore::TextureMapperShaderProgram::GrayscaleFilter,
-        WebCore::TextureMapperShaderProgram::SepiaFilter,
-        WebCore::TextureMapperShaderProgram::SaturateFilter,
-        WebCore::TextureMapperShaderProgram::HueRotateFilter,
-        WebCore::TextureMapperShaderProgram::BrightnessFilter,
-        WebCore::TextureMapperShaderProgram::ContrastFilter,
-        WebCore::TextureMapperShaderProgram::InvertFilter,
-        WebCore::TextureMapperShaderProgram::OpacityFilter,
-        WebCore::TextureMapperShaderProgram::BlurFilter,
-        WebCore::TextureMapperShaderProgram::AlphaBlur,
-        WebCore::TextureMapperShaderProgram::ContentTexture,
-        WebCore::TextureMapperShaderProgram::ManualRepeat,
-        WebCore::TextureMapperShaderProgram::TextureYUV,
-        WebCore::TextureMapperShaderProgram::TextureNV12,
-        WebCore::TextureMapperShaderProgram::TextureNV21,
-        WebCore::TextureMapperShaderProgram::TexturePackedYUV,
-        WebCore::TextureMapperShaderProgram::TextureExternalOES,
-        WebCore::TextureMapperShaderProgram::RoundedRectClip,
-        WebCore::TextureMapperShaderProgram::Premultiply,
-        WebCore::TextureMapperShaderProgram::TextureYUVA
-    >;
-};
-
-} // namespace WTF
-
+#endif // USE(TEXTURE_MAPPER)
+#if PLATFORM(JAVA)
 #endif // USE(TEXTURE_MAPPER_GL)
-
-#endif // TextureMapperShaderProgram_h
+#endif

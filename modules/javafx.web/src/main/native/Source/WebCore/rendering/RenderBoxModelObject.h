@@ -81,13 +81,13 @@ public:
     virtual ~RenderBoxModelObject();
 
     LayoutSize relativePositionOffset() const;
-    LayoutSize relativePositionLogicalOffset() const { return style().isHorizontalWritingMode() ? relativePositionOffset() : relativePositionOffset().transposedSize(); }
+    inline LayoutSize relativePositionLogicalOffset() const;
 
     FloatRect constrainingRectForStickyPosition() const;
     std::pair<const RenderBox&, const RenderLayer*> enclosingClippingBoxForStickyPosition() const;
     void computeStickyPositionConstraints(StickyPositionViewportConstraints&, const FloatRect& constrainingRect) const;
     LayoutSize stickyPositionOffset() const;
-    LayoutSize stickyPositionLogicalOffset() const { return style().isHorizontalWritingMode() ? stickyPositionOffset() : stickyPositionOffset().transposedSize(); }
+    inline LayoutSize stickyPositionLogicalOffset() const;
 
     LayoutSize offsetForInFlowPosition() const;
 
@@ -100,67 +100,69 @@ public:
 
     void updateFromStyle() override;
 
-    bool requiresLayer() const override { return isDocumentElementRenderer() || isPositioned() || createsGroup() || hasTransformRelatedProperty() || hasHiddenBackface() || hasReflection(); }
+    bool requiresLayer() const override;
 
     // This will work on inlines to return the bounding box of all of the lines' border boxes.
     virtual LayoutRect borderBoundingBox() const = 0;
 
     // These return the CSS computed padding values.
-    LayoutUnit computedCSSPaddingTop() const { return computedCSSPadding(style().paddingTop()); }
-    LayoutUnit computedCSSPaddingBottom() const { return computedCSSPadding(style().paddingBottom()); }
-    LayoutUnit computedCSSPaddingLeft() const { return computedCSSPadding(style().paddingLeft()); }
-    LayoutUnit computedCSSPaddingRight() const { return computedCSSPadding(style().paddingRight()); }
-    LayoutUnit computedCSSPaddingBefore() const { return computedCSSPadding(style().paddingBefore()); }
-    LayoutUnit computedCSSPaddingAfter() const { return computedCSSPadding(style().paddingAfter()); }
-    LayoutUnit computedCSSPaddingStart() const { return computedCSSPadding(style().paddingStart()); }
-    LayoutUnit computedCSSPaddingEnd() const { return computedCSSPadding(style().paddingEnd()); }
+    inline LayoutUnit computedCSSPaddingTop() const;
+    inline LayoutUnit computedCSSPaddingBottom() const;
+    inline LayoutUnit computedCSSPaddingLeft() const;
+    inline LayoutUnit computedCSSPaddingRight() const;
+    inline LayoutUnit computedCSSPaddingBefore() const;
+    inline LayoutUnit computedCSSPaddingAfter() const;
+    inline LayoutUnit computedCSSPaddingStart() const;
+    inline LayoutUnit computedCSSPaddingEnd() const;
 
     // These functions are used during layout. Table cells and the MathML
     // code override them to include some extra intrinsic padding.
-    virtual LayoutUnit paddingTop() const { return computedCSSPaddingTop(); }
-    virtual LayoutUnit paddingBottom() const { return computedCSSPaddingBottom(); }
-    virtual LayoutUnit paddingLeft() const { return computedCSSPaddingLeft(); }
-    virtual LayoutUnit paddingRight() const { return computedCSSPaddingRight(); }
-    virtual LayoutUnit paddingBefore() const { return computedCSSPaddingBefore(); }
-    virtual LayoutUnit paddingAfter() const { return computedCSSPaddingAfter(); }
-    virtual LayoutUnit paddingStart() const { return computedCSSPaddingStart(); }
-    virtual LayoutUnit paddingEnd() const { return computedCSSPaddingEnd(); }
+    virtual inline LayoutUnit paddingTop() const;
+    virtual inline LayoutUnit paddingBottom() const;
+    virtual inline LayoutUnit paddingLeft() const;
+    virtual inline LayoutUnit paddingRight() const;
+    virtual inline LayoutUnit paddingBefore() const;
+    virtual inline LayoutUnit paddingAfter() const;
+    virtual inline LayoutUnit paddingStart() const;
+    virtual inline LayoutUnit paddingEnd() const;
 
-    virtual LayoutUnit borderTop() const { return LayoutUnit(style().borderTopWidth()); }
-    virtual LayoutUnit borderBottom() const { return LayoutUnit(style().borderBottomWidth()); }
-    virtual LayoutUnit borderLeft() const { return LayoutUnit(style().borderLeftWidth()); }
-    virtual LayoutUnit borderRight() const { return LayoutUnit(style().borderRightWidth()); }
-    virtual LayoutUnit horizontalBorderExtent() const { return borderLeft() + borderRight(); }
-    virtual LayoutUnit verticalBorderExtent() const { return borderTop() + borderBottom(); }
-    virtual LayoutUnit borderBefore() const { return LayoutUnit(style().borderBeforeWidth()); }
-    virtual LayoutUnit borderAfter() const { return LayoutUnit(style().borderAfterWidth()); }
-    virtual LayoutUnit borderStart() const { return LayoutUnit(style().borderStartWidth()); }
-    virtual LayoutUnit borderEnd() const { return LayoutUnit(style().borderEndWidth()); }
+    virtual inline LayoutUnit borderTop() const;
+    virtual inline LayoutUnit borderBottom() const;
+    virtual inline LayoutUnit borderLeft() const;
+    virtual inline LayoutUnit borderRight() const;
+    virtual inline LayoutUnit horizontalBorderExtent() const;
+    virtual inline LayoutUnit verticalBorderExtent() const;
+    virtual inline LayoutUnit borderBefore() const;
+    virtual inline LayoutUnit borderAfter() const;
+    virtual inline LayoutUnit borderStart() const;
+    virtual inline LayoutUnit borderEnd() const;
 
-    LayoutUnit borderAndPaddingStart() const { return borderStart() + paddingStart(); }
-    LayoutUnit borderAndPaddingBefore() const { return borderBefore() + paddingBefore(); }
-    LayoutUnit borderAndPaddingAfter() const { return borderAfter() + paddingAfter(); }
+    inline LayoutUnit borderAndPaddingStart() const;
+    inline LayoutUnit borderAndPaddingEnd() const;
+    inline LayoutUnit borderAndPaddingBefore() const;
+    inline LayoutUnit borderAndPaddingAfter() const;
 
-    LayoutUnit marginAndBorderAndPaddingStart() const { return marginStart() + borderStart() + paddingStart(); }
-    LayoutUnit marginAndBorderAndPaddingEnd() const { return marginEnd() + borderEnd() + paddingEnd(); }
-    LayoutUnit marginAndBorderAndPaddingBefore() const { return marginBefore() + borderBefore() + paddingBefore(); }
-    LayoutUnit marginAndBorderAndPaddingAfter() const { return marginAfter() + borderAfter() + paddingAfter(); }
+    inline LayoutUnit marginAndBorderAndPaddingStart() const;
+    inline LayoutUnit marginAndBorderAndPaddingEnd() const;
+    inline LayoutUnit marginAndBorderAndPaddingBefore() const;
+    inline LayoutUnit marginAndBorderAndPaddingAfter() const;
 
-    LayoutUnit verticalBorderAndPaddingExtent() const { return borderTop() + borderBottom() + paddingTop() + paddingBottom(); }
-    LayoutUnit horizontalBorderAndPaddingExtent() const { return borderLeft() + borderRight() + paddingLeft() + paddingRight(); }
-    LayoutUnit borderAndPaddingLogicalHeight() const { return borderAndPaddingBefore() + borderAndPaddingAfter(); }
-    LayoutUnit borderAndPaddingLogicalWidth() const { return borderStart() + borderEnd() + paddingStart() + paddingEnd(); }
-    LayoutUnit borderAndPaddingLogicalLeft() const { return style().isHorizontalWritingMode() ? borderLeft() + paddingLeft() : borderTop() + paddingTop(); }
+    inline LayoutUnit verticalBorderAndPaddingExtent() const;
+    inline LayoutUnit horizontalBorderAndPaddingExtent() const;
+    inline LayoutUnit borderAndPaddingLogicalHeight() const;
+    inline LayoutUnit borderAndPaddingLogicalWidth() const;
+    inline LayoutUnit borderAndPaddingLogicalLeft() const;
+    inline LayoutUnit borderAndPaddingLogicalRight() const;
 
-    LayoutUnit borderLogicalLeft() const { return style().isHorizontalWritingMode() ? borderLeft() : borderTop(); }
-    LayoutUnit borderLogicalRight() const { return style().isHorizontalWritingMode() ? borderRight() : borderBottom(); }
-    LayoutUnit borderLogicalWidth() const { return borderStart() + borderEnd(); }
-    LayoutUnit borderLogicalHeight() const { return borderBefore() + borderAfter(); }
+    inline LayoutUnit borderLogicalLeft() const;
+    inline LayoutUnit borderLogicalRight() const;
+    inline LayoutUnit borderLogicalWidth() const;
+    inline LayoutUnit borderLogicalHeight() const;
 
-    LayoutUnit paddingLogicalLeft() const { return style().isHorizontalWritingMode() ? paddingLeft() : paddingTop(); }
-    LayoutUnit paddingLogicalRight() const { return style().isHorizontalWritingMode() ? paddingRight() : paddingBottom(); }
-    LayoutUnit paddingLogicalWidth() const { return paddingStart() + paddingEnd(); }
-    LayoutUnit paddingLogicalHeight() const { return paddingBefore() + paddingAfter(); }
+    inline LayoutUnit paddingLogicalLeft() const;
+    inline LayoutUnit paddingLogicalRight() const;
+    inline LayoutUnit paddingLogicalWidth() const;
+    inline LayoutUnit paddingLogicalHeight() const;
 
     virtual LayoutUnit marginTop() const = 0;
     virtual LayoutUnit marginBottom() const = 0;
@@ -175,8 +177,8 @@ public:
     LayoutUnit marginLogicalHeight() const { return marginBefore() + marginAfter(); }
     LayoutUnit marginLogicalWidth() const { return marginStart() + marginEnd(); }
 
-    bool hasInlineDirectionBordersPaddingOrMargin() const { return hasInlineDirectionBordersOrPadding() || marginStart()|| marginEnd(); }
-    bool hasInlineDirectionBordersOrPadding() const { return borderStart() || borderEnd() || paddingStart()|| paddingEnd(); }
+    inline bool hasInlineDirectionBordersPaddingOrMargin() const;
+    inline bool hasInlineDirectionBordersOrPadding() const;
 
     virtual LayoutUnit containingBlockLogicalWidthForContent() const;
 
@@ -188,7 +190,7 @@ public:
 
     void setSelectionState(HighlightState) override;
 
-    bool canHaveBoxInfoInFragment() const { return !isFloating() && !isReplacedOrInlineBlock() && !isInline() && !isTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
+    bool canHaveBoxInfoInFragment() const { return !isFloating() && !isReplacedOrInlineBlock() && !isInline() && !isRenderTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
 
     void contentChanged(ContentChangeType);
     bool hasAcceleratedCompositing() const;
@@ -208,11 +210,11 @@ public:
     virtual bool hasOverridingContainingBlockContentWidth() const { return false; }
     virtual bool hasOverridingContainingBlockContentHeight() const { return false; }
 
-    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const override;
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const override;
 
 protected:
-    RenderBoxModelObject(Element&, RenderStyle&&, BaseTypeFlags);
-    RenderBoxModelObject(Document&, RenderStyle&&, BaseTypeFlags);
+    RenderBoxModelObject(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
+    RenderBoxModelObject(Type, Document&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
 
     void willBeDestroyed() override;
 
@@ -231,7 +233,7 @@ public:
 
     void paintMaskForTextFillBox(ImageBuffer*, const FloatRect&, const InlineIterator::InlineBoxIterator&, const LayoutRect&);
 
-    // For RenderBlocks and RenderInlines with m_style->styleType() == PseudoId::FirstLetter, this tracks their remaining text fragments
+    // For RenderBlocks and RenderInlines with m_style->pseudoElementType() == PseudoId::FirstLetter, this tracks their remaining text fragments
     RenderTextFragment* firstLetterRemainingText() const;
     void setFirstLetterRemainingText(RenderTextFragment&);
     void clearFirstLetterRemainingText();
@@ -242,7 +244,9 @@ public:
     RenderBlock* containingBlockForAutoHeightDetection(Length logicalHeight) const;
 
     struct ContinuationChainNode {
-        WeakPtr<RenderBoxModelObject> renderer;
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+        SingleThreadWeakPtr<RenderBoxModelObject> renderer;
         ContinuationChainNode* previous { nullptr };
         ContinuationChainNode* next { nullptr };
 
@@ -250,14 +254,12 @@ public:
         ~ContinuationChainNode();
 
         void insertAfter(ContinuationChainNode&);
-
-        WTF_MAKE_FAST_ALLOCATED;
     };
 
     ContinuationChainNode* continuationChainNode() const;
 
 protected:
-    WEBCORE_EXPORT LayoutUnit computedCSSPadding(const Length&) const;
+    LayoutUnit computedCSSPadding(const Length&) const;
     virtual void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* /*wasFixed*/) const { ASSERT_NOT_REACHED(); }
     void collectAbsoluteQuadsForContinuation(Vector<FloatQuad>& quads, bool* wasFixed) const;
 
@@ -269,4 +271,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderBoxModelObject, isBoxModelObject())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderBoxModelObject, isRenderBoxModelObject())

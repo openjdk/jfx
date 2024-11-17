@@ -27,12 +27,12 @@
 #include "VisualViewport.h"
 
 #include "ContextDestructionObserver.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
-#include "Frame.h"
-#include "FrameView.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -40,8 +40,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(VisualViewport);
 
-VisualViewport::VisualViewport(DOMWindow& window)
-    : DOMWindowProperty(&window)
+VisualViewport::VisualViewport(LocalDOMWindow& window)
+    : LocalDOMWindowProperty(&window)
 {
 }
 
@@ -71,7 +71,7 @@ bool VisualViewport::addEventListener(const AtomString& eventType, Ref<EventList
 void VisualViewport::updateFrameLayout() const
 {
     ASSERT(frame());
-    frame()->document()->updateLayoutIgnorePendingStylesheets(Document::RunPostLayoutTasks::Synchronously);
+    frame()->document()->updateLayout({ LayoutOptions::IgnorePendingStylesheets, LayoutOptions::RunPostLayoutTasksSynchronously });
 }
 
 double VisualViewport::offsetLeft() const

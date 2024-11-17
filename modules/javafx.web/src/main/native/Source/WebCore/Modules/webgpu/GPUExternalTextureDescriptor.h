@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,24 +28,55 @@
 #include "GPUObjectDescriptorBase.h"
 #include "GPUPredefinedColorSpace.h"
 #include "HTMLVideoElement.h"
-#include <pal/graphics/WebGPU/WebGPUExternalTextureDescriptor.h>
+#include "WebCodecsVideoFrame.h"
+#include "WebGPUExternalTextureDescriptor.h"
 #include <wtf/RefPtr.h>
+
+typedef struct __CVBuffer* CVPixelBufferRef;
 
 namespace WebCore {
 
 class HTMLVideoElement;
+#if ENABLE(WEB_CODECS)
+using GPUVideoSource = std::variant<RefPtr<HTMLVideoElement>, RefPtr<WebCodecsVideoFrame>>;
+#else
+using GPUVideoSource = RefPtr<HTMLVideoElement>;
+#endif
 
 struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
-    PAL::WebGPU::ExternalTextureDescriptor convertToBacking() const
+
+#if ENABLE(VIDEO)
+    static WebGPU::VideoSourceIdentifier mediaIdentifierForSource(const GPUVideoSource& videoSource)
+    {
+#if ENABLE(WEB_CODECS)
+        return WTF::switchOn(videoSource, [&](const RefPtr<HTMLVideoElement> videoElement) -> WebGPU::VideoSourceIdentifier {
+            return videoElement->playerIdentifier().value_or(MediaPlayerIdentifier(0));
+        }
+        , [&](const RefPtr<WebCodecsVideoFrame> videoFrame) -> WebGPU::VideoSourceIdentifier {
+            return videoFrame->internalFrame();
+        });
+#else
+        return videoSource->playerIdentifier().value_or(MediaPlayerIdentifier(0));
+#endif
+    }
+#endif
+
+    WebGPU::ExternalTextureDescriptor convertToBacking() const
     {
         return {
             { label },
-            // FIXME: Handle the video element.
+#if ENABLE(VIDEO)
+            mediaIdentifierForSource(source),
+#else
+            { },
+#endif
             WebCore::convertToBacking(colorSpace),
         };
     }
 
-    HTMLVideoElement* source { nullptr };
+#if ENABLE(VIDEO)
+    GPUVideoSource source;
+#endif
     GPUPredefinedColorSpace colorSpace { GPUPredefinedColorSpace::SRGB };
 };
 

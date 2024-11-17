@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,10 @@
 
 package test.javafx.scene.chart;
 
-
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import javafx.collections.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.Arrays;
-
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.Chart;
@@ -40,7 +37,8 @@ import javafx.scene.chart.StackedBarChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChartShim;
 import javafx.scene.layout.Region;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class StackedBarChartTest extends XYChartTestBase {
 
@@ -52,13 +50,14 @@ public class StackedBarChartTest extends XYChartTestBase {
     final String[] years = {"2007", "2008", "2009"};
 
     @Override
-    protected Chart createChart() {
+    protected void createChart() {
         final NumberAxis yAxis = new NumberAxis();
         sbc = new StackedBarChart<>(xAxis,yAxis);
         xAxis.setLabel("Year");
         xAxis.setCategories(FXCollections.<String>observableArrayList(Arrays.asList(years)));
         yAxis.setLabel("Price");
         sbc.setTitle("HelloStackedBarChart");
+        sbc.setAnimated(false);
         // Populate Chart data
         ObservableList<XYChart.Data> data = FXCollections.observableArrayList();
         series1.getData().add(new XYChart.Data<String,Number>(years[0], 567));
@@ -70,11 +69,16 @@ public class StackedBarChartTest extends XYChartTestBase {
         series3.getData().add(new XYChart.Data<String,Number>(years[0], 800));
         series3.getData().add(new XYChart.Data<String,Number>(years[1], 1000));
         series3.getData().add(new XYChart.Data<String,Number>(years[2], 2800));
+    }
+
+    @Override
+    protected Chart getChart() {
         return sbc;
     }
 
     @Test
     public void testAddingAutoRangingCategoryAxis() {
+        createChart();
         startApp();
         ObservableList<XYChart.Series<String, Number>> barChartData = FXCollections.observableArrayList(
             new StackedBarChart.Series("Region 1", FXCollections.observableArrayList(
@@ -97,6 +101,7 @@ public class StackedBarChartTest extends XYChartTestBase {
 
     @Test
     public void testSeriesAdd() {
+        createChart();
         startApp();
         sbc.getData().addAll(series1, series2, series3);
         pulse();
@@ -108,7 +113,7 @@ public class StackedBarChartTest extends XYChartTestBase {
         // compute bounds for the first series
         String bounds = computeBoundsString((Region)childrenList.get(0), (Region)childrenList.get(1),
                 (Region)childrenList.get(2));
-        assertEquals("10 478 234 37 254 432 234 83 499 375 234 140 ", bounds);
+        assertEquals("10 453 218 35 238 409 218 79 465 355 218 133 ", bounds);
 
         // compute bounds for the second series
 //        bounds = computeBoundsString((Region)childrenList.get(3), (Region)childrenList.get(4),
@@ -123,6 +128,7 @@ public class StackedBarChartTest extends XYChartTestBase {
 
     @Test
     public void testSeriesRemove() {
+        createChart();
         startApp();
         sbc.getData().addAll(series1);
         pulse();
@@ -136,6 +142,7 @@ public class StackedBarChartTest extends XYChartTestBase {
 
     @Test
     public void testDataItemAdd() {
+        createChart();
         startApp();
         sbc.getData().addAll(series1);
         pulse();
@@ -146,6 +153,7 @@ public class StackedBarChartTest extends XYChartTestBase {
 
     @Test
     public void testDataItemInsert() {
+        createChart();
         startApp();
         sbc.getData().addAll(series1);
         pulse();
@@ -156,6 +164,7 @@ public class StackedBarChartTest extends XYChartTestBase {
 
     @Test
     public void testDataItemRemove() {
+        createChart();
         startApp();
         sbc.getData().addAll(series1);
         pulse();
@@ -166,8 +175,10 @@ public class StackedBarChartTest extends XYChartTestBase {
         }
     }
 
-    @Test @Ignore
+    @Test
+    @Disabled
     public void testDataItemChange() {
+        createChart();
         startApp();
         sbc.getData().addAll(series1);
         pulse();
@@ -217,6 +228,7 @@ public class StackedBarChartTest extends XYChartTestBase {
 
     @Test
     public void testSeriesRemoveAnimatedStyleClasses() {
+        createChart();
         startApp();
         int nodesPerSeries = 3; // 3 bars
         checkSeriesRemoveAnimatedStyleClasses(sbc, nodesPerSeries, 700);

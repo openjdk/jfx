@@ -21,12 +21,14 @@
 
 #include "config.h"
 #include "TextureMapperShaderProgram.h"
-
+#if PLATFORM(JAVA)
 #if USE(TEXTURE_MAPPER_GL)
+#endif
+
+#if USE(TEXTURE_MAPPER)
 
 #include "GLContext.h"
 #include "Logging.h"
-#include "TextureMapperGL.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -52,17 +54,12 @@ static inline bool compositingLogEnabled()
     GLSL_DIRECTIVE(endif)
 
 
-// Input/output variables definition for both GLES and OpenGL < 3.2.
-// The default precision directive is only needed for GLES.
+// Input/output variables definition for OpenGL ES < 3.2.
 static const char* vertexTemplateLT320Vars =
-#if USE(OPENGL_ES)
     TEXTURE_SPACE_MATRIX_PRECISION_DIRECTIVE
-#endif
-#if USE(OPENGL_ES)
     STRINGIFY(
         precision TextureSpaceMatrixPrecision float;
     )
-#endif
     STRINGIFY(
         attribute vec4 a_vertex;
         varying vec2 v_texCoord;
@@ -70,18 +67,6 @@ static const char* vertexTemplateLT320Vars =
         varying float v_antialias;
         varying vec4 v_nonProjectedPosition;
     );
-
-#if !USE(OPENGL_ES)
-// Input/output variables definition for OpenGL >= 3.2.
-static const char* vertexTemplateGE320Vars =
-    STRINGIFY(
-        in vec4 a_vertex;
-        out vec2 v_texCoord;
-        out vec2 v_transformedTexCoord;
-        out float v_antialias;
-        out vec4 v_nonProjectedPosition;
-    );
-#endif
 
 static const char* vertexTemplateCommon =
     STRINGIFY(
@@ -162,8 +147,7 @@ static const char* vertexTemplateCommon =
 #define ENABLE_APPLIER(Name) "#define ENABLE_"#Name"\n#define apply"#Name"IfNeeded apply"#Name"\n"
 #define DISABLE_APPLIER(Name) "#define apply"#Name"IfNeeded noop\n"
 #define BLUR_CONSTANTS \
-    GLSL_DIRECTIVE(define GAUSSIAN_KERNEL_HALF_WIDTH 11) \
-    GLSL_DIRECTIVE(define GAUSSIAN_KERNEL_STEP 0.2)
+    GLSL_DIRECTIVE(define GAUSSIAN_KERNEL_MAX_HALF_SIZE 6)
 
 
 #define OES_EGL_IMAGE_EXTERNAL_DIRECTIVE \
@@ -186,30 +170,25 @@ static const char* vertexTemplateCommon =
 
 // Common header for all versions. We define the matrices variables here to keep the precision
 // directives scope: the first one applies to the matrices variables and the next one to the
-// rest of them. The precision is only used in GLES.
+// rest of them.
 static const char* fragmentTemplateHeaderCommon =
     ANTIALIASING_TEX_COORD_DIRECTIVE
     BLUR_CONSTANTS
     ROUNDED_RECT_CONSTANTS
     OES_EGL_IMAGE_EXTERNAL_DIRECTIVE
-#if USE(OPENGL_ES)
     TEXTURE_SPACE_MATRIX_PRECISION_DIRECTIVE
     STRINGIFY(
         precision TextureSpaceMatrixPrecision float;
     )
-#endif
     STRINGIFY(
         uniform mat4 u_textureSpaceMatrix;
         uniform mat4 u_textureColorSpaceMatrix;
     )
-#if USE(OPENGL_ES)
     STRINGIFY(
         precision mediump float;
-    )
-#endif
-    ;
+    );
 
-// Input/output variables definition for both GLES and OpenGL < 3.2.
+// Input/output variables definition for both OpenGL ES < 3.2.
 static const char* fragmentTemplateLT320Vars =
     STRINGIFY(
         varying float v_antialias;
@@ -217,17 +196,6 @@ static const char* fragmentTemplateLT320Vars =
         varying vec2 v_transformedTexCoord;
         varying vec4 v_nonProjectedPosition;
     );
-
-#if !USE(OPENGL_ES)
-// Input/output variables definition for OpenGL >= 3.2.
-static const char* fragmentTemplateGE320Vars =
-    STRINGIFY(
-        in float v_antialias;
-        in vec2 v_texCoord;
-        in vec2 v_transformedTexCoord;
-        in vec4 v_nonProjectedPosition;
-    );
-#endif
 
 static const char* fragmentTemplateCommon =
     STRINGIFY(
@@ -241,10 +209,12 @@ static const char* fragmentTemplateCommon =
         uniform float u_opacity;
         uniform float u_filterAmount;
         uniform mat4 u_yuvToRgb;
-        uniform vec2 u_blurRadius;
-        uniform vec2 u_shadowOffset;
         uniform vec4 u_color;
-        uniform float u_gaussianKernel[GAUSSIAN_KERNEL_HALF_WIDTH];
+        uniform vec2 u_texelSize;
+        uniform float u_gaussianKernel[GAUSSIAN_KERNEL_MAX_HALF_SIZE];
+        uniform float u_gaussianKernelOffset[GAUSSIAN_KERNEL_MAX_HALF_SIZE];
+        uniform int u_gaussianKernelHalfSize;
+        uniform vec2 u_blurDirection;
         uniform int u_roundedRectNumber;
         uniform vec4 u_roundedRect[ROUNDED_RECT_ARRAY_SIZE];
         uniform mat4 u_roundedRectInverseTransformMatrix[ROUNDED_RECT_INVERSE_TRANSFORM_ARRAY_SIZE];
@@ -377,24 +347,28 @@ static const char* fragmentTemplateCommon =
             color *= u_filterAmount;
         }
 
-        vec4 sampleColorAtRadius(float radius, vec2 texCoord)
+        void applyTextureCopy(inout vec4 color, vec2 texCoord)
         {
-            vec2 coord = texCoord + radius * u_blurRadius;
-            return texture2D(s_sampler, coord);
-        }
+            vec2 min = (u_textureSpaceMatrix * vec4(0., 0., 0., 1.)).xy + u_texelSize / 2.;
+            vec2 max = (u_textureSpaceMatrix * vec4(1., 1., 0., 1.)).xy - u_texelSize / 2.;
 
-        float sampleAlphaAtRadius(float radius, vec2 texCoord)
-        {
-            vec2 coord = texCoord - u_shadowOffset + radius * u_blurRadius;
-            return texture2D(s_sampler, coord).a * float(coord.x > 0. && coord.y > 0. && coord.x < 1. && coord.y < 1.);
+            vec2 coord = clamp(texCoord, min, max);
+
+            color = texture2D(s_sampler, coord);
         }
 
         void applyBlurFilter(inout vec4 color, vec2 texCoord)
         {
-            vec4 total = sampleColorAtRadius(0., texCoord) * u_gaussianKernel[0];
-            for (int i = 1; i < GAUSSIAN_KERNEL_HALF_WIDTH; i++) {
-                total += sampleColorAtRadius(float(i) * GAUSSIAN_KERNEL_STEP, texCoord) * u_gaussianKernel[i];
-                total += sampleColorAtRadius(float(-1 * i) * GAUSSIAN_KERNEL_STEP, texCoord) * u_gaussianKernel[i];
+            vec2 step = u_blurDirection * u_texelSize;
+            vec2 min = (u_textureSpaceMatrix * vec4(0., 0., 0., 1.)).xy + u_texelSize / 2.;
+            vec2 max = (u_textureSpaceMatrix * vec4(1., 1., 0., 1.)).xy - u_texelSize / 2.;
+
+            vec4 total = texture2D(s_sampler, texCoord) * u_gaussianKernel[0];
+
+            for (int i = 1; i < GaussianKernelHalfSize; i++) {
+                vec2 offset = step * u_gaussianKernelOffset[i];
+                total += texture2D(s_sampler, clamp(texCoord + offset, min, max)) * u_gaussianKernel[i];
+                total += texture2D(s_sampler, clamp(texCoord - offset, min, max)) * u_gaussianKernel[i];
             }
 
             color = total;
@@ -402,13 +376,26 @@ static const char* fragmentTemplateCommon =
 
         void applyAlphaBlur(inout vec4 color, vec2 texCoord)
         {
-            float total = sampleAlphaAtRadius(0., texCoord) * u_gaussianKernel[0];
-            for (int i = 1; i < GAUSSIAN_KERNEL_HALF_WIDTH; i++) {
-                total += sampleAlphaAtRadius(float(i) * GAUSSIAN_KERNEL_STEP, texCoord) * u_gaussianKernel[i];
-                total += sampleAlphaAtRadius(float(-1 * i) * GAUSSIAN_KERNEL_STEP, texCoord) * u_gaussianKernel[i];
+            vec2 step = u_blurDirection * u_texelSize;
+            vec2 min = (u_textureSpaceMatrix * vec4(0., 0., 0., 1.)).xy + u_texelSize / 2.;
+            vec2 max = (u_textureSpaceMatrix * vec4(1., 1., 0., 1.)).xy - u_texelSize / 2.;
+
+            float total = texture2D(s_sampler, texCoord).a * u_gaussianKernel[0];
+
+            for (int i = 1; i < GaussianKernelHalfSize; i++) {
+                vec2 offset = step * u_gaussianKernelOffset[i];
+                total += texture2D(s_sampler, clamp(texCoord + offset, min, max)).a * u_gaussianKernel[i];
+                total += texture2D(s_sampler, clamp(texCoord - offset, min, max)).a * u_gaussianKernel[i];
             }
 
-            color *= total;
+            color = vec4(0., 0., 0., total);
+            }
+
+        void applyAlphaToShadow(inout vec4 color, vec2 texCoord)
+        {
+            vec2 coord = clamp(texCoord, u_texelSize / 2., vec2(1., 1.) - u_texelSize / 2.);
+            color *= u_color;
+            color *= texture2D(s_sampler, coord).a;
         }
 
         vec4 sourceOver(vec4 src, vec4 dst) { return src + dst * (1. - src.a); }
@@ -509,6 +496,7 @@ static const char* fragmentTemplateCommon =
             applyPremultiplyIfNeeded(color);
             applySolidColorIfNeeded(color);
             applyAlphaBlurIfNeeded(color, texCoord);
+            applyAlphaToShadowIfNeeded(color, texCoord);
             applyContentTextureIfNeeded(color, texCoord);
             applyAntialiasingIfNeeded(color);
             applyOpacityIfNeeded(color);
@@ -520,6 +508,7 @@ static const char* fragmentTemplateCommon =
             applyBrightnessFilterIfNeeded(color);
             applyContrastFilterIfNeeded(color);
             applyOpacityFilterIfNeeded(color);
+            applyTextureCopyIfNeeded(color, texCoord);
             applyBlurFilterIfNeeded(color, texCoord);
             applyTextureExternalOESIfNeeded(color, texCoord);
             applyRoundedRectClipIfNeeded(color);
@@ -532,6 +521,8 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
 #define SET_APPLIER_FROM_OPTIONS(Applier) \
     optionsApplierBuilder.append(\
         (options & TextureMapperShaderProgram::Applier) ? ENABLE_APPLIER(Applier) : DISABLE_APPLIER(Applier))
+
+    unsigned glVersion = GLContext::current()->version();
 
     StringBuilder optionsApplierBuilder;
     SET_APPLIER_FROM_OPTIONS(TextureRGB);
@@ -551,8 +542,10 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
     SET_APPLIER_FROM_OPTIONS(ContrastFilter);
     SET_APPLIER_FROM_OPTIONS(InvertFilter);
     SET_APPLIER_FROM_OPTIONS(OpacityFilter);
+    SET_APPLIER_FROM_OPTIONS(TextureCopy);
     SET_APPLIER_FROM_OPTIONS(BlurFilter);
     SET_APPLIER_FROM_OPTIONS(AlphaBlur);
+    SET_APPLIER_FROM_OPTIONS(AlphaToShadow);
     SET_APPLIER_FROM_OPTIONS(ContentTexture);
     SET_APPLIER_FROM_OPTIONS(ManualRepeat);
     SET_APPLIER_FROM_OPTIONS(TextureExternalOES);
@@ -561,52 +554,30 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
 
     StringBuilder vertexShaderBuilder;
 
-    // OpenGL >= 3.2 requires a #version directive at the beginning of the code.
-#if !USE(OPENGL_ES)
-    unsigned glVersion = GLContext::current()->version();
-    if (glVersion >= 320)
-        vertexShaderBuilder.append(GLSL_DIRECTIVE(version 150));
-#endif
-
     // Append the options.
     vertexShaderBuilder.append(optionsApplierBuilder.toString());
 
     // Append the appropriate input/output variable definitions.
-#if USE(OPENGL_ES)
-    vertexShaderBuilder.append(vertexTemplateLT320Vars);
-#else
-    if (glVersion >= 320)
-        vertexShaderBuilder.append(vertexTemplateGE320Vars);
-    else
         vertexShaderBuilder.append(vertexTemplateLT320Vars);
-#endif
 
     // Append the common code.
     vertexShaderBuilder.append(vertexTemplateCommon);
 
     StringBuilder fragmentShaderBuilder;
 
-    // OpenGL >= 3.2 requires a #version directive at the beginning of the code.
-#if !USE(OPENGL_ES)
-    if (glVersion >= 320)
-        fragmentShaderBuilder.append(GLSL_DIRECTIVE(version 150));
-#endif
-
     // Append the options.
     fragmentShaderBuilder.append(optionsApplierBuilder.toString());
+
+    if (glVersion >= 300)
+        fragmentShaderBuilder.append(GLSL_DIRECTIVE(define GaussianKernelHalfSize u_gaussianKernelHalfSize));
+    else
+        fragmentShaderBuilder.append(GLSL_DIRECTIVE(define GaussianKernelHalfSize GAUSSIAN_KERNEL_MAX_HALF_SIZE));
 
     // Append the common header.
     fragmentShaderBuilder.append(fragmentTemplateHeaderCommon);
 
     // Append the appropriate input/output variable definitions.
-#if USE(OPENGL_ES)
-    fragmentShaderBuilder.append(fragmentTemplateLT320Vars);
-#else
-    if (glVersion >= 320)
-        fragmentShaderBuilder.append(fragmentTemplateGE320Vars);
-    else
         fragmentShaderBuilder.append(fragmentTemplateLT320Vars);
-#endif
 
     // Append the common code.
     fragmentShaderBuilder.append(fragmentTemplateCommon);
@@ -715,4 +686,7 @@ GLuint TextureMapperShaderProgram::getLocation(VariableID variable, ASCIILiteral
 
 } // namespace WebCore
 
+#endif // USE(TEXTURE_MAPPER)
+#if PLATFORM(JAVA)
 #endif // USE(TEXTURE_MAPPER_GL)
+#endif

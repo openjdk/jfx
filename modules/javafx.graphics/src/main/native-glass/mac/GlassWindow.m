@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,8 @@
 #import "GlassApplication.h"
 #import "GlassLayer3D.h"
 #import "GlassHelper.h"
+
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 //#include <stdio.h>
 //#include <stdarg.h>
@@ -194,6 +196,8 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
             [button setAction:nil];                                                     \
             [button setEnabled:NO];                                                     \
             break;                                                                      \
+        default:                                                                        \
+            break;                                                                      \
     }                                                                                   \
     return button;                                                                      \
 }                                                                                       \
@@ -208,6 +212,22 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
 
 @implementation GlassWindow_Normal
 GLASS_NS_WINDOW_IMPLEMENTATION
+
+-(NSRect)windowWillUseStandardFrame:(NSWindow*)window defaultFrame:(NSRect)newFrame
+{
+    // For windows without titlebars the OS will suggest a frame that's the
+    // same size as the existing window, not the screen.
+    if (window.screen != nil && (window.styleMask & NSWindowStyleMaskTitled) == 0) {
+        return window.screen.visibleFrame;
+    }
+    return newFrame;
+}
+
+-(BOOL)isZoomed
+{
+    // Ensure the window is not reported as maximized during initialization
+    return self.screen != nil && [super isZoomed];
+}
 @end
 
 @implementation GlassWindow_Panel
@@ -729,7 +749,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBackground
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [window->nsWindow setBackgroundColor:[NSColor colorWithCalibratedRed:r green:g blue:b alpha:1.0f]];
+        [window->nsWindow setBackgroundColor:[NSColor colorWithSRGBRed:r green:g blue:b alpha:1.0f]];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

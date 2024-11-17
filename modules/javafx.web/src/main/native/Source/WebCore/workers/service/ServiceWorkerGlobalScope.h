@@ -25,8 +25,7 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
+#include "CookieStore.h"
 #include "NotificationClient.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerContextData.h"
@@ -44,6 +43,10 @@ class PushEvent;
 class ServiceWorkerClient;
 class ServiceWorkerClients;
 class ServiceWorkerThread;
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+class PushNotificationEvent;
+#endif
 
 enum class NotificationEventType : bool;
 
@@ -85,6 +88,12 @@ public:
     void dispatchPushEvent(PushEvent&);
     PushEvent* pushEvent() { return m_pushEvent.get(); }
 
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    void dispatchPushNotificationEvent(PushNotificationEvent&);
+    PushNotificationEvent* pushNotificationEvent() { return m_pushNotificationEvent.get(); }
+    void clearPushNotificationEvent();
+#endif
+
     bool hasPendingSilentPushEvent() const { return m_hasPendingSilentPushEvent; }
     void setHasPendingSilentPushEvent(bool value) { m_hasPendingSilentPushEvent = value; }
 
@@ -93,9 +102,18 @@ public:
     void recordUserGesture();
     void setIsProcessingUserGestureForTesting(bool value) { m_isProcessingUserGesture = value; }
 
+    bool didFirePushEventRecently() const;
+
+    WEBCORE_EXPORT void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier) final;
+    void enableConsoleMessageReporting() { m_consoleMessageReportingEnabled = true; }
+
+    CookieStore& cookieStore();
+
 private:
     ServiceWorkerGlobalScope(ServiceWorkerContextData&&, ServiceWorkerData&&, const WorkerParameters&, Ref<SecurityOrigin>&&, ServiceWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&);
     void notifyServiceWorkerPageOfCreationIfNecessary();
+
+    void prepareForDestruction() final;
 
     Type type() const final { return Type::ServiceWorker; }
     bool hasPendingEvents() const { return !m_extendedEvents.isEmpty(); }
@@ -117,6 +135,12 @@ private:
     bool m_isProcessingUserGesture { false };
     Timer m_userGestureTimer;
     RefPtr<PushEvent> m_pushEvent;
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    RefPtr<PushNotificationEvent> m_pushNotificationEvent;
+#endif
+    MonotonicTime m_lastPushEventTime;
+    bool m_consoleMessageReportingEnabled { false };
+    RefPtr<CookieStore> m_cookieStore;
 };
 
 } // namespace WebCore
@@ -125,5 +149,3 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ServiceWorkerGlobalScope)
     static bool isType(const WebCore::ScriptExecutionContext& context) { return is<WebCore::WorkerGlobalScope>(context) && downcast<WebCore::WorkerGlobalScope>(context).type() == WebCore::WorkerGlobalScope::Type::ServiceWorker; }
     static bool isType(const WebCore::WorkerGlobalScope& context) { return context.type() == WebCore::WorkerGlobalScope::Type::ServiceWorker; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif // ENABLE(SERVICE_WORKER)

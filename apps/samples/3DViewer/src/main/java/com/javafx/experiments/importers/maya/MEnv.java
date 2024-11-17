@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -102,6 +102,7 @@ class nxRigidBody extends MNodeType {
         addAlias("isz", "is.z");
     }
 
+    @Override
     protected void initNode(MNode result) {
         MFloat f  = (MFloat)result.getAttr("mas");
         f.set(1);
@@ -147,6 +148,7 @@ class dRigidBody extends MNodeType {
                                     env.findDataType("double")));
     }
 
+    @Override
     protected void initNode(MNode result) {
         MFloat f  = (MFloat)result.getAttr("rst");
         f.set(.1f);
@@ -173,6 +175,7 @@ class dCollisionShape extends MNodeType {
         addAttribute(new MAttribute(env, "inShape", "insh",
                                     env.findDataType("Message")));
     }
+    @Override
     protected void initNode(MNode result) {
         MFloat3 f  = (MFloat3)result.getAttr("sc");
         f.set(1f, 1f, 1f);
@@ -214,6 +217,7 @@ class dHingeConstraint extends MNodeType {
                                     env.findDataType("double")));
     }
 
+    @Override
     protected void initNode(MNode result) {
         MFloat f  = (MFloat)result.getAttr("reFa");
         f.set(1.0f);
@@ -249,6 +253,7 @@ class dNailConstraint extends MNodeType {
                                     env.findDataType("float3")));
     }
 
+    @Override
     protected void initNode(MNode result) {
         MFloat f  = (MFloat)result.getAttr("dmp");
         f.set(1.0f);
@@ -308,6 +313,7 @@ class animClipType extends MNodeType {
         addAttribute(new MAttribute(env, "scale", "sc",
                                     env.findDataType("double")));
     }
+    @Override
     protected void initNode(MNode result) {
         MFloat f  = (MFloat)result.getAttr("sc");
         f.set(1);
@@ -451,26 +457,32 @@ public class MEnv {
 
     public void dump(final PrintStream ps) {
         Visitor v = new Visitor() {
+            @Override
                 public void visitEnv(MEnv env) {
                     ps.println("MEnv:");
                 }
 
+            @Override
                 public void visitNodeType(MNodeType type) {
                     ps.println("Node Type: "+ type.getName());
                 }
 
+            @Override
                 public void visitNode(MNode node) {
                     ps.println("Node: "+ node.getName());
                 }
 
+            @Override
                 public void visitDataType(MDataType type) {
                     ps.println("Data type: "+ type.getName());
                 }
 
+            @Override
                 public void visitAttribute(MAttribute attr) {
                     ps.println("Attribute : "+ attr);
                 }
 
+            @Override
                 public void visitNodeAttribute(MNode node, MAttribute attr, MData value) {
                     ps.println("Attribute value: " + node.getName() +"."+attr.getShortName() + " = "+ value);
                 }
@@ -575,6 +587,7 @@ public class MEnv {
     }
 
     static class TransformNodeType extends MNodeType {
+        @Override
         protected void initNode(MNode result) {
             MFloat3 s = (MFloat3)result.getAttr("s");
             s.set(1, 1, 1);
@@ -670,6 +683,7 @@ public class MEnv {
                                         env.findDataType("float3[]")));
         }
 
+        @Override
         protected void initNode(MNode result) {
             MFloat f  = (MFloat)result.getAttr("mag");
             f.set(1);
@@ -732,6 +746,7 @@ public class MEnv {
             addAttribute(new MAttribute(env, "spread", "spr", env.findDataType("double")));
         }
 
+        @Override
         protected void initNode(MNode result) {
             MInt e = (MInt)result.getAttr("emt");
             e.set(1);
@@ -867,6 +882,7 @@ public class MEnv {
             addAlias("oz", "o.z");
         }
 
+        @Override
         protected void initNode(MNode result) {
             MFloat3 v = (MFloat3)result.getAttr("a");
             v.set(1, 0, 0);
@@ -910,6 +926,7 @@ public class MEnv {
             addAlias("pvy", "pv.y");
             addAlias("pvz", "pv.z");
         }
+        @Override
         protected void initNode(MNode result) {
             MFloat3 pv = (MFloat3)result.getAttr("pv");
             pv.set(0, 0, 1);
@@ -938,6 +955,7 @@ public class MEnv {
             addAlias("paz", "pa.z");
             addAttribute(new MAttribute(env, "segmentScaleCompensate", "ssc", env.findDataType("bool")));
         }
+        @Override
         protected void initNode(MNode result) {
             MString jot = (MString)result.getAttr("jot");
             jot.set("xyz");
@@ -1200,6 +1218,7 @@ public class MEnv {
             addAttribute(new MAttribute(env, "fractionMode", "fm",
                                         env.findDataType("bool")));
         }
+        @Override
         protected void initNode(MNode result) {
             MFloat w = (MFloat)result.getAttr("bl");
             w.set(90);
@@ -1390,6 +1409,7 @@ public class MEnv {
                                         env.findDataType("bool")));
         }
 
+        @Override
         protected void initNode(MNode result) {
             MBool f  = (MBool)result.getAttr("unm");
             f.set(true);
@@ -1422,6 +1442,7 @@ public class MEnv {
             addAttribute(new MAttribute(env, "depth", "d",
                                         env.findDataType("float")));
         }
+        @Override
         protected void initNode(MNode result) {
             MFloat w = (MFloat)result.getAttr("w");
             MFloat h = (MFloat)result.getAttr("h");
@@ -1442,6 +1463,7 @@ public class MEnv {
                                         env.findDataType("float")));
 
         }
+        @Override
         protected void initNode(MNode result) {
             MFloat r = (MFloat)result.getAttr("r");
             MFloat h = (MFloat)result.getAttr("h");
@@ -1457,6 +1479,7 @@ public class MEnv {
             addAttribute(new MAttribute(env, "radius", "r",
                                         env.findDataType("float")));
         }
+        @Override
         protected void initNode(MNode result) {
             MFloat r = (MFloat)result.getAttr("r");
             r.set(1);
@@ -1509,6 +1532,7 @@ public class MEnv {
             addAlias("itb", "it.z");
         }
 
+        @Override
         protected void initNode(MNode node) {
             MFloat dc = (MFloat)node.getAttr("dc");
             dc.set(.8f);
@@ -1567,6 +1591,7 @@ public class MEnv {
             addAlias("itb", "it.z");
         }
 
+        @Override
         protected void initNode(MNode node) {
             MFloat dc = (MFloat)node.getAttr("dc");
             dc.set(.8f);
@@ -1592,6 +1617,7 @@ public class MEnv {
                                         env.findDataType("float")));
         }
 
+        @Override
         protected void initNode(MNode result) {
             MFloat3 sc = (MFloat3)result.getAttr("sc");
             sc.set(.5f, .5f, .5f);
@@ -1610,6 +1636,7 @@ public class MEnv {
                                         env.findDataType("float")));
         }
 
+        @Override
         protected void initNode(MNode result) {
             MFloat cp = (MFloat)result.getAttr("cp");
             cp.set(20f);
@@ -1626,6 +1653,7 @@ public class MEnv {
                                         env.findDataType("float")));
         }
 
+        @Override
         protected void initNode(MNode result) {
             MFloat cp = (MFloat)result.getAttr("cp");
             cp.set(20f);
@@ -1642,6 +1670,7 @@ public class MEnv {
                                         env.findDataType("float")));
         }
 
+        @Override
         protected void initNode(MNode result) {
             MFloat ec = (MFloat)result.getAttr("ec");
             ec.set(.3f);
@@ -1738,7 +1767,8 @@ public class MEnv {
             addAttribute(new MAttribute(env, "intermediateObject", "io", env.findDataType("bool")));
         }
 
-        protected void initNode(MNode result) {
+        @Override
+       protected void initNode(MNode result) {
             MBool v = (MBool) result.getAttr("v");
             v.set(true);
         }
@@ -1756,6 +1786,7 @@ public class MEnv {
             addAttribute(new MAttribute(env, "output", "o", env.findDataType("Message")));
             addAttribute(new MAttribute(env, "conversionFactor", "cf", env.findDataType("double")));
         }
+        @Override
         protected void initNode(MNode result) {
             MFloat cf = (MFloat)result.getAttr("cf");
             cf.set(1f);
@@ -1800,6 +1831,7 @@ public class MEnv {
             addAlias("opg", "op.y");
             addAlias("opb", "op.z");
         }
+        @Override
         protected void initNode(MNode result) {
             MFloat b = (MFloat)result.getAttr("b");
             b.set(0.5f);
@@ -1848,6 +1880,7 @@ Tip: To calculate the square root of Input 1, set Operation to Power, and set In
             addAlias("oz", "o.z");
 
         }
+        @Override
         protected void initNode(MNode result) {
             MInt op = (MInt)result.getAttr("op");
             op.set(1);
@@ -1891,6 +1924,7 @@ Average: The output is set to the sum of all the inputs, divided by the number o
 
 
         }
+        @Override
         protected void initNode(MNode result) {
             MInt op = (MInt)result.getAttr("op");
             op.set(1);
@@ -1967,6 +2001,7 @@ Less or Equal */
             addAlias("ocg", "oc.y");
             addAlias("ocb", "oc.z");
         }
+        @Override
         protected void initNode(MNode result) {
             MFloat3 cf = (MFloat3)result.getAttr("cf");
             cf.set(1, 1, 1);
@@ -1999,6 +2034,7 @@ Less or Equal */
                                         env.findDataType("float3"))); // ???
         }
 
+        @Override
         protected void initNode(MNode result) {
             MFloat3 cl = (MFloat3)result.getAttr("cl");
             cl.set(1, 1, 1);
@@ -2055,6 +2091,7 @@ Less or Equal */
             addAttribute(new MAttribute(env, "dropoff", "dro",
                                         env.findDataType("double")));
         }
+        @Override
         protected void initNode(MNode result) {
             MFloat ca = (MFloat)result.getAttr("ca");
             ca.set(40);
@@ -2103,6 +2140,7 @@ Less or Equal */
                                         env.findDataType("double")));
         }
 
+        @Override
         protected void initNode(MNode result) {
             MBool renderable = (MBool)result.getAttr("rnd");
             renderable.set(true);
@@ -2148,6 +2186,7 @@ Less or Equal */
             addAttribute(new MAttribute(env, "choice", "chc", env.findDataType("integer")));
         }
 
+        @Override
         protected void initNode(MNode result) {
             MInt typ = (MInt)result.getAttr("typ");
             typ.set(1);
@@ -2216,6 +2255,7 @@ Less or Equal */
         }
 
 
+        @Override
         protected void initNode(MNode result) {
             MBool active = (MBool)result.getAttr("active");
             active.set(true);
@@ -2258,6 +2298,7 @@ Less or Equal */
 
         }
 
+        @Override
         protected void initNode(MNode result) {
             MBool eiw = (MBool)result.getAttr("eiw");
             eiw.set(true);

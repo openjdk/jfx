@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997, 2002  Peter Mattis, Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -20,7 +22,13 @@
 
 #include <glib.h>
 
+#ifdef GSTREAMER_LITE
+#ifdef ENABLE_NLS
 #include <libintl.h>
+#endif
+#else // GSTREAMER_LITE
+#include <libintl.h>
+#endif // GSTREAMER_LITE
 #include <string.h>
 
 #ifndef GETTEXT_PACKAGE

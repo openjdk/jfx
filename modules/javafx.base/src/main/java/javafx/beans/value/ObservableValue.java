@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -272,8 +272,8 @@ public interface ObservableValue<T> extends Observable {
      * <p>
      * For example:
      * <pre>{@code
-     * ObservableValue<Boolean> condition = new SimpleBooleanProperty(true);
-     * ObservableValue<String> longLivedProperty = new SimpleStringProperty("A");
+     * Property<Boolean> condition = new SimpleBooleanProperty(true);
+     * Property<String> longLivedProperty = new SimpleStringProperty("A");
      * ObservableValue<String> whenProperty = longLivedProperty.when(condition);
      *
      * // observe whenProperty, which will in turn observe longLivedProperty
@@ -303,10 +303,12 @@ public interface ObservableValue<T> extends Observable {
     }
 
     /**
-     * Creates a {@link Subscription} on this {@code Observable} which calls the given
+     * Creates a {@code Subscription} on this {@code ObservableValue} which calls the given
      * {@code changeSubscriber} with the old and new value whenever its value changes.
+     * The provided subscriber is akin to a {@code ChangeListener} without the
+     * {@code ObservableValue} parameter.
      * <p>
-     * The parameters supplied to the {@link BiConsumer} are the old and new value
+     * The parameters supplied to the {@link BiConsumer} are the old and new values,
      * respectively.
      * <p>
      * Note that the same subscriber instance may be safely subscribed for
@@ -338,9 +340,11 @@ public interface ObservableValue<T> extends Observable {
     }
 
     /**
-     * Creates a {@link Subscription} on this value which immediately provides
-     * the current value to the given {@code valueSubscriber}, followed by any
-     * subsequent values whenever its value changes.
+     * Creates a {@code Subscription} on this {@code ObservableValue} which immediately
+     * provides the current value to the given {@code valueSubscriber}, followed by any
+     * subsequent values whenever its value changes. The {@code valueSubscriber} is called
+     * immediately for convenience, since usually the user will want to initialize a value
+     * and then update on changes.
      * <p>
      * Note that the same subscriber instance may be safely subscribed for
      * different {@code Observables}.
@@ -353,7 +357,7 @@ public interface ObservableValue<T> extends Observable {
      * to automatically decouple the lifecycle of the subscriber from this
      * {@code ObservableValue} when some condition holds.
      *
-     * @param valueSubscriber a {@link Consumer} to supply with the values of this
+     * @param valueSubscriber a {@code Consumer} to supply with the values of this
      *     {@code ObservableValue}, cannot be {@code null}
      * @return a {@code Subscription} which can be used to cancel this
      *     subscription, never {@code null}

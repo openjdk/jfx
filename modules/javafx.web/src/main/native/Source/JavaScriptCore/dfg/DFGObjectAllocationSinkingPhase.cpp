@@ -268,19 +268,7 @@ public:
         return m_kind == Kind::RegExpObject;
     }
 
-    bool operator==(const Allocation& other) const
-    {
-        return m_identifier == other.m_identifier
-            && m_kind == other.m_kind
-            && m_fields == other.m_fields
-            && m_structures == other.m_structures
-            && m_structuresForMaterialization == other.m_structuresForMaterialization;
-    }
-
-    bool operator!=(const Allocation& other) const
-    {
-        return !(*this == other);
-    }
+    friend bool operator==(const Allocation&, const Allocation&) = default;
 
     void dump(PrintStream& out) const
     {
@@ -643,11 +631,6 @@ public:
             && m_pointers == other.m_pointers;
     }
 
-    bool operator!=(const LocalHeap& other) const
-    {
-        return !(*this == other);
-    }
-
     const HashMap<Node*, Allocation>& allocations() const
     {
         return m_allocations;
@@ -827,7 +810,7 @@ private:
         m_graph.computeRefCounts();
         m_graph.initializeNodeOwners();
         m_graph.ensureSSADominators();
-        performLivenessAnalysis(m_graph);
+        performGraphPackingAndLivenessAnalysis(m_graph);
         performOSRAvailabilityAnalysis(m_graph);
         m_combinedLiveness = CombinedLiveness(m_graph);
 
@@ -1579,8 +1562,7 @@ private:
         // Nodes without remaining unmaterialized fields will be
         // materialized first - amongst the remaining unmaterialized
         // nodes
-        Vector<Allocation> toMaterialize;
-        toMaterialize.resize(escapees.size());
+        Vector<Allocation> toMaterialize(escapees.size());
         size_t firstIndex = 0;
         size_t lastIndex = toMaterialize.size();
         auto materializeFirst = [&] (Allocation&& allocation) {

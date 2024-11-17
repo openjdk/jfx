@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,21 +45,23 @@
 #include <wtf/ListDump.h>
 #include <wtf/StackTrace.h>
 #include <wtf/StringPrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace B3 {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Value);
+
 #if ASSERT_ENABLED
+namespace B3ValueInternal {
+constexpr bool alwaysDumpConstructionSite = false;
+}
+
 String Value::generateCompilerConstructionSite()
 {
-    if (!Options::dumpDisassembly() && !Options::dumpBBQDisassembly()
-        && !Options::dumpOMGDisassembly() && !Options::dumpFTLDisassembly()
-        && !Options::dumpDFGDisassembly())
-        return emptyString();
-
     StringPrintStream s;
-    static constexpr int framesToShow = 3;
-    static constexpr int framesToSkip = 7;
+    static constexpr int framesToShow = 15;
+    static constexpr int framesToSkip = 0;
     void* samples[framesToShow + framesToSkip];
     int frames = framesToShow + framesToSkip;
 
@@ -69,14 +71,37 @@ String Value::generateCompilerConstructionSite()
     StackTraceSymbolResolver stackTrace({ samples + framesToSkip, static_cast<size_t>(frames) });
 
     s.print("[");
-    bool firstPrinted = false;
+    int printed = 0;
     stackTrace.forEach([&] (unsigned, void*, const char* cName) {
+        if (printed > 10)
+            return;
         auto name = String::fromUTF8(cName);
-        if (firstPrinted)
+        if (name.contains("JSC::Wasm::B3IRGenerator::emit"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::add"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::create"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::end"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::set"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::get"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::insert"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::constant("_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::fixup"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::load"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::store"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::atomic"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::trunc"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::sanitize"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::restore"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::connect"_s)
+            || name.contains("JSC::Wasm::B3IRGenerator::prepare"_s)) {
+            if (name.contains(">::add"_s)
+                || name.contains(">::translate"_s)
+                || name.contains(">::inlineEnsure"_s)
+                || name.contains(">::KeyValuePairTraits"_s))
+                return;
+            if (printed)
             s.print("|");
-        if (name.contains("enerator"_s)) {
             s.print(name.left(name.find('(')));
-            firstPrinted = true;
+            ++printed;
         }
     });
     s.print("]");
@@ -249,6 +274,13 @@ void Value::deepDump(const Procedure* proc, PrintStream& out) const
 
     if (m_origin)
         out.print(comma, OriginDump(proc, m_origin));
+
+#if ASSERT_ENABLED
+    if constexpr (B3ValueInternal::alwaysDumpConstructionSite) {
+        if (!m_compilerConstructionSite.isEmpty())
+            out.print(comma, compilerConstructionSite());
+    }
+#endif
 
     out.print(")");
 }
@@ -624,6 +656,8 @@ Effects Value::effects() const
     case BitwiseCast:
     case SExt8:
     case SExt16:
+    case SExt8To64:
+    case SExt16To64:
     case SExt32:
     case ZExt32:
     case Trunc:
@@ -686,6 +720,7 @@ Effects Value::effects() const
     case VectorFloor:
     case VectorTrunc:
     case VectorTruncSat:
+    case VectorRelaxedTruncSat:
     case VectorConvert:
     case VectorConvertLow:
     case VectorNearest:
@@ -704,6 +739,10 @@ Effects Value::effects() const
     case VectorMulSat:
     case VectorSwizzle:
     case VectorMulByElement:
+    case VectorShiftByVector:
+    case VectorRelaxedSwizzle:
+    case VectorRelaxedMAdd:
+    case VectorRelaxedNMAdd:
         break;
     case Div:
     case UDiv:
@@ -825,6 +864,8 @@ ValueKey Value::key() const
     case Sqrt:
     case SExt8:
     case SExt16:
+    case SExt8To64:
+    case SExt16To64:
     case SExt32:
     case ZExt32:
     case Clz:
@@ -899,6 +940,7 @@ ValueKey Value::key() const
     case VectorFloor:
     case VectorTrunc:
     case VectorTruncSat:
+    case VectorRelaxedTruncSat:
     case VectorConvert:
     case VectorConvertLow:
     case VectorNearest:
@@ -947,12 +989,16 @@ ValueKey Value::key() const
     case VectorShr:
     case VectorMulSat:
     case VectorAvgRound:
+    case VectorShiftByVector:
+    case VectorRelaxedSwizzle:
         numChildrenForKind(kind(), 2);
         return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1));
     case VectorReplaceLane:
     case VectorMulByElement:
         numChildrenForKind(kind(), 2);
         return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1), as<SIMDValue>()->immediate());
+    case VectorRelaxedMAdd:
+    case VectorRelaxedNMAdd:
     case VectorBitwiseSelect:
         numChildrenForKind(kind(), 3);
         return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1), child(2));
@@ -1056,6 +1102,8 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
         return Int32;
     case Trunc:
         return firstChild->type() == Int64 ? Int32 : Float;
+    case SExt8To64:
+    case SExt16To64:
     case SExt32:
     case ZExt32:
         return Int64;

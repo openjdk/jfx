@@ -78,9 +78,9 @@ void AbstractModuleRecord::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
 DEFINE_VISIT_CHILDREN(AbstractModuleRecord);
 
-void AbstractModuleRecord::appendRequestedModule(const Identifier& moduleName, RefPtr<ScriptFetchParameters>&& assertions)
+void AbstractModuleRecord::appendRequestedModule(const Identifier& moduleName, RefPtr<ScriptFetchParameters>&& attributes)
 {
-    m_requestedModules.append({ moduleName.impl(), WTFMove(assertions) });
+    m_requestedModules.append({ moduleName.impl(), WTFMove(attributes) });
 }
 
 void AbstractModuleRecord::addStarExportEntry(const Identifier& moduleName)
@@ -764,11 +764,11 @@ JSModuleNamespaceObject* AbstractModuleRecord::getModuleNamespace(JSGlobalObject
         RETURN_IF_EXCEPTION(scope, nullptr);
         switch (resolution.type) {
         case Resolution::Type::NotFound:
-            throwSyntaxError(globalObject, scope, makeString("Exported binding name '", String(name.get()), "' is not found."));
+            throwSyntaxError(globalObject, scope, makeString("Exported binding name '"_s, StringView(name.get()), "' is not found."_s));
             return nullptr;
 
         case Resolution::Type::Error:
-            throwSyntaxError(globalObject, scope, makeString("Exported binding name 'default' cannot be resolved by star export entries."));
+            throwSyntaxError(globalObject, scope, "Exported binding name 'default' cannot be resolved by star export entries."_s);
             return nullptr;
 
         case Resolution::Type::Ambiguous:
@@ -858,7 +858,7 @@ static String printableName(const RefPtr<UniquedStringImpl>& uid)
 {
     if (uid->isSymbol())
         return uid.get();
-    return WTF::makeString("'", String(uid.get()), "'");
+    return WTF::makeString('\'', StringView(uid.get()), '\'');
 }
 
 static String printableName(const Identifier& ident)
@@ -872,7 +872,7 @@ void AbstractModuleRecord::dump()
 
     dataLog("    Dependencies: ", m_requestedModules.size(), " modules\n");
     for (const auto& request : m_requestedModules)
-        dataLogLn("      module(", printableName(request.m_specifier), "),assertions(", RawPointer(request.m_assertions.get()), ")");
+        dataLogLn("      module(", printableName(request.m_specifier), "),attributes(", RawPointer(request.m_attributes.get()), ")");
 
     dataLog("    Import: ", m_importEntries.size(), " entries\n");
     for (const auto& pair : m_importEntries) {

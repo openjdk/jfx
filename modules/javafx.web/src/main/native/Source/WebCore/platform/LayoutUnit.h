@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, Google Inc. All rights reserved.
+ * Copyright (c) 2012-2017, Google Inc. All rights reserved.
  * Copyright (c) 2012-2023, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -79,10 +79,6 @@ public:
     {
         m_value = clampTo<int>(value * kFixedPointDenominator);
     }
-    explicit LayoutUnit(float value)
-    {
-        m_value = clampToInteger(value * kFixedPointDenominator);
-    }
     explicit LayoutUnit(double value)
     {
         m_value = clampToInteger(value * kFixedPointDenominator);
@@ -90,6 +86,8 @@ public:
 
     LayoutUnit& operator=(const LayoutUnit&) = default;
     LayoutUnit& operator=(const float& other) { return *this = LayoutUnit(other); }
+
+    friend bool operator==(LayoutUnit, LayoutUnit) = default;
 
     static LayoutUnit fromFloatCeil(float value)
     {
@@ -160,7 +158,7 @@ public:
 
     int round() const
     {
-        return saturatedSum<int>(rawValue(), kFixedPointDenominator / 2) >> kLayoutUnitFractionalBits;
+        return toInt() + ((fraction().rawValue() + (kFixedPointDenominator / 2)) >> kLayoutUnitFractionalBits);
     }
 
     int floor() const
@@ -240,7 +238,7 @@ private:
     }
     static bool isInBounds(double value)
     {
-        return ::fabs(value) <= std::numeric_limits<int>::max() / kFixedPointDenominator;
+        return ::abs(value) <= std::numeric_limits<int>::max() / kFixedPointDenominator;
     }
 
     inline void setValue(int value)
@@ -376,36 +374,6 @@ inline bool operator>(const float a, const LayoutUnit& b)
 inline bool operator>(const double a, const LayoutUnit& b)
 {
     return a > b.toDouble();
-}
-
-inline bool operator!=(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() != b.rawValue();
-}
-
-inline bool operator!=(const float a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) != b;
-}
-
-inline bool operator!=(const LayoutUnit& a, float b)
-{
-    return a != LayoutUnit(b);
-}
-
-inline bool operator!=(const int a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) != b;
-}
-
-inline bool operator!=(const LayoutUnit& a, int b)
-{
-    return a != LayoutUnit(b);
-}
-
-inline bool operator==(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() == b.rawValue();
 }
 
 inline bool operator==(const LayoutUnit& a, int b)
@@ -668,6 +636,10 @@ inline float operator-(const float a, const LayoutUnit& b)
 
 inline LayoutUnit operator-(const LayoutUnit& a)
 {
+    // -min() is saturated to max().
+    if (a == LayoutUnit::min())
+        return LayoutUnit::max();
+
     LayoutUnit returnVal;
     returnVal.setRawValue(-a.rawValue());
     return returnVal;

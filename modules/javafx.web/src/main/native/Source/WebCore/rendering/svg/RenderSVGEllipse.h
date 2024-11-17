@@ -42,7 +42,7 @@ private:
     ASCIILiteral renderName() const override { return "RenderSVGEllipse"_s; }
 
     void updateShapeFromElement() override;
-    bool isEmpty() const override { return m_usePathFallback ? RenderSVGShape::isEmpty() : m_fillBoundingBox.isEmpty(); }
+    bool isEmpty() const override { return hasPath() ? RenderSVGShape::isEmpty() : m_fillBoundingBox.isEmpty(); }
     bool isRenderingDisabled() const override;
     void fillShape(GraphicsContext&) const override;
     void strokeShape(GraphicsContext&) const override;
@@ -51,9 +51,10 @@ private:
     void calculateRadiiAndCenter();
 
 private:
+    bool canUseStrokeHitTestFastPath() const;
+
     FloatPoint m_center;
     FloatSize m_radii;
-    bool m_usePathFallback;
 };
 
 } // namespace WebCore

@@ -32,8 +32,10 @@
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutPhase.h"
 #include "LayoutState.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
+#include "Shape.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 namespace Layout {
@@ -238,6 +240,9 @@ bool Box::isInlineLevelBox() const
         || display == DisplayType::InlineBox
         || display == DisplayType::InlineFlex
         || display == DisplayType::InlineGrid
+        || display == DisplayType::Ruby
+        || display == DisplayType::RubyBase
+        || display == DisplayType::RubyAnnotation
         || isInlineBlockBox()
         || isInlineTableBox();
 }
@@ -246,7 +251,8 @@ bool Box::isInlineBox() const
 {
     // An inline box is one that is both inline-level and whose contents participate in its containing inline formatting context.
     // A non-replaced element with a 'display' value of 'inline' generates an inline box.
-    return m_style.display() == DisplayType::Inline && !isReplacedBox();
+    auto display = m_style.display();
+    return (display == DisplayType::Inline || display == DisplayType::Ruby || display == DisplayType::RubyBase) && !isReplacedBox();
 }
 
 bool Box::isAtomicInlineLevelBox() const
@@ -268,6 +274,7 @@ bool Box::isBlockContainer() const
     return display == DisplayType::Block
         || display == DisplayType::FlowRoot
         || display == DisplayType::ListItem
+        || display == DisplayType::RubyBlock
         || isInlineBlockBox()
         || isTableCell()
         || isTableCaption(); // TODO && !replaced element
@@ -288,6 +295,21 @@ bool Box::isLayoutContainmentBox() const
         return true;
     };
     return m_style.effectiveContainment().contains(Containment::Layout) && supportsLayoutContainment();
+}
+
+bool Box::isRubyAnnotationBox() const
+{
+    return m_style.display() == DisplayType::RubyAnnotation;
+}
+
+bool Box::isInterlinearRubyAnnotationBox() const
+{
+    return isRubyAnnotationBox() && m_style.rubyPosition() != RubyPosition::InterCharacter;
+}
+
+bool Box::isInternalRubyBox() const
+{
+    return m_style.display() == DisplayType::RubyBase || m_style.display() == DisplayType::RubyAnnotation;
 }
 
 bool Box::isSizeContainmentBox() const
@@ -440,6 +462,30 @@ std::optional<LayoutUnit> Box::columnWidth() const
     if (!hasRareData())
         return { };
     return rareData().columnWidth;
+}
+
+const Shape* Box::shape() const
+{
+    if (!hasRareData())
+        return nullptr;
+    return rareData().shape.get();
+}
+
+void Box::setShape(RefPtr<const Shape> shape)
+{
+    ensureRareData().shape = WTFMove(shape);
+}
+
+const ElementBox* Box::associatedRubyAnnotationBox() const
+{
+    if (style().display() != DisplayType::RubyBase)
+        return nullptr;
+
+    auto* next = nextSibling();
+    if (!next || next->style().display() != DisplayType::RubyAnnotation)
+        return nullptr;
+
+    return dynamicDowncast<ElementBox>(next);
 }
 
 void Box::setCachedGeometryForLayoutState(LayoutState& layoutState, std::unique_ptr<BoxGeometry> geometry) const

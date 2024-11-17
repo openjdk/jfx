@@ -25,17 +25,15 @@
 
 #include "config.h"
 #include "ImageDecoder.h"
-
+#if !PLATFORM(JAVA) && (!USE(CG) || USE(AVIF))
+#include "ScalableImageDecoder.h"
+#endif
 #include <wtf/NeverDestroyed.h>
 
 #if USE(CG)
 #include "ImageDecoderCG.h"
 #elif PLATFORM(JAVA)
 #include "ImageDecoderJava.h"
-#endif
-
-#if !PLATFORM(JAVA) && (!USE(CG) || USE(AVIF))
-#include "ScalableImageDecoder.h"
 #endif
 
 #if HAVE(AVASSETREADER)
@@ -51,9 +49,14 @@ namespace WebCore {
 #if ENABLE(GPU_PROCESS) && HAVE(AVASSETREADER)
 using FactoryVector = Vector<ImageDecoder::ImageDecoderFactory>;
 
+static RefPtr<ImageDecoder> createInProcessImageDecoderAVFObjC(FragmentedSharedBuffer& buffer, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaOption)
+{
+    return ImageDecoderAVFObjC::create(buffer, mimeType, alphaOption, gammaOption, ProcessIdentity { ProcessIdentity::CurrentProcess });
+}
+
 static void platformRegisterFactories(FactoryVector& factories)
 {
-    factories.append({ ImageDecoderAVFObjC::supportsMediaType, ImageDecoderAVFObjC::canDecodeType, ImageDecoderAVFObjC::create });
+    factories.append({ ImageDecoderAVFObjC::supportsMediaType, ImageDecoderAVFObjC::canDecodeType, createInProcessImageDecoderAVFObjC });
 }
 
 static FactoryVector& installedFactories()

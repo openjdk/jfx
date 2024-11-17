@@ -32,10 +32,15 @@
 
 namespace WebCore {
 
+class Document;
+
 class TextTrackCueList : public RefCounted<TextTrackCueList> {
 public:
     static Ref<TextTrackCueList> create();
 
+    void didMoveToNewDocument(Document&);
+
+    bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     unsigned length() const;
     TextTrackCue* item(unsigned index) const;
     TextTrackCue* getCueById(const String&) const;

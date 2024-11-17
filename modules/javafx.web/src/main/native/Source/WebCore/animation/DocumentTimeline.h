@@ -28,6 +28,7 @@
 #include "AnimationFrameRate.h"
 #include "AnimationTimeline.h"
 #include "DocumentTimelineOptions.h"
+#include "ExceptionOr.h"
 #include "Timer.h"
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
@@ -36,9 +37,13 @@ namespace WebCore {
 
 class AnimationEventBase;
 class CustomEffectCallback;
+class Document;
 class DocumentTimelinesController;
+class Element;
 class RenderBoxModelObject;
 class RenderElement;
+class WeakPtrImplWithEventTargetData;
+class WebAnimation;
 
 struct CustomAnimationOptions;
 
@@ -47,9 +52,8 @@ class DocumentTimeline final : public AnimationTimeline
 public:
     static Ref<DocumentTimeline> create(Document&);
     static Ref<DocumentTimeline> create(Document&, DocumentTimelineOptions&&);
-    ~DocumentTimeline();
 
-    bool isDocumentTimeline() const final { return true; }
+    virtual ~DocumentTimeline();
 
     Document* document() const { return m_document.get(); }
 
@@ -65,13 +69,12 @@ public:
 
     void enqueueAnimationEvent(AnimationEventBase&);
 
-    enum class ShouldUpdateAnimationsAndSendEvents : uint8_t { Yes, No };
+    enum class ShouldUpdateAnimationsAndSendEvents : bool { No, Yes };
     ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents();
     void removeReplacedAnimations();
     AnimationEvents prepareForPendingAnimationEventsDispatch();
     void documentDidUpdateAnimationsAndSendEvents();
 
-    void updateThrottlingState();
     WEBCORE_EXPORT Seconds animationInterval() const;
     void suspendAnimations();
     void resumeAnimations();
@@ -86,6 +89,8 @@ public:
 
 private:
     DocumentTimeline(Document&, Seconds);
+
+    bool isDocumentTimeline() const final { return true; }
 
     DocumentTimelinesController* controller() const;
     void applyPendingAcceleratedAnimations();

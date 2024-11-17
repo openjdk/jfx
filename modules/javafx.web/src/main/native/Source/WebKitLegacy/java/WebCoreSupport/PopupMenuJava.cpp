@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -122,7 +122,7 @@ void PopupMenuJava::populate()
     }
 }
 
-void PopupMenuJava::show(const IntRect& r, FrameView* frameView, int index)
+void PopupMenuJava::show(const IntRect& r, LocalFrameView* frameView, int index)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 

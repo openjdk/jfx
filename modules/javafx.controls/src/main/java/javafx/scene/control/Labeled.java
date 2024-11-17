@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,36 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.NodeHelper;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import javafx.beans.DefaultProperty;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.InsetsConverter;
 import javafx.css.converter.PaintConverter;
 import javafx.css.converter.SizeConverter;
 import javafx.css.converter.StringConverter;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -56,16 +65,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
-import javafx.beans.DefaultProperty;
-import javafx.css.CssMetaData;
-import javafx.css.FontCssMetaData;
-import javafx.css.StyleOrigin;
-import javafx.css.Styleable;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableProperty;
-import javafx.css.StyleableStringProperty;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.LabeledHelper;
 
 /**
  * A Labeled {@link Control} is one which has as part of its user interface
@@ -96,6 +98,14 @@ public abstract class Labeled extends Control {
 
     private final static String DEFAULT_ELLIPSIS_STRING = "...";
 
+    static {
+        LabeledHelper.setAccessor(new LabeledHelper.Accessor() {
+            @Override
+            public void setTextTruncated(Labeled c, boolean on) {
+                c.setTextTruncated(on);
+            }
+        });
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -462,7 +472,7 @@ public abstract class Labeled extends Control {
 
                 //
                 // If imageUrlProperty is invalidated, this is the origin of the style that
-                // triggered the invalidation. This is used in the invaildated() method where the
+                // triggered the invalidation. This is used in the invalidated() method where the
                 // value of super.getStyleOrigin() is not valid until after the call to set(v) returns,
                 // by which time invalidated will have been called.
                 // This value is initialized to USER in case someone calls set on the imageUrlProperty, which
@@ -818,16 +828,36 @@ public abstract class Labeled extends Control {
         return mnemonicParsing;
     }
 
-    //    /**
-    //     * This is the symbol that is searched for in the text and used as
-    //     * a mnemonic. You can change what symbol is used. Using the symbol
-    //     * more than once will cause the symbol to be escaped. Thus, if "_"
-    //     * (the default) is used, then the string "H_ello World" will use
-    //     * "e" as the mnemonic. If "H__ello World" is used, then no mnemonic
-    //     * will be used and the text will be rendered as "H_ello World".
-    //     * TODO: Have i18n review this part of the API to confirm proper
-    //     * externalization will work as expected
-    //     */
+    /**
+     * Indicates whether the text has been truncated
+     * because it cannot fit into the available width.
+     * <p>
+     * When truncated, the {@link #ellipsisStringProperty() ellipsisString}
+     * gets inserted in the place dictated by the
+     * {@link #textOverrunProperty textOverrun} property.
+     *
+     * @since 23
+     */
+    private ReadOnlyBooleanWrapper textTruncated;
+
+    public final ReadOnlyBooleanProperty textTruncatedProperty() {
+        return textTruncated().getReadOnlyProperty();
+    }
+
+    public final boolean isTextTruncated() {
+        return textTruncated().get();
+    }
+
+    private final void setTextTruncated(boolean on) {
+        textTruncated().set(on);
+    }
+
+    private ReadOnlyBooleanWrapper textTruncated() {
+        if (textTruncated == null) {
+            textTruncated = new ReadOnlyBooleanWrapper(this, "textTruncated");
+        }
+        return textTruncated;
+    }
 
     @Override public String toString() {
         StringBuilder builder =

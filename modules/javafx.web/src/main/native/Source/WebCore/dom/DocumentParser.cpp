@@ -27,6 +27,7 @@
 #include "DocumentParser.h"
 
 #include "Document.h"
+#include "EventTarget.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
@@ -74,6 +75,11 @@ void DocumentParser::suspendScheduledTasks()
 
 void DocumentParser::resumeScheduledTasks()
 {
+}
+
+RefPtr<Document> DocumentParser::protectedDocument() const
+{
+    return document();
 }
 
 } // namespace WebCore

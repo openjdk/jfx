@@ -108,9 +108,6 @@ inline bool opInByVal(JSGlobalObject* globalObject, JSValue baseVal, JSValue pro
     }
 
     JSObject* baseObj = asObject(baseVal);
-    if (arrayProfile)
-        arrayProfile->observeStructure(baseObj->structure());
-
     uint32_t i;
     if (propName.getUInt32(i)) {
         if (arrayProfile)
@@ -146,8 +143,8 @@ inline bool canAccessArgumentIndexQuickly(JSObject& object, uint32_t index)
 
 ALWAYS_INLINE Structure* originalStructureBeforePut(JSCell* cell)
 {
-    if (cell->type() == PureForwardingProxyType)
-        return jsCast<JSProxy*>(cell)->target()->structure();
+    if (cell->type() == GlobalProxyType)
+        return jsCast<JSGlobalProxy*>(cell)->target()->structure();
     return cell->structure();
 }
 
@@ -183,7 +180,15 @@ static ALWAYS_INLINE void putDirectWithReify(VM& vm, JSGlobalObject* globalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
     bool isJSFunction = baseObject->inherits<JSFunction>();
     if (isJSFunction) {
-        jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded(vm, globalObject, propertyName);
+        JSFunction* jsFunction = jsCast<JSFunction*>(baseObject);
+
+        if (propertyName == vm.propertyNames->prototype) {
+            slot.disableCaching();
+            if (FunctionRareData* rareData = jsFunction->rareData())
+                rareData->clear("Store to prototype property of a function");
+        }
+
+        jsFunction->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
         RETURN_IF_EXCEPTION(scope, void());
     }
 
@@ -204,16 +209,18 @@ static ALWAYS_INLINE void putDirectWithReify(VM& vm, JSGlobalObject* globalObjec
 
 static ALWAYS_INLINE void putDirectAccessorWithReify(VM& vm, JSGlobalObject* globalObject, JSObject* baseObject, PropertyName propertyName, GetterSetter* accessor, unsigned attribute)
 {
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    bool isJSFunction = baseObject->inherits<JSFunction>();
-    if (isJSFunction) {
-        jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded(vm, globalObject, propertyName);
-        RETURN_IF_EXCEPTION(scope, void());
-    }
-
     // baseObject is either JSFinalObject during object literal construction, or a userland JSFunction class
     // constructor, both of which are guaranteed to be extensible and without non-configurable |propertyName|.
     // Please also note that static "prototype" accessor in a `class` literal is a syntax error.
+
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    bool isJSFunction = baseObject->inherits<JSFunction>();
+    if (isJSFunction) {
+        ASSERT(propertyName != vm.propertyNames->prototype);
+        jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
+        RETURN_IF_EXCEPTION(scope, void());
+    }
+
     ASSERT(canPutDirectFast(vm, originalStructureBeforePut(baseObject), propertyName, isJSFunction));
     scope.release();
     baseObject->putDirectAccessor(globalObject, propertyName, accessor, attribute);
@@ -247,15 +254,14 @@ inline JSArray* allocateNewArrayBuffer(VM& vm, Structure* structure, JSImmutable
 class CallFrame;
 
 #define JSC_DECLARE_COMMON_SLOW_PATH(name) \
-    JSC_DECLARE_JIT_OPERATION(name, SlowPathReturnType, (CallFrame*, const JSInstruction*))
+    JSC_DECLARE_JIT_OPERATION(name, UGPRPair, (CallFrame*, const JSInstruction*))
 
 #define JSC_DEFINE_COMMON_SLOW_PATH(name) \
-    JSC_DEFINE_JIT_OPERATION(name, SlowPathReturnType, (CallFrame* callFrame, const JSInstruction* pc))
+    JSC_DEFINE_JIT_OPERATION(name, UGPRPair, (CallFrame* callFrame, const JSInstruction* pc))
 
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_direct_arguments);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_scoped_arguments);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_cloned_arguments);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_arguments_butterfly_excluding_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enter);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_this);
@@ -300,6 +306,7 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_property_enumerator);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_next);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_get_by_val);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_in_by_val);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_put_by_val);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_has_own_property);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_profile_type_clear_log);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_unreachable);

@@ -30,10 +30,10 @@
 #include "Document.h"
 #include "Exception.h"
 #include "FeaturePolicy.h"
-#include "Frame.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSPermissionDescriptor.h"
 #include "JSPermissionStatus.h"
+#include "LocalFrame.h"
 #include "NavigatorBase.h"
 #include "Page.h"
 #include "PermissionController.h"
@@ -95,10 +95,8 @@ std::optional<PermissionQuerySource> Permissions::sourceFromContext(const Script
         return PermissionQuerySource::DedicatedWorker;
     if (is<SharedWorkerGlobalScope>(context))
         return PermissionQuerySource::SharedWorker;
-#if ENABLE(SERVICE_WORKER)
     if (is<ServiceWorkerGlobalScope>(context))
         return PermissionQuerySource::ServiceWorker;
-#endif
     return std::nullopt;
 }
 
@@ -113,26 +111,28 @@ std::optional<PermissionName> Permissions::toPermissionName(const String& name)
         return PermissionName::Microphone;
     if (name == "notifications"_s)
         return PermissionName::Notifications;
+    if (name == "push"_s)
+        return PermissionName::Push;
     return std::nullopt;
 }
 
 void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DOMPromiseDeferred<IDLInterface<PermissionStatus>>&& promise)
 {
-    auto* context = m_navigator ? m_navigator->scriptExecutionContext() : nullptr;
+    RefPtr context = m_navigator ? m_navigator->scriptExecutionContext() : nullptr;
     if (!context || !context->globalObject()) {
-        promise.reject(Exception { InvalidStateError, "The context is invalid"_s });
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "The context is invalid"_s });
         return;
     }
 
     auto source = sourceFromContext(*context);
     if (!source) {
-        promise.reject(Exception { NotSupportedError, "Permissions::query is not supported in this context"_s  });
+        promise.reject(Exception { ExceptionCode::NotSupportedError, "Permissions::query is not supported in this context"_s  });
         return;
     }
 
-    auto* document = dynamicDowncast<Document>(*context);
+    RefPtr document = dynamicDowncast<Document>(*context);
     if (document && !document->isFullyActive()) {
-        promise.reject(Exception { InvalidStateError, "The document is not fully active"_s });
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "The document is not fully active"_s });
         return;
     }
 
@@ -140,17 +140,17 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto permissionDescriptor = convert<IDLDictionary<PermissionDescriptor>>(*context->globalObject(), permissionDescriptorValue.get());
     if (UNLIKELY(scope.exception())) {
-        promise.reject(Exception { ExistingExceptionError });
+        promise.reject(Exception { ExceptionCode::ExistingExceptionError });
         return;
     }
 
-    auto* origin = context->securityOrigin();
+    RefPtr origin = context->securityOrigin();
     auto originData = origin ? origin->data() : SecurityOriginData { };
 
     if (document) {
         WeakPtr page = document->page();
         if (!page) {
-            promise.reject(Exception { InvalidStateError, "The page does not exist"_s });
+            promise.reject(Exception { ExceptionCode::InvalidStateError, "The page does not exist"_s });
             return;
         }
 
@@ -161,7 +161,7 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
 
         PermissionController::shared().query(ClientOrigin { document->topOrigin().data(), WTFMove(originData) }, permissionDescriptor, *page, *source, [document = Ref { *document }, page, permissionDescriptor, promise = WTFMove(promise)](auto permissionState) mutable {
             if (!permissionState) {
-                promise.reject(Exception { NotSupportedError, "Permissions::query does not support this API"_s });
+                promise.reject(Exception { ExceptionCode::NotSupportedError, "Permissions::query does not support this API"_s });
                 return;
             }
 
@@ -177,7 +177,7 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
         auto& document = downcast<Document>(context);
         if (!document.page()) {
             ScriptExecutionContext::postTaskTo(contextIdentifier, [promise = WTFMove(promise)](auto&) mutable {
-                promise.reject(Exception { InvalidStateError, "The page does not exist"_s });
+                promise.reject(Exception { ExceptionCode::InvalidStateError, "The page does not exist"_s });
             });
             return;
         }
@@ -187,7 +187,7 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
         PermissionController::shared().query(ClientOrigin { document.topOrigin().data(), WTFMove(originData) }, permissionDescriptor, page, source, [contextIdentifier, permissionDescriptor, promise = WTFMove(promise), source, page](auto permissionState) mutable {
             ScriptExecutionContext::postTaskTo(contextIdentifier, [promise = WTFMove(promise), permissionState, permissionDescriptor, source, page = WTFMove(page)](auto& context) mutable {
             if (!permissionState) {
-                    promise.reject(Exception { NotSupportedError, "Permissions::query does not support this API"_s });
+                    promise.reject(Exception { ExceptionCode::NotSupportedError, "Permissions::query does not support this API"_s });
                 return;
             }
 
@@ -196,7 +196,8 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
     });
     };
 
-    workerGlobalScope.thread().workerLoaderProxy().postTaskToLoader(WTFMove(completionHandler));
+    if (auto* workerLoaderProxy = workerGlobalScope.thread().workerLoaderProxy())
+        workerLoaderProxy->postTaskToLoader(WTFMove(completionHandler));
 }
 
 } // namespace WebCore

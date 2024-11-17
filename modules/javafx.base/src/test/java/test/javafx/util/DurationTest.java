@@ -26,8 +26,8 @@
 package test.javafx.util;
 
 import javafx.util.Duration;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
@@ -235,9 +235,9 @@ public class DurationTest {
     }
 
     // toMinutes
-        // 0, +infinity, -infinity, Nan, positive value, negative value
+    // 0, +infinity, -infinity, Nan, positive value, negative value
     // toHours
-        // 0, +infinity, -infinity, Nan, positive value, negative value
+    // 0, +infinity, -infinity, Nan, positive value, negative value
 
 
     /************************************************************************************

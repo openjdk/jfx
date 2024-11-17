@@ -66,7 +66,7 @@ public:
     struct RequestData {
         RequestData() { }
 
-        RequestData(const URL& url, const URL& firstPartyForCookies, double timeoutInterval, const String& httpMethod, const HTTPHeaderMap& httpHeaderFields, const Vector<String>& responseContentDispositionEncodingFallbackArray, const ResourceRequestCachePolicy& cachePolicy, const SameSiteDisposition& sameSiteDisposition, const ResourceLoadPriority& priority, const ResourceRequestRequester& requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true)
+        RequestData(const URL& url, const URL& firstPartyForCookies, double timeoutInterval, const String& httpMethod, const HTTPHeaderMap& httpHeaderFields, const Vector<String>& responseContentDispositionEncodingFallbackArray, const ResourceRequestCachePolicy& cachePolicy, const SameSiteDisposition& sameSiteDisposition, const ResourceLoadPriority& priority, const ResourceRequestRequester& requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false, bool didFilterLinkDecoration = false, bool isPrivateTokenUsageByThirdPartyAllowed = false)
             : m_url(url)
             , m_firstPartyForCookies(firstPartyForCookies)
             , m_timeoutInterval(timeoutInterval)
@@ -80,6 +80,10 @@ public:
             , m_isTopSite(isTopSite)
             , m_allowCookies(allowCookies)
             , m_isAppInitiated(isAppInitiated)
+            , m_privacyProxyFailClosedForUnreachableNonMainHosts(privacyProxyFailClosedForUnreachableNonMainHosts)
+            , m_useAdvancedPrivacyProtections(useAdvancedPrivacyProtections)
+            , m_didFilterLinkDecoration(didFilterLinkDecoration)
+            , m_isPrivateTokenUsageByThirdPartyAllowed(isPrivateTokenUsageByThirdPartyAllowed)
         {
         }
 
@@ -102,6 +106,10 @@ public:
         bool m_isTopSite : 1 { false };
         bool m_allowCookies : 1 { false };
         bool m_isAppInitiated : 1 { true };
+        bool m_privacyProxyFailClosedForUnreachableNonMainHosts : 1 { false };
+        bool m_useAdvancedPrivacyProtections : 1 { false };
+        bool m_didFilterLinkDecoration : 1 { false };
+        bool m_isPrivateTokenUsageByThirdPartyAllowed : 1 { false };
     };
 
     ResourceRequestBase(RequestData&& requestData)
@@ -121,10 +129,12 @@ public:
     WEBCORE_EXPORT bool isEmpty() const;
 
     WEBCORE_EXPORT const URL& url() const;
-    WEBCORE_EXPORT void setURL(const URL& url);
+    WEBCORE_EXPORT void setURL(const URL&, bool didFilterLinkDecoration = false);
 
     void redirectAsGETIfNeeded(const ResourceRequestBase &, const ResourceResponse&);
-    WEBCORE_EXPORT ResourceRequest redirectedRequest(const ResourceResponse&, bool shouldClearReferrerOnHTTPSToHTTPRedirect) const;
+
+    enum class ShouldSetHash : bool { No, Yes };
+    WEBCORE_EXPORT ResourceRequest redirectedRequest(const ResourceResponse&, bool shouldClearReferrerOnHTTPSToHTTPRedirect, ShouldSetHash = ShouldSetHash::No) const;
 
     WEBCORE_EXPORT void removeCredentials();
 
@@ -240,12 +250,7 @@ public:
     const std::optional<int>& inspectorInitiatorNodeIdentifier() const { return m_inspectorInitiatorNodeIdentifier; }
     void setInspectorInitiatorNodeIdentifier(int inspectorInitiatorNodeIdentifier) { m_inspectorInitiatorNodeIdentifier = inspectorInitiatorNodeIdentifier; }
 
-#if USE(SYSTEM_PREVIEW)
-    WEBCORE_EXPORT bool isSystemPreview() const;
-
-    WEBCORE_EXPORT std::optional<SystemPreviewInfo> systemPreviewInfo() const;
-    WEBCORE_EXPORT void setSystemPreviewInfo(const SystemPreviewInfo&);
-#endif
+    void upgradeToHTTPS();
 
 #if !PLATFORM(COCOA) && !USE(SOUP)
     bool encodingRequiresPlatformData() const { return true; }
@@ -258,6 +263,18 @@ public:
 
     bool isAppInitiated() const { return m_requestData.m_isAppInitiated; }
     WEBCORE_EXPORT void setIsAppInitiated(bool);
+
+    bool privacyProxyFailClosedForUnreachableNonMainHosts() const { return m_requestData.m_privacyProxyFailClosedForUnreachableNonMainHosts; }
+    WEBCORE_EXPORT void setPrivacyProxyFailClosedForUnreachableNonMainHosts(bool);
+
+    bool useAdvancedPrivacyProtections() const { return m_requestData.m_useAdvancedPrivacyProtections; }
+    WEBCORE_EXPORT void setUseAdvancedPrivacyProtections(bool);
+
+    bool didFilterLinkDecoration() const { return m_requestData.m_didFilterLinkDecoration; }
+    WEBCORE_EXPORT void setDidFilterLinkDecoration(bool);
+
+    bool isPrivateTokenUsageByThirdPartyAllowed() const { return m_requestData.m_isPrivateTokenUsageByThirdPartyAllowed; }
+    void setIsPrivateTokenUsageByThirdPartyAllowed(bool);
 
 protected:
     // Used when ResourceRequest is initialized from a platform representation of the request
@@ -298,9 +315,6 @@ protected:
     mutable bool m_resourceRequestBodyUpdated : 1;
     mutable bool m_platformRequestBodyUpdated : 1;
     bool m_hiddenFromInspector : 1;
-#if USE(SYSTEM_PREVIEW)
-    std::optional<SystemPreviewInfo> m_systemPreviewInfo;
-#endif
 
 private:
     const ResourceRequest& asResourceRequest() const;
@@ -311,7 +325,6 @@ private:
 bool equalIgnoringHeaderFields(const ResourceRequestBase&, const ResourceRequestBase&);
 
 inline bool operator==(const ResourceRequest& a, const ResourceRequest& b) { return ResourceRequestBase::equal(a, b); }
-inline bool operator!=(ResourceRequest& a, const ResourceRequest& b) { return !(a == b); }
 
 WEBCORE_EXPORT unsigned initializeMaximumHTTPConnectionCountPerHost();
 #if PLATFORM(IOS_FAMILY)

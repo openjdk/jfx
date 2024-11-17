@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,8 @@
 #pragma once
 
 #include "GPUIntegralTypes.h"
+#include "WebGPUBufferUsage.h"
 #include <cstdint>
-#include <pal/graphics/WebGPU/WebGPUBufferUsage.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -48,30 +48,24 @@ public:
     static constexpr GPUFlagsConstant QUERY_RESOLVE = 0x0200;
 };
 
-inline PAL::WebGPU::BufferUsageFlags convertBufferUsageFlagsToBacking(GPUBufferUsageFlags bufferUsageFlags)
+static constexpr bool compare(unsigned a, WebCore::WebGPU::BufferUsage b)
 {
-    PAL::WebGPU::BufferUsageFlags result;
-    if (bufferUsageFlags & GPUBufferUsage::MAP_READ)
-        result.add(PAL::WebGPU::BufferUsage::MapRead);
-    if (bufferUsageFlags & GPUBufferUsage::MAP_WRITE)
-        result.add(PAL::WebGPU::BufferUsage::MapWrite);
-    if (bufferUsageFlags & GPUBufferUsage::COPY_SRC)
-        result.add(PAL::WebGPU::BufferUsage::CopySource);
-    if (bufferUsageFlags & GPUBufferUsage::COPY_DST)
-        result.add(PAL::WebGPU::BufferUsage::CopyDestination);
-    if (bufferUsageFlags & GPUBufferUsage::INDEX)
-        result.add(PAL::WebGPU::BufferUsage::Index);
-    if (bufferUsageFlags & GPUBufferUsage::VERTEX)
-        result.add(PAL::WebGPU::BufferUsage::Vertex);
-    if (bufferUsageFlags & GPUBufferUsage::UNIFORM)
-        result.add(PAL::WebGPU::BufferUsage::Uniform);
-    if (bufferUsageFlags & GPUBufferUsage::STORAGE)
-        result.add(PAL::WebGPU::BufferUsage::Storage);
-    if (bufferUsageFlags & GPUBufferUsage::INDIRECT)
-        result.add(PAL::WebGPU::BufferUsage::Indirect);
-    if (bufferUsageFlags & GPUBufferUsage::QUERY_RESOLVE)
-        result.add(PAL::WebGPU::BufferUsage::QueryResolve);
-    return result;
+    return a == static_cast<unsigned>(b);
+}
+
+inline WebGPU::BufferUsageFlags convertBufferUsageFlagsToBacking(GPUBufferUsageFlags bufferUsageFlags)
+{
+    static_assert(compare(GPUBufferUsage::MAP_READ, WebGPU::BufferUsage::MapRead), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    static_assert(compare(GPUBufferUsage::MAP_WRITE,  WebGPU::BufferUsage::MapWrite), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    static_assert(compare(GPUBufferUsage::COPY_SRC,  WebGPU::BufferUsage::CopySource), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    static_assert(compare(GPUBufferUsage::COPY_DST,  WebGPU::BufferUsage::CopyDestination), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    static_assert(compare(GPUBufferUsage::INDEX, WebGPU::BufferUsage::Index), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    static_assert(compare(GPUBufferUsage::VERTEX, WebGPU::BufferUsage::Vertex), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    static_assert(compare(GPUBufferUsage::UNIFORM, WebGPU::BufferUsage::Uniform), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    static_assert(compare(GPUBufferUsage::STORAGE, WebGPU::BufferUsage::Storage), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    static_assert(compare(GPUBufferUsage::INDIRECT, WebGPU::BufferUsage::Indirect), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    static_assert(compare(GPUBufferUsage::QUERY_RESOLVE, WebGPU::BufferUsage::QueryResolve), "GPUBufferUsageFlags does not match BufferUsageFlags");
+    return static_cast<WebGPU::BufferUsageFlags>(bufferUsageFlags);
 }
 
 }

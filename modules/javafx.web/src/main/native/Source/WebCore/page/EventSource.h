@@ -32,9 +32,9 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "EventLoop.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "SuspendableTimer.h"
 #include "ThreadableLoaderClient.h"
 #include "Timer.h"
 #include <wtf/URL.h>
@@ -54,6 +54,10 @@ public:
     };
     static ExceptionOr<Ref<EventSource>> create(ScriptExecutionContext&, const String& url, const Init&);
     virtual ~EventSource();
+
+    using EventTarget::weakPtrFactory;
+    using EventTarget::WeakValueType;
+    using EventTarget::WeakPtrImplType;
 
     const String& url() const;
     bool withCredentials() const;
@@ -114,7 +118,7 @@ private:
 
     Ref<TextResourceDecoder> m_decoder;
     RefPtr<ThreadableLoader> m_loader;
-    SuspendableTimer m_connectTimer;
+    EventLoopTimerHandle m_connectTimer;
     Vector<UChar> m_receiveBuffer;
     bool m_discardTrailingNewline { false };
     bool m_requestInFlight { false };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -900,11 +900,23 @@ public abstract class NGNode {
     /**
      * Clears the dirty flag. This should only happen during rendering.
      */
-    protected void clearDirty() {
-        dirty = DirtyFlag.CLEAN;
-        childDirty = false;
-        dirtyBounds.makeEmpty();
-        dirtyChildrenAccumulated = 0;
+    public void clearDirty() {
+        if (dirty != DirtyFlag.CLEAN || childDirty) {
+            dirty = DirtyFlag.CLEAN;
+            childDirty = false;
+            dirtyBounds.makeEmpty();
+            dirtyChildrenAccumulated = 0;
+
+            if (this instanceof NGGroup) {
+                List<NGNode> children = ((NGGroup) this).getChildren();
+                for (NGNode child : children) {
+                    child.clearDirty();
+                }
+            }
+        }
+        if (getClipNode() != null) {
+            getClipNode().clearDirty();
+        }
     }
 
     /**
@@ -917,22 +929,6 @@ public abstract class NGNode {
             List<NGNode> children = ((NGGroup)this).getChildren();
             for (int i=0; i<children.size(); i++) {
                 children.get(i).clearPainted();
-            }
-        }
-    }
-
-    public void clearDirtyTree() {
-        clearDirty();
-        if (getClipNode() != null) {
-            getClipNode().clearDirtyTree();
-        }
-        if (this instanceof NGGroup) {
-            List<NGNode> children = ((NGGroup) this).getChildren();
-            for (int i = 0; i < children.size(); ++i) {
-                NGNode child = children.get(i);
-                if (child.dirty != DirtyFlag.CLEAN || child.childDirty) {
-                    child.clearDirtyTree();
-                }
             }
         }
     }
@@ -1407,12 +1403,6 @@ public abstract class NGNode {
             }
             mask = mask << 2;
         }//for
-
-        // If we are going to cull a node/group that's dirty,
-        // make sure it's dirty flags are properly cleared.
-        if (cullingBits == 0 && (dirty != DirtyFlag.CLEAN || childDirty)) {
-            clearDirtyTree();
-        }
 
 //        System.out.printf("%s bits: %s bounds: %s\n",
 //            this, Integer.toBinaryString(cullingBits), TEMP_RECT_BOUNDS);
@@ -1955,8 +1945,7 @@ public abstract class NGNode {
         if (PULSE_LOGGING_ENABLED) {
             PulseLogger.incrementCounter("Nodes visited during render");
         }
-        // Clear the visuals changed flag
-        clearDirty();
+
         // If it isn't visible, then punt
         if (!visible || opacity == 0f) return;
 
@@ -2126,7 +2115,6 @@ public abstract class NGNode {
 
         BaseBounds clipBounds = getClippedBounds(new RectBounds(), curXform);
         if (clipBounds.isEmpty()) {
-            clearDirtyTree();
             return;
         }
 
@@ -2151,7 +2139,6 @@ public abstract class NGNode {
         PrDrawable contentImg = (PrDrawable)
             Effect.getCompatibleImage(fctx, clipRect.width, clipRect.height);
         if (contentImg == null) {
-            clearDirtyTree();
             return;
         }
         Graphics gContentImg = contentImg.createGraphics();
@@ -2201,21 +2188,17 @@ public abstract class NGNode {
         if (newClip.isEmpty() ||
             newClip.getWidth() == 0 ||
             newClip.getHeight() == 0) {
-            clearDirtyTree();
             return;
         }
         // REMIND: avoid garbage by changing setClipRect to accept xywh
         g.setClipRect(new Rectangle(newClip));
         renderForClip(g);
         g.setClipRect(curClip);
-        clipNode.clearDirty(); // as render() is not called on the clipNode,
-                               // make sure the dirty flags are cleared
     }
 
     void renderClip(Graphics g) {
         //  if clip's opacity is 0 there's nothing to render
         if (getClipNode().getOpacity() == 0.0) {
-            clearDirtyTree();
             return;
         }
 
@@ -2224,7 +2207,6 @@ public abstract class NGNode {
 
         BaseBounds clipBounds = getClippedBounds(new RectBounds(), curXform);
         if (clipBounds.isEmpty()) {
-            clearDirtyTree();
             return;
         }
 
@@ -2256,13 +2238,6 @@ public abstract class NGNode {
             clipInput.flush();
             nodeInput.flush();
             g.setClipRect(savedClip);
-            // There may have been some errors in the application of the
-            // effect and we would not know to what extent the nodes were
-            // rendered and cleared or left dirty.  clearDirtyTree() will
-            // clear both this node its clip node, and it will not recurse
-            // to the children unless they are still marked dirty.  It should
-            // be cheap if there was no problem and thorough if there was...
-            clearDirtyTree();
             return;
         }
 
@@ -2271,7 +2246,6 @@ public abstract class NGNode {
         PrDrawable contentImg = (PrDrawable)
             Effect.getCompatibleImage(fctx, clipRect.width, clipRect.height);
         if (contentImg == null) {
-            clearDirtyTree();
             return;
         }
         Graphics gContentImg = contentImg.createGraphics();
@@ -2286,7 +2260,6 @@ public abstract class NGNode {
         PrDrawable clipImg = (PrDrawable)
             Effect.getCompatibleImage(fctx, clipRect.width, clipRect.height);
         if (clipImg == null) {
-            getClipNode().clearDirtyTree();
             Effect.releaseCompatibleImage(fctx, contentImg);
             return;
         }

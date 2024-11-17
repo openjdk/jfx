@@ -257,6 +257,8 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case SameValue:
     case CheckTypeInfoFlags:
     case ParseInt:
+    case ToIntegerOrInfinity:
+    case ToLength:
     case OverridesHasInstance:
     case IsEmpty:
     case TypeOfIsUndefined:
@@ -272,6 +274,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case IsConstructor:
     case IsCellWithType:
     case IsTypedArrayView:
+    case HasStructureWithFlags:
     case TypeOf:
     case ToBoolean:
     case LogicalNot:
@@ -281,6 +284,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StrCat:
     case CallStringConstructor:
     case MakeRope:
+    case MakeAtomString:
     case GetFromArguments:
     case GetArgument:
     case StringFromCharCode:
@@ -322,8 +326,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case DataViewGetInt:
     case DataViewGetFloat:
     case ResolveRope:
-    case GetWebAssemblyInstanceExports:
+    case NumberIsNaN:
+    case StringIndexOf:
         return true;
+
+    case GlobalIsNaN:
+        return node->child1().useKind() == DoubleRepUse;
 
     case GetButterfly:
         return state.forNode(node->child1()).isType(SpecObject);
@@ -344,7 +352,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         if (value.isInfinite() || value.size() != 1)
             return false;
 
-        return value[0].get() == graph.m_vm.getterSetterStructure;
+        return value[0].get() == graph.m_vm.getterSetterStructure.get();
     }
 
     case BottomValue:
@@ -369,12 +377,14 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case FilterDeleteByStatus:
     case FilterCheckPrivateBrandStatus:
     case FilterSetPrivateBrandStatus:
+    case EnumeratorPutByVal:
         // We don't want these to be moved anywhere other than where we put them, since we want them
         // to capture "profiling" at the point in control flow here the user put them.
         return false;
 
     case EnumeratorGetByVal:
     case GetByVal:
+    case GetByValMegamorphic:
     case GetIndexedPropertyStorage:
     case GetArrayLength:
     case GetTypedArrayLengthAsInt52:
@@ -396,6 +406,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case PutByValDirect:
     case PutByVal:
     case PutByValAlias:
+    case PutByValMegamorphic:
         return node->arrayMode().modeForPut().alreadyChecked(
             graph, node, state.forNode(graph.varArgChild(node, 0)));
 
@@ -424,6 +435,22 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
             if (checkOffset != desiredOffset || !(attributes & PropertyAttribute::Accessor))
                 return false;
         }
+        return true;
+    }
+
+    case GetWebAssemblyInstanceExports: {
+        if (!state.forNode(node->child1()).isType(SpecCell))
+            return false;
+
+        StructureAbstractValue& value = state.forNode(node->child1()).m_structure;
+        if (value.isInfinite())
+            return false;
+        for (unsigned i = value.size(); i--;) {
+            Structure* structure = value[i].get();
+            if (structure->typeInfo().type() != WebAssemblyInstanceType)
+                return false;
+        }
+
         return true;
     }
 
@@ -501,9 +528,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     }
 
     case EnumeratorNextUpdateIndexAndMode:
-    // These technically don't have effects but they'll only ever follow a EnumeratorNextUpdateIndexAndMode so we might as well return false.
-    case EnumeratorNextExtractMode:
-    case EnumeratorNextExtractIndex:
+    case ExtractFromTuple:
     case EnumeratorNextUpdatePropertyName:
     case ToThis:
     case CreateThis:
@@ -514,12 +539,15 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ObjectCreate:
     case ObjectKeys:
     case ObjectGetOwnPropertyNames:
+    case ObjectGetOwnPropertySymbols:
     case ObjectToString:
+    case ReflectOwnKeys:
     case SetLocal:
     case SetCallee:
     case PutStack:
     case KillStack:
     case MovHint:
+    case ZombieHint:
     case Upsilon:
     case Phi:
     case Flush:
@@ -530,13 +558,17 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case DeleteById:
     case DeleteByVal:
     case GetById:
+    case GetByIdMegamorphic:
     case GetByIdWithThis:
+    case GetByIdWithThisMegamorphic:
     case GetByValWithThis:
+    case GetByValWithThisMegamorphic:
     case GetByIdFlush:
     case GetByIdDirect:
     case GetByIdDirectFlush:
     case PutById:
     case PutByIdFlush:
+    case PutByIdMegamorphic:
     case PutByIdWithThis:
     case PutByValWithThis:
     case PutByIdDirect:
@@ -576,6 +608,8 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case TailCallForwardVarargsInlinedCaller:
     case ConstructVarargs:
     case CallWasm:
+    case CallCustomAccessorGetter:
+    case CallCustomAccessorSetter:
     case VarargsLength:
     case LoadVarargs:
     case CallForwardVarargs:
@@ -585,12 +619,15 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NewAsyncGenerator:
     case NewArray:
     case NewArrayWithSize:
+    case NewArrayWithConstantSize:
     case NewArrayWithSpecies:
     case NewArrayBuffer:
     case NewArrayWithSpread:
     case NewInternalFieldObject:
     case Spread:
     case NewRegexp:
+    case NewMap:
+    case NewSet:
     case NewSymbol:
     case ProfileType:
     case ProfileControlFlow:
@@ -618,12 +655,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case CreateDirectArguments:
     case CreateScopedArguments:
     case CreateClonedArguments:
-    case CreateArgumentsButterflyExcludingThis:
     case PutToArguments:
     case NewFunction:
     case NewGeneratorFunction:
     case NewAsyncGeneratorFunction:
     case NewAsyncFunction:
+    case NewBoundFunction:
     case Jump:
     case Branch:
     case Switch:
@@ -707,6 +744,9 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArithIMul:
     case TryGetById:
     case StringLocaleCompare:
+    case FunctionBind:
+    case DateSetTime:
+    case ArraySpliceExtract:
         return false;
 
     case StringReplaceString:

@@ -50,7 +50,7 @@ struct SelectorMatchingState;
 
 class Invalidator {
 public:
-    Invalidator(const Vector<StyleSheetContents*>&, const MQ::MediaQueryEvaluator&);
+    Invalidator(const Vector<Ref<StyleSheetContents>>&, const MQ::MediaQueryEvaluator&);
     Invalidator(const InvalidationRuleSetVector&);
 
     ~Invalidator();
@@ -68,20 +68,22 @@ public:
     static void invalidateWithMatchElementRuleSets(Element&, const MatchElementRuleSets&);
     static void invalidateAllStyle(Scope&);
     static void invalidateHostAndSlottedStyleIfNeeded(ShadowRoot&);
+    static void invalidateWithScopeBreakingHasPseudoClassRuleSet(Element&, const RuleSet*);
 
 private:
-    enum class CheckDescendants { Yes, No };
+    enum class CheckDescendants : bool { No, Yes };
     CheckDescendants invalidateIfNeeded(Element&, SelectorMatchingState*);
     void invalidateStyleForTree(Element&, SelectorMatchingState*);
     void invalidateStyleForDescendants(Element&, SelectorMatchingState*);
     void invalidateInShadowTreeIfNeeded(Element&);
-    void invalidateShadowPseudoElements(ShadowRoot&);
+    void invalidateUserAgentParts(ShadowRoot&);
     void invalidateStyleWithMatchElement(Element&, MatchElement);
 
     struct RuleInformation {
         bool hasSlottedPseudoElementRules { false };
         bool hasHostPseudoClassRules { false };
-        bool hasShadowPseudoElementRules { false };
+        bool hasHostPseudoClassRulesMatchingInShadowTree { false };
+        bool hasUserAgentPartRules { false };
         bool hasCuePseudoElementRules { false };
         bool hasPartPseudoElementRules { false };
     };

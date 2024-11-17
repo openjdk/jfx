@@ -87,7 +87,7 @@ gst_date_time_new_from_g_date_time (GDateTime * dt)
   if (!dt)
     return NULL;
 
-  gst_dt = g_slice_new (GstDateTime);
+  gst_dt = g_new (GstDateTime, 1);
 
   gst_mini_object_init (GST_MINI_OBJECT_CAST (gst_dt), 0, GST_TYPE_DATE_TIME,
       NULL, NULL, (GstMiniObjectFreeFunction) gst_date_time_free);
@@ -334,7 +334,7 @@ gst_date_time_get_microsecond (const GstDateTime * datetime)
  * values, timezones before (to the west) of UTC have negative values.
  * If @datetime represents UTC time, then the offset is zero.
  *
- * Return value: the offset from UTC in hours, or %G_MAXDOUBLE if none is set.
+ * Return value: the offset from UTC in hours, or %G_MAXFLOAT if none is set.
  */
 gfloat
 gst_date_time_get_time_zone_offset (const GstDateTime * datetime)
@@ -342,7 +342,7 @@ gst_date_time_get_time_zone_offset (const GstDateTime * datetime)
   g_return_val_if_fail (datetime != NULL, 0.0);
 
   if (!gst_date_time_has_time (datetime))
-    return G_MAXDOUBLE;
+    return G_MAXFLOAT;
 
   return (g_date_time_get_utc_offset (datetime->datetime) /
       G_USEC_PER_SEC) / 3600.0;
@@ -1051,7 +1051,7 @@ gst_date_time_free (GstDateTime * datetime)
   memset (datetime, 0xff, sizeof (GstDateTime));
 #endif
 
-  g_slice_free (GstDateTime, datetime);
+  g_free (datetime);
 }
 
 /**

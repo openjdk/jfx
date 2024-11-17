@@ -74,8 +74,24 @@ struct DMABufReleaseFlag {
             return;
 
         uint64_t value { 1 };
-        if (write(fd.value(), &value, sizeof(value)) != sizeof(value))
+        if (::write(fd.value(), &value, sizeof(value)) != sizeof(value))
             WTFLogAlways("Error writing to the eventfd at DMABufReleaseFlag: %s", safeStrerror(errno).data());
+    }
+
+    template<class Encoder> void encode(Encoder& encoder) &&
+    {
+        encoder << WTFMove(fd);
+    }
+
+    template<class Decoder> static std::optional<DMABufReleaseFlag> decode(Decoder& decoder)
+    {
+        auto fd = decoder.template decode<UnixFileDescriptor>();
+        if (!fd)
+            return std::nullopt;
+
+        DMABufReleaseFlag releaseFlag;
+        releaseFlag.fd = WTFMove(*fd);
+        return releaseFlag;
     }
 
     UnixFileDescriptor fd;

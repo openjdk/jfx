@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -308,10 +308,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /**
      * The list of items to show within the ComboBox popup.
      */
-    private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<>(this, "items");
+    private final ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<>(this, "items");
     public final void setItems(ObservableList<T> value) { itemsProperty().set(value); }
     public final ObservableList<T> getItems() {return items.get(); }
-    public ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
+    public final ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
 
 
     // --- string converter
@@ -321,8 +321,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * the input may be retrieved via the  {@link #valueProperty() value} property.
      * @return the converter property
      */
-    public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
-    private ObjectProperty<StringConverter<T>> converter =
+    public final ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
+    private final ObjectProperty<StringConverter<T>> converter =
             new SimpleObjectProperty<>(this, "converter", ComboBox.<T>defaultStringConverter());
     public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
     public final StringConverter<T> getConverter() {return converterProperty().get(); }
@@ -334,11 +334,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * rendering of items in the ComboBox. Refer to the {@link Cell} javadoc
      * for more information on cell factories.
      */
-    private ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactory =
+    private final ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactory =
             new SimpleObjectProperty<>(this, "cellFactory");
     public final void setCellFactory(Callback<ListView<T>, ListCell<T>> value) { cellFactoryProperty().set(value); }
     public final Callback<ListView<T>, ListCell<T>> getCellFactory() {return cellFactoryProperty().get(); }
-    public ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() { return cellFactory; }
+    public final ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() { return cellFactory; }
 
 
     // --- button cell
@@ -350,8 +350,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * @return the button cell property
      * @since JavaFX 2.2
      */
-    public ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
-    private ObjectProperty<ListCell<T>> buttonCell =
+    public final ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
+    private final ObjectProperty<ListCell<T>> buttonCell =
             new SimpleObjectProperty<>(this, "buttonCell");
     public final void setButtonCell(ListCell<T> value) { buttonCellProperty().set(value); }
     public final ListCell<T> getButtonCell() {return buttonCellProperty().get(); }
@@ -618,14 +618,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                     T selectedItem = getSelectedItem();
                     for (int i = 0; i < comboBox.getItems().size(); i++) {
                         if (selectedItem.equals(comboBox.getItems().get(i))) {
-                            comboBox.setValue(null);
-                            setSelectedItem(null);
-                            setSelectedIndex(i);
+                            clearAndSelect(i);
                             break;
                         }
                     }
                 }
-
                 comboBox.previousItemCount = getItemCount();
             }
         };

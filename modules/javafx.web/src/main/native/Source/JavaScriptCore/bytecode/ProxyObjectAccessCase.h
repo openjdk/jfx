@@ -35,12 +35,11 @@ class ProxyObjectAccessCase final : public AccessCase {
 public:
     using Base = AccessCase;
     friend class AccessCase;
+    friend class InlineCacheCompiler;
 
     static Ref<AccessCase> create(VM&, JSCell* owner, AccessType, CacheableIdentifier);
 
-    void emit(AccessGenerationState&, MacroAssembler::JumpList& fallThrough);
-
-    OptimizingCallLinkInfo* callLinkInfo() const { return m_callLinkInfo; }
+    void emit(InlineCacheCompiler&, MacroAssembler::JumpList& fallThrough);
 
 private:
     ProxyObjectAccessCase(VM&, JSCell* owner, AccessType, CacheableIdentifier);
@@ -48,8 +47,6 @@ private:
 
     void dumpImpl(PrintStream&, CommaPrinter&, Indenter&) const;
     Ref<AccessCase> cloneImpl() const;
-
-    OptimizingCallLinkInfo* m_callLinkInfo { nullptr };
 };
 
 } // namespace JSC

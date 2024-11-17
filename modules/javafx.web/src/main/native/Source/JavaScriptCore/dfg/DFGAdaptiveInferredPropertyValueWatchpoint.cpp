@@ -30,8 +30,11 @@
 
 #include "CodeBlock.h"
 #include "DFGCommon.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace DFG {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AdaptiveInferredPropertyValueWatchpoint);
 
 AdaptiveInferredPropertyValueWatchpoint::AdaptiveInferredPropertyValueWatchpoint(const ObjectPropertyCondition& key, CodeBlock* codeBlock)
     : Base(key)
@@ -51,8 +54,10 @@ void AdaptiveInferredPropertyValueWatchpoint::handleFire(VM&, const FireDetail& 
         dataLog("Firing watchpoint ", RawPointer(this), " (", key(), ") on ", *m_codeBlock, "\n");
 
 
-    auto lazyDetail = createLazyFireDetail("Adaptation of ", key(), " failed: ", detail);
-
+    auto lambda = scopedLambda<void(PrintStream&)>([&](PrintStream& out) {
+        out.print("Adaptation of ", key(), " failed: ", detail);
+    });
+    LazyFireDetail lazyDetail(lambda);
     m_codeBlock->jettison(Profiler::JettisonDueToUnprofiledWatchpoint, CountReoptimization, &lazyDetail);
 }
 

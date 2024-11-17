@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,6 @@ import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.impl.PrismSettings;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 
 public final class D3DPipeline extends GraphicsPipeline {
@@ -45,19 +43,14 @@ public final class D3DPipeline extends GraphicsPipeline {
     private static boolean d3dInitialized;
 
     static {
-
-        @SuppressWarnings("removal")
-        boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            if (PrismSettings.verbose) {
-                System.out.println("Loading D3D native library ...");
-            }
-            NativeLibLoader.loadLibrary("prism_d3d");
-            if (PrismSettings.verbose) {
-                System.out.println("\tsucceeded.");
-            }
-            return Boolean.valueOf(nInit(PrismSettings.class, true));
-        });
-        d3dEnabled = tmp;
+        if (PrismSettings.verbose) {
+            System.out.println("Loading D3D native library ...");
+        }
+        NativeLibLoader.loadLibrary("prism_d3d");
+        if (PrismSettings.verbose) {
+            System.out.println("\tsucceeded.");
+        }
+        d3dEnabled = nInit(PrismSettings.class, true);
 
         if (PrismSettings.verbose) {
             System.out.println("Direct3D initialization " + (d3dEnabled ? "succeeded" : "failed"));

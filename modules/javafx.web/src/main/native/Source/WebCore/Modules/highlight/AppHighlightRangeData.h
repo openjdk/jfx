@@ -61,15 +61,7 @@ public:
         {
         }
 
-        bool operator==(const NodePathComponent& other) const
-        {
-            return identifier == other.identifier && nodeName == other.nodeName && textData == other.textData && pathIndex == other.pathIndex;
-        }
-
-        bool operator!=(const NodePathComponent& other) const
-        {
-            return !(*this == other);
-        }
+        friend bool operator==(const NodePathComponent&, const NodePathComponent&) = default;
     };
 
     using NodePath = Vector<NodePathComponent>;

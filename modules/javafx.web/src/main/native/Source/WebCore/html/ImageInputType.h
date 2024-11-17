@@ -38,11 +38,15 @@
 namespace WebCore {
 
 class ImageInputType final : public BaseButtonInputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
-    explicit ImageInputType(HTMLInputElement&);
+    static Ref<ImageInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new ImageInputType(element));
+    }
 
 private:
+    explicit ImageInputType(HTMLInputElement&);
+
     const AtomString& formControlType() const final;
     bool isFormDataAppendable() const final;
     bool appendFormData(DOMFormData&) const final;
@@ -56,6 +60,7 @@ private:
     unsigned height() const final;
     unsigned width() const final;
     String resultForDialogSubmit() const final;
+    bool dirAutoUsesValue() const final;
 
     IntPoint m_clickLocation; // Valid only during HTMLFormElement::submitIfPossible().
 };

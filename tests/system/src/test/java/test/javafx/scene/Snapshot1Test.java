@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,30 @@
 
 package test.javafx.scene;
 
-import java.util.concurrent.TimeUnit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.TIMEOUT;
 import java.util.concurrent.CountDownLatch;
-import javafx.scene.paint.Color;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotResult;
 import javafx.scene.image.WritableImage;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
-import junit.framework.AssertionFailedError;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
-
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
 
 /**
  * Tests for snapshot.
@@ -58,12 +61,12 @@ public class Snapshot1Test extends SnapshotCommon {
     // Short timeout used to ensure that bad callback is not called
     static final int SHORT_TIMEOUT = 1000;
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         doSetupOnce();
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         doTeardownOnce();
     }
@@ -72,14 +75,14 @@ public class Snapshot1Test extends SnapshotCommon {
     private Scene tmpScene = null;
     private Node tmpNode = null;
 
-    @Before
+    @BeforeEach
     public void setupEach() {
         assertNotNull(myApp);
         assertNotNull(myApp.primaryStage);
         assertTrue(myApp.primaryStage.isShowing());
     }
 
-    @After
+    @AfterEach
     public void teardownEach() {
     }
 
@@ -110,54 +113,62 @@ public class Snapshot1Test extends SnapshotCommon {
 
     // Verify that we cannot call snapshot on a thread other than
     // the FX Application thread
-    @Test (expected=IllegalStateException.class)
+    @Test
     public void testSnapshotSceneImmediateWrongThread() {
-        assertFalse(Platform.isFxApplicationThread());
+        assertThrows(IllegalStateException.class, () -> {
+            assertFalse(Platform.isFxApplicationThread());
 
-        Util.runAndWait(() -> tmpScene = new Scene(new Group(), 200, 100));
+            Util.runAndWait(() -> tmpScene = new Scene(new Group(), 200, 100));
 
-        // Should throw IllegalStateException
-        tmpScene.snapshot(null);
+            // Should throw IllegalStateException
+            tmpScene.snapshot(null);
+        });
     }
 
     // Verify that we cannot call snapshot on a thread other than
     // the FX Application thread
-    @Test (expected=IllegalStateException.class)
+    @Test
     public void testSnapshotSceneDeferredWrongThread() {
-        assertFalse(Platform.isFxApplicationThread());
+        assertThrows(IllegalStateException.class, () -> {
+            assertFalse(Platform.isFxApplicationThread());
 
-        Util.runAndWait(() -> tmpScene = new Scene(new Group(), 200, 100));
+            Util.runAndWait(() -> tmpScene = new Scene(new Group(), 200, 100));
 
-        // Should throw IllegalStateException
-        tmpScene.snapshot(p -> {
-            throw new AssertionFailedError("Should never get here");
-        }, null);
+            // Should throw IllegalStateException
+            tmpScene.snapshot(p -> {
+                throw new AssertionError("Should never get here");
+            }, null);
+        });
     }
 
     // Verify that we cannot call snapshot on a thread other than
     // the FX Application thread
-    @Test (expected=IllegalStateException.class)
+    @Test
     public void testSnapshotNodeImmediateWrongThread() {
-        assertFalse(Platform.isFxApplicationThread());
+        assertThrows(IllegalStateException.class, () -> {
+            assertFalse(Platform.isFxApplicationThread());
 
-        tmpNode = new Rectangle(10, 10);
+            tmpNode = new Rectangle(10, 10);
 
-        // Should throw IllegalStateException
-        tmpNode.snapshot(null, null);
+            // Should throw IllegalStateException
+            tmpNode.snapshot(null, null);
+        });
     }
 
     // Verify that we cannot call snapshot on a thread other than
     // the FX Application thread
-    @Test (expected=IllegalStateException.class)
+    @Test
     public void testSnapshotNodeDeferredWrongThread() {
-        assertFalse(Platform.isFxApplicationThread());
+        assertThrows(IllegalStateException.class, () -> {
+            assertFalse(Platform.isFxApplicationThread());
 
-        tmpNode = new Rectangle(10, 10);
+            tmpNode = new Rectangle(10, 10);
 
-        // Should throw IllegalStateException
-        tmpNode.snapshot(p -> {
-            throw new AssertionFailedError("Should never get here");
-        }, null, null);
+            // Should throw IllegalStateException
+            tmpNode.snapshot(p -> {
+                throw new AssertionError("Should never get here");
+            }, null, null);
+        });
     }
 
     // Test immediate snapshot
@@ -192,12 +203,10 @@ public class Snapshot1Test extends SnapshotCommon {
 
         try {
             if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for snapshot callback");
+                fail("Timeout waiting for snapshot callback");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
 
         assertEquals(0, latch.getCount());
@@ -232,12 +241,10 @@ public class Snapshot1Test extends SnapshotCommon {
 
         try {
             if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for snapshot callback");
+                fail("Timeout waiting for snapshot callback");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
 
         assertEquals(0, latch.getCount());
@@ -255,7 +262,7 @@ public class Snapshot1Test extends SnapshotCommon {
             Callback cb = (Callback<String, Integer>) param -> {
                 // Should not get here
                 latch.countDown();
-                throw new AssertionFailedError("Should never get here");
+                throw new AssertionError("Should never get here");
             };
 
             tmpScene.snapshot(cb, null);
@@ -266,23 +273,23 @@ public class Snapshot1Test extends SnapshotCommon {
 
         try {
             if (latch.await(SHORT_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Snapshot callback unexpectedly called");
+                fail("Snapshot callback unexpectedly called");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
 
         assertEquals(1, latch.getCount());
     }
 
     // Test deferred snapshot with null callback (should throw NPE)
-    @Test (expected=NullPointerException.class)
+    @Test
     public void testNullSceneCallback() {
-        Util.runAndWait(() -> {
-            tmpScene = new Scene(new Group(), 200, 100);
-            tmpScene.snapshot(null, null);
+        assertThrows(NullPointerException.class, () -> {
+            Util.runAndWait(() -> {
+                tmpScene = new Scene(new Group(), 200, 100);
+                tmpScene.snapshot(null, null);
+            });
         });
     }
 
@@ -318,12 +325,10 @@ public class Snapshot1Test extends SnapshotCommon {
 
         try {
             if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for snapshot callback");
+                fail("Timeout waiting for snapshot callback");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
 
         assertEquals(0, latch.getCount());
@@ -358,12 +363,10 @@ public class Snapshot1Test extends SnapshotCommon {
 
         try {
             if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for snapshot callback");
+                fail("Timeout waiting for snapshot callback");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
 
         assertEquals(0, latch.getCount());
@@ -381,7 +384,7 @@ public class Snapshot1Test extends SnapshotCommon {
             Callback cb = (Callback<String, Integer>) param -> {
                 // Should not get here
                 latch.countDown();
-                throw new AssertionFailedError("Should never get here");
+                throw new AssertionError("Should never get here");
             };
 
             tmpNode.snapshot(cb, null, null);
@@ -392,31 +395,33 @@ public class Snapshot1Test extends SnapshotCommon {
 
         try {
             if (latch.await(SHORT_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Snapshot callback unexpectedly called");
+                fail("Snapshot callback unexpectedly called");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
 
         assertEquals(1, latch.getCount());
     }
 
     // Test deferred snapshot with null callback (should throw NPE)
-    @Test (expected=NullPointerException.class)
+    @Test
     public void testNullNodeCallback() {
-        Util.runAndWait(() -> {
-            tmpNode = new Rectangle(10, 10);
-            tmpNode.snapshot(null, null, null);
+        assertThrows(NullPointerException.class, () -> {
+            Util.runAndWait(() -> {
+                tmpNode = new Rectangle(10, 10);
+                tmpNode.snapshot(null, null, null);
+            });
         });
     }
 
     // TODO: the following will be covered by ImageOps unit tests, so can be removed
 
-    @Test (expected=IllegalArgumentException.class)
+    @Test
     public void testCreateImageZero() {
-        WritableImage wimg = new WritableImage(0, 0);
+        assertThrows(IllegalArgumentException.class, () -> {
+            WritableImage wimg = new WritableImage(0, 0);
+        });
     }
 
     @Test

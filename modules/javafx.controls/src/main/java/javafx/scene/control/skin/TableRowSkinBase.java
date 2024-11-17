@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -165,15 +165,7 @@ public abstract class TableRowSkinBase<T,
         // use invalidation listener here to update even when item equality is true
         // (e.g. see RT-22463)
         registerInvalidationListener(control.itemProperty(), o -> requestCellUpdate());
-        registerChangeListener(control.indexProperty(), e -> {
-            // Fix for RT-36661, where empty table cells were showing content, as they
-            // had incorrect table cell indices (but the table row index was correct).
-            // Note that we only do the update on empty cells to avoid the issue
-            // noted below in requestCellUpdate().
-            if (getSkinnable().isEmpty()) {
-                requestCellUpdate();
-            }
-        });
+        registerChangeListener(control.indexProperty(), e -> requestCellUpdate());
     }
 
 
@@ -255,9 +247,9 @@ public abstract class TableRowSkinBase<T,
 
         C control = getSkinnable();
 
-        ///////////////////////////////////////////
+        //-----------------------------------------
         // indentation code starts here
-        ///////////////////////////////////////////
+        //-----------------------------------------
         double leftMargin = 0;
         double disclosureWidth = 0;
         double graphicWidth = 0;
@@ -308,9 +300,9 @@ public abstract class TableRowSkinBase<T,
                 }
             }
         }
-        ///////////////////////////////////////////
+        //-----------------------------------------
         // indentation code ends here
-        ///////////////////////////////////////////
+        //-----------------------------------------
 
         // layout the individual column cells
         double width;
@@ -375,9 +367,9 @@ public abstract class TableRowSkinBase<T,
                 }
                 // --- end of RT-32700 fix
 
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 // further indentation code starts here
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 if (indentationRequired && column == indentationColumnIndex) {
                     if (disclosureVisible) {
                         double ph = disclosureNode.prefHeight(disclosureWidth);
@@ -417,9 +409,9 @@ public abstract class TableRowSkinBase<T,
                         }
                     }
                 }
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 // further indentation code ends here
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 tableCell.resize(width, height);
                 tableCell.relocate(x, y);
 
@@ -539,7 +531,8 @@ public abstract class TableRowSkinBase<T,
                 }
             }
             getChildren().removeAll(toRemove);
-        } else if (resetChildren || cellsEmpty) {
+        }
+        if (resetChildren || cellsEmpty) {
             getChildren().setAll(cells);
         }
     }

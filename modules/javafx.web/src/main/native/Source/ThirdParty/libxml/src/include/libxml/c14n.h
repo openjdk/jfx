@@ -20,7 +20,6 @@
 #include <libxml/xmlversion.h>
 
 #ifdef LIBXML_C14N_ENABLED
-#ifdef LIBXML_OUTPUT_ENABLED
 
 #include <libxml/tree.h>
 #include <libxml/xpath.h>
@@ -66,7 +65,7 @@ typedef enum {
     XML_C14N_1_1            = 2     /* C14N 1.1 spec */
 } xmlC14NMode;
 
-XMLPUBFUN int XMLCALL
+XMLPUBFUN int
                 xmlC14NDocSaveTo        (xmlDocPtr doc,
                                          xmlNodeSetPtr nodes,
                                          int mode, /* a xmlC14NMode */
@@ -74,7 +73,7 @@ XMLPUBFUN int XMLCALL
                                          int with_comments,
                                          xmlOutputBufferPtr buf);
 
-XMLPUBFUN int XMLCALL
+XMLPUBFUN int
                 xmlC14NDocDumpMemory    (xmlDocPtr doc,
                                          xmlNodeSetPtr nodes,
                                          int mode, /* a xmlC14NMode */
@@ -82,7 +81,7 @@ XMLPUBFUN int XMLCALL
                                          int with_comments,
                                          xmlChar **doc_txt_ptr);
 
-XMLPUBFUN int XMLCALL
+XMLPUBFUN int
                 xmlC14NDocSave          (xmlDocPtr doc,
                                          xmlNodeSetPtr nodes,
                                          int mode, /* a xmlC14NMode */
@@ -109,7 +108,7 @@ typedef int (*xmlC14NIsVisibleCallback) (void* user_data,
                                          xmlNodePtr node,
                                          xmlNodePtr parent);
 
-XMLPUBFUN int XMLCALL
+XMLPUBFUN int
                 xmlC14NExecute          (xmlDocPtr doc,
                                          xmlC14NIsVisibleCallback is_visible_callback,
                                          void* user_data,
@@ -122,7 +121,6 @@ XMLPUBFUN int XMLCALL
 }
 #endif /* __cplusplus */
 
-#endif /* LIBXML_OUTPUT_ENABLED */
 #endif /* LIBXML_C14N_ENABLED */
 #endif /* __XML_C14N_H__ */
 

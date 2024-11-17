@@ -34,8 +34,8 @@
 #include "JSCJSValue.h"
 #include "JSCellInlines.h"
 #include "JSFunction.h"
+#include "JSGlobalProxy.h"
 #include "JSObject.h"
-#include "JSProxy.h"
 #include "JSStringInlines.h"
 #include "MathCommon.h"
 #include <wtf/text/StringImpl.h>
@@ -66,7 +66,7 @@ inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, const char* error
     double d = toNumber(globalObject);
     RETURN_IF_EXCEPTION(scope, 0);
     if (d <= -1) {
-        throwException(globalObject, scope, createRangeError(globalObject, makeString(errorName, " cannot be negative")));
+        throwException(globalObject, scope, createRangeError(globalObject, makeString(errorName, " cannot be negative"_s)));
         return 0;
     }
 
@@ -74,7 +74,7 @@ inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, const char* error
         return asInt32();
 
     if (d > static_cast<double>(std::numeric_limits<unsigned>::max())) {
-        throwException(globalObject, scope, createRangeError(globalObject, makeString(errorName, " too large")));
+        throwException(globalObject, scope, createRangeError(globalObject, makeString(errorName, " too large"_s)));
         return 0;
     }
 
@@ -89,7 +89,7 @@ inline size_t JSValue::toTypedArrayIndex(JSGlobalObject* globalObject, ASCIILite
     double d = toNumber(globalObject);
     RETURN_IF_EXCEPTION(scope, 0);
     if (d <= -1) {
-        throwException(globalObject, scope, createRangeError(globalObject, makeString(errorName, " cannot be negative")));
+        throwException(globalObject, scope, createRangeError(globalObject, makeString(errorName, " cannot be negative"_s)));
         return 0;
     }
 
@@ -97,7 +97,7 @@ inline size_t JSValue::toTypedArrayIndex(JSGlobalObject* globalObject, ASCIILite
         return asInt32();
 
     if (d > static_cast<double>(MAX_ARRAY_BUFFER_SIZE)) {
-        throwException(globalObject, scope, createRangeError(globalObject, makeString(errorName, " too large")));
+        throwException(globalObject, scope, createRangeError(globalObject, makeString(errorName, " too large"_s)));
         return 0;
     }
 
@@ -112,19 +112,21 @@ inline size_t JSValue::toTypedArrayIndex(JSGlobalObject* globalObject, ASCIILite
     RELEASE_AND_RETURN(scope, outputOffset + static_cast<size_t>(static_cast<uint32_t>(JSC::toInt32(d - inputOffset))));
 }
 
-// https://tc39.es/proposal-temporal/#sec-temporal-tointegerwithoutrounding
-inline double JSValue::toIntegerWithoutRounding(JSGlobalObject* globalObject) const
+// https://tc39.es/proposal-temporal/#sec-tointegerwithtruncation
+inline double JSValue::toIntegerWithTruncation(JSGlobalObject* globalObject) const
 {
     if (isInt32())
         return asInt32();
-    double d = toNumber(globalObject);
-    return std::isnan(d) ? 0.0 : d + 0.0;
+    return trunc(toNumber(globalObject) + 0.0);
 }
 
 // https://tc39.es/ecma262/#sec-tointegerorinfinity
 inline double JSValue::toIntegerOrInfinity(JSGlobalObject* globalObject) const
 {
-    return trunc(toIntegerWithoutRounding(globalObject));
+    if (isInt32())
+        return asInt32();
+    double d = toNumber(globalObject);
+    return trunc(std::isnan(d) ? 0.0 : d + 0.0);
 }
 
 inline bool JSValue::isUInt32() const
@@ -329,11 +331,6 @@ inline bool JSValue::operator==(const JSValue& other) const
     return u.asInt64 == other.u.asInt64;
 }
 
-inline bool JSValue::operator!=(const JSValue& other) const
-{
-    return u.asInt64 != other.u.asInt64;
-}
-
 inline bool JSValue::isEmpty() const
 {
     return tag() == EmptyValueTag;
@@ -479,11 +476,6 @@ inline JSValue::operator bool() const
 inline bool JSValue::operator==(const JSValue& other) const
 {
     return u.asInt64 == other.u.asInt64;
-}
-
-inline bool JSValue::operator!=(const JSValue& other) const
-{
-    return u.asInt64 != other.u.asInt64;
 }
 
 inline bool JSValue::isEmpty() const
@@ -1433,8 +1425,8 @@ ALWAYS_INLINE bool isThisValueAltered(const PutPropertySlot& slot, JSObject* bas
     if (!thisValue.isObject())
         return true;
     JSObject* thisObject = asObject(thisValue);
-    // Only PureForwardingProxyType can be seen as the same to the original target object.
-    if (thisObject->type() == PureForwardingProxyType && jsCast<JSProxy*>(thisObject)->target() == baseObject)
+    // Only GlobalProxyType can be seen as the same to the original target object.
+    if (thisObject->type() == GlobalProxyType && jsCast<JSGlobalProxy*>(thisObject)->target() == baseObject)
         return false;
     return true;
 }

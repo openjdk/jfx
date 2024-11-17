@@ -27,6 +27,7 @@
 #include "ResourceRequestBase.h"
 
 #include "HTTPHeaderNames.h"
+#include "HTTPStatusCodes.h"
 #include "Logging.h"
 #include "PublicSuffix.h"
 #include "RegistrableDomain.h"
@@ -97,6 +98,10 @@ void ResourceRequestBase::setAsIsolatedCopy(const ResourceRequest& other)
         setHTTPBody(other.m_httpBody->isolatedCopy());
     setAllowCookies(other.m_requestData.m_allowCookies);
     setIsAppInitiated(other.isAppInitiated());
+    setPrivacyProxyFailClosedForUnreachableNonMainHosts(other.privacyProxyFailClosedForUnreachableNonMainHosts());
+    setUseAdvancedPrivacyProtections(other.useAdvancedPrivacyProtections());
+    setDidFilterLinkDecoration(other.didFilterLinkDecoration());
+    setIsPrivateTokenUsageByThirdPartyAllowed(other.isPrivateTokenUsageByThirdPartyAllowed());
 }
 
 bool ResourceRequestBase::isEmpty() const
@@ -120,11 +125,12 @@ const URL& ResourceRequestBase::url() const
     return m_requestData.m_url;
 }
 
-void ResourceRequestBase::setURL(const URL& url)
+void ResourceRequestBase::setURL(const URL& url, bool didFilterLinkDecoration)
 {
     updateResourceRequest();
 
     m_requestData.m_url = url;
+    m_requestData.m_didFilterLinkDecoration = didFilterLinkDecoration;
 
     m_platformRequestUpdated = false;
 }
@@ -133,9 +139,9 @@ static bool shouldUseGet(const ResourceRequestBase& request, const ResourceRespo
 {
     if (equalLettersIgnoringASCIICase(request.httpMethod(), "get"_s) || equalLettersIgnoringASCIICase(request.httpMethod(), "head"_s))
         return false;
-    if (redirectResponse.httpStatusCode() == 301 || redirectResponse.httpStatusCode() == 302)
+    if (redirectResponse.httpStatusCode() == httpStatus301MovedPermanently || redirectResponse.httpStatusCode() == httpStatus302Found)
         return equalLettersIgnoringASCIICase(request.httpMethod(), "post"_s);
-    return redirectResponse.httpStatusCode() == 303;
+    return redirectResponse.httpStatusCode() == httpStatus303SeeOther;
 }
 
 // https://fetch.spec.whatwg.org/#concept-http-redirect-fetch Step 11
@@ -152,7 +158,7 @@ void ResourceRequestBase::redirectAsGETIfNeeded(const ResourceRequestBase &redir
     }
 }
 
-ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& redirectResponse, bool shouldClearReferrerOnHTTPSToHTTPRedirect) const
+ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& redirectResponse, bool shouldClearReferrerOnHTTPSToHTTPRedirect, ShouldSetHash shouldSetHash) const
 {
     ASSERT(redirectResponse.isRedirection());
     // This method is based on https://fetch.spec.whatwg.org/#http-redirect-fetch.
@@ -161,7 +167,12 @@ ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& r
     auto request = asResourceRequest();
     auto location = redirectResponse.httpHeaderField(HTTPHeaderName::Location);
 
-    request.setURL(location.isEmpty() ? URL { } : URL { redirectResponse.url(), location });
+    // https://fetch.spec.whatwg.org/#concept-response-location-url
+    auto url = location.isEmpty() ? URL { } : URL { redirectResponse.url(), location };
+    if (shouldSetHash == ShouldSetHash::Yes && url.fragmentIdentifier().isEmpty() && !redirectResponse.url().fragmentIdentifier().isEmpty())
+        url.setFragmentIdentifier(redirectResponse.url().fragmentIdentifier());
+
+    request.setURL(WTFMove(url));
 
     request.redirectAsGETIfNeeded(*this, redirectResponse);
 
@@ -483,11 +494,11 @@ void ResourceRequestBase::setResponseContentDispositionEncodingFallbackArray(con
     m_requestData.m_responseContentDispositionEncodingFallbackArray.clear();
     m_requestData.m_responseContentDispositionEncodingFallbackArray.reserveInitialCapacity(!encoding1.isNull() + !encoding2.isNull() + !encoding3.isNull());
     if (!encoding1.isNull())
-        m_requestData.m_responseContentDispositionEncodingFallbackArray.uncheckedAppend(encoding1);
+        m_requestData.m_responseContentDispositionEncodingFallbackArray.append(encoding1);
     if (!encoding2.isNull())
-        m_requestData.m_responseContentDispositionEncodingFallbackArray.uncheckedAppend(encoding2);
+        m_requestData.m_responseContentDispositionEncodingFallbackArray.append(encoding2);
     if (!encoding3.isNull())
-        m_requestData.m_responseContentDispositionEncodingFallbackArray.uncheckedAppend(encoding3);
+        m_requestData.m_responseContentDispositionEncodingFallbackArray.append(encoding3);
 
     m_platformRequestUpdated = false;
 }
@@ -630,26 +641,43 @@ void ResourceRequestBase::setIsAppInitiated(bool isAppInitiated)
     m_requestData.m_isAppInitiated = isAppInitiated;
 
     m_platformRequestUpdated = false;
-};
-
-#if USE(SYSTEM_PREVIEW)
-
-bool ResourceRequestBase::isSystemPreview() const
-{
-    return m_systemPreviewInfo.has_value();
 }
 
-std::optional<SystemPreviewInfo> ResourceRequestBase::systemPreviewInfo() const
+void ResourceRequestBase::setPrivacyProxyFailClosedForUnreachableNonMainHosts(bool privacyProxyFailClosedForUnreachableNonMainHosts)
 {
-    return m_systemPreviewInfo;
+    updateResourceRequest();
+
+    if (m_requestData.m_privacyProxyFailClosedForUnreachableNonMainHosts == privacyProxyFailClosedForUnreachableNonMainHosts)
+        return;
+
+    m_requestData.m_privacyProxyFailClosedForUnreachableNonMainHosts = privacyProxyFailClosedForUnreachableNonMainHosts;
+
+    m_platformRequestUpdated = false;
 }
 
-void ResourceRequestBase::setSystemPreviewInfo(const SystemPreviewInfo& info)
+void ResourceRequestBase::setUseAdvancedPrivacyProtections(bool useAdvancedPrivacyProtections)
 {
-    m_systemPreviewInfo = info;
+    updateResourceRequest();
+
+    if (m_requestData.m_useAdvancedPrivacyProtections == useAdvancedPrivacyProtections)
+        return;
+
+    m_requestData.m_useAdvancedPrivacyProtections = useAdvancedPrivacyProtections;
+
+    m_platformRequestUpdated = false;
 }
 
-#endif
+void ResourceRequestBase::setDidFilterLinkDecoration(bool didFilterLinkDecoration)
+{
+    if (m_requestData.m_didFilterLinkDecoration == didFilterLinkDecoration)
+        return;
+    m_requestData.m_didFilterLinkDecoration = didFilterLinkDecoration;
+}
+
+void ResourceRequestBase::setIsPrivateTokenUsageByThirdPartyAllowed(bool isPrivateTokenUsageByThirdPartyAllowed)
+{
+    m_requestData.m_isPrivateTokenUsageByThirdPartyAllowed = isPrivateTokenUsageByThirdPartyAllowed;
+}
 
 bool equalIgnoringHeaderFields(const ResourceRequestBase& a, const ResourceRequestBase& b)
 {
@@ -763,6 +791,18 @@ void ResourceRequestBase::updateResourceRequest(HTTPBodyUpdatePolicy bodyPolicy)
         const_cast<ResourceRequest&>(asResourceRequest()).doUpdateResourceHTTPBody();
         m_resourceRequestBodyUpdated = true;
     }
+}
+
+void ResourceRequestBase::upgradeToHTTPS()
+{
+    const URL& originalURL = url();
+    ASSERT(originalURL.protocolIs("http"_s));
+
+    URL newURL = originalURL;
+    newURL.setProtocol("https"_s);
+    if (originalURL.port() && WTF::isDefaultPortForProtocol(originalURL.port().value(), originalURL.protocol()))
+        newURL.setPort(std::nullopt);
+    setURL(newURL);
 }
 
 #if !PLATFORM(COCOA) && !USE(SOUP)

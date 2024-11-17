@@ -29,6 +29,7 @@
 #include "Document.h"
 #include "Element.h"
 #include "RenderStyle.h"
+#include "SVGRenderStyle.h"
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -95,7 +96,7 @@ static RefPtr<CSSValue> svgMarkerValue(const String& marker, const Element* elem
     return CSSPrimitiveValue::createURI(resolvedURL.string());
 }
 
-RefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID propertyID)
+RefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID propertyID) const
 {
     if (!m_element)
         return nullptr;

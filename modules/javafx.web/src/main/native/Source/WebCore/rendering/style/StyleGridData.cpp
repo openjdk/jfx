@@ -26,7 +26,7 @@
 #include "config.h"
 #include "StyleGridData.h"
 
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 
@@ -37,8 +37,6 @@ StyleGridData::StyleGridData()
     , implicitNamedGridRowLines(RenderStyle::initialNamedGridRowLines())
     , gridAutoFlow(RenderStyle::initialGridAutoFlow())
     , masonryAutoFlow(RenderStyle::initialMasonryAutoFlow())
-    , alignTracks(RenderStyle::initialAlignTracks())
-    , justifyTracks(RenderStyle::initialJustifyTracks())
     , gridAutoRows(RenderStyle::initialGridAutoRows())
     , gridAutoColumns(RenderStyle::initialGridAutoColumns())
     , namedGridArea(RenderStyle::initialNamedGridArea())
@@ -73,8 +71,6 @@ inline StyleGridData::StyleGridData(const StyleGridData& o)
     , implicitNamedGridRowLines(o.implicitNamedGridRowLines)
     , gridAutoFlow(o.gridAutoFlow)
     , masonryAutoFlow(o.masonryAutoFlow)
-    , alignTracks(o.alignTracks)
-    , justifyTracks(o.justifyTracks)
     , gridAutoRows(o.gridAutoRows)
     , gridAutoColumns(o.gridAutoColumns)
     , namedGridArea(o.namedGridArea)
@@ -119,10 +115,10 @@ void StyleGridData::setColumns(const GridTrackList& list)
 
 static void createGridLineNamesList(const Vector<String>& names, unsigned currentNamedGridLine, NamedGridLinesMap& namedGridLines, OrderedNamedGridLinesMap& orderedNamedGridLines)
 {
-    auto orderedResult = orderedNamedGridLines.add(currentNamedGridLine, Vector<String>());
+    auto orderedResult = orderedNamedGridLines.map.add(currentNamedGridLine, Vector<String>());
 
     for (auto& name : names) {
-        auto result = namedGridLines.add(name, Vector<unsigned>());
+        auto result = namedGridLines.map.add(name, Vector<unsigned>());
         result.iterator->value.append(currentNamedGridLine);
 
         orderedResult.iterator->value.append(name);
@@ -132,16 +128,16 @@ static void createGridLineNamesList(const Vector<String>& names, unsigned curren
 void StyleGridData::computeCachedTrackData(const GridTrackList& list, Vector<GridTrackSize>& sizes, NamedGridLinesMap& namedLines, OrderedNamedGridLinesMap& orderedNamedLines, Vector<GridTrackSize>& autoRepeatSizes, NamedGridLinesMap& autoRepeatNamedLines, OrderedNamedGridLinesMap& autoRepeatOrderedNamedLines, unsigned& autoRepeatInsertionPoint, AutoRepeatType& autoRepeatType, bool& subgrid, bool& masonry)
 {
     sizes.clear();
-    namedLines.clear();
-    orderedNamedLines.clear();
+    namedLines.map.clear();
+    orderedNamedLines.map.clear();
     autoRepeatSizes.clear();
-    autoRepeatNamedLines.clear();
-    autoRepeatOrderedNamedLines.clear();
+    autoRepeatNamedLines.map.clear();
+    autoRepeatOrderedNamedLines.map.clear();
     autoRepeatInsertionPoint = RenderStyle::initialGridAutoRepeatInsertionPoint();
     autoRepeatType = RenderStyle::initialGridAutoRepeatType();
     subgrid = false;
 
-    if (list.isEmpty())
+    if (list.list.isEmpty())
         return;
 
     unsigned currentNamedGridLine = 0;
@@ -193,7 +189,7 @@ void StyleGridData::computeCachedTrackData(const GridTrackList& list, Vector<Gri
         masonry = true;
     });
 
-    for (const auto& entry : list)
+    for (const auto& entry : list.list)
         std::visit(visitor, entry);
 
     // The parser should have rejected any <track-list> without any <track-size> as

@@ -45,7 +45,6 @@ public:
     Node* operator->() { return &current(); }
 
     bool operator==(const ComposedTreeIterator& other) const { return context().iterator == other.context().iterator; }
-    bool operator!=(const ComposedTreeIterator& other) const { return context().iterator != other.context().iterator; }
 
     ComposedTreeIterator& operator++() { return traverseNext(); }
 
@@ -87,8 +86,8 @@ private:
 };
 
 inline ComposedTreeIterator::ComposedTreeIterator()
+    : m_contextStack({ Context { } })
 {
-    m_contextStack.uncheckedAppend({ });
 }
 
 inline ComposedTreeIterator& ComposedTreeIterator::traverseNext()

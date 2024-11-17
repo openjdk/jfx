@@ -544,8 +544,6 @@
                _Java_com_sun_webkit_dom_ElementImpl_removeAttributeNSImpl
                _Java_com_sun_webkit_dom_ElementImpl_removeAttributeNodeImpl
                _Java_com_sun_webkit_dom_ElementImpl_removeImpl
-               _Java_com_sun_webkit_dom_ElementImpl_scrollByLinesImpl
-               _Java_com_sun_webkit_dom_ElementImpl_scrollByPagesImpl
                _Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewIfNeededImpl
                _Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewImpl
                _Java_com_sun_webkit_dom_ElementImpl_setAttributeImpl
@@ -1436,7 +1434,6 @@
                _Java_com_sun_webkit_dom_HTMLUListElementImpl_getTypeImpl
                _Java_com_sun_webkit_dom_HTMLUListElementImpl_setCompactImpl
                _Java_com_sun_webkit_dom_HTMLUListElementImpl_setTypeImpl
-               _Java_com_sun_webkit_dom_KeyboardEventImpl_getAltGraphKeyImpl
                _Java_com_sun_webkit_dom_KeyboardEventImpl_getAltKeyImpl
                _Java_com_sun_webkit_dom_KeyboardEventImpl_getCharCodeImpl
                _Java_com_sun_webkit_dom_KeyboardEventImpl_getCtrlKeyImpl
@@ -1469,8 +1466,6 @@
                _Java_com_sun_webkit_dom_MouseEventImpl_getScreenYImpl
                _Java_com_sun_webkit_dom_MouseEventImpl_getShiftKeyImpl
                _Java_com_sun_webkit_dom_MouseEventImpl_getToElementImpl
-               _Java_com_sun_webkit_dom_MouseEventImpl_getXImpl
-               _Java_com_sun_webkit_dom_MouseEventImpl_getYImpl
                _Java_com_sun_webkit_dom_MouseEventImpl_initMouseEventImpl
                _Java_com_sun_webkit_dom_MutationEventImpl_getAttrChangeImpl
                _Java_com_sun_webkit_dom_MutationEventImpl_getAttrNameImpl

@@ -41,22 +41,22 @@ Exception convertToException(Error error)
 {
     switch (error) {
     case Error::NotImplemented:
-        return Exception { NotSupportedError, "Not implemented"_s };
+        return Exception { ExceptionCode::NotSupportedError, "Not implemented"_s };
     case Error::ReadDisk:
-        return Exception { TypeError, "Failed reading data from the file system"_s };
+        return Exception { ExceptionCode::TypeError, "Failed reading data from the file system"_s };
     case Error::WriteDisk:
-        return Exception { TypeError, "Failed writing data to the file system"_s };
+        return Exception { ExceptionCode::TypeError, "Failed writing data to the file system"_s };
     case Error::QuotaExceeded:
-        return Exception { QuotaExceededError, "Quota exceeded"_s };
+        return Exception { ExceptionCode::QuotaExceededError, "Quota exceeded"_s };
     case Error::Internal:
-        return Exception { TypeError, "Internal error"_s };
+        return Exception { ExceptionCode::TypeError, "Internal error"_s };
     case Error::Stopped:
-        return Exception { TypeError, "Context is stopped"_s };
+        return Exception { ExceptionCode::TypeError, "Context is stopped"_s };
     case Error::CORP:
-        return Exception { TypeError, "Cross-Origin-Resource-Policy failure"_s };
+        return Exception { ExceptionCode::TypeError, "Cross-Origin-Resource-Policy failure"_s };
     }
     ASSERT_NOT_REACHED();
-    return Exception { TypeError, "Connection stopped"_s };
+    return Exception { ExceptionCode::TypeError, "Connection stopped"_s };
 }
 
 Exception convertToExceptionAndLog(ScriptExecutionContext* context, Error error)
@@ -97,7 +97,7 @@ bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cach
     varyValue.split(',', [&](StringView view) {
         if (isVarying)
             return;
-        auto nameView = stripLeadingAndTrailingHTTPSpaces(view);
+        auto nameView = view.trim(isASCIIWhitespaceWithoutFF<UChar>);
         if (nameView == "*"_s) {
             isVarying = true;
             return;
@@ -151,6 +151,54 @@ ResponseBody copyResponseBody(const ResponseBody& body)
 Record Record::copy() const
 {
     return Record { identifier, updateResponseCounter, requestHeadersGuard, request, options, referrer, responseHeadersGuard, response, copyResponseBody(responseBody), responseBodySize };
+}
+
+CrossThreadRecord toCrossThreadRecord(Record&& record)
+{
+    return CrossThreadRecord {
+        record.identifier,
+        record.updateResponseCounter,
+        record.requestHeadersGuard,
+        WTFMove(record.request).isolatedCopy(),
+        WTFMove(record.options).isolatedCopy(),
+        WTFMove(record.referrer).isolatedCopy(),
+        record.responseHeadersGuard,
+        record.response.crossThreadData(),
+        isolatedResponseBody(record.responseBody),
+        record.responseBodySize
+    };
+}
+
+Record fromCrossThreadRecord(CrossThreadRecord&& record)
+{
+    return Record {
+        record.identifier,
+        record.updateResponseCounter,
+        record.requestHeadersGuard,
+        WTFMove(record.request),
+        WTFMove(record.options),
+        WTFMove(record.referrer),
+        record.responseHeadersGuard,
+        ResourceResponse::fromCrossThreadData(WTFMove(record.response)),
+        WTFMove(record.responseBody),
+        record.responseBodySize
+    };
+}
+
+CrossThreadRecord CrossThreadRecord::isolatedCopy() &&
+{
+    return CrossThreadRecord {
+        identifier,
+        updateResponseCounter,
+        requestHeadersGuard,
+        WTFMove(request).isolatedCopy(),
+        WTFMove(options).isolatedCopy(),
+        WTFMove(referrer).isolatedCopy(),
+        responseHeadersGuard,
+        WTFMove(response).isolatedCopy(),
+        isolatedResponseBody(responseBody),
+        responseBodySize
+    };
 }
 
 } // namespace DOMCacheEngine

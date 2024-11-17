@@ -30,9 +30,14 @@
 
 namespace JSC {
 
-inline void SymbolTable::finalizeUnconditionally(VM& vm)
+inline Structure* SymbolTable::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    m_singleton.finalizeUnconditionally(vm);
+    return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
+}
+
+inline void SymbolTable::finalizeUnconditionally(VM& vm, CollectionScope collectionScope)
+{
+    m_singleton.finalizeUnconditionally(vm, collectionScope);
 }
 
 } // namespace JSC

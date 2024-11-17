@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,33 +24,23 @@
  */
 package test.javafx.scene;
 
-import test.com.sun.javafx.test.PropertiesTestBase;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.scene.PointLight;
 import javafx.scene.paint.Color;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.params.provider.Arguments;
+import test.com.sun.javafx.test.PropertiesTestBase;
+
 public final class LightBase_properties_Test extends PropertiesTestBase {
 
-    @Parameters
-    public static Collection data() {
-        ArrayList array = new ArrayList();
-
+    public static Stream<Arguments> data() {
         // simple property tests
         PointLight testLight = createPointLight();
 
-        array.add(config(testLight, "lightOn", true, false));
-        array.add(config(testLight, "color", Color.WHITE, null));
-
-        return array;
-    }
-
-    public LightBase_properties_Test(final Configuration configuration) {
-        super(configuration);
+        return Stream.of(
+            config(testLight, "lightOn", true, false),
+            config(testLight, "color", Color.WHITE, null)
+        );
     }
 
     private static PointLight createPointLight() {

@@ -163,7 +163,6 @@ RefPtr<CryptoKeyEC> CryptoKeyEC::platformImportJWKPublic(CryptoAlgorithmIdentifi
 {
     auto key = createECKey(curve);
     if (!key)
-    UNUSED_PARAM(extractable);
         return nullptr;
 
     auto group = EC_KEY_get0_group(key.get());

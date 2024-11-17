@@ -27,9 +27,9 @@ package test.com.sun.javafx.runtime;
 
 import java.lang.module.ModuleDescriptor;
 import javafx.beans.property.BooleanProperty;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Simple test to ensure that javafx.base is a named, non-automatic module

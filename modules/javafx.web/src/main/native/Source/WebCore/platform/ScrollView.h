@@ -57,10 +57,10 @@ OBJC_CLASS WAKView;
 
 namespace WebCore {
 
-class EventRegionContext;
 class FloatQuad;
 class HostWindow;
 class LegacyTileCache;
+class RegionContext;
 class Scrollbar;
 
 enum class DelegatedScrollingMode : uint8_t {
@@ -160,7 +160,7 @@ public:
         ~ProhibitScrollingWhenChangingContentSizeForScope();
 
     private:
-        WeakPtr<ScrollView> m_scrollView;
+        SingleThreadWeakPtr<ScrollView> m_scrollView;
     };
 
     std::unique_ptr<ProhibitScrollingWhenChangingContentSizeForScope> prohibitScrollingWhenChangingContentSizeForScope();
@@ -177,6 +177,7 @@ public:
     // will be returned instead of the value set on Page.
     enum class TopContentInsetType { WebCoreContentInset, WebCoreOrPlatformContentInset };
     virtual float topContentInset(TopContentInsetType = TopContentInsetType::WebCoreContentInset) const { return 0; }
+    IntRect frameRectShrunkByInset() const;
 
     // The visible content rect has a location that is the scrolled offset of the document. The width and height are the unobscured viewport
     // width and height. By default the scrollbars themselves are excluded from this rectangle, but an optional boolean argument allows them
@@ -277,8 +278,12 @@ public:
 
     IntSize overhangAmount() const final;
 
-    void cacheCurrentScrollPosition() { m_cachedScrollPosition = scrollPosition(); }
+    void cacheCurrentScrollState();
     ScrollPosition cachedScrollPosition() const { return m_cachedScrollPosition; }
+#if PLATFORM(IOS_FAMILY)
+    IntRect cachedUnobscuredContentRect() const { return m_cachedUnobscuredContentRect; }
+    FloatRect cachedExposedContentRect() const { return m_cachedExposedContentRect; }
+#endif
 
     // Functions for scrolling the view.
     virtual void setScrollPosition(const ScrollPosition&, const ScrollPositionChangeOptions& = ScrollPositionChangeOptions::createProgrammatic());
@@ -354,35 +359,12 @@ public:
     // For platforms that need to hit test scrollbars from within the engine's event handlers (like Win32).
     Scrollbar* scrollbarAtPoint(const IntPoint& windowPoint);
 
-    IntPoint convertChildToSelf(const Widget* child, const IntPoint& point) const
-    {
-        IntPoint newPoint = point;
-        if (!isScrollViewScrollbar(child))
-            newPoint = point - toIntSize(scrollPosition());
-        newPoint.moveBy(child->location());
-        return newPoint;
-    }
-
-    FloatPoint convertChildToSelf(const Widget* child, const FloatPoint& point) const
-    {
-        FloatPoint newPoint = point;
-        if (!isScrollViewScrollbar(child))
-            newPoint -= toFloatSize(scrollPosition());
-        newPoint.moveBy(child->location());
-        return newPoint;
-    }
-
-    IntPoint convertSelfToChild(const Widget* child, const IntPoint& point) const
-    {
-        IntPoint newPoint = point;
-        if (!isScrollViewScrollbar(child))
-            newPoint = point + toIntSize(scrollPosition());
-        newPoint.moveBy(-child->location());
-        return newPoint;
-    }
+    IntPoint convertChildToSelf(const Widget*, IntPoint) const;
+    FloatPoint convertChildToSelf(const Widget*, FloatPoint) const;
+    IntPoint convertSelfToChild(const Widget*, IntPoint) const;
 
     // Widget override. Handles painting of the contents of the view as well as the scrollbars.
-    WEBCORE_EXPORT void paint(GraphicsContext&, const IntRect&, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) final;
+    WEBCORE_EXPORT void paint(GraphicsContext&, const IntRect&, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, RegionContext* = nullptr) final;
     void paintScrollbars(GraphicsContext&, const IntRect&);
 
     // Widget overrides to ensure that our children's visibility status is kept up to date when we get shown and hidden.
@@ -417,11 +399,14 @@ public:
     bool managesScrollbars() const;
     virtual void updateScrollbarSteps();
 
+    // Called to update the scrollbars to accurately reflect the state of the view.
+    void updateScrollbars(const ScrollPosition& desiredPosition);
+
 protected:
     ScrollView();
 
     virtual void repaintContentRectangle(const IntRect&);
-    virtual void paintContents(GraphicsContext&, const IntRect& damageRect, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) = 0;
+    virtual void paintContents(GraphicsContext&, const IntRect& damageRect, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, RegionContext* = nullptr) = 0;
 
     virtual void paintOverhangAreas(GraphicsContext&, const IntRect& horizontalOverhangArea, const IntRect& verticalOverhangArea, const IntRect& dirtyRect);
 
@@ -447,9 +432,6 @@ protected:
     // Subclassed by FrameView to check the writing-mode of the document.
     virtual bool isVerticalDocument() const = 0;
     virtual bool isFlippedDocument() const = 0;
-
-    // Called to update the scrollbars to accurately reflect the state of the view.
-    void updateScrollbars(const ScrollPosition& desiredPosition);
 
     float platformTopContentInset() const;
     void platformSetTopContentInset(float);
@@ -560,6 +542,10 @@ private:
 #endif
     ScrollPosition m_scrollPosition;
     IntPoint m_cachedScrollPosition;
+#if PLATFORM(IOS_FAMILY)
+    IntRect m_cachedUnobscuredContentRect;
+    FloatRect m_cachedExposedContentRect;
+#endif
     IntSize m_fixedLayoutSize;
     IntSize m_contentsSize;
 

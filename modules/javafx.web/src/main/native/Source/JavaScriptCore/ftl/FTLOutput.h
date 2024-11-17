@@ -92,6 +92,7 @@ public:
 
     void applyBlockOrder();
 
+    void probeDebugPrint(const String& str, LValue value);
     LBasicBlock appendTo(LBasicBlock, LBasicBlock nextBlock);
     void appendTo(LBasicBlock);
 
@@ -149,6 +150,7 @@ public:
     void addIncomingToPhiIfSet(LValue phi, Params... theRest);
 
     LValue opaque(LValue);
+    LValue extract(LValue tuple, unsigned index);
 
     LValue add(LValue, LValue);
     LValue sub(LValue, LValue);

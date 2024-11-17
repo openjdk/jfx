@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,13 +32,14 @@
 #include "DFGNode.h"
 #include "DFGNodeFlowProjection.h"
 #include "DFGPhiChildren.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/TriState.h>
 
 namespace JSC { namespace DFG {
 
 template<typename AbstractStateType>
 class AbstractInterpreter {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AbstractInterpreter);
 public:
     AbstractInterpreter(Graph&, AbstractStateType&);
     ~AbstractInterpreter();
@@ -46,6 +47,11 @@ public:
     ALWAYS_INLINE AbstractValue& forNode(NodeFlowProjection node)
     {
         return m_state.forNode(node);
+    }
+
+    ALWAYS_INLINE AbstractValue& forTupleNode(NodeFlowProjection node, unsigned index)
+    {
+        return m_state.forTupleNode(node, index);
     }
 
     ALWAYS_INLINE AbstractValue& forNode(Edge edge)
@@ -117,6 +123,11 @@ public:
     ALWAYS_INLINE void makeHeapTopForNode(Edge edge)
     {
         makeHeapTopForNode(edge.node());
+    }
+
+    bool hasClearedAbstractState(NodeFlowProjection node)
+    {
+        return m_state.hasClearedAbstractState(node);
     }
 
     bool needsTypeCheck(Node* node, SpeculatedType typesPassedThrough)
@@ -245,6 +256,14 @@ private:
     void setConstant(Node* node, FrozenValue value)
     {
         setBuiltInConstant(node, value);
+        m_state.setShouldTryConstantFolding(true);
+    }
+
+    void setTupleConstant(Node* node, unsigned index, FrozenValue value)
+    {
+        AbstractValue& abstractValue = m_state.forTupleNode(node, index);
+        abstractValue.set(m_graph, value, m_state.structureClobberState());
+        abstractValue.fixTypeForRepresentation(m_graph, node);
         m_state.setShouldTryConstantFolding(true);
     }
 

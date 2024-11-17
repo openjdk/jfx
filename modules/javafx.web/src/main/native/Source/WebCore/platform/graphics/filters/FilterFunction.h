@@ -32,7 +32,7 @@
 #include "FilterStyle.h"
 #include "FloatRect.h"
 #include "LengthBox.h"
-#include <wtf/RefCounted.h>
+#include "RenderingResource.h"
 #include <wtf/text/AtomString.h>
 
 namespace WTF {
@@ -49,15 +49,14 @@ enum class FilterRepresentation : uint8_t {
     Debugging
 };
 
-class FilterFunction : public RefCounted<FilterFunction> {
+class FilterFunction : public RenderingResource {
 public:
     enum class Type : uint8_t {
         CSSFilter,
         SVGFilter,
 
-        FEFirst,
-
-        FEBlend = FEFirst,
+        // These are filter effects
+        FEBlend,
         FEColorMatrix,
         FEComponentTransfer,
         FEComposite,
@@ -75,20 +74,18 @@ public:
         FETile,
         FETurbulence,
         SourceAlpha,
-        SourceGraphic,
-
-        FELast = SourceGraphic
+        SourceGraphic
     };
 
-    FilterFunction(Type);
+    FilterFunction(Type, std::optional<RenderingResourceIdentifier> = std::nullopt);
     virtual ~FilterFunction() = default;
 
     Type filterType() const { return m_filterType; }
 
     bool isCSSFilter() const { return m_filterType == Type::CSSFilter; }
     bool isSVGFilter() const { return m_filterType == Type::SVGFilter; }
-    bool isFilter() const { return m_filterType == Type::CSSFilter || m_filterType == Type::SVGFilter; }
-    bool isFilterEffect() const { return m_filterType >= Type::FEFirst && m_filterType <= Type::FELast; }
+    bool isFilter() const override { return m_filterType == Type::CSSFilter || m_filterType == Type::SVGFilter; }
+    bool isFilterEffect() const { return m_filterType >= Type::FEBlend && m_filterType <= Type::SourceGraphic; }
 
     static AtomString filterName(Type);
     static AtomString sourceAlphaName() { return filterName(Type::SourceAlpha); }
@@ -109,35 +106,7 @@ WEBCORE_EXPORT TextStream& operator<<(TextStream&, const FilterFunction&);
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::FilterFunction::Type> {
-    using values = EnumValues<
-        WebCore::FilterFunction::Type,
-
-        WebCore::FilterFunction::Type::CSSFilter,
-        WebCore::FilterFunction::Type::SVGFilter,
-
-        WebCore::FilterFunction::Type::FEBlend,
-        WebCore::FilterFunction::Type::FEColorMatrix,
-        WebCore::FilterFunction::Type::FEComponentTransfer,
-        WebCore::FilterFunction::Type::FEComposite,
-        WebCore::FilterFunction::Type::FEConvolveMatrix,
-        WebCore::FilterFunction::Type::FEDiffuseLighting,
-        WebCore::FilterFunction::Type::FEDisplacementMap,
-        WebCore::FilterFunction::Type::FEDropShadow,
-        WebCore::FilterFunction::Type::FEFlood,
-        WebCore::FilterFunction::Type::FEGaussianBlur,
-        WebCore::FilterFunction::Type::FEImage,
-        WebCore::FilterFunction::Type::FEMerge,
-        WebCore::FilterFunction::Type::FEMorphology,
-        WebCore::FilterFunction::Type::FEOffset,
-        WebCore::FilterFunction::Type::FESpecularLighting,
-        WebCore::FilterFunction::Type::FETile,
-        WebCore::FilterFunction::Type::FETurbulence,
-        WebCore::FilterFunction::Type::SourceAlpha,
-        WebCore::FilterFunction::Type::SourceGraphic
-    >;
-};
-
-} // namespace WTF
+#define SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(ClassName) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ClassName) \
+    static bool isType(const WebCore::FilterFunction& filter) { return filter.filterType() == WebCore::FilterFunction::Type::ClassName; } \
+SPECIALIZE_TYPE_TRAITS_END()

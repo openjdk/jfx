@@ -54,6 +54,7 @@ typedef struct _QtDemuxSample QtDemuxSample;
 typedef struct _QtDemuxSegment QtDemuxSegment;
 typedef struct _QtDemuxRandomAccessEntry QtDemuxRandomAccessEntry;
 typedef struct _QtDemuxStreamStsdEntry QtDemuxStreamStsdEntry;
+typedef struct _QtDemuxGaplessAudioInfo QtDemuxGaplessAudioInfo;
 
 typedef GstBuffer * (*QtDemuxProcessFunc)(GstQTDemux * qtdemux, QtDemuxStream * stream, GstBuffer * buf);
 
@@ -63,6 +64,49 @@ enum QtDemuxState
   QTDEMUX_STATE_HEADER,         /* Parsing the header */
   QTDEMUX_STATE_MOVIE,          /* Parsing/Playing the media data */
   QTDEMUX_STATE_BUFFER_MDAT     /* Buffering the mdat atom */
+};
+
+typedef enum {
+  /* Regular behaviour */
+  VARIANT_NONE,
+
+  /* We're working with a MediaSource Extensions ISO BMFF Bytestream. */
+  VARIANT_MSE_BYTESTREAM,
+
+  /* We're working with a smoothstreaming fragment.
+   * Mss doesn't have 'moov' or any information about the streams format,
+   * requiring qtdemux to expose and create the streams */
+  VARIANT_MSS_FRAGMENTED,
+} Variant;
+
+typedef enum {
+  /* No valid gapless audio info present. Types other than this one
+   * are used only if all of these apply:
+   *
+   * 1. There is embedded gapless audio information available
+   * 2. Only one stream exists
+   * 3. Said stream has only one segment
+   * 4. Said stream is an audio stream
+   */
+  GAPLESS_AUDIO_INFO_TYPE_NONE,
+  /* Using information from the iTunes iTunSMPB revdns tag. */
+  GAPLESS_AUDIO_INFO_TYPE_ITUNES,
+  /* Using known Nero encoder delay information. */
+  GAPLESS_AUDIO_INFO_TYPE_NERO
+} QtDemuxGaplessAudioInfoType;
+
+/* Gapless audio information, only used for single-stream audio-only media. */
+struct _QtDemuxGaplessAudioInfo {
+  QtDemuxGaplessAudioInfoType type;
+
+  guint64 num_start_padding_pcm_frames;
+  guint64 num_end_padding_pcm_frames;
+  guint64 num_valid_pcm_frames;
+
+  /* PCM frame amounts converted to nanoseconds. */
+  GstClockTime start_padding_duration;
+  GstClockTime end_padding_duration;
+  GstClockTime valid_duration;
 };
 
 struct _GstQTDemux {
@@ -89,6 +133,7 @@ struct _GstQTDemux {
   gint     n_video_streams;
   gint     n_audio_streams;
   gint     n_sub_streams;
+  gint     n_meta_streams;
 
   GstFlowCombiner *flowcombiner;
 
@@ -118,6 +163,10 @@ struct _GstQTDemux {
   /* Global duration (in global timescale). Use QTTIME macros to get GstClockTime */
   guint64 duration;
 
+  /* Start UTC time as extracted from the AFIdentification box, reset on every
+   * moov */
+  GstClockTime start_utc_time;
+
   /* Total size of header atoms. Used to calculate fallback overall bitrate */
   guint header_size;
 
@@ -137,10 +186,7 @@ struct _GstQTDemux {
 
   guint32 segment_seqnum;
 
-  /* flag to indicate that we're working with a smoothstreaming fragment
-   * Mss doesn't have 'moov' or any information about the streams format,
-   * requiring qtdemux to expose and create the streams */
-  gboolean mss_mode;
+  Variant variant;
 
   /* Set to TRUE if the incoming stream is either a MSS stream or
    * a Fragmented MP4 (containing the [mvex] atom in the header) */
@@ -161,6 +207,8 @@ struct _GstQTDemux {
   gboolean exposed;
 
   gint64 chapters_track_id;
+
+  QtDemuxGaplessAudioInfo gapless_audio_info;
 
   /* protection support */
   GPtrArray *protection_system_ids; /* Holds identifiers of all content protection systems for all tracks */

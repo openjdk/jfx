@@ -32,6 +32,8 @@ namespace WebCore {
 
 class DataTransfer;
 
+enum class SyntheticClickType : uint8_t;
+
 struct DragEventInit : public MouseEventInit {
     RefPtr<DataTransfer> dataTransfer;
 };
@@ -44,17 +46,18 @@ public:
     static Ref<DragEvent> create(const AtomString& eventType, DragEventInit&&);
     static Ref<DragEvent> createForBindings();
     static Ref<DragEvent> create(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&&, int detail,
-        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, short button, unsigned short buttons,
-        EventTarget* relatedTarget, double force, unsigned short syntheticClickType, DataTransfer* = nullptr, IsSimulated = IsSimulated::No, IsTrusted = IsTrusted::Yes);
+        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, MouseButton, unsigned short buttons,
+        EventTarget* relatedTarget, double force, SyntheticClickType, DataTransfer* = nullptr, IsSimulated = IsSimulated::No, IsTrusted = IsTrusted::Yes);
 
+    virtual ~DragEvent();
 
     DataTransfer* dataTransfer() const { return m_dataTransfer.get(); }
 
 private:
     DragEvent(const AtomString& eventType, DragEventInit&&);
     DragEvent(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&&, int detail,
-        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, short button, unsigned short buttons,
-        EventTarget* relatedTarget, double force, unsigned short syntheticClickType, DataTransfer*, IsSimulated, IsTrusted);
+        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, MouseButton, unsigned short buttons,
+        EventTarget* relatedTarget, double force, SyntheticClickType, DataTransfer*, IsSimulated, IsTrusted);
     DragEvent();
 
     EventInterface eventInterface() const final;

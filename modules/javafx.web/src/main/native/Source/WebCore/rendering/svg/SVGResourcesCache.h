@@ -23,13 +23,14 @@
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
+class LegacyRenderSVGResourceContainer;
 class RenderElement;
 class RenderObject;
 class RenderStyle;
-class RenderSVGResourceContainer;
 class SVGResources;
 
 class SVGResourcesCache {
@@ -46,7 +47,7 @@ public:
     // Called from all SVG renderers removeChild() methods.
     static void clientWillBeRemovedFromTree(RenderObject&);
 
-    // Called from all SVG renderers destroy() methods - except for RenderSVGResourceContainer.
+    // Called from all SVG renderers destroy() methods - except for LegacyRenderSVGResourceContainer.
     static void clientDestroyed(RenderElement&);
 
     // Called from all SVG renderers layout() methods.
@@ -55,8 +56,8 @@ public:
     // Called from all SVG renderers styleDidChange() methods.
     static void clientStyleChanged(RenderElement&, StyleDifference, const RenderStyle* oldStyle, const RenderStyle& newStyle);
 
-    // Called from RenderSVGResourceContainer::willBeDestroyed().
-    static void resourceDestroyed(RenderSVGResourceContainer&);
+    // Called from LegacyRenderSVGResourceContainer::willBeDestroyed().
+    static void resourceDestroyed(LegacyRenderSVGResourceContainer&);
 
     class SetStyleForScope {
         WTF_MAKE_NONCOPYABLE(SetStyleForScope);
@@ -75,7 +76,7 @@ private:
     void addResourcesFromRenderer(RenderElement&, const RenderStyle&);
     void removeResourcesFromRenderer(RenderElement&);
 
-    typedef HashMap<const RenderElement*, std::unique_ptr<SVGResources>> CacheMap;
+    using CacheMap = HashMap<SingleThreadWeakRef<const RenderElement>, std::unique_ptr<SVGResources>>;
     CacheMap m_cache;
 };
 

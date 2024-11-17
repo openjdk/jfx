@@ -27,7 +27,9 @@ namespace WebCore {
 
 class FEDropShadow : public FilterEffect {
 public:
-    WEBCORE_EXPORT static Ref<FEDropShadow> create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity);
+    WEBCORE_EXPORT static Ref<FEDropShadow> create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity, DestinationColorSpace = DestinationColorSpace::SRGB());
+
+    bool operator==(const FEDropShadow&) const;
 
     float stdDeviationX() const { return m_stdX; }
     bool setStdDeviationX(float);
@@ -49,10 +51,16 @@ public:
 
     static IntOutsets calculateOutsets(const FloatSize& offset, const FloatSize& stdDeviation);
 
-private:
-    FEDropShadow(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity);
+#if USE(CAIRO)
+    void setOperatingColorSpace(const DestinationColorSpace&) override { }
+#endif
 
-    FloatRect calculateImageRect(const Filter&, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
+private:
+    FEDropShadow(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity, DestinationColorSpace);
+
+    bool operator==(const FilterEffect& other) const override { return areEqual<FEDropShadow>(*this, other); }
+
+    FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
     OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
 
@@ -71,4 +79,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEDropShadow)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEDropShadow)

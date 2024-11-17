@@ -34,8 +34,12 @@
 #include "MIMETypeRegistry.h"
 #include "ParsedContentRange.h"
 #include "ResourceResponse.h"
+#include "WebCorePersistentCoders.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/persistence/PersistentCoders.h>
+#include <wtf/persistence/PersistentDecoder.h>
+#include <wtf/persistence/PersistentEncoder.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
@@ -62,31 +66,31 @@ ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeTyp
 {
 }
 
-ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseBase::ResponseData> data)
-    : m_url(data ? data->m_url : URL { })
-    , m_mimeType(data ? data->m_mimeType : AtomString { })
-    , m_expectedContentLength(data ? data->m_expectedContentLength : 0)
-    , m_textEncodingName(data ? data->m_textEncodingName : AtomString { })
-    , m_httpStatusText(data ? data->m_httpStatusText : AtomString { })
-    , m_httpVersion(data ? data->m_httpVersion : AtomString { })
-    , m_httpHeaderFields(data ? data->m_httpHeaderFields : HTTPHeaderMap { })
-    , m_networkLoadMetrics(data ? data->m_networkLoadMetrics : Box<WebCore::NetworkLoadMetrics> { })
-    , m_certificateInfo(data ? data->m_certificateInfo : std::nullopt)
-    , m_httpStatusCode(data ? data->m_httpStatusCode : 0)
-    , m_isNull(data ? false : true)
-    , m_usedLegacyTLS(data ? data->m_usedLegacyTLS : UsedLegacyTLS::No)
-    , m_wasPrivateRelayed(data ? data->m_wasPrivateRelayed : WasPrivateRelayed::No)
-    , m_isRedirected(data ? data->m_isRedirected : false)
-    , m_isRangeRequested(data ? data->m_isRangeRequested : false)
-    , m_tainting(data ? data->m_tainting : Tainting::Basic)
-    , m_source(data ? data->m_source : Source::Unknown)
-    , m_type(data ? data->m_type : Type::Default)
+ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseData> data)
+    : m_url(data ? data->url : URL { })
+    , m_mimeType(data ? data->mimeType : AtomString { })
+    , m_expectedContentLength(data ? data->expectedContentLength : 0)
+    , m_textEncodingName(data ? data->textEncodingName : String { })
+    , m_httpStatusText(data ? data->httpStatusText : String { })
+    , m_httpVersion(data ? data->httpVersion : String { })
+    , m_httpHeaderFields(data ? data->httpHeaderFields : HTTPHeaderMap { })
+    , m_networkLoadMetrics(data && data->networkLoadMetrics ? Box<NetworkLoadMetrics>::create(*data->networkLoadMetrics) : Box<NetworkLoadMetrics> { })
+    , m_certificateInfo(data ? data->certificateInfo : std::nullopt)
+    , m_httpStatusCode(data ? data->httpStatusCode : 0)
+    , m_isNull(!data)
+    , m_usedLegacyTLS(data ? data->usedLegacyTLS : UsedLegacyTLS::No)
+    , m_wasPrivateRelayed(data ? data->wasPrivateRelayed : WasPrivateRelayed::No)
+    , m_isRedirected(data ? data->isRedirected : false)
+    , m_isRangeRequested(data ? data->isRangeRequested : false)
+    , m_tainting(data ? data->tainting : Tainting::Basic)
+    , m_source(data ? data->source : Source::Unknown)
+    , m_type(data ? data->type : Type::Default)
 {
 }
 
-ResourceResponseBase::CrossThreadData ResourceResponseBase::CrossThreadData::isolatedCopy() const
+ResourceResponseData ResourceResponseData::isolatedCopy() const
 {
-    ResourceResponseBase::CrossThreadData result;
+    ResourceResponseData result;
     result.url = url.isolatedCopy();
     result.mimeType = mimeType.isolatedCopy();
     result.expectedContentLength = expectedContentLength;
@@ -97,33 +101,41 @@ ResourceResponseBase::CrossThreadData ResourceResponseBase::CrossThreadData::iso
     result.httpHeaderFields = httpHeaderFields.isolatedCopy();
     if (networkLoadMetrics)
         result.networkLoadMetrics = networkLoadMetrics->isolatedCopy();
+    result.source = source;
     result.type = type;
     result.tainting = tainting;
     result.isRedirected = isRedirected;
+    result.usedLegacyTLS = usedLegacyTLS;
+    result.wasPrivateRelayed = wasPrivateRelayed;
     result.isRangeRequested = isRangeRequested;
+    if (certificateInfo)
+        result.certificateInfo = certificateInfo->isolatedCopy();
     return result;
 }
 
-ResourceResponseBase::CrossThreadData ResourceResponseBase::crossThreadData() const
+ResourceResponseData ResourceResponseBase::crossThreadData() const
 {
     CrossThreadData data;
-
     data.url = url().isolatedCopy();
-    data.mimeType = mimeType().string().isolatedCopy();
+    data.mimeType = mimeType().isolatedCopy();
     data.expectedContentLength = expectedContentLength();
-    data.textEncodingName = textEncodingName().string().isolatedCopy();
-
+    data.textEncodingName = textEncodingName().isolatedCopy();
     data.httpStatusCode = httpStatusCode();
-    data.httpStatusText = httpStatusText().string().isolatedCopy();
-    data.httpVersion = httpVersion().string().isolatedCopy();
+    data.httpStatusText = httpStatusText().isolatedCopy();
+    data.httpVersion = httpVersion().isolatedCopy();
 
     data.httpHeaderFields = httpHeaderFields().isolatedCopy();
     if (m_networkLoadMetrics)
         data.networkLoadMetrics = m_networkLoadMetrics->isolatedCopy();
+    data.source = m_source;
     data.type = m_type;
     data.tainting = m_tainting;
     data.isRedirected = m_isRedirected;
+    data.usedLegacyTLS = m_usedLegacyTLS;
+    data.wasPrivateRelayed = m_wasPrivateRelayed;
     data.isRangeRequested = m_isRangeRequested;
+    if (m_certificateInfo)
+        data.certificateInfo = m_certificateInfo->isolatedCopy();
 
     return data;
 }
@@ -133,23 +145,27 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
     ResourceResponse response;
 
     response.setURL(data.url);
-    response.setMimeType(AtomString { WTFMove(data.mimeType) });
+    response.setMimeType(WTFMove(data.mimeType));
     response.setExpectedContentLength(data.expectedContentLength);
-    response.setTextEncodingName(AtomString { WTFMove(data.textEncodingName) });
+    response.setTextEncodingName(WTFMove(data.textEncodingName));
 
     response.setHTTPStatusCode(data.httpStatusCode);
-    response.setHTTPStatusText(AtomString { WTFMove(data.httpStatusText) });
-    response.setHTTPVersion(AtomString { WTFMove(data.httpVersion) });
+    response.setHTTPStatusText(WTFMove(data.httpStatusText));
+    response.setHTTPVersion(WTFMove(data.httpVersion));
 
     response.m_httpHeaderFields = WTFMove(data.httpHeaderFields);
     if (data.networkLoadMetrics)
         response.m_networkLoadMetrics = Box<NetworkLoadMetrics>::create(WTFMove(data.networkLoadMetrics.value()));
     else
         response.m_networkLoadMetrics = nullptr;
+    response.m_source = data.source;
     response.m_type = data.type;
     response.m_tainting = data.tainting;
     response.m_isRedirected = data.isRedirected;
+    response.m_usedLegacyTLS =  data.usedLegacyTLS;
+    response.m_wasPrivateRelayed = data.wasPrivateRelayed;
     response.m_isRangeRequested = data.isRangeRequested;
+    response.m_certificateInfo = WTFMove(data.certificateInfo);
 
     return response;
 }
@@ -247,20 +263,20 @@ void ResourceResponseBase::setURL(const URL& url)
     // FIXME: Should invalidate or update platform response if present.
 }
 
-const AtomString& ResourceResponseBase::mimeType() const
+const String& ResourceResponseBase::mimeType() const
 {
     lazyInit(CommonFieldsOnly);
 
     return m_mimeType;
 }
 
-void ResourceResponseBase::setMimeType(const AtomString& mimeType)
+void ResourceResponseBase::setMimeType(String&& mimeType)
 {
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
 
     // FIXME: MIME type is determined by HTTP Content-Type header. We should update the header, so that it doesn't disagree with m_mimeType.
-    m_mimeType = mimeType;
+    m_mimeType = WTFMove(mimeType);
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -283,14 +299,14 @@ void ResourceResponseBase::setExpectedContentLength(long long expectedContentLen
     // FIXME: Should invalidate or update platform response if present.
 }
 
-const AtomString& ResourceResponseBase::textEncodingName() const
+const String& ResourceResponseBase::textEncodingName() const
 {
     lazyInit(CommonFieldsOnly);
 
     return m_textEncodingName;
 }
 
-void ResourceResponseBase::setTextEncodingName(AtomString&& encodingName)
+void ResourceResponseBase::setTextEncodingName(String&& encodingName)
 {
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
@@ -307,7 +323,7 @@ void ResourceResponseBase::setType(Type type)
     m_type = type;
 }
 
-void ResourceResponseBase::includeCertificateInfo(Span<const std::byte> auditToken) const
+void ResourceResponseBase::includeCertificateInfo(std::span<const std::byte> auditToken) const
 {
     if (m_certificateInfo)
         return;
@@ -360,30 +376,30 @@ bool ResourceResponseBase::isRedirection() const
     return isRedirectionStatusCode(m_httpStatusCode);
 }
 
-const AtomString& ResourceResponseBase::httpStatusText() const
+const String& ResourceResponseBase::httpStatusText() const
 {
     lazyInit(AllFields);
 
     return m_httpStatusText;
 }
 
-void ResourceResponseBase::setHTTPStatusText(const AtomString& statusText)
+void ResourceResponseBase::setHTTPStatusText(String&& statusText)
 {
     lazyInit(AllFields);
 
-    m_httpStatusText = statusText;
+    m_httpStatusText = WTFMove(statusText);
 
     // FIXME: Should invalidate or update platform response if present.
 }
 
-const AtomString& ResourceResponseBase::httpVersion() const
+const String& ResourceResponseBase::httpVersion() const
 {
     lazyInit(AllFields);
 
     return m_httpVersion;
 }
 
-void ResourceResponseBase::setHTTPVersion(const AtomString& versionText)
+void ResourceResponseBase::setHTTPVersion(String&& versionText)
 {
     lazyInit(AllFields);
 
@@ -475,7 +491,7 @@ void ResourceResponseBase::sanitizeHTTPHeaderFieldsAccordingToTainting()
     // FIXME: we don't really need to construct a Tainting here, this is just a workaround
     // for a GCC 10 bug (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97634), that will
     // be removed once the bug is fixed.
-    switch (Tainting(m_tainting)) {
+    switch (m_tainting) {
     case ResourceResponse::Tainting::Basic:
         break;
     case ResourceResponse::Tainting::Cors: {
@@ -484,7 +500,7 @@ void ResourceResponseBase::sanitizeHTTPHeaderFieldsAccordingToTainting()
             return;
 
         m_httpHeaderFields.commonHeaders().removeAllMatching([&corsSafeHeaderSet](auto& header) {
-            return !isSafeCrossOriginResponseHeader(header.key) && !corsSafeHeaderSet.contains<ASCIICaseInsensitiveStringViewHashTranslator>(httpHeaderNameString(header.key));
+            return !isSafeCrossOriginResponseHeader(header.key) && !corsSafeHeaderSet.contains<HashTranslatorASCIILiteralCaseInsensitive>(httpHeaderNameString(header.key));
         });
         m_httpHeaderFields.uncommonHeaders().removeAllMatching([&corsSafeHeaderSet](auto& header) { return !corsSafeHeaderSet.contains(header.key); });
         break;
@@ -802,7 +818,7 @@ bool ResourceResponseBase::isAttachment() const
     lazyInit(AllFields);
 
     auto value = m_httpHeaderFields.get(HTTPHeaderName::ContentDisposition);
-    return equalLettersIgnoringASCIICase(StringView(value).left(value.find(';')).stripWhiteSpace(), "attachment"_s);
+    return equalLettersIgnoringASCIICase(StringView(value).left(value.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<UChar>), "attachment"_s);
 }
 
 bool ResourceResponseBase::isAttachmentWithFilename() const
@@ -814,7 +830,7 @@ bool ResourceResponseBase::isAttachmentWithFilename() const
         return false;
 
     StringView contentDispositionView { contentDisposition };
-    if (!equalLettersIgnoringASCIICase(contentDispositionView.left(contentDispositionView.find(';')).stripWhiteSpace(), "attachment"_s))
+    if (!equalLettersIgnoringASCIICase(contentDispositionView.left(contentDispositionView.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<UChar>), "attachment"_s))
         return false;
 
     return !filenameFromHTTPContentDisposition(contentDispositionView).isNull();
@@ -858,40 +874,164 @@ bool ResourceResponseBase::equalForWebKitLegacyChallengeComparison(const Resourc
 bool ResourceResponseBase::containsInvalidHTTPHeaders() const
 {
     for (auto& header : httpHeaderFields()) {
-        if (!isValidHTTPHeaderValue(stripLeadingAndTrailingHTTPSpaces(header.value)))
+        if (!isValidHTTPHeaderValue(header.value.trim(isASCIIWhitespaceWithoutFF<UChar>)))
             return true;
     }
     return false;
 }
 
-std::optional<ResourceResponseBase::ResponseData> ResourceResponseBase::getResponseData() const
+std::optional<ResourceResponseData> ResourceResponseBase::getResponseData() const
 {
     if (m_isNull)
         return std::nullopt;
     lazyInit(AllFields);
 
-    return { {
-        m_url,
-        m_mimeType,
+    return { ResourceResponseData {
+        URL { m_url },
+        String { m_mimeType },
         m_expectedContentLength,
-        m_textEncodingName,
-        m_httpStatusText,
-        m_httpVersion,
-        m_httpHeaderFields,
-        m_networkLoadMetrics,
-
+        String { m_textEncodingName },
         m_httpStatusCode,
-        m_certificateInfo,
-
+        String { m_httpStatusText },
+        String { m_httpVersion },
+        HTTPHeaderMap { m_httpHeaderFields },
+        m_networkLoadMetrics ? std::optional(*m_networkLoadMetrics) : std::nullopt,
         m_source,
         m_type,
         m_tainting,
-
         m_isRedirected,
         m_usedLegacyTLS,
         m_wasPrivateRelayed,
-        m_isRangeRequested
+        m_isRangeRequested,
+        m_certificateInfo
     } };
 }
 
+} // namespace WebCore
+
+namespace WTF::Persistence {
+
+void Coder<WebCore::ResourceResponseData>::encodeForPersistence(Encoder& encoder, const WebCore::ResourceResponseData& data)
+{
+    encoder << data.url;
+    encoder << data.mimeType;
+    encoder << static_cast<int64_t>(data.expectedContentLength);
+    encoder << data.textEncodingName;
+    encoder << data.httpStatusText;
+    encoder << data.httpVersion;
+    encoder << data.httpHeaderFields;
+    encoder << data.httpStatusCode;
+    encoder << data.certificateInfo;
+    encoder << data.source;
+    encoder << data.type;
+    encoder << data.tainting;
+    encoder << data.isRedirected;
+    encoder << data.usedLegacyTLS;
+    encoder << data.wasPrivateRelayed;
+    encoder << data.isRangeRequested;
 }
+
+std::optional<WebCore::ResourceResponseData> Coder<WebCore::ResourceResponseData>::decodeForPersistence(Decoder& decoder)
+{
+    std::optional<URL> url;
+    decoder >> url;
+    if (!url)
+        return std::nullopt;
+
+    std::optional<String> mimeType;
+    decoder >> mimeType;
+    if (!mimeType)
+        return std::nullopt;
+
+    std::optional<int64_t> expectedContentLength;
+    decoder >> expectedContentLength;
+    if (!expectedContentLength)
+        return std::nullopt;
+
+    std::optional<String> textEncodingName;
+    decoder >> textEncodingName;
+    if (!textEncodingName)
+        return std::nullopt;
+
+    std::optional<String> httpStatusText;
+    decoder >> httpStatusText;
+    if (!httpStatusText)
+        return std::nullopt;
+
+    std::optional<String> httpVersion;
+    decoder >> httpVersion;
+    if (!httpVersion)
+        return std::nullopt;
+
+    std::optional<WebCore::HTTPHeaderMap> httpHeaderFields;
+    decoder >> httpHeaderFields;
+    if (!httpHeaderFields)
+        return std::nullopt;
+
+    std::optional<short> httpStatusCode;
+    decoder >> httpStatusCode;
+    if (!httpStatusCode)
+        return std::nullopt;
+
+    std::optional<std::optional<WebCore::CertificateInfo>> certificateInfo;
+    decoder >> certificateInfo;
+    if (!certificateInfo)
+        return std::nullopt;
+
+    std::optional<WebCore::ResourceResponseBase::Source> source;
+    decoder >> source;
+    if (!source)
+        return std::nullopt;
+
+    std::optional<WebCore::ResourceResponseBase::Type> type;
+    decoder >> type;
+    if (!type)
+        return std::nullopt;
+
+    std::optional<WebCore::ResourceResponseBase::Tainting> tainting;
+    decoder >> tainting;
+    if (!tainting)
+        return std::nullopt;
+
+    std::optional<bool> isRedirected;
+    decoder >> isRedirected;
+    if (!isRedirected)
+        return std::nullopt;
+
+    std::optional<WebCore::UsedLegacyTLS> usedLegacyTLS;
+    decoder >> usedLegacyTLS;
+    if (!usedLegacyTLS)
+        return std::nullopt;
+
+    std::optional<WebCore::WasPrivateRelayed> wasPrivateRelayed;
+    decoder >> wasPrivateRelayed;
+    if (!wasPrivateRelayed)
+        return std::nullopt;
+
+    std::optional<bool> isRangeRequested;
+    decoder >> isRangeRequested;
+    if (!isRangeRequested)
+        return std::nullopt;
+
+    return WebCore::ResourceResponseData {
+        WTFMove(*url),
+        WTFMove(*mimeType),
+        *expectedContentLength,
+        WTFMove(*textEncodingName),
+        *httpStatusCode,
+        WTFMove(*httpStatusText),
+        WTFMove(*httpVersion),
+        WTFMove(*httpHeaderFields),
+        std::nullopt,
+        *source,
+        *type,
+        *tainting,
+        *isRedirected,
+        *usedLegacyTLS,
+        *wasPrivateRelayed,
+        *isRangeRequested,
+        WTFMove(*certificateInfo)
+    };
+}
+
+} // namespace WTF::Persistence

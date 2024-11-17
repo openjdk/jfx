@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,23 +29,18 @@ import java.awt.BorderLayout;
 import java.awt.Point;
 import java.awt.Robot;
 import java.awt.event.InputEvent;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class NonFocusableJFXPanelTest {
@@ -55,7 +50,7 @@ public class NonFocusableJFXPanelTest {
     private static final int WIDTH = 600;
     private static final int HEIGHT = 200;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() throws Exception {
         robot = new Robot();
         robot.setAutoDelay(100);
@@ -74,14 +69,13 @@ public class NonFocusableJFXPanelTest {
             robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
         }
-        Assert.assertFalse("Extra MouseEvent generated", clickCount > 5);
+        Assertions.assertFalse(clickCount > 5, "Extra MouseEvent generated");
     }
 
     private void waitForLatch(CountDownLatch latch, long ms) throws Exception {
-        Assert.assertTrue(String.format(
-            "unexpected error: waiting timeout %d ms elapsed for",
-            ms),
-            latch.await(ms, TimeUnit.MILLISECONDS));
+        Assertions.assertTrue(
+            latch.await(ms, TimeUnit.MILLISECONDS),
+            String.format("unexpected error: waiting timeout %d ms elapsed for", ms));
     }
 
     public void initAndShowGUI() {
@@ -113,14 +107,14 @@ public class NonFocusableJFXPanelTest {
         try {
             waitForLatch(latch, 5000);
         } catch (Exception e) {
-            Assert.fail("Exception while waiting for latch");
+            Assertions.fail("Exception while waiting for latch");
         }
     }
 
 
-    @AfterClass
+    @AfterAll
     public static void teardown() throws Exception {
-        Assert.assertNotNull(frame);
+        Assertions.assertNotNull(frame);
         SwingUtilities.invokeLater(frame::dispose);
     }
 }

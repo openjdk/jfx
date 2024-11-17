@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "FragmentScriptingPermission.h"
+#include "ParserContentPolicy.h"
 #include "PendingScriptClient.h"
 #include "ScriptableDocumentParser.h"
 #include "SegmentedString.h"
@@ -41,7 +41,7 @@ class ContainerNode;
 class CachedResourceLoader;
 class DocumentFragment;
 class Element;
-class FrameView;
+class LocalFrameView;
 class PendingCallbacks;
 class Text;
 
@@ -63,7 +63,7 @@ private:
 class XMLDocumentParser final : public ScriptableDocumentParser, public PendingScriptClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<XMLDocumentParser> create(Document& document, FrameView* view, OptionSet<ParserContentPolicy> policy = DefaultParserContentPolicy)
+    static Ref<XMLDocumentParser> create(Document& document, LocalFrameView* view, OptionSet<ParserContentPolicy> policy = DefaultParserContentPolicy)
     {
         return adoptRef(*new XMLDocumentParser(document, view, policy));
     }
@@ -80,7 +80,7 @@ public:
     void setIsXHTMLDocument(bool isXHTML) { m_isXHTMLDocument = isXHTML; }
     bool isXHTMLDocument() const { return m_isXHTMLDocument; }
 
-    static bool parseDocumentFragment(const String&, DocumentFragment&, Element* parent = nullptr, OptionSet<ParserContentPolicy> = { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
+    static bool parseDocumentFragment(const String&, DocumentFragment&, Element* parent = nullptr, OptionSet<ParserContentPolicy> = { ParserContentPolicy::AllowScriptingContent });
 
     // Used by XMLHttpRequest to check if the responseXML was well formed.
     bool wellFormed() const final { return !m_sawError; }
@@ -88,7 +88,7 @@ public:
     static bool supportsXMLVersion(const String&);
 
 private:
-    explicit XMLDocumentParser(Document&, FrameView*, OptionSet<ParserContentPolicy>);
+    explicit XMLDocumentParser(Document&, LocalFrameView*, OptionSet<ParserContentPolicy>);
     XMLDocumentParser(DocumentFragment&, HashMap<AtomString, AtomString>&&, const AtomString&, OptionSet<ParserContentPolicy>);
 
     void insert(SegmentedString&&) final;
@@ -126,12 +126,6 @@ public:
     void internalSubset(const xmlChar* name, const xmlChar* externalID, const xmlChar* systemID);
     void endDocument();
 
-    bool isParsingEntityDeclaration() const { return m_isParsingEntityDeclaration; }
-    void setIsParsingEntityDeclaration(bool value) { m_isParsingEntityDeclaration = value; }
-
-    int depthTriggeringEntityExpansion() const { return m_depthTriggeringEntityExpansion; }
-    void setDepthTriggeringEntityExpansion(int depth) { m_depthTriggeringEntityExpansion = depth; }
-
 private:
     void initializeParserContext(const CString& chunk = CString());
 
@@ -149,15 +143,13 @@ private:
 
     xmlParserCtxtPtr context() const { return m_context ? m_context->context() : nullptr; };
 
-    FrameView* m_view { nullptr };
+    LocalFrameView* m_view { nullptr };
 
     SegmentedString m_originalSourceForTransform;
 
     RefPtr<XMLParserContext> m_context;
     std::unique_ptr<PendingCallbacks> m_pendingCallbacks;
     Vector<xmlChar> m_bufferedText;
-    int m_depthTriggeringEntityExpansion { -1 };
-    bool m_isParsingEntityDeclaration { false };
 
     ContainerNode* m_currentNode { nullptr };
     Vector<ContainerNode*> m_currentNodeStack;

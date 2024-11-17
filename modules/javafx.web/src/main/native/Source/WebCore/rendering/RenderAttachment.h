@@ -42,18 +42,22 @@ public:
     void setShouldDrawBorder(bool drawBorder) { m_shouldDrawBorder = drawBorder; }
     bool shouldDrawBorder() const;
 
-    bool hasShadowContent() const { return m_hasShadowControls; }
     void setHasShadowControls(bool hasShadowControls) { m_hasShadowControls = hasShadowControls; }
-    bool canHaveGeneratedChildren() const override { return m_hasShadowControls; }
-    bool canHaveChildren() const override { return m_hasShadowControls; }
+    bool hasShadowControls() const { return m_hasShadowControls; }
+    bool isWideLayout() const { return m_isWideLayout; }
+    bool hasShadowContent() const { return hasShadowControls() || isWideLayout(); }
+    bool canHaveGeneratedChildren() const override { return hasShadowContent(); }
+    bool canHaveChildren() const override { return hasShadowContent(); }
+
+    bool paintWideLayoutAttachmentOnly(const PaintInfo&, const LayoutPoint& offset) const;
 
 private:
     void element() const = delete;
-    bool isAttachment() const override { return true; }
     ASCIILiteral renderName() const override { return "RenderAttachment"_s; }
+    LayoutSize layoutWideLayoutAttachmentOnly();
     void layoutShadowContent(const LayoutSize&);
 
-    bool shouldDrawSelectionTint() const override { return false; }
+    bool shouldDrawSelectionTint() const override { return isWideLayout(); }
     void paintReplaced(PaintInfo&, const LayoutPoint& offset) final;
 
     void layout() override;
@@ -63,10 +67,11 @@ private:
     LayoutUnit m_minimumIntrinsicWidth;
     bool m_shouldDrawBorder { true };
     bool m_hasShadowControls { false };
+    bool m_isWideLayout;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderAttachment, isAttachment())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderAttachment, isRenderAttachment())
 
 #endif // ENABLE(ATTACHMENT_ELEMENT)

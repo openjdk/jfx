@@ -30,13 +30,13 @@
 #include "EventContext.h"
 #include "EventNames.h"
 #include "EventPath.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
 #include "HTMLInputElement.h"
 #include "InputEvent.h"
 #include "KeyboardEvent.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MouseEvent.h"
 #include "ScopedEventQueue.h"
@@ -63,24 +63,23 @@ static void callDefaultEventHandlersInBubblingOrder(Event& event, const EventPat
     // Non-bubbling events call only one default event handler, the one for the target.
     Ref rootNode { *path.contextAt(0).node() };
     rootNode->defaultEventHandler(event);
-    ASSERT(!event.defaultPrevented());
 
-    if (event.defaultHandled() || !event.bubbles())
+    if (event.defaultHandled() || !event.bubbles() || event.defaultPrevented())
         return;
 
     size_t size = path.size();
     for (size_t i = 1; i < size; ++i) {
         Ref currentNode { *path.contextAt(i).node() };
         currentNode->defaultEventHandler(event);
-        ASSERT(!event.defaultPrevented());
-        if (event.defaultHandled())
+        if (event.defaultPrevented() || event.defaultHandled())
             return;
     }
 }
 
 static bool isInShadowTree(EventTarget* target)
 {
-    return is<Node>(target) && downcast<Node>(*target).isInShadowTree();
+    auto* node = dynamicDowncast<Node>(target);
+    return node && node->isInShadowTree();
 }
 
 static void dispatchEventInDOM(Event& event, const EventPath& path)
@@ -118,21 +117,19 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     if (!event.isTrusted())
         return false;
 
-    auto frame = node.document().frame();
+    RefPtr frame = node.document().frame();
     if (!frame)
         return false;
 
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
     if (!localFrame)
         return false;
 
-    if (!localFrame->loader().shouldSuppressTextInputFromEditing())
+    if (!localFrame->checkedLoader()->shouldSuppressTextInputFromEditing())
         return false;
 
-    if (is<TextEvent>(event)) {
-        auto& textEvent = downcast<TextEvent>(event);
-        return textEvent.isKeyboard() || textEvent.isComposition();
-    }
+    if (auto* textEvent = dynamicDowncast<TextEvent>(event))
+        return textEvent->isKeyboard() || textEvent->isComposition();
 
     return is<CompositionEvent>(event) || is<InputEvent>(event) || is<KeyboardEvent>(event);
 }
@@ -141,11 +138,30 @@ static HTMLInputElement* findInputElementInEventPath(const EventPath& path)
 {
     size_t size = path.size();
     for (size_t i = 0; i < size; ++i) {
-        const EventContext& eventContext = path.contextAt(i);
-        if (is<HTMLInputElement>(eventContext.currentTarget()))
-            return downcast<HTMLInputElement>(eventContext.currentTarget());
+        auto& eventContext = path.contextAt(i);
+        if (auto* inputElement = dynamicDowncast<HTMLInputElement>(eventContext.currentTarget()))
+            return inputElement;
     }
     return nullptr;
+}
+
+static bool hasRelevantEventListener(Document& document, const Event& event)
+{
+    if (document.hasEventListenersOfType(event.type()))
+        return true;
+
+    auto legacyType = EventTarget::legacyTypeForEvent(event);
+    if (!legacyType.isNull() && document.hasEventListenersOfType(legacyType))
+        return true;
+
+    return false;
+}
+
+static void resetAfterDispatchInShadowTree(Event& event)
+{
+    event.setTarget(nullptr);
+    event.setRelatedTarget(nullptr);
+    // FIXME: We should also clear the event's touch target list.
 }
 
 void EventDispatcher::dispatchEvent(Node& node, Event& event)
@@ -157,9 +173,26 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     Ref protectedNode { node };
     RefPtr protectedView { node.document().view() };
 
+    auto typeInfo = eventNames().typeInfoForEvent(event.type());
+    bool shouldDispatchEventToScripts = hasRelevantEventListener(node.document(), event);
+
+    bool targetOrRelatedTargetIsInShadowTree = node.isInShadowTree() || isInShadowTree(event.relatedTarget());
+    // FIXME: We should also check touch target list.
+    bool hasNoEventListnerOrDefaultEventHandler = !shouldDispatchEventToScripts && !typeInfo.hasDefaultEventHandler() && !node.document().hasConnectedPluginElements();
+    if (hasNoEventListnerOrDefaultEventHandler && !targetOrRelatedTargetIsInShadowTree) {
+        event.resetBeforeDispatch();
+        event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
+        return;
+    }
+
     EventPath eventPath { node, event };
 
-    std::optional<bool> shouldClearTargetsAfterDispatch;
+    if (node.document().settings().sendMouseEventsToDisabledFormControlsEnabled() && event.isTrusted() && event.isMouseEvent()
+        && (typeInfo.type() == EventType::mousedown || typeInfo.type() == EventType::mouseup || typeInfo.type() == EventType::click || typeInfo.type() == EventType::dblclick)) {
+        eventPath.adjustForDisabledFormControl();
+    }
+
+    bool shouldClearTargetsAfterDispatch = false;
     for (size_t i = eventPath.size(); i > 0; --i) {
         const EventContext& eventContext = eventPath.contextAt(i - 1);
         // FIXME: We should also set shouldClearTargetsAfterDispatch to true if an EventTarget object in eventContext's touch target list
@@ -170,7 +203,11 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         }
     }
 
-    ChildNodesLazySnapshot::takeChildNodesLazySnapshot();
+    if (hasNoEventListnerOrDefaultEventHandler) {
+        if (shouldClearTargetsAfterDispatch)
+            resetAfterDispatchInShadowTree(event);
+        return;
+    }
 
     event.resetBeforeDispatch();
 
@@ -179,18 +216,17 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         return;
 
     InputElementClickState clickHandlingState;
+    clickHandlingState.trusted = event.isTrusted();
 
-    bool isActivationEvent = event.type() == eventNames().clickEvent;
     RefPtr inputForLegacyPreActivationBehavior = dynamicDowncast<HTMLInputElement>(node);
-    if (!inputForLegacyPreActivationBehavior && isActivationEvent && event.bubbles())
+    if (!inputForLegacyPreActivationBehavior && event.bubbles() && event.type() == eventNames().clickEvent)
         inputForLegacyPreActivationBehavior = findInputElementInEventPath(eventPath);
-    if (inputForLegacyPreActivationBehavior)
+    if (inputForLegacyPreActivationBehavior
+        && (!event.isTrusted() || !inputForLegacyPreActivationBehavior->isDisabledFormControl())) {
         inputForLegacyPreActivationBehavior->willDispatchEvent(event, clickHandlingState);
+    }
 
-    if (shouldSuppressEventDispatchInDOM(node, event))
-        event.stopPropagation();
-
-    if (!event.propagationStopped() && !eventPath.isEmpty()) {
+    if (!event.propagationStopped() && !eventPath.isEmpty() && !shouldSuppressEventDispatchInDOM(node, event) && shouldDispatchEventToScripts) {
         event.setEventPath(eventPath);
         dispatchEventInDOM(event, eventPath);
     }
@@ -203,7 +239,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     // Call default event handlers. While the DOM does have a concept of preventing
     // default handling, the detail of which handlers are called is an internal
     // implementation detail and not part of the DOM.
-    if (!event.defaultPrevented() && !event.defaultHandled() && !event.isDefaultEventHandlerIgnored()) {
+    if (typeInfo.hasDefaultEventHandler() && !event.defaultPrevented() && !event.defaultHandled() && !event.isDefaultEventHandlerIgnored()) {
         // FIXME: Not clear why we need to reset the target for the default event handlers.
         // We should research this, and remove this code if possible.
         RefPtr finalTarget = event.target();
@@ -212,11 +248,8 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         event.setTarget(WTFMove(finalTarget));
     }
 
-    if (shouldClearTargetsAfterDispatch.value_or(false)) {
-        event.setTarget(nullptr);
-        event.setRelatedTarget(nullptr);
-        // FIXME: We should also clear the event's touch target list.
-    }
+    if (shouldClearTargetsAfterDispatch)
+        resetAfterDispatchInShadowTree(event);
 }
 
 template<typename T>

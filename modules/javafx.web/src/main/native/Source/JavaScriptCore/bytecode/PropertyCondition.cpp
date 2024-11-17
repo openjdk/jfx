@@ -175,6 +175,12 @@ bool PropertyCondition::isStillValidAssumingImpurePropertyWatchpoint(
             return false;
         }
 
+        if (structure->typeInfo().overridesPut() && JSObject::mightBeSpecialProperty(structure->vm(), structure->typeInfo().type(), uid())) {
+            if (PropertyConditionInternal::verbose)
+                dataLog("Invalid because its put() override may treat ", uid(), " property as special non-structure one.\n");
+            return false;
+        }
+
         unsigned currentAttributes;
         PropertyOffset currentOffset = structure->get(structure->vm(), concurrency, uid(), currentAttributes);
         if (currentOffset != invalidOffset) {
@@ -186,14 +192,14 @@ bool PropertyCondition::isStillValidAssumingImpurePropertyWatchpoint(
                 }
                 return false;
             }
-        } else if (structure->typeInfo().overridesPut() && JSObject::mightBeSpecialProperty(structure->vm(), structure->typeInfo().type(), uid())) {
-            if (PropertyConditionInternal::verbose)
-                dataLog("Invalid because its put() override may treat ", uid(), " property as special non-structure one.\n");
-            return false;
-        } else if (structure->hasNonReifiedStaticProperties() && structure->classInfoForCells()->hasStaticReadOnlyOrGetterSetterProperty(uid())) {
+        } else if (structure->hasNonReifiedStaticProperties()) {
+            if (auto entry = structure->findPropertyHashEntry(uid())) {
+                if (entry->value->attributes() & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue) {
             if (PropertyConditionInternal::verbose)
                 dataLog("Invalid because we expected not to have a setter, but we have one in non-reified static property table: ", uid(), ".\n");
             return false;
+        }
+            }
         }
 
         if (structure->hasPolyProto()) {
@@ -406,8 +412,7 @@ bool PropertyCondition::isWatchableWhenValid(
             set = structure->propertyReplacementWatchpointSet(offset);
             break;
         case EnsureWatchability:
-            set = structure->ensurePropertyReplacementWatchpointSet(structure->vm(), offset);
-            set->fireAll(vm, "Firing replacement to ensure validity");
+            set = structure->firePropertyReplacementWatchpointSet(structure->vm(), offset, "Firing replacement to ensure validity");
             break;
         }
 
@@ -490,9 +495,11 @@ bool PropertyCondition::isValidValueForAttributes(JSValue value, unsigned attrib
 {
     if (!value)
         return false;
-    bool attributesClaimAccessor = !!(attributes & PropertyAttribute::Accessor);
-    bool valueClaimsAccessor = !!jsDynamicCast<GetterSetter*>(value);
-    return attributesClaimAccessor == valueClaimsAccessor;
+    if (value.inherits<GetterSetter>())
+        return attributes & PropertyAttribute::Accessor;
+    if (value.inherits<CustomGetterSetter>())
+        return attributes & PropertyAttribute::CustomAccessorOrValue;
+    return !(attributes & PropertyAttribute::AccessorOrCustomAccessorOrValue);
 }
 
 bool PropertyCondition::isValidValueForPresence(JSValue value) const

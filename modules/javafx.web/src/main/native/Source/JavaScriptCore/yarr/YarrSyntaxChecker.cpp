@@ -36,12 +36,16 @@ public:
     void assertionBOL() { }
     void assertionEOL() { }
     void assertionWordBoundary(bool) { }
-    void atomPatternCharacter(UChar32) { }
+    void atomPatternCharacter(char32_t) { }
     void atomBuiltInCharacterClass(BuiltInCharacterClassID, bool) { }
     void atomCharacterClassBegin(bool = false) { }
     void atomCharacterClassAtom(UChar) { }
     void atomCharacterClassRange(UChar, UChar) { }
     void atomCharacterClassBuiltIn(BuiltInCharacterClassID, bool) { }
+    void atomClassStringDisjunction(Vector<Vector<char32_t>>&) { }
+    void atomCharacterClassSetOp(CharacterClassSetOp) { }
+    void atomCharacterClassPushNested() { }
+    void atomCharacterClassPopNested() { }
     void atomCharacterClassEnd() { }
     void atomParenthesesSubpatternBegin(bool = true, std::optional<String> = std::nullopt) { }
     void atomParentheticalAssertionBegin(bool, MatchDirection) { }
@@ -62,7 +66,7 @@ ErrorCode checkSyntax(StringView pattern, StringView flags)
     if (!parsedFlags)
         return ErrorCode::InvalidRegularExpressionFlags;
 
-    return parse(syntaxChecker, pattern, parsedFlags->contains(Flags::Unicode));
+    return parse(syntaxChecker, pattern, compileMode(parsedFlags));
 }
 
 }} // JSC::Yarr

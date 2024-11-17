@@ -26,8 +26,9 @@
 
 #include "GraphicsContext.h"
 #include "ImageQualityController.h"
+#include "LayoutRect.h"
 #include "LengthFunctions.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PointerComparison.h>
 #include <wtf/text/TextStream.h>
@@ -45,7 +46,7 @@ inline DataRef<NinePieceImage::Data>& NinePieceImage::defaultMaskData()
     static NeverDestroyed<DataRef<Data>> maskData { Data::create() };
     auto& data = maskData.get().access();
     data.imageSlices = LengthBox(0);
-    data.fill = true;
+    data.fill = false;
     data.borderSlices = LengthBox();
     return maskData.get();
 }
@@ -202,7 +203,7 @@ void NinePieceImage::paint(GraphicsContext& graphicsContext, const RenderElement
 {
     StyleImage* styleImage = image();
     ASSERT(styleImage);
-    ASSERT(styleImage->isLoaded());
+    ASSERT(styleImage->isLoaded(renderer));
 
     LayoutBoxExtent sourceSlices = computeSlices(source, imageSlices(), styleImage->imageScaleFactor());
     LayoutBoxExtent destinationSlices = computeSlices(destination.size(), borderSlices(), style.borderWidth(), sourceSlices);

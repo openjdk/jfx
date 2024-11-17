@@ -27,6 +27,7 @@
 #include "config.h"
 #include "ScrollTypes.h"
 
+#include "ScrollBehavior.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -68,6 +69,16 @@ TextStream& operator<<(TextStream& ts, ScrollBehaviorForFixedElements behavior)
     case ScrollBehaviorForFixedElements::StickToViewportBounds:
         ts << 1;
         break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollBehavior behavior)
+{
+    switch (behavior) {
+    case ScrollBehavior::Auto: ts << "auto"; break;
+    case ScrollBehavior::Instant: ts << "instant"; break;
+    case ScrollBehavior::Smooth: ts << "smooth"; break;
     }
     return ts;
 }
@@ -150,6 +161,46 @@ TextStream& operator<<(TextStream& ts, ScrollGranularity granularity)
         break;
     case ScrollGranularity::Pixel:
         ts << "pixel";
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollbarWidth width)
+{
+    switch (width) {
+    case ScrollbarWidth::Auto:
+        ts << "auto";
+        break;
+    case ScrollbarWidth::Thin:
+        ts << "thin";
+        break;
+    case ScrollbarWidth::None:
+        ts << "none";
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollPositionChangeOptions options)
+{
+    ts.dumpProperty("type", options.type);
+    ts.dumpProperty("clamping", options.clamping);
+    ts.dumpProperty("animated", options.animated == ScrollIsAnimated::Yes);
+    ts.dumpProperty("snap point selection method", options.snapPointSelectionMethod);
+    ts.dumpProperty("original scroll delta", options.originalScrollDelta ? *options.originalScrollDelta : FloatSize());
+
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollSnapPointSelectionMethod option)
+{
+    switch (option) {
+    case ScrollSnapPointSelectionMethod::Directional:
+        ts << "Directional";
+        break;
+    case ScrollSnapPointSelectionMethod::Closest:
+        ts << "Closest";
         break;
     }
     return ts;

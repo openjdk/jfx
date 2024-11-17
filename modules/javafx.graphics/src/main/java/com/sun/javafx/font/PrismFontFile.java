@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@ package com.sun.javafx.font;
 import java.lang.ref.WeakReference;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -114,35 +112,32 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
     /* This is called only for fonts where a temp file was created
      */
-    @SuppressWarnings("removal")
     protected synchronized void disposeOnShutdown() {
         if (isCopy || isDecoded) {
-            AccessController.doPrivileged(
-                    (PrivilegedAction<Void>) () -> {
-                        try {
-                            /* Although there is likely no harm in calling
-                             * delete on a file > once, we want to refrain
-                             * from deleting it until the shutdown hook
-                             * code in subclasses has had an opportunity
-                             * to clean up native accesses on the resource.
-                             */
-                            if (decFileRefCount() > 0) {
-                                return null;
-                            }
-                            boolean delOK = (new File(filename)).delete();
-                            if (!delOK && PrismFontFactory.debugFonts) {
-                                 System.err.println("Temp file not deleted : "
-                                                    + filename);
-                            }
-                            /* Embedded fonts (copy) can also be decoded.
-                             * Set both flags to false to avoid double deletes.
-                             */
-                            isCopy = isDecoded = false;
-                        } catch (Exception e) {
-                        }
-                        return null;
-                    }
-            );
+            try {
+                /* Although there is likely no harm in calling
+                 * delete on a file > once, we want to refrain
+                 * from deleting it until the shutdown hook
+                 * code in subclasses has had an opportunity
+                 * to clean up native accesses on the resource.
+                 */
+                if (decFileRefCount() > 0) {
+                    return;
+                }
+                boolean delOK = (new File(filename)).delete();
+                if (!delOK && PrismFontFactory.debugFonts) {
+                        System.err.println("Temp file not deleted : "
+                                        + filename);
+                }
+                /* Embedded fonts (copy) can also be decoded.
+                    * Set both flags to false to avoid double deletes.
+                    */
+                isCopy = isDecoded = false;
+            } catch (Exception e) {
+            }
+
+            // TODO: In case of failure this will print "temp file not deleted" and then
+            // "temp file deleted" right after, might be worth ironing out.
             if (PrismFontFactory.debugFonts) {
                 System.err.println("Temp file deleted: " + filename);
             }
@@ -220,45 +215,40 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         }
 
         @Override
-        @SuppressWarnings("removal")
         public synchronized void dispose() {
             if (fileName != null) {
-                AccessController.doPrivileged(
-                        (PrivilegedAction<Void>) () -> {
-                            try {
-                                if (refCounter != null &&
-                                    refCounter.decrement() > 0)
-                                {
-                                    return null;
-                                }
-                                File file = new File(fileName);
-                                int size = (int)file.length();
-                                file.delete();
-                                // decrement tracker only after
-                                // successful deletion.
-                                if (isTracked) {
-                                    FontFileWriter.FontTracker.
-                                        getTracker().subBytes(size);
-                                }
-                                if (factory != null && refKey != null) {
-                                    Object o = refKey.get();
-                                    if (o == null) {
-                                        factory.removeTmpFont(refKey);
-                                        factory = null;
-                                        refKey = null;
-                                    }
-                                }
-                                if (PrismFontFactory.debugFonts) {
-                                    System.err.println("FileDisposer=" + fileName);
-                                }
-                            } catch (Exception e) {
-                                if (PrismFontFactory.debugFonts) {
-                                    e.printStackTrace();
-                                }
-                            }
-                            return null;
+                try {
+                    if (refCounter != null &&
+                        refCounter.decrement() > 0)
+                    {
+                        return;
+                    }
+                    File file = new File(fileName);
+                    int size = (int)file.length();
+                    file.delete();
+                    // decrement tracker only after
+                    // successful deletion.
+                    if (isTracked) {
+                        FontFileWriter.FontTracker.
+                            getTracker().subBytes(size);
+                    }
+                    if (factory != null && refKey != null) {
+                        Object o = refKey.get();
+                        if (o == null) {
+                            factory.removeTmpFont(refKey);
+                            factory = null;
+                            refKey = null;
                         }
-                );
+                    }
+                    if (PrismFontFactory.debugFonts) {
+                        System.err.println("FileDisposer=" + fileName);
+                    }
+                } catch (Exception e) {
+                    if (PrismFontFactory.debugFonts) {
+                        e.printStackTrace();
+                    }
+                }
+
                 fileName = null;
             }
         }
@@ -1420,6 +1410,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
        return hasColorTables;
     }
 
+    @Override
     public boolean isColorGlyph(int glyphID) {
         if (!fontSupportsColorGlyphs()) {
             return false;

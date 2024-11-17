@@ -52,11 +52,16 @@ public:
 
     void loadDeferredFrame();
 
+#if ENABLE(FULLSCREEN_API)
+    bool hasIFrameFullscreenFlag() const { return m_IFrameFullscreenFlag; }
+    void setIFrameFullscreenFlag(bool value) { m_IFrameFullscreenFlag = value; }
+#endif
+
 private:
     HTMLIFrameElement(const QualifiedName&, Document&);
 
     int defaultTabIndex() const final;
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
@@ -70,6 +75,9 @@ private:
 
     std::unique_ptr<DOMTokenList> m_sandbox;
     mutable std::optional<FeaturePolicy> m_featurePolicy;
+#if ENABLE(FULLSCREEN_API)
+    bool m_IFrameFullscreenFlag { false };
+#endif
     std::unique_ptr<LazyLoadFrameObserver> m_lazyLoadFrameObserver;
 };
 

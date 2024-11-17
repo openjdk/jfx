@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,49 +28,61 @@
 
 namespace WebCore {
 
-SourceBrush::SourceBrush(const Color& color, std::optional<Brush>&& brush)
+SourceBrush::SourceBrush(const Color& color, OptionalPatternGradient&& patternGradient)
     : m_color(color)
-    , m_brush(WTFMove(brush))
+    , m_patternGradient(WTFMove(patternGradient))
 {
 }
 
 const AffineTransform& SourceBrush::gradientSpaceTransform() const
 {
-    if (!m_brush)
-        return identity;
-
-    if (auto* gradient = std::get_if<Brush::LogicalGradient>(&m_brush->brush))
-        return gradient->spaceTransform;
-
+    if (auto* logicalGradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient))
+        return logicalGradient->spaceTransform;
     return identity;
 }
 
 Gradient* SourceBrush::gradient() const
 {
-    if (!m_brush)
-        return nullptr;
-    if (auto* gradient = std::get_if<Brush::LogicalGradient>(&m_brush->brush))
-        return gradient->gradient.ptr();
+    if (auto* logicalGradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient)) {
+        if (auto* gradient = std::get_if<Ref<Gradient>>(&logicalGradient->gradient))
+            return gradient->ptr();
+    }
     return nullptr;
+}
+
+std::optional<RenderingResourceIdentifier> SourceBrush::gradientIdentifier() const
+{
+    auto* gradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient);
+    if (!gradient)
+        return std::nullopt;
+
+    return WTF::switchOn(gradient->gradient,
+        [] (const Ref<Gradient>& gradient) -> std::optional<RenderingResourceIdentifier> {
+            if (!gradient->hasValidRenderingResourceIdentifier())
+                return std::nullopt;
+            return gradient->renderingResourceIdentifier();
+        },
+        [] (RenderingResourceIdentifier renderingResourceIdentifier) -> std::optional<RenderingResourceIdentifier> {
+            return renderingResourceIdentifier;
+        }
+    );
 }
 
 Pattern* SourceBrush::pattern() const
 {
-    if (!m_brush)
-        return nullptr;
-    if (auto* pattern = std::get_if<Ref<Pattern>>(&m_brush->brush))
+    if (auto* pattern = std::get_if<Ref<Pattern>>(&m_patternGradient))
         return pattern->ptr();
     return nullptr;
 }
 
 void SourceBrush::setGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform)
 {
-    m_brush = Brush { Brush::LogicalGradient { WTFMove(gradient), spaceTransform } };
+    m_patternGradient = SourceBrushLogicalGradient { WTFMove(gradient), spaceTransform };
 }
 
 void SourceBrush::setPattern(Ref<Pattern>&& pattern)
 {
-    m_brush = Brush { Brush::Variant { std::in_place_type<Ref<Pattern>>, WTFMove(pattern) } };
+    m_patternGradient.emplace<Ref<Pattern>>(WTFMove(pattern));
 }
 
 WTF::TextStream& operator<<(TextStream& ts, const SourceBrush& brush)

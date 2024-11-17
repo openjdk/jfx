@@ -35,6 +35,7 @@
 #include "DataTransfer.h"
 #include "ExceptionOr.h"
 #include "ScriptWrappable.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -54,13 +55,14 @@ public:
     ~DataTransferItemList();
 
     // DataTransfer owns DataTransferItemList, and DataTransfer is kept alive as long as DataTransferItemList is alive.
-    void ref() { m_dataTransfer.ref(); }
-    void deref() { m_dataTransfer.deref(); }
-    DataTransfer& dataTransfer() { return m_dataTransfer; }
+    void ref() { m_dataTransfer->ref(); }
+    void deref() { m_dataTransfer->deref(); }
+    DataTransfer& dataTransfer() { return m_dataTransfer.get(); }
 
     // DOM API
     unsigned length() const;
     RefPtr<DataTransferItem> item(unsigned index);
+    bool isSupportedPropertyIndex(unsigned index);
     ExceptionOr<RefPtr<DataTransferItem>> add(Document&, const String& data, const String& type);
     RefPtr<DataTransferItem> add(Ref<File>&&);
     ExceptionOr<void> remove(unsigned index);
@@ -79,7 +81,7 @@ private:
     Vector<Ref<DataTransferItem>>& ensureItems() const;
     Document* document() const;
 
-    DataTransfer& m_dataTransfer;
+    WeakRef<DataTransfer> m_dataTransfer;
     mutable std::optional<Vector<Ref<DataTransferItem>>> m_items;
 };
 

@@ -35,6 +35,7 @@
 #include "CSSSegmentedFontFace.h"
 #include "CSSValueList.h"
 #include "CSSValuePool.h"
+#include "DocumentInlines.h"
 #include "FontCache.h"
 #include "FontSelectionValueInlines.h"
 #include "StyleBuilderConverter.h"
@@ -127,9 +128,8 @@ void CSSFontFaceSet::ensureLocalFontFacesForFamilyRegistered(const AtomString& f
         auto face = CSSFontFace::create(*m_owningFontSelector, nullptr, nullptr, true);
 
         // FIXME: Don't use a list here. https://bugs.webkit.org/show_bug.cgi?id=196381
-        Ref<CSSValueList> familyList = CSSValueList::createCommaSeparated();
-        familyList->append(m_owningFontSelector->scriptExecutionContext()->cssValuePool().createFontFamilyValue(familyName));
-        face->setFamilies(familyList.get());
+        auto& pool = m_owningFontSelector->scriptExecutionContext()->cssValuePool();
+        face->setFamilies(CSSValueList::createCommaSeparated(pool.createFontFamilyValue(familyName)).get());
         face->setFontSelectionCapabilities(item);
         face->adoptSource(makeUnique<CSSFontFaceSource>(face.get(), familyName));
         ASSERT(!face->computeFailureState());
@@ -175,8 +175,8 @@ void CSSFontFaceSet::addToFacesLookupTable(CSSFontFace& face)
     }
 
     for (auto& item : *families) {
-        auto familyName = AtomString { CSSFontFaceSet::familyNameFromPrimitive(downcast<CSSPrimitiveValue>(item.get())) };
-        if (familyName.isEmpty())
+        auto familyName = AtomString { CSSFontFaceSet::familyNameFromPrimitive(downcast<CSSPrimitiveValue>(item)) };
+        if (familyName.isNull())
             continue;
 
         auto addResult = m_facesLookupTable.add(familyName, Vector<Ref<CSSFontFace>>());
@@ -223,8 +223,8 @@ void CSSFontFaceSet::add(CSSFontFace& face)
 void CSSFontFaceSet::removeFromFacesLookupTable(const CSSFontFace& face, const CSSValueList& familiesToSearchFor)
 {
     for (auto& item : familiesToSearchFor) {
-        String familyName = CSSFontFaceSet::familyNameFromPrimitive(downcast<CSSPrimitiveValue>(item.get()));
-        if (familyName.isEmpty())
+        String familyName = CSSFontFaceSet::familyNameFromPrimitive(downcast<CSSPrimitiveValue>(item));
+        if (familyName.isNull())
             continue;
 
         auto iterator = m_facesLookupTable.find(familyName);
@@ -362,14 +362,14 @@ static FontSelectionRequest computeFontSelectionRequest(CSSPropertyParserHelpers
     return { weightSelectionValue, *stretchSelectionValue, styleSelectionValue };
 }
 
-using CodePointsMap = HashSet<UChar32, DefaultHash<UChar32>, WTF::UnsignedWithZeroKeyHashTraits<UChar32>>;
+using CodePointsMap = HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 static CodePointsMap codePointsFromString(StringView stringView)
 {
     CodePointsMap result;
     auto graphemeClusters = stringView.graphemeClusters();
     for (auto cluster : graphemeClusters) {
         ASSERT(cluster.length() > 0);
-        UChar32 character = 0;
+        char32_t character = 0;
         if (cluster.is8Bit())
             character = cluster[0];
         else
@@ -383,7 +383,7 @@ ExceptionOr<Vector<std::reference_wrapper<CSSFontFace>>> CSSFontFaceSet::matchin
 {
     auto font = CSSPropertyParserWorkerSafe::parseFont(fontShorthand, HTMLStandardMode);
     if (!font)
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
 
     HashSet<AtomString> uniqueFamilies;
     Vector<AtomString> familyOrder;
@@ -400,7 +400,7 @@ ExceptionOr<Vector<std::reference_wrapper<CSSFontFace>>> CSSFontFaceSet::matchin
             familyAtom = familyString;
         });
 
-        if (!familyAtom.isEmpty() && uniqueFamilies.add(familyAtom).isNewEntry)
+        if (!familyAtom.isNull() && uniqueFamilies.add(familyAtom).isNewEntry)
             familyOrder.append(familyAtom);
     }
 

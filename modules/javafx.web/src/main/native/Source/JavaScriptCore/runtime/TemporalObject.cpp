@@ -300,15 +300,15 @@ std::optional<TemporalUnit> temporalSmallestUnit(JSGlobalObject* globalObject, J
     return unitType;
 }
 
-static constexpr std::initializer_list<TemporalUnit> disallowedUnits[] = {
-    { },
-    { TemporalUnit::Hour, TemporalUnit::Minute, TemporalUnit::Second, TemporalUnit::Millisecond, TemporalUnit::Microsecond, TemporalUnit::Nanosecond },
-    { TemporalUnit::Year, TemporalUnit::Month, TemporalUnit::Week, TemporalUnit::Day }
-};
-
 // https://tc39.es/proposal-temporal/#sec-temporal-getdifferencesettings
 std::tuple<TemporalUnit, TemporalUnit, RoundingMode, double> extractDifferenceOptions(JSGlobalObject* globalObject, JSValue optionsValue, UnitGroup unitGroup, TemporalUnit defaultSmallestUnit, TemporalUnit defaultLargestUnit)
 {
+    static const std::initializer_list<TemporalUnit> disallowedUnits[] = {
+    { },
+    { TemporalUnit::Hour, TemporalUnit::Minute, TemporalUnit::Second, TemporalUnit::Millisecond, TemporalUnit::Microsecond, TemporalUnit::Nanosecond },
+    { TemporalUnit::Year, TemporalUnit::Month, TemporalUnit::Week, TemporalUnit::Day }
+    };
+
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -355,7 +355,7 @@ std::optional<unsigned> temporalFractionalSecondDigits(JSGlobalObject* globalObj
         return std::nullopt;
 
     if (value.isNumber()) {
-        double doubleValue = std::trunc(value.asNumber());
+        double doubleValue = std::floor(value.asNumber());
         if (!(doubleValue >= 0 && doubleValue <= 9)) {
             throwRangeError(globalObject, scope, makeString("fractionalSecondDigits must be 'auto' or 0 through 9, not "_s, doubleValue));
             return std::nullopt;
@@ -531,7 +531,7 @@ double temporalRoundingIncrement(JSGlobalObject* globalObject, JSObject* options
 
     double maximum;
     if (!dividend)
-        maximum = std::numeric_limits<double>::infinity();
+        maximum = 1'000'000'000;
     else if (inclusive)
         maximum = dividend.value();
     else if (dividend.value() > 1)
@@ -542,12 +542,12 @@ double temporalRoundingIncrement(JSGlobalObject* globalObject, JSObject* options
     double increment = doubleNumberOption(globalObject, options, vm.propertyNames->roundingIncrement, 1);
     RETURN_IF_EXCEPTION(scope, 0);
 
+    increment = std::trunc(increment);
     if (increment < 1 || increment > maximum) {
         throwRangeError(globalObject, scope, "roundingIncrement is out of range"_s);
         return 0;
     }
 
-    increment = std::floor(increment);
     if (dividend && std::fmod(dividend.value(), increment)) {
         throwRangeError(globalObject, scope, makeString("roundingIncrement value does not divide "_s, dividend.value(), " evenly"_s));
         return 0;

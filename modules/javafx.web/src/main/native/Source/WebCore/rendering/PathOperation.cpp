@@ -27,7 +27,6 @@
 #include "PathOperation.h"
 
 #include "AnimationUtilities.h"
-#include "GeometryUtilities.h"
 #include "SVGElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGPathData.h"
@@ -45,14 +44,22 @@ Ref<ReferencePathOperation> ReferencePathOperation::create(std::optional<Path>&&
     return adoptRef(*new ReferencePathOperation(WTFMove(path)));
 }
 
+Ref<PathOperation> ReferencePathOperation::clone() const
+{
+    if (auto path = this->path()) {
+        auto pathCopy = *path;
+        return adoptRef(*new ReferencePathOperation(WTFMove(pathCopy)));
+    }
+    return adoptRef(*new ReferencePathOperation(std::nullopt));
+}
+
 ReferencePathOperation::ReferencePathOperation(const String& url, const AtomString& fragment, const RefPtr<SVGElement> element)
     : PathOperation(Reference)
     , m_url(url)
     , m_fragment(fragment)
-    , m_element(element)
 {
-    if (is<SVGPathElement>(m_element) || is<SVGGeometryElement>(m_element))
-        m_path = pathFromGraphicsElement(m_element.get());
+    if (is<SVGPathElement>(element) || is<SVGGeometryElement>(element))
+        m_path = pathFromGraphicsElement(*element);
 }
 
 ReferencePathOperation::ReferencePathOperation(std::optional<Path>&& path)
@@ -61,110 +68,33 @@ ReferencePathOperation::ReferencePathOperation(std::optional<Path>&& path)
 {
 }
 
-const SVGElement* ReferencePathOperation::element() const
+Ref<RayPathOperation> RayPathOperation::create(float angle, Size size, bool isContaining, LengthPoint&& position, CSSBoxType referenceBox)
 {
-    return m_element.get();
+    return adoptRef(*new RayPathOperation(angle, size, isContaining, WTFMove(position), referenceBox));
 }
 
-Ref<RayPathOperation> RayPathOperation::create(float angle, Size size, bool isContaining, FloatRect&& containingBlockBoundingRect, FloatPoint&& position)
+Ref<PathOperation> RayPathOperation::clone() const
 {
-    return adoptRef(*new RayPathOperation(angle, size, isContaining, WTFMove(containingBlockBoundingRect), WTFMove(position)));
+    auto position = m_position;
+    return adoptRef(*new RayPathOperation(m_angle, m_size, m_isContaining, WTFMove(position), m_referenceBox));
 }
 
 bool RayPathOperation::canBlend(const PathOperation& to) const
 {
     if (auto* toRayPathOperation = dynamicDowncast<RayPathOperation>(to))
-        return m_size == toRayPathOperation->size() && m_isContaining == toRayPathOperation->isContaining();
+        return m_size == toRayPathOperation->size() && m_isContaining == toRayPathOperation->isContaining() && m_referenceBox == toRayPathOperation->referenceBox();
     return false;
 }
 
 RefPtr<PathOperation> RayPathOperation::blend(const PathOperation* to, const BlendingContext& context) const
 {
-    ASSERT(is<RayPathOperation>(to));
     auto& toRayPathOperation = downcast<RayPathOperation>(*to);
-    return RayPathOperation::create(WebCore::blend(m_angle, toRayPathOperation.angle(), context), m_size, m_isContaining);
+    return RayPathOperation::create(WebCore::blend(m_angle, toRayPathOperation.angle(), context), m_size, m_isContaining, WebCore::blend(m_position, toRayPathOperation.position(), context), m_referenceBox);
 }
 
-double RayPathOperation::lengthForPath() const
+const std::optional<Path> RayPathOperation::getPath(const TransformOperationData& data) const
 {
-    auto boundingBox = m_containingBlockBoundingRect;
-    auto distances = distanceOfPointToSidesOfRect(boundingBox, m_position);
-
-    switch (m_size) {
-    case Size::ClosestSide:
-        return std::min( { distances.top(), distances.bottom(), distances.left(), distances.right() } );
-    case Size::FarthestSide:
-        return std::max( { distances.top(), distances.bottom(), distances.left(), distances.right() } );
-    case Size::FarthestCorner:
-        return std::sqrt(std::pow(std::max(distances.left(), distances.right()), 2) + std::pow(std::max(distances.top(), distances.bottom()), 2));
-    case Size::ClosestCorner:
-        return std::sqrt(std::pow(std::min(distances.left(), distances.right()), 2) + std::pow(std::min(distances.top(), distances.bottom()), 2));
-    case Size::Sides:
-        return lengthOfRayIntersectionWithBoundingBox(boundingBox, std::make_pair(m_position, m_angle));
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-double RayPathOperation::lengthForContainPath(const FloatRect& elementRect, double computedPathLength, const FloatPoint& anchor, const OffsetRotation rotation) const
-{
-    // Construct vertices of element for determining if they are within the path length
-    // Anchor point as origin
-    auto vertices = verticesForBox(elementRect, anchor);
-
-    // Rotate vertices depending on offset rotate or angle
-    if (!rotation.hasAuto()) {
-        auto deg = toRelatedAcuteAngle(toPositiveAngle(m_angle - rotation.angle()));
-        auto angle = deg2rad(deg);
-        std::for_each(vertices.begin(), vertices.end(), [angle] (FloatPoint& p) {
-            p.rotate(angle);
-        });
-    }
-
-    Vector<std::pair<double, double>, 4> bounds;
-
-    for (const auto& p : vertices) {
-        // Use equation for circle (offset distance + x)^2 + y^2 <= r^2 to find offset distance that satisfies equation
-        // If no solution for above equation, must minimally increase it, otherwise clamp such that
-        // every point is within path
-        double discriminant = computedPathLength * computedPathLength - p.y() * p.y();
-        if (discriminant < 0) {
-            // Need to minimally increase path length
-            break;
-        }
-        bounds.append(std::make_pair(-p.x() - std::sqrt(discriminant), -p.x() + std::sqrt(discriminant)));
-    }
-
-    if (vertices.size() == bounds.size()) {
-        auto lowerBound = std::max_element(bounds.begin(), bounds.end(),
-            [] (std::pair<double, double> const lhs, std::pair<double, double> const rhs) {
-            return lhs.first < rhs.first;
-        })->first;
-
-        auto upperBound = std::min_element(bounds.begin(), bounds.end(),
-            [] (std::pair<double, double> const lhs, std::pair<double, double> const rhs) {
-            return lhs.second < rhs.second;
-        })->second;
-
-        if (lowerBound <= upperBound)
-            return std::max(lowerBound, std::min(upperBound, computedPathLength));
-    }
-
-    // TODO: Implement minimally increasing path length to allow all vertices to be within such a path length
-    return computedPathLength;
-}
-
-const std::optional<Path> RayPathOperation::getPath(const FloatRect& referenceRect, FloatPoint anchor, OffsetRotation rotation) const
-{
-    Path path;
-    if (m_containingBlockBoundingRect.isZero())
-        return std::nullopt;
-    double length = lengthForPath();
-    if (m_isContaining)
-        length = lengthForContainPath(referenceRect, length, anchor, rotation);
-    auto radians = deg2rad(toPositiveAngle(m_angle) - 90.0);
-    auto point = FloatPoint(std::cos(radians) * length, std::sin(radians) * length);
-    path.addLineTo(point);
-    return path;
+    return MotionPath::computePathForRay(*this, data);
 }
 
 } // namespace WebCore

@@ -25,11 +25,12 @@
 
 #pragma once
 
+#include <span>
+#include <wtf/DebugHeap.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Span.h>
 
 namespace WTF {
 
@@ -63,6 +64,7 @@ public:
     WTF_EXPORT_PRIVATE CString(const char*);
     WTF_EXPORT_PRIVATE CString(const char*, size_t length);
     CString(const uint8_t* data, size_t length) : CString(reinterpret_cast<const char*>(data), length) { }
+    CString(std::span<const uint8_t> bytes) : CString(reinterpret_cast<const char*>(bytes.data()), bytes.size()) { }
     CString(CStringBuffer* buffer) : m_buffer(buffer) { }
     WTF_EXPORT_PRIVATE static CString newUninitialized(size_t length, char*& characterBuffer);
     CString(HashTableDeletedValueType) : m_buffer(HashTableDeletedValue) { }
@@ -76,14 +78,14 @@ public:
 
     const uint8_t* dataAsUInt8Ptr() const { return reinterpret_cast<const uint8_t*>(data()); }
 
-    Span<const uint8_t> bytes() const
+    std::span<const uint8_t> bytes() const
     {
         if (m_buffer)
             return { reinterpret_cast<const uint8_t*>(m_buffer->data()), m_buffer->length() };
         return { };
     }
 
-    Span<const uint8_t> bytesInludingNullTerminator() const
+    std::span<const uint8_t> bytesInludingNullTerminator() const
     {
         if (m_buffer)
             return { reinterpret_cast<const uint8_t*>(m_buffer->data()), m_buffer->length() + 1 };
@@ -114,11 +116,9 @@ private:
     RefPtr<CStringBuffer> m_buffer;
 };
 
-WTF_EXPORT_PRIVATE bool operator==(const CString& a, const CString& b);
-inline bool operator!=(const CString& a, const CString& b) { return !(a == b); }
-WTF_EXPORT_PRIVATE bool operator==(const CString& a, const char* b);
-inline bool operator!=(const CString& a, const char* b) { return !(a == b); }
-WTF_EXPORT_PRIVATE bool operator<(const CString& a, const CString& b);
+WTF_EXPORT_PRIVATE bool operator==(const CString&, const CString&);
+WTF_EXPORT_PRIVATE bool operator==(const CString&, const char*);
+WTF_EXPORT_PRIVATE bool operator<(const CString&, const CString&);
 
 struct CStringHash {
     static unsigned hash(const CString& string) { return string.hash(); }

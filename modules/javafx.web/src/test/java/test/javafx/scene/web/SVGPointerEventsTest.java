@@ -28,10 +28,10 @@ import static java.util.Arrays.asList;
 import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
 import javafx.scene.web.WebEngineShim;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class SVGPointerEventsTest extends TestBase {
 
@@ -64,7 +64,7 @@ public class SVGPointerEventsTest extends TestBase {
             WebPageShim.click(page, 70, 410);
 
             for (String s : asList("polyline", "path", "rect", "circle", "ellipse", "polygon", "dashed")) {
-                assertTrue("Expected element '" + s + "' to be activated", (boolean) getEngine().executeScript("isActivated('" + s + "')"));
+                assertTrue((boolean) getEngine().executeScript("isActivated('" + s + "')"), "Expected element '" + s + "' to be activated");
             }
         });
     }
@@ -99,7 +99,7 @@ public class SVGPointerEventsTest extends TestBase {
             WebPageShim.click(page, 30, 410);
 
             for (String s : asList("polyline", "path", "rect", "circle", "ellipse", "polygon", "dashed")) {
-                assertFalse("Expected element '" + s + "' not to be activated", (boolean) getEngine().executeScript("isActivated('" + s + "')"));
+                assertFalse((boolean) getEngine().executeScript("isActivated('" + s + "')"), "Expected element '" + s + "' not to be activated");
             }
         });
     }

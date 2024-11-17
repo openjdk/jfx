@@ -149,8 +149,12 @@ void State::dumpDisassembly(PrintStream& out, const ScopedLambda<void(DFG::Node*
         printedValues.add(value);
     };
 
+    B3::Value* prevOrigin = nullptr;
     auto forEachInst = scopedLambda<void(B3::Air::Inst&)>([&] (B3::Air::Inst& inst) {
+        if (inst.origin != prevOrigin) {
         printB3Value(inst.origin);
+            prevOrigin = inst.origin;
+        }
     });
 
     disassembler->dump(proc->code(), out, linkBuffer, airPrefix, asmPrefix, forEachInst);
@@ -171,7 +175,7 @@ StructureStubInfo* State::addStructureStubInfo()
 
 OptimizingCallLinkInfo* State::addCallLinkInfo(CodeOrigin codeOrigin)
 {
-    return jitCode->common.m_callLinkInfos.add(codeOrigin, CallLinkInfo::UseDataIC::No);
+    return jitCode->common.m_callLinkInfos.add(codeOrigin, CallLinkInfo::UseDataIC::No, graph.m_codeBlock);
 }
 
 } } // namespace JSC::FTL

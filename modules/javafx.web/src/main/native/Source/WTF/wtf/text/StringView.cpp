@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <wtf/ASCIICType.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
+#include <wtf/text/AdaptiveStringSearcher.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
@@ -107,6 +108,31 @@ CString StringView::utf8(ConversionMode mode) const
 size_t StringView::find(StringView matchString, unsigned start) const
 {
     return findCommon(*this, matchString, start);
+}
+
+size_t StringView::find(AdaptiveStringSearcherTables& tables, StringView matchString, unsigned start) const
+{
+    unsigned subjectLength = length();
+    unsigned matchLength = matchString.length();
+
+    if (start > subjectLength)
+        return notFound;
+
+    if (!matchLength)
+        return start;
+
+    if (UNLIKELY(subjectLength > INT32_MAX || matchLength > INT32_MAX))
+        return find(matchString, start);
+
+    if (is8Bit()) {
+        if (matchString.is8Bit())
+            return searchStringRaw(tables, characters8(), length(), matchString.characters8(), matchString.length(), start);
+        return searchStringRaw(tables, characters8(), length(), matchString.characters16(), matchString.length(), start);
+    }
+
+    if (matchString.is8Bit())
+        return searchStringRaw(tables, characters16(), length(), matchString.characters8(), matchString.length(), start);
+    return searchStringRaw(tables, characters16(), length(), matchString.characters16(), matchString.length(), start);
 }
 
 size_t StringView::find(const LChar* match, unsigned matchLength, unsigned start) const
@@ -243,11 +269,6 @@ bool StringView::GraphemeClusters::Iterator::operator==(const Iterator& other) c
     return *m_impl == *(other.m_impl);
 }
 
-bool StringView::GraphemeClusters::Iterator::operator!=(const Iterator& other) const
-{
-    return !(*this == other);
-}
-
 enum class ASCIICase { Lower, Upper };
 
 template<ASCIICase type, typename CharacterType>
@@ -369,11 +390,6 @@ bool equalRespectingNullity(StringView a, StringView b)
         return a.isNull() == b.isNull();
 
     return equalCommon(a, b);
-}
-
-StringView StringView::stripWhiteSpace() const
-{
-    return stripLeadingAndTrailingMatchedCharacters(isASCIISpace<UChar>);
 }
 
 size_t StringView::reverseFind(StringView matchString, unsigned start) const

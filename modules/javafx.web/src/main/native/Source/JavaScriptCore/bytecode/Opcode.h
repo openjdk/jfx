@@ -56,7 +56,7 @@ namespace JSC {
 
 
 #if ENABLE(C_LOOP)
-const int numOpcodeIDs = NUMBER_OF_BYTECODE_IDS + NUMBER_OF_CLOOP_BYTECODE_HELPER_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
+const int numOpcodeIDs = NUMBER_OF_BYTECODE_IDS + NUMBER_OF_CLOOP_BYTECODE_HELPER_IDS + NUMBER_OF_BYTECODE_HELPER_IDS + NUMBER_OF_CLOOP_RETURN_HELPER_IDS;
 #else
 const int numOpcodeIDs = NUMBER_OF_BYTECODE_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
 #endif
@@ -100,8 +100,6 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
 
 #define FOR_EACH_OPCODE_WITH_VALUE_PROFILE(macro) \
     macro(OpCallVarargs) \
-    macro(OpTailCallVarargs) \
-    macro(OpTailCallForwardArguments) \
     macro(OpConstructVarargs) \
     macro(OpGetByVal) \
     macro(OpEnumeratorGetByVal) \
@@ -112,23 +110,14 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpGetByValWithThis) \
     macro(OpGetPrototypeOf) \
     macro(OpGetFromArguments) \
-    macro(OpToNumber) \
-    macro(OpToNumeric) \
     macro(OpToObject) \
     macro(OpGetArgument) \
     macro(OpGetInternalField) \
     macro(OpToThis) \
     macro(OpCall) \
-    macro(OpTailCall) \
     macro(OpCallDirectEval) \
     macro(OpConstruct) \
     macro(OpGetFromScope) \
-    macro(OpBitand) \
-    macro(OpBitor) \
-    macro(OpBitnot) \
-    macro(OpBitxor) \
-    macro(OpLshift) \
-    macro(OpRshift) \
     macro(OpGetPrivateName) \
     macro(OpNewArrayWithSpecies) \
 
@@ -143,8 +132,9 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpTailCallVarargs) \
     macro(OpTailCallForwardArguments) \
     macro(OpConstructVarargs) \
+    macro(OpCallIgnoreResult) \
 
-#define FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(macro) \
+#define FOR_EACH_OPCODE_WITH_SIMPLE_ARRAY_PROFILE(macro) \
     macro(OpGetByVal) \
     macro(OpInByVal) \
     macro(OpPutByVal) \
@@ -152,9 +142,13 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpEnumeratorNext) \
     macro(OpEnumeratorGetByVal) \
     macro(OpEnumeratorInByVal) \
+    macro(OpEnumeratorPutByVal) \
     macro(OpEnumeratorHasOwnProperty) \
     macro(OpNewArrayWithSpecies) \
-    FOR_EACH_OPCODE_WITH_CALL_LINK_INFO(macro) \
+    macro(OpCall) \
+    macro(OpCallIgnoreResult) \
+    macro(OpTailCall) \
+    macro(OpIteratorOpen) \
 
 #define FOR_EACH_OPCODE_WITH_ARRAY_ALLOCATION_PROFILE(macro) \
     macro(OpNewArray) \
@@ -170,11 +164,19 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpMul) \
     macro(OpDiv) \
     macro(OpSub) \
+    macro(OpBitand) \
+    macro(OpBitor) \
+    macro(OpBitxor) \
+    macro(OpLshift) \
+    macro(OpRshift) \
 
 #define FOR_EACH_OPCODE_WITH_UNARY_ARITH_PROFILE(macro) \
+    macro(OpBitnot) \
     macro(OpInc) \
     macro(OpDec) \
     macro(OpNegate) \
+    macro(OpToNumber) \
+    macro(OpToNumeric) \
 
 
 IGNORE_WARNINGS_BEGIN("type-limits")

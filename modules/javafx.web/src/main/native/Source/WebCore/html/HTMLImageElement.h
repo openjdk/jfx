@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010-2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -24,9 +24,9 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "AttachmentAssociatedElement.h"
 #include "DecodingOptions.h"
 #include "FormAssociatedElement.h"
-#include "GraphicsLayer.h"
 #include "GraphicsTypes.h"
 #include "HTMLElement.h"
 #include "MediaQuery.h"
@@ -40,13 +40,21 @@ class HTMLAttachmentElement;
 class HTMLFormElement;
 class HTMLImageLoader;
 class HTMLMapElement;
+class Image;
 
 struct ImageCandidate;
 
 enum class ReferrerPolicy : uint8_t;
 enum class RelevantMutation : bool;
+enum class RequestPriority : uint8_t;
 
-class HTMLImageElement : public HTMLElement, public FormAssociatedElement, public ActiveDOMObject {
+class HTMLImageElement
+    : public HTMLElement
+#if ENABLE(ATTACHMENT_ELEMENT)
+    , public AttachmentAssociatedElement
+#endif
+    , public FormAssociatedElement
+    , public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLImageElement);
 public:
     static Ref<HTMLImageElement> create(Document&);
@@ -63,8 +71,9 @@ public:
     WEBCORE_EXPORT unsigned width();
     WEBCORE_EXPORT unsigned height();
 
-    WEBCORE_EXPORT int naturalWidth() const;
-    WEBCORE_EXPORT int naturalHeight() const;
+    WEBCORE_EXPORT unsigned naturalWidth() const;
+    WEBCORE_EXPORT unsigned naturalHeight() const;
+    const URL& currentURL() const { return m_currentURL; }
     const AtomString& currentSrc() const { return m_currentSrc; }
 
     bool isServerMap() const;
@@ -77,8 +86,8 @@ public:
 
     void setLoadManually(bool);
 
-    bool matchesUsemap(const AtomStringImpl&) const;
-    HTMLMapElement* associatedMapElement() const;
+    bool matchesUsemap(const AtomString&) const;
+    RefPtr<HTMLMapElement> associatedMapElement() const;
 
     WEBCORE_EXPORT const AtomString& alt() const;
 
@@ -107,15 +116,12 @@ public:
 #if PLATFORM(IOS_FAMILY)
     bool willRespondToMouseClickEventsWithEditability(Editability) const override;
 
-    enum class IgnoreTouchCallout { No, Yes };
+    enum class IgnoreTouchCallout : bool { No, Yes };
     bool willRespondToMouseClickEventsWithEditability(Editability, IgnoreTouchCallout) const;
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-    void setAttachmentElement(Ref<HTMLAttachmentElement>&&);
-    RefPtr<HTMLAttachmentElement> attachmentElement() const;
-    const String& attachmentIdentifier() const;
-    void didUpdateAttachmentIdentifier();
+    void setAttachmentElement(Ref<HTMLAttachmentElement>&&) final;
 #endif
 
     WEBCORE_EXPORT size_t pendingDecodePromisesCountForTesting() const;
@@ -167,7 +173,13 @@ public:
     WEBCORE_EXPORT void setAllowsAnimation(std::optional<bool>);
 #endif
 
+    void setFetchPriorityForBindings(const AtomString&);
+    String fetchPriorityForBindings() const;
+    RequestPriority fetchPriorityHint() const;
+
     bool originClean(const SecurityOrigin&) const;
+
+    void collectExtraStyleForPresentationalHints(MutableStyleProperties&);
 
 protected:
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
@@ -178,13 +190,11 @@ private:
     void resetFormOwner() final;
     void refFormAssociatedElement() const final { HTMLElement::ref(); }
     void derefFormAssociatedElement() const final { HTMLElement::deref(); }
-    void setFormInternal(HTMLFormElement*) final;
+    void setFormInternal(RefPtr<HTMLFormElement>&&) final;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
-    void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
     void invalidateAttributeMapping();
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) final;
@@ -202,10 +212,12 @@ private:
     bool isURLAttribute(const Attribute&) const override;
     bool attributeContainsURL(const Attribute&) const override;
     String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const override;
+    Attribute replaceURLsInAttributeValue(const Attribute&, const HashMap<String, String>&) const override;
 
     bool isDraggableIgnoringAttributes() const final { return true; }
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
+    void addCandidateSubresourceURLs(ListHashSet<URL>&) const override;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
@@ -214,6 +226,15 @@ private:
     FormAssociatedElement* asFormAssociatedElement() final { return this; }
     HTMLImageElement& asHTMLElement() final { return *this; }
     const HTMLImageElement& asHTMLElement() const final { return *this; }
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    void refAttachmentAssociatedElement() const final { HTMLElement::ref(); }
+    void derefAttachmentAssociatedElement() const final { HTMLElement::deref(); }
+
+    AttachmentAssociatedElement* asAttachmentAssociatedElement() final { return this; }
+
+    AttachmentAssociatedElementType attachmentAssociatedElementType() const final { return AttachmentAssociatedElementType::Image; };
+#endif
 
     bool isInteractiveContent() const final;
 
@@ -237,6 +258,7 @@ private:
     CompositeOperator m_compositeOperator;
     AtomString m_bestFitImageURL;
     AtomString m_currentSrc;
+    URL m_currentURL;
     AtomString m_parsedUsemap;
     float m_imageDevicePixelRatio;
 #if ENABLE(SERVICE_CONTROLS)
@@ -250,10 +272,6 @@ private:
     WeakPtr<HTMLSourceElement, WeakPtrImplWithEventTargetData> m_sourceElement;
 
     Vector<MQ::MediaQueryResult> m_dynamicMediaQueryResults;
-
-#if ENABLE(ATTACHMENT_ELEMENT)
-    String m_pendingClonedAttachmentID;
-#endif
 
     Image* image() const;
 

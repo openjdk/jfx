@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,30 +32,34 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include <wtf/text/WTFString.h>
+#include "MediaConstraintType.h"
 
 namespace WebCore {
-
-enum class MediaConstraintType : uint8_t {
-    Unknown,
-    Width,
-    Height,
-    AspectRatio,
-    FrameRate,
-    FacingMode,
-    Volume,
-    SampleRate,
-    SampleSize,
-    EchoCancellation,
-    DeviceId,
-    GroupId,
-    DisplaySurface,
-    LogicalSurface,
-};
 
 class RealtimeMediaSourceSupportedConstraints {
 public:
     RealtimeMediaSourceSupportedConstraints()
+    {
+    }
+
+    RealtimeMediaSourceSupportedConstraints(bool supportsWidth, bool supportsHeight, bool supportsAspectRatio, bool supportsFrameRate, bool supportsFacingMode, bool supportsVolume, bool supportsSampleRate, bool supportsSampleSize, bool supportsEchoCancellation, bool supportsDeviceId, bool supportsGroupId, bool supportsDisplaySurface, bool supportsLogicalSurface, bool supportsFocusDistance, bool supportsWhiteBalanceMode, bool supportsZoom, bool supportsTorch)
+        : m_supportsWidth(supportsWidth)
+        , m_supportsHeight(supportsHeight)
+        , m_supportsAspectRatio(supportsAspectRatio)
+        , m_supportsFrameRate(supportsFrameRate)
+        , m_supportsFacingMode(supportsFacingMode)
+        , m_supportsVolume(supportsVolume)
+        , m_supportsSampleRate(supportsSampleRate)
+        , m_supportsSampleSize(supportsSampleSize)
+        , m_supportsEchoCancellation(supportsEchoCancellation)
+        , m_supportsDeviceId(supportsDeviceId)
+        , m_supportsGroupId(supportsGroupId)
+        , m_supportsDisplaySurface(supportsDisplaySurface)
+        , m_supportsLogicalSurface(supportsLogicalSurface)
+        , m_supportsFocusDistance(supportsFocusDistance)
+        , m_supportsWhiteBalanceMode(supportsWhiteBalanceMode)
+        , m_supportsZoom(supportsZoom)
+        , m_supportsTorch(supportsTorch)
     {
     }
 
@@ -100,8 +104,17 @@ public:
 
     bool supportsConstraint(MediaConstraintType) const;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, RealtimeMediaSourceSupportedConstraints&);
+    bool supportsFocusDistance() const { return m_supportsFocusDistance; }
+    void setSupportsFocusDistance(bool value) { m_supportsFocusDistance = value; }
+
+    bool supportsWhiteBalanceMode() const { return m_supportsWhiteBalanceMode; }
+    void setSupportsWhiteBalanceMode(bool value) { m_supportsWhiteBalanceMode = value; }
+
+    bool supportsZoom() const { return m_supportsZoom; }
+    void setSupportsZoom(bool value) { m_supportsZoom = value; }
+
+    bool supportsTorch() const { return m_supportsTorch; }
+    void setSupportsTorch(bool value) { m_supportsTorch = value; }
 
 private:
     bool m_supportsWidth { false };
@@ -117,43 +130,11 @@ private:
     bool m_supportsGroupId { false };
     bool m_supportsDisplaySurface { false };
     bool m_supportsLogicalSurface { false };
+    bool m_supportsFocusDistance { false };
+    bool m_supportsWhiteBalanceMode { false };
+    bool m_supportsZoom { false };
+    bool m_supportsTorch { false };
 };
-
-template<class Encoder>
-void RealtimeMediaSourceSupportedConstraints::encode(Encoder& encoder) const
-{
-    encoder << m_supportsWidth
-        << m_supportsHeight
-        << m_supportsAspectRatio
-        << m_supportsFrameRate
-        << m_supportsFacingMode
-        << m_supportsVolume
-        << m_supportsSampleRate
-        << m_supportsSampleSize
-        << m_supportsEchoCancellation
-        << m_supportsDeviceId
-        << m_supportsGroupId
-        << m_supportsDisplaySurface
-        << m_supportsLogicalSurface;
-}
-
-template<class Decoder>
-bool RealtimeMediaSourceSupportedConstraints::decode(Decoder& decoder, RealtimeMediaSourceSupportedConstraints& constraints)
-{
-    return decoder.decode(constraints.m_supportsWidth)
-        && decoder.decode(constraints.m_supportsHeight)
-        && decoder.decode(constraints.m_supportsAspectRatio)
-        && decoder.decode(constraints.m_supportsFrameRate)
-        && decoder.decode(constraints.m_supportsFacingMode)
-        && decoder.decode(constraints.m_supportsVolume)
-        && decoder.decode(constraints.m_supportsSampleRate)
-        && decoder.decode(constraints.m_supportsSampleSize)
-        && decoder.decode(constraints.m_supportsEchoCancellation)
-        && decoder.decode(constraints.m_supportsDeviceId)
-        && decoder.decode(constraints.m_supportsGroupId)
-        && decoder.decode(constraints.m_supportsDisplaySurface)
-        && decoder.decode(constraints.m_supportsLogicalSurface);
-}
 
 } // namespace WebCore
 

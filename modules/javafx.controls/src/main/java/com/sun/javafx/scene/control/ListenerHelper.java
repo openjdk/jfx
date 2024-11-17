@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,18 +41,11 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
-import javafx.concurrent.Task;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.event.EventType;
-import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.SkinBase;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TreeItem;
-import javafx.scene.transform.Transform;
-import javafx.stage.Window;
 
 /**
  * This class provides convenience methods for adding various listeners, both
@@ -393,92 +386,34 @@ public class ListenerHelper implements IDisconnectable {
 
     // event handlers
 
-    public <T extends Event> IDisconnectable addEventHandler(Object x, EventType<T> t, EventHandler<T> handler) {
+    public <T extends Event> IDisconnectable addEventHandler(EventTarget x, EventType<T> t, EventHandler<T> handler) {
         EvHa<T> h = new EvHa<>(handler) {
             @Override
             public void disconnect() {
-                if (x instanceof Node n) {
-                    n.removeEventHandler(t, this);
-                } else if (x instanceof Window y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof Scene y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof MenuItem y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof TreeItem y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof TableColumnBase y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof Transform y) {
-                    y.removeEventHandler(t, this);
-                } else if (x instanceof Task y) {
-                    y.removeEventHandler(t, this);
-                }
+                x.removeEventHandler(t, this);
             }
         };
 
         items.add(h);
 
-        // we really need an interface here ... "HasEventHandlers"
-        if (x instanceof Node y) {
-            y.addEventHandler(t, h);
-        } else if (x instanceof Window y) {
-            y.addEventHandler(t, h);
-        } else if (x instanceof Scene y) {
-            y.addEventHandler(t, h);
-        } else if (x instanceof MenuItem y) {
-            y.addEventHandler(t, h);
-        } else if (x instanceof TreeItem y) {
-            y.addEventHandler(t, h);
-        } else if (x instanceof TableColumnBase y) {
-            y.addEventHandler(t, h);
-        } else if (x instanceof Transform y) {
-            y.addEventHandler(t, h);
-        } else if (x instanceof Task y) {
-            y.addEventHandler(t, h);
-        } else {
-            throw new IllegalArgumentException("Cannot add event handler to " + x);
-        }
+        x.addEventHandler(t, h);
 
         return h;
     }
 
     // event filters
 
-    public <T extends Event> IDisconnectable addEventFilter(Object x, EventType<T> t, EventHandler<T> handler) {
+    public <T extends Event> IDisconnectable addEventFilter(EventTarget x, EventType<T> t, EventHandler<T> handler) {
         EvHa<T> h = new EvHa<>(handler) {
             @Override
             public void disconnect() {
-                if (x instanceof Node n) {
-                    n.removeEventFilter(t, this);
-                } else if (x instanceof Window y) {
-                    y.removeEventFilter(t, this);
-                } else if (x instanceof Scene y) {
-                    y.removeEventFilter(t, this);
-                } else if (x instanceof Transform y) {
-                    y.removeEventFilter(t, this);
-                } else if (x instanceof Task y) {
-                    y.removeEventFilter(t, this);
-                }
+                x.removeEventFilter(t, this);
             }
         };
 
         items.add(h);
 
-        // we really need an interface here ... "HasEventFilters"
-        if (x instanceof Node y) {
-            y.addEventFilter(t, h);
-        } else if (x instanceof Window y) {
-            y.addEventFilter(t, h);
-        } else if (x instanceof Scene y) {
-            y.addEventFilter(t, h);
-        } else if (x instanceof Transform y) {
-            y.addEventFilter(t, h);
-        } else if (x instanceof Task y) {
-            y.addEventFilter(t, h);
-        } else {
-            throw new IllegalArgumentException("Cannot add event filter to " + x);
-        }
+        x.addEventFilter(t, h);
 
         return h;
     }

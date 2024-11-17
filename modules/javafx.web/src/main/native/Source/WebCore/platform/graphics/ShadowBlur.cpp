@@ -191,19 +191,17 @@ ShadowBlur::ShadowBlur(const FloatSize& radius, const FloatSize& offset, const C
     updateShadowBlurValues();
 }
 
-ShadowBlur::ShadowBlur(const DropShadow& dropShadow, bool shadowsIgnoreTransforms)
+ShadowBlur::ShadowBlur(const GraphicsDropShadow& dropShadow, bool shadowsIgnoreTransforms)
     : m_color(dropShadow.color)
-    , m_blurRadius(dropShadow.blurRadius, dropShadow.blurRadius)
+    , m_blurRadius(dropShadow.radius, dropShadow.radius)
     , m_offset(dropShadow.offset)
     , m_shadowsIgnoreTransforms(shadowsIgnoreTransforms)
 {
 #if USE(CG)
     // Core Graphics incorrectly renders shadows with radius > 8px (<rdar://problem/8103442>),
     // but we need to preserve this buggy behavior for canvas and -webkit-box-shadow.
-    if (dropShadow.radiusMode == ShadowRadiusMode::Legacy) {
-        float shadowBlur = radiusToLegacyRadius(dropShadow.blurRadius);
-        m_blurRadius = FloatSize(shadowBlur, shadowBlur);
-    }
+    if (dropShadow.radiusMode == ShadowRadiusMode::Legacy)
+        m_blurRadius = { radiusToLegacyRadius(m_blurRadius.width()), radiusToLegacyRadius(m_blurRadius.height()) };
 #endif
     updateShadowBlurValues();
 }
@@ -451,8 +449,8 @@ std::optional<ShadowBlur::LayerImageProperties> ShadowBlur::calculateLayerBoundi
 
     // Set the origin as the top left corner of the scratch image, or, in case there's a clipped
     // out region, set the origin accordingly to the full bounding rect's top-left corner.
-    float translationX = -shadowedRect.x() + inflation.width() - fabsf(clippedOut.width());
-    float translationY = -shadowedRect.y() + inflation.height() - fabsf(clippedOut.height());
+    float translationX = -shadowedRect.x() + inflation.width() - std::abs(clippedOut.width());
+    float translationY = -shadowedRect.y() + inflation.height() - std::abs(clippedOut.height());
     calculatedLayerImageProperties.layerContextTranslation = FloatSize(translationX, translationY);
 
     return calculatedLayerImageProperties;
@@ -471,7 +469,7 @@ void ShadowBlur::drawShadowBuffer(GraphicsContext& graphicsContext, ImageBuffer&
     graphicsContext.clipToImageBuffer(layerImage, FloatRect(layerOrigin, bufferSize));
     graphicsContext.setFillColor(m_color);
 
-    graphicsContext.clearShadow();
+    graphicsContext.clearDropShadow();
     graphicsContext.fillRect(FloatRect(layerOrigin, layerSize));
 }
 
@@ -509,13 +507,13 @@ void ShadowBlur::drawRectShadow(GraphicsContext& graphicsContext, const FloatRou
         },
         [&graphicsContext](ImageBuffer& image, const FloatRect& destRect, const FloatRect& srcRect) {
             GraphicsContextStateSaver stateSaver(graphicsContext);
-            graphicsContext.clearShadow();
+            graphicsContext.clearDropShadow();
             graphicsContext.drawImageBuffer(image, destRect, srcRect);
         },
         [&graphicsContext](const FloatRect& rect, const Color& color) {
             GraphicsContextStateSaver stateSaver(graphicsContext);
             graphicsContext.setFillColor(color);
-            graphicsContext.clearShadow();
+            graphicsContext.clearDropShadow();
             graphicsContext.fillRect(rect);
         });
 }
@@ -530,7 +528,7 @@ void ShadowBlur::drawInsetShadow(GraphicsContext& graphicsContext, const FloatRe
             // Note that drawing the ImageBuffer is faster than creating a Image and drawing that,
             // because ImageBuffer::draw() knows that it doesn't have to copy the image bits.
             GraphicsContextStateSaver stateSaver(graphicsContext);
-            graphicsContext.clearShadow();
+            graphicsContext.clearDropShadow();
             graphicsContext.drawImageBuffer(image, destRect, srcRect);
         },
         [&graphicsContext](const FloatRect& rect, const FloatRect& holeRect, const Color& color) {
@@ -541,7 +539,7 @@ void ShadowBlur::drawInsetShadow(GraphicsContext& graphicsContext, const FloatRe
             GraphicsContextStateSaver fillStateSaver(graphicsContext);
             graphicsContext.setFillRule(WindRule::EvenOdd);
             graphicsContext.setFillColor(color);
-            graphicsContext.clearShadow();
+            graphicsContext.clearDropShadow();
             graphicsContext.fillPath(exteriorPath);
         });
 }
@@ -899,7 +897,7 @@ void ShadowBlur::blurShadowBuffer(ImageBuffer& layerImage, const IntSize& templa
     if (!layerData)
         return;
 
-    blurLayerImage(layerData->bytes(), blurRect.size(), blurRect.width() * 4);
+    blurLayerImage(layerData->bytes(), layerData->size(), layerData->size().width() * 4);
     layerImage.putPixelBuffer(*layerData, blurRect);
 }
 

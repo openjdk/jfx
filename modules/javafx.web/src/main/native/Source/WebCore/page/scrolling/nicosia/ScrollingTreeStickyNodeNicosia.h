@@ -30,7 +30,7 @@
 
 #if ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
 
-#include "NicosiaPlatformLayer.h"
+#include "NicosiaCompositionLayer.h"
 #include "ScrollingConstraints.h"
 #include "ScrollingTreeStickyNode.h"
 #include <wtf/RefPtr.h>
@@ -42,7 +42,6 @@ public:
     static Ref<ScrollingTreeStickyNodeNicosia> create(ScrollingTree&, ScrollingNodeID);
     virtual ~ScrollingTreeStickyNodeNicosia() = default;
 
-    Nicosia::CompositionLayer* layer() const { return m_layer.get(); }
 
 private:
     ScrollingTreeStickyNodeNicosia(ScrollingTree&, ScrollingNodeID);

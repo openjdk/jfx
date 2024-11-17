@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "CachedResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "ResourceLoadTiming.h"
 #include "ResourceLoaderIdentifier.h"
@@ -52,9 +53,9 @@ namespace WebCore {
 class AuthenticationChallenge;
 class CachedResource;
 class DocumentLoader;
-class Frame;
 class FrameLoader;
 class LegacyPreviewLoader;
+class LocalFrame;
 class NetworkLoadMetrics;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
@@ -79,7 +80,9 @@ public:
 #endif
 
     WEBCORE_EXPORT FrameLoader* frameLoader() const;
+    WEBCORE_EXPORT CheckedPtr<FrameLoader> checkedFrameLoader() const;
     DocumentLoader* documentLoader() const { return m_documentLoader.get(); }
+    RefPtr<DocumentLoader> protectedDocumentLoader() const;
     const ResourceRequest& originalRequest() const { return m_originalRequest; }
 
     WEBCORE_EXPORT void start();
@@ -88,6 +91,7 @@ public:
     WEBCORE_EXPORT ResourceError blockedError();
     ResourceError blockedByContentBlockerError();
     ResourceError cannotShowURLError();
+    ResourceError httpsUpgradeRedirectLoopError();
 
     virtual void setDefersLoading(bool);
     bool defersLoading() const { return m_defersLoading; }
@@ -100,6 +104,7 @@ public:
     const ResourceResponse& response() const { return m_response; }
 
     const FragmentedSharedBuffer* resourceData() const;
+    RefPtr<const FragmentedSharedBuffer> protectedResourceData() const;
     void clearResourceData();
 
     virtual bool isSubresourceLoader() const;
@@ -135,6 +140,7 @@ public:
     WEBCORE_EXPORT bool shouldIncludeCertificateInfo() const;
 
     virtual CachedResource* cachedResource() const { return nullptr; }
+    CachedResourceHandle<CachedResource> protectedCachedResource() const { return cachedResource(); }
 
     bool reachedTerminalState() const { return m_reachedTerminalState; }
 
@@ -152,7 +158,8 @@ public:
     void unschedule(WTF::SchedulePair&);
 #endif
 
-    const Frame* frame() const { return m_frame.get(); }
+    LocalFrame* frame() const { return m_frame.get(); }
+    RefPtr<LocalFrame> protectedFrame() const;
 
     const ResourceLoaderOptions& options() const { return m_options; }
 
@@ -162,7 +169,7 @@ public:
     bool isPDFJSResourceLoad() const;
 
 protected:
-    ResourceLoader(Frame&, ResourceLoaderOptions);
+    ResourceLoader(LocalFrame&, ResourceLoaderOptions);
 
     void didFinishLoadingOnePart(const NetworkLoadMetrics&);
     void cleanupForError(const ResourceError&);
@@ -179,7 +186,7 @@ protected:
     virtual void willSendRequestInternal(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&&);
 
     RefPtr<ResourceHandle> m_handle;
-    RefPtr<Frame> m_frame;
+    RefPtr<LocalFrame> m_frame;
     RefPtr<DocumentLoader> m_documentLoader;
     ResourceResponse m_response;
     ResourceLoadTiming m_loadTiming;

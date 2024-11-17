@@ -25,6 +25,8 @@
 #include "RenderFrame.h"
 
 #include "HTMLFrameElement.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderFrameSet.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -33,8 +35,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFrame);
 
 RenderFrame::RenderFrame(HTMLFrameElement& frame, RenderStyle&& style)
-    : RenderFrameBase(frame, WTFMove(style))
+    : RenderFrameBase(Type::Frame, frame, WTFMove(style))
 {
+    ASSERT(isRenderFrame());
 }
 
 HTMLFrameElement& RenderFrame::frameElement() const
@@ -49,8 +52,8 @@ FrameEdgeInfo RenderFrame::edgeInfo() const
 
 void RenderFrame::updateFromElement()
 {
-    if (is<RenderFrameSet>(parent()))
-        downcast<RenderFrameSet>(*parent()).notifyFrameEdgeInfoChanged();
+    if (CheckedPtr frameSet = dynamicDowncast<RenderFrameSet>(parent()))
+        frameSet->notifyFrameEdgeInfoChanged();
 }
 
 } // namespace WebCore

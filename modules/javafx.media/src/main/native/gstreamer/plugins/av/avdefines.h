@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,14 @@
 // Do not call avcodec_register_all() and av_register_all()
 // Not required since 58 and removed in 59
 #define NO_REGISTER_ALL        (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(59,0,0))
+
+// Do not use reordered_opaque to pass PTS. Use AVPacket.pts/AVFrame.pts instead.
+// reordered_opaque is removed since 61.
+#define NO_REORDERED_OPAQUE    (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61,0,0))
+
+// Use AVCodecContext.frame_num instead of AVCodecContext.frame_number. They same
+// except frame_num is 64-bit and frame_number is 32-bit. Since 61.
+#define USE_FRAME_NUM          (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61,0,0))
 
 #endif  /* AVDEFINES_H */
 

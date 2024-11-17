@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,9 +88,14 @@ jmethodID jClipboardContentChanged;
 
 jmethodID jSizeInit;
 
+jclass jMapCls;
 jmethodID jMapGet;
+jmethodID jMapPut;
 jmethodID jMapKeySet;
 jmethodID jMapContainsKey;
+
+jclass jHashMapCls;
+jmethodID jHashMapInit;
 
 jclass jHashSetCls;
 jmethodID jHashSetInit;
@@ -110,6 +115,20 @@ jfieldID jApplicationVisualID;
 jmethodID jApplicationReportException;
 jmethodID jApplicationGetApplication;
 jmethodID jApplicationGetName;
+jmethodID jApplicationNotifyPreferencesChanged;
+
+jclass jObjectCls;
+jmethodID jObjectEquals;
+
+jclass jBooleanCls;
+jfieldID jBooleanTRUE;
+jfieldID jBooleanFALSE;
+
+jclass jCollectionsCls;
+jmethodID jCollectionsUnmodifiableMap;
+
+jclass jColorCls;
+jmethodID jColorRgb;
 
 static jboolean displayValid = JNI_FALSE;
 
@@ -276,11 +295,20 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 
     clazz = env->FindClass("java/util/Map");
     if (env->ExceptionCheck()) return JNI_ERR;
+    jMapCls = (jclass)env->NewGlobalRef(clazz);
     jMapGet = env->GetMethodID(clazz, "get", "(Ljava/lang/Object;)Ljava/lang/Object;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jMapPut = env->GetMethodID(clazz, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
     if (env->ExceptionCheck()) return JNI_ERR;
     jMapKeySet = env->GetMethodID(clazz, "keySet", "()Ljava/util/Set;");
     if (env->ExceptionCheck()) return JNI_ERR;
     jMapContainsKey = env->GetMethodID(clazz, "containsKey", "(Ljava/lang/Object;)Z");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("java/util/HashMap");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jHashMapCls = (jclass) env->NewGlobalRef(clazz);
+    jHashMapInit = env->GetMethodID(jHashMapCls, "<init>", "()V");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("java/util/HashSet");
@@ -327,6 +355,34 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
     jApplicationGetName = env->GetMethodID(jApplicationCls, "getName", "()Ljava/lang/String;");
     if (env->ExceptionCheck()) return JNI_ERR;
+    jApplicationNotifyPreferencesChanged = env->GetMethodID(jApplicationCls, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("java/lang/Object");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jObjectCls = (jclass)env->NewGlobalRef(clazz);
+    jObjectEquals = env->GetMethodID(jObjectCls, "equals", "(Ljava/lang/Object;)Z");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("java/lang/Boolean");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jBooleanCls = (jclass)env->NewGlobalRef(clazz);
+    jBooleanTRUE = env->GetStaticFieldID(jBooleanCls, "TRUE", "Ljava/lang/Boolean;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jBooleanFALSE = env->GetStaticFieldID(jBooleanCls, "FALSE", "Ljava/lang/Boolean;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("java/util/Collections");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jCollectionsCls = (jclass)env->NewGlobalRef(clazz);
+    jCollectionsUnmodifiableMap = env->GetStaticMethodID(jCollectionsCls, "unmodifiableMap", "(Ljava/util/Map;)Ljava/util/Map;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("javafx/scene/paint/Color");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jColorCls = (jclass)env->NewGlobalRef(clazz);
+    jColorRgb = env->GetStaticMethodID(jColorCls, "rgb", "(IIID)Ljavafx/scene/paint/Color;");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     return JNI_VERSION_1_6;
 }
@@ -354,7 +410,15 @@ glass_throw_oom(JNIEnv * env, const char * message) {
 
 
 guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height) {
+  if (stride <= 0 || height <= 0 || (height > INT_MAX / stride)) {
+    return NULL;
+  }
+
   guint8* new_pixels = (guint8*) g_malloc(height * stride);
+  if (!new_pixels) {
+    return NULL;
+  }
+
   int i = 0;
 
   for (i = 0; i < height * stride; i += 4) {
@@ -549,7 +613,8 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
                                                 | GDK_BUTTON2_MOTION_MASK
                                                 | GDK_BUTTON3_MOTION_MASK
                                                 | GDK_BUTTON_PRESS_MASK
-                                                | GDK_BUTTON_RELEASE_MASK),
+                                                | GDK_BUTTON_RELEASE_MASK
+                                                | GDK_TOUCH_MASK),
                                             NULL, cursor, GDK_CURRENT_TIME);
 
     return (status == GDK_GRAB_SUCCESS) ? TRUE : FALSE;

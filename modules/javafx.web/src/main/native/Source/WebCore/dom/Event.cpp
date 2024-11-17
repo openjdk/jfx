@@ -23,14 +23,13 @@
 #include "config.h"
 #include "Event.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "EventNames.h"
 #include "EventPath.h"
 #include "EventTarget.h"
 #include "InspectorInstrumentation.h"
+#include "LocalDOMWindow.h"
 #include "Performance.h"
-#include "TouchList.h"
 #include "UserGestureIndicator.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/HexNumber.h>
@@ -85,6 +84,7 @@ Event::Event(const AtomString& eventType, const EventInit& initializer, IsTruste
         initializer.composed ? IsComposed::Yes : IsComposed::No }
 {
     ASSERT(!eventType.isNull());
+    m_isConstructedFromInitializer = true;
 }
 
 Event::~Event() = default;
@@ -132,10 +132,20 @@ void Event::setTarget(RefPtr<EventTarget>&& target)
         receivedTarget();
 }
 
-void Event::setCurrentTarget(EventTarget* currentTarget, std::optional<bool> isInShadowTree)
+RefPtr<EventTarget> Event::protectedCurrentTarget() const
 {
-    m_currentTarget = currentTarget;
-    m_currentTargetIsInShadowTree = isInShadowTree ? *isInShadowTree : (is<Node>(currentTarget) && downcast<Node>(*currentTarget).isInShadowTree());
+    return m_currentTarget;
+}
+
+void Event::setCurrentTarget(RefPtr<EventTarget>&& currentTarget, std::optional<bool> isInShadowTree)
+{
+    m_currentTarget = WTFMove(currentTarget);
+    if (isInShadowTree)
+        m_currentTargetIsInShadowTree = *isInShadowTree;
+    else {
+        auto* targetNode = dynamicDowncast<Node>(m_currentTarget.get());
+        m_currentTargetIsInShadowTree = targetNode && targetNode->isInShadowTree();
+    }
 }
 
 void Event::setEventPath(const EventPath& path)
@@ -147,7 +157,7 @@ Vector<Ref<EventTarget>> Event::composedPath() const
 {
     if (!m_eventPath)
         return Vector<Ref<EventTarget>>();
-    return m_eventPath->computePathUnclosedToTarget(*m_currentTarget);
+    return m_eventPath->computePathUnclosedToTarget(*protectedCurrentTarget());
 }
 
 void Event::setUnderlyingEvent(Event* underlyingEvent)
@@ -162,10 +172,10 @@ void Event::setUnderlyingEvent(Event* underlyingEvent)
 
 DOMHighResTimeStamp Event::timeStampForBindings(ScriptExecutionContext& context) const
 {
-    Performance* performance = nullptr;
-    if (is<WorkerGlobalScope>(context))
-        performance = &downcast<WorkerGlobalScope>(context).performance();
-    else if (auto* window = downcast<Document>(context).domWindow())
+    RefPtr<Performance> performance;
+    if (auto* globalScope = dynamicDowncast<WorkerGlobalScope>(context))
+        performance = &globalScope->performance();
+    else if (RefPtr window = downcast<Document>(context).domWindow())
         performance = &window->performance();
 
     if (!performance)

@@ -27,6 +27,7 @@
 #include "MainThreadStylePropertyMapReadOnly.h"
 
 #include "CSSPendingSubstitutionValue.h"
+#include "CSSProperty.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
 #include "CSSStyleValue.h"
@@ -64,10 +65,10 @@ ExceptionOr<RefPtr<CSSStyleValue>> MainThreadStylePropertyMapReadOnly::get(Scrip
 
     auto propertyID = cssPropertyID(property);
     if (!isExposed(propertyID, &document->settings()))
-        return Exception { TypeError, makeString("Invalid property ", property) };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid property ", property) };
 
     if (isShorthand(propertyID))
-        return CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID));
+        return CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID), { *document });
 
     return reifyValue(propertyValue(propertyID), propertyID, *document);
 }
@@ -84,10 +85,10 @@ ExceptionOr<Vector<RefPtr<CSSStyleValue>>> MainThreadStylePropertyMapReadOnly::g
 
     auto propertyID = cssPropertyID(property);
     if (!isExposed(propertyID, &document->settings()))
-        return Exception { TypeError, makeString("Invalid property ", property) };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid property ", property) };
 
     if (isShorthand(propertyID)) {
-        if (RefPtr value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID)))
+        if (RefPtr value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID), { *document }))
             return Vector<RefPtr<CSSStyleValue>> { WTFMove(value) };
         return Vector<RefPtr<CSSStyleValue>> { };
     }

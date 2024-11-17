@@ -38,61 +38,57 @@
 
 namespace WebCore {
 
-typedef HashMap<String, Vector<unsigned>> NamedGridLinesMap;
-typedef HashMap<unsigned, Vector<String>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> OrderedNamedGridLinesMap;
+struct NamedGridLinesMap {
+    HashMap<String, Vector<unsigned>> map;
+
+    friend bool operator==(const NamedGridLinesMap&, const NamedGridLinesMap&) = default;
+};
+
+struct OrderedNamedGridLinesMap {
+    HashMap<unsigned, Vector<String>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> map;
+};
 
 typedef std::variant<GridTrackSize, Vector<String>> RepeatEntry;
 typedef Vector<RepeatEntry> RepeatTrackList;
 
 struct GridTrackEntrySubgrid {
-    bool operator==(const GridTrackEntrySubgrid&) const
-    {
-        return true;
-    }
+    friend bool operator==(const GridTrackEntrySubgrid&, const GridTrackEntrySubgrid&) = default;
 };
 
 struct GridTrackEntryMasonry {
-    bool operator==(const GridTrackEntryMasonry&) const
-    {
-        return true;
-    }
+    friend bool operator==(const GridTrackEntryMasonry&, const GridTrackEntryMasonry&) = default;
 };
 
 struct GridTrackEntryRepeat {
-    bool operator==(const GridTrackEntryRepeat& other) const
-    {
-        return repeats == other.repeats && list == other.list;
-    }
+    friend bool operator==(const GridTrackEntryRepeat&, const GridTrackEntryRepeat&) = default;
 
     unsigned repeats;
     RepeatTrackList list;
 };
 
 struct GridTrackEntryAutoRepeat {
-    bool operator==(const GridTrackEntryAutoRepeat& other) const
-    {
-        return type == other.type && list == other.list;
-    }
+    friend bool operator==(const GridTrackEntryAutoRepeat&, const GridTrackEntryAutoRepeat&) = default;
 
     AutoRepeatType type;
     RepeatTrackList list;
 };
 
 struct MasonryAutoFlow {
-    bool operator==(const MasonryAutoFlow& other) const
-    {
-        return placementAlgorithm == other.placementAlgorithm && placementOrder == other.placementOrder;
-    }
+    friend bool operator==(const MasonryAutoFlow&, const MasonryAutoFlow&) = default;
 
     MasonryAutoFlowPlacementAlgorithm placementAlgorithm;
     MasonryAutoFlowPlacementOrder placementOrder;
 };
 
 typedef std::variant<GridTrackSize, Vector<String>, GridTrackEntryRepeat, GridTrackEntryAutoRepeat, GridTrackEntrySubgrid, GridTrackEntryMasonry> GridTrackEntry;
-typedef Vector<GridTrackEntry> GridTrackList;
+struct GridTrackList {
+    Vector<GridTrackEntry> list;
+    friend bool operator==(const GridTrackList&, const GridTrackList&) = default;
+};
+inline WTF::TextStream& operator<<(WTF::TextStream& stream, const GridTrackList& list) { return stream << list.list; }
 
-WTF::TextStream& operator<<(WTF::TextStream&, const RepeatEntry& item);
-WTF::TextStream& operator<<(WTF::TextStream&, const GridTrackEntry& item);
+WTF::TextStream& operator<<(WTF::TextStream&, const RepeatEntry&);
+WTF::TextStream& operator<<(WTF::TextStream&, const GridTrackEntry&);
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleGridData);
 class StyleGridData : public RefCounted<StyleGridData> {
@@ -103,12 +99,7 @@ public:
 
     bool operator==(const StyleGridData& o) const
     {
-        return columns() == o.columns() && rows() == o.rows() && implicitNamedGridColumnLines == o.implicitNamedGridColumnLines && implicitNamedGridRowLines == o.implicitNamedGridRowLines && gridAutoFlow == o.gridAutoFlow && gridAutoRows == o.gridAutoRows && gridAutoColumns == o.gridAutoColumns && namedGridArea == o.namedGridArea && namedGridAreaRowCount == o.namedGridAreaRowCount && namedGridAreaColumnCount == o.namedGridAreaColumnCount && m_masonryRows == o.m_masonryRows && m_masonryColumns == o.m_masonryColumns && masonryAutoFlow == o.masonryAutoFlow && alignTracks == o.alignTracks && justifyTracks == o.justifyTracks;
-    }
-
-    bool operator!=(const StyleGridData& o) const
-    {
-        return !(*this == o);
+        return m_columns == o.m_columns && m_rows == o.m_rows && implicitNamedGridColumnLines == o.implicitNamedGridColumnLines && implicitNamedGridRowLines == o.implicitNamedGridRowLines && gridAutoFlow == o.gridAutoFlow && gridAutoRows == o.gridAutoRows && gridAutoColumns == o.gridAutoColumns && namedGridArea == o.namedGridArea && namedGridAreaRowCount == o.namedGridAreaRowCount && namedGridAreaColumnCount == o.namedGridAreaColumnCount && m_masonryRows == o.m_masonryRows && m_masonryColumns == o.m_masonryColumns && masonryAutoFlow == o.masonryAutoFlow;
     }
 
     void setRows(const GridTrackList&);
@@ -143,17 +134,14 @@ public:
     bool masonryRows() const { return m_masonryRows; }
     bool masonryColumns() const { return m_masonryColumns; }
 
-    const GridTrackList& columns() const { return m_columns; };
-    const GridTrackList& rows() const { return m_rows; };
+    const GridTrackList& columns() const { return m_columns; }
+    const GridTrackList& rows() const { return m_rows; }
 
     NamedGridLinesMap implicitNamedGridColumnLines;
     NamedGridLinesMap implicitNamedGridRowLines;
 
     unsigned gridAutoFlow : GridAutoFlowBits;
     MasonryAutoFlow masonryAutoFlow;
-
-    Vector<StyleContentAlignmentData> alignTracks;
-    Vector<StyleContentAlignmentData> justifyTracks;
 
     Vector<GridTrackSize> gridAutoRows;
     Vector<GridTrackSize> gridAutoColumns;
@@ -165,7 +153,6 @@ public:
     unsigned namedGridAreaColumnCount;
 
 private:
-
     void computeCachedTrackData(const GridTrackList&, Vector<GridTrackSize>& sizes, NamedGridLinesMap& namedLines, OrderedNamedGridLinesMap& orderedNamedLines, Vector<GridTrackSize>& autoRepeatSizes, NamedGridLinesMap& autoRepeatNamedLines, OrderedNamedGridLinesMap& autoRepeatOrderedNamedLines, unsigned& autoRepeatInsertionPoint, AutoRepeatType&, bool& subgrid, bool& masonry);
 
     GridTrackList m_columns;

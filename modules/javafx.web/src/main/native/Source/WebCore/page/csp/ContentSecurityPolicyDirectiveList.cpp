@@ -29,8 +29,8 @@
 
 #include "ContentSecurityPolicyDirectiveNames.h"
 #include "Document.h"
-#include "Frame.h"
 #include "HTTPParsers.h"
+#include "LocalFrame.h"
 #include "ParsingUtilities.h"
 #include "SecurityContext.h"
 #include <wtf/text/StringParsingBuffer.h>
@@ -44,7 +44,7 @@ template<typename CharacterType> static bool isDirectiveNameCharacter(CharacterT
 
 template<typename CharacterType> static bool isDirectiveValueCharacter(CharacterType c)
 {
-    return isASCIISpace(c) || (c >= 0x21 && c <= 0x7e); // Whitespace + VCHAR
+    return isUnicodeCompatibleASCIIWhitespace(c) || (c >= 0x21 && c <= 0x7e); // Whitespace + VCHAR
 }
 
 static inline bool checkEval(ContentSecurityPolicySourceListDirective* directive)
@@ -99,7 +99,7 @@ static inline URL urlFromOrigin(const SecurityOrigin& origin)
     return { URL { }, origin.toString() };
 }
 
-static inline bool checkFrameAncestors(ContentSecurityPolicySourceListDirective* directive, const Frame& frame)
+static inline bool checkFrameAncestors(ContentSecurityPolicySourceListDirective* directive, const LocalFrame& frame)
 {
     if (!directive)
         return true;
@@ -121,6 +121,8 @@ static inline bool checkFrameAncestors(ContentSecurityPolicySourceListDirective*
         return true;
     bool didReceiveRedirectResponse = false;
     for (auto& origin : ancestorOrigins) {
+        if (!origin)
+            continue;
         URL originURL = urlFromOrigin(*origin);
         if (!originURL.isValid() || !directive->allows(originURL, didReceiveRedirectResponse, ContentSecurityPolicySourceListDirective::ShouldAllowEmptyURLIfSourceListIsNotNone::No))
             return false;
@@ -132,7 +134,7 @@ static inline bool checkMediaType(ContentSecurityPolicyMediaListDirective* direc
 {
     if (!directive)
         return true;
-    if (typeAttribute.isEmpty() || typeAttribute.stripWhiteSpace() != type)
+    if (typeAttribute.isEmpty() || StringView(typeAttribute).trim(deprecatedIsSpaceOrNewline) != type)
         return false;
     return directive->allows(type);
 }
@@ -170,7 +172,7 @@ ContentSecurityPolicySourceListDirective* ContentSecurityPolicyDirectiveList::op
     }
 
     if (m_childSrc.get()) {
-        m_childSrc.get()->setNameForReporting(nameForReporting);
+        m_childSrc->setNameForReporting(nameForReporting);
         return m_childSrc.get();
     }
 
@@ -185,7 +187,7 @@ ContentSecurityPolicySourceListDirective* ContentSecurityPolicyDirectiveList::op
     }
 
     if (m_defaultSrc.get())
-        m_defaultSrc.get()->setNameForReporting(nameForReporting);
+        m_defaultSrc->setNameForReporting(nameForReporting);
 
     return m_defaultSrc.get();
 }
@@ -343,7 +345,7 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
     return operativeDirective;
 }
 
-const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForFrameAncestor(const Frame& frame) const
+const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForFrameAncestor(const LocalFrame& frame) const
 {
     if (checkFrameAncestors(m_frameAncestors.get(), frame))
         return nullptr;
@@ -401,6 +403,7 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
     return operativeDirective;
 }
 
+// FIXME: typeAttribute should be a StringView throughout
 const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForPluginType(const String& type, const String& typeAttribute) const
 {
     if (checkMediaType(m_pluginTypes.get(), type, typeAttribute))
@@ -440,6 +443,14 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
     return operativeDirective;
 }
 
+const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForTrustedTypesPolicy(const String& value, bool isDuplicate, AllowTrustedTypePolicy& details) const
+{
+    auto* directive = m_trustedTypes.get();
+    if (!directive || directive->allows(value, isDuplicate, details))
+        return nullptr;
+    return directive;
+}
+
 // policy            = directive-list
 // directive-list    = [ directive *( ";" [ directive ] ) ]
 //
@@ -448,7 +459,7 @@ void ContentSecurityPolicyDirectiveList::parse(const String& policy, ContentSecu
     // A meta tag delievered CSP could contain invalid HTTP header values depending on how it was formatted in the document.
     // We want to store the CSP as a valid HTTP header for e.g. blob URL inheritance.
     if (policyFrom == ContentSecurityPolicy::PolicyFrom::HTTPEquivMeta) {
-        m_header = stripLeadingAndTrailingHTTPSpaces(policy).removeCharacters([](auto c) {
+        m_header = policy.trim(isASCIIWhitespaceWithoutFF<UChar>).removeCharacters([](auto c) {
             return c == 0x00 || c == '\r' || c == '\n';
         });
     } else
@@ -495,7 +506,7 @@ void ContentSecurityPolicyDirectiveList::parse(const String& policy, ContentSecu
 //
 template<typename CharacterType> auto ContentSecurityPolicyDirectiveList::parseDirective(StringParsingBuffer<CharacterType> buffer) -> std::optional<ParsedDirective>
 {
-    skipWhile<isASCIISpace>(buffer);
+    skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
 
     // Empty directive (e.g. ";;;"). Exit early.
     if (buffer.atEnd())
@@ -516,13 +527,13 @@ template<typename CharacterType> auto ContentSecurityPolicyDirectiveList::parseD
     if (buffer.atEnd())
         return ParsedDirective { WTFMove(name), { } };
 
-    if (!skipExactly<isASCIISpace>(buffer)) {
+    if (!skipExactly<isUnicodeCompatibleASCIIWhitespace>(buffer)) {
         skipWhile<isNotASCIISpace>(buffer);
         m_policy.reportUnsupportedDirective(String(nameBegin, buffer.position() - nameBegin));
         return std::nullopt;
     }
 
-    skipWhile<isASCIISpace>(buffer);
+    skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
 
     auto valueBegin = buffer.position();
     skipWhile<isDirectiveValueCharacter>(buffer);
@@ -550,7 +561,7 @@ void ContentSecurityPolicyDirectiveList::parseReportURI(ParsedDirective&& direct
     readCharactersForParsing(directive.value, [&](auto buffer) {
         auto begin = buffer.position();
         while (buffer.hasCharactersRemaining()) {
-            skipWhile<isASCIISpace>(buffer);
+            skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
 
             auto urlBegin = buffer.position();
             skipWhile<isNotASCIISpace>(buffer);
@@ -571,13 +582,39 @@ void ContentSecurityPolicyDirectiveList::parseReportTo(ParsedDirective&& directi
     readCharactersForParsing(directive.value, [&](auto buffer) {
         auto begin = buffer.position();
         while (buffer.hasCharactersRemaining()) {
-            skipWhile<isASCIISpace>(buffer);
+            skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
 
             auto urlBegin = buffer.position();
             skipWhile<isNotASCIISpace>(buffer);
 
             if (urlBegin < buffer.position())
                 m_reportToTokens.append(directive.value.substring(urlBegin - begin, buffer.position() - urlBegin));
+        }
+    });
+}
+
+void ContentSecurityPolicyDirectiveList::parseRequireTrustedTypesFor(ParsedDirective&& directive)
+{
+    if (m_requireTrustedTypesForScript) {
+        m_policy.reportDuplicateDirective(directive.name);
+        return;
+    }
+
+    readCharactersForParsing(directive.value, [&](auto buffer) {
+        while (buffer.hasCharactersRemaining()) {
+            skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
+            if (buffer.atEnd()) {
+                policy().reportEmptyRequireTrustedTypesForDirective();
+                continue;
+            }
+
+            auto begin = buffer.position();
+            if (skipExactlyIgnoringASCIICase(buffer, "'script'"_s))
+                m_requireTrustedTypesForScript = true;
+            else
+                policy().reportInvalidTrustedTypesSinkGroup(String(begin, buffer.position() - begin));
+
+            ASSERT(buffer.atEnd() || isUnicodeCompatibleASCIIWhitespace(*buffer));
         }
     });
 }
@@ -704,6 +741,10 @@ void ContentSecurityPolicyDirectiveList::addDirective(ParsedDirective&& directiv
         setUpgradeInsecureRequests(WTFMove(directive));
     else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::blockAllMixedContent))
         setBlockAllMixedContentEnabled(WTFMove(directive));
+    else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::trustedTypes))
+        setCSPDirective<ContentSecurityPolicyTrustedTypesDirective>(WTFMove(directive), m_trustedTypes);
+    else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::requireTrustedTypesFor))
+        parseRequireTrustedTypesFor(WTFMove(directive));
     else
         m_policy.reportUnsupportedDirective(WTFMove(directive.name));
 }
@@ -721,6 +762,8 @@ bool ContentSecurityPolicyDirectiveList::shouldReportSample(const String& violat
         directive = m_styleSrc.get();
     else if (violatedDirective.startsWith(StringView { ContentSecurityPolicyDirectiveNames::scriptSrc }))
         directive = m_scriptSrc.get();
+    else if (violatedDirective.startsWith(StringView { ContentSecurityPolicyDirectiveNames::trustedTypes }))
+        return true;
 
     return directive && directive->shouldReportSample();
 }

@@ -2,7 +2,8 @@
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2001 Tobias Anton (anton@stud.fbi.fh-darmstadt.de)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2017 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +27,7 @@
 #include "EventTarget.h"
 #include "MouseEventInit.h"
 #include "MouseRelatedEvent.h"
+#include "PlatformMouseEvent.h"
 
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
 #include "PlatformTouchEventIOS.h"
@@ -41,18 +43,20 @@ namespace WebCore {
 class Node;
 class PlatformMouseEvent;
 
+enum class SyntheticClickType : uint8_t;
+
 class MouseEvent : public MouseRelatedEvent {
     WTF_MAKE_ISO_ALLOCATED(MouseEvent);
 public:
     WEBCORE_EXPORT static Ref<MouseEvent> create(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&&, int detail,
-        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, short button, unsigned short buttons,
-        EventTarget* relatedTarget, double force, unsigned short syntheticClickType, IsSimulated = IsSimulated::No, IsTrusted = IsTrusted::Yes);
+        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, MouseButton, unsigned short buttons,
+        EventTarget* relatedTarget, double force, SyntheticClickType, IsSimulated = IsSimulated::No, IsTrusted = IsTrusted::Yes);
 
     WEBCORE_EXPORT static Ref<MouseEvent> create(const AtomString& eventType, RefPtr<WindowProxy>&&, const PlatformMouseEvent&, int detail, Node* relatedTarget);
 
     static Ref<MouseEvent> create(const AtomString& eventType, CanBubble, IsCancelable, IsComposed, RefPtr<WindowProxy>&&, int detail,
-        int screenX, int screenY, int clientX, int clientY, OptionSet<Modifier>, short button, unsigned short buttons,
-        unsigned short syntheticClickType, EventTarget* relatedTarget);
+        int screenX, int screenY, int clientX, int clientY, OptionSet<Modifier>, MouseButton, unsigned short buttons,
+        SyntheticClickType, EventTarget* relatedTarget);
 
     static Ref<MouseEvent> createForBindings() { return adoptRef(*new MouseEvent); }
 
@@ -66,15 +70,12 @@ public:
 
     WEBCORE_EXPORT void initMouseEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&,
         int detail, int screenX, int screenY, int clientX, int clientY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey,
-        short button, EventTarget* relatedTarget);
+        int16_t button, EventTarget* relatedTarget);
 
-    void initMouseEventQuirk(JSC::JSGlobalObject&, ScriptExecutionContext&, const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&,
-        int detail, int screenX, int screenY, int clientX, int clientY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey,
-        short button, JSC::JSValue relatedTarget);
-
-    short button() const { return m_button; }
+    MouseButton button() const;
+    int16_t buttonAsShort() const { return m_button; }
     unsigned short buttons() const { return m_buttons; }
-    unsigned short syntheticClickType() const { return m_syntheticClickType; }
+    SyntheticClickType syntheticClickType() const { return m_syntheticClickType; }
     bool buttonDown() const { return m_buttonDown; }
     EventTarget* relatedTarget() const final { return m_relatedTarget.get(); }
     double force() const { return m_force; }
@@ -85,16 +86,16 @@ public:
 
     static bool canTriggerActivationBehavior(const Event&);
 
-    int which() const final;
+    unsigned which() const final;
 
 protected:
     MouseEvent(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&&, int detail,
-        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, short button, unsigned short buttons,
-        EventTarget* relatedTarget, double force, unsigned short syntheticClickType, IsSimulated, IsTrusted);
+        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, MouseButton, unsigned short buttons,
+        EventTarget* relatedTarget, double force, SyntheticClickType, IsSimulated, IsTrusted);
 
     MouseEvent(const AtomString& type, CanBubble, IsCancelable, IsComposed, RefPtr<WindowProxy>&&, int detail,
-        const IntPoint& screenLocation, const IntPoint& clientLocation, double movementX, double movementY, OptionSet<Modifier>, short button, unsigned short buttons,
-        unsigned short syntheticClickType, EventTarget* relatedTarget);
+        const IntPoint& screenLocation, const IntPoint& clientLocation, double movementX, double movementY, OptionSet<Modifier>, MouseButton, unsigned short buttons,
+        SyntheticClickType, EventTarget* relatedTarget);
 
     MouseEvent(const AtomString& type, const MouseEventInit&);
 
@@ -106,9 +107,9 @@ private:
 
     void setRelatedTarget(RefPtr<EventTarget>&& relatedTarget) final { m_relatedTarget = WTFMove(relatedTarget); }
 
-    short m_button { 0 };
+    int16_t m_button { enumToUnderlyingType(MouseButton::Left) };
     unsigned short m_buttons { 0 };
-    unsigned short m_syntheticClickType { 0 };
+    SyntheticClickType m_syntheticClickType { SyntheticClickType::NoTap };
     bool m_buttonDown { false };
     RefPtr<EventTarget> m_relatedTarget;
     double m_force { 0 };

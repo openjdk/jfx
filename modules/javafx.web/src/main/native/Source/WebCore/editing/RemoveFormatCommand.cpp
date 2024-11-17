@@ -29,11 +29,11 @@
 
 #include "ApplyStyleCommand.h"
 #include "Element.h"
-#include "ElementName.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "HTMLNames.h"
+#include "LocalFrame.h"
 #include "MutableStyleProperties.h"
+#include "NodeName.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashSet.h>
 
@@ -41,8 +41,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RemoveFormatCommand::RemoveFormatCommand(Document& document)
-    : CompositeEditCommand(document)
+RemoveFormatCommand::RemoveFormatCommand(Ref<Document>&& document)
+    : CompositeEditCommand(WTFMove(document))
 {
 }
 
@@ -50,7 +50,7 @@ static bool isElementForRemoveFormatCommand(const Element* element)
 {
     using namespace ElementNames;
 
-    switch (element->tagQName().elementName()) {
+    switch (element->elementName()) {
     case HTML::acronym:
     case HTML::b:
     case HTML::bdo:
@@ -89,14 +89,13 @@ void RemoveFormatCommand::doApply()
 
     // Get the default style for this editable root, it's the style that we'll give the
     // content that we're operating on.
-    Node* root = endingSelection().rootEditableElement();
-    auto defaultStyle = EditingStyle::create(root);
+    auto defaultStyle = EditingStyle::create(endingSelection().rootEditableElement());
 
     // We want to remove everything but transparent background.
     // FIXME: We shouldn't access style().
     defaultStyle->style()->setProperty(CSSPropertyBackgroundColor, CSSValueTransparent);
 
-    applyCommandToComposite(ApplyStyleCommand::create(document(), defaultStyle.ptr(), isElementForRemoveFormatCommand, editingAction()));
+    applyCommandToComposite(ApplyStyleCommand::create(protectedDocument(), defaultStyle.ptr(), isElementForRemoveFormatCommand, editingAction()));
 }
 
 }

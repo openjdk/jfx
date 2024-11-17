@@ -37,11 +37,15 @@
 namespace WebCore {
 
 class TimeInputType final : public BaseDateAndTimeInputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
-    explicit TimeInputType(HTMLInputElement&);
+    static Ref<TimeInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new TimeInputType(element));
+    }
 
 private:
+    explicit TimeInputType(HTMLInputElement&);
+
     const AtomString& formControlType() const final;
     DateComponentsType dateType() const final;
     Decimal defaultValueForStepUp() const final;
@@ -49,6 +53,7 @@ private:
     std::optional<DateComponents> parseToDateComponents(StringView) const final;
     std::optional<DateComponents> setMillisecondToDateComponents(double) const final;
     void handleDOMActivateEvent(Event&) final;
+    void showPicker() final;
 
     bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const final;
     String formatDateTimeFieldsState(const DateTimeFieldsState&) const final;

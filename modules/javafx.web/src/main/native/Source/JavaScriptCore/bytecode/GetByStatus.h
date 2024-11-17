@@ -57,7 +57,9 @@ public:
         // a possible structure chain and a possible specific value.
         Simple,
         // It's cached for a custom accessor with a possible structure chain.
-        Custom,
+        CustomAccessor,
+        // It's cached for a megamorphic case.
+        Megamorphic,
         // It's cached for an access to a module namespace object's binding.
         ModuleNamespace,
         // It's cached for an access to a proxy object's binding.
@@ -69,7 +71,7 @@ public:
         // It will likely take the slow path and will make calls.
         MakesCalls,
         // It known to take paths that make calls. We also observed that the slow path was taken on StructureStubInfo.
-        ObservedSlowPathAndMakesCalls ,
+        ObservedSlowPathAndMakesCalls,
     };
 
     GetByStatus()
@@ -100,7 +102,8 @@ public:
     bool isSet() const { return m_state != NoInformation; }
     explicit operator bool() const { return isSet(); }
     bool isSimple() const { return m_state == Simple; }
-    bool isCustom() const { return m_state == Custom; }
+    bool isCustomAccessor() const { return m_state == CustomAccessor; }
+    bool isMegamorphic() const { return m_state == Megamorphic; }
     bool isModuleNamespace() const { return m_state == ModuleNamespace; }
     bool isProxyObject() const { return m_state == ProxyObject; }
 
@@ -109,7 +112,10 @@ public:
     const GetByVariant& at(size_t index) const { return m_variants[index]; }
     const GetByVariant& operator[](size_t index) const { return at(index); }
 
-    bool takesSlowPath() const { return m_state == LikelyTakesSlowPath || m_state == ObservedTakesSlowPath || m_state == MakesCalls || m_state == ObservedSlowPathAndMakesCalls || m_state == Custom || m_state == ModuleNamespace; }
+    bool takesSlowPath() const
+    {
+        return m_state == LikelyTakesSlowPath || m_state == ObservedTakesSlowPath || m_state == MakesCalls || m_state == ObservedSlowPathAndMakesCalls || m_state == CustomAccessor || m_state == ModuleNamespace || m_state == Megamorphic;
+    }
     bool observedStructureStubInfoSlowPath() const { return m_state == ObservedTakesSlowPath || m_state == ObservedSlowPathAndMakesCalls; }
     bool makesCalls() const;
 
@@ -141,11 +147,10 @@ private:
 #if ENABLE(JIT)
     GetByStatus(const ModuleNamespaceAccessCase&);
     GetByStatus(const ProxyObjectAccessCase&);
-    static GetByStatus computeForStubInfoWithoutExitSiteFeedback(
-        const ConcurrentJSLocker&, CodeBlock* profiledBlock, StructureStubInfo*, CallLinkStatus::ExitSiteData);
+    static GetByStatus computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker&, CodeBlock* profiledBlock, StructureStubInfo*, CallLinkStatus::ExitSiteData, CodeOrigin);
 #endif
     static GetByStatus computeFromLLInt(CodeBlock*, BytecodeIndex);
-    static GetByStatus computeFor(CodeBlock*, ICStatusMap&, BytecodeIndex, ExitFlag, CallLinkStatus::ExitSiteData);
+    static GetByStatus computeFor(CodeBlock*, ICStatusMap&, ExitFlag, CallLinkStatus::ExitSiteData, CodeOrigin);
 
     struct ModuleNamespaceData {
         JSModuleNamespaceObject* m_moduleNamespaceObject { nullptr };
@@ -157,7 +162,8 @@ private:
     Vector<GetByVariant, 1> m_variants;
     Box<ModuleNamespaceData> m_moduleNamespaceData;
     State m_state;
-    bool m_wasSeenInJIT { false };
+    bool m_wasSeenInJIT : 1 { false };
+    bool m_containsDOMGetter : 1 { false };
 };
 
 } // namespace JSC

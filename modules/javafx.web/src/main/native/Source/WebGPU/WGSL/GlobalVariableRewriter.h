@@ -32,6 +32,6 @@ namespace WGSL {
 class CallGraph;
 struct PipelineLayout;
 
-void rewriteGlobalVariables(CallGraph&, const HashMap<String, PipelineLayout>&);
+void rewriteGlobalVariables(CallGraph&, const HashMap<String, std::optional<PipelineLayout>>&);
 
 } // namespace WGSL

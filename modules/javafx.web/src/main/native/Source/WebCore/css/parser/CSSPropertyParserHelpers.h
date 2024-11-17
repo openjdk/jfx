@@ -52,6 +52,7 @@ enum class FamilyNamesIndex;
 }
 
 enum class BoxOrient : bool;
+enum class FontTechnology : uint8_t;
 
 // When these functions are successful, they will consume all the relevant
 // tokens from the range and also consume any whitespace which follows. When
@@ -190,21 +191,21 @@ struct FontRaw {
 };
 
 RefPtr<CSSPrimitiveValue> consumeCounterStyleName(CSSParserTokenRange&);
-AtomString consumeCounterStyleNameInPrelude(CSSParserTokenRange&);
+AtomString consumeCounterStyleNameInPrelude(CSSParserTokenRange&, CSSParserMode = CSSParserMode::HTMLStandardMode);
 RefPtr<CSSPrimitiveValue> consumeSingleContainerName(CSSParserTokenRange&);
 
 std::optional<CSSValueID> consumeFontStretchKeywordValueRaw(CSSParserTokenRange&);
 AtomString concatenateFamilyName(CSSParserTokenRange&);
 AtomString consumeFamilyNameRaw(CSSParserTokenRange&);
 // https://drafts.csswg.org/css-fonts-4/#family-name-value
-Vector<AtomString> consumeFamilyNameList(CSSParserTokenRange&);
+Vector<AtomString> consumeFamilyNameListRaw(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeFamilyNameList(CSSParserTokenRange&);
 std::optional<FontRaw> consumeFontRaw(CSSParserTokenRange&, CSSParserMode);
 const AtomString& genericFontFamily(CSSValueID);
 WebKitFontFamilyNames::FamilyNamesIndex genericFontFamilyIndex(CSSValueID);
 
 bool isFontStyleAngleInRange(double angleInDegrees);
 
-RefPtr<CSSValueList> consumeAspectRatioValue(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeAspectRatio(CSSParserTokenRange&);
 
 using IsPositionKeyword = bool (*)(CSSValueID);
@@ -214,12 +215,12 @@ bool isContentPositionKeyword(CSSValueID);
 bool isContentPositionOrLeftOrRightKeyword(CSSValueID);
 bool isSelfPositionKeyword(CSSValueID);
 bool isSelfPositionOrLeftOrRightKeyword(CSSValueID);
+bool isGridBreadthIdent(CSSValueID);
 
-RefPtr<CSSValueList> consumeAlignTracks(CSSParserTokenRange&);
-RefPtr<CSSValueList> consumeJustifyTracks(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeDisplay(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeDisplay(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeWillChange(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeQuotes(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeFontVariantLigatures(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeFontVariantEastAsian(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeFontVariantAlternates(CSSParserTokenRange&);
@@ -229,8 +230,10 @@ RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeCounterIncrement(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeCounterReset(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeCounterSet(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeSize(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeTextIndent(CSSParserTokenRange&, CSSParserMode);
+RefPtr<CSSValue> consumeTextTransform(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeMarginSide(CSSParserTokenRange&, CSSPropertyID currentShorthand, CSSParserMode);
 RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeSide(CSSParserTokenRange&, CSSPropertyID currentShorthand, CSSParserMode);
@@ -256,6 +259,7 @@ RefPtr<CSSValue> consumeRepeatStyle(CSSParserTokenRange&, const CSSParserContext
 RefPtr<CSSValue> consumePositionX(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumePositionY(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumePaintStroke(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeListStyleType(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeCursor(CSSParserTokenRange&, const CSSParserContext&, bool inQuirksMode);
@@ -263,11 +267,14 @@ RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext&);
 RefPtr<CSSValue> consumeContent(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeScrollSnapAlign(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeTextEdge(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeScrollbarColor(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeScrollbarGutter(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeTextBoxEdge(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeViewTransitionName(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeBorderRadiusCorner(CSSParserTokenRange&, CSSParserMode);
 bool consumeRadii(std::array<RefPtr<CSSValue>, 4>& horizontalRadii, std::array<RefPtr<CSSValue>, 4>& verticalRadii, CSSParserTokenRange&, CSSParserMode, bool useLegacyParsing);
-enum class ConsumeRay { Include, Exclude };
-RefPtr<CSSValue> consumePathOperation(CSSParserTokenRange&, const CSSParserContext&, ConsumeRay);
+enum PathParsingOption : uint8_t { RejectRay = 1 << 0, RejectFillRule = 1 << 1 };
+RefPtr<CSSValue> consumePathOperation(CSSParserTokenRange&, const CSSParserContext&, OptionSet<PathParsingOption>);
 RefPtr<CSSValue> consumeShapeOutside(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeContentDistributionOverflowPosition(CSSParserTokenRange&, IsPositionKeyword);
 RefPtr<CSSValue> consumeJustifyContent(CSSParserTokenRange&);
@@ -290,8 +297,9 @@ RefPtr<CSSValue> consumeJustifyItems(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeGridLine(CSSParserTokenRange&);
 bool parseGridTemplateAreasRow(StringView gridRowNames, NamedGridAreaMap&, const size_t rowCount, size_t& columnCount);
 RefPtr<CSSValue> consumeGridTrackSize(CSSParserTokenRange&, CSSParserMode);
-RefPtr<CSSGridLineNamesValue> consumeGridLineNames(CSSParserTokenRange&, CSSGridLineNamesValue* = nullptr, bool allowEmpty = false);
-enum TrackListType { GridTemplate, GridTemplateNoRepeat, GridAuto };
+enum class AllowEmpty : bool { No, Yes };
+RefPtr<CSSGridLineNamesValue> consumeGridLineNames(CSSParserTokenRange&, AllowEmpty = AllowEmpty::No);
+enum TrackListType : uint8_t { GridTemplate, GridTemplateNoRepeat, GridAuto };
 RefPtr<CSSValue> consumeGridTrackList(CSSParserTokenRange&, const CSSParserContext&, TrackListType);
 RefPtr<CSSValue> consumeGridTemplatesRowsOrColumns(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeGridTemplateAreas(CSSParserTokenRange&);
@@ -300,7 +308,6 @@ RefPtr<CSSValue> consumeContainerName(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeWebkitInitialLetter(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeSpeakAs(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeHangingPunctuation(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeAlt(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeContain(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeContainIntrinsicSize(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeTextEmphasisPosition(CSSParserTokenRange&);
@@ -310,12 +317,20 @@ RefPtr<CSSValue> consumeColorScheme(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeOffsetRotate(CSSParserTokenRange&, CSSParserMode);
 RefPtr<CSSValue> consumeTextSpacingTrim(CSSParserTokenRange&);
 RefPtr<CSSValue> consumeTextAutospace(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeAnimationTimeline(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeSingleAnimationTimeline(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeAnimationTimelineScroll(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeAnimationTimelineView(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeViewTimelineInsetListItem(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeViewTimelineInset(CSSParserTokenRange&, const CSSParserContext&);
 
 RefPtr<CSSValue> consumeDeclarationValue(CSSParserTokenRange&, const CSSParserContext&);
 
 // @font-face descriptor consumers:
 
 RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange&);
+Vector<FontTechnology> consumeFontTech(CSSParserTokenRange&, bool singleValue = false);
+String consumeFontFormat(CSSParserTokenRange&, bool rejectStringValues = false);
 
 // @font-palette-values descriptor consumers:
 
@@ -323,7 +338,7 @@ RefPtr<CSSValue> consumeFontPaletteValuesOverrideColors(CSSParserTokenRange&, co
 
 // @counter-style descriptor consumers:
 
-RefPtr<CSSValue> consumeCounterStyleSystem(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeCounterStyleSystem(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeCounterStyleSymbol(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeCounterStyleNegative(CSSParserTokenRange&, const CSSParserContext&);
 RefPtr<CSSValue> consumeCounterStyleRange(CSSParserTokenRange&);
@@ -395,45 +410,32 @@ inline SystemFontDatabase::FontShorthand lowerFontShorthand(CSSValueID valueID)
     return static_cast<SystemFontDatabase::FontShorthand>(valueID - CSSValueCaption);
 }
 
-inline void assignOrDowngradeToListAndAppend(RefPtr<CSSValue>& result, Ref<CSSValue>&& value)
-{
-    if (result) {
-        if (!is<CSSValueList>(*result)) {
-            auto firstValue = result.releaseNonNull();
-            result = CSSValueList::createCommaSeparated();
-            downcast<CSSValueList>(*result).append(WTFMove(firstValue));
-        }
-        downcast<CSSValueList>(*result).append(WTFMove(value));
-    } else
-        result = WTFMove(value);
-}
-
 template<typename SubConsumer, typename... Args>
 RefPtr<CSSValue> consumeCommaSeparatedListWithSingleValueOptimization(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args)
 {
-    RefPtr<CSSValue> result;
+    CSSValueListBuilder list;
     do {
         auto value = std::invoke(subConsumer, range, std::forward<Args>(args)...);
         if (!value)
             return nullptr;
-        assignOrDowngradeToListAndAppend(result, value.releaseNonNull());
+        list.append(value.releaseNonNull());
     } while (consumeCommaIncludingWhitespace(range));
-
-    return result;
+    if (list.size() == 1)
+        return WTFMove(list[0]);
+    return CSSValueList::createCommaSeparated(WTFMove(list));
 }
 
 template<typename SubConsumer, typename... Args>
 RefPtr<CSSValueList> consumeCommaSeparatedListWithoutSingleValueOptimization(CSSParserTokenRange& range, SubConsumer&& subConsumer, Args&&... args)
 {
-    auto result = CSSValueList::createCommaSeparated();
+    CSSValueListBuilder list;
     do {
         auto value = std::invoke(subConsumer, range, std::forward<Args>(args)...);
         if (!value)
             return nullptr;
-        result->append(value.releaseNonNull());
+        list.append(value.releaseNonNull());
     } while (consumeCommaIncludingWhitespace(range));
-
-    return result;
+    return CSSValueList::createCommaSeparated(WTFMove(list));
 }
 
 } // namespace CSSPropertyParserHelpers

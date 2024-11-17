@@ -34,11 +34,9 @@ enum FrameEdge { LeftFrameEdge, RightFrameEdge, TopFrameEdge, BottomFrameEdge };
 
 struct FrameEdgeInfo {
     explicit FrameEdgeInfo(bool preventResize = false, bool allowBorder = true)
-        : m_preventResize(4)
-        , m_allowBorder(4)
+        : m_preventResize(4, preventResize)
+        , m_allowBorder(4, allowBorder)
     {
-        m_preventResize.fill(preventResize);
-        m_allowBorder.fill(allowBorder);
     }
 
     bool preventResize(FrameEdge edge) const { return m_preventResize[edge]; }
@@ -63,9 +61,6 @@ public:
     FrameEdgeInfo edgeInfo() const;
 
     bool userResize(MouseEvent&);
-
-    bool isResizingRow() const;
-    bool isResizingColumn() const;
 
     bool canResizeRow(const IntPoint&) const;
     bool canResizeColumn(const IntPoint&) const;
@@ -92,7 +87,6 @@ private:
     };
 
     ASCIILiteral renderName() const override { return "RenderFrameSet"_s; }
-    bool isFrameSet() const override { return true; }
 
     void layout() override;
     void paint(PaintInfo&, const LayoutPoint&) override;
@@ -120,9 +114,8 @@ private:
     GridAxis m_cols;
 
     bool m_isResizing;
-    bool m_isChildResizing;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFrameSet, isFrameSet())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFrameSet, isRenderFrameSet())

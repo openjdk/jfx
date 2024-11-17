@@ -27,6 +27,7 @@
 #include "config.h"
 #include "WorkerThread.h"
 
+#include "AdvancedPrivacyProtections.h"
 #include "IDBConnectionProxy.h"
 #include "ScriptSourceCode.h"
 #include "SecurityOrigin.h"
@@ -69,10 +70,10 @@ WorkerParameters WorkerParameters::isolatedCopy() const
         settingsValues.isolatedCopy(),
         workerThreadMode,
         sessionID,
-#if ENABLE(SERVICE_WORKER)
         crossThreadCopy(serviceWorkerData),
-#endif
-        clientIdentifier
+        clientIdentifier,
+        advancedPrivacyProtections,
+        noiseInjectionHashSalt
     };
 }
 
@@ -99,10 +100,10 @@ WorkerThreadStartupData::WorkerThreadStartupData(const WorkerParameters& other, 
 
 WorkerThread::WorkerThread(const WorkerParameters& params, const ScriptBuffer& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerDebuggerProxy& workerDebuggerProxy, WorkerReportingProxy& workerReportingProxy, WorkerBadgeProxy& badgeProxy, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, JSC::RuntimeFlags runtimeFlags)
     : WorkerOrWorkletThread(params.inspectorIdentifier.isolatedCopy(), params.workerThreadMode)
-    , m_workerLoaderProxy(workerLoaderProxy)
-    , m_workerDebuggerProxy(workerDebuggerProxy)
-    , m_workerReportingProxy(workerReportingProxy)
-    , m_workerBadgeProxy(badgeProxy)
+    , m_workerLoaderProxy(&workerLoaderProxy)
+    , m_workerDebuggerProxy(&workerDebuggerProxy)
+    , m_workerReportingProxy(&workerReportingProxy)
+    , m_workerBadgeProxy(&badgeProxy)
     , m_runtimeFlags(runtimeFlags)
     , m_startupData(makeUnique<WorkerThreadStartupData>(params, sourceCode, startMode, topOrigin))
     , m_idbConnectionProxy(connectionProxy)
@@ -166,12 +167,12 @@ void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
         sourceProvider = static_cast<ScriptBufferSourceProvider&>(sourceCode.provider());
         bool success = globalScope()->script()->loadModuleSynchronously(scriptFetcher.get(), sourceCode);
         if (success) {
-            if (std::optional<LoadableScript::Error> error = scriptFetcher->error()) {
+            if (auto error = scriptFetcher->error()) {
                 if (std::optional<LoadableScript::ConsoleMessage> message = error->consoleMessage)
                     exceptionMessage = message->message;
                 else
                     exceptionMessage = "Importing a module script failed."_s;
-                globalScope()->reportException(exceptionMessage, { }, { }, { }, { }, { });
+                globalScope()->reportErrorToWorkerObject(exceptionMessage);
             } else if (!scriptFetcher->wasCanceled()) {
                 globalScope()->script()->linkAndEvaluateModule(scriptFetcher.get(), sourceCode, &exceptionMessage);
                 finishedEvaluatingScript();
@@ -199,7 +200,16 @@ SocketProvider* WorkerThread::socketProvider()
 
 WorkerGlobalScope* WorkerThread::globalScope()
 {
+    ASSERT(!thread() || thread() == &Thread::current());
     return downcast<WorkerGlobalScope>(WorkerOrWorkletThread::globalScope());
+}
+
+void WorkerThread::clearProxies()
+{
+    m_workerLoaderProxy = nullptr;
+    m_workerDebuggerProxy = nullptr;
+    m_workerReportingProxy = nullptr;
+    m_workerBadgeProxy = nullptr;
 }
 
 } // namespace WebCore

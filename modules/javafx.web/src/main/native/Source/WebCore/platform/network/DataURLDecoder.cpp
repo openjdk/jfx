@@ -76,9 +76,10 @@ static Result parseMediaType(const String& mediaType)
 struct DecodeTask {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    DecodeTask(const URL& url, const ScheduleContext& scheduleContext, DecodeCompletionHandler&& completionHandler)
+    DecodeTask(const URL& url, const ScheduleContext& scheduleContext, ShouldValidatePadding shouldValidatePadding, DecodeCompletionHandler&& completionHandler)
         : url(url.isolatedCopy())
         , scheduleContext(scheduleContext)
+        , shouldValidatePadding(shouldValidatePadding)
         , completionHandler(WTFMove(completionHandler))
     {
     }
@@ -110,13 +111,13 @@ public:
         // formatTypeStart might be at the begining of "base64" or "charset=...".
         size_t formatTypeStart = mediaTypeEnd + 1;
         auto formatType = header.substring(formatTypeStart, header.length() - formatTypeStart);
-        formatType = stripLeadingAndTrailingHTTPSpaces(formatType);
+        formatType = formatType.trim(isASCIIWhitespaceWithoutFF<UChar>);
 
         isBase64 = equalLettersIgnoringASCIICase(formatType, "base64"_s);
 
         // If header does not end with "base64", mediaType should be the whole header.
         auto mediaType = (isBase64 ? header.left(mediaTypeEnd) : header).toString();
-        mediaType = stripLeadingAndTrailingHTTPSpaces(mediaType);
+        mediaType = mediaType.trim(isASCIIWhitespaceWithoutFF<UChar>);
         if (mediaType.startsWith(';'))
             mediaType = makeString("text/plain"_s, mediaType);
 
@@ -133,67 +134,46 @@ public:
     StringView encodedData;
     bool isBase64 { false };
     const ScheduleContext scheduleContext;
+    ShouldValidatePadding shouldValidatePadding;
     DecodeCompletionHandler completionHandler;
 
     Result result;
 };
 
-static std::unique_ptr<DecodeTask> createDecodeTask(const URL& url, const ScheduleContext& scheduleContext, DecodeCompletionHandler&& completionHandler)
+static std::unique_ptr<DecodeTask> createDecodeTask(const URL& url, const ScheduleContext& scheduleContext, ShouldValidatePadding shouldValidatePadding, DecodeCompletionHandler&& completionHandler)
 {
     return makeUnique<DecodeTask>(
         url,
         scheduleContext,
+        shouldValidatePadding,
         WTFMove(completionHandler)
     );
 }
 
-static std::optional<Vector<uint8_t>> decodeBase64(const DecodeTask& task, Mode mode)
-{
-    switch (mode) {
-    case Mode::ForgivingBase64:
-        return base64Decode(PAL::decodeURLEscapeSequences(task.encodedData), { Base64DecodeOptions::ValidatePadding, Base64DecodeOptions::IgnoreSpacesAndNewLines, Base64DecodeOptions::DiscardVerticalTab });
-
-    case Mode::Legacy:
-        // First try base64url.
-        if (auto decodedData = base64URLDecode(task.encodedData))
-            return decodedData;
-        // Didn't work, try unescaping and decoding as base64.
-        return base64Decode(PAL::decodeURLEscapeSequences(task.encodedData), { Base64DecodeOptions::IgnoreSpacesAndNewLines, Base64DecodeOptions::DiscardVerticalTab });
-    }
-
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-static Vector<uint8_t> decodeEscaped(const DecodeTask& task)
-{
-    PAL::TextEncoding encodingFromCharset(task.result.charset);
-    auto& encoding = encodingFromCharset.isValid() ? encodingFromCharset : PAL::UTF8Encoding();
-    return PAL::decodeURLEscapeSequencesAsData(task.encodedData, encoding);
-}
-
-static std::optional<Result> decodeSynchronously(DecodeTask& task, Mode mode)
+static std::optional<Result> decodeSynchronously(DecodeTask& task)
 {
     if (!task.process())
         return std::nullopt;
 
     if (task.isBase64) {
-        auto decodedData = decodeBase64(task, mode);
+        auto mode = task.shouldValidatePadding == ShouldValidatePadding::Yes ? Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace : Base64DecodeMode::DefaultIgnoreWhitespaceForQuirk;
+        auto decodedData = base64Decode(PAL::decodeURLEscapeSequences(task.encodedData), mode);
         if (!decodedData)
             return std::nullopt;
         task.result.data = WTFMove(*decodedData);
     } else
-        task.result.data = decodeEscaped(task);
+        task.result.data = PAL::decodeURLEscapeSequencesAsData(task.encodedData);
 
     task.result.data.shrinkToFit();
     return WTFMove(task.result);
 }
 
-void decode(const URL& url, const ScheduleContext& scheduleContext, Mode mode, DecodeCompletionHandler&& completionHandler)
+void decode(const URL& url, const ScheduleContext& scheduleContext, ShouldValidatePadding shouldValidatePadding, DecodeCompletionHandler&& completionHandler)
 {
     ASSERT(url.protocolIsData());
 
-    decodeQueue().dispatch([decodeTask = createDecodeTask(url, scheduleContext, WTFMove(completionHandler)), mode]() mutable {
-        auto result = decodeSynchronously(*decodeTask, mode);
+    decodeQueue().dispatch([decodeTask = createDecodeTask(url, scheduleContext, shouldValidatePadding, WTFMove(completionHandler))]() mutable {
+        auto result = decodeSynchronously(*decodeTask);
 
 #if USE(COCOA_EVENT_LOOP) && !PLATFORM(JAVA)
         auto scheduledPairs = decodeTask->scheduleContext.scheduledPairs;
@@ -211,12 +191,12 @@ void decode(const URL& url, const ScheduleContext& scheduleContext, Mode mode, D
     });
 }
 
-std::optional<Result> decode(const URL& url, Mode mode)
+std::optional<Result> decode(const URL& url, ShouldValidatePadding shouldValidatePadding)
 {
     ASSERT(url.protocolIsData());
 
-    auto task = createDecodeTask(url, { }, nullptr);
-    return decodeSynchronously(*task, mode);
+    auto task = createDecodeTask(url, { }, shouldValidatePadding, nullptr);
+    return decodeSynchronously(*task);
 }
 
 } // namespace DataURLDecoder

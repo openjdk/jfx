@@ -27,6 +27,8 @@
 
 namespace WebCore {
 
+enum class RepaintRectCalculation : bool;
+
 class SVGMaskElement final : public SVGElement, public SVGTests {
     WTF_MAKE_ISO_ALLOCATED(SVGMaskElement);
 public:
@@ -46,12 +48,14 @@ public:
     SVGAnimatedEnumeration& maskUnitsAnimated() { return m_maskUnits; }
     SVGAnimatedEnumeration& maskContentUnitsAnimated() { return m_maskContentUnits; }
 
+    FloatRect calculateMaskContentRepaintRect(RepaintRectCalculation);
+
 private:
     SVGMaskElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGMaskElement, SVGElement, SVGTests>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
     void childrenChanged(const ChildChange&) final;
 

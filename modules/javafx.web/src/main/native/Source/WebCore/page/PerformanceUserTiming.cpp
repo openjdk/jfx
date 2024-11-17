@@ -28,11 +28,14 @@
 #include "PerformanceUserTiming.h"
 
 #include "Document.h"
+#include "FrameDestructionObserverInlines.h"
+#include "InspectorInstrumentation.h"
 #include "MessagePort.h"
 #include "PerformanceMarkOptions.h"
 #include "PerformanceMeasureOptions.h"
 #include "PerformanceTiming.h"
 #include "SerializedScriptValue.h"
+#include "WorkerOrWorkletGlobalScope.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/SortedArrayMap.h>
 
@@ -91,7 +94,16 @@ static void addPerformanceEntry(PerformanceEntryMap& map, const String& name, Pe
 
 ExceptionOr<Ref<PerformanceMark>> PerformanceUserTiming::mark(JSC::JSGlobalObject& globalObject, const String& markName, std::optional<PerformanceMarkOptions>&& markOptions)
 {
-    auto mark = PerformanceMark::create(globalObject, *m_performance.scriptExecutionContext(), markName, WTFMove(markOptions));
+    Ref context = *m_performance.scriptExecutionContext();
+
+    std::optional<MonotonicTime> timestamp;
+    if (markOptions && markOptions->startTime)
+        timestamp = m_performance.monotonicTimeFromRelativeTime(*markOptions->startTime);
+
+    RefPtr document = dynamicDowncast<Document>(context);
+    InspectorInstrumentation::performanceMark(context.get(), markName, timestamp, document ? document->protectedFrame().get() : nullptr);
+
+    auto mark = PerformanceMark::create(globalObject, context, markName, WTFMove(markOptions));
     if (mark.hasException())
         return mark.releaseException();
 
@@ -115,7 +127,7 @@ ExceptionOr<double> PerformanceUserTiming::convertMarkToTimestamp(const String& 
 {
     if (!isMainThread()) {
         if (restrictedMarkFunctions.contains(mark))
-            return Exception { TypeError };
+            return Exception { ExceptionCode::TypeError };
     } else {
         if (auto function = restrictedMarkFunctions.tryGet(mark)) {
             if (*function == &PerformanceTiming::navigationStart)
@@ -127,7 +139,7 @@ ExceptionOr<double> PerformanceUserTiming::convertMarkToTimestamp(const String& 
             auto startTime = timing->navigationStart();
             auto endTime = ((*timing).*(*function))();
             if (!endTime)
-                return Exception { InvalidAccessError };
+                return Exception { ExceptionCode::InvalidAccessError };
             return endTime - startTime;
         }
     }
@@ -136,13 +148,13 @@ ExceptionOr<double> PerformanceUserTiming::convertMarkToTimestamp(const String& 
     if (iterator != m_marksMap.end())
         return iterator->value.last()->startTime();
 
-    return Exception { SyntaxError, makeString("No mark named '", mark, "' exists") };
+    return Exception { ExceptionCode::SyntaxError, makeString("No mark named '", mark, "' exists") };
 }
 
 ExceptionOr<double> PerformanceUserTiming::convertMarkToTimestamp(double mark) const
 {
     if (mark < 0)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
     return mark;
 }
 
@@ -240,11 +252,11 @@ ExceptionOr<Ref<PerformanceMeasure>> PerformanceUserTiming::measure(JSC::JSGloba
             [&] (const PerformanceMeasureOptions& measureOptions) -> ExceptionOr<Ref<PerformanceMeasure>> {
                 if (isNonEmptyDictionary(measureOptions)) {
                     if (!endMark.isNull())
-                        return Exception { TypeError };
+                        return Exception { ExceptionCode::TypeError };
                     if (!measureOptions.start && !measureOptions.end)
-                        return Exception { TypeError };
+                        return Exception { ExceptionCode::TypeError };
                     if (measureOptions.start && measureOptions.duration && measureOptions.end)
-                        return Exception { TypeError };
+                        return Exception { ExceptionCode::TypeError };
                 }
 
                 return measure(globalObject, measureName, measureOptions);

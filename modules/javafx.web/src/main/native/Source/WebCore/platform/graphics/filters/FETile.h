@@ -28,12 +28,12 @@ namespace WebCore {
 
 class FETile : public FilterEffect {
 public:
-    WEBCORE_EXPORT static Ref<FETile> create();
+    WEBCORE_EXPORT static Ref<FETile> create(DestinationColorSpace = DestinationColorSpace::SRGB());
 
 private:
-    FETile();
+    explicit FETile(DestinationColorSpace);
 
-    FloatRect calculateImageRect(const Filter&, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
+    FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
     bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
 
@@ -44,4 +44,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FETile)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FETile)

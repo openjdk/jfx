@@ -26,12 +26,16 @@
 #include "config.h"
 #include "DeferredWorkTimer.h"
 
+#include "GlobalObjectMethodTable.h"
 #include "JSPromise.h"
 #include "StrongInlines.h"
 #include "VM.h"
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(DeferredWorkTimerTicketData, DeferredWorkTimer::TicketData);
 
 namespace DeferredWorkTimerInternal {
 static constexpr bool verbose = false;
@@ -218,6 +222,12 @@ void DeferredWorkTimer::didResumeScriptExecutionOwner()
     Locker locker { m_taskLock };
     if (!isScheduled() && m_tasks.size())
         setTimeUntilFire(0_s);
+}
+
+bool DeferredWorkTimer::hasAnyPendingWork() const
+{
+    ASSERT(m_apiLock->vm()->currentThreadIsHoldingAPILock() || (Thread::mayBeGCThread() && m_apiLock->vm()->heap.worldIsStopped()));
+    return !m_pendingTickets.isEmpty();
 }
 
 } // namespace JSC

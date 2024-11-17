@@ -26,17 +26,17 @@
 package test.javafx.util.converter;
 
 import javafx.util.converter.FloatStringConverter;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  */
 public class FloatStringConverterTest {
     private FloatStringConverter converter;
 
-    @Before public void setup() {
+    @BeforeEach public void setup() {
         converter = new FloatStringConverter();
     }
 

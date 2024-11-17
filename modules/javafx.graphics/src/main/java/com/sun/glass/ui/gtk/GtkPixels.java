@@ -25,7 +25,6 @@
 package com.sun.glass.ui.gtk;
 
 import com.sun.glass.ui.Pixels;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
@@ -52,30 +51,20 @@ final class GtkPixels extends Pixels {
         // Taken from MacPixels
         if (this.bytes != null) {
             this.bytes.rewind();
-            if (this.bytes.isDirect()) {
-                _copyPixels(bb, this.bytes, getWidth()*getHeight());
-            } else {
-                bb.put(this.bytes);
-            }
+            bb.put(this.bytes);
             this.bytes.rewind();
         } else {
             this.ints.rewind();
-            if (this.ints.isDirect()) {
-                _copyPixels(bb, this.ints, getWidth()*getHeight());
-            } else {
-                for (int i=0; i<this.ints.capacity(); i++) {
-                    int data = this.ints.get();
-                    bb.put((byte)((data)&0xff));
-                    bb.put((byte)((data>>8)&0xff));
-                    bb.put((byte)((data>>16)&0xff));
-                    bb.put((byte)((data>>24)&0xff));
-                }
+            for (int i=0; i<this.ints.capacity(); i++) {
+                int data = this.ints.get();
+                bb.put((byte)((data)&0xff));
+                bb.put((byte)((data>>8)&0xff));
+                bb.put((byte)((data>>16)&0xff));
+                bb.put((byte)((data>>24)&0xff));
             }
             this.ints.rewind();
         }
     }
-
-    protected native void _copyPixels(Buffer dst, Buffer src, int size);
 
     @Override
     protected native void _attachInt(long ptr, int w, int h, IntBuffer ints, int[] array, int offset);

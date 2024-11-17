@@ -115,7 +115,7 @@ bool ScrollingTreeScrollingNode::commitStateAfterChildren(const ScrollingStateNo
         handleScrollPositionRequest(scrollingStateNode.requestedScrollData());
 
     if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::KeyboardScrollData))
-        handleKeyboardScrollRequest(scrollingStateNode.keyboardScrollData());
+        requestKeyboardScroll(scrollingStateNode.keyboardScrollData());
 
     // This synthetic bit is added back in ScrollingTree::propagateSynchronousScrollingReasons().
 #if ENABLE(SCROLLING_THREAD)
@@ -294,13 +294,18 @@ void ScrollingTreeScrollingNode::handleKeyboardScrollRequest(const RequestedKeyb
         m_delegate->handleKeyboardScrollRequest(scrollData);
 }
 
+void ScrollingTreeScrollingNode::requestKeyboardScroll(const RequestedKeyboardScrollData& scrollData)
+{
+    scrollingTree().scrollingTreeNodeRequestsKeyboardScroll(scrollingNodeID(), scrollData);
+}
+
 void ScrollingTreeScrollingNode::handleScrollPositionRequest(const RequestedScrollData& requestedScrollData)
 {
-    LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeScrollingNode " << scrollingNodeID() << " handleScrollPositionRequest() - position " << requestedScrollData.scrollPosition << " animated " << (requestedScrollData.animated == ScrollIsAnimated::Yes));
-
     stopAnimatedScroll();
 
     if (requestedScrollData.requestType == ScrollRequestType::CancelAnimatedScroll) {
+        ASSERT(!requestedScrollData.requestedDataBeforeAnimatedScroll);
+        LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeScrollingNode " << scrollingNodeID() << " handleScrollPositionRequest() - cancel animated scroll");
         scrollingTree().removePendingScrollAnimationForNode(scrollingNodeID());
         return;
     }
@@ -308,12 +313,31 @@ void ScrollingTreeScrollingNode::handleScrollPositionRequest(const RequestedScro
     if (scrollingTree().scrollingTreeNodeRequestsScroll(scrollingNodeID(), requestedScrollData))
         return;
 
+    LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeScrollingNode " << scrollingNodeID() << " handleScrollPositionRequest() with data " << requestedScrollData);
+
+    if (requestedScrollData.requestedDataBeforeAnimatedScroll) {
+        auto& [requestType, positionOrDeltaBeforeAnimatedScroll, scrollType, clamping] = *requestedScrollData.requestedDataBeforeAnimatedScroll;
+
+        switch (requestType) {
+        case ScrollRequestType::PositionUpdate:
+        case ScrollRequestType::DeltaUpdate: {
+            auto intermediatePosition = RequestedScrollData::computeDestinationPosition(currentScrollPosition(), requestType, positionOrDeltaBeforeAnimatedScroll);
+            scrollTo(intermediatePosition, scrollType, clamping);
+            break;
+        }
+        case ScrollRequestType::CancelAnimatedScroll:
+            stopAnimatedScroll();
+            break;
+        }
+    }
+
+    auto destinationPosition = requestedScrollData.destinationPosition(currentScrollPosition());
     if (requestedScrollData.animated == ScrollIsAnimated::Yes) {
-        startAnimatedScrollToPosition(requestedScrollData.scrollPosition);
+        startAnimatedScrollToPosition(destinationPosition);
         return;
     }
 
-    scrollTo(requestedScrollData.scrollPosition, requestedScrollData.scrollType, requestedScrollData.clamping);
+    scrollTo(destinationPosition, requestedScrollData.scrollType, requestedScrollData.clamping);
 }
 
 FloatPoint ScrollingTreeScrollingNode::adjustedScrollPosition(const FloatPoint& scrollPosition, ScrollClamping clamping) const
@@ -485,6 +509,16 @@ ScrollPropagationInfo ScrollingTreeScrollingNode::computeScrollPropagation(const
         propagation.isHandled = true;
     }
     return propagation;
+}
+
+void ScrollingTreeScrollingNode::scrollbarVisibilityDidChange(ScrollbarOrientation orientation, bool isVisible)
+{
+    scrollingTree().scrollingTreeNodeScrollbarVisibilityDidChange(scrollingNodeID(), orientation, isVisible);
+}
+
+void ScrollingTreeScrollingNode::scrollbarMinimumThumbLengthDidChange(ScrollbarOrientation orientation, int minimumThumbLength)
+{
+    scrollingTree().scrollingTreeNodeScrollbarMinimumThumbLengthDidChange(scrollingNodeID(), orientation, minimumThumbLength);
 }
 
 } // namespace WebCore

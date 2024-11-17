@@ -45,6 +45,25 @@ function forEach(callback /*, thisArg */)
     } while (true);
 }
 
+// https://tc39.es/proposal-set-methods/#sec-getsetrecord (steps 1-7)
+@linkTimeConstant
+@alwaysInline
+function getSetSizeAsInt(other)
+{
+    if (!@isObject(other))
+        @throwTypeError("Set operation expects first argument to be an object");
+
+    var size = @toNumber(other.size);
+    if (size !== size) // is NaN?
+        @throwTypeError("Set operation expects first argument to have non-NaN 'size' property");
+
+    var sizeInt = @toIntegerOrInfinity(size);
+    if (sizeInt < 0)
+        @throwRangeError("Set operation expects first argument to have non-negative 'size' property");
+
+    return sizeInt;
+}
+
 function union(other)
 {
     "use strict";
@@ -53,12 +72,7 @@ function union(other)
         @throwTypeError("Set operation called on non-Set object");
 
     // Get Set Record
-    if (!@isObject(other))
-        @throwTypeError("Set.prototype.union expects the first parameter to be an object");
-    var size = @toNumber(other.size);
-    // size is NaN
-    if (size !== size)
-        @throwTypeError("Set.prototype.union expects other.size to be a non-NaN number");
+    var size = @getSetSizeAsInt(other); // unused but @getSetSizeAsInt call is observable
 
     var has = other.has;
     if (!@isCallable(has))
@@ -88,12 +102,7 @@ function intersection(other)
         @throwTypeError("Set operation called on non-Set object");
 
     // Get Set Record
-    if (!@isObject(other))
-        @throwTypeError("Set.prototype.intersection expects the first parameter to be an object");
-    var size = @toNumber(other.size);
-    // size is NaN
-    if (size !== size)
-        @throwTypeError("Set.prototype.intersection expects other.size to be a non-NaN number");
+    var size = @getSetSizeAsInt(other);
 
     var has = other.has;
     if (!@isCallable(has))
@@ -116,8 +125,6 @@ function intersection(other)
                 result.@add(key);
         } while (true);
     } else {
-        // FIXME: This path needs to have the iteration order of the receiver but we don't have a good way to compare in constant time the relative ordering of two keys.
-        // https://bugs.webkit.org/show_bug.cgi?id=251869
         var iterator = keys.@call(other, keys);
         var wrapper = {
             @@iterator: function () { return iterator; }
@@ -132,6 +139,51 @@ function intersection(other)
     return result;
 }
 
+function difference(other)
+{
+    "use strict";
+
+    if (!@isSet(this))
+        @throwTypeError("Set operation called on non-Set object");
+
+    // Get Set Record
+    var size = @getSetSizeAsInt(other);
+
+    var has = other.has;
+    if (!@isCallable(has))
+        @throwTypeError("Set.prototype.difference expects other.has to be callable");
+
+    var keys = other.keys;
+    if (!@isCallable(keys))
+        @throwTypeError("Set.prototype.difference expects other.keys to be callable");
+
+    var result = @setClone(this);
+    if (this.@size <= size) {
+        var bucket = @setBucketHead(this);
+
+        while (true) {
+            bucket = @setBucketNext(bucket);
+            if (bucket === @sentinelSetBucket)
+                break;
+            var key = @setBucketKey(bucket);
+            if (has.@call(other, key))
+                result.@delete(key);
+        }
+    } else {
+        var iterator = keys.@call(other, keys);
+        var wrapper = {
+            @@iterator: function () { return iterator; }
+        };
+
+        for (var key of wrapper) {
+            if (this.@has(key))
+                result.@delete(key);
+        }
+    }
+
+    return result;
+}
+
 function symmetricDifference(other)
 {
     "use strict";
@@ -140,12 +192,7 @@ function symmetricDifference(other)
         @throwTypeError("Set operation called on non-Set object");
 
     // Get Set Record
-    if (!@isObject(other))
-        @throwTypeError("Set.prototype.symmetricDifference expects the first parameter to be an object");
-    var size = @toNumber(other.size);
-    // size is NaN
-    if (size !== size)
-        @throwTypeError("Set.prototype.symmetricDifference expects other.size to be a non-NaN number");
+    var size = @getSetSizeAsInt(other); // unused but @getSetSizeAsInt call is observable
 
     var has = other.has;
     if (!@isCallable(has))
@@ -179,12 +226,7 @@ function isSubsetOf(other)
         @throwTypeError("Set operation called on non-Set object");
 
     // Get Set Record
-    if (!@isObject(other))
-        @throwTypeError("Set.prototype.isSubsetOf expects the first parameter to be an object");
-    var size = @toNumber(other.size);
-    // size is NaN
-    if (size !== size)
-        @throwTypeError("Set.prototype.isSubsetOf expects other.size to be a non-NaN number");
+    var size = @getSetSizeAsInt(other);
 
     var has = other.has;
     if (!@isCallable(has))
@@ -219,12 +261,7 @@ function isSupersetOf(other)
         @throwTypeError("Set operation called on non-Set object");
 
     // Get Set Record
-    if (!@isObject(other))
-        @throwTypeError("Set.prototype.isSupersetOf expects the first parameter to be an object");
-    var size = @toNumber(other.size);
-    // size is NaN
-    if (size !== size)
-        @throwTypeError("Set.prototype.isSupersetOf expects other.size to be a non-NaN number");
+    var size = @getSetSizeAsInt(other);
 
     var has = other.has;
     if (!@isCallable(has))
@@ -257,12 +294,7 @@ function isDisjointFrom(other)
         @throwTypeError("Set operation called on non-Set object");
 
     // Get Set Record
-    if (!@isObject(other))
-        @throwTypeError("Set.prototype.isDisjointFrom expects the first parameter to be an object");
-    var size = @toNumber(other.size);
-    // size is NaN
-    if (size !== size)
-        @throwTypeError("Set.prototype.isDisjointFrom expects other.size to be a non-NaN number");
+    var size = @getSetSizeAsInt(other);
 
     var has = other.has;
     if (!@isCallable(has))

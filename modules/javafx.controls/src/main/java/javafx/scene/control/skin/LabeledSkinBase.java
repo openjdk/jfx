@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,12 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.LabeledText;
-import com.sun.javafx.scene.control.behavior.MnemonicInfo;
-import com.sun.javafx.scene.control.skin.Utils;
+import static javafx.scene.control.ContentDisplay.BOTTOM;
+import static javafx.scene.control.ContentDisplay.LEFT;
+import static javafx.scene.control.ContentDisplay.RIGHT;
+import static javafx.scene.control.ContentDisplay.TOP;
+import static javafx.scene.control.OverrunStyle.CLIP;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.geometry.HPos;
@@ -51,16 +54,15 @@ import javafx.scene.input.Mnemonic;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
-
-import static javafx.scene.control.ContentDisplay.BOTTOM;
-import static javafx.scene.control.ContentDisplay.LEFT;
-import static javafx.scene.control.ContentDisplay.RIGHT;
-import static javafx.scene.control.ContentDisplay.TOP;
-import static javafx.scene.control.OverrunStyle.CLIP;
+import com.sun.javafx.scene.control.LabeledHelper;
+import com.sun.javafx.scene.control.LabeledText;
+import com.sun.javafx.scene.control.behavior.MnemonicInfo;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Default skin implementation for controls extends {@link Labeled}.
  *
+ * @param <C> the type of the labeled control
  * @see Labeled
  * @since 9
  */
@@ -132,6 +134,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     private KeyCombination mnemonicCode;
     // needs to be an object, as MenuItem isn't a node
     private Node labeledNode = null;
+    private final AtomicBoolean textTruncated = new AtomicBoolean();
 
 
 
@@ -956,6 +959,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     }
 
     private void updateDisplayedText(double w, double h) {
+        textTruncated.set(false);
         if (invalidText) {
             final Labeled labeled = getSkinnable();
             String cleanText = getCleanText();
@@ -1101,13 +1105,30 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             String ellipsisString = labeled.getEllipsisString();
 
             if (labeled.isWrapText()) {
-                result = Utils.computeClippedWrappedText(font, cleanText, wrapWidth, wrapHeight, labeled.getLineSpacing(), truncationStyle, ellipsisString, text.getBoundsType());
+                result = Utils.computeClippedWrappedText(
+                    font,
+                    cleanText,
+                    wrapWidth,
+                    wrapHeight,
+                    labeled.getLineSpacing(),
+                    truncationStyle,
+                    ellipsisString,
+                    textTruncated,
+                    text.getBoundsType()
+                );
             } else if (multiline) {
                 StringBuilder sb = new StringBuilder();
 
                 String[] splits = cleanText.split("\n");
                 for (int i = 0; i < splits.length; i++) {
-                    sb.append(Utils.computeClippedText(font, splits[i], wrapWidth, truncationStyle, ellipsisString));
+                    sb.append(Utils.computeClippedText(
+                        font,
+                        splits[i],
+                        wrapWidth,
+                        truncationStyle,
+                        ellipsisString,
+                        textTruncated
+                    ));
                     if (i < splits.length - 1) {
                         sb.append('\n');
                     }
@@ -1133,7 +1154,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
                 result = sb.toString();
             } else {
-                result = Utils.computeClippedText(font, cleanText, wrapWidth, truncationStyle, ellipsisString);
+                result = Utils.computeClippedText(font, cleanText, wrapWidth, truncationStyle, ellipsisString, textTruncated);
             }
 
             if (result != null && result.endsWith("\n")) {
@@ -1143,6 +1164,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
             text.setText(result);
             updateWrappingWidth();
+            LabeledHelper.setTextTruncated(getSkinnable(), textTruncated.get());
             invalidText = false;
         }
     }

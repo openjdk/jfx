@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,9 @@
 
 // https://gpuweb.github.io/gpuweb/#dictdef-gpucomputepassdescriptor
 
-// https://bugs.webkit.org/show_bug.cgi?id=232548 This shouldn't need to be here.
-typedef sequence<GPUComputePassTimestampWrite> GPUComputePassTimestampWrites;
-
 [
-    EnabledBySetting=WebGPU
+    EnabledBySetting=WebGPUEnabled
 ]
 dictionary GPUComputePassDescriptor : GPUObjectDescriptorBase {
-    GPUComputePassTimestampWrites timestampWrites = [];
+    GPUComputePassTimestampWrites timestampWrites;
 };

@@ -198,6 +198,7 @@ public:
     void setIsTailProcessing(bool isTailProcessing) { m_isTailProcessing = isTailProcessing; }
 
     NoiseInjectionPolicy noiseInjectionPolicy() const;
+    virtual float noiseInjectionMultiplier() const { return 0; }
 
 protected:
     // Inputs and outputs must be created before the AudioNode is initialized.
@@ -205,6 +206,7 @@ protected:
     void addOutput(unsigned numberOfChannels);
 
     void markNodeForDeletionIfNecessary();
+    void unmarkNodeForDeletionIfNecessary();
     void derefWithLock();
 
     struct DefaultAudioNodeOptions {
@@ -282,15 +284,16 @@ private:
 };
 
 template<typename T> struct AudioNodeConnectionRefDerefTraits {
-    static ALWAYS_INLINE void refIfNotNull(T* ptr)
+    static ALWAYS_INLINE T* refIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr != nullptr))
+        if (LIKELY(ptr))
             ptr->incrementConnectionCount();
+        return ptr;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr != nullptr))
+        if (LIKELY(ptr))
             ptr->decrementConnectionCount();
     }
 };

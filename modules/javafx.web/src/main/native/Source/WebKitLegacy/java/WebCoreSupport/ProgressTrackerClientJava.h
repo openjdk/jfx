@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,9 +37,9 @@ public:
     ProgressTrackerClientJava(const JLObject &webPage);
 
     // ProgressTrackerClient methods
-    void progressStarted(Frame& originatingProgressFrame) override;
-    void progressEstimateChanged(Frame& originatingProgressFrame) override;
-    void progressFinished(Frame& originatingProgressFrame) override;
+    void progressStarted(LocalFrame& originatingProgressFrame) override;
+    void progressEstimateChanged(LocalFrame& originatingProgressFrame) override;
+    void progressFinished(LocalFrame& originatingProgressFrame) override;
 
 private:
     JGObject m_webPage;

@@ -3,6 +3,8 @@
  *  Copyright 2000, 2003 Red Hat, Inc.
  *  Copyright 2007, 2008 Ryan Lortie <desrt@desrt.ca>
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -35,55 +37,6 @@
 #include "gtestutils.h"
 #include "glibintl.h"
 #include "gthread.h"
-
-/**
- * SECTION:markup
- * @Title: Simple XML Subset Parser
- * @Short_description: parses a subset of XML
- * @See_also: [XML Specification](http://www.w3.org/TR/REC-xml/)
- *
- * The "GMarkup" parser is intended to parse a simple markup format
- * that's a subset of XML. This is a small, efficient, easy-to-use
- * parser. It should not be used if you expect to interoperate with
- * other applications generating full-scale XML, and must not be used if you
- * expect to parse untrusted input. However, it's very
- * useful for application data files, config files, etc. where you
- * know your application will be the only one writing the file.
- * Full-scale XML parsers should be able to parse the subset used by
- * GMarkup, so you can easily migrate to full-scale XML at a later
- * time if the need arises.
- *
- * GMarkup is not guaranteed to signal an error on all invalid XML;
- * the parser may accept documents that an XML parser would not.
- * However, XML documents which are not well-formed (which is a
- * weaker condition than being valid. See the
- * [XML specification](http://www.w3.org/TR/REC-xml/)
- * for definitions of these terms.) are not considered valid GMarkup
- * documents.
- *
- * Simplifications to XML include:
- *
- * - Only UTF-8 encoding is allowed
- *
- * - No user-defined entities
- *
- * - Processing instructions, comments and the doctype declaration
- *   are "passed through" but are not interpreted in any way
- *
- * - No DTD or validation
- *
- * The markup format does support:
- *
- * - Elements
- *
- * - Attributes
- *
- * - 5 standard entities: &amp; &lt; &gt; &quot; &apos;
- *
- * - Character references
- *
- * - Sections marked as CDATA
- */
 
 G_DEFINE_QUARK (g-markup-error-quark, g_markup_error)
 
@@ -191,13 +144,6 @@ free_list_node (GMarkupParseContext *context, GSList *node)
 {
   node->data = NULL;
   context->spare_list_nodes = g_slist_concat (node, context->spare_list_nodes);
-}
-
-static inline void
-string_blank (GString *string)
-{
-  string->str[0] = '\0';
-  string->len = 0;
 }
 
 /**
@@ -854,7 +800,7 @@ release_chunk (GMarkupParseContext *context, GString *str)
       g_string_free (str, TRUE);
       return;
     }
-  string_blank (str);
+  g_string_truncate (str, 0);
   node = get_list_node (context, str);
   context->spare_chunks = g_slist_concat (node, context->spare_chunks);
 }
@@ -879,7 +825,7 @@ add_to_partial (GMarkupParseContext *context,
     }
 
   if (text_start != text_end)
-    g_string_insert_len (context->partial_chunk, -1,
+    g_string_append_len (context->partial_chunk,
                          text_start, text_end - text_start);
 }
 
@@ -887,7 +833,7 @@ static inline void
 truncate_partial (GMarkupParseContext *context)
 {
   if (context->partial_chunk != NULL)
-    string_blank (context->partial_chunk);
+    g_string_truncate (context->partial_chunk, 0);
 }
 
 static inline const gchar*
@@ -1939,7 +1885,7 @@ g_markup_parse_context_get_element (GMarkupParseContext *context)
  * would merely return the name of the element that is being
  * processed.
  *
- * Returns: the element stack, which must not be modified
+ * Returns: (element-type utf8): the element stack, which must not be modified
  *
  * Since: 2.16
  */
@@ -2541,7 +2487,7 @@ g_markup_vprintf_escaped (const gchar *format,
 
   /* Use them to format the arguments
    */
-  G_VA_COPY (args2, args);
+  va_copy (args2, args);
 
   output1 = g_strdup_vprintf (format1->str, args);
 

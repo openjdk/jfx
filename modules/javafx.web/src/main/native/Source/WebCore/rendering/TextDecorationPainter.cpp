@@ -27,11 +27,10 @@
 #include "FontCascade.h"
 #include "GraphicsContext.h"
 #include "HTMLAnchorElement.h"
-#include "HTMLFontElement.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineTextBoxStyle.h"
 #include "RenderBlock.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "ShadowData.h"
 #include "TextRun.h"
@@ -67,6 +66,9 @@ namespace WebCore {
  */
 static void strokeWavyTextDecoration(GraphicsContext& context, const FloatRect& rect, WavyStrokeParameters wavyStrokeParameters)
 {
+    if (rect.isEmpty() || !wavyStrokeParameters.step)
+        return;
+
     FloatPoint p1 = rect.minXMinYCorner();
     FloatPoint p2 = rect.maxXMinYCorner();
 
@@ -138,8 +140,10 @@ static DashArray translateIntersectionPointsToSkipInkBoundaries(const DashArray&
             else
                 intermediateTuples.append(*i);
         }
-    } else
-        intermediateTuples = tuples;
+    } else {
+        // XXX(274780): A plain assignment or move here makes Clang generate bad code in LTO builds.
+        intermediateTuples.swap(tuples);
+    }
 
     // Step 3: Output the space between the ranges, but only if the space warrants an underline.
     float previous = 0;
@@ -200,7 +204,7 @@ TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const Fon
 }
 
 // Paint text-shadow, underline, overline
-void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, const BackgroundDecorationGeometry& decorationGeometry, OptionSet<TextDecorationLine> decorationType, const Styles& decorationStyle)
+void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style, const TextRun& textRun, const BackgroundDecorationGeometry& decorationGeometry, OptionSet<TextDecorationLine> decorationType, const Styles& decorationStyle)
 {
     auto paintDecoration = [&] (auto decoration, auto style, auto& color, auto& rect) {
         m_context.setStrokeColor(color);
@@ -270,20 +274,20 @@ void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, c
                 boxOrigin.move(0, -extraOffset);
                 extraOffset = 0;
             }
-            auto shadowColor = shadow->color();
+            auto shadowColor = style.colorResolvingCurrentColor(shadow->color());
             if (m_shadowColorFilter)
                 m_shadowColorFilter->transformColor(shadowColor);
 
             auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
             auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
-            m_context.setShadow(FloatSize { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor);
+            m_context.setDropShadow({ { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor, ShadowRadiusMode::Default });
             shadow = shadow->next();
         };
         applyShadowIfNeeded();
 
-        if (decorationType.contains(TextDecorationLine::Underline))
+        if (decorationType.contains(TextDecorationLine::Underline) && !underlineRect.isEmpty())
             paintDecoration(TextDecorationLine::Underline, decorationStyle.underline.decorationStyle, decorationStyle.underline.color, underlineRect);
-        if (decorationType.contains(TextDecorationLine::Overline))
+        if (decorationType.contains(TextDecorationLine::Overline) && !overlineRect.isEmpty())
             paintDecoration(TextDecorationLine::Overline, decorationStyle.overline.decorationStyle, decorationStyle.overline.color, overlineRect);
         // We only want to paint the shadow, hence the transparent color, not the actual line-through,
         // which will be painted in paintForegroundDecorations().
@@ -294,7 +298,7 @@ void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, c
     if (clipping)
         m_context.restore();
     else if (m_shadow)
-        m_context.clearShadow();
+        m_context.clearDropShadow();
 }
 
 void TextDecorationPainter::paintForegroundDecorations(const ForegroundDecorationGeometry& foregroundDecorationGeometry, const Styles& decorationStyle)
@@ -346,8 +350,8 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
 
     auto styleForRenderer = [&] (const RenderObject& renderer) -> const RenderStyle& {
         if (pseudoId != PseudoId::None && renderer.style().hasPseudoStyle(pseudoId)) {
-            if (is<RenderText>(renderer))
-                return *downcast<RenderText>(renderer).getCachedPseudoStyle(pseudoId);
+            if (auto textRenderer = dynamicDowncast<RenderText>(renderer))
+                return *textRenderer->getCachedPseudoStyle(pseudoId);
             return *downcast<RenderElement>(renderer).getCachedPseudoStyle(pseudoId);
         }
         return firstLineStyle ? renderer.firstLineStyle() : renderer.style();
@@ -358,17 +362,20 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
         const auto& style = styleForRenderer(*current);
         extractDecorations(style, style.textDecorationLine());
 
-        if (current->isRubyText())
+        if (current->isRenderRubyText() || current->style().display() == DisplayType::RubyAnnotation)
             return;
 
         current = current->parent();
-        if (current && current->isAnonymousBlock() && downcast<RenderBlock>(*current).continuation())
-            current = downcast<RenderBlock>(*current).continuation();
+        if (current && current->isAnonymousBlock()) {
+            auto& currentBlock = downcast<RenderBlock>(*current);
+            if (auto* continuation = currentBlock.continuation())
+                current = continuation;
+        }
 
         if (remainingDecorations.isEmpty())
             break;
 
-    } while (current && !is<HTMLAnchorElement>(current->node()) && !is<HTMLFontElement>(current->node()));
+    } while (current && !is<HTMLAnchorElement>(current->node()));
 
     // If we bailed out, use the element we bailed out at (typically a <font> or <a> element).
     if (!remainingDecorations.isEmpty() && current)

@@ -31,21 +31,21 @@
 #include "DocumentType.h"
 #include "Element.h"
 #include "FTPDirectoryDocument.h"
-#include "FragmentScriptingPermission.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLDocument.h"
 #include "HTMLHeadElement.h"
 #include "HTMLTitleElement.h"
 #include "Image.h"
 #include "ImageDocument.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "MIMETypeRegistry.h"
 #include "MediaDocument.h"
 #include "MediaPlayer.h"
 #include "MediaQueryParser.h"
 #include "PDFDocument.h"
 #include "Page.h"
+#include "ParserContentPolicy.h"
 #include "PluginData.h"
 #include "PluginDocument.h"
 #include "SVGDocument.h"
@@ -70,6 +70,11 @@ using namespace HTMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(DOMImplementation);
 
+Ref<Document> DOMImplementation::protectedDocument()
+{
+    return m_document.get();
+}
+
 DOMImplementation::DOMImplementation(Document& document)
     : m_document(document)
 {
@@ -80,7 +85,7 @@ ExceptionOr<Ref<DocumentType>> DOMImplementation::createDocumentType(const AtomS
     auto parseResult = Document::parseQualifiedName(qualifiedName);
     if (parseResult.hasException())
         return parseResult.releaseException();
-    return DocumentType::create(m_document, qualifiedName, publicId, systemId);
+    return DocumentType::create(protectedDocument(), qualifiedName, publicId, systemId);
 }
 
 static inline Ref<XMLDocument> createXMLDocument(const String& namespaceURI, const Settings& settings)
@@ -92,16 +97,16 @@ static inline Ref<XMLDocument> createXMLDocument(const String& namespaceURI, con
         document = XMLDocument::createXHTML(nullptr, settings, URL());
     else
         document = XMLDocument::create(nullptr, settings, URL());
-    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
+    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
     return document.releaseNonNull();
 }
 
 ExceptionOr<Ref<XMLDocument>> DOMImplementation::createDocument(const AtomString& namespaceURI, const AtomString& qualifiedName, DocumentType* documentType)
 {
-    auto document = createXMLDocument(namespaceURI, m_document.settings());
-    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
-    document->setContextDocument(m_document.contextDocument());
-    document->setSecurityOriginPolicy(m_document.securityOriginPolicy());
+    Ref document = createXMLDocument(namespaceURI, m_document->protectedSettings());
+    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
+    document->setContextDocument(m_document->contextDocument());
+    document->setSecurityOriginPolicy(m_document->securityOriginPolicy());
 
     RefPtr<Element> documentElement;
     if (!qualifiedName.isEmpty()) {
@@ -131,22 +136,22 @@ Ref<CSSStyleSheet> DOMImplementation::createCSSStyleSheet(const String&, const S
 
 Ref<HTMLDocument> DOMImplementation::createHTMLDocument(String&& title)
 {
-    auto document = HTMLDocument::create(nullptr, m_document.settings(), URL(), { });
-    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
+    Ref document = HTMLDocument::create(nullptr, m_document->protectedSettings(), URL(), { });
+    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
     document->open();
     document->write(nullptr, { "<!doctype html><html><head></head><body></body></html>"_s });
     if (!title.isNull()) {
         auto titleElement = HTMLTitleElement::create(titleTag, document);
         titleElement->appendChild(document->createTextNode(WTFMove(title)));
         ASSERT(document->head());
-        document->head()->appendChild(titleElement);
+        document->protectedHead()->appendChild(titleElement);
     }
-    document->setContextDocument(m_document.contextDocument());
-    document->setSecurityOriginPolicy(m_document.securityOriginPolicy());
+    document->setContextDocument(m_document->contextDocument());
+    document->setSecurityOriginPolicy(m_document->securityOriginPolicy());
     return document;
 }
 
-Ref<Document> DOMImplementation::createDocument(const String& contentType, Frame* frame, const Settings& settings, const URL& url, ScriptExecutionContextIdentifier documentIdentifier)
+Ref<Document> DOMImplementation::createDocument(const String& contentType, LocalFrame* frame, const Settings& settings, const URL& url, ScriptExecutionContextIdentifier documentIdentifier)
 {
     // FIXME: Inelegant to have this here just because this is the home of DOM APIs for creating documents.
     // This is internal, not a DOM API. Maybe we should put it in a new class called DocumentFactory,

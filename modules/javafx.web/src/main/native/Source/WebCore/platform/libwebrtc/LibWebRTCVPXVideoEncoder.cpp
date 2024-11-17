@@ -79,6 +79,7 @@ private:
     uint64_t m_height { 0 };
     bool m_isInitialized { false };
     bool m_hasEncoded { false };
+    bool m_hasMultipleTemporalLayers { false };
 };
 
 void LibWebRTCVPXVideoEncoder::create(Type type, const VideoEncoder::Config& config, CreateCallback&& callback, DescriptionCallback&& descriptionCallback, OutputCallback&& outputCallback, PostTaskCallback&& postTaskCallback)
@@ -95,7 +96,7 @@ void LibWebRTCVPXVideoEncoder::create(Type type, const VideoEncoder::Config& con
             callback(UniqueRef<VideoEncoder> { WTFMove(encoder) });
 
             VideoEncoder::ActiveConfiguration configuration;
-            configuration.colorSpace = PlatformVideoColorSpace { PlatformVideoColorPrimaries::Bt709, PlatformVideoTransferCharacteristics::Iec6196621, PlatformVideoMatrixCoefficients::Smpte170m, false };
+            configuration.colorSpace = PlatformVideoColorSpace { PlatformVideoColorPrimaries::Bt709, PlatformVideoTransferCharacteristics::Bt709, PlatformVideoMatrixCoefficients::Bt709, false };
             descriptionCallback(WTFMove(configuration));
         });
     });
@@ -146,6 +147,8 @@ static UniqueRef<webrtc::VideoEncoder> createInternalEncoder(LibWebRTCVPXVideoEn
         return makeUniqueRefFromNonNullUniquePtr(webrtc::VP8Encoder::Create());
     case LibWebRTCVPXVideoEncoder::Type::VP9:
         return makeUniqueRefFromNonNullUniquePtr(webrtc::VP9Encoder::Create());
+    case LibWebRTCVPXVideoEncoder::Type::VP9_P2:
+        return makeUniqueRefFromNonNullUniquePtr(webrtc::VP9Encoder::Create(cricket::CreateVideoCodec(webrtc::SdpVideoFormat { cricket::kVp9CodecName, { { "profile-id", "2" } } } )));
     case LibWebRTCVPXVideoEncoder::Type::AV1:
         return makeUniqueRefFromNonNullUniquePtr(webrtc::CreateLibaomAv1Encoder());
     }
@@ -169,21 +172,58 @@ int LibWebRTCVPXInternalVideoEncoder::initialize(LibWebRTCVPXVideoEncoder::Type 
     videoCodec.height = config.height;
     videoCodec.maxFramerate = 100;
 
-    if (type == LibWebRTCVPXVideoEncoder::Type::VP8)
+    webrtc::VideoBitrateAllocation allocation;
+    auto totalBitRate = config.bitRate ? config.bitRate : 3 * config.width * config.height;
+    switch (config.scalabilityMode) {
+    case VideoEncoder::ScalabilityMode::L1T1:
+        videoCodec.SetScalabilityMode(webrtc::ScalabilityMode::kL1T1);
+        allocation.SetBitrate(0, 0, totalBitRate);
+        break;
+    case VideoEncoder::ScalabilityMode::L1T2:
+        m_hasMultipleTemporalLayers = true;
+        videoCodec.SetScalabilityMode(webrtc::ScalabilityMode::kL1T2);
+        allocation.SetBitrate(0, 0, totalBitRate * 0.6);
+        allocation.SetBitrate(0, 1, totalBitRate * 0.4);
+        break;
+    case VideoEncoder::ScalabilityMode::L1T3:
+        m_hasMultipleTemporalLayers = true;
+        videoCodec.SetScalabilityMode(webrtc::ScalabilityMode::kL1T3);
+        allocation.SetBitrate(0, 0, totalBitRate * 0.5);
+        allocation.SetBitrate(0, 1, totalBitRate * 0.2);
+        allocation.SetBitrate(0, 2, totalBitRate * 0.3);
+        break;
+    }
+
+    switch (type) {
+    case LibWebRTCVPXVideoEncoder::Type::VP8:
         videoCodec.codecType = webrtc::kVideoCodecVP8;
-    else {
+        switch (config.scalabilityMode) {
+        case VideoEncoder::ScalabilityMode::L1T1:
+            videoCodec.VP8()->numberOfTemporalLayers = 1;
+            break;
+        case VideoEncoder::ScalabilityMode::L1T2:
+            videoCodec.VP8()->numberOfTemporalLayers = 2;
+            break;
+        case VideoEncoder::ScalabilityMode::L1T3:
+            videoCodec.VP8()->numberOfTemporalLayers = 3;
+            break;
+        }
+        break;
+    case LibWebRTCVPXVideoEncoder::Type::VP9:
+    case LibWebRTCVPXVideoEncoder::Type::VP9_P2:
         videoCodec.codecType = webrtc::kVideoCodecVP9;
         videoCodec.VP9()->numberOfSpatialLayers = 1;
-        videoCodec.VP9()->numberOfTemporalLayers = 1;
+        break;
+    case LibWebRTCVPXVideoEncoder::Type::AV1:
+        videoCodec.codecType = webrtc::kVideoCodecAV1;
+        videoCodec.qpMax = 56; // default qp max
+        break;
     }
 
     if (auto error = m_internalEncoder->InitEncode(&videoCodec, webrtc::VideoEncoder::Settings { webrtc::VideoEncoder::Capabilities { true }, static_cast<int>(webrtc::CpuInfo::DetectNumberOfCores()), defaultPayloadSize }))
         return error;
 
     m_isInitialized = true;
-
-    webrtc::VideoBitrateAllocation allocation;
-    allocation.SetBitrate(0, 0, config.bitRate ? config.bitRate : 3 * config.width * config.height);
     m_internalEncoder->SetRates({ allocation, config.frameRate ? config.frameRate : 30.0 });
 
     m_internalEncoder->RegisterEncodeCompleteCallback(this);
@@ -225,11 +265,18 @@ void LibWebRTCVPXInternalVideoEncoder::encode(VideoEncoder::RawFrame&& rawFrame,
 
 webrtc::EncodedImageCallback::Result LibWebRTCVPXInternalVideoEncoder::OnEncodedImage(const webrtc::EncodedImage& encodedImage, const webrtc::CodecSpecificInfo*)
 {
+    std::optional<unsigned> frameTemporalIndex;
+    if (m_hasMultipleTemporalLayers) {
+        if (auto temporalIndex = encodedImage.TemporalIndex())
+            frameTemporalIndex = *temporalIndex;
+    }
+
     VideoEncoder::EncodedFrame encodedFrame {
-        Vector<uint8_t> { Span<const uint8_t> { encodedImage.data(), encodedImage.size() } },
+        Vector<uint8_t> { std::span<const uint8_t> { encodedImage.data(), encodedImage.size() } },
         encodedImage._frameType == webrtc::VideoFrameType::kVideoFrameKey,
         m_timestamp,
-        m_duration
+        m_duration,
+        frameTemporalIndex
     };
 
     m_postTaskCallback([protectedThis = Ref { *this }, encodedFrame = WTFMove(encodedFrame)]() mutable {

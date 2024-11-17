@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2023 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,11 @@
 
 package test.javafx.scene.control.skin;
 
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -40,17 +44,13 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.control.skin.TableRowSkin;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 public class TableRowSkinTest {
 
@@ -58,7 +58,7 @@ public class TableRowSkinTest {
     private StageLoader stageLoader;
     private TableColumnHeader firstColumnHeader;
 
-    @Before
+    @BeforeEach
     public void before() {
         tableView = new TableView<>();
 
@@ -316,7 +316,28 @@ public class TableRowSkinTest {
         invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl();
     }
 
-    @After
+    /**
+     * The {@link TableRowSkin} should add new cells after new columns are added.
+     * See: JDK-8321970
+     */
+    @Test
+    public void cellsShouldBeAddedInRowFixedCellSize() {
+        tableView.setFixedCellSize(24);
+
+        TableColumn<Person, String> otherColumn = new TableColumn<>("other");
+        otherColumn.setPrefWidth(100);
+        otherColumn.setCellValueFactory(value -> new SimpleStringProperty("other"));
+        tableView.getColumns().add(otherColumn);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(5, tableView.getColumns().size());
+
+        Toolkit.getToolkit().firePulse();
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(tableView, 1);
+        assertEquals(5, row.getChildrenUnmodifiable().stream().filter(TableCell.class::isInstance).count());
+    }
+
+    @AfterEach
     public void after() {
         stageLoader.dispose();
     }

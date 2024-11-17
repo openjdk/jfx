@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -189,11 +189,13 @@ public final class InputMethodEvent extends InputEvent{
         return (EventType<InputMethodEvent>) super.getEventType();
     }
 
+    @SuppressWarnings("doclint:missing")
     private void writeObject(ObjectOutputStream oos) throws IOException {
         oos.defaultWriteObject();
         oos.writeObject(new ArrayList(composed));
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(ObjectInputStream ois) throws IOException,
             ClassNotFoundException {
         ois.defaultReadObject();

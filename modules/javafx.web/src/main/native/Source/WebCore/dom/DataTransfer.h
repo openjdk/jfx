@@ -26,6 +26,7 @@
 #include "CachedResourceHandle.h"
 #include "DragActions.h"
 #include "DragImage.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -42,7 +43,7 @@ class Pasteboard;
 class ScriptExecutionContext;
 enum class WebContentReadingPolicy : bool;
 
-class DataTransfer : public RefCounted<DataTransfer> {
+class DataTransfer : public RefCounted<DataTransfer>, public CanMakeWeakPtr<DataTransfer> {
 #if PLATFORM(JAVA)
       friend class EventHandler;
 #endif
@@ -144,7 +145,7 @@ private:
     String readStringFromPasteboard(Document&, const String& lowercaseType, WebContentReadingPolicy) const;
     bool shouldSuppressGetAndSetDataToAvoidExposingFilePaths() const;
 
-    enum class AddFilesType { No, Yes };
+    enum class AddFilesType : bool { No, Yes };
     Vector<String> types(AddFilesType) const;
     Vector<Ref<File>> filesFromPasteboardAndItemList(ScriptExecutionContext*) const;
 

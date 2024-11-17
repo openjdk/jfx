@@ -91,21 +91,21 @@ static ExceptionOr<Ref<CSSTransformComponent>> createTransformComponent(CSSFunct
     case CSSValueMatrix3d:
         return makeTransformComponent(CSSMatrixComponent::create(functionValue));
     default:
-        return Exception { TypeError, "Unexpected function value type"_s };
+        return Exception { ExceptionCode::TypeError, "Unexpected function value type"_s };
     }
 }
 
-ExceptionOr<Ref<CSSTransformValue>> CSSTransformValue::create(CSSTransformListValue& transformList)
+ExceptionOr<Ref<CSSTransformValue>> CSSTransformValue::create(const CSSTransformListValue& list)
 {
     Vector<RefPtr<CSSTransformComponent>> components;
-    for (auto transformFunction : transformList) {
-        if (!is<CSSFunctionValue>(transformFunction))
-            return Exception { TypeError, "Expected only function values in a transform list."_s };
-        auto& functionValue = downcast<CSSFunctionValue>(transformFunction.get());
-        auto transformComponentOrException = createTransformComponent(functionValue);
-        if (transformComponentOrException.hasException())
-            return transformComponentOrException.releaseException();
-        components.append(transformComponentOrException.releaseReturnValue());
+    for (auto& value : list) {
+        auto* functionValue = dynamicDowncast<CSSFunctionValue>(value);
+        if (!functionValue)
+            return Exception { ExceptionCode::TypeError, "Expected only function values in a transform list."_s };
+        auto component = createTransformComponent(const_cast<CSSFunctionValue&>(*functionValue));
+        if (component.hasException())
+            return component.releaseException();
+        components.append(component.releaseReturnValue());
     }
     return adoptRef(*new CSSTransformValue(WTFMove(components)));
 }
@@ -114,22 +114,19 @@ ExceptionOr<Ref<CSSTransformValue>> CSSTransformValue::create(Vector<RefPtr<CSST
 {
     // https://drafts.css-houdini.org/css-typed-om/#dom-csstransformvalue-csstransformvalue
     if (transforms.isEmpty())
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
     return adoptRef(*new CSSTransformValue(WTFMove(transforms)));
 }
 
-ExceptionOr<RefPtr<CSSTransformComponent>> CSSTransformValue::item(size_t index)
+RefPtr<CSSTransformComponent> CSSTransformValue::item(size_t index)
 {
-    if (index >= m_components.size())
-        return Exception { RangeError, makeString("Index ", index, " exceeds the range of CSSTransformValue.") };
-
-    return RefPtr<CSSTransformComponent> { m_components[index] };
+    return index < m_components.size() ? m_components[index] : nullptr;
 }
 
 ExceptionOr<RefPtr<CSSTransformComponent>> CSSTransformValue::setItem(size_t index, Ref<CSSTransformComponent>&& value)
 {
     if (index > m_components.size())
-        return Exception { RangeError, makeString("Index ", index, " exceeds the range of CSSTransformValue.") };
+        return Exception { ExceptionCode::RangeError, makeString("Index ", index, " exceeds the range of CSSTransformValue.") };
 
     if (index == m_components.size())
         m_components.append(WTFMove(value));
@@ -170,6 +167,8 @@ CSSTransformValue::CSSTransformValue(Vector<RefPtr<CSSTransformComponent>>&& tra
 {
 }
 
+CSSTransformValue::~CSSTransformValue() = default;
+
 void CSSTransformValue::serialize(StringBuilder& builder, OptionSet<SerializationArguments>) const
 {
     // https://drafts.css-houdini.org/css-typed-om/#serialize-a-csstransformvalue
@@ -182,12 +181,12 @@ void CSSTransformValue::serialize(StringBuilder& builder, OptionSet<Serializatio
 
 RefPtr<CSSValue> CSSTransformValue::toCSSValue() const
 {
-    auto cssValueList = CSSTransformListValue::create();
+    CSSValueListBuilder builder;
     for (auto& component : m_components) {
         if (auto cssComponent = component->toCSSValue())
-            cssValueList->append(cssComponent.releaseNonNull());
+            builder.append(cssComponent.releaseNonNull());
     }
-    return cssValueList;
+    return CSSTransformListValue::create(WTFMove(builder));
 }
 
 } // namespace WebCore

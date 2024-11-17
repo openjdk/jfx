@@ -29,15 +29,15 @@
 #if ENABLE(USER_MESSAGE_HANDLERS)
 
 #include "DOMWrapperWorld.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "UserContentController.h"
 #include "UserMessageHandler.h"
 
 namespace WebCore {
 
-UserMessageHandlersNamespace::UserMessageHandlersNamespace(Frame& frame, UserContentProvider& userContentProvider)
+UserMessageHandlersNamespace::UserMessageHandlersNamespace(LocalFrame& frame, UserContentProvider& userContentProvider)
     : FrameDestructionObserver(&frame)
     , m_userContentProvider(userContentProvider)
 {
@@ -72,9 +72,16 @@ Vector<AtomString> UserMessageHandlersNamespace::supportedPropertyNames() const
     return { };
 }
 
+bool UserMessageHandlersNamespace::isSupportedPropertyName(const AtomString&)
+{
+    // FIXME: Consider adding support for this. It would require adding support for passing the
+    // DOMWrapperWorld to isSupportedPropertyName().
+    return false;
+}
+
 UserMessageHandler* UserMessageHandlersNamespace::namedItem(DOMWrapperWorld& world, const AtomString& name)
 {
-    Frame* frame = this->frame();
+    auto* frame = this->frame();
     if (!frame)
         return nullptr;
 

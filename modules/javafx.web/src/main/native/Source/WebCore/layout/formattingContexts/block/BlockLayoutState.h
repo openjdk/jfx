@@ -25,7 +25,9 @@
 
 #pragma once
 
-#include "FloatingState.h"
+#include "Font.h"
+#include "PlacedFloats.h"
+#include <algorithm>
 
 namespace WebCore {
 namespace Layout {
@@ -36,37 +38,52 @@ class BlockFormattingContext;
 class BlockLayoutState {
 public:
     struct LineClamp {
-        size_t maximumNumberOfLines { 0 };
-        size_t numberOfVisibleLines { 0 };
-        bool isLineClampRootOverflowHidden { true };
+        size_t allowedLineCount() const { return std::max(maximumLineCount - currentLineCount, static_cast<size_t>(0)); }
+        size_t maximumLineCount { 0 };
+        size_t currentLineCount { 0 };
     };
-    enum class LeadingTrimSide : uint8_t {
+    enum class TextBoxTrimSide : uint8_t {
         Start = 1 << 0,
         End   = 1 << 1
     };
-    using LeadingTrim = OptionSet<LeadingTrimSide>;
-    BlockLayoutState(FloatingState&, std::optional<LineClamp> = { }, LeadingTrim = { }, std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom = { });
+    using TextBoxTrim = OptionSet<TextBoxTrimSide>;
 
-    FloatingState& floatingState() { return m_floatingState; }
-    const FloatingState& floatingState() const { return m_floatingState; }
+    struct LineGrid {
+        LayoutSize layoutOffset;
+        LayoutSize gridOffset;
+        InlineLayoutUnit columnWidth;
+        LayoutUnit rowHeight;
+        LayoutUnit topRowOffset;
+        Ref<const Font> primaryFont;
+        std::optional<LayoutSize> paginationOrigin;
+        LayoutUnit pageLogicalTop;
+    };
+
+    BlockLayoutState(PlacedFloats&, std::optional<LineClamp> = { }, TextBoxTrim = { }, std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom = { }, std::optional<LineGrid> lineGrid = { });
+
+    PlacedFloats& placedFloats() { return m_placedFloats; }
+    const PlacedFloats& placedFloats() const { return m_placedFloats; }
 
     std::optional<LineClamp> lineClamp() const { return m_lineClamp; }
-    LeadingTrim leadingTrim() const { return m_leadingTrim; }
+    TextBoxTrim textBoxTrim() const { return m_textBoxTrim; }
 
     std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom() const { return m_intrusiveInitialLetterLogicalBottom; }
+    const std::optional<LineGrid>& lineGrid() const { return m_lineGrid; }
 
 private:
-    FloatingState& m_floatingState;
+    PlacedFloats& m_placedFloats;
     std::optional<LineClamp> m_lineClamp;
-    LeadingTrim m_leadingTrim;
+    TextBoxTrim m_textBoxTrim;
     std::optional<LayoutUnit> m_intrusiveInitialLetterLogicalBottom;
+    std::optional<LineGrid> m_lineGrid;
 };
 
-inline BlockLayoutState::BlockLayoutState(FloatingState& floatingState, std::optional<LineClamp> lineClamp, LeadingTrim leadingTrim, std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom)
-    : m_floatingState(floatingState)
+inline BlockLayoutState::BlockLayoutState(PlacedFloats& placedFloats, std::optional<LineClamp> lineClamp, TextBoxTrim textBoxTrim, std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom, std::optional<LineGrid> lineGrid)
+    : m_placedFloats(placedFloats)
     , m_lineClamp(lineClamp)
-    , m_leadingTrim(leadingTrim)
+    , m_textBoxTrim(textBoxTrim)
     , m_intrusiveInitialLetterLogicalBottom(intrusiveInitialLetterLogicalBottom)
+    , m_lineGrid(lineGrid)
 {
 }
 

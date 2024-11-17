@@ -44,7 +44,7 @@ public:
     HTMLProgressElement* progressElement() const;
 
 protected:
-    ProgressShadowElement(Document&);
+    explicit ProgressShadowElement(Document&);
 
 private:
     bool rendererIsNeeded(const RenderStyle&) override;
@@ -77,7 +77,7 @@ static_assert(sizeof(ProgressBarElement) == sizeof(ProgressShadowElement));
 class ProgressValueElement final : public ProgressShadowElement {
 public:
     static Ref<ProgressValueElement> create(Document&);
-    void setWidthPercentage(double);
+    void setInlineSizePercentage(double);
 
 private:
     ProgressValueElement(Document&);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,9 +112,9 @@ public final class KeyCharacterCombination extends KeyCombination {
         if (event.getCode() == KeyCode.UNDEFINED) {
             return false;
         }
-        return (event.getCode().getCode()
-                       == Toolkit.getToolkit().getKeyCodeForChar(getCharacter()))
-                   && super.match(event);
+        int code = event.getCode().getCode();
+        return (super.match(event) &&
+                code == Toolkit.getToolkit().getKeyCodeForChar(getCharacter(), code));
     }
 
     /**

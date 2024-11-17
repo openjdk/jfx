@@ -24,6 +24,7 @@
 #include "RenderQuote.h"
 
 #include "QuotesData.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderTextFragment.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
@@ -36,10 +37,11 @@ using namespace WTF::Unicode;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderQuote);
 
 RenderQuote::RenderQuote(Document& document, RenderStyle&& style, QuoteType quote)
-    : RenderInline(document, WTFMove(style))
+    : RenderInline(Type::Quote, document, WTFMove(style))
     , m_type(quote)
     , m_text(emptyString())
 {
+    ASSERT(isRenderQuote());
 }
 
 RenderQuote::~RenderQuote()
@@ -435,17 +437,6 @@ static inline StringImpl* apostropheString()
     return apostropheString;
 }
 
-static RenderTextFragment* quoteTextRenderer(RenderObject* lastChild)
-{
-    if (!lastChild)
-        return nullptr;
-
-    if (!is<RenderTextFragment>(lastChild))
-        return nullptr;
-
-    return downcast<RenderTextFragment>(lastChild);
-}
-
 void RenderQuote::updateTextRenderer(RenderTreeBuilder& builder)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(document().inRenderTreeUpdate());
@@ -453,7 +444,7 @@ void RenderQuote::updateTextRenderer(RenderTreeBuilder& builder)
     if (m_text == text)
         return;
     m_text = text;
-    if (auto* renderText = quoteTextRenderer(lastChild())) {
+    if (auto* renderText = dynamicDowncast<RenderTextFragment>(lastChild())) {
         renderText->setContentString(m_text);
         renderText->dirtyLineBoxes(false);
         return;

@@ -33,7 +33,7 @@ public:
     static Ref<HTMLDivElement> create(const QualifiedName&, Document&);
 
 protected:
-    HTMLDivElement(const QualifiedName&, Document&);
+    HTMLDivElement(const QualifiedName&, Document&, OptionSet<TypeFlag> = { });
 
 private:
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;

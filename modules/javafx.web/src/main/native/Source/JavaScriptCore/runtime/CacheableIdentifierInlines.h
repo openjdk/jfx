@@ -117,6 +117,17 @@ inline bool CacheableIdentifier::isStringCell() const
     return isCell() && cell()->isString();
 }
 
+inline void CacheableIdentifier::ensureIsCell(VM& vm)
+{
+    if (!isCell()) {
+        if (uid()->isSymbol())
+            setCellBits(Symbol::create(vm, static_cast<SymbolImpl&>(*uid())));
+        else
+            setCellBits(jsString(vm, String(static_cast<AtomStringImpl*>(uid()))));
+    }
+    ASSERT(isCell());
+}
+
 inline void CacheableIdentifier::setCellBits(JSCell* cell)
 {
     RELEASE_ASSERT(isCacheableIdentifierCell(cell));
@@ -135,15 +146,9 @@ inline void CacheableIdentifier::visitAggregate(Visitor& visitor) const
         visitor.appendUnbarriered(cell());
 }
 
-
 inline bool CacheableIdentifier::operator==(const CacheableIdentifier& other) const
 {
     return uid() == other.uid();
-}
-
-inline bool CacheableIdentifier::operator!=(const CacheableIdentifier& other) const
-{
-    return uid() != other.uid();
 }
 
 inline bool CacheableIdentifier::operator==(const Identifier& other) const

@@ -38,6 +38,7 @@
 #include "MediaElementSession.h"
 #include "MediaPlaybackTarget.h"
 #include "RemotePlaybackAvailabilityCallback.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -93,11 +94,9 @@ void RemotePlayback::watchAvailability(Ref<RemotePlaybackAvailabilityCallback>&&
 
         // 3. If the disableRemotePlayback attribute is present for the media element, reject the promise with
         //    InvalidStateError and abort all the remaining steps.
-        if (!m_mediaElement
-            || m_mediaElement->hasAttributeWithoutSynchronization(HTMLNames::webkitwirelessvideoplaybackdisabledAttr)
-            || m_mediaElement->hasAttributeWithoutSynchronization(HTMLNames::disableremoteplaybackAttr)) {
+        if (!m_mediaElement || m_mediaElement->isWirelessPlaybackTargetDisabled()) {
             ERROR_LOG(identifier, "promise rejected, remote playback disabled");
-            promise->reject(InvalidStateError);
+            promise->reject(ExceptionCode::InvalidStateError);
             return;
         }
 
@@ -155,11 +154,9 @@ void RemotePlayback::cancelWatchAvailability(std::optional<int32_t> id, Ref<Defe
             return;
         // 3. If the disableRemotePlayback attribute is present for the media element, reject promise with
         //    InvalidStateError and abort all the remaining steps.
-        if (!m_mediaElement
-            || m_mediaElement->hasAttributeWithoutSynchronization(HTMLNames::webkitwirelessvideoplaybackdisabledAttr)
-            || m_mediaElement->hasAttributeWithoutSynchronization(HTMLNames::disableremoteplaybackAttr)) {
+        if (!m_mediaElement || m_mediaElement->isWirelessPlaybackTargetDisabled()) {
             ERROR_LOG(identifier, "promise rejected, remote playback disabled");
-            promise->reject(InvalidStateError);
+            promise->reject(ExceptionCode::InvalidStateError);
             return;
         }
 
@@ -174,7 +171,7 @@ void RemotePlayback::cancelWatchAvailability(std::optional<int32_t> id, Ref<Defe
             // 6. Otherwise, reject promise with NotFoundError and abort all the remaining steps.
             else {
                 ERROR_LOG(identifier, "promise rejected, no matching callback");
-                promise->reject(NotFoundError);
+                promise->reject(ExceptionCode::NotFoundError);
                 return;
             }
         }
@@ -206,11 +203,9 @@ void RemotePlayback::prompt(Ref<DeferredPromise>&& promise)
 
         // 3. If the disableRemotePlayback attribute is present for the media element, reject the promise with
         //    InvalidStateError and abort all the remaining steps.
-        if (!m_mediaElement
-            || m_mediaElement->hasAttributeWithoutSynchronization(HTMLNames::webkitwirelessvideoplaybackdisabledAttr)
-            || m_mediaElement->hasAttributeWithoutSynchronization(HTMLNames::disableremoteplaybackAttr)) {
+        if (!m_mediaElement || m_mediaElement->isWirelessPlaybackTargetDisabled()) {
             ERROR_LOG(identifier, "promise rejected, remote playback disabled");
-            promise->reject(InvalidStateError);
+            promise->reject(ExceptionCode::InvalidStateError);
             return;
         }
 
@@ -221,10 +216,10 @@ void RemotePlayback::prompt(Ref<DeferredPromise>&& promise)
 
         // 5. OPTIONALLY, if the user agent knows a priori that showing the UI for this particular media element
         //    is not feasible, reject promise with a NotSupportedError and abort all remaining steps.
-#if !PLATFORM(IOS)
+#if !(PLATFORM(IOS) || PLATFORM(VISION))
         if (m_mediaElement->readyState() < HTMLMediaElementEnums::HAVE_METADATA) {
             ERROR_LOG(identifier, "promise rejected, readyState = ", m_mediaElement->readyState());
-            promise->reject(NotSupportedError);
+            promise->reject(ExceptionCode::NotSupportedError);
             return;
         }
 #endif
@@ -233,7 +228,7 @@ void RemotePlayback::prompt(Ref<DeferredPromise>&& promise)
         //    and abort these steps.
         if (!processingUserGesture) {
             ERROR_LOG(identifier, "promise rejected, user gesture required");
-            promise->reject(InvalidAccessError);
+            promise->reject(ExceptionCode::InvalidAccessError);
             return;
         }
 
@@ -250,7 +245,7 @@ void RemotePlayback::prompt(Ref<DeferredPromise>&& promise)
         //    NotSupportedError exception and abort all remaining steps.
         if (m_state == State::Disconnected && !m_available) {
             ERROR_LOG(identifier, "promise rejected, state = ", m_state, ", available = ", m_available);
-            promise->reject(NotSupportedError);
+            promise->reject(ExceptionCode::NotSupportedError);
             return;
         }
 
@@ -384,7 +379,7 @@ void RemotePlayback::playbackTargetPickerWasDismissed()
     ASSERT(!m_promptPromises.isEmpty());
 
     for (auto& promise : std::exchange(m_promptPromises, { }))
-        promise->reject(NotAllowedError);
+        promise->reject(ExceptionCode::NotAllowedError);
 
     if (m_mediaElement)
         m_mediaElement->remoteHasAvailabilityCallbacksChanged();

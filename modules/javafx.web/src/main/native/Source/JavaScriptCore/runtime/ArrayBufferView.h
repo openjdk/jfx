@@ -73,7 +73,7 @@ public:
     {
         if (isDetached())
             return nullptr;
-        return m_baseAddress.getMayBeNull(m_byteLength);
+        return m_baseAddress.getMayBeNull();
     }
 
     void* data() const { return baseAddress(); }
@@ -140,9 +140,8 @@ public:
     }
 
     // Helper to verify that a given sub-range of an ArrayBuffer is within range.
-    static bool verifySubRangeLength(const ArrayBuffer& buffer, size_t byteOffset, size_t numElements, unsigned elementSize)
+    static bool verifySubRangeLength(size_t byteLength, size_t byteOffset, size_t numElements, unsigned elementSize)
     {
-        size_t byteLength = buffer.byteLength();
         if (byteOffset > byteLength)
             return false;
         size_t remainingElements = (byteLength - byteOffset) / static_cast<size_t>(elementSize);
@@ -200,7 +199,7 @@ protected:
     size_t m_byteOffset;
     size_t m_byteLength;
 
-    using BaseAddress = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>;
+    using BaseAddress = CagedPtr<Gigacage::Primitive, void>;
     // This is the address of the ArrayBuffer's storage, plus the byte offset.
     BaseAddress m_baseAddress;
 

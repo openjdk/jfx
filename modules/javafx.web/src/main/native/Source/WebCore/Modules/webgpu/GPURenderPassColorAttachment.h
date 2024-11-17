@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,11 @@
 #pragma once
 
 #include "GPUColorDict.h"
+#include "GPUIntegralTypes.h"
 #include "GPULoadOp.h"
 #include "GPUStoreOp.h"
 #include "GPUTextureView.h"
-#include <pal/graphics/WebGPU/WebGPURenderPassColorAttachment.h>
+#include "WebGPURenderPassColorAttachment.h"
 #include <variant>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -37,19 +38,21 @@
 namespace WebCore {
 
 struct GPURenderPassColorAttachment {
-    PAL::WebGPU::RenderPassColorAttachment convertToBacking() const
+    WebGPU::RenderPassColorAttachment convertToBacking() const
     {
         ASSERT(view);
         return {
-            view->backing(),
-            resolveTarget ? &resolveTarget->backing() : nullptr,
-            clearValue ? std::optional { WebCore::convertToBacking(*clearValue) } : std::nullopt,
-            WebCore::convertToBacking(loadOp),
-            WebCore::convertToBacking(storeOp),
+            .view = view->backing(),
+            .depthSlice = depthSlice,
+            .resolveTarget = resolveTarget ? &resolveTarget->backing() : nullptr,
+            .clearValue = clearValue ? std::optional { WebCore::convertToBacking(*clearValue) } : std::nullopt,
+            .loadOp = WebCore::convertToBacking(loadOp),
+            .storeOp = WebCore::convertToBacking(storeOp),
         };
     }
 
     GPUTextureView* view { nullptr };
+    std::optional<GPUIntegerCoordinate> depthSlice;
     GPUTextureView* resolveTarget { nullptr };
 
     std::optional<GPUColor> clearValue;

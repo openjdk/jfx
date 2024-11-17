@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,36 +38,23 @@
 
 namespace WebCore {
 
-String RealtimeMediaSourceSettings::facingMode(RealtimeMediaSourceSettings::VideoFacingMode mode)
+RealtimeMediaSourceSettings RealtimeMediaSourceSettings::isolatedCopy() const
 {
-    static const NeverDestroyed<String> values[] = {
-        MAKE_STATIC_STRING_IMPL("unknown"),
-        MAKE_STATIC_STRING_IMPL("user"),
-        MAKE_STATIC_STRING_IMPL("environment"),
-        MAKE_STATIC_STRING_IMPL("left"),
-        MAKE_STATIC_STRING_IMPL("right"),
-    };
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Unknown) == 0, "RealtimeMediaSourceSettings::VideoFacingMode::Unknown is not 0 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::User) == 1, "RealtimeMediaSourceSettings::VideoFacingMode::User is not 1 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Environment) == 2, "RealtimeMediaSourceSettings::VideoFacingMode::Environment is not 2 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Left) == 3, "RealtimeMediaSourceSettings::VideoFacingMode::Left is not 3 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Right) == 4, "RealtimeMediaSourceSettings::VideoFacingMode::Right is not 4 as expected");
-    ASSERT(static_cast<size_t>(mode) < std::size(values));
-    return values[static_cast<size_t>(mode)];
+    return { m_width, m_height , m_frameRate, m_facingMode, m_volume , m_sampleRate, m_sampleSize, m_echoCancellation, m_deviceId.isolatedCopy(), m_groupId.isolatedCopy(), m_label.isolatedCopy(), m_displaySurface, m_logicalSurface, m_whiteBalanceMode, m_zoom, m_torch, RealtimeMediaSourceSupportedConstraints { m_supportedConstraints } };
 }
 
-RealtimeMediaSourceSettings::VideoFacingMode RealtimeMediaSourceSettings::videoFacingModeEnum(const String& mode)
+VideoFacingMode RealtimeMediaSourceSettings::videoFacingModeEnum(const String& mode)
 {
     if (mode == "user"_s)
-        return RealtimeMediaSourceSettings::VideoFacingMode::User;
+        return VideoFacingMode::User;
     if (mode == "environment"_s)
-        return RealtimeMediaSourceSettings::VideoFacingMode::Environment;
+        return VideoFacingMode::Environment;
     if (mode == "left"_s)
-        return RealtimeMediaSourceSettings::VideoFacingMode::Left;
+        return VideoFacingMode::Left;
     if (mode == "right"_s)
-        return RealtimeMediaSourceSettings::VideoFacingMode::Right;
+        return VideoFacingMode::Right;
 
-    return RealtimeMediaSourceSettings::Unknown;
+    return VideoFacingMode::Unknown;
 }
 
 String RealtimeMediaSourceSettings::convertFlagsToString(const OptionSet<RealtimeMediaSourceSettings::Flag> flags)
@@ -85,9 +72,6 @@ String RealtimeMediaSourceSettings::convertFlagsToString(const OptionSet<Realtim
             break;
         case RealtimeMediaSourceSettings::Height:
             builder.append("Height");
-            break;
-        case RealtimeMediaSourceSettings::AspectRatio:
-            builder.append("AspectRatio");
             break;
         case RealtimeMediaSourceSettings::FrameRate:
             builder.append("FrameRate");
@@ -122,6 +106,15 @@ String RealtimeMediaSourceSettings::convertFlagsToString(const OptionSet<Realtim
         case RealtimeMediaSourceSettings::LogicalSurface:
             builder.append("LogicalSurface");
             break;
+        case RealtimeMediaSourceSettings::WhiteBalanceMode:
+            builder.append("WhiteBalanceMode");
+            break;
+        case RealtimeMediaSourceSettings::Zoom:
+            builder.append("Zoom");
+            break;
+        case RealtimeMediaSourceSettings::Torch:
+            builder.append("Torch");
+            break;
         }
     }
     builder.append(" ]");
@@ -137,8 +130,6 @@ OptionSet<RealtimeMediaSourceSettings::Flag> RealtimeMediaSourceSettings::differ
         difference.add(RealtimeMediaSourceSettings::Width);
     if (height() != that.height())
         difference.add(RealtimeMediaSourceSettings::Height);
-    if (aspectRatio() != that.aspectRatio())
-        difference.add(RealtimeMediaSourceSettings::AspectRatio);
     if (frameRate() != that.frameRate())
         difference.add(RealtimeMediaSourceSettings::FrameRate);
     if (facingMode() != that.facingMode())
@@ -161,29 +152,35 @@ OptionSet<RealtimeMediaSourceSettings::Flag> RealtimeMediaSourceSettings::differ
         difference.add(RealtimeMediaSourceSettings::DisplaySurface);
     if (logicalSurface() != that.logicalSurface())
         difference.add(RealtimeMediaSourceSettings::LogicalSurface);
+    if (whiteBalanceMode() != that.whiteBalanceMode())
+        difference.add(RealtimeMediaSourceSettings::WhiteBalanceMode);
+    if (zoom() != that.zoom())
+        difference.add(RealtimeMediaSourceSettings::Zoom);
+    if (torch() != that.torch())
+        difference.add(RealtimeMediaSourceSettings::Torch);
 
     return difference;
 }
 
-String convertEnumerationToString(RealtimeMediaSourceSettings::VideoFacingMode enumerationValue)
+String convertEnumerationToString(VideoFacingMode enumerationValue)
 {
     static const NeverDestroyed<String> values[] = {
-        MAKE_STATIC_STRING_IMPL("Unknown"),
-        MAKE_STATIC_STRING_IMPL("User"),
-        MAKE_STATIC_STRING_IMPL("Environment"),
-        MAKE_STATIC_STRING_IMPL("Left"),
-        MAKE_STATIC_STRING_IMPL("Right"),
+        MAKE_STATIC_STRING_IMPL("unknown"),
+        MAKE_STATIC_STRING_IMPL("user"),
+        MAKE_STATIC_STRING_IMPL("environment"),
+        MAKE_STATIC_STRING_IMPL("left"),
+        MAKE_STATIC_STRING_IMPL("right"),
     };
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Unknown) == 0, "RealtimeMediaSourceSettings::VideoFacingMode::Unknown is not 0 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::User) == 1, "RealtimeMediaSourceSettings::VideoFacingMode::User is not 1 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Environment) == 2, "RealtimeMediaSourceSettings::VideoFacingMode::Environment is not 2 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Left) == 3, "RealtimeMediaSourceSettings::VideoFacingMode::Left is not 3 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Right) == 4, "RealtimeMediaSourceSettings::VideoFacingMode::Right is not 4 as expected");
+    static_assert(static_cast<size_t>(VideoFacingMode::Unknown) == 0, "VideoFacingMode::Unknown is not 0 as expected");
+    static_assert(static_cast<size_t>(VideoFacingMode::User) == 1, "VideoFacingMode::User is not 1 as expected");
+    static_assert(static_cast<size_t>(VideoFacingMode::Environment) == 2, "VideoFacingMode::Environment is not 2 as expected");
+    static_assert(static_cast<size_t>(VideoFacingMode::Left) == 3, "VideoFacingMode::Left is not 3 as expected");
+    static_assert(static_cast<size_t>(VideoFacingMode::Right) == 4, "VideoFacingMode::Right is not 4 as expected");
     ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
-String RealtimeMediaSourceSettings::displaySurface(RealtimeMediaSourceSettings::DisplaySurfaceType surface)
+String RealtimeMediaSourceSettings::displaySurface(DisplaySurfaceType surface)
 {
     static const NeverDestroyed<String> values[] = {
         MAKE_STATIC_STRING_IMPL("monitor"),
@@ -193,11 +190,11 @@ String RealtimeMediaSourceSettings::displaySurface(RealtimeMediaSourceSettings::
         MAKE_STATIC_STRING_IMPL("invalid"),
     };
 
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Monitor) == 0, "RealtimeMediaSourceSettings::DisplaySurface::Monitor is not 0 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Window) == 1, "RealtimeMediaSourceSettings::DisplaySurface::Window is not 1 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Application) == 2, "RealtimeMediaSourceSettings::DisplaySurface::Application is not 0 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Browser) == 3, "RealtimeMediaSourceSettings::DisplaySurface::Browser is not 1 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Invalid) == 4, "RealtimeMediaSourceSettings::DisplaySurface::Invalid is not 0 as expected");
+    static_assert(static_cast<size_t>(DisplaySurfaceType::Monitor) == 0, "RealtimeMediaSourceSettings::DisplaySurface::Monitor is not 0 as expected");
+    static_assert(static_cast<size_t>(DisplaySurfaceType::Window) == 1, "RealtimeMediaSourceSettings::DisplaySurface::Window is not 1 as expected");
+    static_assert(static_cast<size_t>(DisplaySurfaceType::Application) == 2, "RealtimeMediaSourceSettings::DisplaySurface::Application is not 0 as expected");
+    static_assert(static_cast<size_t>(DisplaySurfaceType::Browser) == 3, "RealtimeMediaSourceSettings::DisplaySurface::Browser is not 1 as expected");
+    static_assert(static_cast<size_t>(DisplaySurfaceType::Invalid) == 4, "RealtimeMediaSourceSettings::DisplaySurface::Invalid is not 0 as expected");
     ASSERT(static_cast<size_t>(surface) < std::size(values));
     return values[static_cast<size_t>(surface)];
 }

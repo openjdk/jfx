@@ -27,14 +27,15 @@
 #include "ResourceTimingInformation.h"
 
 #include "CachedResource.h"
-#include "DOMWindow.h"
-#include "Document.h"
-#include "Frame.h"
+#include "DocumentInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLFrameOwnerElement.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "Performance.h"
 #include "ResourceTiming.h"
+#include "SecurityOrigin.h"
 
 namespace WebCore {
 
@@ -50,7 +51,7 @@ void ResourceTimingInformation::addResourceTiming(CachedResource& resource, Docu
     if (!ResourceTimingInformation::shouldAddResourceTiming(resource))
         return;
 
-    auto iterator = m_initiatorMap.find(&resource);
+    auto iterator = m_initiatorMap.find(resource);
     if (iterator == m_initiatorMap.end())
         return;
 
@@ -58,32 +59,32 @@ void ResourceTimingInformation::addResourceTiming(CachedResource& resource, Docu
     if (info.added == Added)
         return;
 
-    Document* initiatorDocument = &document;
+    RefPtr initiatorDocument = &document;
     if (resource.type() == CachedResource::Type::MainResource && document.frame() && document.frame()->loader().shouldReportResourceTimingToParentFrame()) {
         initiatorDocument = document.parentDocument();
         if (initiatorDocument)
-            resourceTiming.updateExposure(initiatorDocument->securityOrigin());
+            resourceTiming.updateExposure(initiatorDocument->protectedSecurityOrigin());
     }
     if (!initiatorDocument)
         return;
 
-    auto* initiatorWindow = initiatorDocument->domWindow();
+    RefPtr initiatorWindow = initiatorDocument->domWindow();
     if (!initiatorWindow)
         return;
 
     resourceTiming.overrideInitiatorType(info.type);
 
-    initiatorWindow->performance().addResourceTiming(WTFMove(resourceTiming));
+    initiatorWindow->protectedPerformance()->addResourceTiming(WTFMove(resourceTiming));
 
     info.added = Added;
 }
 
 void ResourceTimingInformation::removeResourceTiming(CachedResource& resource)
 {
-    m_initiatorMap.remove(&resource);
+    m_initiatorMap.remove(resource);
 }
 
-void ResourceTimingInformation::storeResourceTimingInitiatorInformation(const CachedResourceHandle<CachedResource>& resource, const AtomString& initiatorType, Frame* frame)
+void ResourceTimingInformation::storeResourceTimingInitiatorInformation(const CachedResourceHandle<CachedResource>& resource, const AtomString& initiatorType, LocalFrame* frame)
 {
     ASSERT(resource.get());
 
@@ -92,11 +93,11 @@ void ResourceTimingInformation::storeResourceTimingInitiatorInformation(const Ca
         ASSERT(frame);
         if (frame->ownerElement()) {
             InitiatorInfo info = { frame->ownerElement()->localName(), NotYetAdded };
-            m_initiatorMap.add(resource.get(), info);
+            m_initiatorMap.add(*resource, info);
         }
     } else {
         InitiatorInfo info = { initiatorType, NotYetAdded };
-        m_initiatorMap.add(resource.get(), info);
+        m_initiatorMap.add(*resource, info);
     }
 }
 

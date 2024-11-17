@@ -28,8 +28,6 @@
 
 #include <wtf/CrossThreadCopier.h>
 
-#if ENABLE(SERVICE_WORKER)
-
 namespace WebCore {
 
 static inline ServiceWorkerOrClientIdentifier serviceWorkerOrClientIdentifier(const ServiceWorkerOrClientIdentifier& localSourceContext)
@@ -43,7 +41,7 @@ static inline ServiceWorkerOrClientIdentifier serviceWorkerOrClientIdentifier(co
 
 ServiceWorkerJobData::ServiceWorkerJobData(SWServerConnectionIdentifier connectionIdentifier, const ServiceWorkerOrClientIdentifier& localSourceContext)
     : sourceContext(serviceWorkerOrClientIdentifier(localSourceContext))
-    , m_identifier { connectionIdentifier, ServiceWorkerJobIdentifier::generateThreadSafe() }
+    , m_identifier { connectionIdentifier, ServiceWorkerJobIdentifier::generate() }
 {
 }
 
@@ -127,5 +125,3 @@ bool ServiceWorkerJobData::isEquivalent(const ServiceWorkerJobData& job) const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -27,7 +27,7 @@
 #include "config.h"
 #include "PublicURLManager.h"
 
-#include "ScriptExecutionContext.h"
+#include "ContextDestructionObserverInlines.h"
 #include "SecurityOrigin.h"
 #include "URLRegistry.h"
 #include <wtf/URL.h>
@@ -69,7 +69,7 @@ void PublicURLManager::revoke(const URL& url)
         return;
 
     URLRegistry::forEach([&](auto& registry) {
-        registry.unregisterURL(url);
+        registry.unregisterURL(url, scriptExecutionContext()->topOrigin().data());
     });
 }
 

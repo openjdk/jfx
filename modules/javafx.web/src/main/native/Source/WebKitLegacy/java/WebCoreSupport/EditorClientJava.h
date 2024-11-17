@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,7 +64,7 @@ public:
 
     void didBeginEditing() override;
     void respondToChangedContents() override;
-    void respondToChangedSelection(Frame*) override;
+    void respondToChangedSelection(LocalFrame*) override;
     void didEndUserTriggeredSelectionChanges() override { }
     void updateEditorStateAfterLayoutIfEditabilityChanged() override;
     void didEndEditing() override;
@@ -73,16 +73,16 @@ public:
     void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
     void didUpdateComposition() override { }
 
-    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
-    void discardedComposition(Frame*) override;
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const String& originIdentifier) override;
+    void discardedComposition(const Document&) override;
     void canceledComposition() override;
 
     void registerUndoStep(UndoStep&) override;
     void registerRedoStep(UndoStep&) override;
     void clearUndoRedoOperations() override;
 
-    bool canCopyCut(Frame*, bool defaultValue) const override;
-    bool canPaste(Frame*, bool defaultValue) const override;
+    bool canCopyCut(LocalFrame*, bool defaultValue) const override;
+    bool canPaste(LocalFrame*, bool defaultValue) const override;
     bool canUndo() const override;
     bool canRedo() const override;
 

@@ -24,32 +24,30 @@
 #pragma once
 
 #include "ContainerNode.h"
-#include "FragmentScriptingPermission.h"
+#include "ParserContentPolicy.h"
 
 namespace WebCore {
 
 class DocumentFragment : public ContainerNode {
     WTF_MAKE_ISO_ALLOCATED(DocumentFragment);
 public:
-    static Ref<DocumentFragment> create(Document&);
+    WEBCORE_EXPORT static Ref<DocumentFragment> create(Document&);
+    static Ref<DocumentFragment> createForInnerOuterHTML(Document&);
 
-    void parseHTML(const String&, Element* contextElement, OptionSet<ParserContentPolicy> = { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
-    bool parseXML(const String&, Element* contextElement, OptionSet<ParserContentPolicy> = { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
+    void parseHTML(const String&, Element& contextElement, OptionSet<ParserContentPolicy> = { ParserContentPolicy::AllowScriptingContent });
+    WEBCORE_EXPORT bool parseXML(const String&, Element* contextElement, OptionSet<ParserContentPolicy> = { ParserContentPolicy::AllowScriptingContent });
 
     bool canContainRangeEndPoint() const final { return true; }
     virtual bool isTemplateContent() const { return false; }
-
-    void setIsDocumentFragmentForInnerOuterHTML() { setNodeFlag(NodeFlag::IsDocumentFragmentForInnerOuterHTML); }
 
     // From the NonElementParentNode interface - https://dom.spec.whatwg.org/#interface-nonelementparentnode
     WEBCORE_EXPORT Element* getElementById(const AtomString&) const;
 
 protected:
-    DocumentFragment(Document&, ConstructionType = CreateContainer);
+    DocumentFragment(Document&, OptionSet<TypeFlag> = { });
     String nodeName() const final;
 
 private:
-    NodeType nodeType() const final;
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
     bool childTypeAllowed(NodeType) const override;
 };

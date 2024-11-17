@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.javafx.scene.chart;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
@@ -38,17 +40,18 @@ import javafx.scene.chart.ValueAxisShim;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChartShim;
 import javafx.scene.shape.Path;
-import static org.junit.Assert.assertEquals;
-import org.junit.Ignore;
-import org.junit.Test;
+import javafx.scene.shape.PathElement;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class StackedAreaChartTest extends XYChartTestBase {
     StackedAreaChart<Number,Number> ac;
     final XYChart.Series<Number, Number> series1 = new XYChart.Series<>();
     boolean useCategoryAxis = false;
     final String[] countries = {"USA", "Italy", "France", "China", "India"};
+
     @Override
-    protected Chart createChart() {
+    protected void createChart() {
         final NumberAxis yAxis = new NumberAxis();
         ObservableList<XYChart.Data> data = FXCollections.observableArrayList();
         Axis xAxis;
@@ -56,26 +59,31 @@ public class StackedAreaChartTest extends XYChartTestBase {
             xAxis = new CategoryAxis();
             ((CategoryAxis)xAxis).setCategories(FXCollections.observableArrayList(countries));
             // add starting data
-        series1.getData().add(new XYChart.Data(countries[0], 10d));
-        series1.getData().add(new XYChart.Data(countries[1], 20d));
-        series1.getData().add(new XYChart.Data(countries[2], 15d));
-        series1.getData().add(new XYChart.Data(countries[3], 15d));
-        series1.getData().add(new XYChart.Data(countries[4], 10d));
+            series1.getData().add(new XYChart.Data(countries[0], 10d));
+            series1.getData().add(new XYChart.Data(countries[1], 20d));
+            series1.getData().add(new XYChart.Data(countries[2], 15d));
+            series1.getData().add(new XYChart.Data(countries[3], 15d));
+            series1.getData().add(new XYChart.Data(countries[4], 10d));
         } else {
             xAxis = new NumberAxis();
-            ac = new StackedAreaChart<Number,Number>(xAxis,yAxis);
             // add starting data
-        series1.getData().add(new XYChart.Data(10d, 10d));
-        series1.getData().add(new XYChart.Data(25d, 20d));
-        series1.getData().add(new XYChart.Data(30d, 15d));
-        series1.getData().add(new XYChart.Data(50d, 15d));
-        series1.getData().add(new XYChart.Data(80d, 10d));
+            series1.getData().add(new XYChart.Data(10d, 10d));
+            series1.getData().add(new XYChart.Data(25d, 20d));
+            series1.getData().add(new XYChart.Data(30d, 15d));
+            series1.getData().add(new XYChart.Data(50d, 15d));
+            series1.getData().add(new XYChart.Data(80d, 10d));
         }
 
         xAxis.setLabel("X Axis");
         yAxis.setLabel("Y Axis");
-        ac.setTitle("HelloStackedAreaChart");
 
+        ac = new StackedAreaChart<Number, Number>(xAxis, yAxis);
+        ac.setTitle("HelloStackedAreaChart");
+        ac.setAnimated(false);
+    }
+
+    @Override
+    protected Chart getChart() {
         return ac;
     }
 
@@ -93,8 +101,10 @@ public class StackedAreaChartTest extends XYChartTestBase {
         return "";
     }
 
-    @Test @Ignore("pending RT-28373")
+    @Test
+    @Disabled("pending RT-28373")
     public void testSeriesAdd() {
+        createChart();
         startApp();
         ac.getData().addAll(series1);
         pulse();
@@ -103,8 +113,10 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     }
 
-    @Test @Ignore
+    @Test
+    @Disabled
     public void testDataItemRemove() {
+        createChart();
         startApp();
         ac.getData().addAll(series1);
         pulse();
@@ -115,8 +127,10 @@ public class StackedAreaChartTest extends XYChartTestBase {
         }
     }
 
-    @Test @Ignore
+    @Test
+    @Disabled
     public void testDataItemAdd() {
+        createChart();
         startApp();
         ac.getData().addAll(series1);
         pulse();
@@ -127,8 +141,10 @@ public class StackedAreaChartTest extends XYChartTestBase {
         }
     }
 
-    @Test @Ignore
+    @Test
+    @Disabled
     public void testDataItemInsert() {
+        createChart();
         startApp();
         ac.getData().addAll(series1);
         pulse();
@@ -139,8 +155,10 @@ public class StackedAreaChartTest extends XYChartTestBase {
         }
     }
 
-    @Test @Ignore
+    @Test
+    @Disabled
     public void testDataItemChange() {
+        createChart();
         startApp();
         ac.getData().addAll(series1);
         pulse();
@@ -156,11 +174,14 @@ public class StackedAreaChartTest extends XYChartTestBase {
     @Test
     public void testStackedAreaChartWithCategoryAxis() {
         useCategoryAxis = true;
+        createChart();
         startApp();
         useCategoryAxis = false;
     }
 
-    @Test public void testCreateSymbols() {
+    @Test
+    public void testCreateSymbols() {
+        createChart();
          startApp();
          ac.setCreateSymbols(false);
          pulse();
@@ -178,6 +199,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     @Test
     public void  testAutoRange_AdditionalPointInSeries1() {
+        createChart();
         ac.getData().clear();
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
         yAxis.setAutoRanging(true);
@@ -208,6 +230,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     @Test
     public void testAutoRange_AdditionalPointInSeries1AtTheEnd() {
+        createChart();
         ac.getData().clear();
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
         yAxis.setAutoRanging(true);
@@ -238,6 +261,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     @Test
     public void testAutoRange_AdditionalPointInSeries1AtTheBeginning() {
+        createChart();
         ac.getData().clear();
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
         yAxis.setAutoRanging(true);
@@ -268,6 +292,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     @Test
     public void testAutoRange_AdditionalPointInSeries2() {
+        createChart();
         ac.getData().clear();
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
         yAxis.setAutoRanging(true);
@@ -298,6 +323,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     @Test
     public void testAutoRange_AdditionalPointInSeries2AtTheEnd() {
+        createChart();
         ac.getData().clear();
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
         yAxis.setAutoRanging(true);
@@ -328,6 +354,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     @Test
     public void testAutoRange_AdditionalPointInSeries2AtTheBeginning() {
+        createChart();
         ac.getData().clear();
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
         yAxis.setAutoRanging(true);
@@ -358,6 +385,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     @Test
     public void testAutoRange_EmptySeries1() {
+        createChart();
         ac.getData().clear();
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
         yAxis.setAutoRanging(true);
@@ -381,6 +409,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     @Test
     public void testAutoRange_EmptySeries2() {
+        createChart();
         ac.getData().clear();
         final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
         yAxis.setAutoRanging(true);
@@ -409,6 +438,30 @@ public class StackedAreaChartTest extends XYChartTestBase {
         assertEquals(15, ValueAxisShim.get_dataMaxValue(yAxis), 1e-100);
     }
 
+    /*
+     * JDK-8314779
+     * The test checks if the line and path element of the chart
+     * are removed when series data is cleared.
+     */
+    @Test
+    public void testChartLineAndAreaRemovedOnClearingSeries() {
+        createChart();
+        startApp();
+        ac.getData().addAll(series1);
+        pulse();
+
+        final ObservableList<Node> children = ((Group)series1.getNode()).getChildren();
+        ObservableList<PathElement> fillElements = ((Path) children.get(0)).getElements();
+        ObservableList<PathElement> lineElements = ((Path) children.get(1)).getElements();
+
+        assertTrue(0 < fillElements.size());
+        assertTrue(0 < lineElements.size());
+        series1.getData().clear();
+        pulse();
+        assertEquals(0, fillElements.size());
+        assertEquals(0, lineElements.size());
+    }
+
     @Override
     void checkSeriesStyleClasses(XYChart.Series<?, ?> series,
             int seriesIndex, int colorIndex) {
@@ -428,6 +481,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
     @Test
     public void testSeriesRemoveAnimatedStyleClasses() {
+        createChart();
         startApp();
         //ac.setCreateSymbols(false);
         int nodesPerSeries = 4; // 3 symbols + 1 path

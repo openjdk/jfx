@@ -43,9 +43,12 @@
 
 #if USE(FREETYPE)
 #include "FcUniquePtr.h"
-#include "HbUniquePtr.h"
 #include "RefPtrFontconfig.h"
 #include <memory>
+
+#if ENABLE(MATHML) && USE(HARFBUZZ)
+#include "HbUniquePtr.h"
+#endif
 #endif
 
 #if PLATFORM(JAVA)
@@ -58,6 +61,7 @@ OBJC_CLASS NSFont;
 #endif
 
 #if USE(CORE_TEXT)
+#include <pal/spi/cf/CoreTextSPI.h>
 typedef const struct __CTFont* CTFontRef;
 #endif
 
@@ -75,13 +79,85 @@ interface IDWriteFontFace;
 namespace WebCore {
 
 class FontDescription;
+struct FontCustomPlatformData;
+struct FontSizeAdjust;
+
+struct FontPlatformDataAttributes {
+    FontPlatformDataAttributes(float size, FontOrientation orientation, FontWidthVariant widthVariant, TextRenderingMode textRenderingMode, bool syntheticBold, bool syntheticOblique)
+        : m_size(size)
+        , m_orientation(orientation)
+        , m_widthVariant(widthVariant)
+        , m_textRenderingMode(textRenderingMode)
+        , m_syntheticBold(syntheticBold)
+        , m_syntheticOblique(syntheticOblique)
+        { }
+
+#if USE(CORE_TEXT)
+    FontPlatformDataAttributes(float size, FontOrientation orientation, FontWidthVariant widthVariant, TextRenderingMode textRenderingMode, bool syntheticBold, bool syntheticOblique, RetainPtr<CFDictionaryRef> attributes, CTFontDescriptorOptions options, RetainPtr<CFStringRef> url, RetainPtr<CFStringRef> psName)
+        : m_size(size)
+        , m_orientation(orientation)
+        , m_widthVariant(widthVariant)
+        , m_textRenderingMode(textRenderingMode)
+        , m_syntheticBold(syntheticBold)
+        , m_syntheticOblique(syntheticOblique)
+        , m_attributes(attributes)
+        , m_options(options)
+        , m_url(url)
+        , m_psName(psName)
+        { }
+#endif
+
+#if USE(WIN)
+    FontPlatformDataAttributes(float size, FontOrientation orientation, FontWidthVariant widthVariant, TextRenderingMode textRenderingMode, bool syntheticBold, bool syntheticOblique, LOGFONT font)
+        : m_size(size)
+        , m_orientation(orientation)
+        , m_widthVariant(widthVariant)
+        , m_textRenderingMode(textRenderingMode)
+        , m_syntheticBold(syntheticBold)
+        , m_syntheticOblique(syntheticOblique)
+        , m_font(font)
+        { }
+#endif
+
+    float m_size { 0 };
+
+    FontOrientation m_orientation { FontOrientation::Horizontal };
+    FontWidthVariant m_widthVariant { FontWidthVariant::RegularWidth };
+    TextRenderingMode m_textRenderingMode { TextRenderingMode::AutoTextRendering };
+
+    bool m_syntheticBold { false };
+    bool m_syntheticOblique { false };
+
+#if PLATFORM(WIN)
+    LOGFONT m_font;
+#elif USE(CORE_TEXT)
+    RetainPtr<CFDictionaryRef> m_attributes;
+    CTFontDescriptorOptions m_options;
+    RetainPtr<CFStringRef> m_url;
+    RetainPtr<CFStringRef> m_psName;
+#endif
+};
+
+#if USE(CORE_TEXT)
+struct FontPlatformSerializedCreationData {
+    Vector<uint8_t> fontFaceData;
+    RetainPtr<CFDictionaryRef> attributes;
+    String itemInCollection;
+};
+
+struct FontPlatformSerializedData {
+    CTFontDescriptorOptions options { 0 }; // <rdar://121670125>
+    RetainPtr<CFStringRef> referenceURL;
+    RetainPtr<CFStringRef> postScriptName;
+    RetainPtr<CFDictionaryRef> attributes;
+};
+#endif
 
 // This class is conceptually immutable. Once created, no instances should ever change (in an observable way).
 class FontPlatformData {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     struct CreationData;
-
     struct FontVariationAxis {
         FontVariationAxis(const String& name, const String& tag, float defaultValue, float minimumValue, float maximumValue)
             : m_name(name)
@@ -109,22 +185,22 @@ public:
     FontPlatformData(WTF::HashTableDeletedValueType);
     FontPlatformData();
 
-    FontPlatformData(float size, bool syntheticBold, bool syntheticOblique, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering, const CreationData* = nullptr);
+    FontPlatformData(float size, bool syntheticBold, bool syntheticOblique, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering, const FontCustomPlatformData* = nullptr);
 
 #if USE(CORE_TEXT)
-    WEBCORE_EXPORT FontPlatformData(RetainPtr<CTFontRef>&&, float size, bool syntheticBold = false, bool syntheticOblique = false, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering, const CreationData* = nullptr);
+    WEBCORE_EXPORT FontPlatformData(RetainPtr<CTFontRef>&&, float size, bool syntheticBold = false, bool syntheticOblique = false, FontOrientation = FontOrientation::Horizontal, FontWidthVariant = FontWidthVariant::RegularWidth, TextRenderingMode = TextRenderingMode::AutoTextRendering, const FontCustomPlatformData* = nullptr);
 #endif
 
 #if PLATFORM(WIN)
-    WEBCORE_EXPORT FontPlatformData(GDIObject<HFONT>, float size, bool syntheticBold, bool syntheticOblique, bool useGDI, const CreationData* = nullptr);
-#if USE(CAIRO)
-    FontPlatformData(GDIObject<HFONT>, cairo_font_face_t*, float size, bool bold, bool italic, const CreationData* = nullptr);
-#endif
+    WEBCORE_EXPORT FontPlatformData(GDIObject<HFONT>, float size, bool syntheticBold, bool syntheticOblique, const FontCustomPlatformData* = nullptr);
+    FontPlatformData(GDIObject<HFONT>, cairo_font_face_t*, float size, bool bold, bool italic, const FontCustomPlatformData* = nullptr);
 #endif
 
 #if USE(FREETYPE)
-    FontPlatformData(cairo_font_face_t*, RefPtr<FcPattern>&&, float size, bool fixedWidth, bool syntheticBold, bool syntheticOblique, FontOrientation);
+    FontPlatformData(cairo_font_face_t*, RefPtr<FcPattern>&&, float size, bool fixedWidth, bool syntheticBold, bool syntheticOblique, FontOrientation, const FontCustomPlatformData* = nullptr);
 #endif
+
+    using Attributes = FontPlatformDataAttributes;
 
 #if PLATFORM(JAVA)
     FontPlatformData(RefPtr<RQRef> font, float size);
@@ -132,21 +208,29 @@ public:
     std::unique_ptr<FontPlatformData> derive(float scaleFactor) const;
 #endif
 
+    WEBCORE_EXPORT static FontPlatformData create(const Attributes&, const FontCustomPlatformData*);
+
+    WEBCORE_EXPORT FontPlatformData(const FontPlatformData&);
+    WEBCORE_EXPORT FontPlatformData& operator=(const FontPlatformData&);
+    WEBCORE_EXPORT ~FontPlatformData();
+
     static FontPlatformData cloneWithOrientation(const FontPlatformData&, FontOrientation);
     static FontPlatformData cloneWithSyntheticOblique(const FontPlatformData&, bool);
 
     static FontPlatformData cloneWithSize(const FontPlatformData&, float);
-    void updateSizeWithFontSizeAdjust(const std::optional<float>& fontSizeAdjust);
+    void updateSizeWithFontSizeAdjust(const FontSizeAdjust&, float);
 
 #if PLATFORM(WIN)
     HFONT hfont() const { return m_font ? m_font->get() : 0; }
-    bool useGDI() const { return m_useGDI; }
-#if USE(CG)
-    CGFontRef cgFont() const { return m_cgFont.get(); }
-#endif
 #endif
 
 #if USE(CORE_TEXT)
+    using PlatformDataVariant = std::variant<FontPlatformSerializedData, FontPlatformSerializedCreationData>;
+    WEBCORE_EXPORT static std::optional<FontPlatformData> tryMakeFontPlatformData(float size, WebCore::FontOrientation&&, WebCore::FontWidthVariant&&, WebCore::TextRenderingMode&&, bool syntheticBold, bool syntheticOblique, FontPlatformData::PlatformDataVariant&& platformSerializationData);
+    WEBCORE_EXPORT FontPlatformData(float size, WebCore::FontOrientation&&, WebCore::FontWidthVariant&&, WebCore::TextRenderingMode&&, bool syntheticBold, bool syntheticOblique, RetainPtr<CTFontRef>&&, RefPtr<FontCustomPlatformData>&&);
+
+    WEBCORE_EXPORT PlatformDataVariant platformSerializationData() const;
+
     WEBCORE_EXPORT CTFontRef registeredFont() const; // Returns nullptr iff the font is not registered, such as web fonts (otherwise returns font()).
     static RetainPtr<CFTypeRef> objectForEqualityCheck(CTFontRef);
     RetainPtr<CFTypeRef> objectForEqualityCheck() const;
@@ -180,7 +264,7 @@ public:
 #endif
 
 #if USE(FREETYPE)
-#if USE(HARFBUZZ) && !ENABLE(OPENTYPE_MATH)
+#if ENABLE(MATHML) && USE(HARFBUZZ)
     HbUniquePtr<hb_font_t> createOpenTypeMathHarfBuzzFont() const;
 #endif
     bool hasCompatibleCharmap() const;
@@ -234,10 +318,13 @@ public:
 #endif
     };
 
-    const CreationData* creationData() const
+    WEBCORE_EXPORT const CreationData* creationData() const;
+    const FontCustomPlatformData* customPlatformData() const
     {
-        return m_creationData ? &m_creationData.value() : nullptr;
+        return m_customPlatformData.get();
     }
+
+    WEBCORE_EXPORT Attributes attributes() const;
 
 private:
     bool platformIsEqual(const FontPlatformData&) const;
@@ -249,7 +336,7 @@ private:
 #endif
 
 #if PLATFORM(WIN)
-    void platformDataInit(HFONT, float size, HDC, WCHAR* faceName);
+    void platformDataInit(HFONT, float size, WCHAR* faceName);
 #endif
 
 #if USE(FREETYPE)
@@ -284,7 +371,7 @@ private:
 
     // This is conceptually const, but we can't make it actually const,
     // because FontPlatformData is used as a key in a HashMap.
-    std::optional<CreationData> m_creationData;
+    RefPtr<const FontCustomPlatformData> m_customPlatformData;
 
     bool m_syntheticBold { false };
     bool m_syntheticOblique { false };
@@ -298,10 +385,6 @@ private:
     bool m_isEmoji { false };
 #endif
 
-#if PLATFORM(WIN)
-    bool m_useGDI { false };
-#endif
-
 #if USE(FREETYPE)
     bool m_fixedWidth { false };
 #endif
@@ -311,21 +394,7 @@ private:
 
 #if USE(CORE_TEXT)
 bool isSystemFont(CTFontRef);
-#endif
-
-#if USE(APPKIT) && defined(__OBJC__)
-
-// NSFonts and CTFontRefs are toll-free-bridged.
-inline CTFontRef toCTFont(NSFont *font)
-{
-    return (__bridge CTFontRef)font;
-}
-
-inline NSFont *toNSFont(CTFontRef font)
-{
-    return (__bridge NSFont *)font;
-}
-
+WEBCORE_EXPORT RetainPtr<CTFontRef> createCTFont(CFDictionaryRef attributes, float size, CTFontDescriptorOptions, CFStringRef referenceURL, CFStringRef desiredPostScriptName);
 #endif
 
 #if USE(CG)
@@ -354,6 +423,12 @@ private:
     CGAffineTransform m_textMatrix;
 };
 
+#endif
+
+#if PLATFORM(WIN)
+// This is a scaling factor for Windows GDI fonts. We do this for
+// subpixel precision when rendering using Uniscribe.
+constexpr int cWindowsFontScaleFactor = 32;
 #endif
 
 } // namespace WebCore

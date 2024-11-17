@@ -2,6 +2,8 @@
  *
  * Copyright (C) 2011  Stef Walter  <stefw@collabora.co.uk>
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -28,15 +30,6 @@
 
 G_BEGIN_DECLS
 
-/**
- * GHmac:
- *
- * An opaque structure representing a HMAC operation.
- * To create a new GHmac, use g_hmac_new(). To free
- * a GHmac, use g_hmac_unref().
- *
- * Since: 2.30
- */
 typedef struct _GHmac       GHmac;
 
 GLIB_AVAILABLE_IN_2_30

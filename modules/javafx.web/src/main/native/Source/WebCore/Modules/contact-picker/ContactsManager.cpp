@@ -32,9 +32,9 @@
 #include "ContactsRequestData.h"
 #include "ContactsSelectOptions.h"
 #include "Document.h"
-#include "Frame.h"
 #include "JSContactInfo.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalFrame.h"
 #include "Navigator.h"
 #include "Page.h"
 #include "UserGestureIndicator.h"
@@ -59,7 +59,7 @@ ContactsManager::ContactsManager(Navigator& navigator)
 ContactsManager::~ContactsManager() = default;
 
 
-Frame* ContactsManager::frame() const
+LocalFrame* ContactsManager::frame() const
 {
     return m_navigator ? m_navigator->frame() : nullptr;
 }
@@ -77,24 +77,24 @@ void ContactsManager::getProperties(Ref<DeferredPromise>&& promise)
 
 void ContactsManager::select(const Vector<ContactProperty>& properties, const ContactsSelectOptions& options, Ref<DeferredPromise>&& promise)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame || !frame->isMainFrame() || !frame->document() || !frame->page()) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
     if (!UserGestureIndicator::processingUserGesture()) {
-        promise->reject(SecurityError);
+        promise->reject(ExceptionCode::SecurityError);
         return;
     }
 
     if (m_contactPickerIsShowing) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
     if (properties.isEmpty()) {
-        promise->reject(TypeError);
+        promise->reject(ExceptionCode::TypeError);
         return;
     }
 
@@ -114,7 +114,7 @@ void ContactsManager::select(const Vector<ContactProperty>& properties, const Co
             return;
         }
 
-        promise->reject(UnknownError);
+        promise->reject(ExceptionCode::UnknownError);
     });
 }
 

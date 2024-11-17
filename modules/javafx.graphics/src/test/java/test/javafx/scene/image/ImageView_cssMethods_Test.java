@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,7 @@
 
 package test.javafx.scene.image;
 
-import java.util.Arrays;
-import java.util.Collection;
-
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import java.util.stream.Stream;
 
 import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
 import test.com.sun.javafx.pgstub.StubPlatformImageInfo;
@@ -42,7 +36,8 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.api.BeforeAll;
+
 public final class ImageView_cssMethods_Test extends CssMethodsTestBase {
     private static final ImageView TEST_IMAGE_VIEW = new ImageView();
     private static final String TEST_IMAGE_URL1 = "file:test_image_1.png";
@@ -59,7 +54,7 @@ public final class ImageView_cssMethods_Test extends CssMethodsTestBase {
             };
 
 
-    @BeforeClass
+    @BeforeAll
     public static void configureImageLoaderFactory() {
         final StubImageLoaderFactory imageLoaderFactory =
                 ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
@@ -72,20 +67,17 @@ public final class ImageView_cssMethods_Test extends CssMethodsTestBase {
                 new StubPlatformImageInfo(48, 48));
     }
 
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(new Object[] {
-            config(TEST_IMAGE_VIEW, "image", null,
-                   "-fx-image", TEST_IMAGE_URL1, IMAGE_COMPARATOR),
-            config(TEST_IMAGE_VIEW, "image",
-                   TestImages.TEST_IMAGE_32x32,
-                   "-fx-image", TEST_IMAGE_URL2, IMAGE_COMPARATOR),
-            config(TEST_IMAGE_VIEW, "translateX", 0.0,
-                   "-fx-translate-x", 10.0)
-        });
-    }
+    public static Stream<Configuration> data() {
+        boolean smooth = ImageView.SMOOTH_DEFAULT;
 
-    public ImageView_cssMethods_Test(final Configuration configuration) {
-        super(configuration);
+        return Stream.of(
+            config(TEST_IMAGE_VIEW, "image", null, "-fx-image", TEST_IMAGE_URL1, IMAGE_COMPARATOR),
+            config(TEST_IMAGE_VIEW, "image", TestImages.TEST_IMAGE_32x32, "-fx-image", TEST_IMAGE_URL2, IMAGE_COMPARATOR),
+            config(TEST_IMAGE_VIEW, "translateX", 0.0, "-fx-translate-x", 10.0),
+            config(TEST_IMAGE_VIEW, "fitHeight", 0.0, "-fx-fit-height", 10.0),
+            config(TEST_IMAGE_VIEW, "fitWidth", 0.0, "-fx-fit-width", 10.0),
+            config(TEST_IMAGE_VIEW, "preserveRatio", false, "-fx-preserve-ratio", true),
+            config(TEST_IMAGE_VIEW, "smooth", smooth, "-fx-smooth", !smooth)
+        );
     }
 }

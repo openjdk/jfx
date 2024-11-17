@@ -32,7 +32,9 @@
 #include "FloatRoundedRect.h"
 #include "FrameSelection.h"
 #include "HTMLAttachmentElement.h"
+#include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/URL.h>
@@ -44,8 +46,10 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderAttachment);
 
 RenderAttachment::RenderAttachment(HTMLAttachmentElement& element, RenderStyle&& style)
-    : RenderReplaced(element, WTFMove(style), LayoutSize())
+    : RenderReplaced(Type::Attachment, element, WTFMove(style), LayoutSize())
+    , m_isWideLayout(element.isWideLayout())
 {
+    ASSERT(isRenderAttachment());
 #if ENABLE(SERVICE_CONTROLS)
     m_hasShadowControls = element.isImageMenuEnabled();
 #endif
@@ -56,8 +60,29 @@ HTMLAttachmentElement& RenderAttachment::attachmentElement() const
     return downcast<HTMLAttachmentElement>(nodeForNonAnonymous());
 }
 
+LayoutSize RenderAttachment::layoutWideLayoutAttachmentOnly()
+{
+    if (auto* wideLayoutShadowElement = attachmentElement().wideLayoutShadowContainer()) {
+        if (auto* wideLayoutShadowRenderer = downcast<RenderBox>(wideLayoutShadowElement->renderer())) {
+            if (wideLayoutShadowRenderer->needsLayout())
+                wideLayoutShadowRenderer->layout();
+            ASSERT(!wideLayoutShadowRenderer->needsLayout());
+            return wideLayoutShadowRenderer->size();
+        }
+    }
+    return { };
+}
+
 void RenderAttachment::layout()
 {
+    if (auto size = layoutWideLayoutAttachmentOnly(); !size.isEmpty()) {
+        setIntrinsicSize(size);
+        RenderReplaced::layout();
+        if (hasShadowContent())
+            layoutShadowContent(intrinsicSize());
+        return;
+    }
+
     LayoutSize newIntrinsicSize = theme().attachmentIntrinsicSize(*this);
 
     if (!theme().attachmentShouldAllowWidthToShrink(*this)) {
@@ -75,6 +100,15 @@ void RenderAttachment::layout()
 
 LayoutUnit RenderAttachment::baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const
 {
+    if (auto* baselineElement = attachmentElement().wideLayoutImageElement()) {
+        if (auto* baselineElementRenderBox = baselineElement->renderBox()) {
+            // This is the bottom of the image assuming it is vertically centered.
+            return (height() + baselineElementRenderBox->height()) / 2;
+        }
+        // Fallback to the bottom of the attachment if there is no image.
+        return height();
+    }
+
     return theme().attachmentBaseline(*this);
 }
 
@@ -93,8 +127,7 @@ void RenderAttachment::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& of
     auto paintRect = borderBoxRect();
     paintRect.moveBy(offset);
 
-    ControlStates controlStates;
-    theme().paint(*this, controlStates, paintInfo, paintRect);
+    theme().paint(*this, paintInfo, paintRect);
 }
 
 void RenderAttachment::layoutShadowContent(const LayoutSize& size)
@@ -105,6 +138,26 @@ void RenderAttachment::layoutShadowContent(const LayoutSize& size)
         renderBox.setNeedsLayout(MarkOnlyThis);
         renderBox.layout();
     }
+}
+
+bool RenderAttachment::paintWideLayoutAttachmentOnly(const PaintInfo& paintInfo, const LayoutPoint& offset) const
+{
+    if (paintInfo.phase != PaintPhase::Foreground && paintInfo.phase != PaintPhase::Selection)
+        return false;
+
+    if (auto* wideLayoutShadowElement = attachmentElement().wideLayoutShadowContainer()) {
+        if (auto* wideLayoutShadowRenderer = wideLayoutShadowElement->renderer()) {
+            auto shadowPaintInfo = paintInfo;
+            for (PaintPhase phase : { PaintPhase::BlockBackground, PaintPhase::ChildBlockBackgrounds, PaintPhase::Float, PaintPhase::Foreground, PaintPhase::Outline }) {
+                shadowPaintInfo.phase = phase;
+                wideLayoutShadowRenderer->paint(shadowPaintInfo, offset);
+            }
+        }
+
+        attachmentElement().requestWideLayoutIconIfNeeded();
+        return true;
+    }
+    return false;
 }
 
 } // namespace WebCore

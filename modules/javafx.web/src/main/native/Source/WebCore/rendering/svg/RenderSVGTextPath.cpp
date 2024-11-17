@@ -22,6 +22,7 @@
 
 #include "FloatQuad.h"
 #include "RenderBlock.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
 #include "RenderSVGInlineInlines.h"
 #include "RenderSVGShape.h"
@@ -40,8 +41,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGTextPath);
 
 RenderSVGTextPath::RenderSVGTextPath(SVGTextPathElement& element, RenderStyle&& style)
-    : RenderSVGInline(element, WTFMove(style))
+    : RenderSVGInline(Type::SVGTextPath, element, WTFMove(style))
 {
+    ASSERT(isRenderSVGTextPath());
 }
 
 SVGTextPathElement& RenderSVGTextPath::textPathElement() const
@@ -51,17 +53,17 @@ SVGTextPathElement& RenderSVGTextPath::textPathElement() const
 
 SVGGeometryElement* RenderSVGTextPath::targetElement() const
 {
-    auto target = SVGURIReference::targetElementFromIRIString(textPathElement().href(), textPathElement().treeScope());
+    auto target = SVGURIReference::targetElementFromIRIString(textPathElement().href(), textPathElement().treeScopeForSVGReferences());
     return dynamicDowncast<SVGGeometryElement>(target.element.get());
 }
 
 Path RenderSVGTextPath::layoutPath() const
 {
-    auto element = targetElement();
+    RefPtr element = targetElement();
     if (!is<SVGGeometryElement>(element))
         return { };
 
-    auto path = pathFromGraphicsElement(element);
+    auto path = pathFromGraphicsElement(*element);
 
     // Spec:  The transform attribute on the referenced 'path' element represents a
     // supplemental transformation relative to the current user coordinate system for
@@ -72,7 +74,7 @@ Path RenderSVGTextPath::layoutPath() const
     if (element->renderer() && document().settings().layerBasedSVGEngineEnabled()) {
         auto& renderer = downcast<RenderSVGShape>(*element->renderer());
         if (auto* layer = renderer.layer()) {
-            const auto& layerTransform = layer->currentTransform(RenderStyle::individualTransformOperations).toAffineTransform();
+            const auto& layerTransform = layer->currentTransform(RenderStyle::individualTransformOperations()).toAffineTransform();
             if (!layerTransform.isIdentity())
                 path.transform(layerTransform);
             return path;
@@ -87,16 +89,6 @@ Path RenderSVGTextPath::layoutPath() const
 const SVGLengthValue& RenderSVGTextPath::startOffset() const
 {
     return textPathElement().startOffset();
-}
-
-bool RenderSVGTextPath::exactAlignment() const
-{
-    return textPathElement().spacing() == SVGTextPathSpacingExact;
-}
-
-bool RenderSVGTextPath::stretchMethod() const
-{
-    return textPathElement().method() == SVGTextPathMethodStretch;
 }
 
 }

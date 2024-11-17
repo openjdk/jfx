@@ -64,11 +64,11 @@ CryptoKeyOKP::CryptoKeyOKP(CryptoAlgorithmIdentifier identifier, NamedCurve curv
 ExceptionOr<CryptoKeyPair> CryptoKeyOKP::generatePair(CryptoAlgorithmIdentifier identifier, NamedCurve namedCurve, bool extractable, CryptoKeyUsageBitmap usages)
 {
     if (!isPlatformSupportedCurve(namedCurve))
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     auto result = platformGeneratePair(identifier, namedCurve, extractable, usages);
     if (!result)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     return WTFMove(*result);
 }
@@ -78,6 +78,7 @@ RefPtr<CryptoKeyOKP> CryptoKeyOKP::importRaw(CryptoAlgorithmIdentifier identifie
     if (!isPlatformSupportedCurve(namedCurve))
         return nullptr;
 
+    // FIXME: The Ed25519 spec states that import in raw format must be used only for Verify.
     return create(identifier, namedCurve, usages & CryptoKeyUsageSign ? CryptoKeyType::Private : CryptoKeyType::Public, WTFMove(keyData), extractable, usages);
 }
 
@@ -88,6 +89,7 @@ RefPtr<CryptoKeyOKP> CryptoKeyOKP::importJwk(CryptoAlgorithmIdentifier identifie
 
     switch (namedCurve) {
     case NamedCurve::Ed25519:
+        // FIXME: this is already done in the Algorithm's importKey method for each format, so it seems we can remoev this duplicated code.
         if (!keyData.d.isEmpty()) {
             if (usages & (CryptoKeyUsageEncrypt | CryptoKeyUsageDecrypt | CryptoKeyUsageVerify | CryptoKeyUsageDeriveKey | CryptoKeyUsageDeriveBits | CryptoKeyUsageWrapKey | CryptoKeyUsageUnwrapKey))
                 return nullptr;
@@ -95,10 +97,9 @@ RefPtr<CryptoKeyOKP> CryptoKeyOKP::importJwk(CryptoAlgorithmIdentifier identifie
             if (usages & (CryptoKeyUsageEncrypt | CryptoKeyUsageDecrypt | CryptoKeyUsageSign | CryptoKeyUsageDeriveKey | CryptoKeyUsageDeriveBits | CryptoKeyUsageWrapKey | CryptoKeyUsageUnwrapKey))
                 return nullptr;
         }
-        if (keyData.kty != "OKP"_s)
-            return nullptr;
        if (keyData.crv != "Ed25519"_s)
             return nullptr;
+        // FIXME: Do we have tests for these checks ?
         if (!keyData.alg.isEmpty() && keyData.alg != "EdDSA"_s)
             return nullptr;
         if (usages && !keyData.use.isEmpty() && keyData.use != "sign"_s)
@@ -115,13 +116,8 @@ RefPtr<CryptoKeyOKP> CryptoKeyOKP::importJwk(CryptoAlgorithmIdentifier identifie
         break;
     }
 
-    if (!keyData.d.isNull()) {
-        // FIXME: Validate keyData.x is paired with keyData.d
-        auto d = base64URLDecode(keyData.d);
-        if (!d)
+    if (keyData.kty != "OKP"_s)
             return nullptr;
-        return create(identifier, namedCurve, CryptoKeyType::Private, WTFMove(*d), extractable, usages);
-    }
 
     if (keyData.x.isNull())
         return nullptr;
@@ -129,17 +125,25 @@ RefPtr<CryptoKeyOKP> CryptoKeyOKP::importJwk(CryptoAlgorithmIdentifier identifie
     auto x = base64URLDecode(keyData.x);
     if (!x)
         return nullptr;
+
+    if (!keyData.d.isNull()) {
+        auto d = base64URLDecode(keyData.d);
+        if (!d || !platformCheckPairedKeys(identifier, namedCurve, *d, *x))
+            return nullptr;
+        return create(identifier, namedCurve, CryptoKeyType::Private, WTFMove(*d), extractable, usages);
+    }
+
     return create(identifier, namedCurve, CryptoKeyType::Public, WTFMove(*x), extractable, usages);
 }
 
 ExceptionOr<Vector<uint8_t>> CryptoKeyOKP::exportRaw() const
 {
     if (type() != CryptoKey::Type::Public)
-        return Exception { InvalidAccessError };
+        return Exception { ExceptionCode::InvalidAccessError };
 
     auto result = platformExportRaw();
     if (result.isEmpty())
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
     return result;
 }
 
@@ -168,7 +172,7 @@ ExceptionOr<JsonWebKey> CryptoKeyOKP::exportJwk() const
         result.x = generateJwkX();
         break;
     case CryptoKeyType::Secret:
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
     }
 
     return result;
@@ -194,22 +198,11 @@ bool CryptoKeyOKP::isValidOKPAlgorithm(CryptoAlgorithmIdentifier algorithm)
 
 auto CryptoKeyOKP::algorithm() const -> KeyAlgorithm
 {
-    CryptoEcKeyAlgorithm result;
-    result.name = CryptoAlgorithmRegistry::singleton().name(algorithmIdentifier());
-
-    switch (m_curve) {
-    case NamedCurve::X25519:
-        result.namedCurve = X25519;
-        break;
-    case NamedCurve::Ed25519:
-        result.namedCurve = Ed25519;
-        break;
-    }
-
-    return result;
+    return CryptoKeyAlgorithm { CryptoAlgorithmRegistry::singleton().name(algorithmIdentifier()) };
 }
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) && !USE(GCRYPT)
+
 bool CryptoKeyOKP::isPlatformSupportedCurve(NamedCurve)
 {
     return false;
@@ -220,6 +213,11 @@ std::optional<CryptoKeyPair> CryptoKeyOKP::platformGeneratePair(CryptoAlgorithmI
     return { };
 }
 
+bool CryptoKeyOKP::platformCheckPairedKeys(CryptoAlgorithmIdentifier, NamedCurve, const Vector<uint8_t>&, const Vector<uint8_t>&)
+{
+    return true;
+}
+
 RefPtr<CryptoKeyOKP> CryptoKeyOKP::importSpki(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&&, bool, CryptoKeyUsageBitmap)
 {
     // FIXME: Implement it.
@@ -228,7 +226,7 @@ RefPtr<CryptoKeyOKP> CryptoKeyOKP::importSpki(CryptoAlgorithmIdentifier, NamedCu
 
 ExceptionOr<Vector<uint8_t>> CryptoKeyOKP::exportSpki() const
 {
-    return Exception { NotSupportedError };
+    return Exception { ExceptionCode::NotSupportedError };
 }
 
 RefPtr<CryptoKeyOKP> CryptoKeyOKP::importPkcs8(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&&, bool, CryptoKeyUsageBitmap)
@@ -239,7 +237,7 @@ RefPtr<CryptoKeyOKP> CryptoKeyOKP::importPkcs8(CryptoAlgorithmIdentifier, NamedC
 
 ExceptionOr<Vector<uint8_t>> CryptoKeyOKP::exportPkcs8() const
 {
-    return Exception { NotSupportedError };
+    return Exception { ExceptionCode::NotSupportedError };
 }
 
 String CryptoKeyOKP::generateJwkD() const
@@ -256,7 +254,6 @@ Vector<uint8_t> CryptoKeyOKP::platformExportRaw() const
 {
     return { };
 }
-
 #endif
 
 } // namespace WebCore

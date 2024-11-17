@@ -26,23 +26,24 @@
 #include "InspectorCSSOMWrappers.h"
 #include "MatchedDeclarationsCache.h"
 #include "MediaQueryEvaluator.h"
-#include "RenderStyle.h"
 #include "RuleSet.h"
 #include "StyleScopeRuleSets.h"
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
+class BlendingKeyframe;
+class BlendingKeyframes;
 class CSSStyleSheet;
 class Document;
 class Element;
-class KeyframeList;
-class KeyframeValue;
+class RenderStyle;
 class RuleData;
 class RuleSet;
 class SelectorFilter;
@@ -68,13 +69,8 @@ enum class RuleMatchingBehavior: uint8_t {
 
 namespace Style {
 
+struct ResolvedStyle;
 struct SelectorMatchingState;
-
-struct ResolvedStyle {
-    std::unique_ptr<RenderStyle> style;
-    std::unique_ptr<Relations> relations { };
-    std::unique_ptr<MatchResult> matchResult { };
-};
 
 struct ResolutionContext {
     const RenderStyle* parentStyle;
@@ -85,7 +81,7 @@ struct ResolutionContext {
     bool isSVGUseTreeRoot { false };
 };
 
-class Resolver : public RefCounted<Resolver> {
+class Resolver : public RefCounted<Resolver>, public CanMakeSingleThreadWeakPtr<Resolver> {
     WTF_MAKE_ISO_ALLOCATED(Resolver);
 public:
     // Style resolvers are shared between shadow trees with identical styles. That's why we don't simply provide a Style::Scope.
@@ -95,7 +91,7 @@ public:
 
     ResolvedStyle styleForElement(const Element&, const ResolutionContext&, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules);
 
-    void keyframeStylesForAnimation(const Element&, const RenderStyle& elementStyle, const ResolutionContext&, KeyframeList&);
+    void keyframeStylesForAnimation(const Element&, const RenderStyle& elementStyle, const ResolutionContext&, BlendingKeyframes&);
 
     WEBCORE_EXPORT std::optional<ResolvedStyle> styleForPseudoElement(const Element&, const PseudoElementRequest&, const ResolutionContext&);
 
@@ -117,7 +113,7 @@ public:
 
     void addCurrentSVGFontFaceRules();
 
-    std::unique_ptr<RenderStyle> styleForKeyframe(const Element&, const RenderStyle& elementStyle, const ResolutionContext&, const StyleRuleKeyframe&, KeyframeValue&);
+    std::unique_ptr<RenderStyle> styleForKeyframe(const Element&, const RenderStyle& elementStyle, const ResolutionContext&, const StyleRuleKeyframe&, BlendingKeyframe&);
     bool isAnimationNameValid(const String&);
 
     // These methods will give back the set of rules that matched for a given element (or a pseudo-element).
@@ -181,20 +177,6 @@ private:
     bool m_matchAuthorAndUserStyles { true };
     bool m_isSharedBetweenShadowTrees { false };
 };
-
-inline bool Resolver::hasSelectorForAttribute(const Element& element, const AtomString &attributeName) const
-{
-    ASSERT(!attributeName.isEmpty());
-    if (element.isHTMLElement())
-        return m_ruleSets.features().attributeCanonicalLocalNamesInRules.contains(attributeName);
-    return m_ruleSets.features().attributeLocalNamesInRules.contains(attributeName);
-}
-
-inline bool Resolver::hasSelectorForId(const AtomString& idValue) const
-{
-    ASSERT(!idValue.isEmpty());
-    return m_ruleSets.features().idsInRules.contains(idValue);
-}
 
 } // namespace Style
 } // namespace WebCore

@@ -485,7 +485,7 @@ gst_pad_template_get_caps (GstPadTemplate * templ)
 /**
  * gst_pad_template_set_documentation_caps:
  * @templ: the pad template to set documented capabilities on
- * @caps: (transfer full): the documented capabilities
+ * @caps: (transfer none): the documented capabilities
  *
  * Certain elements will dynamically construct the caps of their
  * pad templates. In order not to let environment-specific information
@@ -512,7 +512,7 @@ gst_pad_template_set_documentation_caps (GstPadTemplate * templ, GstCaps * caps)
  *
  * See gst_pad_template_set_documentation_caps().
  *
- * Returns: The caps to document. For convenience, this will return
+ * Returns: (transfer full): The caps to document. For convenience, this will return
  *   gst_pad_template_get_caps() when no documentation caps were set.
  * Since: 1.18
  */

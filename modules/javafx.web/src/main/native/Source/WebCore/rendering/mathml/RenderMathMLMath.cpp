@@ -30,6 +30,9 @@
 
 #include "MathMLNames.h"
 #include "MathMLRowElement.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderStyleInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -39,18 +42,28 @@ using namespace MathMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLMath);
 
 RenderMathMLMath::RenderMathMLMath(MathMLRowElement& element, RenderStyle&& style)
-    : RenderMathMLRow(element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLMath, element, WTFMove(style))
 {
+    ASSERT(isRenderMathMLMath());
 }
 
 void RenderMathMLMath::centerChildren(LayoutUnit contentWidth)
 {
-    LayoutUnit centerBlockOffset = (logicalWidth() - contentWidth) / 2;
+    auto centerBlockOffset = (logicalWidth() - contentWidth) / 2;
+    if (!centerBlockOffset)
+        return;
+
     if (!style().isLeftToRightDirection())
         centerBlockOffset = -centerBlockOffset;
     for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
-        if (!child->isOutOfFlowPositioned())
-            child->setLocation(child->location() + LayoutPoint(centerBlockOffset, 0_lu));
+        if (!child->isInFlow())
+            continue;
+        auto repaintRect = child->checkForRepaintDuringLayout() ? std::make_optional(child->frameRect()) : std::nullopt;
+        child->move(centerBlockOffset, { });
+        if (repaintRect) {
+            repaintRect->uniteEvenIfEmpty(child->frameRect());
+            repaintRectangle(*repaintRect);
+        }
     }
 }
 

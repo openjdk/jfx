@@ -29,6 +29,7 @@
 #include "PasteboardContext.h"
 #include "PasteboardCustomData.h"
 #include "PasteboardItemInfo.h"
+#include "SharedBuffer.h"
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/Noncopyable.h>
@@ -65,11 +66,10 @@ typedef struct HWND__* HWND;
 
 namespace WebCore {
 
-class SharedBuffer;
 class DocumentFragment;
 class DragData;
 class Element;
-class Frame;
+class LocalFrame;
 class PasteboardStrategy;
 class FragmentedSharedBuffer;
 
@@ -148,8 +148,6 @@ struct PasteboardBuffer {
 
 class PasteboardWebContentReader {
 public:
-    String contentOrigin;
-
     virtual ~PasteboardWebContentReader() = default;
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)
@@ -167,6 +165,12 @@ public:
     virtual bool readRTF(SharedBuffer&) = 0;
     virtual bool readDataBuffer(SharedBuffer&, const String& type, const AtomString& name, PresentationSize preferredPresentationSize = { }) = 0;
 #endif
+
+    const String& contentOrigin() const { return m_contentOrigin; }
+    void setContentOrigin(const String& contentOrigin) { m_contentOrigin = contentOrigin; }
+
+private:
+    String m_contentOrigin;
 };
 
 struct PasteboardPlainText {
@@ -257,9 +261,9 @@ public:
 #endif
 
 #if PLATFORM(WIN) || PLATFORM(JAVA)
-    RefPtr<DocumentFragment> documentFragment(Frame&, const SimpleRange&, bool allowPlainText, bool& chosePlainText); // FIXME: Layering violation.
+    RefPtr<DocumentFragment> documentFragment(LocalFrame&, const SimpleRange&, bool allowPlainText, bool& chosePlainText); // FIXME: Layering violation.
     void writeImage(Element&, const URL&, const String& title); // FIXME: Layering violation.
-    void writeSelection(const SimpleRange&, bool canSmartCopyOrDelete, Frame&, ShouldSerializeSelectedTextForDataTransfer = DefaultSelectedTextType); // FIXME: Layering violation.
+    void writeSelection(const SimpleRange&, bool canSmartCopyOrDelete, LocalFrame&, ShouldSerializeSelectedTextForDataTransfer = DefaultSelectedTextType); // FIXME: Layering violation.
 #endif
 
 #if PLATFORM(GTK)
@@ -300,6 +304,12 @@ public:
     const String& name() const { return emptyString(); }
 #endif
 
+#if PLATFORM(MAC)
+    WEBCORE_EXPORT static RefPtr<SharedBuffer> bufferConvertedToPasteboardType(const PasteboardBuffer&, const String& pasteboardType);
+#else
+    static RefPtr<SharedBuffer> bufferConvertedToPasteboardType(const PasteboardBuffer& pasteboardBuffer, const String&) { return pasteboardBuffer.data; };
+#endif
+
 #if PLATFORM(WIN)
     COMPtr<IDataObject> dataObject() const { return m_dataObject; }
     WEBCORE_EXPORT void setExternalDataObject(IDataObject*);
@@ -333,7 +343,7 @@ private:
 
 #if PLATFORM(WIN)
     void finishCreatingPasteboard();
-    void writeRangeToDataObject(const SimpleRange&, Frame&); // FIXME: Layering violation.
+    void writeRangeToDataObject(const SimpleRange&, LocalFrame&); // FIXME: Layering violation.
     void writeURLToDataObject(const URL&, const String&);
     void writePlainTextToDataObject(const String&, SmartReplaceOption);
     std::optional<PasteboardCustomData> readPasteboardCustomData();
@@ -387,6 +397,7 @@ private:
 #if PLATFORM(IOS_FAMILY)
 extern NSString *WebArchivePboardType;
 extern NSString *UIColorPboardType;
+extern NSString *UIImagePboardType;
 #endif
 
 #if PLATFORM(MAC)

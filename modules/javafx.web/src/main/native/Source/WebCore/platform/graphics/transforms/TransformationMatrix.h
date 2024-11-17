@@ -29,6 +29,7 @@
 #include "FloatPoint.h"
 #include "FloatPoint3D.h"
 #include "IntPoint.h"
+#include "Quaternion.h"
 #include <array>
 #include <string.h> //for memcpy
 #include <wtf/FastMalloc.h>
@@ -55,10 +56,6 @@ const int MCOUNT = 6;
 typedef double* PlatformTransformationMatrix;
 #endif
 
-#if PLATFORM(WIN)
-struct D2D_MATRIX_3X2_F;
-typedef D2D_MATRIX_3X2_F D2D1_MATRIX_3X2_F;
-#endif
 
 namespace WTF {
 class TextStream;
@@ -110,6 +107,16 @@ public:
     {
     }
 
+    constexpr TransformationMatrix(double tx, double ty)
+        : m_matrix {
+            { 1, 0, 0, 0 },
+            { 0, 1, 0, 0 },
+            { 0, 0, 1, 0 },
+            { tx, ty, 0, 1 },
+        }
+    {
+    }
+
     constexpr TransformationMatrix(
         double m11, double m12, double m13, double m14,
         double m21, double m22, double m23, double m24,
@@ -126,13 +133,13 @@ public:
 
     WEBCORE_EXPORT TransformationMatrix(const AffineTransform&);
 
-    static TransformationMatrix fromQuaternion(double qx, double qy, double qz, double qw);
+    static TransformationMatrix fromQuaternion(const Quaternion&);
 
     // Field of view in radians
     static TransformationMatrix fromProjection(double fovUp, double fovDown, double fovLeft, double fovRight, double depthNear, double depthFar);
     static TransformationMatrix fromProjection(double fovy, double aspect, double depthNear, double depthFar);
 
-    static const TransformationMatrix identity;
+    WEBCORE_EXPORT static const TransformationMatrix identity;
 
     void setMatrix(double a, double b, double c, double d, double e, double f)
     {
@@ -267,13 +274,19 @@ public:
     WEBCORE_EXPORT TransformationMatrix& scaleNonUniform(double sx, double sy);
     TransformationMatrix& scale3d(double sx, double sy, double sz);
 
+    enum class RotationSnapping {
+        None,
+        Snap90degRotations,
+    };
+
     // Angle is in degrees.
-    WEBCORE_EXPORT TransformationMatrix& rotate(double);
+    WEBCORE_EXPORT TransformationMatrix& rotate(double, RotationSnapping = RotationSnapping::Snap90degRotations);
+    WEBCORE_EXPORT TransformationMatrix& rotateRadians(double, RotationSnapping = RotationSnapping::Snap90degRotations);
     TransformationMatrix& rotateFromVector(double x, double y);
-    WEBCORE_EXPORT TransformationMatrix& rotate3d(double rx, double ry, double rz);
+    WEBCORE_EXPORT TransformationMatrix& rotate3d(double rx, double ry, double rz, RotationSnapping = RotationSnapping::Snap90degRotations);
 
     // The vector (x,y,z) is normalized if it's not already. A vector of (0,0,0) uses a vector of (0,0,1).
-    TransformationMatrix& rotate3d(double x, double y, double z, double angle);
+    TransformationMatrix& rotate3d(double x, double y, double z, double angle, RotationSnapping = RotationSnapping::Snap90degRotations);
 
     WEBCORE_EXPORT TransformationMatrix& translate(double tx, double ty);
     WEBCORE_EXPORT TransformationMatrix& translate3d(double tx, double ty, double tz);
@@ -314,30 +327,17 @@ public:
         double angle;
         double m11, m12, m21, m22;
 
-        bool operator==(const Decomposed2Type& other) const
-        {
-            return scaleX == other.scaleX && scaleY == other.scaleY
-                && translateX == other.translateX && translateY == other.translateY
-                && angle == other.angle
-                && m11 == other.m11 && m12 == other.m12 && m21 == other.m21 && m22 == other.m22;
-        }
+        friend bool operator==(const Decomposed2Type&, const Decomposed2Type&) = default;
     };
 
     struct Decomposed4Type {
         double scaleX, scaleY, scaleZ;
         double skewXY, skewXZ, skewYZ;
-        double quaternionX, quaternionY, quaternionZ, quaternionW;
+        Quaternion quaternion;
         double translateX, translateY, translateZ;
         double perspectiveX, perspectiveY, perspectiveZ, perspectiveW;
 
-        bool operator==(const Decomposed4Type& other) const
-        {
-            return scaleX == other.scaleX && scaleY == other.scaleY && scaleZ == other.scaleZ
-                && skewXY == other.skewXY && skewXZ == other.skewXZ && skewYZ == other.skewYZ
-                && quaternionX == other.quaternionX && quaternionY == other.quaternionY && quaternionZ == other.quaternionZ && quaternionW == other.quaternionW
-                && translateX == other.translateX && translateY == other.translateY && translateZ == other.translateZ
-                && perspectiveX == other.perspectiveX && perspectiveY == other.perspectiveY && perspectiveZ == other.perspectiveZ && perspectiveW == other.perspectiveW;
-        }
+        friend bool operator==(const Decomposed4Type&, const Decomposed4Type&) = default;
     };
 
     bool decompose2(Decomposed2Type&) const WARN_UNUSED_RETURN;
@@ -380,8 +380,6 @@ public:
                 m_matrix[3][2] == m2.m_matrix[3][2] &&
                 m_matrix[3][3] == m2.m_matrix[3][3]);
     }
-
-    bool operator!=(const TransformationMatrix& other) const { return !(*this == other); }
 
     // *this = *this * t
     TransformationMatrix& operator*=(const TransformationMatrix& t)

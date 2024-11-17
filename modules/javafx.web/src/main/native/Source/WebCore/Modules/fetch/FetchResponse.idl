@@ -38,7 +38,6 @@ dictionary FetchResponseInit {
 };
 
 [
-    EnabledBySetting=FetchAPIEnabled,
     ActiveDOMObject,
     ExportMacro=WEBCORE_EXPORT,
     Exposed=(Window,Worker),
@@ -48,6 +47,7 @@ dictionary FetchResponseInit {
 
     [CallWith=CurrentScriptExecutionContext, NewObject] static FetchResponse error();
     [CallWith=CurrentScriptExecutionContext, NewObject] static FetchResponse redirect(USVString url, optional unsigned short status = 302);
+    [CallWith=CurrentScriptExecutionContext, NewObject, ImplementedAs=jsonForBindings] static FetchResponse json(any data, optional FetchResponseInit init);
 
     readonly attribute FetchResponseType type;
 

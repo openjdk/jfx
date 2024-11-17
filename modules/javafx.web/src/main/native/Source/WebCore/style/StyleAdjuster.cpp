@@ -2,13 +2,13 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2012, 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Google Inc. All rights reserved.
  * Copyright (C) 2014, 2020, 2022 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
@@ -32,11 +32,12 @@
 
 #include "CSSFontSelector.h"
 #include "DOMTokenList.h"
-#include "DOMWindow.h"
+#include "Document.h"
+#include "DocumentInlines.h"
+#include "ElementAncestorIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
-#include "ElementName.h"
 #include "EventNames.h"
-#include "FrameView.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDialogElement.h"
 #include "HTMLDivElement.h"
@@ -47,14 +48,18 @@
 #include "HTMLTableElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrameView.h"
 #include "MathMLElement.h"
-#include "ModalContainerObserver.h"
+#include "NodeName.h"
 #include "Page.h"
 #include "Quirks.h"
 #include "RenderBox.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
+#include "RubyElement.h"
+#include "RubyTextElement.h"
 #include "SVGElement.h"
 #include "SVGGraphicsElement.h"
 #include "SVGNames.h"
@@ -62,8 +67,12 @@
 #include "SVGURIReference.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "StyleSelfAlignmentData.h"
 #include "StyleUpdate.h"
 #include "Text.h"
+#include "TouchAction.h"
+#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "WebAnimationTypes.h"
 #include <wtf/RobinHoodHashSet.h>
 
@@ -112,6 +121,7 @@ static void addIntrinsicMargins(RenderStyle& style)
 }
 #endif
 
+// https://www.w3.org/TR/css-display-3/#transformations
 static DisplayType equivalentBlockDisplay(const RenderStyle& style)
 {
     switch (auto display = style.display()) {
@@ -122,6 +132,7 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style)
     case DisplayType::Grid:
     case DisplayType::FlowRoot:
     case DisplayType::ListItem:
+    case DisplayType::RubyBlock:
         return display;
     case DisplayType::InlineTable:
         return DisplayType::Table;
@@ -131,6 +142,8 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style)
         return DisplayType::Flex;
     case DisplayType::InlineGrid:
         return DisplayType::Grid;
+    case DisplayType::Ruby:
+        return DisplayType::RubyBlock;
 
     case DisplayType::Inline:
     case DisplayType::InlineBlock:
@@ -142,7 +155,10 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style)
     case DisplayType::TableColumn:
     case DisplayType::TableCell:
     case DisplayType::TableCaption:
+    case DisplayType::RubyBase:
+    case DisplayType::RubyAnnotation:
         return DisplayType::Block;
+
     case DisplayType::Contents:
         ASSERT_NOT_REACHED();
         return DisplayType::Contents;
@@ -154,26 +170,88 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style)
     return DisplayType::Block;
 }
 
+// https://www.w3.org/TR/css-display-3/#transformations
+static DisplayType equivalentInlineDisplay(const RenderStyle& style)
+{
+    switch (auto display = style.display()) {
+    case DisplayType::Block:
+        return DisplayType::InlineBlock;
+    case DisplayType::Table:
+        return DisplayType::InlineTable;
+    case DisplayType::Box:
+        return DisplayType::InlineBox;
+    case DisplayType::Flex:
+        return DisplayType::InlineFlex;
+    case DisplayType::Grid:
+        return DisplayType::InlineGrid;
+    case DisplayType::RubyBlock:
+        return DisplayType::Ruby;
+
+    case DisplayType::Inline:
+    case DisplayType::InlineBlock:
+    case DisplayType::InlineTable:
+    case DisplayType::InlineBox:
+    case DisplayType::InlineFlex:
+    case DisplayType::InlineGrid:
+    case DisplayType::Ruby:
+    case DisplayType::RubyBase:
+    case DisplayType::RubyAnnotation:
+        return display;
+
+    case DisplayType::FlowRoot:
+    case DisplayType::ListItem:
+    case DisplayType::TableRowGroup:
+    case DisplayType::TableHeaderGroup:
+    case DisplayType::TableFooterGroup:
+    case DisplayType::TableRow:
+    case DisplayType::TableColumnGroup:
+    case DisplayType::TableColumn:
+    case DisplayType::TableCell:
+    case DisplayType::TableCaption:
+        return DisplayType::Inline;
+
+    case DisplayType::Contents:
+        ASSERT_NOT_REACHED();
+        return DisplayType::Contents;
+    case DisplayType::None:
+        ASSERT_NOT_REACHED();
+        return DisplayType::None;
+    }
+    ASSERT_NOT_REACHED();
+    return DisplayType::Inline;
+}
+
 static bool shouldInheritTextDecorationsInEffect(const RenderStyle& style, const Element* element)
 {
     if (style.isFloating() || style.hasOutOfFlowPosition())
         return false;
 
-    auto isAtUserAgentShadowBoundary = [&] {
+    // Media elements have a special rendering where the media controls do not use a proper containing
+    // block model which means we need to manually stop text-decorations to apply to text inside media controls.
+    auto isAtMediaUAShadowBoundary = [&] {
+#if ENABLE(VIDEO)
         if (!element)
             return false;
         auto* parentNode = element->parentNode();
-        return parentNode && parentNode->isUserAgentShadowRoot();
+        return parentNode && parentNode->isUserAgentShadowRoot() && parentNode->parentOrShadowHostElement()->isMediaElement();
+#else
+        return false;
+#endif
     }();
 
+    // Outermost <svg> roots are considered to be atomic inline-level.
+    if (RefPtr svgElement = dynamicDowncast<SVGElement>(element); svgElement && svgElement->isOutermostSVGSVGElement())
+        return false;
+
     // There is no other good way to prevent decorations from affecting user agent shadow trees.
-    if (isAtUserAgentShadowBoundary)
+    if (isAtMediaUAShadowBoundary)
         return false;
 
     switch (style.display()) {
-    case DisplayType::Table:
     case DisplayType::InlineTable:
     case DisplayType::InlineBlock:
+    case DisplayType::InlineGrid:
+    case DisplayType::InlineFlex:
     case DisplayType::InlineBox:
         return false;
     default:
@@ -219,13 +297,15 @@ static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& st
     return sharedTouchActions;
 }
 
-void Adjuster::adjustEventListenerRegionTypesForRootStyle(RenderStyle& rootStyle, const Document& document)
+bool Adjuster::adjustEventListenerRegionTypesForRootStyle(RenderStyle& rootStyle, const Document& document)
 {
     auto regionTypes = computeEventListenerRegionTypes(document, rootStyle, document, { });
     if (auto* window = document.domWindow())
         regionTypes.add(computeEventListenerRegionTypes(document, rootStyle, *window, { }));
 
+    bool changed = regionTypes != rootStyle.eventListenerRegionTypes();
     rootStyle.setEventListenerRegionTypes(regionTypes);
+    return changed;
 }
 
 OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(const Document& document, const RenderStyle& style, const EventTarget& eventTarget, OptionSet<EventListenerRegionType> parentTypes)
@@ -259,10 +339,11 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
 #endif
 
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
-    if (document.page() && document.page()->shouldBuildInteractionRegions() && eventTarget.isNode()) {
-        const auto& node = downcast<Node>(eventTarget);
-        if (node.willRespondToMouseClickEventsWithEditability(node.computeEditabilityForMouseClickEvents(&style)))
+    if (document.page() && document.page()->shouldBuildInteractionRegions()) {
+        if (const auto* node = dynamicDowncast<Node>(eventTarget)) {
+            if (node->willRespondToMouseClickEventsWithEditability(node->computeEditabilityForMouseClickEvents(&style)))
             types.add(EventListenerRegionType::MouseClick);
+    }
     }
 #else
     UNUSED_PARAM(document);
@@ -276,23 +357,81 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
     return types;
 }
 
+static bool isOverflowClipOrVisible(Overflow overflow)
+{
+    return overflow == Overflow::Clip || overflow == Overflow::Visible;
+}
+
+static bool shouldInlinifyForRuby(const RenderStyle& style, const RenderStyle& parentBoxStyle)
+{
+    auto parentDisplay = parentBoxStyle.display();
+    auto hasRubyParent = parentDisplay == DisplayType::Ruby
+        || parentDisplay == DisplayType::RubyBlock
+        || parentDisplay == DisplayType::RubyAnnotation
+        || parentDisplay == DisplayType::RubyBase;
+
+    return hasRubyParent && !style.hasOutOfFlowPosition() && !style.isFloating();
+}
+
+static bool isRubyContainerOrInternalRubyBox(const RenderStyle& style)
+{
+    auto display = style.display();
+    return display == DisplayType::Ruby
+        || display == DisplayType::RubyAnnotation
+        || display == DisplayType::RubyBase;
+}
+
+static bool hasUnsupportedRubyDisplay(DisplayType display, const Element* element)
+{
+    // Only allow ruby elements to have ruby display types for now.
+    switch (display) {
+    case DisplayType::Ruby:
+    case DisplayType::RubyBlock:
+        return !element || !element->hasTagName(rubyTag);
+    case DisplayType::RubyAnnotation:
+        return !element || !element->hasTagName(rtTag);
+    case DisplayType::RubyBase:
+        ASSERT_NOT_REACHED();
+        return false;
+    default:
+        return false;
+    }
+}
+
+// https://drafts.csswg.org/css-ruby-1/#bidi
+static UnicodeBidi forceBidiIsolationForRuby(UnicodeBidi unicodeBidi)
+{
+    switch (unicodeBidi) {
+    case UnicodeBidi::Normal:
+    case UnicodeBidi::Embed:
+    case UnicodeBidi::Isolate:
+        return UnicodeBidi::Isolate;
+    case UnicodeBidi::Override:
+    case UnicodeBidi::IsolateOverride:
+        return UnicodeBidi::IsolateOverride;
+    case UnicodeBidi::Plaintext:
+        return UnicodeBidi::Plaintext;
+    }
+    ASSERT_NOT_REACHED();
+    return UnicodeBidi::Isolate;
+}
+
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
 {
     if (style.display() == DisplayType::Contents)
         adjustDisplayContentsStyle(style);
+
+    if (m_element && (m_element->hasTagName(frameTag) || m_element->hasTagName(framesetTag))) {
+        // Framesets ignore display and position properties.
+        style.setPosition(PositionType::Static);
+        style.setEffectiveDisplay(DisplayType::Block);
+    }
 
     if (style.display() != DisplayType::None && style.display() != DisplayType::Contents) {
         if (m_element) {
             // Tables never support the -webkit-* values for text-align and will reset back to the default.
             if (is<HTMLTableElement>(*m_element) && (style.textAlign() == TextAlignMode::WebKitLeft || style.textAlign() == TextAlignMode::WebKitCenter || style.textAlign() == TextAlignMode::WebKitRight))
                 style.setTextAlign(TextAlignMode::Start);
-
-            // Frames and framesets never honor position:relative or position:absolute. This is necessary to
-            // fix a crash where a site tries to position these objects. They also never honor display.
-            if (m_element->hasTagName(frameTag) || m_element->hasTagName(framesetTag)) {
-                style.setPosition(PositionType::Static);
-                style.setEffectiveDisplay(DisplayType::Block);
-            }
 
             // Ruby text does not support float or position. This might change with evolution of the specification.
             if (m_element->hasTagName(rtTag)) {
@@ -303,6 +442,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             if (m_element->hasTagName(legendTag))
                 style.setEffectiveDisplay(equivalentBlockDisplay(style));
         }
+
+        if (hasUnsupportedRubyDisplay(style.display(), m_element))
+            style.setEffectiveDisplay(style.display() == DisplayType::RubyBlock ? DisplayType::Block : DisplayType::Inline);
 
         // Top layer elements are always position: absolute; unless the position is set to fixed.
         // https://fullscreen.spec.whatwg.org/#new-stacking-layer
@@ -315,7 +457,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
         // FIXME: Don't support this mutation for pseudo styles like first-letter or first-line, since it's not completely
         // clear how that should work.
-        if (style.display() == DisplayType::Inline && style.styleType() == PseudoId::None && style.writingMode() != m_parentStyle.writingMode())
+        if (style.display() == DisplayType::Inline && style.pseudoElementType() == PseudoId::None && style.writingMode() != m_parentStyle.writingMode())
             style.setEffectiveDisplay(DisplayType::InlineBlock);
 
         // After performing the display mutation, check table rows. We do not honor position:relative or position:sticky on
@@ -333,11 +475,15 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.display() == DisplayType::TableCell)
             style.setWritingMode(m_parentStyle.writingMode());
 
+        if (style.isDisplayDeprecatedFlexibleBox()) {
         // FIXME: Since we don't support block-flow on flexible boxes yet, disallow setting
-        // of block-flow to anything other than WritingMode::TopToBottom.
+            // of block-flow to anything other than WritingMode::HorizontalTb.
         // https://bugs.webkit.org/show_bug.cgi?id=46418 - Flexible box support.
-        if (style.writingMode() != WritingMode::TopToBottom && (style.display() == DisplayType::Box || style.display() == DisplayType::InlineBox))
-            style.setWritingMode(WritingMode::TopToBottom);
+            style.setWritingMode(WritingMode::HorizontalTb);
+        }
+
+        if (m_parentBoxStyle.isDisplayDeprecatedFlexibleBox())
+            style.setFloating(Float::None);
 
         // https://www.w3.org/TR/css-display/#transformations
         // "A parent with a grid or flex display value blockifies the box’s display type."
@@ -345,6 +491,13 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setFloating(Float::None);
             style.setEffectiveDisplay(equivalentBlockDisplay(style));
         }
+
+        // https://www.w3.org/TR/css-ruby-1/#anon-gen-inlinize
+        if (shouldInlinifyForRuby(style, m_parentBoxStyle))
+            style.setEffectiveDisplay(equivalentInlineDisplay(style));
+        // https://drafts.csswg.org/css-ruby-1/#bidi
+        if (isRubyContainerOrInternalRubyBox(style))
+            style.setUnicodeBidi(forceBidiIsolationForRuby(style.unicodeBidi()));
     }
 
     auto hasAutoZIndex = [](const RenderStyle& style, const RenderStyle& parentBoxStyle, const Element* element) {
@@ -356,7 +509,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         // of the value of the position property, with one exception: as for boxes in CSS 2.1, outer ‘svg’ elements
         // must be positioned for z-index to apply to them.
         if (element && element->document().settings().layerBasedSVGEngineEnabled()) {
-            if (auto* svgElement = dynamicDowncast<SVGElement>(element); svgElement && svgElement->isOutermostSVGSVGElement())
+            if (RefPtr svgElement = dynamicDowncast<SVGElement>(*element); svgElement && svgElement->isOutermostSVGSVGElement())
                 return element->renderer() && element->renderer()->style().position() == PositionType::Static;
 
             return false;
@@ -379,7 +532,10 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     // Same for the additional translation component present in RenderSVGTransformableContainer (that stems from <use> x/y
     // properties, that are transferred to the internal RenderSVGTransformableContainer), or for the viewBox-induced transformation
     // in RenderSVGViewportContainer. They all need to return true for 'hasTransformRelatedProperty'.
-    auto hasTransformRelatedProperty = [](const RenderStyle& style, const Element* element) {
+    auto hasTransformRelatedProperty = [](const RenderStyle& style, const Element* element, const RenderStyle& parentStyle) {
+        if (element && element->document().settings().css3DTransformBackfaceVisibilityInteroperabilityEnabled() && style.backfaceVisibility() == BackfaceVisibility::Hidden && parentStyle.preserves3D())
+            return true;
+
         if (style.hasTransformRelatedProperty())
             return true;
 
@@ -401,14 +557,12 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (style.hasAutoUsedZIndex()) {
         if ((m_element && m_document.documentElement() == m_element)
             || style.hasOpacity()
-            || hasTransformRelatedProperty(style, m_element)
+            || hasTransformRelatedProperty(style, m_element, m_parentStyle)
             || style.hasMask()
             || style.clipPath()
             || style.boxReflect()
             || style.hasFilter()
-#if ENABLE(FILTERS_LEVEL_2)
             || style.hasBackdropFilter()
-#endif
             || style.hasBlendMode()
             || style.hasIsolation()
             || style.position() == PositionType::Sticky
@@ -425,11 +579,11 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setOverflowY(style.overflowY() == Overflow::Visible ? Overflow::Auto : style.overflowY());
         }
 
-        if (is<HTMLInputElement>(*m_element) && downcast<HTMLInputElement>(*m_element).isPasswordField())
+        if (RefPtr input = dynamicDowncast<HTMLInputElement>(*m_element); input && input->isPasswordField())
             style.setTextSecurity(style.inputSecurity() == InputSecurity::Auto ? TextSecurity::Disc : TextSecurity::None);
 
         // Disallow -webkit-user-modify on :pseudo and ::pseudo elements.
-        if (!m_element->shadowPseudoId().isNull())
+        if (m_element->isInUserAgentShadowTree() && !m_element->userAgentPart().isNull())
             style.setUserModify(UserModify::ReadOnly);
 
         if (is<HTMLMarqueeElement>(*m_element)) {
@@ -440,7 +594,8 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             bool isVertical = style.marqueeDirection() == MarqueeDirection::Up || style.marqueeDirection() == MarqueeDirection::Down;
             // Make horizontal marquees not wrap.
             if (!isVertical) {
-                style.setWhiteSpace(WhiteSpace::NoWrap);
+                style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Collapse);
+                style.setTextWrapMode(TextWrapMode::NoWrap);
                 style.setTextAlign(TextAlignMode::Start);
             }
             // Apparently this is the expected legacy behavior.
@@ -454,41 +609,48 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     else
         style.setTextDecorationsInEffect(style.textDecorationLine());
 
-    auto overflowReplacement = [] (Overflow overflow, Overflow overflowInOtherDimension) -> std::optional<Overflow> {
-        if (overflow != Overflow::Visible && overflow != Overflow::Clip) {
-            if (overflowInOtherDimension == Overflow::Visible)
-                return Overflow::Auto;
-            if (overflowInOtherDimension == Overflow::Clip)
-                return Overflow::Hidden;
-        }
-        return std::nullopt;
-    };
+    bool overflowIsClipOrVisible = isOverflowClipOrVisible(style.overflowX()) && isOverflowClipOrVisible(style.overflowX());
 
-    // If either overflow value is not visible, change to auto. Similarly if either overflow
-    // value is not clip, change to hidden.
+    if (!overflowIsClipOrVisible && (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable)) {
+        // Tables only support overflow:hidden and overflow:visible and ignore anything else,
+        // see https://drafts.csswg.org/css2/#overflow. As a table is not a block
+        // container box the rules for resolving conflicting x and y values in CSS Overflow Module
+        // Level 3 do not apply. Arguably overflow-x and overflow-y aren't allowed on tables but
+        // all UAs allow it.
+        if (style.overflowX() != Overflow::Hidden)
+            style.setOverflowX(Overflow::Visible);
+        if (style.overflowY() != Overflow::Hidden)
+            style.setOverflowY(Overflow::Visible);
+        // If we are left with conflicting overflow values for the x and y axes on a table then resolve
+        // both to Overflow::Visible. This is interoperable behaviour but is not specced anywhere.
+        if (style.overflowX() == Overflow::Visible)
+            style.setOverflowY(Overflow::Visible);
+        else if (style.overflowY() == Overflow::Visible)
+            style.setOverflowX(Overflow::Visible);
+    } else if (!isOverflowClipOrVisible(style.overflowY())) {
     // FIXME: Once we implement pagination controls, overflow-x should default to hidden
     // if overflow-y is set to -webkit-paged-x or -webkit-page-y. For now, we'll let it
     // default to auto so we can at least scroll through the pages.
-    if (auto replacement = overflowReplacement(style.overflowY(), style.overflowX()))
-        style.setOverflowX(*replacement);
-    else if (auto replacement = overflowReplacement(style.overflowX(), style.overflowY()))
-        style.setOverflowY(*replacement);
+        // Values of 'clip' and 'visible' can only be used with 'clip' and 'visible'.
+        // If they aren't, 'clip' and 'visible' is reset.
+        if (style.overflowX() == Overflow::Visible)
+            style.setOverflowX(Overflow::Auto);
+        else if (style.overflowX() == Overflow::Clip)
+            style.setOverflowX(Overflow::Hidden);
+    } else if (!isOverflowClipOrVisible(style.overflowX())) {
+        // Values of 'clip' and 'visible' can only be used with 'clip' and 'visible'.
+        // If they aren't, 'clip' and 'visible' is reset.
+        if (style.overflowY() == Overflow::Visible)
+            style.setOverflowY(Overflow::Auto);
+        else if (style.overflowY() == Overflow::Clip)
+            style.setOverflowY(Overflow::Hidden);
+    }
 
     // Call setStylesForPaginationMode() if a pagination mode is set for any non-root elements. If these
     // styles are specified on a root element, then they will be incorporated in
     // Style::createForm_document.
     if ((style.overflowY() == Overflow::PagedX || style.overflowY() == Overflow::PagedY) && !(m_element && (m_element->hasTagName(htmlTag) || m_element->hasTagName(bodyTag))))
         style.setColumnStylesFromPaginationMode(WebCore::paginationModeForRenderStyle(style));
-
-    // Table rows, sections and the table itself will support overflow:hidden and will ignore scroll/auto.
-    // FIXME: Eventually table sections will support auto and scroll.
-    if (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable
-        || style.display() == DisplayType::TableRowGroup || style.display() == DisplayType::TableRow) {
-        if (style.overflowX() != Overflow::Visible && style.overflowX() != Overflow::Hidden)
-            style.setOverflowX(Overflow::Visible);
-        if (style.overflowY() != Overflow::Visible && style.overflowY() != Overflow::Hidden)
-            style.setOverflowY(Overflow::Visible);
-    }
 
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     // Touch overflow scrolling creates a stacking context.
@@ -504,14 +666,18 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     style.adjustAnimations();
     style.adjustTransitions();
 
+    // Do the same for scroll-timeline and view-timeline longhands.
+    style.adjustScrollTimelines();
+    style.adjustViewTimelines();
+
 #if PLATFORM(COCOA)
     if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DoesNotAddIntrinsicMarginsToFormControls)) {
     // Important: Intrinsic margins get added to controls before the theme has adjusted the style, since the theme will
     // alter fonts and heights/widths.
-    if (is<HTMLFormControlElement>(m_element) && style.computedFontPixelSize() >= 11) {
+        if (is<HTMLFormControlElement>(m_element) && style.computedFontSize() >= 11) {
         // Don't apply intrinsic margins to image buttons. The designer knows how big the images are,
         // so we have to treat all image buttons as though they were explicitly sized.
-        if (!is<HTMLInputElement>(*m_element) || !downcast<HTMLInputElement>(*m_element).isImageButton())
+            if (RefPtr input = dynamicDowncast<HTMLInputElement>(*m_element); !input || !input->isImageButton())
             addIntrinsicMargins(style);
     }
     }
@@ -534,15 +700,13 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.hasFilter()
             || style.hasIsolation()
             || style.hasMask()
-#if ENABLE(FILTERS_LEVEL_2)
             || style.hasBackdropFilter()
-#endif
             || style.hasBlendMode();
         style.setTransformStyleForcedToFlat(forceToFlat);
     }
 
-    if (is<SVGElement>(m_element))
-        adjustSVGElementStyle(style, downcast<SVGElement>(*m_element));
+    if (RefPtr element = dynamicDowncast<SVGElement>(m_element))
+        adjustSVGElementStyle(style, *element);
 
     // If the inherited value of justify-items includes the 'legacy' keyword (plus 'left', 'right' or
     // 'center'), 'legacy' computes to the the inherited value. Otherwise, 'auto' computes to 'normal'.
@@ -552,8 +716,8 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     style.setEffectiveTouchActions(computeEffectiveTouchActions(style, m_parentStyle.effectiveTouchActions()));
 
     // Counterparts in Element::addToTopLayer/removeFromTopLayer & SharingResolver::canShareStyleWithElement need to match!
-    auto hasInertAttribute = [this] (const Element* element) -> bool {
-        return m_document.settings().inertAttributeEnabled() && is<HTMLElement>(element) && element->hasAttributeWithoutSynchronization(HTMLNames::inertAttr);
+    auto hasInertAttribute = [] (const Element* element) -> bool {
+        return is<HTMLElement>(element) && element->hasAttributeWithoutSynchronization(HTMLNames::inertAttr);
     };
     auto isInertSubtreeRoot = [this, hasInertAttribute] (const Element* element) -> bool {
         if (m_document.activeModalDialog() && element == m_document.documentElement())
@@ -561,7 +725,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         if (hasInertAttribute(element))
             return true;
 #if ENABLE(FULLSCREEN_API)
-        if (m_document.fullscreenManager().fullscreenElement() && element == m_document.documentElement())
+        if (CheckedPtr fullscreenManager = m_document.fullscreenManagerIfExists(); fullscreenManager && fullscreenManager->fullscreenElement() && element == m_document.documentElement())
             return true;
 #endif
         return false;
@@ -575,27 +739,30 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setEffectiveInert(false);
 
 #if ENABLE(FULLSCREEN_API)
-        if (m_element == m_document.fullscreenManager().fullscreenElement() && !hasInertAttribute(m_element))
+        if (CheckedPtr fullscreenManager = m_document.fullscreenManagerIfExists(); fullscreenManager && m_element == fullscreenManager->fullscreenElement() && !hasInertAttribute(m_element))
             style.setEffectiveInert(false);
 #endif
 
         style.setEventListenerRegionTypes(computeEventListenerRegionTypes(m_document, style, *m_element, m_parentStyle.eventListenerRegionTypes()));
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+        // Every element will automatically get an interaction region which is not useful, ignoring the `cursor: pointer;` on the body.
+        if (is<HTMLBodyElement>(*m_element) && style.cursor() == CursorType::Pointer && style.eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick))
+            style.setCursor(CursorType::Auto);
+#endif
+
 #if ENABLE(TEXT_AUTOSIZING)
         if (m_document.settings().textAutosizingUsesIdempotentMode())
             adjustForTextAutosizing(style, *m_element);
 #endif
-
-        if (auto observer = m_element->document().modalContainerObserverIfExists()) {
-            if (observer->shouldHide(*m_element))
-                style.setDisplay(DisplayType::None);
-            if (observer->shouldMakeVerticallyScrollable(*m_element))
-                style.setOverflowY(Overflow::Auto);
-        }
     }
+    if (isSkippedContentRoot(style, m_element) && m_parentStyle.contentVisibility() != ContentVisibility::Hidden)
+        style.setEffectiveContentVisibility(style.contentVisibility());
 
-    if (style.contentVisibility() == ContentVisibility::Hidden)
-        style.setEffectiveSkipsContent(true);
+    if (style.contentVisibility() == ContentVisibility::Auto) {
+        style.containIntrinsicWidthAddAuto();
+        style.containIntrinsicHeightAddAuto();
+    }
 
     adjustForSiteSpecificQuirks(style);
 }
@@ -617,7 +784,7 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
         return false;
 
     // https://drafts.csswg.org/css-display-3/#unbox-html
-    switch (element.tagQName().elementName()) {
+    switch (element.elementName()) {
     case HTML::br:
     case HTML::wbr:
     case HTML::meter:
@@ -651,7 +818,7 @@ void Adjuster::adjustDisplayContentsStyle(RenderStyle& style) const
         return;
     }
 
-    if (!m_element && style.styleType() != PseudoId::Before && style.styleType() != PseudoId::After) {
+    if (!m_element && style.pseudoElementType() != PseudoId::Before && style.pseudoElementType() != PseudoId::After) {
         style.setEffectiveDisplay(DisplayType::None);
         return;
     }
@@ -679,10 +846,9 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
     // - the "filter" property applies to the element and it has a computed value other than none
     // - a property defined in another specification is applied and that property is defined to establish a stacking context in SVG
     //
-    // Some of the rules above were already enforced in StyleResolver::adjustRenderStyle() - for those cases assertions were added.
+    // Some of the rules above were already enforced in StyleResolver::adjust() - for those cases assertions were added.
     if (svgElement.document().settings().layerBasedSVGEngineEnabled() && style.hasAutoUsedZIndex()) {
-        // adjustRenderStyle() has already assigned a z-index of 0 if clip / filter is present or the element is the root element.
-        ASSERT(!style.hasClip());
+        // adjust() has already assigned a z-index of 0 if clip / filter is present or the element is the root element.
         ASSERT(!style.clipPath());
         ASSERT(!style.hasFilter());
 
@@ -784,18 +950,26 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
     }
 #if ENABLE(VIDEO)
     if (m_document.quirks().needsFullscreenDisplayNoneQuirk()) {
-        if (is<HTMLDivElement>(m_element) && style.display() == DisplayType::None) {
+        if (RefPtr div = dynamicDowncast<HTMLDivElement>(m_element); div && style.display() == DisplayType::None) {
             static MainThreadNeverDestroyed<const AtomString> instreamNativeVideoDivClass("instream-native-video--mobile"_s);
             static MainThreadNeverDestroyed<const AtomString> videoElementID("vjs_video_3_html5_api"_s);
 
-            auto& div = downcast<HTMLDivElement>(*m_element);
-            if (div.hasClass() && div.classNames().contains(instreamNativeVideoDivClass)) {
-                auto* video = div.treeScope().getElementById(videoElementID);
-                if (is<HTMLVideoElement>(video) && downcast<HTMLVideoElement>(*video).isFullscreen())
+            if (div->hasClass() && div->classNames().contains(instreamNativeVideoDivClass)) {
+                RefPtr video = dynamicDowncast<HTMLVideoElement>(div->treeScope().getElementById(videoElementID));
+                if (video && video->isFullscreen())
                     style.setEffectiveDisplay(DisplayType::Block);
             }
         }
     }
+#if ENABLE(FULLSCREEN_API)
+    if (CheckedPtr fullscreenManager = m_document.fullscreenManagerIfExists(); fullscreenManager && m_document.quirks().needsFullscreenObjectFitQuirk()) {
+        static MainThreadNeverDestroyed<const AtomString> playerClassName("top-player-video-element"_s);
+        bool isFullscreen = fullscreenManager->isFullscreen();
+        RefPtr video = dynamicDowncast<HTMLVideoElement>(m_element);
+        if (video && isFullscreen && video->hasClass() && video->classNames().contains(playerClassName) && style.objectFit() == ObjectFit::Fill)
+            style.setObjectFit(ObjectFit::Contain);
+    }
+#endif
 #endif
 }
 
@@ -853,7 +1027,7 @@ void Adjuster::propagateToDocumentElementAndInitialContainingBlock(Update& updat
         }
         documentElementUpdate->style->setWritingMode(writingMode);
         documentElementUpdate->style->setDirection(direction);
-        documentElementUpdate->change = determineChange(*documentElementStyle, *documentElementUpdate->style);
+        documentElementUpdate->change = std::max(documentElementUpdate->change, Change::Inherited);
     }
 }
 

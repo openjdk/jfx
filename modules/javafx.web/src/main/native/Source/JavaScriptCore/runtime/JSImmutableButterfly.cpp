@@ -183,13 +183,13 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
     auto forEachCodePointViaStringIteratorProtocol = [](const UChar* characters, unsigned length, auto func) {
         for (unsigned i = 0; i < length; ++i) {
             UChar character = characters[i];
-            if (character < 0xD800 || character > 0xDBFF || (i + 1) == length) {
+            if (!U16_IS_LEAD(character) || (i + 1) == length) {
                 if (func(i, 1) == IterationStatus::Done)
                     return;
                 continue;
             }
             UChar second = characters[i + 1];
-            if (second < 0xDC00 || second > 0xDFFF) {
+            if (!U16_IS_TRAIL(second)) {
                 if (func(i, 1) == IterationStatus::Done)
                     return;
                 continue;
@@ -233,6 +233,16 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
         return IterationStatus::Continue;
     });
 
+    return result;
+}
+
+JSImmutableButterfly* JSImmutableButterfly::tryCreateFromArgList(VM& vm, ArgList argList)
+{
+    JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), argList.size());
+    if (UNLIKELY(!result))
+        return nullptr;
+    gcSafeMemcpy(bitwise_cast<EncodedJSValue*>(result->toButterfly()->contiguous().data()), argList.data(), argList.size() * sizeof(EncodedJSValue));
+    vm.writeBarrier(result);
     return result;
 }
 

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/ArgumentCoder.h>
 #include <wtf/Hasher.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
@@ -34,11 +35,18 @@ namespace WebCore {
 class ThreadSafeDataBuffer;
 
 class ThreadSafeDataBufferImpl : public ThreadSafeRefCounted<ThreadSafeDataBufferImpl> {
-friend class ThreadSafeDataBuffer;
 private:
-    ThreadSafeDataBufferImpl(Vector<uint8_t>&& data)
+    friend class ThreadSafeDataBuffer;
+    friend struct IPC::ArgumentCoder<ThreadSafeDataBufferImpl, void>;
+
+    static Ref<ThreadSafeDataBufferImpl> create(Vector<uint8_t>&& data)
     {
-        m_data = WTFMove(data);
+        return adoptRef(*new ThreadSafeDataBufferImpl(WTFMove(data)));
+    }
+
+    ThreadSafeDataBufferImpl(Vector<uint8_t>&& data)
+        : m_data(WTFMove(data))
+    {
     }
 
     ThreadSafeDataBufferImpl(const Vector<uint8_t>& data)
@@ -56,6 +64,8 @@ private:
 };
 
 class ThreadSafeDataBuffer {
+private:
+    friend struct IPC::ArgumentCoder<ThreadSafeDataBuffer, void>;
 public:
     static ThreadSafeDataBuffer create(Vector<uint8_t>&& data)
     {
@@ -72,9 +82,9 @@ public:
         return ThreadSafeDataBuffer(data, length);
     }
 
-    ThreadSafeDataBuffer()
-    {
-    }
+    ThreadSafeDataBuffer() = default;
+
+    ThreadSafeDataBuffer isolatedCopy() const { return *this; }
 
     const Vector<uint8_t>* data() const
     {
@@ -94,55 +104,34 @@ public:
         return m_impl->m_data == other.m_impl->m_data;
     }
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, ThreadSafeDataBuffer&);
-
 private:
-    explicit ThreadSafeDataBuffer(Vector<uint8_t>&& data)
+    static ThreadSafeDataBuffer create(RefPtr<ThreadSafeDataBufferImpl>&& impl)
     {
-        m_impl = adoptRef(new ThreadSafeDataBufferImpl(WTFMove(data)));
+        return ThreadSafeDataBuffer(WTFMove(impl));
+    }
+
+    explicit ThreadSafeDataBuffer(RefPtr<ThreadSafeDataBufferImpl>&& impl)
+        : m_impl(WTFMove(impl))
+    {
+    }
+
+    explicit ThreadSafeDataBuffer(Vector<uint8_t>&& data)
+        : m_impl(adoptRef(new ThreadSafeDataBufferImpl(WTFMove(data))))
+    {
     }
 
     explicit ThreadSafeDataBuffer(const Vector<uint8_t>& data)
+        : m_impl(adoptRef(new ThreadSafeDataBufferImpl(data)))
     {
-        m_impl = adoptRef(new ThreadSafeDataBufferImpl(data));
     }
 
     explicit ThreadSafeDataBuffer(const void* data, unsigned length)
+        : m_impl(adoptRef(new ThreadSafeDataBufferImpl(data, length)))
     {
-        m_impl = adoptRef(new ThreadSafeDataBufferImpl(data, length));
     }
 
     RefPtr<ThreadSafeDataBufferImpl> m_impl;
 };
-
-template<class Encoder>
-void ThreadSafeDataBuffer::encode(Encoder& encoder) const
-{
-    bool hasData = m_impl;
-    encoder << hasData;
-
-    if (hasData)
-        encoder << m_impl->m_data;
-}
-
-template<class Decoder>
-bool ThreadSafeDataBuffer::decode(Decoder& decoder, ThreadSafeDataBuffer& result)
-{
-    bool hasData;
-    if (!decoder.decode(hasData))
-        return false;
-
-    if (hasData) {
-        Vector<uint8_t> data;
-        if (!decoder.decode(data))
-            return false;
-
-        result = ThreadSafeDataBuffer::create(WTFMove(data));
-    }
-
-    return true;
-}
 
 inline void add(Hasher& hasher, const ThreadSafeDataBuffer& buffer)
 {

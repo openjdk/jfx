@@ -26,7 +26,7 @@
 #include "config.h"
 #include "HTMLPictureElement.h"
 
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLImageElement.h"
 #include "ImageLoader.h"
@@ -72,10 +72,8 @@ bool HTMLPictureElement::isSystemPreviewImage()
     if (!document().settings().systemPreviewEnabled())
         return false;
 
-    auto* parent = parentElement();
-    if (!is<HTMLAnchorElement>(parent))
-        return false;
-    return downcast<HTMLAnchorElement>(parent)->isSystemPreviewLink();
+    auto* parent = dynamicDowncast<HTMLAnchorElement>(parentElement());
+    return parent && parent->isSystemPreviewLink();
 }
 #endif
 

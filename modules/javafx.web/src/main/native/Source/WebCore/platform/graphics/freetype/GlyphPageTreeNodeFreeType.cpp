@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Michael Emmel mike.emmel@gmail.com
  * Copyright (C) 2007 Alp Toker <alp.toker@collabora.co.uk>
  *
@@ -35,7 +35,6 @@
 #include "CharacterProperties.h"
 #include "Font.h"
 #include "FontCascade.h"
-#include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
 #include <fontconfig/fcfreetype.h>
@@ -62,21 +61,23 @@ bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
         };
 
     bool haveGlyphs = false;
-    UTF16UChar32Iterator iterator(buffer, bufferLength);
+    unsigned bufferOffset = 0;
     for (unsigned i = 0; i < GlyphPage::size; i++) {
-        UChar32 character = iterator.next();
-        if (character == iterator.end())
+        if (bufferOffset == bufferLength)
             break;
+        char32_t character;
+        U16_NEXT(buffer, bufferOffset, bufferLength, character);
 
         Glyph glyph = FcFreeTypeCharIndex(face, FontCascade::treatAsSpace(character) ? space : character);
         // If the font doesn't support a Default_Ignorable character, replace it with zero with space.
         if (!glyph && (isDefaultIgnorableCodePoint(character) || isControlCharacter(character)))
             glyph = zeroWidthSpaceGlyph();
 
+        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=259205 Determine if the glyph is a color glyph or not.
         if (!glyph)
-            setGlyphForIndex(i, 0);
+            setGlyphForIndex(i, 0, ColorGlyphType::Outline);
         else {
-            setGlyphForIndex(i, glyph);
+            setGlyphForIndex(i, glyph, font.colorGlyphType(glyph));
             haveGlyphs = true;
         }
     }

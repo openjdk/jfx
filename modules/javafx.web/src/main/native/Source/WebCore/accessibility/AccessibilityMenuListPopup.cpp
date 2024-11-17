@@ -68,28 +68,21 @@ bool AccessibilityMenuListPopup::computeAccessibilityIsIgnored() const
     return accessibilityIsIgnoredByDefault();
 }
 
-bool AccessibilityMenuListPopup::canHaveSelectedChildren() const
+AXCoreObject::AccessibilityChildrenVector AccessibilityMenuListPopup::selectedChildren()
 {
-#if USE(ATSPI)
-    return true;
-#else
-    return false;
-#endif
-}
-
-void AccessibilityMenuListPopup::selectedChildren(AccessibilityChildrenVector& result)
-{
-    ASSERT(result.isEmpty());
     if (!canHaveSelectedChildren())
-        return;
+        return { };
 
     if (!childrenInitialized())
         addChildren();
 
+    AccessibilityChildrenVector result;
     for (const auto& child : m_children) {
-        if (child->isMenuListOption() && child->isSelected())
+        auto* liveChild = dynamicDowncast<AccessibilityObject>(child.get());
+        if (liveChild && liveChild->isMenuListOption() && liveChild->isSelected())
             result.append(child.get());
     }
+    return result;
 }
 
 AccessibilityMenuListOption* AccessibilityMenuListPopup::menuListOptionAccessibilityObject(HTMLElement* element) const
@@ -114,13 +107,13 @@ void AccessibilityMenuListPopup::addChildren()
     if (!m_parent)
         return;
 
-    auto* parentNode = m_parent->node();
-    if (!is<HTMLSelectElement>(parentNode))
+    RefPtr select = dynamicDowncast<HTMLSelectElement>(m_parent->node());
+    if (!select)
         return;
 
     m_childrenInitialized = true;
 
-    for (const auto& listItem : downcast<HTMLSelectElement>(*parentNode).listItems()) {
+    for (const auto& listItem : select->listItems()) {
         if (auto* menuListOptionObject = menuListOptionAccessibilityObject(listItem.get())) {
             menuListOptionObject->setParent(this);
             addChild(menuListOptionObject, DescendIfIgnored::No);

@@ -28,7 +28,6 @@
 #include "Document.h"
 #include "GCReachableRef.h"
 #include "IntersectionObserverCallback.h"
-#include "IntersectionObserverEntry.h"
 #include "LengthBox.h"
 #include "ReducedResolutionSeconds.h"
 #include <variant>
@@ -44,8 +43,10 @@ class AbstractSlotVisitor;
 
 namespace WebCore {
 
-class Element;
 class ContainerNode;
+class Document;
+class Element;
+class IntersectionObserverEntry;
 
 struct IntersectionObserverRegistration {
     WeakPtr<IntersectionObserver> observer;
@@ -65,6 +66,7 @@ struct IntersectionObserverData {
 };
 
 class IntersectionObserver : public RefCounted<IntersectionObserver>, public CanMakeWeakPtr<IntersectionObserver> {
+    WTF_MAKE_ISO_ALLOCATED(IntersectionObserver);
 public:
     struct Init {
         std::optional<std::variant<RefPtr<Element>, RefPtr<Document>>> root;
@@ -99,6 +101,9 @@ public:
     void targetDestroyed(Element&);
     void rootDestroyed();
 
+    enum class NeedNotify : bool { No, Yes };
+    NeedNotify updateObservations(Document&);
+
     std::optional<ReducedResolutionSeconds> nowTimestamp() const;
 
     void appendQueuedEntry(Ref<IntersectionObserverEntry>&&);
@@ -112,6 +117,20 @@ private:
 
     bool removeTargetRegistration(Element&);
     void removeAllTargets();
+
+    struct IntersectionObservationState {
+        FloatRect rootBounds;
+        std::optional<FloatRect> absoluteIntersectionRect; // Only computed if intersecting.
+        std::optional<FloatRect> absoluteTargetRect; // Only computed if first observation, or intersecting.
+        std::optional<FloatRect> absoluteRootBounds; // Only computed if observationChanged.
+        float intersectionRatio { 0 };
+        size_t thresholdIndex { 0 };
+        bool canComputeIntersection { false };
+        bool isIntersecting { false };
+        bool observationChanged { false };
+    };
+
+    IntersectionObservationState computeIntersectionState(const IntersectionObserverRegistration&, LocalFrameView&, Element& target, bool applyRootMargin) const;
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_implicitRootDocument;
     WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_root;

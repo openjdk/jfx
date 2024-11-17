@@ -36,7 +36,7 @@
 #include "BaseAudioContext.h"
 #include "CacheStorageConnection.h"
 #include "Document.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "Settings.h"
 #include "WebRTCProvider.h"
@@ -47,7 +47,7 @@ namespace WebCore {
 
 static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
 {
-    auto* document = worklet.document();
+    RefPtr document = worklet.document();
     auto jsRuntimeFlags = document->settings().javaScriptRuntimeFlags();
     RELEASE_ASSERT(document->sessionID());
 
@@ -59,7 +59,9 @@ static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
         *document->sessionID(),
         document->settingsValues(),
         document->referrerPolicy(),
-        worklet.audioContext() ? !worklet.audioContext()->isOfflineContext() : false
+        worklet.audioContext() ? !worklet.audioContext()->isOfflineContext() : false,
+        document->advancedPrivacyProtections(),
+        document->noiseInjectionHashSalt()
     };
 }
 
@@ -76,6 +78,7 @@ AudioWorkletMessagingProxy::AudioWorkletMessagingProxy(AudioWorklet& worklet)
 AudioWorkletMessagingProxy::~AudioWorkletMessagingProxy()
 {
     m_workletThread->stop();
+    m_workletThread->clearProxies();
 }
 
 bool AudioWorkletMessagingProxy::postTaskForModeToWorkletGlobalScope(ScriptExecutionContext::Task&& task, const String& mode)

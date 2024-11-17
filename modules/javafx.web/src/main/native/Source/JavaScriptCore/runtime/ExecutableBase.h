@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 #include "CodeBlockHash.h"
 #include "CodeSpecializationKind.h"
 #include "JITCode.h"
-#include "JSGlobalObject.h"
 #include "UnlinkedCodeBlock.h"
 #include "UnlinkedFunctionExecutable.h"
 
@@ -59,6 +58,7 @@ class ExecutableBase : public JSCell {
     friend class JIT;
     friend class LLIntOffsetsExtractor;
     friend MacroAssemblerCodeRef<JSEntryPtrTag> boundFunctionCallGenerator(VM*);
+    using Base = JSCell;
 
 protected:
     ExecutableBase(VM& vm, Structure* structure)
@@ -66,13 +66,9 @@ protected:
     {
     }
 
-    void finishCreation(VM& vm)
-    {
-        Base::finishCreation(vm);
-    }
+    DECLARE_DEFAULT_FINISH_CREATION;
 
 public:
-    typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
 
     static constexpr bool needsDestruction = true;
@@ -105,24 +101,24 @@ public:
         return type() == NativeExecutableType;
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) { return Structure::create(vm, globalObject, proto, TypeInfo(CellType, StructureFlags), info()); }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
 
 public:
-    Ref<JITCode> generatedJITCodeForCall() const
+    Ref<JSC::JITCode> generatedJITCodeForCall() const
     {
         ASSERT(m_jitCodeForCall);
         return *m_jitCodeForCall;
     }
 
-    Ref<JITCode> generatedJITCodeForConstruct() const
+    Ref<JSC::JITCode> generatedJITCodeForConstruct() const
     {
         ASSERT(m_jitCodeForConstruct);
         return *m_jitCodeForConstruct;
     }
 
-    Ref<JITCode> generatedJITCodeFor(CodeSpecializationKind kind) const
+    Ref<JSC::JITCode> generatedJITCodeFor(CodeSpecializationKind kind) const
     {
         if (kind == CodeForCall)
             return generatedJITCodeForCall();
@@ -205,16 +201,12 @@ public:
     }
 
     // Intrinsics are only for calls, currently.
-    Intrinsic intrinsic() const;
+    inline Intrinsic intrinsic() const;
 
-    Intrinsic intrinsicFor(CodeSpecializationKind kind) const
-    {
-        if (isCall(kind))
-            return intrinsic();
-        return NoIntrinsic;
-    }
+    inline Intrinsic intrinsicFor(CodeSpecializationKind) const;
 
     ImplementationVisibility implementationVisibility() const;
+    InlineAttribute inlineAttribute() const;
 
     CodePtr<JSEntryPtrTag> swapGeneratedJITCodeWithArityCheckForDebugger(CodeSpecializationKind kind, CodePtr<JSEntryPtrTag> jitCodeWithArityCheck)
     {
@@ -241,8 +233,8 @@ public:
     void dump(PrintStream&) const;
 
 protected:
-    RefPtr<JITCode> m_jitCodeForCall;
-    RefPtr<JITCode> m_jitCodeForConstruct;
+    RefPtr<JSC::JITCode> m_jitCodeForCall;
+    RefPtr<JSC::JITCode> m_jitCodeForConstruct;
     CodePtr<JSEntryPtrTag> m_jitCodeForCallWithArityCheck;
     CodePtr<JSEntryPtrTag> m_jitCodeForConstructWithArityCheck;
 };

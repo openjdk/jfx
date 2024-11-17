@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,13 +31,17 @@
 #include "HeapInlines.h"
 #include "HeapIterationScope.h"
 #include "JSCInlines.h"
+#include "JSWebAssemblyModule.h"
 #include "MarkedSpaceInlines.h"
 #include "StackVisitor.h"
 #include "VMEntryRecord.h"
 #include <mutex>
 #include <wtf/Expected.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VMInspector);
 
 VM* VMInspector::m_recentVM { nullptr };
 
@@ -433,10 +437,14 @@ SUPPRESS_ASAN void VMInspector::dumpRegisters(CallFrame* callFrame)
     }
 
     // Dumping from low memory to high memory.
-    bool isWasm = callFrame->isWasmFrame();
-    CodeBlock* codeBlock = isWasm ? nullptr : callFrame->codeBlock();
+    JSCell* owner = callFrame->codeOwnerCell();
+    CodeBlock* codeBlock = jsDynamicCast<CodeBlock*>(owner);
     unsigned numCalleeLocals = codeBlock ? codeBlock->numCalleeLocals() : 0;
     unsigned numVars = codeBlock ? codeBlock->numVars() : 0;
+    bool isWasm = false;
+#if ENABLE(WEBASSEMBLY)
+    isWasm = owner->inherits<JSWebAssemblyModule>();
+#endif
 
     const Register* it;
     const Register* callFrameTop = callFrame->registers();
@@ -503,10 +511,8 @@ SUPPRESS_ASAN void VMInspector::dumpRegisters(CallFrame* callFrame)
 
     StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) {
         if (visitor->callFrame() == callFrame) {
-            unsigned line = 0;
-            unsigned unusedColumn = 0;
-            visitor->computeLineAndColumn(line, unusedColumn);
-            dataLogF("% 2d.1  ReturnVPC        : %10p  %d (line %d)\n", registerNumber, it, visitor->bytecodeIndex().offset(), line);
+            auto lineColumn = visitor->computeLineAndColumn();
+            dataLogF("% 2d.1  ReturnVPC        : %10p  %d (line %d)\n", registerNumber, it, visitor->bytecodeIndex().offset(), lineColumn.line);
                 return IterationStatus::Done;
         }
             return IterationStatus::Continue;
@@ -697,7 +703,7 @@ void VMInspector::dumpSubspaceHashes(VM* vm)
     unsigned count = 0;
     vm->heap.objectSpace().forEachSubspace([&] (const Subspace& subspace) -> IterationStatus {
         const char* name = subspace.name();
-        unsigned hash = StringHasher::computeHash(name);
+        unsigned hash = SuperFastHash::computeHash(name);
         void* hashAsPtr = reinterpret_cast<void*>(static_cast<uintptr_t>(hash));
         dataLogLn("    [", count++, "] ", name, " Hash:", RawPointer(hashAsPtr));
         return IterationStatus::Continue;

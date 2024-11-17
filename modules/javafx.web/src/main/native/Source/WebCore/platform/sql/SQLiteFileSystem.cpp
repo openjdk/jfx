@@ -31,14 +31,19 @@
 #include "config.h"
 #include "SQLiteFileSystem.h"
 
+#include "Logging.h"
 #include "SQLiteDatabase.h"
 #include "SQLiteStatement.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <sqlite3.h>
 #include <wtf/FileSystem.h>
 
-#if PLATFORM(IOS_FAMILY)
-#include <pal/spi/ios/SQLite3SPI.h>
+#if PLATFORM(COCOA)
+#include <pal/spi/cocoa/SQLite3SPI.h>
+#endif
+
+#if PLATFORM(COCOA)
+#include <sys/xattr.h>
 #endif
 
 namespace WebCore {
@@ -59,7 +64,6 @@ bool SQLiteFileSystem::ensureDatabaseDirectoryExists(const String& path)
     if (path.isEmpty())
         return false;
     return FileSystem::makeAllDirectories(path);
-    return false;
 }
 
 bool SQLiteFileSystem::ensureDatabaseFileExists(const String& fileName, bool checkPathOnly)
@@ -73,7 +77,6 @@ bool SQLiteFileSystem::ensureDatabaseFileExists(const String& fileName, bool che
     }
 
     return FileSystem::fileExists(fileName);
-    return false;
 }
 
 bool SQLiteFileSystem::deleteEmptyDatabaseDirectory(const String& path)
@@ -93,6 +96,19 @@ bool SQLiteFileSystem::deleteDatabaseFile(const String& filePath)
     return !fileExists;
 }
 
+#if PLATFORM(COCOA)
+void SQLiteFileSystem::setCanSuspendLockedFileAttribute(const String& filePath)
+{
+    for (const auto* suffix : databaseFileSuffixes) {
+        String path = filePath + suffix;
+        char excluded = 0xff;
+        auto result = setxattr(FileSystem::fileSystemRepresentation(path).data(), "com.apple.runningboard.can-suspend-locked", &excluded, sizeof(excluded), 0, 0);
+        if (result < 0 && !strcmp(suffix, ""))
+            RELEASE_LOG_ERROR(SQLDatabase, "SQLiteFileSystem::setCanSuspendLockedFileAttribute: setxattr failed: %" PUBLIC_LOG_STRING, strerror(errno));
+    }
+}
+#endif
+
 bool SQLiteFileSystem::moveDatabaseFile(const String& oldFilePath, const String& newFilePath)
 {
     bool allMoved = true;
@@ -102,7 +118,7 @@ bool SQLiteFileSystem::moveDatabaseFile(const String& oldFilePath, const String&
     return allMoved;
 }
 
-#if PLATFORM(IOS_FAMILY) && !PLATFORM(JAVA)
+#if PLATFORM(COCOA) && !PLATFORM(JAVA)
 bool SQLiteFileSystem::truncateDatabaseFile(sqlite3* database)
 {
     return sqlite3_file_control(database, 0, SQLITE_TRUNCATE_DATABASE, 0) == SQLITE_OK;

@@ -59,6 +59,8 @@ public:
     SVGPreserveAspectRatioValue(StringView);
     WEBCORE_EXPORT SVGPreserveAspectRatioValue(SVGPreserveAspectRatioType, SVGMeetOrSliceType);
 
+    bool operator==(const SVGPreserveAspectRatioValue&) const = default;
+
     ExceptionOr<void> setAlign(unsigned short);
     unsigned short align() const { return m_align; }
 
@@ -75,12 +77,10 @@ public:
 
     String valueAsString() const;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<SVGPreserveAspectRatioValue> decode(Decoder&);
-
 private:
-    SVGPreserveAspectRatioType m_align { SVG_PRESERVEASPECTRATIO_XMIDYMID };
-    SVGMeetOrSliceType m_meetOrSlice { SVG_MEETORSLICE_MEET };
+    friend struct IPC::ArgumentCoder<SVGPreserveAspectRatioValue, void>;
+    SVGPreserveAspectRatioType m_align { SVGPreserveAspectRatioValue::SVG_PRESERVEASPECTRATIO_XMIDYMID };
+    SVGMeetOrSliceType m_meetOrSlice { SVGPreserveAspectRatioValue::SVG_MEETORSLICE_MEET };
 
     template<typename CharacterType> bool parseInternal(StringParsingBuffer<CharacterType>&, bool validate);
 };
@@ -91,29 +91,6 @@ template<> struct SVGPropertyTraits<SVGPreserveAspectRatioValue> {
     static std::optional<SVGPreserveAspectRatioValue> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
     static String toString(const SVGPreserveAspectRatioValue& type) { return type.valueAsString(); }
 };
-
-template<class Encoder>
-void SVGPreserveAspectRatioValue::encode(Encoder& encoder) const
-{
-    encoder << m_align;
-    encoder << m_meetOrSlice;
-}
-
-template<class Decoder>
-std::optional<SVGPreserveAspectRatioValue> SVGPreserveAspectRatioValue::decode(Decoder& decoder)
-{
-    std::optional<SVGPreserveAspectRatioType> align;
-    decoder >> align;
-    if (!align)
-        return std::nullopt;
-
-    std::optional<SVGMeetOrSliceType> meetOrSlice;
-    decoder >> meetOrSlice;
-    if (!meetOrSlice)
-        return std::nullopt;
-
-    return SVGPreserveAspectRatioValue(*align, *meetOrSlice);
-}
 
 } // namespace WebCore
 

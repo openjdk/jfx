@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@
 #include <PiscesSysutils.h>
 
 #include <PiscesSurface.inl>
+#include <limits.h>
 
 #define SURFACE_NATIVE_PTR 0
 #define SURFACE_LAST SURFACE_NATIVE_PTR
@@ -65,8 +66,8 @@ JNIEXPORT void JNICALL
 Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle,
         jintArray arrayHandle, jint offset, jint scanLength,
         jint x, jint y, jint width, jint height) {
-    jint dstX = 0;
-    jint dstY = 0;
+    const jint dstX = 0;
+    const jint dstY = 0;
 
     Surface* surface;
 
@@ -74,12 +75,33 @@ Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle
                   (*env)->GetLongField(env, objectHandle,
                                        fieldIds[SURFACE_NATIVE_PTR]));
 
-    CORRECT_DIMS(surface, x, y, width, height, dstX, dstY);
+    if (surface == NULL)  {
+        JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Invalid surface");
+        return;
+    }
+    int surfaceWidth = surface->width;
+    int surfaceHeight = surface->height;
+    if (x < 0 || x >= surfaceWidth ||
+        y < 0 || y >= surfaceHeight ||
+        width  < 0 || width  > (surfaceWidth  - x) ||
+        height < 0 || height > (surfaceHeight - y) ||
+        scanLength < width || offset < 0) {
+        JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Illegal arguments");
+        return;
+    }
 
     if ((width > 0) && (height > 0)) {
         jint* dstData;
         jsize dstDataLength = (*env)->GetArrayLength(env, arrayHandle);
+        if (dstY > ((INT_MAX - offset - dstX) / scanLength)) {
+            JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Out of bounds offset or scan length");
+            return;
+        }
         jint dstStart = offset + dstY * scanLength + dstX;
+        if (scanLength > ((INT_MAX - dstStart) / height)) {
+            JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Out of bounds offset or scan length");
+            return;
+        }
         jint dstEnd = dstStart + height * scanLength - 1;
         if ((dstStart < 0) || (dstStart >= dstDataLength) || (dstEnd < 0) || (dstEnd >= dstDataLength)) {
             JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Out of range access of buffer");
@@ -122,20 +144,43 @@ JNIEXPORT void JNICALL
 Java_com_sun_pisces_AbstractSurface_setRGBImpl(JNIEnv* env, jobject objectHandle,
         jintArray arrayHandle, jint offset, jint scanLength,
         jint x, jint y, jint width, jint height) {
-    jint srcX = 0;
-    jint srcY = 0;
+    const jint srcX = 0;
+    const jint srcY = 0;
 
     Surface* surface;
     surface = (Surface*)JLongToPointer(
                   (*env)->GetLongField(env, objectHandle,
                                        fieldIds[SURFACE_NATIVE_PTR]));
 
-    CORRECT_DIMS(surface, x, y, width, height, srcX, srcY);
+    if (surface == NULL)  {
+        JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Invalid surface");
+        return;
+    }
+    int surfaceWidth = surface->width;
+    int surfaceHeight = surface->height;
+    if (x < 0 || x >= surfaceWidth ||
+        y < 0 || y >= surfaceHeight ||
+        width  < 0 || width  > (surfaceWidth  - x) ||
+        height < 0 || height > (surfaceHeight - y) ||
+        scanLength < width || offset < 0) {
+        JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Illegal arguments");
+        return;
+    }
 
     if ((width > 0) && (height > 0)) {
         jint* srcData;
         jsize srcDataLength = (*env)->GetArrayLength(env, arrayHandle);
+
+        if (srcY > ((INT_MAX - offset - srcX) / scanLength)) {
+            JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Out of bounds offset or scan length");
+            return;
+        }
         jint srcStart = offset + srcY * scanLength + srcX;
+
+        if (scanLength > ((INT_MAX - srcStart) / height)) {
+            JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Out of bounds offset or scan length");
+            return;
+        }
         jint srcEnd = srcStart + height * scanLength - 1;
         if ((srcStart < 0) || (srcStart >= srcDataLength) || (srcEnd < 0) || (srcEnd >= srcDataLength)) {
             JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "out of range access of buffer");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package test.robot.javafx.stage;
 
 import java.util.concurrent.CountDownLatch;
-
+import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -36,13 +36,13 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
+@Timeout(value=25000, unit=TimeUnit.MILLISECONDS)
 public class WrongStageFocusWithApplicationModalityTest {
     private static Robot robot;
     private static Stage stage;
@@ -50,17 +50,17 @@ public class WrongStageFocusWithApplicationModalityTest {
     private static CountDownLatch startupLatch = new CountDownLatch(4);
     private static CountDownLatch alertCloseLatch = new CountDownLatch(3);
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
-    @Test(timeout = 25000)
+    @Test
     public void testWindowFocusByClosingAlerts() throws Exception {
         Thread.sleep(3000);
         mouseClick();

@@ -30,9 +30,8 @@
 #include "config.h"
 #include "CSSTokenizerInputStream.h"
 
-#include "HTMLParserIdioms.h"
-
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSTokenizerInputStream);
 
 CSSTokenizerInputStream::CSSTokenizerInputStream(const String& input)
     : m_offset(0)
@@ -43,14 +42,14 @@ CSSTokenizerInputStream::CSSTokenizerInputStream(const String& input)
 
 void CSSTokenizerInputStream::advanceUntilNonWhitespace()
 {
-    // Using HTML space here rather than CSS space since we don't do preprocessing
+    // Using ASCII whitespace here rather than CSS space since we don't do preprocessing
     if (m_string->is8Bit()) {
         const LChar* characters = m_string->characters8();
-        while (m_offset < m_stringLength && isHTMLSpace(characters[m_offset]))
+        while (m_offset < m_stringLength && isASCIIWhitespace(characters[m_offset]))
             ++m_offset;
     } else {
         const UChar* characters = m_string->characters16();
-        while (m_offset < m_stringLength && isHTMLSpace(characters[m_offset]))
+        while (m_offset < m_stringLength && isASCIIWhitespace(characters[m_offset]))
             ++m_offset;
     }
 }

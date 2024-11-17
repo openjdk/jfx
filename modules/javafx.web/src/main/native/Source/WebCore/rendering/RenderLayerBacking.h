@@ -32,24 +32,16 @@
 #include "RenderLayer.h"
 #include "RenderLayerCompositor.h"
 #include "ScrollingCoordinator.h"
+#include <wtf/WeakListHashSet.h>
 
 namespace WebCore {
 
-class EventRegionContext;
-class KeyframeList;
+class BlendingKeyframes;
 class PaintedContentsInfo;
+class RegionContext;
 class RenderLayerCompositor;
 class TiledBacking;
 class TransformationMatrix;
-
-
-#if CPU(ADDRESS64) && PLATFORM(COCOA)
-#define USE_OWNING_LAYER_BEAR_TRAP 1
-#define BEAR_TRAP_VALUE 0xEEEEEEEEEEEEEEEE
-#else
-#define USE_OWNING_LAYER_BEAR_TRAP 0
-#endif
-
 
 enum CompositingLayerType {
     NormalCompositingLayer, // non-tiled layer with backing store
@@ -70,20 +62,16 @@ public:
     explicit RenderLayerBacking(RenderLayer&);
     ~RenderLayerBacking();
 
-#if PLATFORM(IOS_FAMILY)
-    void layerWillBeDestroyed();
-#endif
-
     // Do cleanup while layer->backing() is still valid.
     void willBeDestroyed();
 
     RenderLayer& owningLayer() const { return m_owningLayer; }
 
     // Included layers are non-z-order descendant layers that are painted into this backing.
-    const Vector<WeakPtr<RenderLayer>>& backingSharingLayers() const { return m_backingSharingLayers; }
-    void setBackingSharingLayers(Vector<WeakPtr<RenderLayer>>&&);
+    const SingleThreadWeakListHashSet<RenderLayer>& backingSharingLayers() const { return m_backingSharingLayers; }
+    void setBackingSharingLayers(SingleThreadWeakListHashSet<RenderLayer>&&);
 
-    bool hasBackingSharingLayers() const { return !m_backingSharingLayers.isEmpty(); }
+    bool hasBackingSharingLayers() const { return !m_backingSharingLayers.isEmptyIgnoringNullReferences(); }
 
     void removeBackingSharingLayer(RenderLayer&);
     void clearBackingSharingLayers();
@@ -146,6 +134,8 @@ public:
             return 0;
         case ScrollCoordinationRole::FrameHosting:
             return m_frameHostingNodeID;
+        case ScrollCoordinationRole::PluginHosting:
+            return m_pluginHostingNodeID;
         case ScrollCoordinationRole::ViewportConstrained:
             return m_viewportConstrainedNodeID;
         case ScrollCoordinationRole::Positioning:
@@ -185,12 +175,16 @@ public:
     void contentChanged(ContentChangeType);
 
     // Interface to start, finish, suspend and resume animations
-    bool startAnimation(double timeOffset, const Animation&, const KeyframeList&);
+    bool startAnimation(double timeOffset, const Animation&, const BlendingKeyframes&);
     void animationPaused(double timeOffset, const String& name);
     void animationFinished(const String& name);
     void transformRelatedPropertyDidChange();
     void suspendAnimations(MonotonicTime = MonotonicTime());
     void resumeAnimations();
+
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+    bool updateAcceleratedEffectsAndBaseValues();
+#endif
 
     WEBCORE_EXPORT LayoutRect compositedBounds() const;
     // Returns true if changed.
@@ -208,6 +202,10 @@ public:
     void setNeedsEventRegionUpdate(bool needsUpdate = true) { m_needsEventRegionUpdate = needsUpdate; }
 #endif
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    void clearInteractionRegions();
+#endif
+
     void updateAfterWidgetResize();
     void positionOverflowControlsLayers();
 
@@ -223,9 +221,9 @@ public:
     void tiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/) override;
     void notifyAnimationStarted(const GraphicsLayer*, const String& animationKey, MonotonicTime startTime) override;
     void notifyFlushRequired(const GraphicsLayer*) override;
-    void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) override;
+    void notifySubsequentFlushRequired(const GraphicsLayer*) override;
 
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clip, GraphicsLayerPaintBehavior) override;
+    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior>) override;
 
     float deviceScaleFactor() const override;
     float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const override;
@@ -273,12 +271,12 @@ public:
     GraphicsLayer* layerForScrollCorner() const { return m_layerForScrollCorner.get(); }
     GraphicsLayer* overflowControlsContainer() const { return m_overflowControlsContainer.get(); }
 
+    GraphicsLayer* layerForContents() const;
+
     void adjustOverflowControlsPositionRelativeToAncestor(const RenderLayer&);
 
     bool canCompositeFilters() const { return m_canCompositeFilters; }
-#if ENABLE(FILTERS_LEVEL_2)
     bool canCompositeBackdropFilters() const { return m_canCompositeBackdropFilters; }
-#endif
 
     // Return an estimate of the backing store area (in pixels) allocated by this object's GraphicsLayers.
     WEBCORE_EXPORT double backingStoreMemoryEstimate() const;
@@ -290,6 +288,11 @@ public:
     WEBCORE_EXPORT void setIsTrackingDisplayListReplay(bool);
     WEBCORE_EXPORT String replayDisplayListAsText(OptionSet<DisplayList::AsTextFlag>) const;
 
+    bool shouldPaintUsingCompositeCopy() const { return m_shouldPaintUsingCompositeCopy; }
+
+    void purgeFrontBufferForTesting();
+    void purgeBackBufferForTesting();
+    void markFrontBufferVolatileForTesting();
 private:
     friend class PaintedContentsInfo;
 
@@ -347,12 +350,12 @@ private:
     void updateTransform(const RenderStyle&);
     void updateChildrenTransformAndAnchorPoint(const LayoutRect& primaryGraphicsLayerRect, LayoutSize offsetFromParentGraphicsLayer);
     void updateFilters(const RenderStyle&);
-#if ENABLE(FILTERS_LEVEL_2)
     void updateBackdropFilters(const RenderStyle&);
     void updateBackdropFiltersGeometry();
-#endif
-#if ENABLE(CSS_COMPOSITING)
+    bool updateBackdropRoot();
     void updateBlendMode(const RenderStyle&);
+#if ENABLE(VIDEO)
+    void updateVideoGravity(const RenderStyle&);
 #endif
     void updateContentsScalingFilters(const RenderStyle&);
 
@@ -392,7 +395,7 @@ private:
     bool hasTiledBackingFlatteningLayer() const { return (m_childContainmentLayer && m_isFrameLayerWithTiledBacking); }
     GraphicsLayer* tileCacheFlatteningLayer() const { return m_isFrameLayerWithTiledBacking ? m_childContainmentLayer.get() : nullptr; }
 
-    void paintIntoLayer(const GraphicsLayer*, GraphicsContext&, const IntRect& paintDirtyRect, OptionSet<PaintBehavior>, EventRegionContext* = nullptr);
+    void paintIntoLayer(const GraphicsLayer*, GraphicsContext&, const IntRect& paintDirtyRect, OptionSet<PaintBehavior>, RegionContext* = nullptr);
     OptionSet<RenderLayer::PaintLayerFlag> paintFlagsForLayer(const GraphicsLayer&) const;
 
     void paintDebugOverlays(const GraphicsLayer*, GraphicsContext&);
@@ -406,13 +409,10 @@ private:
 
     bool shouldSetContentsDisplayDelegate() const;
 
-#if USE(OWNING_LAYER_BEAR_TRAP)
-    uintptr_t m_owningLayerBearTrap { BEAR_TRAP_VALUE }; // webkit.org/b.206915
-#endif
     RenderLayer& m_owningLayer;
 
     // A list other layers that paint into this backing store, later than m_owningLayer in paint order.
-    Vector<WeakPtr<RenderLayer>> m_backingSharingLayers;
+    SingleThreadWeakListHashSet<RenderLayer> m_backingSharingLayers;
 
     std::unique_ptr<LayerAncestorClippingStack> m_ancestorClippingStack; // Only used if we are clipped by an ancestor which is not a stacking context.
     std::unique_ptr<LayerAncestorClippingStack> m_overflowControlsHostLayerAncestorClippingStack; // Used when we have an overflow controls host layer which was reparented, and needs clipping by ancestors.
@@ -441,6 +441,7 @@ private:
     ScrollingNodeID m_viewportConstrainedNodeID { 0 };
     ScrollingNodeID m_scrollingNodeID { 0 };
     ScrollingNodeID m_frameHostingNodeID { 0 };
+    ScrollingNodeID m_pluginHostingNodeID { 0 };
     ScrollingNodeID m_positioningNodeID { 0 };
 
     bool m_artificiallyInflatedBounds { false }; // bounds had to be made non-zero to make transform-origin work
@@ -448,15 +449,14 @@ private:
     bool m_isFrameLayerWithTiledBacking { false };
     bool m_requiresOwnBackingStore { true };
     bool m_canCompositeFilters { false };
-#if ENABLE(FILTERS_LEVEL_2)
     bool m_canCompositeBackdropFilters { false };
-#endif
     bool m_backgroundLayerPaintsFixedRootBackground { false };
     bool m_requiresBackgroundLayer { false };
     bool m_hasSubpixelRounding { false };
 #if ENABLE(ASYNC_SCROLLING)
     bool m_needsEventRegionUpdate { true };
 #endif
+    bool m_shouldPaintUsingCompositeCopy { false };
 };
 
 enum CanvasCompositingStrategy {

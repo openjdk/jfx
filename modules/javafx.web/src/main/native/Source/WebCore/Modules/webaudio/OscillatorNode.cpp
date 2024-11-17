@@ -61,7 +61,7 @@ static void clampFrequency(float* frequency, size_t framesToProcess, float nyqui
 ExceptionOr<Ref<OscillatorNode>> OscillatorNode::create(BaseAudioContext& context, const OscillatorOptions& options)
 {
     if (options.type == OscillatorType::Custom && !options.periodicWave)
-        return Exception { InvalidStateError, "Must provide periodicWave when using custom type."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Must provide periodicWave when using custom type."_s };
 
     auto oscillator = adoptRef(*new OscillatorNode(context, options));
     oscillator->suspendIfNeeded();
@@ -105,7 +105,7 @@ ExceptionOr<void> OscillatorNode::setTypeForBindings(OscillatorType type)
 
     if (type == OscillatorType::Custom) {
         if (m_type != OscillatorType::Custom)
-            return Exception { InvalidStateError, "OscillatorNode.type cannot be changed to 'custom'"_s };
+            return Exception { ExceptionCode::InvalidStateError, "OscillatorNode.type cannot be changed to 'custom'"_s };
         return { };
     }
 
@@ -290,7 +290,7 @@ double OscillatorNode::processARate(int n, float* destP, double virtualReadIndex
         float frequency = invRateScale * incr;
         m_periodicWave->waveDataForFundamentalFrequency(frequency, lowerWaveData, higherWaveData, tableInterpolationFactor);
 
-        float sample = doInterpolation(virtualReadIndex, fabs(incr), readIndexMask, tableInterpolationFactor, lowerWaveData, higherWaveData);
+        float sample = doInterpolation(virtualReadIndex, std::abs(incr), readIndexMask, tableInterpolationFactor, lowerWaveData, higherWaveData);
 
         *destP++ = sample;
 
@@ -325,7 +325,7 @@ double OscillatorNode::processKRate(int n, float* destP, double virtualReadIndex
     float incr = frequency * rateScale;
 
     for (int k = 0; k < n; ++k) {
-        float sample = doInterpolation(virtualReadIndex, fabs(incr), readIndexMask, tableInterpolationFactor, lowerWaveData, higherWaveData);
+        float sample = doInterpolation(virtualReadIndex, std::abs(incr), readIndexMask, tableInterpolationFactor, lowerWaveData, higherWaveData);
 
         *destP++ = sample;
 

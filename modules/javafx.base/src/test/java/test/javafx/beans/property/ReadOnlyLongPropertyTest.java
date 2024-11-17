@@ -25,7 +25,7 @@
 
 package test.javafx.beans.property;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ReadOnlyLongProperty;
 import javafx.beans.property.ReadOnlyLongWrapper;
@@ -33,14 +33,14 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ChangeListener;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ReadOnlyLongPropertyTest {
 
     private static final long DEFAULT = 0L;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
     }
 

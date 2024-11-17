@@ -26,26 +26,19 @@
 #pragma once
 
 #include "ASTIdentifier.h"
-
-#include <wtf/UniqueRefVector.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/ReferenceWrapperVector.h>
 
 namespace WGSL::AST {
 
 class Directive : public Node {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(Directive);
 public:
-    using List = UniqueRefVector<Directive>;
+    using List = ReferenceWrapperVector<Directive>;
 
-    Directive(SourceSpan span, Identifier&& name)
+protected:
+    Directive(SourceSpan span)
         : Node(span)
-        , m_name(WTFMove(name))
     { }
-
-    const String& name() const { return m_name.id(); }
-
-private:
-    Identifier m_name;
 };
 
 } // namespace WGSL::AST

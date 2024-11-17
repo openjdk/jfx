@@ -49,8 +49,7 @@ public:
     T& operator*() const { return m_iterator->get(); }
     T* operator->() const { return m_iterator->ptr(); }
 
-    bool operator==(const Iterator& other) const { return m_iterator == other.m_iterator; }
-    bool operator!=(const Iterator& other) const { return m_iterator != other.m_iterator; }
+    friend bool operator==(Iterator, Iterator) = default;
 
     Iterator& operator++()
     {
@@ -86,8 +85,7 @@ public:
     const T& operator*() const { return m_iterator->get(); }
     const T* operator->() const { return m_iterator->ptr(); }
 
-    bool operator==(const Iterator& other) const { return m_iterator == other.m_iterator; }
-    bool operator!=(const Iterator& other) const { return m_iterator != other.m_iterator; }
+    friend bool operator==(Iterator, Iterator) = default;
 
     Iterator& operator++()
     {

@@ -25,7 +25,6 @@
 #include "config.h"
 #include "TextDecoder.h"
 
-#include "HTMLParserIdioms.h"
 #include <pal/text/TextCodec.h>
 #include <pal/text/TextEncodingRegistry.h>
 
@@ -41,13 +40,13 @@ TextDecoder::~TextDecoder() = default;
 
 ExceptionOr<Ref<TextDecoder>> TextDecoder::create(const String& label, Options options)
 {
-    String strippedLabel = stripLeadingAndTrailingHTMLSpaces(label);
+    auto trimmedLabel = label.trim(isASCIIWhitespace);
     const UChar nullCharacter = '\0';
-    if (strippedLabel.contains(nullCharacter))
-        return Exception { RangeError };
-    auto decoder = adoptRef(*new TextDecoder(strippedLabel, options));
+    if (trimmedLabel.contains(nullCharacter))
+        return Exception { ExceptionCode::RangeError };
+    auto decoder = adoptRef(*new TextDecoder(trimmedLabel, options));
     if (!decoder->m_textEncoding.isValid() || !strcmp(decoder->m_textEncoding.name(), "replacement"))
-        return Exception { RangeError };
+        return Exception { ExceptionCode::RangeError };
     return decoder;
 }
 
@@ -75,7 +74,7 @@ ExceptionOr<String> TextDecoder::decode(std::optional<BufferSource::VariantType>
         m_codec->stripByteOrderMark();
 
     if (sawError && m_options.fatal)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
     return result;
 }
 

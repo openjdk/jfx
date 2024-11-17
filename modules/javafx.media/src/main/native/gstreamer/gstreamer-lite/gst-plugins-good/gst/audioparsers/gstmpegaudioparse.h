@@ -51,14 +51,19 @@ struct _GstMpegAudioParse {
   GstBaseParse baseparse;
 
   /*< private >*/
+  GstFormat    upstream_format;
+
   gint         rate;
   gint         channels;
   gint         layer;
   gint         version;
 
   GstClockTime max_bitreservoir;
-  /* samples per frame */
-  gint        spf;
+
+  /* Samples per frame */
+  gint         spf;
+
+  GstClockTime frame_duration;
 
   gint         freerate;
 
@@ -66,6 +71,8 @@ struct _GstMpegAudioParse {
   guint        last_posted_bitrate;
   gint         last_posted_crc, last_crc;
   guint        last_posted_channel_mode, last_mode;
+
+  gboolean     outgoing_frame_is_xing_header;
 
   /* Bitrate from non-vbr headers */
   guint32      hdr_bitrate;
@@ -75,6 +82,7 @@ struct _GstMpegAudioParse {
   guint32      xing_flags;
   guint32      xing_frames;
   GstClockTime xing_total_time;
+  GstClockTime xing_actual_total_time;
   guint32      xing_bytes;
   /* percent -> filepos mapping */
   guchar       xing_seek_table[100];
@@ -95,6 +103,14 @@ struct _GstMpegAudioParse {
   /* LAME info */
   guint32      encoder_delay;
   guint32      encoder_padding;
+
+  /* Gapless playback states */
+  guint32      decoder_delay;
+  guint64      start_of_actual_samples;
+  guint64      end_of_actual_samples;
+  GstClockTime start_padding_time;
+  GstClockTime end_padding_time;
+  GstClockTime total_padding_time;
 };
 
 /**

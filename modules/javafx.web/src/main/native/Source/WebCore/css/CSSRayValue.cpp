@@ -29,30 +29,36 @@
 #include "config.h"
 #include "CSSRayValue.h"
 
+#include "CSSPrimitiveValueMappings.h"
+
 namespace WebCore {
 
 String CSSRayValue::customCSSText() const
 {
-    StringBuilder builder;
+    bool isNonDefaultSize = m_size != CSSValueClosestSide;
+    bool hasPosition = m_position;
+    bool hasCustomCoordinateBox = m_coordinateBox != CSSBoxType::BoxMissing;
 
-    builder.append("ray(");
-    builder.append(m_angle->cssText());
-    builder.append(" ");
-    builder.append(m_size->cssText());
-
-    if (m_isContaining)
-        builder.append(" contain");
-
-    builder.append(")");
-
-    return builder.toString();
+    return makeString(
+        "ray("_s, m_angle->cssText(),
+        isNonDefaultSize ? " "_s : ""_s,
+        isNonDefaultSize ? nameLiteral(m_size) : ""_s,
+        m_isContaining ? " contain"_s : ""_s,
+        hasPosition ? " at "_s : ""_s,
+        hasPosition ? m_position->cssText() : ""_s,
+        ')',
+        hasCustomCoordinateBox ? " "_s : ""_s,
+        hasCustomCoordinateBox ? nameLiteral(toCSSValueID(m_coordinateBox)) : ""_s
+    );
 }
 
 bool CSSRayValue::equals(const CSSRayValue& other) const
 {
     return compareCSSValue(m_angle, other.m_angle)
-        && compareCSSValue(m_size, other.m_size)
-        && m_isContaining == other.m_isContaining;
+        && m_size == other.m_size
+        && m_isContaining == other.m_isContaining
+        && compareCSSValuePtr(m_position, other.m_position)
+        && m_coordinateBox == other.m_coordinateBox;
 }
 
 }

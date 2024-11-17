@@ -1,6 +1,6 @@
 /**
- * Copyright (C) 2006, 2007 Apple Inc. All rights reserved.
- *           (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
+ * Copyright (C) 2006, 2007 Apple Inc. All rights reserved
+ * Copyright (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -16,16 +16,19 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #include "config.h"
 #include "RenderTextControlMultiLine.h"
 
-#include "Frame.h"
 #include "HTMLNames.h"
 #include "HTMLTextAreaElement.h"
 #include "HitTestResult.h"
+#include "LocalFrame.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderLayerScrollableArea.h"
+#include "RenderStyleSetters.h"
 #include "ShadowRoot.h"
 #include "StyleInheritedData.h"
 #include "TextControlInnerElements.h"
@@ -36,21 +39,14 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTextControlMultiLine);
 
 RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element, RenderStyle&& style)
-    : RenderTextControl(element, WTFMove(style))
+    : RenderTextControl(Type::TextControlMultiLine, element, WTFMove(style))
 {
+    ASSERT(isRenderTextControlMultiLine());
 }
 
 RenderTextControlMultiLine::~RenderTextControlMultiLine()
 {
     // Do not add any code here. Add it to willBeDestroyed() instead.
-}
-
-void RenderTextControlMultiLine::willBeDestroyed()
-{
-    if (textAreaElement().isConnected())
-        textAreaElement().rendererWillBeDestroyed();
-
-    RenderTextControl::willBeDestroyed();
 }
 
 HTMLTextAreaElement& RenderTextControlMultiLine::textAreaElement() const
@@ -62,6 +58,10 @@ bool RenderTextControlMultiLine::nodeAtPoint(const HitTestRequest& request, HitT
 {
     if (!RenderTextControl::nodeAtPoint(request, result, locationInContainer, accumulatedOffset, hitTestAction))
         return false;
+
+    const LayoutPoint adjustedPoint(accumulatedOffset + location());
+    if (isPointInOverflowControl(result, locationInContainer.point(), adjustedPoint))
+        return true;
 
     if (result.innerNode() == &textAreaElement() || result.innerNode() == innerTextElement())
         hitInnerTextElement(result, locationInContainer.point(), accumulatedOffset);
@@ -84,7 +84,13 @@ float RenderTextControlMultiLine::getAverageCharWidth()
 
 LayoutUnit RenderTextControlMultiLine::preferredContentLogicalWidth(float charWidth) const
 {
-    return LayoutUnit(ceilf(charWidth * textAreaElement().cols()) + scrollbarThickness());
+    float width = ceilf(charWidth * textAreaElement().cols());
+
+    // We are able to have a vertical scrollbar if the overflow style is scroll or auto
+    if ((style().overflowY() == Overflow::Scroll) || (style().overflowY() == Overflow::Auto))
+        width += scrollbarThickness();
+
+    return LayoutUnit(width);
 }
 
 LayoutUnit RenderTextControlMultiLine::computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const
@@ -104,12 +110,11 @@ void RenderTextControlMultiLine::layoutExcludedChildren(bool relayoutChildren)
     RenderElement* placeholderRenderer = placeholder ? placeholder->renderer() : 0;
     if (!placeholderRenderer)
         return;
-    if (is<RenderBox>(placeholderRenderer)) {
-        auto& placeholderBox = downcast<RenderBox>(*placeholderRenderer);
-        placeholderBox.mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox.borderAndPaddingLogicalWidth(), LengthType::Fixed));
-        placeholderBox.layoutIfNeeded();
-        placeholderBox.setX(borderLeft() + paddingLeft());
-        placeholderBox.setY(borderTop() + paddingTop());
+    if (CheckedPtr placeholderBox = dynamicDowncast<RenderBox>(placeholderRenderer)) {
+        placeholderBox->mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox->borderAndPaddingLogicalWidth(), LengthType::Fixed));
+        placeholderBox->layoutIfNeeded();
+        placeholderBox->setX(borderLeft() + paddingLeft());
+        placeholderBox->setY(borderTop() + paddingTop());
     }
 }
 

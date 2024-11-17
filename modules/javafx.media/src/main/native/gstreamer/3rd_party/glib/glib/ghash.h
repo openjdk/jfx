@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -30,6 +32,7 @@
 #endif
 
 #include <glib/gtypes.h>
+#include <glib/garray.h>
 #include <glib/glist.h>
 
 G_BEGIN_DECLS
@@ -91,6 +94,10 @@ gboolean    g_hash_table_steal_extended    (GHashTable     *hash_table,
                                             gpointer       *stolen_value);
 GLIB_AVAILABLE_IN_ALL
 void        g_hash_table_steal_all         (GHashTable     *hash_table);
+GLIB_AVAILABLE_IN_2_76
+GPtrArray * g_hash_table_steal_all_keys    (GHashTable     *hash_table);
+GLIB_AVAILABLE_IN_2_76
+GPtrArray * g_hash_table_steal_all_values  (GHashTable     *hash_table);
 GLIB_AVAILABLE_IN_ALL
 gpointer    g_hash_table_lookup            (GHashTable     *hash_table,
                                             gconstpointer   key);
@@ -127,6 +134,11 @@ GList *     g_hash_table_get_values        (GHashTable     *hash_table);
 GLIB_AVAILABLE_IN_2_40
 gpointer *  g_hash_table_get_keys_as_array (GHashTable     *hash_table,
                                             guint          *length);
+GLIB_AVAILABLE_IN_2_76
+GPtrArray * g_hash_table_get_keys_as_ptr_array (GHashTable *hash_table);
+
+GLIB_AVAILABLE_IN_2_76
+GPtrArray * g_hash_table_get_values_as_ptr_array (GHashTable *hash_table);
 
 GLIB_AVAILABLE_IN_ALL
 void        g_hash_table_iter_init         (GHashTableIter *iter,
@@ -158,6 +170,10 @@ void        g_hash_table_unref             (GHashTable     *hash_table);
 GLIB_AVAILABLE_IN_ALL
 gboolean g_str_equal    (gconstpointer  v1,
                          gconstpointer  v2);
+
+/* Macro for optimization in the case it is not used as callback function */
+#define g_str_equal(v1, v2) (strcmp ((const char *) (v1), (const char *) (v2)) == 0)
+
 GLIB_AVAILABLE_IN_ALL
 guint    g_str_hash     (gconstpointer  v);
 

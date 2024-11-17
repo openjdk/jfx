@@ -236,6 +236,7 @@ private:
     void completeCursorRequest(IDBRequest&, const IDBResultData&);
 
     void trySchedulePendingOperationTimer();
+    void addCursorRequest(IDBRequest&);
 
     Ref<IDBDatabase> m_database;
     IDBTransactionInfo m_info;
@@ -247,11 +248,11 @@ private:
     RefPtr<DOMException> m_domError;
 
     RefPtr<IDBOpenDBRequest> m_openDBRequest;
+    WeakHashSet<IDBRequest, WeakPtrImplWithEventTargetData> m_cursorRequests;
 
     Deque<RefPtr<IDBClient::TransactionOperation>> m_pendingTransactionOperationQueue;
     Deque<IDBClient::TransactionOperation*> m_transactionOperationsInProgressQueue;
     Deque<RefPtr<IDBClient::TransactionOperation>> m_abortQueue;
-    Event* m_abortOrCommitEvent;
     HashMap<RefPtr<IDBClient::TransactionOperation>, IDBResultData> m_transactionOperationResultMap;
     HashMap<IDBResourceIdentifier, RefPtr<IDBClient::TransactionOperation>> m_transactionOperationMap;
 

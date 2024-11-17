@@ -28,6 +28,7 @@
 
 #include "AffineTransform.h"
 #include "FloatSize.h"
+#include <stdint.h>
 #include <wtf/EnumTraits.h>
 
 // X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
@@ -39,7 +40,7 @@
 namespace WebCore {
 
 struct ImageOrientation {
-    enum class Orientation : int {
+    enum class Orientation : uint8_t {
         FromImage         = 0, // Orientation from the image should be respected.
 
         // This range intentionally matches the orientation values from the EXIF spec.
@@ -56,9 +57,9 @@ struct ImageOrientation {
         None              = OriginTopLeft
     };
 
-    ImageOrientation() = default;
+    constexpr ImageOrientation() = default;
 
-    ImageOrientation(Orientation orientation)
+    constexpr ImageOrientation(Orientation orientation)
         : m_orientation(orientation)
     {
     }
@@ -69,20 +70,17 @@ struct ImageOrientation {
         m_orientation = static_cast<Orientation>(orientation);
     }
 
-    static Orientation fromEXIFValue(int exifValue)
+    static constexpr Orientation fromEXIFValue(int exifValue)
     {
         return isValidEXIFOrientation(exifValue) ? static_cast<Orientation>(exifValue) : Orientation::None;
     }
 
-    operator int() const { return static_cast<int>(m_orientation); }
-    friend bool operator==(const ImageOrientation& lhs, const ImageOrientation& rhs) { return lhs.m_orientation == rhs.m_orientation; }
-    friend bool operator!=(const ImageOrientation& lhs, const ImageOrientation& rhs) { return lhs.m_orientation != rhs.m_orientation; }
-    friend bool operator==(const ImageOrientation& lhs, const Orientation& rhs) { return lhs.m_orientation == rhs; }
-    friend bool operator!=(const ImageOrientation& lhs, const Orientation& rhs) { return lhs.m_orientation != rhs; }
+    constexpr operator int() const { return static_cast<int>(m_orientation); }
+    friend constexpr bool operator==(const ImageOrientation&, const ImageOrientation&) = default;
 
-    Orientation orientation() const { return m_orientation; }
+    constexpr Orientation orientation() const { return m_orientation; }
 
-    bool usesWidthAsHeight() const
+    constexpr bool usesWidthAsHeight() const
     {
         ASSERT(m_orientation != Orientation::FromImage);
         // Values 5 through 8 all flip the width/height.
@@ -97,7 +95,7 @@ struct ImageOrientation {
         }
     }
 
-    AffineTransform transformFromDefault(const FloatSize& drawnSize) const
+    constexpr AffineTransform transformFromDefault(const FloatSize& drawnSize) const
     {
         float w = drawnSize.width();
         float h = drawnSize.height();
@@ -128,7 +126,7 @@ struct ImageOrientation {
         return AffineTransform();
     }
 
-    ImageOrientation withFlippedY() const
+    constexpr ImageOrientation withFlippedY() const
     {
         ASSERT(m_orientation != Orientation::FromImage);
 
@@ -159,22 +157,24 @@ struct ImageOrientation {
     }
 
 private:
-    static const Orientation EXIFFirst = Orientation::OriginTopLeft;
-    static const Orientation EXIFLast = Orientation::OriginLeftBottom;
-    static const Orientation First = Orientation::FromImage;
-    static const Orientation Last = EXIFLast;
+    static constexpr auto EXIFFirst = Orientation::OriginTopLeft;
+    static constexpr auto EXIFLast = Orientation::OriginLeftBottom;
+    static constexpr auto First = Orientation::FromImage;
+    static constexpr auto Last = EXIFLast;
 
-    static bool isValidOrientation(int orientation)
+    static constexpr bool isValidOrientation(int orientation)
     {
         return orientation >= static_cast<int>(First) && orientation <= static_cast<int>(Last);
     }
 
-    static bool isValidEXIFOrientation(int orientation)
+    static constexpr bool isValidEXIFOrientation(int orientation)
     {
         return orientation >= static_cast<int>(EXIFFirst) && orientation <= static_cast<int>(EXIFLast);
     }
 
     Orientation m_orientation { Orientation::None };
 };
+
+TextStream& operator<<(TextStream&, ImageOrientation::Orientation);
 
 } // namespace WebCore

@@ -33,10 +33,7 @@
 #if PLATFORM(X11)
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
-#include <X11/extensions/Xcomposite.h>
 #if PLATFORM(GTK)
-#include <X11/Xutil.h>
-#include <X11/extensions/Xdamage.h>
 #if USE(GTK4)
 #include <gdk/x11/gdkx.h>
 #else
@@ -45,20 +42,7 @@
 #endif
 
 #if USE(EGL)
-#if USE(LIBEPOXY)
 #include <epoxy/egl.h>
-#else
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#endif
-#endif
-
-#if USE(GLX)
-#if USE(LIBEPOXY)
-#include <epoxy/glx.h>
-#else
-#include <GL/glx.h>
-#endif
 #endif
 
 namespace WebCore {
@@ -79,26 +63,9 @@ std::unique_ptr<PlatformDisplay> PlatformDisplayX11::create(GdkDisplay* display)
 }
 #endif
 
-static inline void clearSharingGLContextAtExit()
-{
-#if USE(GLX)
-    // In X11 only one PlatformDisplay instance is allowed per process which is the sharedDisplay one.
-    // We install an atexit handler to clear the sharing GL context to ensure it's released before
-    // the constructor is called, because clearing the context in X11 requires to access PlatformDisplay::sharedDisplay()
-    // and calling it from its constructor causes issues in some systems. See https://bugs.webkit.org/show_bug.cgi?id=238494.
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [] {
-        std::atexit([] {
-            PlatformDisplay::sharedDisplay().clearSharingGLContext();
-        });
-    });
-#endif
-}
-
 PlatformDisplayX11::PlatformDisplayX11(Display* display)
     : m_display(display)
 {
-    clearSharingGLContextAtExit();
 }
 
 #if PLATFORM(GTK)
@@ -106,13 +73,12 @@ PlatformDisplayX11::PlatformDisplayX11(GdkDisplay* display)
     : PlatformDisplay(display)
     , m_display(display ? GDK_DISPLAY_XDISPLAY(display) : nullptr)
 {
-    clearSharingGLContextAtExit();
 }
 #endif
 
 PlatformDisplayX11::~PlatformDisplayX11()
 {
-#if USE(EGL) || USE(GLX)
+#if USE(EGL)
     ASSERT(!m_sharingGLContext);
 #endif
 
@@ -134,122 +100,55 @@ void PlatformDisplayX11::sharedDisplayDidClose()
 #endif
 
 #if USE(EGL)
+#if PLATFORM(GTK)
+EGLDisplay PlatformDisplayX11::gtkEGLDisplay()
+{
+    if (m_eglDisplay != EGL_NO_DISPLAY)
+        return m_eglDisplayOwned ? EGL_NO_DISPLAY : m_eglDisplay;
+
+    if (!m_sharedDisplay)
+        return EGL_NO_DISPLAY;
+
+#if USE(GTK4)
+    m_eglDisplay = gdk_x11_display_get_egl_display(m_sharedDisplay.get());
+    if (m_eglDisplay != EGL_NO_DISPLAY) {
+        m_eglDisplayOwned = false;
+        PlatformDisplay::initializeEGLDisplay();
+#if ENABLE(WEBGL)
+        m_anglePlatform = EGL_PLATFORM_X11_KHR;
+        m_angleNativeDisplay = m_display;
+#endif
+        return m_eglDisplay;
+    }
+#endif
+
+    return EGL_NO_DISPLAY;
+}
+#endif
+
 void PlatformDisplayX11::initializeEGLDisplay()
 {
-#if defined(EGL_KHR_platform_x11)
-    const char* extensions = eglQueryString(nullptr, EGL_EXTENSIONS);
-    if (GLContext::isExtensionSupported(extensions, "EGL_KHR_platform_base")) {
-        if (auto* getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplay")))
-            m_eglDisplay = getPlatformDisplay(EGL_PLATFORM_X11_KHR, m_display, nullptr);
-    } else if (GLContext::isExtensionSupported(extensions, "EGL_EXT_platform_base")) {
-        if (auto* getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT")))
-            m_eglDisplay = getPlatformDisplay(EGL_PLATFORM_X11_KHR, m_display, nullptr);
-    } else
+#if PLATFORM(GTK)
+    if (gtkEGLDisplay() != EGL_NO_DISPLAY)
+        return;
 #endif
+
+    const char* extensions = eglQueryString(nullptr, EGL_EXTENSIONS);
+    if (GLContext::isExtensionSupported(extensions, "EGL_KHR_platform_base"))
+        m_eglDisplay = eglGetPlatformDisplay(EGL_PLATFORM_X11_KHR, m_display, nullptr);
+    else if (GLContext::isExtensionSupported(extensions, "EGL_EXT_platform_base"))
+        m_eglDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_X11_KHR, m_display, nullptr);
+    else
         m_eglDisplay = eglGetDisplay(m_display);
 
     PlatformDisplay::initializeEGLDisplay();
+
+#if ENABLE(WEBGL)
+    m_anglePlatform = EGL_PLATFORM_X11_KHR;
+    m_angleNativeDisplay = m_display;
+#endif
 }
 #endif // USE(EGL)
-
-bool PlatformDisplayX11::supportsXComposite() const
-{
-    if (!m_supportsXComposite) {
-        if (m_display) {
-            int eventBase, errorBase;
-            m_supportsXComposite = XCompositeQueryExtension(m_display, &eventBase, &errorBase);
-        } else
-            m_supportsXComposite = false;
-    }
-    return m_supportsXComposite.value();
-}
-
-bool PlatformDisplayX11::supportsXDamage(std::optional<int>& damageEventBase, std::optional<int>& damageErrorBase) const
-{
-    if (!m_supportsXDamage) {
-        m_supportsXDamage = false;
-#if PLATFORM(GTK)
-        if (m_display) {
-            int eventBase, errorBase;
-            m_supportsXDamage = XDamageQueryExtension(m_display, &eventBase, &errorBase);
-            if (m_supportsXDamage.value()) {
-                m_damageEventBase = eventBase;
-                m_damageErrorBase = errorBase;
-            }
-        }
-#endif
-    }
-
-    damageEventBase = m_damageEventBase;
-    damageErrorBase = m_damageErrorBase;
-    return m_supportsXDamage.value();
-}
-
-bool PlatformDisplayX11::supportsGLX(std::optional<int>& glxErrorBase) const
-{
-#if USE(GLX)
-    if (!m_supportsGLX) {
-        m_supportsGLX = false;
-        if (m_display) {
-            int eventBase, errorBase;
-            m_supportsGLX = glXQueryExtension(m_display, &errorBase, &eventBase);
-            if (m_supportsGLX.value())
-                m_glxErrorBase = errorBase;
-        }
-    }
-
-    glxErrorBase = m_glxErrorBase;
-    return m_supportsGLX.value();
-#else
-    return false;
-#endif
-}
-
-bool PlatformDisplayX11::supportsGLX(std::optional<int>& glxErrorBase) const
-{
-#if USE(GLX)
-    if (!m_supportsGLX) {
-        m_supportsGLX = false;
-        if (m_display) {
-            int eventBase, errorBase;
-            m_supportsGLX = glXQueryExtension(m_display, &errorBase, &eventBase);
-            if (m_supportsGLX.value())
-                m_glxErrorBase = errorBase;
-        }
-    }
-
-    glxErrorBase = m_glxErrorBase;
-    return m_supportsGLX.value();
-#else
-    UNUSED_PARAM(glxErrorBase);
-    return false;
-#endif
-}
-
-void* PlatformDisplayX11::visual() const
-{
-    if (m_visual)
-        return m_visual;
-
-    XVisualInfo visualTemplate;
-    visualTemplate.screen = DefaultScreen(m_display);
-
-    int visualCount = 0;
-    XVisualInfo* visualInfo = XGetVisualInfo(m_display, VisualScreenMask, &visualTemplate, &visualCount);
-    for (int i = 0; i < visualCount; ++i) {
-        auto& info = visualInfo[i];
-        if (info.depth == 32 && info.red_mask == 0xff0000 && info.green_mask == 0x00ff00 && info.blue_mask == 0x0000ff) {
-            m_visual = info.visual;
-            break;
-        }
-    }
-    XFree(visualInfo);
-
-    if (!m_visual)
-        m_visual = DefaultVisual(m_display, DefaultScreen(m_display));
-
-    return m_visual;
-}
 
 #if USE(LCMS)
 cmsHPROFILE PlatformDisplayX11::colorProfile() const

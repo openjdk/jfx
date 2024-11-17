@@ -95,7 +95,6 @@ public:
                 }
 
                 bool operator==(const iterator& other) const { return m_sparceSetIterator == other.m_sparceSetIterator; }
-                bool operator!=(const iterator& other) const { return m_sparceSetIterator != other.m_sparceSetIterator; }
 
             private:
                 Adapter& m_adapter;
@@ -197,11 +196,6 @@ public:
             {
                 ASSERT(m_liveness == other.m_liveness);
                 return m_iter == other.m_iter;
-            }
-
-            bool operator!=(const iterator& other) const
-            {
-                return !(*this == other);
             }
 
         private:
@@ -329,9 +323,8 @@ protected:
                 if (m_workset.isEmpty())
                     continue;
 
-                liveAtHead.reserveCapacity(liveAtHead.size() + m_workset.size());
-                for (unsigned newValue : m_workset)
-                    liveAtHead.uncheckedAppend(newValue);
+                liveAtHead.appendRange(m_workset.begin(), m_workset.end());
+
 
                 m_workset.sort();
 
@@ -346,7 +339,7 @@ protected:
                             liveAtTail.begin(), liveAtTail.end(),
                             m_workset.begin(), m_workset.end(),
                             mergeBuffer.begin());
-                        mergeBuffer.resize(iter - mergeBuffer.begin());
+                        mergeBuffer.shrink(iter - mergeBuffer.begin());
 
                         if (mergeBuffer.size() == liveAtTail.size())
                             continue;

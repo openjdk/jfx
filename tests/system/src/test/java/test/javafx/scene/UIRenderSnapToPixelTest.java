@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,9 @@
  */
 package test.javafx.scene;
 
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Node;
@@ -37,14 +36,10 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
-
-import junit.framework.Assert;
 import test.util.Util;
 
 public class UIRenderSnapToPixelTest {
@@ -53,7 +48,7 @@ public class UIRenderSnapToPixelTest {
     private static volatile Stage stage;
     private static final double epsilon = 0.00001;
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         System.setProperty("glass.win.uiScale", String.valueOf(scale));
         System.setProperty("glass.gtk.uiScale", String.valueOf(scale));
@@ -61,24 +56,24 @@ public class UIRenderSnapToPixelTest {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     @Test
     public void testScrollPaneSnapChildrenToPixels() {
         assumeTrue(PlatformUtil.isLinux() || PlatformUtil.isWindows());
 
-        Assert.assertEquals("Wrong render scale", scale, stage.getRenderScaleY(), 0.0001);
+        assertEquals(scale, stage.getRenderScaleY(), 0.0001, "Wrong render scale");
 
         for (Node node : stage.getScene().getRoot().getChildrenUnmodifiable()) {
             if (node instanceof ScrollPane) {
                 var sp = (ScrollPane) node;
-                Assert.assertEquals("Top inset not snapped to pixel", 0, ((sp.snappedTopInset() * scale) + epsilon) % 1, 0.0001);
-                Assert.assertEquals("Bottom inset not snapped to pixel", 0, ((sp.snappedBottomInset() * scale) + epsilon) % 1, 0.0001);
-                Assert.assertEquals("Left inset not snapped to pixel", 0, ((sp.snappedLeftInset() * scale) + epsilon) % 1, 0.0001);
-                Assert.assertEquals("Right inset not snapped to pixel", 0, ((sp.snappedRightInset() * scale) + epsilon) % 1, 0.0001);
+                assertEquals(0, ((sp.snappedTopInset() * scale) + epsilon) % 1, 0.0001, "Top inset not snapped to pixel");
+                assertEquals(0, ((sp.snappedBottomInset() * scale) + epsilon) % 1, 0.0001, "Bottom inset not snapped to pixel");
+                assertEquals(0, ((sp.snappedLeftInset() * scale) + epsilon) % 1, 0.0001, "Left inset not snapped to pixel");
+                assertEquals(0, ((sp.snappedRightInset() * scale) + epsilon) % 1, 0.0001, "Right inset not snapped to pixel");
             }
         }
     }

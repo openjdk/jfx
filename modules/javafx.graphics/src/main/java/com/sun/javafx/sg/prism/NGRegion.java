@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -439,13 +439,13 @@ public class NGRegion extends NGGroup {
     }
 
     /**
-     * When cleaning the dirty tree, we also have to keep in mind
+     * When cleaning the dirty flag, we also have to keep in mind
      * the NGShape used by the NGRegion
      */
-    @Override public void clearDirtyTree() {
-        super.clearDirtyTree();
+    @Override public void clearDirty() {
+        super.clearDirty();
         if (ngShape != null) {
-            ngShape.clearDirtyTree();
+            ngShape.clearDirty();
         }
     }
 

@@ -25,19 +25,23 @@
 
 #include "config.h"
 #include "WOFFFileFormat.h"
+
+#include "SharedBuffer.h"
+
+#if !HAVE(WOFF_SUPPORT)
+#include <wtf/ByteOrder.h>
 #if !PLATFORM(JAVA)
 #include <zlib.h>
 #endif
-
-#include "SharedBuffer.h"
-#include <wtf/ByteOrder.h>
-
 #if USE(WOFF2)
 #include <woff2/decode.h>
 static const uint32_t kWoff2Signature = 0x774f4632; // "wOF2"
 #endif
+#endif
 
 namespace WebCore {
+
+#if !HAVE(WOFF_SUPPORT) && !PLATFORM(JAVA)
 
 static bool readUInt32(SharedBuffer& buffer, size_t& offset, uint32_t& value)
 {
@@ -50,7 +54,7 @@ static bool readUInt32(SharedBuffer& buffer, size_t& offset, uint32_t& value)
 
     return true;
 }
-#if !PLATFORM(JAVA)
+
 static bool readUInt16(SharedBuffer& buffer, size_t& offset, uint16_t& value)
 {
     ASSERT_ARG(offset, offset <= buffer.size());
@@ -74,7 +78,7 @@ static bool writeUInt16(Vector<uint8_t>& vector, uint16_t value)
     uint16_t bigEndianValue = htons(value);
     return vector.tryAppend(reinterpret_cast_ptr<uint8_t*>(&bigEndianValue), sizeof(bigEndianValue));
 }
-#endif
+
 static const uint32_t woffSignature = 0x774f4646; /* 'wOFF' */
 
 bool isWOFF(SharedBuffer& buffer)
@@ -131,11 +135,6 @@ private:
 bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
 {
     ASSERT_ARG(sfnt, sfnt.isEmpty());
-#if PLATFORM(JAVA)
-    UNUSED_PARAM(woff);
-        UNUSED_PARAM(sfnt);
-    return false;
-#else
 
     size_t offset = 0;
 
@@ -290,15 +289,10 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
     }
 
     return sfnt.size() == totalSfntSize;
-#endif
 }
 
 bool convertWOFFToSfntIfNecessary(RefPtr<SharedBuffer>& buffer)
 {
-#if (PLATFORM(COCOA) || PLATFORM(WIN)) && PLATFORM(JAVA)
-    UNUSED_PARAM(buffer);
-    return false;
-#else
     if (!buffer || !isWOFF(*buffer))
         return false;
 
@@ -309,7 +303,15 @@ bool convertWOFFToSfntIfNecessary(RefPtr<SharedBuffer>& buffer)
         buffer = nullptr;
 
     return true;
-#endif
 }
+
+#else
+
+bool convertWOFFToSfntIfNecessary(RefPtr<SharedBuffer>&)
+{
+    return false;
+}
+
+#endif // HAVE(WOFF_SUPPORT)
 
 } // namespace WebCore

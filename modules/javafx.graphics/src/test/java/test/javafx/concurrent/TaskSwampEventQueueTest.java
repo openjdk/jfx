@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,11 +30,11 @@ import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import javafx.concurrent.Task;
 
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * In this test, the Task is going to attempt to totally swamp the
@@ -52,7 +52,8 @@ public class TaskSwampEventQueueTest {
     private Task task;
     private Thread th;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         barrier = new CyclicBarrier(2);
         eventQueue = new ArrayList<>();
         task = new AbstractTask() {

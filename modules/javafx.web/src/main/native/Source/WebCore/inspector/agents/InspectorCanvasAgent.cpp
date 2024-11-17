@@ -34,24 +34,19 @@
 #include "CanvasRenderingContext2D.h"
 #include "DOMMatrix2DInit.h"
 #include "DOMPointInit.h"
-#include "Document.h"
-#include "Element.h"
 #include "EventLoop.h"
-#include "Frame.h"
-#include "FrameDestructionObserverInlines.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLVideoElement.h"
 #include "ImageBitmap.h"
 #include "ImageBitmapRenderingContext.h"
 #include "ImageData.h"
-#include "InspectorDOMAgent.h"
 #include "InspectorInstrumentation.h"
 #include "InspectorShaderProgram.h"
 #include "InstrumentingAgents.h"
 #include "JSExecState.h"
-#include "OffscreenCanvas.h"
 #include "Path2D.h"
+#include "PlaceholderRenderingContext.h"
 #include "StringAdaptors.h"
 #include "WebGL2RenderingContext.h"
 #include "WebGLBuffer.h"
@@ -84,16 +79,20 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
+
+#if ENABLE(OFFSCREEN_CANVAS)
+#include "OffscreenCanvas.h"
+#include "OffscreenCanvasRenderingContext2D.h"
+#endif
 namespace WebCore {
 
 using namespace Inspector;
 
-InspectorCanvasAgent::InspectorCanvasAgent(PageAgentContext& context)
+InspectorCanvasAgent::InspectorCanvasAgent(WebAgentContext& context)
     : InspectorAgentBase("Canvas"_s, context)
     , m_frontendDispatcher(makeUnique<Inspector::CanvasFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::CanvasBackendDispatcher::create(context.backendDispatcher, this))
     , m_injectedScriptManager(context.injectedScriptManager)
-    , m_inspectedPage(context.inspectedPage)
     , m_canvasDestroyedTimer(*this, &InspectorCanvasAgent::canvasDestroyedTimerFired)
 #if ENABLE(WEBGL)
     , m_programDestroyedTimer(*this, &InspectorCanvasAgent::programDestroyedTimerFired)
@@ -119,25 +118,48 @@ void InspectorCanvasAgent::discardAgent()
 
 Protocol::ErrorStringOr<void> InspectorCanvasAgent::enable()
 {
-    if (m_instrumentingAgents.enabledCanvasAgent() == this)
+    if (enabled())
+        return makeUnexpected("Canvas domain already enabled"_s);
+
+    internalEnable();
+
         return { };
+}
+
+Protocol::ErrorStringOr<void> InspectorCanvasAgent::disable()
+{
+    internalDisable();
+
+    return { };
+}
+
+bool InspectorCanvasAgent::enabled() const
+{
+    return m_instrumentingAgents.enabledCanvasAgent() == this;
+}
+
+void InspectorCanvasAgent::internalEnable()
+{
+    ASSERT(!enabled());
 
     m_instrumentingAgents.setEnabledCanvasAgent(this);
-
-    const auto existsInCurrentPage = [&] (ScriptExecutionContext* scriptExecutionContext) {
-        if (!is<Document>(scriptExecutionContext))
-            return false;
-
-        // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display iframe's WebSockets
-        auto* document = downcast<Document>(scriptExecutionContext);
-        return document->page() == &m_inspectedPage;
-    };
 
     {
         Locker locker { CanvasRenderingContext::instancesLock() };
         for (auto* context : CanvasRenderingContext::instances()) {
+            if (!is<CanvasRenderingContext2D>(context)
+                && !is<ImageBitmapRenderingContext>(context)
+#if ENABLE(OFFSCREEN_CANVAS)
+                && !is<OffscreenCanvasRenderingContext2D>(context)
+#endif
+#if ENABLE(WEBGL)
+                && !is<WebGLRenderingContext>(context)
+                && !is<WebGL2RenderingContext>(context)
+#endif
+            )
+                continue;
 
-            if (existsInCurrentPage(context->canvasBase().scriptExecutionContext()))
+            if (matchesCurrentContext(context->canvasBase().scriptExecutionContext()))
                 bindCanvas(*context, false);
         }
     }
@@ -146,80 +168,29 @@ Protocol::ErrorStringOr<void> InspectorCanvasAgent::enable()
     {
         Locker locker { WebGLProgram::instancesLock() };
         for (auto& [program, contextWebGLBase] : WebGLProgram::instances()) {
-            if (contextWebGLBase && existsInCurrentPage(contextWebGLBase->canvasBase().scriptExecutionContext()))
+            if (contextWebGLBase && matchesCurrentContext(contextWebGLBase->canvasBase().scriptExecutionContext()))
                 didCreateWebGLProgram(*contextWebGLBase, *program);
         }
     }
 #endif
-
-    return { };
 }
 
-Protocol::ErrorStringOr<void> InspectorCanvasAgent::disable()
+void InspectorCanvasAgent::internalDisable()
 {
     m_instrumentingAgents.setEnabledCanvasAgent(nullptr);
 
     reset();
 
     m_recordingAutoCaptureFrameCount = std::nullopt;
-
-    return { };
-}
-
-Protocol::ErrorStringOr<Protocol::DOM::NodeId> InspectorCanvasAgent::requestNode(const Protocol::Canvas::CanvasId& canvasId)
-{
-    Protocol::ErrorString errorString;
-
-    auto inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
-    if (!inspectorCanvas)
-        return makeUnexpected(errorString);
-
-    auto* node = inspectorCanvas->canvasElement();
-    if (!node)
-        makeUnexpected("Missing element of canvas for given canvasId"_s);
-
-    // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
-    int documentNodeId = m_instrumentingAgents.persistentDOMAgent()->boundNodeId(&node->document());
-    if (!documentNodeId)
-        makeUnexpected("Document must have been requested"_s);
-
-    return m_instrumentingAgents.persistentDOMAgent()->pushNodeToFrontend(errorString, documentNodeId, node);
 }
 
 Protocol::ErrorStringOr<String> InspectorCanvasAgent::requestContent(const Protocol::Canvas::CanvasId& canvasId)
 {
     Protocol::ErrorString errorString;
-
     auto inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
         return makeUnexpected(errorString);
-
-    auto result = inspectorCanvas->getCanvasContentAsDataURL(errorString);
-    if (!result)
-        return makeUnexpected(errorString);
-
-    return result;
-}
-
-Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::DOM::NodeId>>> InspectorCanvasAgent::requestClientNodes(const Protocol::Canvas::CanvasId& canvasId)
-{
-    Protocol::ErrorString errorString;
-
-    auto* domAgent = m_instrumentingAgents.persistentDOMAgent();
-    if (!domAgent)
-        return makeUnexpected("DOM domain must be enabled"_s);
-
-    auto inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
-    if (!inspectorCanvas)
-        return makeUnexpected(errorString);
-
-    auto clientNodeIds = JSON::ArrayOf<Protocol::DOM::NodeId>::create();
-    for (auto& clientNode : inspectorCanvas->clientNodes()) {
-        // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
-        if (auto documentNodeId = domAgent->boundNodeId(&clientNode->document()))
-            clientNodeIds->addItem(domAgent->pushNodeToFrontend(errorString, documentNodeId, clientNode));
-    }
-    return clientNodeIds;
+    return inspectorCanvas->getContentAsDataURL();
 }
 
 Protocol::ErrorStringOr<Ref<Protocol::Runtime::RemoteObject>> InspectorCanvasAgent::resolveContext(const Protocol::Canvas::CanvasId& canvasId, const String& objectGroup)
@@ -361,41 +332,6 @@ Protocol::ErrorStringOr<void> InspectorCanvasAgent::setShaderProgramHighlighted(
 
 #endif // ENABLE(WEBGL)
 
-void InspectorCanvasAgent::frameNavigated(Frame& frame)
-{
-    if (frame.isMainFrame()) {
-        reset();
-        return;
-    }
-
-    Vector<InspectorCanvas*> inspectorCanvases;
-    for (auto& inspectorCanvas : m_identifierToInspectorCanvas.values()) {
-        if (auto* canvasElement = inspectorCanvas->canvasElement()) {
-            if (canvasElement->document().frame() == &frame)
-                inspectorCanvases.append(inspectorCanvas.get());
-        }
-    }
-
-    for (auto* inspectorCanvas : inspectorCanvases)
-        unbindCanvas(*inspectorCanvas);
-}
-
-void InspectorCanvasAgent::didChangeCSSCanvasClientNodes(CanvasBase& canvasBase)
-{
-    auto* context = canvasBase.renderingContext();
-    if (!context) {
-        ASSERT_NOT_REACHED();
-        return;
-    }
-
-    auto inspectorCanvas = findInspectorCanvas(*context);
-    ASSERT(inspectorCanvas);
-    if (!inspectorCanvas)
-        return;
-
-    m_frontendDispatcher->clientNodesChanged(inspectorCanvas->identifier());
-}
-
 void InspectorCanvasAgent::didCreateCanvasRenderingContext(CanvasRenderingContext& context)
 {
     if (findInspectorCanvas(context)) {
@@ -412,6 +348,21 @@ void InspectorCanvasAgent::didCreateCanvasRenderingContext(CanvasRenderingContex
     }
 }
 
+void InspectorCanvasAgent::didChangeCanvasSize(CanvasRenderingContext& context)
+{
+    RefPtr<InspectorCanvas> inspectorCanvas;
+
+    if (!inspectorCanvas)
+        inspectorCanvas = findInspectorCanvas(context);
+
+    ASSERT(inspectorCanvas);
+    if (!inspectorCanvas)
+        return;
+
+    const auto& size = inspectorCanvas->canvasContext().canvasBase().size();
+    m_frontendDispatcher->canvasSizeChanged(inspectorCanvas->identifier(), size.width(), size.height());
+}
+
 void InspectorCanvasAgent::didChangeCanvasMemory(CanvasRenderingContext& context)
 {
     RefPtr<InspectorCanvas> inspectorCanvas;
@@ -423,13 +374,10 @@ void InspectorCanvasAgent::didChangeCanvasMemory(CanvasRenderingContext& context
     if (!inspectorCanvas)
         return;
 
-    // FIXME: <https://webkit.org/b/180833> Web Inspector: support OffscreenCanvas for Canvas related operations
-
-    if (auto* node = inspectorCanvas->canvasElement())
-        m_frontendDispatcher->canvasMemoryChanged(inspectorCanvas->identifier(), node->memoryCost());
+    m_frontendDispatcher->canvasMemoryChanged(inspectorCanvas->identifier(), inspectorCanvas->canvasContext().canvasBase().memoryCost());
 }
 
-void InspectorCanvasAgent::canvasChanged(CanvasBase& canvasBase, const std::optional<FloatRect>&)
+void InspectorCanvasAgent::canvasChanged(CanvasBase& canvasBase, const FloatRect&)
 {
     auto* context = canvasBase.renderingContext();
     if (!context)
@@ -630,11 +578,13 @@ void InspectorCanvasAgent::recordAction(CanvasRenderingContext& canvasRenderingC
 void InspectorCanvasAgent::startRecording(InspectorCanvas& inspectorCanvas, Protocol::Recording::Initiator initiator, RecordingOptions&& recordingOptions)
 {
     auto& context = inspectorCanvas.canvasContext();
-
     // FIXME: <https://webkit.org/b/201651> Web Inspector: Canvas: support canvas recordings for WebGPUDevice
 
     if (!is<CanvasRenderingContext2D>(context)
         && !is<ImageBitmapRenderingContext>(context)
+#if ENABLE(OFFSCREEN_CANVAS)
+        && !is<OffscreenCanvasRenderingContext2D>(context)
+#endif
 #if ENABLE(WEBGL)
         && !is<WebGLRenderingContext>(context)
         && !is<WebGL2RenderingContext>(context)
@@ -729,6 +679,8 @@ InspectorCanvas& InspectorCanvasAgent::bindCanvas(CanvasRenderingContext& contex
 
 void InspectorCanvasAgent::unbindCanvas(InspectorCanvas& inspectorCanvas)
 {
+    didFinishRecordingCanvasFrame(inspectorCanvas.canvasContext(), true);
+
 #if ENABLE(WEBGL)
     Vector<InspectorShaderProgram*> programsToRemove;
     for (auto& inspectorProgram : m_identifierToInspectorProgram.values()) {

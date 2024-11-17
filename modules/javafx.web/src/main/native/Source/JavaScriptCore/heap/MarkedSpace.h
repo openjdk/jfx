@@ -96,7 +96,7 @@ public:
     MarkedSpace(Heap*);
     ~MarkedSpace();
 
-    Heap& heap() const;
+    JSC::Heap& heap() const;
 
     void lastChanceToFinalize(); // Must call stopAllocatingForGood first.
     void freeMemory();
@@ -105,8 +105,10 @@ public:
 
     void prepareForAllocation();
 
-    template<typename Visitor> void visitWeakSets(Visitor&);
     void reapWeakSets();
+
+    template<typename Visitor>
+    Ref<SharedTask<void(Visitor&)>> forEachWeakInParallel();
 
     MarkedBlockSet& blocks() { return m_blocks; }
 
@@ -152,6 +154,7 @@ public:
 
     HeapVersion markingVersion() const { return m_markingVersion; }
     HeapVersion newlyAllocatedVersion() const { return m_newlyAllocatedVersion; }
+    HeapVersion edenVersion() const { return m_edenVersion; }
 
     const Vector<PreciseAllocation*>& preciseAllocations() const { return m_preciseAllocations; }
     unsigned preciseAllocationsNurseryOffset() const { return m_preciseAllocationsNurseryOffset; }
@@ -212,6 +215,7 @@ private:
     size_t m_capacity { 0 };
     HeapVersion m_markingVersion { initialVersion };
     HeapVersion m_newlyAllocatedVersion { initialVersion };
+    HeapVersion m_edenVersion { initialVersion };
     bool m_isIterating { false };
     bool m_isMarking { false };
     Lock m_directoryLock;

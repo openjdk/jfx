@@ -27,12 +27,17 @@
 
 #include "EventNames.h"
 #include "MouseEvent.h"
+#include "Node.h"
 #include "PointerEventTypeNames.h"
 #include "PointerID.h"
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
 #include "PlatformTouchEventIOS.h"
+#endif
+
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(WPE)
+#include "PlatformTouchEvent.h"
 #endif
 
 namespace WebCore {
@@ -55,7 +60,7 @@ public:
         bool isPrimary { false };
     };
 
-    enum class IsPrimary : uint8_t { No, Yes };
+    enum class IsPrimary : bool { No, Yes };
 
     static Ref<PointerEvent> create(const AtomString& type, Init&& initializer)
     {
@@ -77,13 +82,13 @@ public:
         return adoptRef(*new PointerEvent);
     }
 
-    static RefPtr<PointerEvent> create(short button, const MouseEvent&, PointerID, const String& pointerType);
-    static Ref<PointerEvent> create(const AtomString& type, short button, const MouseEvent&, PointerID, const String& pointerType);
+    static RefPtr<PointerEvent> create(MouseButton, const MouseEvent&, PointerID, const String& pointerType);
+    static Ref<PointerEvent> create(const AtomString& type, MouseButton, const MouseEvent&, PointerID, const String& pointerType);
     static Ref<PointerEvent> create(const AtomString& type, PointerID, const String& pointerType, IsPrimary = IsPrimary::No);
 
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
-    static Ref<PointerEvent> create(const PlatformTouchEvent&, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&);
-    static Ref<PointerEvent> create(const AtomString& type, const PlatformTouchEvent&, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&);
+#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE))
+    static Ref<PointerEvent> create(const PlatformTouchEvent&, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&, const IntPoint& touchDelta = { });
+    static Ref<PointerEvent> create(const AtomString& type, const PlatformTouchEvent&, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&, const IntPoint& touchDelta = { });
 #endif
 
     virtual ~PointerEvent();
@@ -110,19 +115,34 @@ public:
     RefPtr<Node> fromElement() const final { return nullptr; }
 
     EventInterface eventInterface() const override;
+    static bool typeIsUpOrDown(const AtomString& type);
+    static MouseButton buttonForType(const AtomString& type) { return !typeIsUpOrDown(type) ? MouseButton::PointerHasNotChanged : MouseButton::Left; }
 
 private:
     static bool typeIsEnterOrLeave(const AtomString& type);
     static CanBubble typeCanBubble(const AtomString& type) { return typeIsEnterOrLeave(type) ? CanBubble::No : CanBubble::Yes; }
     static IsCancelable typeIsCancelable(const AtomString& type) { return typeIsEnterOrLeave(type) ? IsCancelable::No : IsCancelable::Yes; }
     static IsComposed typeIsComposed(const AtomString& type) { return typeIsEnterOrLeave(type) ? IsComposed::No : IsComposed::Yes; }
+    static unsigned short buttonsForType(const AtomString& type)
+    {
+        // We have contact with the touch surface for most events except when we've released the touch or canceled it.
+        auto& eventNames = WebCore::eventNames();
+        return (type == eventNames.pointerupEvent || type == eventNames.pointeroutEvent || type == eventNames.pointerleaveEvent || type == eventNames.pointercancelEvent) ? 0 : 1;
+    }
+    static float pressureForPressureInsensitiveInputDevices(unsigned short buttons)
+    {
+        // https://www.w3.org/TR/pointerevents/#dfn-active-buttons-state
+        bool isInActiveButtonsState = buttons;
+        // https://www.w3.org/TR/pointerevents/#dom-pointerevent-pressure
+        return isInActiveButtonsState ? 0.5 : 0;
+    }
 
     PointerEvent();
     PointerEvent(const AtomString&, Init&&);
-    PointerEvent(const AtomString& type, short button, const MouseEvent&, PointerID, const String& pointerType);
+    PointerEvent(const AtomString& type, MouseButton, const MouseEvent&, PointerID, const String& pointerType);
     PointerEvent(const AtomString& type, PointerID, const String& pointerType, IsPrimary);
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
-    PointerEvent(const AtomString& type, const PlatformTouchEvent&, IsCancelable isCancelable, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&);
+#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE))
+    PointerEvent(const AtomString& type, const PlatformTouchEvent&, IsCancelable isCancelable, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&, const IntPoint& touchDelta = { });
 #endif
 
     PointerID m_pointerId { mousePointerID };
@@ -141,6 +161,12 @@ inline bool PointerEvent::typeIsEnterOrLeave(const AtomString& type)
 {
     auto& eventNames = WebCore::eventNames();
     return type == eventNames.pointerenterEvent || type == eventNames.pointerleaveEvent;
+}
+
+inline bool PointerEvent::typeIsUpOrDown(const AtomString& type)
+{
+    auto& eventNames = WebCore::eventNames();
+    return type == eventNames.pointerupEvent || type == eventNames.pointerdownEvent;
 }
 
 } // namespace WebCore

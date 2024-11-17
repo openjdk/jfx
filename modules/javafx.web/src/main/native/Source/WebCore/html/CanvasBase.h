@@ -25,7 +25,11 @@
 
 #pragma once
 
+#include "CanvasNoiseInjection.h"
+#include "FloatRect.h"
 #include "IntSize.h"
+#include "PixelBuffer.h"
+#include "TaskSource.h"
 #include <wtf/HashSet.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
@@ -37,15 +41,17 @@ class CanvasBase;
 class CanvasObserver;
 class CanvasRenderingContext;
 class Element;
-class GraphicsClient;
+class Event;
 class GraphicsContext;
 class GraphicsContextStateSaver;
 class Image;
 class ImageBuffer;
-class FloatRect;
+class IntRect;
 class ScriptExecutionContext;
 class SecurityOrigin;
 class WebCoreOpaqueRoot;
+
+enum class ShouldApplyPostProcessingToDirtyRect : bool { No, Yes };
 
 class CanvasDisplayBufferObserver : public CanMakeWeakPtr<CanvasDisplayBufferObserver> {
 public:
@@ -77,7 +83,7 @@ public:
 
     virtual AffineTransform baseTransform() const;
 
-    void makeRenderingResultsAvailable();
+    void makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect = ShouldApplyPostProcessingToDirtyRect::Yes);
 
     size_t memoryCost() const;
     size_t externalMemoryCost() const;
@@ -93,7 +99,8 @@ public:
 
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
-    void notifyObserversCanvasChanged(const std::optional<FloatRect>&);
+    bool hasObserver(CanvasObserver&) const;
+    void notifyObserversCanvasChanged(const FloatRect&);
     void notifyObserversCanvasResized();
     void notifyObserversCanvasDestroyed(); // Must be called in destruction before clearing m_context.
     void addDisplayBufferObserver(CanvasDisplayBufferObserver&);
@@ -106,9 +113,9 @@ public:
     virtual GraphicsContext* drawingContext() const;
     virtual GraphicsContext* existingDrawingContext() const;
 
-    GraphicsClient* graphicsClient() const;
-
-    virtual void didDraw(const std::optional<FloatRect>&) = 0;
+    // !rect means caller knows the full canvas is invalidated previously.
+    void didDraw(const std::optional<FloatRect>& rect) { return didDraw(rect, ShouldApplyPostProcessingToDirtyRect::Yes); }
+    virtual void didDraw(const std::optional<FloatRect>&, ShouldApplyPostProcessingToDirtyRect);
 
     virtual Image* copiedImage() const = 0;
     virtual void clearCopiedImage() const = 0;
@@ -116,29 +123,41 @@ public:
     bool hasActiveInspectorCanvasCallTracer() const;
 
     bool shouldAccelerate(const IntSize&) const;
-    bool shouldAccelerate(unsigned area) const;
 
-    WEBCORE_EXPORT static size_t maxActivePixelMemory();
-    WEBCORE_EXPORT static void setMaxPixelMemoryForTesting(std::optional<size_t>);
     WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
 
+    virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) = 0;
+    virtual void dispatchEvent(Event&) = 0;
+
+    bool postProcessPixelBufferResults(Ref<PixelBuffer>&&) const;
+    void recordLastFillText(const String&);
+
+    void resetGraphicsContextState() const;
+
+    void setNoiseInjectionSalt(NoiseInjectionHashSalt salt) { m_canvasNoiseHashSalt = salt; }
+    bool havePendingCanvasNoiseInjection() const { return m_canvasNoiseInjection.haveDirtyRects(); }
+
 protected:
-    explicit CanvasBase(IntSize);
+    explicit CanvasBase(IntSize, const std::optional<NoiseInjectionHashSalt>&);
 
     virtual ScriptExecutionContext* canvasBaseScriptExecutionContext() const = 0;
 
-    virtual void setSize(const IntSize& size) { m_size = size; }
+    virtual void setSize(const IntSize&);
 
     RefPtr<ImageBuffer> setImageBuffer(RefPtr<ImageBuffer>&&) const;
     virtual bool hasCreatedImageBuffer() const { return false; }
     static size_t activePixelMemory();
 
-    void resetGraphicsContextState() const;
-
-    RefPtr<ImageBuffer> allocateImageBuffer(bool usesDisplayListDrawing, bool avoidBackendSizeCheckForTesting) const;
+    RefPtr<ImageBuffer> allocateImageBuffer() const;
+    String lastFillText() const { return m_lastFillText; }
+    void addCanvasNeedingPreparationForDisplayOrFlush();
+    void removeCanvasNeedingPreparationForDisplayOrFlush();
 
 private:
+    bool shouldInjectNoiseBeforeReadback() const;
     virtual void createImageBuffer() const { }
+    bool shouldAccelerate(uint64_t area) const;
+
 
     mutable IntSize m_size;
     mutable Lock m_imageBufferAssignmentLock;
@@ -146,6 +165,10 @@ private:
     mutable size_t m_imageBufferCost { 0 };
     mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
 
+    String m_lastFillText;
+
+    CanvasNoiseInjection m_canvasNoiseInjection;
+    Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt, std::numeric_limits<int64_t>::max()>> m_canvasNoiseHashSalt;
     bool m_originClean { true };
 #if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };

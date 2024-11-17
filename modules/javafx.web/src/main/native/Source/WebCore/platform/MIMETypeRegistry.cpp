@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -87,9 +87,7 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
     "application/x-tiff",
     "application/x-win-bitmap",
 #endif
-#if USE(CG) || ENABLE(APNG)
     "image/apng",
-#endif
 #if HAVE(AVIF) || USE(AVIF)
     "image/avif",
 #endif
@@ -98,19 +96,19 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
     "image/gi_",
 #endif
     "image/gif",
-#if USE(CG) || USE(OPENJPEG)
-    "image/jp2",
+#if HAVE(HEIC)
+    "image/heic",
+    "image/heic-sequence",
+    "image/heif",
+    "image/heif-sequence",
 #endif
 #if PLATFORM(IOS_FAMILY)
     "image/jp_",
     "image/jpe_",
 #endif
     "image/jpeg",
-#if !USE(CG) && USE(OPENJPEG)
-    "image/jpeg2000",
-#endif
     "image/jpg",
-#if USE(JPEGXL)
+#if HAVE(JPEGXL) || USE(JPEGXL)
     "image/jxl",
 #endif
 #if PLATFORM(IOS_FAMILY)
@@ -225,10 +223,10 @@ HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedNonImageMI
     return types;
 }
 
-const HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedMediaMIMETypes()
+const HashSet<String>& MIMETypeRegistry::supportedMediaMIMETypes()
 {
     static NeverDestroyed types = [] {
-        HashSet<String, ASCIICaseInsensitiveHash> types;
+        HashSet<String> types;
 #if ENABLE(VIDEO)
         MediaPlayer::getSupportedTypes(types);
 #endif
@@ -605,9 +603,10 @@ static inline bool isValidXMLMIMETypeChar(UChar c)
         || c == '-' || c == '.' || c == '^' || c == '_' || c == '`' || c == '{' || c == '|' || c == '}' || c == '~';
 }
 
+// https://mimesniff.spec.whatwg.org/#xml-mime-type
 bool MIMETypeRegistry::isXMLMIMEType(const String& mimeType)
 {
-    if (equalLettersIgnoringASCIICase(mimeType, "text/xml"_s) || equalLettersIgnoringASCIICase(mimeType, "application/xml"_s) || equalLettersIgnoringASCIICase(mimeType, "text/xsl"_s))
+    if (equalLettersIgnoringASCIICase(mimeType, "text/xml"_s) || equalLettersIgnoringASCIICase(mimeType, "application/xml"_s))
         return true;
 
     if (!mimeType.endsWithIgnoringASCIICase("+xml"_s))
@@ -632,17 +631,6 @@ bool MIMETypeRegistry::isXMLEntityMIMEType(StringView mimeType)
 {
     return equalLettersIgnoringASCIICase(mimeType, "text/xml-external-parsed-entity"_s)
         || equalLettersIgnoringASCIICase(mimeType, "application/xml-external-parsed-entity"_s);
-}
-
-bool MIMETypeRegistry::isJavaAppletMIMEType(const String& mimeType)
-{
-    // Since this set is very limited and is likely to remain so we won't bother with the overhead
-    // of using a hash set.
-    // Any of the MIME types below may be followed by any number of specific versions of the JVM,
-    // which is why we use startsWith()
-    return startsWithLettersIgnoringASCIICase(mimeType, "application/x-java-applet"_s)
-        || startsWithLettersIgnoringASCIICase(mimeType, "application/x-java-bean"_s)
-        || startsWithLettersIgnoringASCIICase(mimeType, "application/x-java-vm"_s);
 }
 
 bool MIMETypeRegistry::isPDFMIMEType(const String& mimeType)

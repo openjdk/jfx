@@ -40,7 +40,7 @@ float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& 
     if (style.baselineShift() == BaselineShift::Length) {
         auto baselineShiftValueLength = style.baselineShiftValue();
         if (baselineShiftValueLength.lengthType() == SVGLengthType::Percentage)
-            return baselineShiftValueLength.valueAsPercentage() * m_font.pixelSize();
+            return baselineShiftValueLength.valueAsPercentage() * m_font.size();
 
         SVGLengthContext lengthContext(context);
         return baselineShiftValueLength.value(lengthContext);
@@ -101,7 +101,7 @@ AlignmentBaseline SVGTextLayoutEngineBaseline::dominantBaselineToAlignmentBaseli
         return AlignmentBaseline::TextBeforeEdge;
     default:
         ASSERT_NOT_REACHED();
-        return AlignmentBaseline::Auto;
+        return AlignmentBaseline::Baseline;
     }
 }
 
@@ -111,9 +111,9 @@ float SVGTextLayoutEngineBaseline::calculateAlignmentBaselineShift(bool isVertic
     ASSERT(textRendererParent);
 
     AlignmentBaseline baseline = textRenderer.style().svgStyle().alignmentBaseline();
-    if (baseline == AlignmentBaseline::Auto || baseline == AlignmentBaseline::Baseline) {
+    if (baseline == AlignmentBaseline::Baseline) {
         baseline = dominantBaselineToAlignmentBaseline(isVerticalText, textRendererParent);
-        ASSERT(baseline != AlignmentBaseline::Auto && baseline != AlignmentBaseline::Baseline);
+        ASSERT(baseline != AlignmentBaseline::Baseline);
     }
 
     const FontMetrics& fontMetrics = m_font.metricsOfPrimaryFont();
@@ -138,9 +138,6 @@ float SVGTextLayoutEngineBaseline::calculateAlignmentBaselineShift(bool isVertic
     case AlignmentBaseline::Mathematical:
         return fontMetrics.floatAscent() / 2;
     case AlignmentBaseline::Baseline:
-        ASSERT_NOT_REACHED();
-        return 0;
-    case AlignmentBaseline::Auto:
         ASSERT_NOT_REACHED();
         return 0;
     }
@@ -182,7 +179,7 @@ float SVGTextLayoutEngineBaseline::calculateGlyphOrientationAngle(bool isVertica
 
 static inline bool glyphOrientationIsMultiplyOf180Degrees(float orientationAngle)
 {
-    return !fabsf(fmodf(orientationAngle, 180));
+    return !(fmodf(orientationAngle, 180));
 }
 
 float SVGTextLayoutEngineBaseline::calculateGlyphAdvanceAndOrientation(bool isVerticalText, SVGTextMetrics& metrics, float angle, float& xOrientationShift, float& yOrientationShift) const

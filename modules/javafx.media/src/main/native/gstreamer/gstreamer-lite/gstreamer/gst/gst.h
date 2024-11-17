@@ -36,6 +36,7 @@
 #include <gst/gstbuffer.h>
 #include <gst/gstbufferlist.h>
 #include <gst/gstbufferpool.h>
+#include <gst/gstbytearrayinterface.h>
 #include <gst/gstcaps.h>
 #include <gst/gstcapsfeatures.h>
 #include <gst/gstchildproxy.h>
@@ -100,6 +101,15 @@
 
 /* API compatibility stuff */
 #include <gst/gstcompat.h>
+
+#ifndef GSTREAMER_LITE
+#ifdef __APPLE__
+#  include <TargetConditionals.h>
+#  if TARGET_OS_MAC && !TARGET_OS_IPHONE
+#   include <gst/gstmacos.h>
+#  endif
+#endif
+#endif // GSTREAMER_LITE
 
 G_BEGIN_DECLS
 

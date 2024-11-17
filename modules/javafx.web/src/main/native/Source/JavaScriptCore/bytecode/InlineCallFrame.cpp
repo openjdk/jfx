@@ -31,6 +31,8 @@
 
 namespace JSC {
 
+DEFINE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(InlineCallFrame);
+
 JSFunction* InlineCallFrame::calleeConstant() const
 {
     if (calleeRecovery.isConstant())
@@ -118,8 +120,14 @@ void printInternal(PrintStream& out, JSC::InlineCallFrame::Kind kind)
     case JSC::InlineCallFrame::ProxyObjectLoadCall:
         out.print("ProxyObjectLoadCall");
         return;
+    case JSC::InlineCallFrame::ProxyObjectStoreCall:
+        out.print("ProxyObjectStoreCall");
+        return;
     case JSC::InlineCallFrame::BoundFunctionCall:
         out.print("BoundFunctionCall");
+        return;
+    case JSC::InlineCallFrame::BoundFunctionTailCall:
+        out.print("BoundFunctionTailCall");
         return;
     }
     RELEASE_ASSERT_NOT_REACHED();

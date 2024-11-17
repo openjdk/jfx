@@ -59,7 +59,7 @@
 #include "pbutils.h"
 #include "pbutils-private.h"
 
-#include "gst/gst-i18n-plugin.h"
+#include <glib/gi18n-lib.h>
 
 #ifndef GST_DISABLE_GST_DEBUG
 #define GST_CAT_DEFAULT gst_pb_utils_ensure_debug_category()

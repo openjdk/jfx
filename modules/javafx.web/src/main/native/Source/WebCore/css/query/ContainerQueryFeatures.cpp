@@ -26,7 +26,8 @@
 #include "ContainerQueryFeatures.h"
 
 #include "ContainerQueryEvaluator.h"
-#include "RenderBox.h"
+#include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore::CQ::Features {
@@ -34,7 +35,7 @@ namespace WebCore::CQ::Features {
 using namespace MQ;
 
 struct SizeFeatureSchema : public FeatureSchema {
-    SizeFeatureSchema(const AtomString& name, Type type, ValueType valueType, Vector<CSSValueID>&& valueIdentifiers = { })
+    SizeFeatureSchema(const AtomString& name, Type type, ValueType valueType, FixedVector<CSSValueID>&& valueIdentifiers = { })
         : FeatureSchema(name, type, valueType, WTFMove(valueIdentifiers))
     { }
 
@@ -44,29 +45,14 @@ struct SizeFeatureSchema : public FeatureSchema {
         // or the query container does not support container size queries on the relevant axes, then the result of
         // evaluating the size feature is unknown."
         // https://drafts.csswg.org/css-contain-3/#size-container
-        if (!is<RenderBox>(context.renderer))
+        CheckedPtr renderer = dynamicDowncast<RenderBox>(context.renderer.get());
+        if (!renderer)
             return MQ::EvaluationResult::Unknown;
 
-        auto& renderer = downcast<RenderBox>(*context.renderer);
-
-        auto hasEligibleContainment = [&] {
-            if (!renderer.shouldApplyLayoutContainment())
-                return false;
-            switch (renderer.style().containerType()) {
-            case ContainerType::InlineSize:
-                return renderer.shouldApplyInlineSizeContainment();
-            case ContainerType::Size:
-                return renderer.shouldApplySizeContainment();
-            case ContainerType::Normal:
-                return true;
-            }
-            RELEASE_ASSERT_NOT_REACHED();
-        };
-
-        if (!hasEligibleContainment())
+        if (!renderer->hasEligibleContainmentForSizeQuery())
             return MQ::EvaluationResult::Unknown;
 
-        return evaluate(feature, renderer, context.conversionData);
+        return evaluate(feature, *renderer, context.conversionData);
     }
 
     virtual EvaluationResult evaluate(const MQ::Feature&, const RenderBox&, const CSSToLengthConversionData&) const = 0;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -551,6 +551,8 @@ public class MouseEvent extends InputEvent {
         ev.recomputeCoordinatesToSource(e, source);
         return ev;
     }
+
+    @SuppressWarnings("doclint:missing")
     private final Flags flags = new Flags();
 
     /**
@@ -820,6 +822,7 @@ public class MouseEvent extends InputEvent {
         return metaDown;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final boolean synthesized;
 
     /**
@@ -1102,6 +1105,7 @@ public class MouseEvent extends InputEvent {
         }
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         in.defaultReadObject();

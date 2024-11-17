@@ -64,12 +64,11 @@ void WorkerFontLoadRequest::load(WorkerGlobalScope& workerGlobalScope)
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.contentSecurityPolicyEnforcement = m_context->shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
     options.loadedFromOpaqueSource = m_loadedFromOpaqueSource;
+    options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
 
     options.serviceWorkersMode = ServiceWorkersMode::All;
-#if ENABLE(SERVICE_WORKER)
     if (auto* activeServiceWorker = workerGlobalScope.activeServiceWorker())
         options.serviceWorkerRegistrationIdentifier = activeServiceWorker->registrationIdentifier();
-#endif
 
     WorkerThreadableLoader::loadResourceSynchronously(workerGlobalScope, WTFMove(request), *this, options);
 }
@@ -81,7 +80,6 @@ bool WorkerFontLoadRequest::ensureCustomFontData()
         if (m_data)
             contiguousData = m_data.takeAsContiguous();
 #if PLATFORM(JAVA)
-#else
         convertWOFFToSfntIfNecessary(contiguousData);
 #endif
         if (contiguousData) {
@@ -141,6 +139,8 @@ void WorkerFontLoadRequest::didFinishLoading(ResourceLoaderIdentifier, const Net
 void WorkerFontLoadRequest::didFail(const ResourceError&)
 {
     m_errorOccurred = true;
+    if (m_fontLoadRequestClient)
+        m_fontLoadRequestClient->fontLoaded(*this);
 }
 
 } // namespace WebCore

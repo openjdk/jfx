@@ -48,12 +48,12 @@ struct Relation {
         ChildrenAffectedByBackwardPositionalRules,
         DescendantsAffectedByBackwardPositionalRules,
         ChildrenAffectedByFirstChildRules,
-        ChildrenAffectedByPropertyBasedBackwardPositionalRules,
         ChildrenAffectedByLastChildRules,
         FirstChild,
         LastChild,
         NthChildIndex,
         Unique,
+        AffectedByHasWithPositionalPseudoClass,
     };
     const Element* element;
     Type type;

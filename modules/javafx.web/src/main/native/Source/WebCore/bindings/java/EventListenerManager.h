@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-class DOMWindow;
+class LocalDOMWindow;
 class JavaEventListener;
 
 
@@ -65,7 +65,7 @@ class EventListenerManager {
     WTF_MAKE_NONCOPYABLE(EventListenerManager);
 
     std::map<JavaEventListener*, ListenerJObjectWrapper*> listenerJObjectMap;
-    std::multimap<JavaEventListener*, DOMWindow*> listenerDOMWindowMultiMap;
+    std::multimap<JavaEventListener*, LocalDOMWindow*> listenerDOMWindowMultiMap;
 
     friend class NeverDestroyed<EventListenerManager>;
 
@@ -76,8 +76,8 @@ public:
     void unregisterListener(JavaEventListener *listener) ;
     JGObject getListenerJObject(JavaEventListener *listener);
 
-    void registerDOMWindow(DOMWindow*, JavaEventListener *listener);
-    void unregisterDOMWindow(DOMWindow*);
+    void registerDOMWindow(LocalDOMWindow*, JavaEventListener *listener);
+    void unregisterDOMWindow(LocalDOMWindow*);
 };
 
 } // namespace WebCore

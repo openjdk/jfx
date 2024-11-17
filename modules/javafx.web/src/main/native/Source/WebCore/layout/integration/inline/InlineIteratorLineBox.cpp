@@ -26,9 +26,10 @@
 #include "config.h"
 #include "InlineIteratorLineBox.h"
 
-#include "InlineIteratorBox.h"
+#include "InlineIteratorBoxInlines.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderBlockFlow.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 
 namespace WebCore {
@@ -93,6 +94,12 @@ LineBoxIterator lastLineBoxFor(const RenderBlockFlow& flow)
     return { LineBoxIteratorLegacyPath { flow.lastRootBox() } };
 }
 
+LineBoxIterator lineBoxFor(const LayoutIntegration::InlineContent& inlineContent, size_t lineIndex)
+{
+    return { LineBoxIteratorModernPath { inlineContent, lineIndex } };
+}
+
+
 LineBoxIterator LineBox::next() const
 {
     return LineBoxIterator(*this).traverseNext();
@@ -136,15 +143,15 @@ LeafBoxIterator closestBoxForHorizontalPosition(const LineBox& lineBox, float ho
     if (firstBox == lastBox && (!editableOnly || isEditable(firstBox)))
         return firstBox;
 
-    if (firstBox && horizontalPosition <= firstBox->logicalLeftIgnoringInlineDirection() && !firstBox->renderer().isListMarker() && (!editableOnly || isEditable(firstBox)))
+    if (firstBox && horizontalPosition <= firstBox->logicalLeftIgnoringInlineDirection() && !firstBox->renderer().isRenderListMarker() && (!editableOnly || isEditable(firstBox)))
         return firstBox;
 
-    if (lastBox && horizontalPosition >= lastBox->logicalRightIgnoringInlineDirection() && !lastBox->renderer().isListMarker() && (!editableOnly || isEditable(lastBox)))
+    if (lastBox && horizontalPosition >= lastBox->logicalRightIgnoringInlineDirection() && !lastBox->renderer().isRenderListMarker() && (!editableOnly || isEditable(lastBox)))
         return lastBox;
 
     auto closestBox = lastBox;
     for (auto box = firstBox; box; box = box.traverseNextOnLineIgnoringLineBreak()) {
-        if (!box->renderer().isListMarker() && (!editableOnly || isEditable(box))) {
+        if (!box->renderer().isRenderListMarker() && (!editableOnly || isEditable(box))) {
             if (horizontalPosition < box->logicalRightIgnoringInlineDirection())
                 return box;
             closestBox = box;

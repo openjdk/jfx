@@ -25,14 +25,16 @@
 
 #pragma once
 
+#include <span>
 #include <type_traits>
 #include <wtf/ASCIICType.h>
 #include <wtf/Forward.h>
-#include <wtf/Span.h>
+#include <wtf/HashFunctions.h>
 #include <wtf/StdLibExtras.h>
-#ifdef __OBJC__
-@class NSString;
-#endif
+#include <wtf/text/SuperFastHash.h>
+
+OBJC_CLASS NSString;
+
 namespace WTF {
 
 class PrintStream;
@@ -50,12 +52,13 @@ public:
 
     ASCIILiteral() = default;
 
+    unsigned hash() const;
     constexpr bool isNull() const { return !m_characters; }
 
     constexpr const char* characters() const { return m_characters; }
     const LChar* characters8() const { return bitwise_cast<const LChar*>(m_characters); }
     constexpr size_t length() const;
-    Span<const LChar> span8() const { return { characters8(), length() }; }
+    std::span<const LChar> span8() const { return { characters8(), length() }; }
     size_t isEmpty() const { return !m_characters || !*m_characters; }
 
     constexpr char characterAt(unsigned index) const { return m_characters[index]; }
@@ -102,6 +105,30 @@ inline constexpr size_t ASCIILiteral::length() const
     return strlen(m_characters);
 }
 
+inline unsigned ASCIILiteral::hash() const
+{
+    if (isNull())
+        return 0;
+    SuperFastHash hasher;
+    hasher.addCharacters(characters(), length());
+    return hasher.hash();
+}
+
+struct ASCIILiteralHash {
+    static unsigned hash(const ASCIILiteral& literal) { return literal.hash(); }
+    static bool equal(const ASCIILiteral& a, const ASCIILiteral& b) { return a == b; }
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
+};
+
+template<typename T> struct DefaultHash;
+template<> struct DefaultHash<ASCIILiteral> : ASCIILiteralHash { };
+
+struct ASCIILiteralPtrHash {
+    static unsigned hash(const ASCIILiteral& key) { return IntHash<uintptr_t>::hash(reinterpret_cast<uintptr_t>(key.characters())); }
+    static bool equal(const ASCIILiteral& a, const ASCIILiteral& b) { return a.characters() == b.characters(); }
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
+};
+
 inline namespace StringLiterals {
 
 constexpr ASCIILiteral operator"" _s(const char* characters, size_t n)
@@ -119,4 +146,5 @@ constexpr ASCIILiteral operator"" _s(const char* characters, size_t n)
 
 } // namespace WTF
 
+using WTF::ASCIILiteralPtrHash;
 using namespace WTF::StringLiterals;

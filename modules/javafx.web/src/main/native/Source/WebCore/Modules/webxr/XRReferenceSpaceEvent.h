@@ -28,7 +28,6 @@
 #if ENABLE(WEBXR)
 
 #include "Event.h"
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 

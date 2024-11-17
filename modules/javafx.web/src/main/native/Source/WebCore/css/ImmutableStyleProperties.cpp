@@ -27,6 +27,8 @@
 
 #include "CSSCustomPropertyValue.h"
 #include "StylePropertiesInlines.h"
+#include <wtf/HashMap.h>
+#include <wtf/Hasher.h>
 
 namespace WebCore {
 
@@ -58,11 +60,65 @@ Ref<ImmutableStyleProperties> ImmutableStyleProperties::create(const CSSProperty
     return adoptRef(*new (NotNull, slot) ImmutableStyleProperties(properties, count, mode));
 }
 
+static auto& deduplicationMap()
+{
+    static NeverDestroyed<HashMap<unsigned, Ref<ImmutableStyleProperties>, AlreadyHashed>> map;
+    return map.get();
+}
+
+Ref<ImmutableStyleProperties> ImmutableStyleProperties::createDeduplicating(const CSSProperty* properties, unsigned count, CSSParserMode mode)
+{
+    static constexpr auto maximumDeduplicationMapSize = 1024u;
+    if (deduplicationMap().size() >= maximumDeduplicationMapSize)
+        deduplicationMap().remove(deduplicationMap().random());
+
+    auto computeHash = [&] {
+        Hasher hasher;
+        add(hasher, mode);
+        for (auto* property = properties; property < properties + count; ++property) {
+            if (!property->value()->addHash(hasher))
+                return 0u;
+            add(hasher, property->id(), property->isImportant());
+        }
+        return hasher.hash();
+    };
+
+    auto hash = computeHash();
+    if (!hash)
+        return create(properties, count, mode);
+
+    auto result = deduplicationMap().ensure(hash, [&] {
+        return create(properties, count, mode);
+    });
+
+    auto isEqual = [&](auto& existingValue) {
+        if (existingValue.propertyCount() != count)
+            return false;
+        if (existingValue.cssParserMode() != mode)
+            return false;
+        for (unsigned i = 0; i < count; ++i) {
+            if (existingValue.propertyAt(i).toCSSProperty() != *(properties + i))
+                return false;
+        }
+        return true;
+    };
+
+    if (!result.isNewEntry && !isEqual(result.iterator->value.get()))
+        return create(properties, count, mode);
+
+    return result.iterator->value;
+}
+
+void ImmutableStyleProperties::clearDeduplicationMap()
+{
+    deduplicationMap().clear();
+}
+
 int ImmutableStyleProperties::findPropertyIndex(CSSPropertyID propertyID) const
 {
     // Convert here propertyID into an uint16_t to compare it with the metadata's m_propertyID to avoid
     // the compiler converting it to an int multiple times in the loop.
-    uint16_t id = static_cast<uint16_t>(propertyID);
+    uint16_t id = enumToUnderlyingType(propertyID);
     for (int n = m_arraySize - 1 ; n >= 0; --n) {
         if (metadataArray()[n].m_propertyID == id)
             return n;

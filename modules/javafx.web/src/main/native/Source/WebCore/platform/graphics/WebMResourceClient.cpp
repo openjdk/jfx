@@ -39,10 +39,9 @@ RefPtr<WebMResourceClient> WebMResourceClient::create(WebMResourceClientParent& 
     auto resource = loader.requestResource(WTFMove(request), PlatformMediaResourceLoader::LoadOption::DisallowCaching);
     if (!resource)
         return nullptr;
-    auto* resourcePointer = resource.get();
-    auto client = adoptRef(*new WebMResourceClient { parent, resource.releaseNonNull() });
+    auto client = adoptRef(*new WebMResourceClient { parent, Ref { *resource } });
     auto result = client.copyRef();
-    resourcePointer->setClient(WTFMove(client));
+    resource->setClient(WTFMove(client));
     return result;
 }
 
@@ -58,33 +57,25 @@ void WebMResourceClient::stop()
         return;
 
     auto resource = WTFMove(m_resource);
-    resource->stop();
-    resource->setClient(nullptr);
+    resource->shutdown();
 }
 
 void WebMResourceClient::dataReceived(PlatformMediaResource&, const SharedBuffer& buffer)
 {
-    if (!m_parent)
-        return;
-
-    m_buffer.append(buffer);
-    m_parent->dataReceived(buffer);
+    if (RefPtr parent = m_parent.get())
+        parent->dataReceived(buffer);
 }
 
 void WebMResourceClient::loadFailed(PlatformMediaResource&, const ResourceError& error)
 {
-    if (!m_parent)
-        return;
-
-    m_parent->loadFailed(error);
+    if (RefPtr parent = m_parent.get())
+        parent->loadFailed(error);
 }
 
 void WebMResourceClient::loadFinished(PlatformMediaResource&, const NetworkLoadMetrics&)
 {
-    if (!m_parent)
-        return;
-
-    m_parent->loadFinished(*m_buffer.get());
+    if (RefPtr parent = m_parent.get())
+        parent->loadFinished();
 }
 
 } // namespace WebCore

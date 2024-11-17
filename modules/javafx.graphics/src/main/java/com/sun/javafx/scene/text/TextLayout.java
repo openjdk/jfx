@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ package com.sun.javafx.scene.text;
 import javafx.scene.shape.PathElement;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Shape;
+
+import java.util.Objects;
 
 public interface TextLayout {
 
@@ -91,6 +93,28 @@ public interface TextLayout {
         public int getCharIndex() { return charIndex; }
         public int getInsertionIndex() { return insertionIndex; }
         public boolean isLeading() { return leading; }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(charIndex, insertionIndex, leading);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            Hit other = (Hit) obj;
+            return charIndex == other.charIndex && insertionIndex == other.insertionIndex && leading == other.leading;
+        }
+
+        @Override
+        public String toString() {
+            return "Hit[charIndex=" + charIndex + ", insertionIndex=" + insertionIndex + ", leading=" + leading + "]";
+        }
     }
 
     /**
@@ -199,6 +223,14 @@ public interface TextLayout {
      */
     public boolean setTabSize(int spaces);
 
+    /**
+     * Calculates character index and insertion index for the given coordinates
+     * and maps to {@link Hit} class.
+     *
+     * @param x x coordinate value.
+     * @param y y coordinate value.
+     * @return returns a {@link Hit} object containing character index, insertion index and position of cursor on the character.
+     */
     public Hit getHitInfo(float x, float y);
 
     public PathElement[] getCaretShape(int offset, boolean isLeading,

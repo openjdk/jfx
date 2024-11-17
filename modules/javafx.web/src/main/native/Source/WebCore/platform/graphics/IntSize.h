@@ -134,12 +134,12 @@ public:
 
     template<typename T = CrashOnOverflow> Checked<unsigned, T> area() const
     {
-        return Checked<unsigned, T>(abs(m_width)) * abs(m_height);
+        return Checked<unsigned, T>(std::abs(m_width)) * std::abs(m_height);
     }
 
     uint64_t unclampedArea() const
     {
-        return static_cast<uint64_t>(abs(m_width)) * abs(m_height);
+        return static_cast<uint64_t>(std::abs(m_width)) * std::abs(m_height);
     }
 
     constexpr int diagonalLengthSquared() const
@@ -151,6 +151,8 @@ public:
     {
         return IntSize(m_height, m_width);
     }
+
+    friend constexpr bool operator==(const IntSize&, const IntSize&) = default;
 
 #if USE(CG)
     WEBCORE_EXPORT explicit IntSize(const CGSize&); // don't do this implicitly since it's lossy
@@ -202,16 +204,6 @@ constexpr IntSize operator-(const IntSize& a, const IntSize& b)
 constexpr IntSize operator-(const IntSize& size)
 {
     return IntSize(-size.width(), -size.height());
-}
-
-constexpr bool operator==(const IntSize& a, const IntSize& b)
-{
-    return a.width() == b.width() && a.height() == b.height();
-}
-
-constexpr bool operator!=(const IntSize& a, const IntSize& b)
-{
-    return a.width() != b.width() || a.height() != b.height();
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const IntSize&);

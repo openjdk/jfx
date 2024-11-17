@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-enum WindowIdentifierType { };
+enum class WindowIdentifierType { };
 using WindowIdentifier = ObjectIdentifier<WindowIdentifierType>;
 
 // Window identifier that is unique across all WebContent processes.
@@ -40,40 +40,12 @@ struct GlobalWindowIdentifier {
     ProcessIdentifier processIdentifier;
     WindowIdentifier windowIdentifier;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<GlobalWindowIdentifier> decode(Decoder&);
+    friend bool operator==(const GlobalWindowIdentifier&, const GlobalWindowIdentifier&) = default;
 };
-
-inline bool operator==(const GlobalWindowIdentifier& a, const GlobalWindowIdentifier& b)
-{
-    return a.processIdentifier == b.processIdentifier &&  a.windowIdentifier == b.windowIdentifier;
-}
 
 inline void add(Hasher& hasher, const GlobalWindowIdentifier& identifier)
 {
     add(hasher, identifier.processIdentifier, identifier.windowIdentifier);
-}
-
-template<class Encoder>
-void GlobalWindowIdentifier::encode(Encoder& encoder) const
-{
-    encoder << processIdentifier << windowIdentifier;
-}
-
-template<class Decoder>
-std::optional<GlobalWindowIdentifier> GlobalWindowIdentifier::decode(Decoder& decoder)
-{
-    std::optional<ProcessIdentifier> processIdentifier;
-    decoder >> processIdentifier;
-    if (!processIdentifier)
-        return std::nullopt;
-
-    std::optional<WindowIdentifier> windowIdentifier;
-    decoder >> windowIdentifier;
-    if (!windowIdentifier)
-        return std::nullopt;
-
-    return { { WTFMove(*processIdentifier), WTFMove(*windowIdentifier) } };
 }
 
 } // namespace WebCore

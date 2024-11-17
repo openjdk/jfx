@@ -35,7 +35,7 @@ class VerticalPositionCache;
 
 struct GlyphOverflow;
 
-typedef HashMap<const LegacyInlineTextBox*, std::pair<Vector<const Font*>, GlyphOverflow>> GlyphOverflowAndFallbackFontsMap;
+typedef HashMap<const LegacyInlineTextBox*, std::pair<Vector<SingleThreadWeakPtr<const Font>>, GlyphOverflow>> GlyphOverflowAndFallbackFontsMap;
 
 class LegacyInlineFlowBox : public LegacyInlineBox {
     WTF_MAKE_ISO_ALLOCATED(LegacyInlineFlowBox);
@@ -117,8 +117,8 @@ public:
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
 
     // logicalLeft = left in a horizontal line and top in a vertical line.
-    LayoutUnit marginBorderPaddingLogicalLeft() const { return LayoutUnit(marginLogicalLeft() + borderLogicalLeft() + paddingLogicalLeft()); }
-    LayoutUnit marginBorderPaddingLogicalRight() const { return LayoutUnit(marginLogicalRight() + borderLogicalRight() + paddingLogicalRight()); }
+    inline LayoutUnit marginBorderPaddingLogicalLeft() const;
+    inline LayoutUnit marginBorderPaddingLogicalRight() const;
     LayoutUnit marginLogicalLeft() const
     {
         if (!includeLogicalLeftEdge())
@@ -131,30 +131,10 @@ public:
             return 0;
         return isHorizontal() ? renderer().marginRight() : renderer().marginBottom();
     }
-    float borderLogicalLeft() const
-    {
-        if (!includeLogicalLeftEdge())
-            return 0;
-        return isHorizontal() ? lineStyle().borderLeftWidth() : lineStyle().borderTopWidth();
-    }
-    float borderLogicalRight() const
-    {
-        if (!includeLogicalRightEdge())
-            return 0;
-        return isHorizontal() ? lineStyle().borderRightWidth() : lineStyle().borderBottomWidth();
-    }
-    float paddingLogicalLeft() const
-    {
-        if (!includeLogicalLeftEdge())
-            return 0;
-        return isHorizontal() ? renderer().paddingLeft() : renderer().paddingTop();
-    }
-    float paddingLogicalRight() const
-    {
-        if (!includeLogicalRightEdge())
-            return 0;
-        return isHorizontal() ? renderer().paddingRight() : renderer().paddingBottom();
-    }
+    inline float borderLogicalLeft() const;
+    inline float borderLogicalRight() const;
+    inline float paddingLogicalLeft() const;
+    inline float paddingLogicalRight() const;
 
     bool includeLogicalLeftEdge() const { return m_includeLogicalLeftEdge; }
     bool includeLogicalRightEdge() const { return m_includeLogicalRightEdge; }

@@ -26,9 +26,6 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.Permission;
-import java.security.PrivilegedAction;
 import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -53,7 +50,6 @@ import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
-import static com.sun.javafx.FXPermissions.*;
 
 public class WindowStage extends GlassStage {
 
@@ -287,9 +283,13 @@ public class WindowStage extends GlassStage {
             });
         }
         if (oldScene != null) {
-            ViewPainter painter = ((ViewScene)oldScene).getPainter();
-            QuantumRenderer.getInstance().disposePresentable(painter.presentable);   // latched on RT
+            disposeScenePainter((ViewScene) oldScene);
         }
+    }
+
+    private static void disposeScenePainter(ViewScene oldScene) {
+        ViewPainter painter = oldScene.getPainter();
+        QuantumRenderer.getInstance().disposePresentable(painter.presentable);   // latched on RT
     }
 
     @Override public void setBounds(float x, float y, boolean xSet, boolean ySet,
@@ -570,14 +570,7 @@ public class WindowStage extends GlassStage {
         }
 
         if (alwaysOnTop) {
-            if (hasPermission(SET_WINDOW_ALWAYS_ON_TOP_PERMISSION)) {
-                platformWindow.setLevel(Level.FLOATING);
-            } else {
-                alwaysOnTop = false;
-                if (stageListener != null) {
-                    stageListener.changedAlwaysOnTop(alwaysOnTop);
-                }
-            }
+            platformWindow.setLevel(Level.FLOATING);
         } else {
             platformWindow.setLevel(Level.NORMAL);
         }
@@ -589,11 +582,10 @@ public class WindowStage extends GlassStage {
         // note: for child windows this is ignored and we fail silently
     }
 
-    // Return true if this stage is trusted for full screen - doesn't have a
-    // security manager, or a permission check doesn't result in a security
-    // exeception.
+    // TODO: JDK-8344111: Consider removing this obsolete method
+    // Return true if this stage is trusted for full screen (it always is)
     boolean isTrustedFullScreen() {
-        return hasPermission(UNRESTRICTED_FULL_SCREEN_PERMISSION);
+        return true;
     }
 
     // Safely exit full screen
@@ -601,19 +593,7 @@ public class WindowStage extends GlassStage {
         setFullScreen(false);
     }
 
-    private boolean hasPermission(Permission perm) {
-        try {
-            @SuppressWarnings("removal")
-            final SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                sm.checkPermission(perm, getAccessControlContext());
-            }
-            return true;
-        } catch (SecurityException se) {
-            return false;
-        }
-    }
-
+    // TODO: JDK-8344111: Consider removing this obsolete field
     private boolean fullScreenFromUserEvent = false;
 
     private KeyCombination savedFullScreenExitKey = null;
@@ -736,7 +716,6 @@ public class WindowStage extends GlassStage {
         }
     }
 
-    @SuppressWarnings("removal")
     void fullscreenChanged(final boolean fs) {
         if (!fs) {
             if (activeFSWindow.compareAndSet(this, null)) {
@@ -746,12 +725,9 @@ public class WindowStage extends GlassStage {
             isInFullScreen = true;
             activeFSWindow.set(this);
         }
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            if (stageListener != null) {
-                stageListener.changedFullscreen(fs);
-            }
-            return null;
-        }, getAccessControlContext());
+        if (stageListener != null) {
+            stageListener.changedFullscreen(fs);
+        }
     }
 
     @Override public void toBack() {
@@ -792,9 +768,10 @@ public class WindowStage extends GlassStage {
                 }
                 platformWindow = null;
             }
-            GlassScene oldScene = getViewScene();
+            ViewScene oldScene = getViewScene();
             if (oldScene != null) {
                 oldScene.updateSceneState();
+                disposeScenePainter(oldScene);
             }
             return null;
         });

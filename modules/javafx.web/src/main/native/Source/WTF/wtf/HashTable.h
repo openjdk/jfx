@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2008 David Levin <levin@chromium.org>
  *
  * This library is free software; you can redistribute it and/or
@@ -211,18 +211,9 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
             checkValidity(other);
             return m_position == other.m_position;
         }
-        bool operator!=(const const_iterator& other) const
-        {
-            checkValidity(other);
-            return m_position != other.m_position;
-        }
         bool operator==(const iterator& other) const
         {
             return *this == static_cast<const_iterator>(other);
-        }
-        bool operator!=(const iterator& other) const
-        {
-            return *this != static_cast<const_iterator>(other);
         }
 
     private:
@@ -296,9 +287,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
 
         // Comparison.
         bool operator==(const iterator& other) const { return m_iterator == other.m_iterator; }
-        bool operator!=(const iterator& other) const { return m_iterator != other.m_iterator; }
         bool operator==(const const_iterator& other) const { return m_iterator == other; }
-        bool operator!=(const const_iterator& other) const { return m_iterator != other; }
 
         operator const_iterator() const { return m_iterator; }
 
@@ -487,6 +476,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
 
         unsigned size() const { return keyCount(); }
         unsigned capacity() const { return tableSize(); }
+        size_t byteSize() const { return metadataSize + tableSize() * sizeof(ValueType); }
         bool isEmpty() const { return !keyCount(); }
 
         void reserveInitialCapacity(unsigned keyCount)
@@ -1588,24 +1578,11 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
     }
 
     template<typename T, typename U>
-    inline bool operator!=(const HashTableConstIteratorAdapter<T, U>& a, const HashTableConstIteratorAdapter<T, U>& b)
-    {
-        return a.m_impl != b.m_impl;
-    }
-
-    template<typename T, typename U>
     inline bool operator==(const HashTableIteratorAdapter<T, U>& a, const HashTableIteratorAdapter<T, U>& b)
     {
         return a.m_impl == b.m_impl;
     }
 
-    template<typename T, typename U>
-    inline bool operator!=(const HashTableIteratorAdapter<T, U>& a, const HashTableIteratorAdapter<T, U>& b)
-    {
-        return a.m_impl != b.m_impl;
-    }
-
-    // All 4 combinations of ==, != and Const,non const.
     template<typename T, typename U>
     inline bool operator==(const HashTableConstIteratorAdapter<T, U>& a, const HashTableIteratorAdapter<T, U>& b)
     {
@@ -1613,21 +1590,9 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HashTable);
     }
 
     template<typename T, typename U>
-    inline bool operator!=(const HashTableConstIteratorAdapter<T, U>& a, const HashTableIteratorAdapter<T, U>& b)
-    {
-        return a.m_impl != b.m_impl;
-    }
-
-    template<typename T, typename U>
     inline bool operator==(const HashTableIteratorAdapter<T, U>& a, const HashTableConstIteratorAdapter<T, U>& b)
     {
         return a.m_impl == b.m_impl;
-    }
-
-    template<typename T, typename U>
-    inline bool operator!=(const HashTableIteratorAdapter<T, U>& a, const HashTableConstIteratorAdapter<T, U>& b)
-    {
-        return a.m_impl != b.m_impl;
     }
 
 } // namespace WTF

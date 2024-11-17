@@ -25,27 +25,96 @@
 
 #pragma once
 
+#include "CachedResourceLoader.h"
 #include "ClientOrigin.h"
 #include "Document.h"
+#include "DocumentMarkerController.h"
+#include "DocumentParser.h"
+#include "Element.h"
+#include "ExtensionStyleSheets.h"
 #include "FocusOptions.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FullscreenManager.h"
+#include "LocalDOMWindow.h"
 #include "MediaProducer.h"
+#include "NodeIterator.h"
+#include "ReportingScope.h"
 #include "SecurityOrigin.h"
 #include "TextResourceDecoder.h"
+#include "UndoManager.h"
 #include "WebCoreOpaqueRoot.h"
 
 namespace WebCore {
 
 inline PAL::TextEncoding Document::textEncoding() const
 {
-    if (auto* decoder = this->decoder())
+    if (RefPtr decoder = this->decoder())
         return decoder->encoding();
     return PAL::TextEncoding();
 }
 
-inline AtomString Document::encoding() const { return AtomString::fromLatin1(textEncoding().domName()); }
-
 inline String Document::charset() const { return Document::encoding(); }
+
+inline Quirks& Document::quirks()
+{
+    if (!m_quirks)
+        return ensureQuirks();
+    return *m_quirks;
+}
+
+inline const Quirks& Document::quirks() const
+{
+    if (!m_quirks)
+        return const_cast<Document&>(*this).ensureQuirks();
+    return *m_quirks;
+}
+
+inline ExtensionStyleSheets& Document::extensionStyleSheets()
+{
+    if (!m_extensionStyleSheets)
+        return ensureExtensionStyleSheets();
+    return *m_extensionStyleSheets;
+}
+
+inline CheckedRef<ExtensionStyleSheets> Document::checkedExtensionStyleSheets()
+{
+    return extensionStyleSheets();
+}
+
+inline VisitedLinkState& Document::visitedLinkState() const
+{
+    if (!m_visitedLinkState)
+        return const_cast<Document&>(*this).ensureVisitedLinkState();
+    return *m_visitedLinkState;
+}
+
+inline ScriptRunner& Document::scriptRunner()
+{
+    if (!m_scriptRunner)
+        return ensureScriptRunner();
+    return *m_scriptRunner;
+}
+
+inline ScriptModuleLoader& Document::moduleLoader()
+{
+    if (!m_moduleLoader)
+        return ensureModuleLoader();
+    return *m_moduleLoader;
+}
+
+CSSFontSelector& Document::fontSelector()
+{
+    if (!m_fontSelector)
+        return ensureFontSelector();
+    return *m_fontSelector;
+}
+
+const CSSFontSelector& Document::fontSelector() const
+{
+    if (!m_fontSelector)
+        return const_cast<Document&>(*this).ensureFontSelector();
+    return *m_fontSelector;
+}
 
 inline const Document* Document::templateDocument() const
 {
@@ -64,6 +133,11 @@ inline Ref<Document> Document::create(const Settings& settings, const URL& url)
     auto document = adoptRef(*new Document(nullptr, settings, url));
     document->addToContextsMap();
     return document;
+}
+
+bool Document::hasNodeIterators() const
+{
+    return !m_nodeIterators.isEmptyIgnoringNullReferences();
 }
 
 inline void Document::invalidateAccessKeyCache()
@@ -123,5 +197,125 @@ inline WebCoreOpaqueRoot Node::opaqueRoot() const
 
 inline bool Document::wasLastFocusByClick() const { return m_latestFocusTrigger == FocusTrigger::Click; }
 
+inline Ref<Document> Node::protectedDocument() const
+{
+    return document();
+}
+
+inline RefPtr<LocalDOMWindow> Document::protectedWindow() const
+{
+    return m_domWindow;
+}
+
+inline CachedResourceLoader& Document::cachedResourceLoader()
+{
+    if (!m_cachedResourceLoader)
+        return ensureCachedResourceLoader();
+    return *m_cachedResourceLoader;
+}
+
+inline Ref<CachedResourceLoader> Document::protectedCachedResourceLoader() const
+{
+    return const_cast<Document&>(*this).cachedResourceLoader();
+}
+
+inline RefPtr<DocumentParser> Document::protectedParser() const
+{
+    return m_parser;
+}
+
+inline RefPtr<Element> Document::protectedDocumentElement() const
+{
+    return m_documentElement;
+}
+
+inline UndoManager& Document::undoManager() const
+{
+    if (!m_undoManager)
+        return const_cast<Document&>(*this).ensureUndoManager();
+    return *m_undoManager;
+}
+
+inline Ref<UndoManager> Document::protectedUndoManager() const
+{
+    return undoManager();
+}
+
+inline ReportingScope& Document::reportingScope() const
+{
+    if (!m_reportingScope)
+        return const_cast<Document&>(*this).ensureReportingScope();
+    return *m_reportingScope;
+}
+
+inline Ref<ReportingScope> Document::protectedReportingScope() const
+{
+    return reportingScope();
+}
+
+inline RefPtr<TextResourceDecoder> Document::protectedDecoder() const
+{
+    return m_decoder;
+}
+
+inline RefPtr<Element> Document::protectedFocusedElement() const
+{
+    return m_focusedElement;
+}
+
+inline DocumentMarkerController& Document::markers()
+{
+    if (!m_markers)
+        return ensureMarkers();
+    return *m_markers;
+}
+
+inline const DocumentMarkerController& Document::markers() const
+{
+    if (!m_markers)
+        return const_cast<Document&>(*this).ensureMarkers();
+    return *m_markers;
+}
+
+inline CheckedRef<DocumentMarkerController> Document::checkedMarkers()
+{
+    return markers();
+}
+
+inline CheckedRef<const DocumentMarkerController> Document::checkedMarkers() const
+{
+    return markers();
+}
+
+inline Ref<SecurityOrigin> Document::protectedSecurityOrigin() const
+{
+    return SecurityContext::protectedSecurityOrigin().releaseNonNull();
+}
+
+#if ENABLE(FULLSCREEN_API)
+inline FullscreenManager& Document::fullscreenManager()
+{
+    if (!m_fullscreenManager)
+        return ensureFullscreenManager();
+    return *m_fullscreenManager;
+}
+
+inline const FullscreenManager& Document::fullscreenManager() const
+{
+    if (!m_fullscreenManager)
+        return const_cast<Document&>(*this).ensureFullscreenManager();
+    return *m_fullscreenManager;
+}
+
+inline CheckedRef<FullscreenManager> Document::checkedFullscreenManager()
+{
+    return fullscreenManager();
+}
+
+inline CheckedRef<const FullscreenManager> Document::checkedFullscreenManager() const
+{
+    return fullscreenManager();
+}
+#endif
 
 } // namespace WebCore
