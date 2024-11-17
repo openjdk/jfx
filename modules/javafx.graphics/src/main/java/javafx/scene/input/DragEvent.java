@@ -133,7 +133,7 @@ rect.setOnDragDetected(new EventHandler&lt;MouseEvent&gt;() {
  * {@code DragBoard.getTransferModes()} (set of transfer modes supported by
  * the gesture source) and {@code DragEvent.getTransferMode()} (default
  * transfer mode issued by platform, driven by key modifiers) can be used.
- * It is posible to pass more transfer modes into the
+ * It is possible to pass more transfer modes into the
  * {@code acceptTransferModes(TransferMode...)} method. In this case
  * it makes the decision in behalf of the
  * application (it chooses the default mode if it's supported by gesture source
