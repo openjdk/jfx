@@ -50,7 +50,7 @@ import java.util.Objects;
  * When applied to a Region with a defined shape, a BorderImage is ignored.
  * @since JavaFX 8.0
  */
-public class BorderImage implements Interpolatable<BorderImage> {
+public final class BorderImage implements Interpolatable<BorderImage> {
     /**
      * The image to be used. This will never be null. If this
      * image fails to load, then the entire BorderImage will
@@ -61,7 +61,7 @@ public class BorderImage implements Interpolatable<BorderImage> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final Image getImage() { return image; }
-    final Image image;
+    private final Image image;
 
     /**
      * Indicates in what manner (if at all) the border image
@@ -73,7 +73,7 @@ public class BorderImage implements Interpolatable<BorderImage> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderRepeat getRepeatX() { return repeatX; }
-    final BorderRepeat repeatX;
+    private final BorderRepeat repeatX;
 
     /**
      * Indicates in what manner (if at all) the border image
@@ -85,7 +85,7 @@ public class BorderImage implements Interpolatable<BorderImage> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderRepeat getRepeatY() { return repeatY; }
-    final BorderRepeat repeatY;
+    private final BorderRepeat repeatY;
 
     /**
      * The widths of the border on each side. These can be defined
@@ -97,7 +97,7 @@ public class BorderImage implements Interpolatable<BorderImage> {
      * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final BorderWidths getWidths() { return widths; }
-    final BorderWidths widths;
+    private final BorderWidths widths;
 
     /**
      * Defines the slices of the image. JavaFX uses a 4-slice scheme where
@@ -119,7 +119,7 @@ public class BorderImage implements Interpolatable<BorderImage> {
      * @see <a href="http://www.w3.org/TR/css3-background/#the-border-image-slice">border-image-slice</a>
      */
     public final BorderWidths getSlices() { return slices; }
-    final BorderWidths slices;
+    private final BorderWidths slices;
 
     /**
      * Specifies whether or not the center patch (as defined by the left, right, top, and bottom slices)
@@ -129,7 +129,7 @@ public class BorderImage implements Interpolatable<BorderImage> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isFilled() { return filled; }
-    final boolean filled;
+    private final boolean filled;
 
     /**
      * The insets of the BorderImage define where the border should be positioned
@@ -139,7 +139,7 @@ public class BorderImage implements Interpolatable<BorderImage> {
      * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final Insets getInsets() { return insets; }
-    final Insets insets;
+    private final Insets insets;
 
     // These two are used by Border to compute the insets and outsets of the border
     final Insets innerEdge;

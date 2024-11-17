@@ -66,26 +66,14 @@ public final class Printer {
      * the application may want to query the status of a printer
      * before using it.
      * @return may be null if there are no printers.
-     * @throws SecurityException if the application does not
-     * have permission to browse printers.
      */
     public static ObservableSet<Printer> getAllPrinters() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPrintJobAccess();
-        }
         return PrintPipeline.getPrintPipeline().getAllPrinters();
     }
 
     private static ReadOnlyObjectWrapper<Printer> defaultPrinter;
 
     private static ReadOnlyObjectWrapper<Printer> defaultPrinterImpl() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPrintJobAccess();
-        }
         Printer p = PrintPipeline.getPrintPipeline().getDefaultPrinter();
         if (defaultPrinter == null) {
             defaultPrinter =
@@ -100,8 +88,6 @@ public final class Printer {
      * A read only object property representing the current default printer.
      * If there are no installed printers, the wrapped value will be null.
      * @return the current default printer
-     * @throws SecurityException if the application does not
-     * have permission to browse printers.
      */
     public static ReadOnlyObjectProperty<Printer> defaultPrinterProperty() {
         return defaultPrinterImpl().getReadOnlyProperty();
@@ -117,8 +103,6 @@ public final class Printer {
      * a result of the default changing in the environment of the
      * application.
      * @return default printer or null.
-     * @throws SecurityException if the application does not
-     * have permission to browse printers.
      */
     public static Printer getDefaultPrinter() {
         return defaultPrinterProperty().get();

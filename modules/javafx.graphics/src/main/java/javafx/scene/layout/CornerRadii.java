@@ -39,7 +39,7 @@ import java.util.Objects;
  *
  * @since JavaFX 8.0
  */
-public class CornerRadii implements Interpolatable<CornerRadii> {
+public final class CornerRadii implements Interpolatable<CornerRadii> {
     /**
      * A CornerRadii which is entirely empty, indicating squared corners.
      * This is the default value for a BorderStroke's radii.
@@ -58,7 +58,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTopLeftHorizontalRadius() { return topLeftHorizontalRadius; }
-    private double topLeftHorizontalRadius;
+    private final double topLeftHorizontalRadius;
 
     /**
      * The length of the vertical radii of the top-left corner.
@@ -69,7 +69,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTopLeftVerticalRadius() { return topLeftVerticalRadius; }
-    private double topLeftVerticalRadius;
+    private final double topLeftVerticalRadius;
 
     /**
      * The length of the vertical radii of the top-right corner.
@@ -80,7 +80,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTopRightVerticalRadius() { return topRightVerticalRadius; }
-    private double topRightVerticalRadius;
+    private final double topRightVerticalRadius;
 
     /**
      * The length of the horizontal radii of the top-right corner.
@@ -91,7 +91,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTopRightHorizontalRadius() { return topRightHorizontalRadius; }
-    private double topRightHorizontalRadius;
+    private final double topRightHorizontalRadius;
 
     /**
      * The length of the horizontal radii of the bottom-right corner.
@@ -102,7 +102,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottomRightHorizontalRadius() { return bottomRightHorizontalRadius; }
-    private double bottomRightHorizontalRadius;
+    private final double bottomRightHorizontalRadius;
 
     /**
      * The length of the vertical radii of the bottom-right corner.
@@ -113,7 +113,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottomRightVerticalRadius() { return bottomRightVerticalRadius; }
-    private double bottomRightVerticalRadius;
+    private final double bottomRightVerticalRadius;
 
     /**
      * The length of the vertical radii of the bottom-left corner.
@@ -124,7 +124,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottomLeftVerticalRadius() { return bottomLeftVerticalRadius; }
-    private double bottomLeftVerticalRadius;
+    private final double bottomLeftVerticalRadius;
 
     /**
      * The length of the horizontal radii of the bottom-left corner.
@@ -135,7 +135,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottomLeftHorizontalRadius() { return bottomLeftHorizontalRadius; }
-    private double bottomLeftHorizontalRadius;
+    private final double bottomLeftHorizontalRadius;
 
     /**
      * Indicates whether {@code topLeftHorizontalRadius} is interpreted as a value or a percentage.
@@ -217,7 +217,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      * @return if true each corner radius is uniformly percentage-based, otherwise not
      */
     public final boolean isUniform() { return uniform; }
-    final boolean uniform;
+    private final boolean uniform;
 
     /**
      * The cached hash code.

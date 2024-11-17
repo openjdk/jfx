@@ -53,7 +53,7 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
      * @interpolationType see {@link Paint}
      */
     public final Paint getFill() { return fill; }
-    final Paint fill;
+    private final Paint fill;
 
     /**
      * The Radii to use for representing the four radii of the
@@ -65,7 +65,7 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
      * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final CornerRadii getRadii() { return radii; }
-    final CornerRadii radii;
+    private final CornerRadii radii;
 
     /**
      * The Insets to use for this fill. Each inset indicates at what
@@ -78,7 +78,7 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
      * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final Insets getInsets() { return insets; }
-    final Insets insets;
+    private final Insets insets;
 
     /**
      * A cached hash for improved performance on subsequent hash or

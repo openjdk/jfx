@@ -82,7 +82,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTop() { return top; }
-    final double top;
+    private final double top;
 
     /**
      * The non-negative value (with the exception of {@link #AUTO}) indicating the border
@@ -97,7 +97,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getRight() { return right; }
-    final double right;
+    private final double right;
 
     /**
      * The non-negative value (with the exception of {@link #AUTO}) indicating the border
@@ -112,7 +112,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottom() { return bottom; }
-    final double bottom;
+    private final double bottom;
 
     /**
      * The non-negative value (with the exception of {@link #AUTO}) indicating the border
@@ -127,7 +127,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getLeft() { return left; }
-    final double left;
+    private final double left;
 
     /**
      * Specifies whether the {@link #getTop() top} property should be interpreted as a percentage ({@code true})
@@ -137,7 +137,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isTopAsPercentage() { return topAsPercentage; }
-    final boolean topAsPercentage;
+    private final boolean topAsPercentage;
 
     /**
      * Specifies whether the {@link #getRight() right} property should be interpreted as a percentage ({@code true})
@@ -147,7 +147,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isRightAsPercentage() { return rightAsPercentage; }
-    final boolean rightAsPercentage;
+    private final boolean rightAsPercentage;
 
     /**
      * Specifies whether the {@link #getBottom() bottom} property should be interpreted as a percentage ({@code true})
@@ -157,7 +157,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isBottomAsPercentage() { return bottomAsPercentage; }
-    final boolean bottomAsPercentage;
+    private final boolean bottomAsPercentage;
 
     /**
      * Specifies whether the {@link #getLeft() left} property should be interpreted as a percentage ({@code true})
@@ -167,7 +167,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isLeftAsPercentage() { return leftAsPercentage; }
-    final boolean leftAsPercentage;
+    private final boolean leftAsPercentage;
 
     /**
      * A cached hash code for faster secondary usage. It is expected

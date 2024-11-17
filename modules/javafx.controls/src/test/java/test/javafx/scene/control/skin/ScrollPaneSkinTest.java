@@ -144,6 +144,67 @@ public class ScrollPaneSkinTest {
         assertTrue(originalValue < scrollPane.getVvalue());
     }
 
+    @Test
+    public void fitToHeight() {
+        StackPane content = new StackPane();
+        content.setPrefWidth(100);
+        content.setPrefHeight(100);
+
+        scrollPane.setContent(content);
+        scrollPane.setPrefWidth(200);
+        scrollPane.setPrefHeight(200);
+        scrollPane.setFitToHeight(false);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        assertTrue(content.getHeight() == 100);
+
+        scrollPane.setFitToHeight(true);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(content.getHeight() > 150);
+
+        scrollPane.setFitToHeight(false);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(content.getHeight() == 100);
+    }
+
+    @Test
+    public void fitToWidth() {
+        StackPane content = new StackPane();
+        content.setPrefWidth(100);
+        content.setPrefHeight(100);
+
+        scrollPane.setContent(content);
+        scrollPane.setPrefWidth(200);
+        scrollPane.setPrefHeight(200);
+        scrollPane.setFitToWidth(false);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        assertTrue(content.getWidth() == 100);
+
+        scrollPane.setFitToWidth(true);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(content.getWidth() > 150);
+
+        scrollPane.setFitToWidth(false);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(content.getWidth() == 100);
+    }
 
     boolean continueTest;
     class myPane extends Pane {

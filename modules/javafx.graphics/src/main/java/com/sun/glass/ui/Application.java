@@ -27,16 +27,16 @@ package com.sun.glass.ui;
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public abstract class Application {
 
@@ -95,13 +95,11 @@ public abstract class Application {
     private static boolean loaded = false;
     private static Application application;
     private static Thread eventThread;
-    @SuppressWarnings("removal")
-    private static final boolean disableThreadChecks =
-        AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            final String str =
+    private static final boolean disableThreadChecks = ((Supplier<Boolean>) () -> {
+        final String str =
                     System.getProperty("glass.disableThreadChecks", "false");
             return "true".equalsIgnoreCase(str);
-        });
+    }).get();
 
     // May be called on any thread.
     protected static synchronized void loadNativeLibrary(final String libname) {
@@ -214,8 +212,7 @@ public abstract class Application {
      */
     public String getDataDirectory() {
         checkEventThread();
-        @SuppressWarnings("removal")
-        String userHome = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("user.home"));
+        String userHome = System.getProperty("user.home");
         return userHome + File.separator + "." + name + File.separator;
     }
 
@@ -771,22 +768,25 @@ public abstract class Application {
     }
 
     /**
-     * Returns a map of platform-specific keys to platform-independent keys defined by JavaFX.
+     * Returns a map of platform-specific keys to platform-independent keys defined by JavaFX, including a
+     * function that maps the platform-specific value to the platform-independent value.
      * <p>
      * For example, the platform-specific key "Windows.UIColor.Foreground" is mapped to the key "foregroundColor",
      * which makes it easier to write shared code without depending on platform-specific details.
      * <p>
-     * The following platform-independent keys are currently supported, which correspond to the names of color
+     * The following platform-independent keys are currently supported, which correspond to the names of
      * properties on the {@link com.sun.javafx.application.preferences.PreferenceProperties} class:
      * <ul>
      *     <li>foregroundColor
      *     <li>backgroundColor
      *     <li>accentColor
+     *     <li>reducedMotion
+     *     <li>reducedTransparency
      * </ul>
      *
      * @return a map of platform-specific keys to well-known keys
      */
-    public Map<String, String> getPlatformKeyMappings() {
+    public Map<String, PreferenceMapping<?>> getPlatformKeyMappings() {
         return Map.of();
     }
 
@@ -811,4 +811,13 @@ public abstract class Application {
      * and if so, emits a warning.
      */
     public void checkPlatformPreferencesSupport() {}
+
+    private static native void _overrideNativeWindowHandle(Class lwFrameWrapperClass,
+                                                           Object frame,
+                                                           long handle, Runnable closeWindow);
+
+    public static void overrideNativeWindowHandle(Class lwFrameWrapperClass, Object frame,
+                                                  long handle, Runnable closeWindow) {
+        _overrideNativeWindowHandle(lwFrameWrapperClass, frame, handle, closeWindow);
+    }
 }

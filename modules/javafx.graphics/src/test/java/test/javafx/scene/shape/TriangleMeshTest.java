@@ -26,6 +26,7 @@ package test.javafx.scene.shape;
 
 import java.util.Arrays;
 import javafx.scene.shape.TriangleMesh;
+import javafx.scene.shape.VertexFormat;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -456,6 +457,14 @@ public class TriangleMeshTest {
         assertEquals(2, triMesh.getTexCoordElementSize());
         // 3 point indices and 3 texCoord indices per triangle
         assertEquals(6, triMesh.getFaceElementSize());
+    }
+
+    @Test
+    public void testVertexFormatProperty() {
+        TriangleMesh triMesh = new TriangleMesh();
+        VertexFormat vf1 = triMesh.getVertexFormat();
+        VertexFormat vf2 = triMesh.vertexFormatProperty().get();
+        assertEquals(vf1, vf2);
     }
 
     TriangleMesh buildTriangleMesh(int subDivX, int subDivY) {

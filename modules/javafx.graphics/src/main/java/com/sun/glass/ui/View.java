@@ -29,9 +29,8 @@ import com.sun.glass.events.ViewEvent;
 
 import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public abstract class View {
 
@@ -44,8 +43,7 @@ public abstract class View {
     @Native public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
     @Native public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
 
-    @SuppressWarnings("removal")
-    final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+    final static boolean accessible = ((Supplier<Boolean>) () -> {
         String force = System.getProperty("glass.accessible.force");
         if (force != null) return Boolean.parseBoolean(force);
 
@@ -60,13 +58,14 @@ public abstract class View {
         } catch (Exception e) {
             return false;
         }
-    });
+    }).get();
 
     public static class EventHandler {
         public void handleViewEvent(View view, long time, int type) {
         }
-        public void handleKeyEvent(View view, long time, int action,
+        public boolean handleKeyEvent(View view, long time, int action,
                 int keyCode, char[] keyChars, int modifiers) {
+            return false;
         }
         public void handleMenuEvent(View view, int x, int y, int xAbs,
                 int yAbs, boolean isKeyboardTrigger) {
@@ -545,11 +544,12 @@ public abstract class View {
         }
     }
 
-    private void handleKeyEvent(long time, int action,
+    private boolean handleKeyEvent(long time, int action,
             int keyCode, char[] keyChars, int modifiers) {
         if (shouldHandleEvent()) {
-            this.eventHandler.handleKeyEvent(this, time, action, keyCode, keyChars, modifiers);
+            return this.eventHandler.handleKeyEvent(this, time, action, keyCode, keyChars, modifiers);
         }
+        return false;
     }
 
     private void handleMouseEvent(long time, int type, int button, int x, int y,
@@ -973,6 +973,10 @@ public abstract class View {
 
     protected void notifyKey(int type, int keyCode, char[] keyChars, int modifiers) {
         handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers);
+    }
+
+    protected boolean notifyKeyAndReturnConsumed(int type, int keyCode, char[] keyChars, int modifiers) {
+        return handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers);
     }
 
     protected void notifyInputMethod(String text, int[] clauseBoundary,

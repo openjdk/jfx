@@ -172,7 +172,7 @@ public final class Border implements Interpolatable<Border> {
      * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BorderStroke> getStrokes() { return strokes; }
-    final List<BorderStroke> strokes;
+    private final List<BorderStroke> strokes;
 
     /**
      * The list of BorderImages which together define the images to use
@@ -189,7 +189,7 @@ public final class Border implements Interpolatable<Border> {
      * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BorderImage> getImages() { return images; }
-    final List<BorderImage> images;
+    private final List<BorderImage> images;
 
     /**
      * The outsets of the border define the outer-most edge of the border to be drawn.
@@ -198,7 +198,7 @@ public final class Border implements Interpolatable<Border> {
      * border to be drawn
      */
     public final Insets getOutsets() { return outsets; }
-    final Insets outsets;
+    private final Insets outsets;
 
     /**
      * The insets define the distance from the edge of the Region to the inner-most edge
@@ -208,7 +208,7 @@ public final class Border implements Interpolatable<Border> {
      * inner-most edge of the border
      */
     public final Insets getInsets() { return insets; }
-    final Insets insets;
+    private final Insets insets;
 
     /**
      * Gets whether the Border is empty. It is empty if there are no strokes or images.

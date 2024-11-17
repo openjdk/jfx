@@ -115,6 +115,10 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
                     (int) Math.ceil(width * pixelScale),
                     (int) Math.ceil(height * pixelScale),
                     Texture.WrapMode.CLAMP_NOT_NEEDED);
+            if (txt == null) {
+                log.fine("RTImage::getTexture : return null because rt texture not allocated");
+                return null;
+            }
             txt.contentsUseful();
             txt.makePermanent();
             if (registeredWithFactory == null || registeredWithFactory.get() != f) {

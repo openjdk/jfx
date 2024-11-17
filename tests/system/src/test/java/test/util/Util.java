@@ -171,16 +171,14 @@ public class Util {
 
     public static ArrayList<String> createApplicationLaunchCommand(
             String testAppName,
-            String testPldrName,
-            String testPolicy) throws IOException {
+            String testPldrName) throws IOException {
 
-        return createApplicationLaunchCommand(testAppName, testPldrName, testPolicy, null);
+        return createApplicationLaunchCommand(testAppName, testPldrName, null);
     }
 
     public static ArrayList<String> createApplicationLaunchCommand(
             String testAppName,
             String testPldrName,
-            String testPolicy,
             String[] jvmArgs) throws IOException {
 
         final boolean isJar = testAppName.endsWith(".jar");
@@ -190,7 +188,6 @@ public class Util {
          */
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
         final String workerPatchModuleFile = System.getProperty("worker.patchmodule.file");
-        final String workerPatchPolicy = System.getProperty("worker.patch.policy");
         final String workerClassPath = System.getProperty("worker.classpath.file");
         final Boolean workerDebug = Boolean.getBoolean("worker.debug");
 
@@ -218,64 +215,6 @@ public class Util {
 
         if (testPldrName != null) {
             cmd.add("-Djavafx.preloader=" + testPldrName);
-        }
-
-        if (testPolicy != null) {
-
-            cmd.add("-Djava.security.manager");
-
-            try {
-                if (workerPatchPolicy != null) {
-                    // with Jigsaw, we need to create a merged java.policy
-                    // file that contains the permissions for the patchmodule classes
-                    // as well as the permissions needed for this test
-
-                    File wpp = new File(workerPatchPolicy);
-                    if (!wpp.exists()) {
-                        throw new RuntimeException("Missing workerPatchPolicy");
-                    }
-
-                    File tempFile = null;
-                    if (workerDebug) {
-                        String baseAppName = isJar
-                                ? testAppName.substring(0, testAppName.length() - 4)
-                                : testAppName;
-                        final int lastSlashIdx = baseAppName.lastIndexOf("/");
-                        if (lastSlashIdx >= 0) {
-                            baseAppName = baseAppName.substring(lastSlashIdx + 1);
-                        }
-                        tempFile = new File(workerPatchPolicy +
-                                "_" + baseAppName);
-                    } else {
-                        tempFile = File.createTempFile("java", "policy");
-                        tempFile.deleteOnExit();
-                    }
-
-                    BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
-
-                    BufferedReader reader1 = new BufferedReader(new FileReader(wpp));
-                    URL url = new URL(testPolicy);
-                    BufferedReader reader2 = new BufferedReader(new FileReader(url.getFile()));
-
-                    String line = null;
-                    while ((line = reader1.readLine()) != null) {
-                        writer.write(line);
-                        writer.newLine();
-                    }
-                    while ((line = reader2.readLine()) != null) {
-                        writer.write(line);
-                        writer.newLine();
-                    }
-                    writer.close();
-                    cmd.add("-Djava.security.policy=" +
-                        tempFile.getAbsolutePath().replaceAll("\\\\","/"));
-                } else {
-                    cmd.add("-Djava.security.policy=" + testPolicy);
-                }
-            } catch (IOException e) {
-                throw e;
-            }
-
         }
 
         if (jvmArgs != null) {
