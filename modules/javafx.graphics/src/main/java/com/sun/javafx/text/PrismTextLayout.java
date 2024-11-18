@@ -397,21 +397,22 @@ public class PrismTextLayout implements TextLayout {
                         if (isMirrored()) {
                             lineX2 = getMirroringWidth() - lineX2;
                         }
+                        // split caret
                         return new float[] {
                             lineX,
                             lineY,
-                            lineY + lineHeight / 2,
                             lineX2,
-                            lineY + lineHeight
+                            lineHeight
                         };
                     }
                 }
             }
         }
+        // regular caret
         return new float[] {
             lineX,
             lineY,
-            lineY + lineHeight
+            lineHeight
         };
     }
 

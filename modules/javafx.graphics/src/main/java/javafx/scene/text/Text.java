@@ -1074,7 +1074,6 @@ public class Text extends Shape {
      */
     public final PathElement[] caretShape(int charIndex, boolean caretBias) {
         if (0 <= charIndex && charIndex <= getTextInternal().length()) {
-            // TODO padding JDK-8341438?
             double dx = getX();
             double dy = getY() - getYRendering();
             float[] c = getTextLayout().getCaretInf(charIndex, caretBias);

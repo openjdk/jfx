@@ -99,29 +99,29 @@ public final class TextUtils {
         if (c == null) {
             return null;
         } else if (c.length == 3) {
-            // [x, ymin, ymax] - corresponds to a single line from (x, ymin) tp (x, ymax)
+            // [x, y, h] - corresponds to a single line from (x, y) to (x, y + h)
             double x = c[0] + dx;
-            double ymin = c[1] + dy;
-            double ymax = c[2] + dy;
+            double y = c[1] + dy;
+            double h = c[2];
 
             return new PathElement[] {
-                new MoveTo(x, ymin),
-                new LineTo(x, ymax)
+                new MoveTo(x, y),
+                new LineTo(x, y + h)
             };
         } else {
-            // [x, ymin, y2, x2, ymax] - corresponds to a split caret drawn as two lines, the first line
-            // drawn from (x,ymin) to (x, y2), the second line drawn from (x2, y2) to (x2, ymax).
-            double x = c[0];
-            double ymin = c[1];
-            double y2 = c[2];
-            double x2 = c[3];
-            double ymax = c[4];
+            // [x, y, x2, h] - corresponds to a split caret drawn as two lines, the first line
+            // drawn from (x, y) to (x, y + h/2), the second line drawn from (x2, y + h/2) to (x2, y + h).
+            double x = c[0] + dx;
+            double y = c[1] + dy;
+            double x2 = c[2] + dx;
+            double h = c[3];
+            double y2 = y + h/2.0;
 
             return new PathElement[] {
-                new MoveTo(x, ymin),
+                new MoveTo(x, y),
                 new LineTo(x, y2),
                 new MoveTo(x2, y2),
-                new LineTo(x2, ymax)
+                new LineTo(x2, y + h)
             };
         }
     }

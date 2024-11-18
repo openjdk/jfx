@@ -244,9 +244,9 @@ public interface TextLayout {
      * depending on whether the caret is drawn as a single vertical line or as two separate
      * lines (a "split" caret).
      * <ul>
-     * <li>{@code x, ymin, ymax} - corresponds to a single line from (x, ymin) tp (x, ymax)
-     * <li>{@code x, ymin, y2, x2, ymax} - corresponds to a split caret drawn as two lines, the first line
-     * drawn from (x,ymin) to (x, y2), the second line drawn from (x2, y2) to (x2, ymax).
+     * <li>{@code [x, y, h]} - corresponds to a single line from (x, y) to (x, y + h)
+     * <li>{@code [x, y, x2, h]} - corresponds to a split caret drawn as two lines, the first line
+     * drawn from (x, y) to (x, y + h/2), the second line drawn from (x2, y + h/2) to (x2, y + h).
      * </ul>
      *
      * @param offset the character offset

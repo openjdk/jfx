@@ -136,24 +136,23 @@ public abstract class PrismLayoutInfo extends LayoutInfo {
 
         Rectangle2D[] parts;
         if (c.length == 3) {
-            // {x, ymin, ymax} - corresponds to a single line from (x, ymin) tp (x, ymax)
-            double x = c[0];
-            double ymin = c[1];
-            double ymax = c[2];
+            // [x, y, h] - corresponds to a single line from (x, y) to (x, y + h)
+            double x = c[0] + dx;
+            double y = c[1] + dy;
+            double h = c[2];
             parts = new Rectangle2D[] {
-                new Rectangle2D(x + dx, ymin + dy, 0.0, ymax - ymin)
+                new Rectangle2D(x, y, 0.0, h)
             };
         } else {
-            // {x, y, y2, x2, ymax} - corresponds to a split caret drawn as two lines, the first line
-            // drawn from (x,y) to (x, y2), the second line drawn from (x2, y2) to (x2, ymax).
-            double x = c[0];
-            double y = c[1];
-            double y2 = c[2];
-            double x2 = c[3];
-            double ymax = c[4];
+            // [x, y, x2, h] - corresponds to a split caret drawn as two lines, the first line
+            // drawn from (x, y) to (x, y + h/2), the second line drawn from (x2, y + h/2) to (x2, y + h).
+            double x = c[0] + dx;
+            double y = c[1] + dy;
+            double x2 = c[2] + dx;
+            double h2 = c[3] / 2.0;
             parts = new Rectangle2D[] {
-                new Rectangle2D(x + dx, y + dy, 0.0, y2 - y),
-                new Rectangle2D(x2 + dx, y2 + dy, 0.0, ymax - y2)
+                new Rectangle2D(x, y, 0.0, h2),
+                new Rectangle2D(x2, y + h2, 0.0, h2)
             };
         }
         return new PrismCaretInfo(parts);
