@@ -696,13 +696,13 @@ if (HUDSON_JOB_NAME == "not_hudson") {
     relOpt = "-${buildTimestamp}"
 } else {
     if (IS_MILESTONE_FCS) {
-        if (jfxExperimentalReleaseSuffix != "") {
-            fail("An experimental release branch should not be used for FCS build")
+        if (jfxExperimentalFeatureName != "") {
+            fail("An experimental feature branch should not be used for FCS build")
         }
         relSuffix = ""
     } else {
-        relSuffix = jfxExperimentalReleaseSuffix != "" ?
-                        jfxExperimentalReleaseSuffix : jfxReleaseSuffix;
+        relSuffix = jfxExperimentalFeatureName != "" ?
+                        "-${jfxExperimentalFeatureName}" : jfxReleaseSuffix;
         relOpt = "-${buildTimestamp}"
     }
 }
