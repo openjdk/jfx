@@ -703,6 +703,7 @@ if (HUDSON_JOB_NAME == "not_hudson") {
     } else {
         relSuffix = jfxExperimentalReleaseSuffix != "" ?
                         jfxExperimentalReleaseSuffix : jfxReleaseSuffix;
+        relOpt = "-${buildTimestamp}"
     }
 }
 defineProperty("RELEASE_SUFFIX", relSuffix)
