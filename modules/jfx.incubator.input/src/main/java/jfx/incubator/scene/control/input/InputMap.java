@@ -41,6 +41,7 @@ import com.sun.jfx.incubator.scene.control.input.EventHandlerPriority;
 import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
 import com.sun.jfx.incubator.scene.control.input.PHList;
+import com.sun.jfx.incubator.scene.control.input.SkinInputMap;
 
 /**
  * InputMap is a property of the {@link Control} class which enables customization
@@ -385,7 +386,9 @@ public final class InputMap {
      * This method removes all the mappings from the previous skin input map, if any.
      * @param m the skin input map
      */
-    public void setSkinInputMap(SkinInputMap m) {
+    // TODO change to public once SkinInputMap is public
+    // or add getSkinInputMap() to Skin.
+    private void setSkinInputMap(SkinInputMap m) {
         if (skinInputMap != null) {
             // uninstall all handlers with SKIN_* priority
             Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
@@ -424,16 +427,22 @@ public final class InputMap {
 
     private static void initAccessor() {
         InputMapHelper.setAccessor(new InputMapHelper.Accessor() {
-            // will be unnecessary after JDK-8314968
+            // TODO will be unnecessary after JDK-8314968
             @Override
             public void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
                 inputMap.executeDefault(source, tag);
             }
 
-            // will be unnecessary after JDK-8314968
+            // TODO will be unnecessary after JDK-8314968
             @Override
             public void execute(Object source, InputMap inputMap, FunctionTag tag) {
                 inputMap.execute(source, tag);
+            }
+
+            // TODO will be unnecessary once SkinInputMap is public
+            @Override
+            public void setSkinInputMap(InputMap inputMap, SkinInputMap sm) {
+                inputMap.setSkinInputMap(sm);
             }
         });
     }
