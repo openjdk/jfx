@@ -857,7 +857,8 @@ public class Text extends Shape {
     }
 
     /**
-     * The shape of the selection in local coordinates.
+     * The shape of the selection in coordinates
+     * relative to the font base line.
      *
      * @return the {@code selectionShape} property
      *
@@ -1084,7 +1085,8 @@ public class Text extends Shape {
     }
 
     /**
-     * Returns the shape for the range of the text in local coordinates.
+     * Returns the shape for the range of the text in coordinates
+     * relative to the font base line.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
@@ -1096,7 +1098,8 @@ public class Text extends Shape {
     }
 
     /**
-     * Returns the shape for the underline in local coordinates.
+     * Returns the shape for the underline in coordinates
+     * relative to the font base line.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
@@ -1108,7 +1111,8 @@ public class Text extends Shape {
     }
 
     /**
-     * Returns the shape for the strike-through in local coordinates.
+     * Returns the shape for the strike-through in coordinates
+     * relative to the font base line.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
