@@ -53,4 +53,5 @@ public sealed abstract class CaretInfo permits PrismCaretInfo {
      * @return the bounds of the caret part
      */
     public abstract Rectangle2D getPartAt(int index);
+    // TODO variant: CaretLineInfo, with bounds and (character index + bias)
 }
