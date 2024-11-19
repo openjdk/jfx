@@ -531,7 +531,7 @@ public abstract class PopupWindow extends Window {
             // Setup the peer
             StageStyle popupStyle;
             popupStyle = StageStyle.TRANSPARENT;
-            setPeer(toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().getPeer(), acc));
+            setPeer(toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().getPeer()));
             setPeerListener(new PopupWindowPeerListener(PopupWindow.this));
         }
     }

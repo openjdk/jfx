@@ -88,8 +88,6 @@ import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
 import java.io.File;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
@@ -183,9 +181,6 @@ public class Scene implements EventTarget {
     private final SceneAntialiasing antiAliasing;
 
     private EnumSet<DirtyBits> dirtyBits = EnumSet.noneOf(DirtyBits.class);
-
-    @SuppressWarnings("removal")
-    final AccessControlContext acc = AccessController.getContext();
 
     private Camera defaultCamera;
 
@@ -831,7 +826,7 @@ public class Scene implements EventTarget {
         setAllowPGAccess(true);
 
         Toolkit tk = Toolkit.getToolkit();
-        peer = windowPeer.createTKScene(isDepthBufferInternal(), getAntiAliasingInternal(), acc);
+        peer = windowPeer.createTKScene(isDepthBufferInternal(), getAntiAliasingInternal());
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
         peer.setTKSceneListener(new ScenePeerListener());
         peer.setTKScenePaintListener(new ScenePeerPaintListener());
@@ -6436,11 +6431,6 @@ public class Scene implements EventTarget {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
-                @SuppressWarnings("removal")
-                @Override public AccessControlContext getAccessControlContext() {
-                    return getPeer().getAccessControlContext();
-                }
-
                 @Override public Object getAttribute(AccessibleAttribute attribute,
                                                      Object... parameters) {
                     switch (attribute) {

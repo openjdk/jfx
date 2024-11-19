@@ -27,7 +27,6 @@ package test.javafx.scene.input;
 
 import com.sun.javafx.scene.SceneHelper;
 
-import java.security.AccessControlContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -1614,10 +1613,6 @@ public class DragAndDropTest {
         private Image image;
         private double offsetX;
         private double offsetY;
-
-        @Override
-        public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext ctx) {
-        }
 
         @Override
         public Object getContent(DataFormat df) {

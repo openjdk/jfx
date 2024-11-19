@@ -775,7 +775,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         // JDK-8115747: Icon URLs are now specified in CSS.
         // fgColorButton.applyCss();
         // ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
-        // String fgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString());
+        // String fgIcon = HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString();
         // ((StyleableProperty)fgColorPickerSkin.imageUrlProperty()).applyStyle(null,fgIcon);
 
         fgColorButton.setValue(DEFAULT_FG_COLOR);
@@ -796,7 +796,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         // JDK-8115747: Icon URLs are now specified in CSS.
         // bgColorButton.applyCss();
         // ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
-        // String bgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString());
+        // String bgIcon = HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString();
         // ((StyleableProperty)bgColorPickerSkin.imageUrlProperty()).applyStyle(null,bgIcon);
 
         bgColorButton.setValue(DEFAULT_BG_COLOR);

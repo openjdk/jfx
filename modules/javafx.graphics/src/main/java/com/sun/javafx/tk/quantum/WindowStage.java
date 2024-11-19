@@ -26,7 +26,6 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
-import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -239,9 +238,8 @@ public class WindowStage extends GlassStage {
         return style;
     }
 
-    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc) {
+    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa) {
         ViewScene scene = new ViewScene(depthBuffer, msaa);
-        scene.setSecurityContext(acc);
         return scene;
     }
 
