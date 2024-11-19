@@ -42,7 +42,7 @@ import com.sun.javafx.scene.text.TextLine;
 public abstract class PrismLayoutInfo extends LayoutInfo {
 
     protected abstract double lineSpacing();
-    
+
     protected abstract Insets insets();
 
     private final TextLayout layout;
