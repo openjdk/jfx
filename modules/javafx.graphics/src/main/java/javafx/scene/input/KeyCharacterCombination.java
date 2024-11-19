@@ -36,18 +36,14 @@ import javafx.beans.NamedArg;
  *
  * <p>
  *
- * The {@link KeyCode} of the key associated with a symbol can vary across
- * layouts. For example, on an English QWERTY layout the '+' symbol is the
- * shifted character on the key with code ({@link KeyCode#EQUALS}). The same
- * symbol is unshifted on a German layout ({@link KeyCode#PLUS}), and on the
- * same key as '1' on a Swiss German layout ({@link KeyCode#DIGIT1}). A key
- * character combination specifying '+' will match anyf of these keys even if
- * the Shift key is not held down during the key press.
+ * The location of a symbol or punctuation mark can vary from one keyboard
+ * layout to another. For example, on an English QWERTY layout the '+' symbol
+ * is the shifted character on {@link KeyCode#EQUALS} but on a German layout
+ * it is the unmodified character on {@link KeyCode#PLUS}. On most layouts
+ * the '+' symbol also appears on {@link KeyCode#ADD} on the numeric keypad.
+ * A key character combination dynamically queries the OS to determine which
+ * keys the character appears on when matching against a key event.
  *
- * <p>
- *
- * A key character combination can match more than one key e.g. a key on the
- * numeric keypad in addition to one or more on the main keyboard.
  * @since JavaFX 2.0
  */
 public final class KeyCharacterCombination extends KeyCombination {
@@ -109,8 +105,8 @@ public final class KeyCharacterCombination extends KeyCombination {
     /**
      * Tests whether this key combination matches the key combination in the
      * given {@code KeyEvent}. The key character of this object is first
-     * translated to the key code which is capable of producing the character
-     * in the current keyboard layout and then the resulting key code together
+     * translated to the key codes which are capable of producing the character
+     * in the current keyboard layout and then the resulting key codes together
      * with the modifier keys are matched against the key code and key modifiers
      * from the {@code KeyEvent}. This means that the method can return
      * {@code true} only for {@code KEY_PRESSED} and {@code KEY_RELEASED}

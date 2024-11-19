@@ -33,13 +33,14 @@ import java.util.Map;
  *
  * <p>
  *
- * Any given key will be assigned one {@code KeyCode} which is not affected by
- * the modifier state in effect when the key is pressed. For keys that
- * generate printable characters the code will be based on the character
- * generated with no modifiers. The exception is {@code KeyCode.A} through
- * {@code KeyCode.Z} which will be assigned to keys even on layouts which
- * don't generate those letters (such as Greek) to ensure that common
- * letter-based shortcuts are always accessible.
+ * For a given keyboard layout each key is assigned a key code which remains
+ * the same regardless of the modifier keys in effect when the key is
+ * pressed. For keys that generate printable characters the code will
+ * generally be based on the character produced with no modifiers. The
+ * exception is {@link KeyCode#A} through {@link KeyCode#Z} which are
+ * assigned to keys even on layouts which don't generate those letters
+ * (such as Greek) to ensure that common letter-based shortcuts are always
+ * accessible.
  *
  * <p>
  *
