@@ -34,7 +34,7 @@ import java.util.function.Consumer;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.Node;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.robot.Robot;
 import javafx.scene.text.CaretInfo;
@@ -53,9 +53,9 @@ import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
- * Tests new LayoutInfo API in the TextFlow.
+ * Tests new LayoutInfo API in the Text.
  */
-public class TextFlow_TextLayout_Test {
+public class Text_TextLayout_Test {
     private static final int WIDTH = 500;
     private static final int HEIGHT = 500;
     private static final int FONT_SIZE = 24;
@@ -63,16 +63,17 @@ public class TextFlow_TextLayout_Test {
     private static final double EPS = 0.1;
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
     private static Robot robot;
-    private static TextFlow textFlow;
+    private static Text text;
     private static volatile Stage stage;
     private static volatile Scene scene;
+    private static volatile Group root;
 
     // testing caret info
     @Test
     public void testCaretInfo() {
-        setText("__________\n", "______\n", "_\n");
+        setText("__________\n______\n_\n");
         waitForIdle();
-        LayoutInfo la = textFlow.getLayoutInfo();
+        LayoutInfo la = text.getLayoutInfo();
 
         CaretInfo ci = la.caretInfo(0, true);
 
@@ -100,12 +101,12 @@ public class TextFlow_TextLayout_Test {
     // testing layout bounds
     @Test
     public void testBounds() {
-        setText("__\n", "____\n", "______");
+        setText("__\n____\n______");
         apply((f) -> {
             f.setLineSpacing(LINE_SPACING);
         });
         waitForIdle();
-        LayoutInfo la = textFlow.getLayoutInfo();
+        LayoutInfo la = text.getLayoutInfo();
 
         Rectangle2D r0 = la.getBounds(false);
         Rectangle2D r1 = la.getBounds(true);
@@ -124,9 +125,9 @@ public class TextFlow_TextLayout_Test {
     // testing text lines
     @Test
     public void testTextLines() {
-        setText("__\n", "____\n", "______");
+        setText("__\n____\n______");
         waitForIdle();
-        LayoutInfo la = textFlow.getLayoutInfo();
+        LayoutInfo la = text.getLayoutInfo();
 
         // spacing = 0
 
@@ -185,9 +186,9 @@ public class TextFlow_TextLayout_Test {
     // testing selection shape
     @Test
     public void testSelection() {
-        setText("__\n", "____\n", "______");
+        setText("__\n____\n______");
         waitForIdle();
-        LayoutInfo la = textFlow.getLayoutInfo();
+        LayoutInfo la = text.getLayoutInfo();
 
         // spacing = 0
 
@@ -245,9 +246,9 @@ public class TextFlow_TextLayout_Test {
     // testing strike-through shape
     @Test
     public void testStrikeThrough() {
-        setText("__\n", "____\n", "______");
+        setText("__\n____\n______");
         waitForIdle();
-        LayoutInfo la = textFlow.getLayoutInfo();
+        LayoutInfo la = text.getLayoutInfo();
 
         int len = textLength();
         List<Rectangle2D> ss = la.strikeThroughShape(0, len);
@@ -273,9 +274,9 @@ public class TextFlow_TextLayout_Test {
     // testing underline shape
     @Test
     public void testUnderline() {
-        setText("__\n", "____\n", "______");
+        setText("__\n____\n______");
         waitForIdle();
-        LayoutInfo la = textFlow.getLayoutInfo();
+        LayoutInfo la = text.getLayoutInfo();
 
         int len = textLength();
         List<Rectangle2D> ss = la.underlineShape(0, len);
@@ -298,14 +299,11 @@ public class TextFlow_TextLayout_Test {
         assertEquals(s1.getHeight(), s2.getHeight(), EPS);
     }
 
-    private void setText(String... segments) {
+    private void setText(String s) {
         Util.runAndWait(() -> {
-            textFlow.getChildren().clear();
-            for (String s : segments) {
-                Text t = new Text(s);
-                t.setFont(new Font(FONT_SIZE));
-                textFlow.getChildren().add(t);
-            }
+            text = new Text(s);
+            text.setFont(new Font(FONT_SIZE));
+            root.getChildren().setAll(text);
         });
     }
 
@@ -314,28 +312,12 @@ public class TextFlow_TextLayout_Test {
     }
 
     public static int textLength() {
-        int len = 0;
-        for (Node n : textFlow.getChildrenUnmodifiable()) {
-            if (n instanceof Text t) {
-                len += t.getText().length();
-            } else {
-                // treat non-Text nodes as having 1 character
-                len++;
-            }
-        }
-        return len;
+        return text.getText().length();
     }
 
-    private void apply(Consumer<TextFlow> c) {
+    private void apply(Consumer<Text> c) {
         Util.runAndWait(() -> {
-            c.accept(textFlow);
-        });
-    }
-
-    @BeforeEach
-    public void beforeEach() {
-        apply((t) -> {
-            t.setLineSpacing(0);
+            c.accept(text);
         });
     }
 
@@ -355,8 +337,8 @@ public class TextFlow_TextLayout_Test {
             robot = new Robot();
             stage = st;
 
-            textFlow = new TextFlow();
-            scene = new Scene(textFlow, WIDTH, HEIGHT);
+            root = new Group();
+            scene = new Scene(root, WIDTH, HEIGHT);
             stage.setScene(scene);
             stage.initStyle(StageStyle.UNDECORATED);
             stage.setOnShown(event -> Platform.runLater(startupLatch::countDown));
