@@ -92,7 +92,7 @@ public class BMPImageLoaderTest {
         ImageLoader loader = loaderFactory.createImageLoader(stream);
         assertNotNull(loader);
 
-        ImageFrame frame = loader.load(0, 0, 0, true, true);
+        ImageFrame frame = loader.load(0, 0, 0, true, true, 1, 1);
         return Image.convertImageFrame(frame);
     }
 
