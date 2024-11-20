@@ -43,7 +43,12 @@ import java.security.BasicPermission;
  * @see java.security.PermissionCollection
  *
  * @since 9
+ *
+ * @deprecated This class was only useful in connection with the
+ *       Security Manager, which is no longer supported.
+ *       There is no replacement for this class.
  */
+@Deprecated(since = "24", forRemoval = true)
 public final class FXPermission extends BasicPermission {
 
     private static final long serialVersionUID = 2890556410764946054L;
