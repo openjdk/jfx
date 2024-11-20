@@ -126,7 +126,6 @@ public class LinuxScreencastHangCrashTest {
         robot.delay(DELAY_WAIT_FOR_SESSION_TO_CLOSE);
 
         awtPixel();
-        robot.delay(DELAY_WAIT_FOR_SESSION_TO_CLOSE);
     }
 
     @ParameterizedTest
@@ -140,11 +139,15 @@ public class LinuxScreencastHangCrashTest {
     })
     public void testCrash(int delay) throws Exception {
         System.out.println("Testing with delay: " + delay);
+
+        robot.delay(DELAY_WAIT_FOR_SESSION_TO_CLOSE);
         awtPixel();
         robot.delay(delay);
         fxPixel();
+
+        robot.delay(DELAY_WAIT_FOR_SESSION_TO_CLOSE);
+        fxPixel();
         robot.delay(delay);
         awtPixelOnFxThread();
-        robot.delay(delay);
     }
 }
