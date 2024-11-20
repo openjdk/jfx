@@ -828,20 +828,17 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     @Override
     protected int getInsertionPoint(double x, double y) {
         TextArea textArea = getSkinnable();
-        Text paragraphNode = getTextNode();
+        Text n = getTextNode();
 
         if (y < contentView.snappedTopInset()) {
             return 0;
         } else if (y > contentView.snappedTopInset() + contentView.getHeight()) {
-            return (textArea.getLength() - paragraphNode.getText().length());
+            return (textArea.getLength() - n.getText().length());
         } else {
-            Bounds bounds = paragraphNode.getBoundsInLocal();
-            double paragraphViewY = paragraphNode.getLayoutY() + bounds.getMinY();
-            if (
-                (y >= paragraphViewY) &&
-                (y < paragraphViewY + paragraphNode.getBoundsInLocal().getHeight())
-            ) {
-                Point2D p = new Point2D(x - paragraphNode.getLayoutX(), y - paragraphNode.getLayoutY());
+            Bounds bounds = n.getBoundsInLocal();
+            double dy = n.getLayoutY() + bounds.getMinY();
+            if ((y >= dy) && (y < dy + n.getBoundsInLocal().getHeight())) {
+                Point2D p = new Point2D(x - n.getLayoutX(), y - n.getLayoutY());
                 return hitTest(p).getInsertionIndex();
             }
         }
