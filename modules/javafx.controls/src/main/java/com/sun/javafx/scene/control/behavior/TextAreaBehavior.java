@@ -123,17 +123,17 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         if (isMac()) {
             // macOS specific mappings
             registerKey(KeyBinding.alt(KeyCode.DOWN), TextArea.PARAGRAPH_DOWN);
-            registerKey(KeyBinding.with(KeyCode.DOWN).alt().shift().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+            registerKey(KeyBinding.shiftOption(KeyCode.DOWN), TextArea.SELECT_PARAGRAPH_DOWN);
             registerKey(KeyBinding.shortcut(KeyCode.DOWN), TextArea.DOCUMENT_END);
-            registerKey(KeyBinding.with(KeyCode.DOWN).shortcut().shift().build(), TextArea.SELECT_END_EXTEND);
+            registerKey(KeyBinding.builder(KeyCode.DOWN).shortcut().shift().build(), TextArea.SELECT_END_EXTEND);
             registerKey(KeyBinding.shortcut(KeyCode.LEFT), TextArea.LINE_START);
-            registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().build(), TextArea.SELECT_LINE_START);
+            registerKey(KeyBinding.builder(KeyCode.LEFT).shortcut().shift().build(), TextArea.SELECT_LINE_START);
             registerKey(KeyBinding.shortcut(KeyCode.RIGHT), TextArea.LINE_END);
-            registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().build(), TextArea.SELECT_LINE_END);
+            registerKey(KeyBinding.builder(KeyCode.RIGHT).shortcut().shift().build(), TextArea.SELECT_LINE_END);
             registerKey(KeyBinding.alt(KeyCode.UP), TextArea.PARAGRAPH_UP);
-            registerKey(KeyBinding.with(KeyCode.UP).alt().shift().build(), TextArea.SELECT_PARAGRAPH_UP);
+            registerKey(KeyBinding.shiftOption(KeyCode.UP), TextArea.SELECT_PARAGRAPH_UP);
             registerKey(KeyBinding.shortcut(KeyCode.UP), TextArea.DOCUMENT_START);
-            registerKey(KeyBinding.with(KeyCode.UP).shortcut().shift().build(), TextArea.SELECT_HOME_EXTEND);
+            registerKey(KeyBinding.builder(KeyCode.UP).shortcut().shift().build(), TextArea.SELECT_HOME_EXTEND);
         } else {
             // non-macOS specific mappings
             registerKey(KeyBinding.ctrl(KeyCode.DOWN), TextArea.PARAGRAPH_DOWN);

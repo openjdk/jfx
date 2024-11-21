@@ -148,8 +148,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         registerKey(KeyBinding.shortcut(KeyCode.V), TextInputControl.PASTE);
         registerKey(KeyBinding.of(KeyCode.RIGHT), TextInputControl.RIGHT);
         registerKey(KeyBinding.shift(KeyCode.DOWN), TextInputControl.SELECT_END);
-        registerKey(KeyBinding.with(KeyCode.END).shortcut().shift().build(), TextInputControl.SELECT_END);
-        registerKey(KeyBinding.with(KeyCode.HOME).shortcut().shift().build(), TextInputControl.SELECT_HOME);
+        registerKey(KeyBinding.builder(KeyCode.END).shortcut().shift().build(), TextInputControl.SELECT_END);
+        registerKey(KeyBinding.builder(KeyCode.HOME).shortcut().shift().build(), TextInputControl.SELECT_HOME);
         registerKey(KeyBinding.shift(KeyCode.UP), TextInputControl.SELECT_HOME);
         registerKey(KeyBinding.shift(KeyCode.LEFT), TextInputControl.SELECT_LEFT);
         registerKey(KeyBinding.shift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT);
@@ -169,13 +169,13 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             registerKey(KeyBinding.shortcut(KeyCode.LEFT), TextInputControl.DOCUMENT_START);
             registerKey(KeyBinding.shortcut(KeyCode.RIGHT), TextInputControl.DOCUMENT_END);
             registerKey(KeyBinding.alt(KeyCode.LEFT), TextInputControl.LEFT_WORD);
-            registerKey(KeyBinding.with(KeyCode.Z).shortcut().shift().build(), TextInputControl.REDO);
+            registerKey(KeyBinding.builder(KeyCode.Z).shortcut().shift().build(), TextInputControl.REDO);
             registerKey(KeyBinding.alt(KeyCode.RIGHT), TextInputControl.RIGHT_WORD);
-            registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().build(), TextInputControl.SELECT_HOME_EXTEND);
-            registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().build(), TextInputControl.SELECT_END_EXTEND);
+            registerKey(KeyBinding.builder(KeyCode.LEFT).shortcut().shift().build(), TextInputControl.SELECT_HOME_EXTEND);
+            registerKey(KeyBinding.builder(KeyCode.RIGHT).shortcut().shift().build(), TextInputControl.SELECT_END_EXTEND);
             registerKey(KeyBinding.shift(KeyCode.END), TextInputControl.SELECT_END_EXTEND);
-            registerKey(KeyBinding.with(KeyCode.LEFT).shift().alt().build(), TextInputControl.SELECT_LEFT_WORD);
-            registerKey(KeyBinding.with(KeyCode.RIGHT).shift().alt().build(), TextInputControl.SELECT_RIGHT_WORD);
+            registerKey(KeyBinding.shiftOption(KeyCode.LEFT), TextInputControl.SELECT_LEFT_WORD);
+            registerKey(KeyBinding.shiftOption(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT_WORD);
         } else {
             // not-mac key bindings
             registerKey(KeyBinding.ctrl(KeyCode.DELETE), TextInputControl.DELETE_NEXT_WORD);

@@ -47,7 +47,7 @@ import com.sun.javafx.scene.control.input.PHList;
  * <p>
  * The {@code InputMap} serves as an integration point between the Control and its Skin.
  * The {@code InputMap} The InputMap provides an ordered repository of event handlers,
- * working together with {@link SkinInputMap} supplied by the skin, which
+ * working together with the input map managed by the skin, which
  * guarantees the order in which handers are invoked.
  * It also stores key mappings with a similar guarantee that the application mappings
  * always take precedence over mappings created by the skin,
@@ -55,7 +55,7 @@ import com.sun.javafx.scene.control.input.PHList;
  * <p>
  * The class supports the following scenarios:
  * <ul>
- * <li>map a key binding to a function, provided either by the application or the skin
+ * <li>map a key binding to a function
  * <li>un-map a key binding
  * <li>map a new function to an existing key binding
  * <li>obtain the default function
@@ -229,8 +229,8 @@ public final class InputMap {
     }
 
     /**
-     * Registers a function for the given key binding.  This mapping will  take precedence
-     * over any such mapping set by the skin.
+     * Registers a function for the given key binding.  This mapping will take precedence
+     * over the default mapping set by the skin.
      *
      * @param k the key binding
      * @param function the function
@@ -243,7 +243,7 @@ public final class InputMap {
 
     /**
      * Adds (or overrides) a user-specified function under the given function tag.
-     * This function will take precedence over any function set by the skin.
+     * This function will take precedence over any default function set by the skin.
      *
      * @param tag the function tag
      * @param function the function
@@ -259,7 +259,7 @@ public final class InputMap {
      * When the key binding matches the input event, the function is executed, the event is consumed,
      * and the process of dispatching is stopped.
      * <p>
-     * This method will take precedence over any function set by the skin.
+     * This method will take precedence over any default function set by the skin.
      *
      * @param k the key binding
      * @param tag the function tag
@@ -319,7 +319,7 @@ public final class InputMap {
     }
 
     /**
-     * Collects all mapped key bindings (set either by the user or the behavior).
+     * Collects all mapped key bindings.
      * @return the set of key bindings
      */
     public Set<KeyBinding> getKeyBindings() {
@@ -422,13 +422,13 @@ public final class InputMap {
 
     private static void initAccessor() {
         InputMapHelper.setAccessor(new InputMapHelper.Accessor() {
-            // will be unnecessary after JDK-8314968
+            // TODO will be unnecessary after JDK-8314968
             @Override
             public void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
                 inputMap.executeDefault(source, tag);
             }
 
-            // will be unnecessary after JDK-8314968
+            // TODO will be unnecessary after JDK-8314968
             @Override
             public void execute(Object source, InputMap inputMap, FunctionTag tag) {
                 inputMap.execute(source, tag);
