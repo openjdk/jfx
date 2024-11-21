@@ -25,8 +25,6 @@
 package test.robot.javafx.scene.control.behavior;
 
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-import javafx.application.Platform;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -44,11 +42,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import test.util.Util;
 
 /**
  * Tests TextArea RTL/LTR behavior.
  */
+@ExtendWith(ScreenshotFailedTestWatcher.class)
 public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
     private Color selectionColor;
 
