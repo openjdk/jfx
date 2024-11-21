@@ -36,7 +36,6 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import java.security.AccessControlContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -72,15 +71,6 @@ final class QuantumClipboard implements TKClipboard {
      * Handle to the Glass peer.
      */
     private ClipboardAssistance systemAssistant;
-
-    /**
-     * Security access context for image loading
-     *      com.sun.javafx.tk.quantum.QuantumClipboard
-     *      javafx.scene.input.Clipboard
-     *          ... user code ...
-     */
-    @SuppressWarnings("removal")
-    private AccessControlContext accessContext = null;
 
     /**
      * Distinguishes between clipboard and dragboard. This is needed
@@ -119,21 +109,6 @@ final class QuantumClipboard implements TKClipboard {
      * Disallow direct creation of QuantumClipboard
      */
     private QuantumClipboard() {
-    }
-
-    @Override public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext acc) {
-        if (accessContext != null) {
-            throw new RuntimeException("Clipboard security context has been already set!");
-        }
-        accessContext = acc;
-    }
-
-    @SuppressWarnings("removal")
-    private AccessControlContext getAccessControlContext() {
-        if (accessContext == null) {
-            throw new RuntimeException("Clipboard security context has not been set!");
-        }
-        return accessContext;
     }
 
     /**
