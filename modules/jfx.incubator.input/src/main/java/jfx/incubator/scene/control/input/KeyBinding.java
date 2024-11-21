@@ -33,11 +33,19 @@ import javafx.scene.input.KeyEvent;
 import com.sun.javafx.PlatformUtil;
 
 /**
- * Key binding provides a way to map key event to a hash table key for easy matching.
+ * This immutable class represents a combination of keys which are used in key mappings.
+ * A key combination consists of a main key and a set of modifier keys.
+ * The main key can be specified by its {@link KeyCode key code}
+ * or key character, the latter must match values returned by {@link KeyEvent#getCharacter()}.
+ * A modifier key is {@code shift}, {@code control}, {@code alt}, {@code meta} or {@code shortcut}.
+ * <p>
+ * This class also provides a set of convenience methods for refering to keys found on macOS platform.
  *
  * @since 999 TODO
  */
-public class KeyBinding implements EventCriteria<KeyEvent> {
+public class KeyBinding
+//implements EventCriteria<KeyEvent> 
+{
     /**
      * Condition used to build input key mappings.
      * <p>
@@ -252,72 +260,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Determines whether the shortcut key ({@code command} on macOS and {@code ctrl} elsewhere)
-     * is down in this key binding.
-     *
-     * @return true if {@code shortcut} key is down in this key binding
-     */
-    public boolean isShortcut() {
-        if (PlatformUtil.isMac()) {
-            return modifiers.contains(KCondition.COMMAND);
-        }
-        return modifiers.contains(KCondition.CTRL);
-    }
-
-    /**
-     * Determines whether {@code alt} key is down in this key binding.
-     * @return true if {@code alt} key is down in this key binding
-     */
-    public boolean isAlt() {
-        return modifiers.contains(KCondition.ALT);
-    }
-
-    /**
-     * Determines whether {@code ctrl} key is down in this key binding.
-     * @return true if {@code ctrl} key is down in this key binding
-     */
-    public boolean isCtrl() {
-        return modifiers.contains(KCondition.CTRL);
-    }
-
-    /**
-     * Determines whether {@code ⌘ command} key is down in this key binding.
-     * Applies to macOS platform only.
-     *
-     * @return true if {@code ⌘ command} key is down in this key binding
-     */
-    public boolean isCommand() {
-        return modifiers.contains(KCondition.COMMAND);
-    }
-
-    /**
-     * Determines whether {@code meta} key is down in this key binding.
-     * @return true if {@code meta} key is down in this key binding
-     */
-    public boolean isMeta() {
-        return modifiers.contains(KCondition.META);
-    }
-
-    /**
-     * Determines whether {@code option} key is down in this key binding.
-     * Applies to macOS only.
-     *
-     * @return true if {@code option} key is down in this key binding
-     */
-    public boolean isOption() {
-        return modifiers.contains(KCondition.OPTION);
-    }
-
-    /**
-     * Determines whether {@code shift} key is down in this key binding.
-     *
-     * @return true if {@code shift} key is down in this key binding
-     */
-    public boolean isShift() {
-        return modifiers.contains(KCondition.SHIFT);
-    }
-
-    /**
      * Returns the {@link KeyCode}, or null if the key binding is not for a key code.
      *
      * @return key code, or null
@@ -339,7 +281,8 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Creates a {@link Builder} with the specified KeyCode.
+     * Creates a {@link Builder} with the specified character.  The string must correspond to the
+     * value returned by {@link KeyEvent#getCharacter()}.
      * @param character the character
      * @return the Builder instance
      */
@@ -365,24 +308,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
                 modifiers.equals(k.modifiers);
         }
         return false;
-    }
-
-    /**
-     * Creates a Builder with a key pressed event.
-     * @param c key code
-     * @return Builder instance
-     */
-    public static Builder with(KeyCode c) {
-        return builder(c);
-    }
-
-    /**
-     * Creates a Builder with a key pressed event.
-     * @param c character pressed
-     * @return Builder instance
-     */
-    public static Builder with(String c) {
-        return new Builder(c);
     }
 
     /**
@@ -515,21 +440,21 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
      * Returns the event type for this key binding.
      * @return KeyEvent
      */
-    @Override
-    public EventType<KeyEvent> getEventType() {
-        if (isKeyPressed()) {
-            return KeyEvent.KEY_PRESSED;
-        } else if (isKeyReleased()) {
-            return KeyEvent.KEY_RELEASED;
-        } else {
-            return KeyEvent.KEY_TYPED;
-        }
-    }
-
-    @Override
-    public boolean isEventAcceptable(KeyEvent ev) {
-        return equals(KeyBinding.from(ev));
-    }
+//    @Override
+//    public EventType<KeyEvent> getEventType() {
+//        if (isKeyPressed()) {
+//            return KeyEvent.KEY_PRESSED;
+//        } else if (isKeyReleased()) {
+//            return KeyEvent.KEY_RELEASED;
+//        } else {
+//            return KeyEvent.KEY_TYPED;
+//        }
+//    }
+//
+//    @Override
+//    public boolean isEventAcceptable(KeyEvent ev) {
+//        return equals(KeyBinding.from(ev));
+//    }
 
     /** Key bindings builder */
     public static class Builder {

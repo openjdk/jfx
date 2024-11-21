@@ -25,23 +25,24 @@
 
 package jfx.incubator.scene.control.input;
 
+import javafx.scene.control.Control;
 import com.sun.javafx.ModuleUtil;
 
 /**
  * A function tag is a public identifier of a method that can be mapped to a key binding by the
  * control's {@link InputMap}.
  * <h2>Example</h2>
- * The following example is taken from the {@code TabPane} class:
- * <pre>    public class TabPane extends Control {
- *      // Identifiers for methods available for customization via the InputMap.
- *      public static final class Tag {
- *          // Selects the first tab.
- *          public static final FunctionTag SELECT_FIRST_TAB = new FunctionTag();
- *          // Selects the last tab.
- *          public static final FunctionTag SELECT_LAST_TAB = new FunctionTag();
- *          // Selects the left tab: previous in LTR mode, next in RTL mode.
- *          public static final FunctionTag SELECT_LEFT_TAB = new FunctionTag();
- *          ...
+ * Example:
+ * <pre>
+ * public class RichTextArea extends Control {
+ *     public static class Tags {
+ *         // Deletes the symbol before the caret.
+ *         public static final FunctionTag BACKSPACE = new FunctionTag();
+ *         // Copies selected text to the clipboard.
+ *         public static final FunctionTag COPY = new FunctionTag();
+ *         // Cuts selected text and places it to the clipboard.
+ *         public static final FunctionTag CUT = new FunctionTag();
+ *         ...
  * </pre>
  *
  * @since 999 TODO

@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package jfx.incubator.scene.control.input;
+package com.sun.jfx.incubator.scene.control.input;
 
 import javafx.event.Event;
 import javafx.event.EventType;

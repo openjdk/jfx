@@ -217,7 +217,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             registerKey(KeyBinding.shiftOption(KeyCode.UP), RichTextArea.Tags.SELECT_PARAGRAPH_UP);
             registerKey(KeyBinding.shiftShortcut(KeyCode.UP), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
             registerKey(KeyBinding.shortcut(KeyCode.UP), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
-            registerKey(KeyBinding.with(KeyCode.Z).shift().command().build(), RichTextArea.Tags.REDO);
+            registerKey(KeyBinding.builder(KeyCode.Z).shift().command().build(), RichTextArea.Tags.REDO);
         } else {
             registerKey(KeyBinding.ctrl(KeyCode.BACK_SLASH), RichTextArea.Tags.DESELECT);
             registerKey(KeyBinding.ctrl(KeyCode.BACK_SPACE), RichTextArea.Tags.DELETE_WORD_PREVIOUS);

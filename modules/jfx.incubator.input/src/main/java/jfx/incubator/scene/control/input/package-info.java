@@ -35,11 +35,7 @@
  * <li>allows for reverting customization to the default implementation
  * <li>guarantees priorities between the application and the skin event handlers and key mappings
  * <li>allows for gradual migration of the existing controls to use the InputMap
- * <li>supports stateful and stateless (fully static) behavior implementations
  * </ul>
- * See
- * <a href="https://github.com/andy-goryachev-oracle/Test/blob/main/doc/InputMap/InputMapV3.md">Public InputMap Proposal (v3)</a>
- * for more info.
  * <p>
  * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
