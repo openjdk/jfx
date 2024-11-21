@@ -77,6 +77,8 @@ public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
             exe(() -> {
                 mouseMove(5, 12);
                 mousePress();
+            }),
+            exe(() -> {
                 mouseMove(100, 36);
                 mouseRelease();
             }),
@@ -136,6 +138,8 @@ public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
                     exe(() -> {
                         mousePress();
                         mouseMove(x, 100);
+                    }),
+                    exe(() -> {
                         mouseRelease();
                     }),
                     PULSE,
