@@ -79,7 +79,7 @@ public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
                 mousePress();
             }),
             exe(() -> {
-                mouseMove(100, 36);
+                mouseMove(100, 100);
                 mouseRelease();
             }),
             checkSelection(0, 13),

@@ -65,7 +65,6 @@ import test.util.Util;
 public class ScreenshotFailedTestWatcher implements TestWatcher {
     @Override
     public void testFailed(ExtensionContext cx, Throwable e) {
-        e.printStackTrace();
         System.err.println(generateScreenshot("Screenshot:\ndata:image/png;base64,", "\n"));
     }
 
