@@ -44,7 +44,7 @@ import com.sun.javafx.PlatformUtil;
  * @since 24
  */
 public class KeyBinding
-//implements EventCriteria<KeyEvent> 
+//implements EventCriteria<KeyEvent>
 {
     /**
      * Condition used to build input key mappings.
