@@ -78,10 +78,10 @@ public class Text_TextLayout_Test {
         CaretInfo ci = la.caretInfo(0, true);
 
         // caret is one line
-        assertEquals(ci.getPartCount(), 1);
+        assertEquals(ci.getSegmentCount(), 1);
 
         // basic size checks
-        Rectangle2D r = ci.getPartAt(0);
+        Rectangle2D r = ci.getSegmentAt(0);
         assertTrue(r.getMinX() >= 0);
         assertTrue(r.getMinY() >= 0);
         assertTrue(r.getWidth() < 0.1);
@@ -90,8 +90,8 @@ public class Text_TextLayout_Test {
         // caret at the end
         int len = textLength();
         ci = la.caretInfo(len - 1, false);
-        assertEquals(ci.getPartCount(), 1);
-        Rectangle2D r2 = ci.getPartAt(0);
+        assertEquals(ci.getSegmentCount(), 1);
+        Rectangle2D r2 = ci.getSegmentAt(0);
 
         // basic checks
         assertTrue(r2.getMinY() > r.getMinY());

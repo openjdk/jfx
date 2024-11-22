@@ -39,12 +39,12 @@ public final class PrismCaretInfo extends CaretInfo {
     }
 
     @Override
-    public int getPartCount() {
+    public int getSegmentCount() {
         return parts.length;
     }
 
     @Override
-    public Rectangle2D getPartAt(int index) {
+    public Rectangle2D getSegmentAt(int index) {
         return parts[index];
     }
 
@@ -52,11 +52,11 @@ public final class PrismCaretInfo extends CaretInfo {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("PrismCaretInfo{parts=[");
-        for (int i = 0; i < getPartCount(); i++) {
+        for (int i = 0; i < getSegmentCount(); i++) {
             if (i > 0) {
                 sb.append(",");
             }
-            sb.append(getPartAt(i));
+            sb.append(getSegmentAt(i));
         }
         sb.append("]}");
         return sb.toString();

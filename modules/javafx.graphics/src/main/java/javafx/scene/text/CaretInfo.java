@@ -29,6 +29,11 @@ import com.sun.javafx.text.PrismCaretInfo;
 
 /**
  * Provides the information associated with the caret.
+ * <p>
+ * Typically, the caret is represented by a single vertical line which visually indicates the
+ * position within the text.  In some cases, where the caret is positioned between left-to-right and
+ * right-to-left text, two line segments will be shown, indicating the insertion position for both left-to-right
+ * and right-to-left character.
  *
  * @since 24
  */
@@ -40,18 +45,17 @@ public sealed abstract class CaretInfo permits PrismCaretInfo {
     }
 
     /**
-     * Returns the number of parts representing the caret.
+     * Returns the number of segments representing the caret.
      *
-     * @return the number of parts representing the caret
+     * @return the number of segments representing the caret
      */
-    public abstract int getPartCount();
+    public abstract int getSegmentCount();
 
     /**
-     * Returns the geometry of the part at the specified index.
+     * Returns the geometry of the segment at the specified index.
      *
      * @param index the line index
-     * @return the bounds of the caret part
+     * @return the bounds of the caret segment
      */
-    public abstract Rectangle2D getPartAt(int index);
-    // TODO variant: CaretLineInfo, with bounds and (character index + bias)
+    public abstract Rectangle2D getSegmentAt(int index);
 }
