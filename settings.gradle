@@ -23,34 +23,20 @@
  * questions.
  */
 
-include "base",
-        "graphics",
-        "controls",
-
-        // Add an entry for each incubator module here, leaving the incubator
-        // placeholder lines as an example.
-        // BEGIN: incubator placeholder
-        //"incubator.mymod",
-        // END: incubator placeholder
-
-        "swing",
-        "swt",
-        "fxml",
-        "jsobject",
-        "web",
-        "media",
-        "systemTests"
+include("base")
+include("graphics")
+include("controls")
+include("swing")
+include("swt")
+include("fxml")
+include("jsobject")
+include("web")
+include("media")
+include("systemTests")
 
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
-
-// Add an entry for each incubator module here, leaving the incubator
-// placeholder lines as an example.
-// BEGIN: incubator placeholder
-//project(":incubator.mymod").projectDir = file("modules/jfx.incubator.mymod")
-// END: incubator placeholder
-
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")
@@ -58,6 +44,9 @@ project(":jsobject").projectDir = file("modules/jdk.jsobject")
 project(":web").projectDir = file("modules/javafx.web")
 project(":media").projectDir = file("modules/javafx.media")
 project(":systemTests").projectDir = file("tests/system")
+
+def incubatorSettingsFile = file("incubator-settings.gradle");
+apply from: incubatorSettingsFile
 
 def closedDir = file("../rt-closed")
 def buildClosed = closedDir.isDirectory()
