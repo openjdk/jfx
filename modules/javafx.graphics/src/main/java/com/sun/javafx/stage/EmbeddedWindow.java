@@ -82,8 +82,7 @@ public class EmbeddedWindow extends Window {
         Toolkit toolkit = Toolkit.getToolkit();
         if (visible && (WindowHelper.getPeer(this) == null)) {
             // Setup the peer
-            WindowHelper.setPeer(this, toolkit.createTKEmbeddedStage(host,
-                    WindowHelper.getAccessControlContext(this)));
+            WindowHelper.setPeer(this, toolkit.createTKEmbeddedStage(host));
             WindowHelper.setPeerListener(this, new WindowPeerListener(this));
         }
     }
