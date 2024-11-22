@@ -25,9 +25,6 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -54,9 +51,6 @@ abstract class GlassStage implements TKStage {
     private boolean visible;
 
     private boolean important = true;
-
-    @SuppressWarnings("removal")
-    private AccessControlContext accessCtrlCtx = null;
 
     protected static final AtomicReference<GlassStage> activeFSWindow = new AtomicReference<>();
 
@@ -92,38 +86,6 @@ abstract class GlassStage implements TKStage {
         if (this.scene != null) {
             this.scene.setStage(this);
         }
-    }
-
-    // To be used by subclasses to enforce context check
-    @SuppressWarnings("removal")
-    final AccessControlContext getAccessControlContext() {
-        if (accessCtrlCtx == null) {
-            throw new RuntimeException("Stage security context has not been set!");
-        }
-        return accessCtrlCtx;
-    }
-
-    @SuppressWarnings("removal")
-    static AccessControlContext doIntersectionPrivilege(PrivilegedAction<AccessControlContext> action,
-                                                       AccessControlContext stack,
-                                                       AccessControlContext context) {
-        return AccessController.doPrivileged((PrivilegedAction<AccessControlContext>) () -> {
-            return AccessController.doPrivilegedWithCombiner((PrivilegedAction<AccessControlContext>) () -> {
-                return AccessController.getContext();
-            }, stack);
-        },  context);
-    }
-
-    @SuppressWarnings("removal")
-    public final void setSecurityContext(AccessControlContext ctx) {
-        if (accessCtrlCtx != null) {
-            throw new RuntimeException("Stage security context has been already set!");
-        }
-        AccessControlContext acc = AccessController.getContext();
-        // JDK doesn't provide public APIs to get ACC intersection,
-        // so using this ugly workaround
-        accessCtrlCtx = doIntersectionPrivilege(
-                () -> AccessController.getContext(), acc, ctx);
     }
 
     @Override public void requestFocus() {
@@ -189,7 +151,6 @@ abstract class GlassStage implements TKStage {
     }
 
     // Cmd+Q action
-    @SuppressWarnings("removal")
     static void requestClosingAllWindows() {
         GlassStage fsWindow = activeFSWindow.get();
         if (fsWindow != null) {
@@ -200,10 +161,7 @@ abstract class GlassStage implements TKStage {
             // In case of child windows some of them could already be closed
             // so check if list still contains an object
             if (windows.contains(window) && window.isVisible() && window.stageListener != null) {
-                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                    window.stageListener.closing();
-                    return null;
-                }, window.getAccessControlContext());
+                window.stageListener.closing();
             }
         }
     }

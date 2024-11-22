@@ -28,7 +28,6 @@ package com.sun.javafx.tk.quantum;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FilePermission;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInput;
@@ -36,11 +35,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.net.MalformedURLException;
-import java.net.SocketPermission;
-import java.net.URL;
 import java.nio.ByteBuffer;
-import java.security.AccessControlContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -60,7 +55,6 @@ import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.Pixels;
 import com.sun.javafx.tk.ImageLoader;
-import com.sun.javafx.tk.PermissionHelper;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.image.PixelReader;
@@ -77,15 +71,6 @@ final class QuantumClipboard implements TKClipboard {
      * Handle to the Glass peer.
      */
     private ClipboardAssistance systemAssistant;
-
-    /**
-     * Security access context for image loading
-     *      com.sun.javafx.tk.quantum.QuantumClipboard
-     *      javafx.scene.input.Clipboard
-     *          ... user code ...
-     */
-    @SuppressWarnings("removal")
-    private AccessControlContext accessContext = null;
 
     /**
      * Distinguishes between clipboard and dragboard. This is needed
@@ -124,21 +109,6 @@ final class QuantumClipboard implements TKClipboard {
      * Disallow direct creation of QuantumClipboard
      */
     private QuantumClipboard() {
-    }
-
-    @Override public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext acc) {
-        if (accessContext != null) {
-            throw new RuntimeException("Clipboard security context has been already set!");
-        }
-        accessContext = acc;
-    }
-
-    @SuppressWarnings("removal")
-    private AccessControlContext getAccessControlContext() {
-        if (accessContext == null) {
-            throw new RuntimeException("Clipboard security context has not been set!");
-        }
-        return accessContext;
     }
 
     /**
@@ -371,39 +341,7 @@ final class QuantumClipboard implements TKClipboard {
             if (htmlData != null) {
                 String url = parseIMG(htmlData);
                 if (url != null) {
-                    try {
-                        @SuppressWarnings("removal")
-                        SecurityManager sm = System.getSecurityManager();
-                        if (sm != null) {
-                            @SuppressWarnings("removal")
-                            AccessControlContext context = getAccessControlContext();
-                            URL u = new URL(url);
-                            String protocol = u.getProtocol();
-                            if (protocol.equalsIgnoreCase("jar")) {
-                                String file = u.getFile();
-                                u = new URL(file);
-                                protocol = u.getProtocol();
-                            }
-                            if (protocol.equalsIgnoreCase("file")) {
-                                FilePermission fp = new FilePermission(u.getFile(), "read");
-                                sm.checkPermission(fp, context);
-                            } else if (protocol.equalsIgnoreCase("ftp") ||
-                                       protocol.equalsIgnoreCase("http") ||
-                                       protocol.equalsIgnoreCase("https")) {
-                                int port = u.getPort();
-                                String hoststr = (port == -1 ? u.getHost() : u.getHost() + ":" + port);
-                                SocketPermission sp = new SocketPermission(hoststr, "connect");
-                                sm.checkPermission(sp, context);
-                            } else {
-                                PermissionHelper.checkClipboardPermission(context);
-                            }
-                        }
-                        return (new Image(url));
-                    } catch (MalformedURLException mue) {
-                        return null;
-                    } catch (SecurityException se) {
-                        return null;
-                    }
+                    return (new Image(url));
                 }
             }
             return null;
