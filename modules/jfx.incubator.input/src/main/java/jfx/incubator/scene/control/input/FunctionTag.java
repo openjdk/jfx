@@ -45,7 +45,7 @@ import com.sun.javafx.ModuleUtil;
  *         ...
  * </pre>
  *
- * @since 999 TODO
+ * @since 24
  */
 public final class FunctionTag {
     /** Constructs the function tag. */

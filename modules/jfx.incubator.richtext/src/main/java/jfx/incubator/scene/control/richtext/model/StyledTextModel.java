@@ -95,7 +95,7 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * {@link #getParagraph(int)}.  It is the responsibility of the model to store and restore the values
  * of such properties.
  *
- * @since 999 TODO
+ * @since 24
  */
 public abstract class StyledTextModel {
     /**

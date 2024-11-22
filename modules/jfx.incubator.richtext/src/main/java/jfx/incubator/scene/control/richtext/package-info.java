@@ -34,6 +34,6 @@
  * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
  *
- * @since 999 TODO
+ * @since 24
  */
 package jfx.incubator.scene.control.richtext;

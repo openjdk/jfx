@@ -52,7 +52,7 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * Where T are the characters inserted following the start position, A are the inserted complete paragraphs,
  * and B are the characters inserted at the beginning of the paragraph that contains the end position.
  *
- * @since 999 TODO
+ * @since 24
  */
 public abstract class ContentChange {
     private final TextPos start;

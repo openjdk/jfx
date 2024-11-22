@@ -31,7 +31,7 @@ import javafx.event.EventType;
  * This interface enables wider control in specifying conditional matching logic when adding skin/behavior handlers.
  *
  * @param <T> the type of the event
- * @since 999 TODO
+ * @since 24
  */
 public interface EventCriteria<T extends Event> {
     /**
