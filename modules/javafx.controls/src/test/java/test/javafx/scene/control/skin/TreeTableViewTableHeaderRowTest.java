@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control.skin;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.scene.control.CheckMenuItem;
@@ -45,6 +46,7 @@ import test.com.sun.javafx.binding.ExpressionHelperUtility;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.util.memory.JMemoryBuddy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -230,11 +232,11 @@ public class TreeTableViewTableHeaderRowTest {
     }
 
     /**
-     * Tests that re-setting the same columns does not cause memory leaks.
+     * Tests that re-setting the same columns does not cause excessive listener registrations.
      * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
      */
     @Test
-    void testReSettingColumnsDoesNotLeakMemory() {
+    void testReSettingColumnsDoesNotCauseExcessiveListeners() {
         for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
             assertEquals(2, getVisibilityListenerCount(column));
         }
@@ -258,11 +260,11 @@ public class TreeTableViewTableHeaderRowTest {
     }
 
     /**
-     * Tests that toggling the column visibility does not cause memory leaks.
+     * Tests that toggling the column visibility does not cause excessive listener registrations.
      * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
      */
     @Test
-    void testTogglingColumnVisibilityDoesNotLeakMemory() {
+    void testTogglingColumnVisibilityDoesNotCauseExcessiveListeners() {
         for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
             assertEquals(2, getVisibilityListenerCount(column));
         }
@@ -287,6 +289,58 @@ public class TreeTableViewTableHeaderRowTest {
         for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
             assertEquals(3, getVisibilityListenerCount(column));
         }
+    }
+
+    /**
+     * Tests that re-setting the same columns does not cause memory leaks.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
+     */
+    @Test
+    void testReSettingColumnsDoesNotCauseMemoryLeaks() {
+        JMemoryBuddy.memoryTest((mem) -> {
+            mem.assertCollectable(tableHeaderRow);
+
+            // Trigger the menu once so that it will start listening to column changes.
+            MouseEventFirer mouseEventFirer = new MouseEventFirer(cornerRegion);
+            mouseEventFirer.fireMousePressed();
+
+            cornerRegion = null;
+            tableHeaderRow = null;
+
+            treeTableView.getColumns().setAll(FXCollections.observableArrayList(treeTableView.getColumns()));
+            treeTableView.getColumns().setAll(FXCollections.observableArrayList(treeTableView.getColumns()));
+
+            treeTableView.setSkin(new TreeTableViewSkin<>(treeTableView));
+            Toolkit.getToolkit().firePulse();
+        });
+    }
+
+    /**
+     * Tests that toggling the column visibility does not cause memory leaks.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
+     */
+    @Test
+    void testTogglingColumnVisibilityDoesNotCauseMemoryLeaks() {
+        JMemoryBuddy.memoryTest((mem) -> {
+            mem.assertCollectable(tableHeaderRow);
+
+            // Trigger the menu once so that it will start listening to column changes.
+            MouseEventFirer mouseEventFirer = new MouseEventFirer(cornerRegion);
+            mouseEventFirer.fireMousePressed();
+
+            cornerRegion = null;
+            tableHeaderRow = null;
+
+            for (TreeTableColumn<String, ?> column : treeTableView.getColumns()) {
+                column.setVisible(false);
+                column.setVisible(true);
+                column.setVisible(false);
+                column.setVisible(true);
+            }
+
+            treeTableView.setSkin(new TreeTableViewSkin<>(treeTableView));
+            Toolkit.getToolkit().firePulse();
+        });
     }
 
     private int getVisibilityListenerCount(TreeTableColumn<String, ?> column) {
