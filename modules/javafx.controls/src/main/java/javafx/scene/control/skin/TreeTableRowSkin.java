@@ -97,10 +97,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         ListenerHelper lh = ListenerHelper.get(this);
 
-        lh.addChangeListener(control.indexProperty(), (ev) -> {
-            updateCells = true;
-        });
-
         lh.addChangeListener(control.treeItemProperty(), (ev) -> {
             updateTreeItem();
             // There used to be an isDirty = true statement here, but this was
@@ -111,7 +107,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         setupTreeTableViewListeners();
     }
 
-    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
@@ -130,36 +125,15 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 }
             });
 
-            DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
-            if (fixedCellSizeProperty != null) {
-                registerChangeListener(fixedCellSizeProperty, (x) -> {
-                    updateCachedFixedSize();
-                });
-                updateCachedFixedSize();
-
+            if (getFixedCellSize() > 0) {
                 // JDK-8144500:
                 // When in fixed cell size mode, we must listen to the width of the virtual flow, so
                 // that when it changes, we can appropriately add / remove cells that may or may not
                 // be required (because we remove all cells that are not visible).
                 VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
                 if (virtualFlow != null) {
-                    registerChangeListener(getVirtualFlow().widthProperty(), (x) -> {
-                        if (getSkinnable() != null) {
-                            TreeTableView<T> t = getSkinnable().getTreeTableView();
-                            t.requestLayout();
-                        }
-                    });
+                    registerChangeListener(getVirtualFlow().widthProperty(), e -> getTreeTableView().requestLayout());
                 }
-            }
-        }
-    }
-
-    private void updateCachedFixedSize() {
-        if (getSkinnable() != null) {
-            TreeTableView<T> t = getSkinnable().getTreeTableView();
-            if (t != null) {
-                fixedCellSize = t.getFixedCellSize();
-                fixedCellSizeEnabled = fixedCellSize > 0.0;
             }
         }
     }
@@ -349,6 +323,12 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     private TreeTableView<T> getTreeTableView() {
         return getSkinnable().getTreeTableView();
+    }
+
+    @Override
+    double getFixedCellSize() {
+        TreeTableView<T> treeTableView = getTreeTableView();
+        return treeTableView != null ? treeTableView.getFixedCellSize() : super.getFixedCellSize();
     }
 
     private void updateDisclosureNodeAndGraphic() {

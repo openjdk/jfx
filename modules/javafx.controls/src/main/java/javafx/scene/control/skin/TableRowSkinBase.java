@@ -41,6 +41,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
 
 import com.sun.javafx.tk.Toolkit;
@@ -128,10 +129,6 @@ public abstract class TableRowSkinBase<T,
 
     boolean isDirty = false;
     boolean updateCells = false;
-
-    // FIXME: replace cached values with direct lookup - JDK-8277000
-    double fixedCellSize;
-    boolean fixedCellSizeEnabled;
 
 
     /* *************************************************************************
@@ -323,7 +320,7 @@ public abstract class TableRowSkinBase<T,
             TableColumnBase<T, ?> tableColumn = getTableColumn(tableCell);
 
             boolean isVisible = true;
-            if (fixedCellSizeEnabled) {
+            if (getFixedCellSize() > 0) {
                 // we determine if the cell is visible, and if not we have the
                 // ability to take it out of the scenegraph to help improve
                 // performance. However, we only do this when there is a
@@ -336,13 +333,13 @@ public abstract class TableRowSkinBase<T,
                 isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
 
                 y = 0;
-                height = fixedCellSize;
+                height = getFixedCellSize();
             } else {
                 height = h;
             }
 
             if (isVisible) {
-                if (fixedCellSizeEnabled && tableCell.getParent() == null) {
+                if (getFixedCellSize() > 0 && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
                 // Note: prefWidth() has to be called only after the tableCell is added to the tableRow, if it wasn't
@@ -420,7 +417,7 @@ public abstract class TableRowSkinBase<T,
                 tableCell.requestLayout();
             } else {
                 width = tableCell.prefWidth(height);
-                if (fixedCellSizeEnabled) {
+                if (getFixedCellSize() > 0) {
                     // we only add/remove to the scenegraph if the fixed cell
                     // length support is enabled - otherwise we keep all
                     // TableCells in the scenegraph
@@ -430,6 +427,10 @@ public abstract class TableRowSkinBase<T,
 
             x += width;
         }
+    }
+
+    double getFixedCellSize() {
+        return Region.USE_COMPUTED_SIZE;
     }
 
     int getIndentationLevel(C control) {
@@ -519,7 +520,7 @@ public abstract class TableRowSkinBase<T,
         }
 
         // update children of each row
-        if (fixedCellSizeEnabled) {
+        if (getFixedCellSize() > 0) {
             // we leave the adding / removing up to the layoutChildren method mostly, but here we remove any children
             // cells that refer to columns that are removed or not visible.
             List<Node> toRemove = new ArrayList<>();
@@ -559,7 +560,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
@@ -592,7 +594,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
@@ -622,7 +625,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
         return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
