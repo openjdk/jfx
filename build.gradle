@@ -235,29 +235,6 @@ void setupTools(String name, Closure loader, Closure processor) {
     }
 }
 
-//String[] parseJavaVersion(String jRuntimeVersion) {
-//    def jVersion = jRuntimeVersion.split("[-\\+]")[0]
-//    def tmpBuildNumber = "0"
-//    if (jVersion.startsWith("1.")) {
-//        // This is a pre-JEP-223 version string
-//        def dashbIdx = jRuntimeVersion.lastIndexOf("-b")
-//        if (dashbIdx != -1) {
-//            tmpBuildNumber = jRuntimeVersion.substring(dashbIdx + 2)
-//        }
-//    } else {
-//        // This is a post-JEP-223 version string
-//        def plusIdx = jRuntimeVersion.indexOf("+")
-//        if (plusIdx != -1) {
-//            tmpBuildNumber = jRuntimeVersion.substring(plusIdx + 1)
-//        }
-//    }
-//    def jBuildNumber = tmpBuildNumber.split("[-\\+]")[0]
-//    def versionInfo = new String[2];
-//    versionInfo[0] = jVersion
-//    versionInfo[1] = jBuildNumber
-//    return versionInfo
-//}
-
 /**
  * Fails the build with the specified error message
  *
@@ -760,7 +737,7 @@ if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to '
 //
 // We need to parse the second line
 Version jdkVersionInfo;
-try(BufferedReader inStream = new java.io.BufferedReader(new java.io.InputStreamReader(
+try (BufferedReader inStream = new java.io.BufferedReader(new java.io.InputStreamReader(
         new java.lang.ProcessBuilder(JAVA, "-fullversion").start().getErrorStream()))) {
     String v = inStream.readLine().trim();
     if (v != null) {
