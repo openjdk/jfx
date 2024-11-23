@@ -1932,7 +1932,7 @@ task verifyJava() {
     doLast {
         Version minVersionInfo = Version.parse("${jfxBuildJdkVersionMin}+${jfxBuildJdkBuildnumMin}") // from build.properties
         if (jdkVersionInfo.compareTo(minVersionInfo) < 0) {
-            fail("java version mismatch: JDK version (${jdkVersionInfo}) < minimum version (${minVersionInfo})")                             
+            fail("java version mismatch: JDK version (${jdkVersionInfo}) < minimum version (${minVersionInfo})")
         }
     }
 }
