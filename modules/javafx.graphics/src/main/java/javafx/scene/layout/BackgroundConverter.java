@@ -100,7 +100,7 @@ class BackgroundConverter extends StyleConverter<ParsedValue[], Background>
             final int lastPositionIndex = positions.length - 1;
             final int lastSizeIndex = sizes.length - 1;
             for (int i = 0; i < images.length; i++) {
-                // RT-21335: skip background and border images whose image url is null
+                // JDK-8116322: skip background and border images whose image url is null
                 if (images[i] == null) continue;
 
                 final Image image;

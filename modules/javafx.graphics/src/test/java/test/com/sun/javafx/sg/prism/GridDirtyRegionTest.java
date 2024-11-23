@@ -278,9 +278,9 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     }
 
     // TODO be sure to test changing properties on the node clip. For example, use a rect clip
-    // and change its geometry (RT-26928)
+    // and change its geometry (JDK-8091760)
 
 
     // TODO be sure to write a number of tests regarding the screen clip, and make sure that
-    // I test that accumulating dirty regions is correct in the presence of a clip. (RT-26928)
+    // I test that accumulating dirty regions is correct in the presence of a clip. (JDK-8091760)
 }

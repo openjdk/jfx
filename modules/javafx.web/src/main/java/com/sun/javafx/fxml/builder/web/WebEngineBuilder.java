@@ -25,7 +25,7 @@
 
 package com.sun.javafx.fxml.builder.web;
 
-// TODO: remove this class as part of fixing RT-40037.
+// TODO: remove this class as part of fixing JDK-8089907.
 
 import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;

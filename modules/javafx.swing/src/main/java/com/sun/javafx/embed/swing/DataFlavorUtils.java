@@ -144,7 +144,7 @@ final class DataFlavorUtils {
         }
 
         if (flavor.isFlavorJavaFileListType()) {
-            // RT-12663
+            // JDK-8101336
             final List<File> fileList = (List<File>)swingData;
             final String[] paths = new String[fileList.size()];
             int i = 0;

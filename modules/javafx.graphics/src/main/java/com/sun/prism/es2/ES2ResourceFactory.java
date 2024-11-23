@@ -187,7 +187,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
                 return glFactory.isGL2()
                     // Unfortunately our support for float textures on GLES
                     // seems to be broken so we will defer use of this extension
-                    // until we fix RT-26286.
+                    // until we fix JDK-8092380.
 //                        || glFactory.isGLExtensionSupported("GL_OES_texture_float")
                         ;
             case BYTE_APPLE_422:

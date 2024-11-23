@@ -102,7 +102,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
     }
 
     @Test
-    @Disabled("pending RT-28373")
+    @Disabled("pending JDK-8087612")
     public void testSeriesAdd() {
         createChart();
         startApp();

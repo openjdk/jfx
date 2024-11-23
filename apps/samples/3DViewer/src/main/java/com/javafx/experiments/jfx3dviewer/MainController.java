@@ -160,7 +160,7 @@ public class MainController implements Initializable {
                                 }
                             }
                             if (supportedFile!=null) {
-                                // workaround for RT-30195
+                                // workaround for JDK-8119860
                                 if (supportedFile.getAbsolutePath().indexOf('%') != -1) {
                                     supportedFile = new File(URLDecoder.decode(supportedFile.getAbsolutePath()));
                                 }

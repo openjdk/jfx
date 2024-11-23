@@ -174,7 +174,7 @@ public class Modena extends Application {
         // scene.getStylesheets().add(testAppCssUrl);
         stage.setScene(scene);
         stage.setTitle("Modena");
-//        stage.setIconified(test); // TODO: Blocked by http://javafx-jira.kenai.com/browse/JMY-203
+//        stage.setIconified(test); // TODO: Blocked by JMY-203
         stage.show(); // see SamplePage.java:110 comment on how test fails without having stage shown
         instance = this;
     }
@@ -292,7 +292,7 @@ public class Modena extends Application {
             tab5.setContent(new ScrollPane(combinationsTest =
                     (Node)FXMLLoader.load(Modena.class.getResource("CombinationTest.fxml"))));
 
-            // Customer example from bug report http://javafx-jira.kenai.com/browse/DTL-5561
+            // Customer example from bug report DTL-5561
             Tab tab6 = new Tab("Customer Example");
             tab6.setContent(new ScrollPane(customerTest =
                     (Node)FXMLLoader.load(Modena.class.getResource("ScottSelvia.fxml"))));

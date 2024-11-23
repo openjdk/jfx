@@ -141,7 +141,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
     private double calculateIndentation() {
         double indentation = 0;
 
-        // RT-27167: we must take into account the disclosure node and the
+        // JDK-8118884: we must take into account the disclosure node and the
         // indentation (which is not taken into account by the LabeledSkinBase.
         final double height = getCellSize();
 

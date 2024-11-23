@@ -429,7 +429,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongLeft(48, TOP);
     }
 
-    @Disabled("RT-33411: Doesn't work at present because of Prism bug where the gaps between rows are inconsistent")
+    @Disabled("JDK-8088544: Doesn't work at present because of Prism bug where the gaps between rows are inconsistent")
     @Test
     public void unalignedImage_Space() {
         setStyle("-fx-background-color: black;" +
@@ -449,7 +449,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkCompletelyFilled(50); // rounded up from 48 to 50
     }
 
-    @Disabled("RT-33411: Doesn't work at present because of Prism bug where the gaps between rows are inconsistent")
+    @Disabled("JDK-8088544: Doesn't work at present because of Prism bug where the gaps between rows are inconsistent")
     @Test
     public void unalignedImage_RoundSpace() {
         setStyle("-fx-background-color: black;" +

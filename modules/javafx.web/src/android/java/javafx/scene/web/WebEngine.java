@@ -947,7 +947,7 @@ final public class WebEngine {
      */
     private static final class PulseTimer {
 
-        // Used just to guarantee constant pulse activity. See RT-14433.
+        // Used just to guarantee constant pulse activity. See JDK-8114603.
         private static final AnimationTimer animation =
             new AnimationTimer() {
                 @Override public void handle(long l) {}

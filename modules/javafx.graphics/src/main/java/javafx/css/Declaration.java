@@ -157,7 +157,7 @@ final public class Declaration {
     }
 
     //
-    // RT-21964
+    // JDK-8126015
     //
     // We know when the .css file is parsed what the stylesheet URL is,
     // but that might not be the URL of the deployed file. So for URL

@@ -196,7 +196,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
     private static final String INSERT_NEW_LINE_COMMAND = "insertnewline";
     private static final String INSERT_TAB_COMMAND = "inserttab";
 
-    // As per RT-16330: default format -> bold/size mappings are as follows:
+    // As per JDK-8128317: default format -> bold/size mappings are as follows:
     private static final String[][] DEFAULT_FORMAT_MAPPINGS = {
         { FORMAT_PARAGRAPH,   "",             SIZE_SMALL     },
         { FORMAT_HEADING_1,   BOLD_COMMAND,   SIZE_X_LARGE   },
@@ -207,7 +207,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
         { FORMAT_HEADING_6,   BOLD_COMMAND,   SIZE_XX_SMALL  },
     };
 
-    // As per RT-16379: default OS -> font mappings:
+    // As per JDK-8128304: default OS -> font mappings:
     private static final String[] DEFAULT_WINDOWS_7_MAPPINGS = {
         "Windows 7",       "Segoe UI",        "12px",   "",     "120"
     };
@@ -245,7 +245,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
 //                if (c.getRemovedSize() > 0) {
 //                    for (Node n : c.getList()) {
 //                        if (n instanceof WebView) {
-//                            // RT-28611 webView removed - set associated webPage to null
+//                            // JDK-8120698 webView removed - set associated webPage to null
 //                            webPage.dispose();
 //                        }
 //                    }
@@ -611,7 +611,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
                     executeCommand(FORMAT_COMMAND, formatValue);
                     updateToolbarState(false);
 
-                    // RT-16330 match the new font format with the required weight and size
+                    // JDK-8128317 match the new font format with the required weight and size
                     for (int i = 0; i < DEFAULT_FORMAT_MAPPINGS.length; i++) {
                         String[] mapping = DEFAULT_FORMAT_MAPPINGS[i];
                         if (mapping[0].equalsIgnoreCase(formatValue)) {
@@ -745,7 +745,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
 
         insertHorizontalRuleButton = addButton(toolbar2, resources.getString("insertHorizontalRuleIcon"),
             resources.getString("insertHorizontalRule"), INSERT_HORIZONTAL_RULE_COMMAND, "html-editor-hr");
-        // We override setOnAction to insert a new line.  This fixes RT-16453
+        // We override setOnAction to insert a new line.  This fixes JDK-8128749
         insertHorizontalRuleButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {

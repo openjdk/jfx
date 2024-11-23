@@ -261,7 +261,7 @@ public class PickRay {
         }
         double t = -origZ / dirZ;
         if (perspective && t < 0) {
-            // TODO: Or should we use Infinity? (RT-26888)
+            // TODO: Or should we use Infinity? (JDK-8091717)
             return null;
         }
         if (ret == null) {

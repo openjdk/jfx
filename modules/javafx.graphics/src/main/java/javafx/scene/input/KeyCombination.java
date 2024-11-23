@@ -300,7 +300,7 @@ public abstract class KeyCombination {
             if (getMeta() == KeyCombination.ModifierValue.DOWN || getShortcut() == KeyCombination.ModifierValue.DOWN) {
                 stringBuilder.append("\u2318");
             }
-            // TODO refer to RT-14486 for remaining glyphs
+            // TODO refer to JDK-8114084 for remaining glyphs
         }
         else {
             if (getControl() == KeyCombination.ModifierValue.DOWN || getShortcut() == KeyCombination.ModifierValue.DOWN ) {

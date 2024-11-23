@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests for Region picking. By default, Region has pickOnBounds set to true, so picking
  * anything within the bounds of the region will return true, anything outside the bounds
- * false. However, due to RT-25066, the bounds of a region defined by a shape will be 0x0,
+ * false. However, due to JDK-8088149, the bounds of a region defined by a shape will be 0x0,
  * in which case it will never be picked.
  *
  * If pickOnBounds is false, then an entire different code path is executed. We don't care

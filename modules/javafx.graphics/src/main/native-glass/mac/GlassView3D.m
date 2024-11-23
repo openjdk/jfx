@@ -471,7 +471,7 @@
     // Local copy of the id keeps the retain/release calls balanced.
     id fsWindow = [self->_delegate->fullscreenWindow retain];
 
-    // RT-37093, RT-37399 Command-EQUALS and Command-DOT needs special casing on Mac
+    // JDK-8093711, JDK-8094601 Command-EQUALS and Command-DOT needs special casing on Mac
     // as it is passed through as two calls to performKeyEquivalent, which in turn
     // create extra KeyEvents.
     //

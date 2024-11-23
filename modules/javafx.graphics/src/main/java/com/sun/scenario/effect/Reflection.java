@@ -248,7 +248,7 @@ public class Reflection extends CoreEffect<RenderState> {
                                       Object renderHelper,
                                       Effect defaultInput)
     {
-        // RT-27405
+        // JDK-8091422
         // TODO: We could calculate which parts are needed based on the two
         // ways that the input is rendered into this ouput rectangle. For now,
         // we will just use the stock object that requests unclipped inputs.
