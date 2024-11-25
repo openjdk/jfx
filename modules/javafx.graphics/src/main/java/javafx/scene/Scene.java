@@ -604,7 +604,7 @@ public class Scene implements EventTarget {
      * is completed. Nodes will use this event to determine whether they are in their initial
      * CSS state (see {@link Node#initialCssState}.
      */
-    private final Set<Node> clearInitialCssStateNodes = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<Node> clearInitialCssStateNodes = new HashSet<>();
 
     void registerClearInitialCssStateFlag(Node node) {
         clearInitialCssStateNodes.add(node);
