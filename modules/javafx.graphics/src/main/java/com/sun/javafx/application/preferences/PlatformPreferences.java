@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.binding.MapExpressionHelper;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.MapChangeListener;
 import javafx.scene.paint.Color;
@@ -50,7 +51,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * When the operating system signals that a preference has changed, the mappings are updated
  * by calling the {@link #update(Map)} method.
  */
-public class PlatformPreferences extends AbstractMap<String, Object> implements Platform.Preferences {
+public final class PlatformPreferences extends AbstractMap<String, Object> implements Platform.Preferences {
 
     /**
      * Contains mappings from platform-specific keys to their types. This information is
@@ -63,7 +64,7 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
      * Contains mappings from platform-specific keys to well-known keys, which are used
      * in the implementation of the property-based API in {@link PreferenceProperties}.
      */
-    private final Map<String, String> platformKeyMappings;
+    private final Map<String, PreferenceMapping<?>> platformKeyMappings;
 
     /**
      * Contains the current set of effective preferences, i.e. the set of preferences that
@@ -86,7 +87,8 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
      * @throws NullPointerException if {@code platformKeys} or {@code platformKeyMappings} is {@code null} or
      *                              contains {@code null} keys or values
      */
-    public PlatformPreferences(Map<String, Class<?>> platformKeys, Map<String, String> platformKeyMappings) {
+    public PlatformPreferences(Map<String, Class<?>> platformKeys,
+                               Map<String, PreferenceMapping<?>> platformKeyMappings) {
         this.platformKeys = Map.copyOf(platformKeys);
         this.platformKeyMappings = Map.copyOf(platformKeyMappings);
     }
@@ -199,6 +201,26 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     @Override
     public Optional<Color> getColor(String key) {
         return getValue(key, Color.class);
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty reducedMotionProperty() {
+        return properties.reducedMotionProperty();
+    }
+
+    @Override
+    public boolean isReducedMotion() {
+        return properties.isReducedMotion();
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty reducedTransparencyProperty() {
+        return properties.reducedTransparencyProperty();
+    }
+
+    @Override
+    public boolean isReducedTransparency() {
+        return properties.isReducedTransparency();
     }
 
     @Override

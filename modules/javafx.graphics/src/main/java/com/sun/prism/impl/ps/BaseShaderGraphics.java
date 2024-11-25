@@ -25,8 +25,6 @@
 
 package com.sun.prism.impl.ps;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
@@ -534,8 +532,7 @@ public abstract class BaseShaderGraphics
 
     private static final float FRINGE_FACTOR;
     static {
-        @SuppressWarnings("removal")
-        String v = (String) AccessController.doPrivileged((PrivilegedAction) () -> System.getProperty("prism.primshaderpad"));
+        String v = System.getProperty("prism.primshaderpad");
         if (v == null) {
             FRINGE_FACTOR = -0.5f;
         } else {

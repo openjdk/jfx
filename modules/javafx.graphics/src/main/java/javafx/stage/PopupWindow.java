@@ -62,7 +62,6 @@ import com.sun.javafx.stage.PopupWindowPeerListener;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 
 import com.sun.javafx.stage.PopupWindowHelper;
 import com.sun.javafx.stage.WindowHelper;
@@ -531,18 +530,8 @@ public abstract class PopupWindow extends Window {
         if (visible && (getPeer() == null)) {
             // Setup the peer
             StageStyle popupStyle;
-            try {
-                @SuppressWarnings("removal")
-                final SecurityManager securityManager =
-                        System.getSecurityManager();
-                if (securityManager != null) {
-                    securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
-                }
-                popupStyle = StageStyle.TRANSPARENT;
-            } catch (final SecurityException e) {
-                popupStyle = StageStyle.UNDECORATED;
-            }
-            setPeer(toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().getPeer(), acc));
+            popupStyle = StageStyle.TRANSPARENT;
+            setPeer(toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().getPeer()));
             setPeerListener(new PopupWindowPeerListener(PopupWindow.this));
         }
     }

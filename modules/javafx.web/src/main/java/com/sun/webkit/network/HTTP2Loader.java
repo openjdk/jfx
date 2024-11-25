@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,9 +51,6 @@ import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.ByteBuffer;
-import java.security.AccessControlException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -90,23 +87,18 @@ final class HTTP2Loader extends URLLoaderBase {
 
     private final CompletableFuture<Void> response;
     // Use singleton instance of HttpClient to get the maximum benefits
-    @SuppressWarnings("removal")
-    private final static HttpClient HTTP_CLIENT =
-        AccessController.doPrivileged((PrivilegedAction<HttpClient>) () -> HttpClient.newBuilder()
+    private final static HttpClient HTTP_CLIENT = HttpClient.newBuilder()
                 .version(Version.HTTP_2)  // this is the default
                 .followRedirects(Redirect.NEVER) // WebCore handles redirection
                 .connectTimeout(Duration.ofSeconds(30)) // FIXME: Add a property to control the timeout
                 .cookieHandler(CookieHandler.getDefault())
-                .build());
+                .build();
     // Singleton instance of direct ByteBuffer to transfer downloaded bytes from
     // Java to native
     private static final int DEFAULT_BUFSIZE = 40 * 1024;
     private final static ByteBuffer BUFFER;
     static {
-       @SuppressWarnings("removal")
-       int bufSize  = AccessController.doPrivileged(
-                        (PrivilegedAction<Integer>) () ->
-                            Integer.valueOf(System.getProperty("jdk.httpclient.bufsize", Integer.toString(DEFAULT_BUFSIZE))));
+       int bufSize  = Integer.valueOf(System.getProperty("jdk.httpclient.bufsize", Integer.toString(DEFAULT_BUFSIZE)));
        BUFFER = ByteBuffer.allocateDirect(bufSize);
     }
 
@@ -398,14 +390,9 @@ final class HTTP2Loader extends URLLoaderBase {
             return getBodySubscriber(getContentEncoding(rsp));
         };
 
-        // Run the HttpClient in the page's access control context
-        @SuppressWarnings("removal")
-        var tmpResponse = AccessController.doPrivileged((PrivilegedAction<CompletableFuture<Void>>) () -> {
-            return HTTP_CLIENT.sendAsync(request, bodyHandler)
+        this.response = HTTP_CLIENT.sendAsync(request, bodyHandler)
                               .thenAccept($ -> {})
                               .exceptionally(ex -> didFail(ex.getCause()));
-        }, webPage.getAccessControlContext());
-        this.response = tmpResponse;
 
         if (!asynchronous) {
             waitForRequestToComplete();
@@ -576,8 +563,6 @@ final class HTTP2Loader extends URLLoaderBase {
                 throw th;
             } catch (MalformedURLException ex) {
                 errorCode = LoadListenerClient.MALFORMED_URL;
-            } catch (@SuppressWarnings("removal") AccessControlException ex) {
-                errorCode = LoadListenerClient.PERMISSION_DENIED;
             } catch (UnknownHostException ex) {
                 errorCode = LoadListenerClient.UNKNOWN_HOST;
             } catch (NoRouteToHostException ex) {

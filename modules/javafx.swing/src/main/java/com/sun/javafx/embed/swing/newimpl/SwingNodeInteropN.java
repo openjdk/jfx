@@ -33,6 +33,7 @@ import com.sun.javafx.embed.swing.SwingCursors;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 import java.awt.AWTEvent;
 import java.awt.Component;
@@ -163,9 +164,9 @@ public class SwingNodeInteropN {
         return new SwingNodeContent(content, node);
     }
 
-    public DisposerRecord createSwingNodeDisposer(Object frame) {
+    public DisposerRecord createSwingNodeDisposer(Object frame, SwingNodeInteropN swNodeIOP) {
         LightweightFrameWrapper lwFrame = (LightweightFrameWrapper)frame;
-        return new SwingNodeDisposer(lwFrame);
+        return new SwingNodeDisposer(lwFrame, swNodeIOP);
     }
 
     private static final class OptionalMethod<T> {
@@ -233,13 +234,24 @@ public class SwingNodeInteropN {
 
     private static class SwingNodeDisposer implements DisposerRecord {
         LightweightFrameWrapper lwFrame;
+        Runnable tkShutdownHook;
 
-        SwingNodeDisposer(LightweightFrameWrapper ref) {
+        SwingNodeDisposer(LightweightFrameWrapper ref, SwingNodeInteropN swNodeIOP) {
             this.lwFrame = ref;
+
+            // Reset and notify FX stage handle to JLightweightFrame
+            // so that CPlatformWindow doesn't try to create AWT child window
+            // once FX is shutdown
+            final Runnable shutdownHook = () -> {
+                swNodeIOP.overrideNativeWindowHandle(lwFrame, 0L, null);
+            };
+            Toolkit.getToolkit().addShutdownHook(shutdownHook);
+            tkShutdownHook = shutdownHook;
         }
 
         @Override
         public void dispose() {
+            Toolkit.getToolkit().removeShutdownHook(tkShutdownHook);
             if (lwFrame != null) {
                 lwFrame.dispose();
                 lwFrame = null;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -158,6 +158,14 @@ public class TableHeaderRow extends StackPane {
         }
     };
 
+    private InvalidationListener visibleColumnListener = observable -> {
+        TableColumnBase<?, ?> column = (TableColumnBase<?, ?>) ((BooleanProperty) observable).getBean();
+        CheckMenuItem menuItem = columnMenuItems.get(column);
+        if (menuItem != null) {
+            menuItem.setSelected(column.isVisible());
+        }
+    };
+
     private final ChangeListener<Boolean> cornerPaddingListener = (obs, ov, nv) -> updateCornerPadding();
 
     private final WeakInvalidationListener weakTableWidthListener =
@@ -175,10 +183,11 @@ public class TableHeaderRow extends StackPane {
     private final WeakInvalidationListener weakColumnTextListener =
             new WeakInvalidationListener(columnTextListener);
 
+    private final WeakInvalidationListener weakVisibleColumnListener =
+            new WeakInvalidationListener(visibleColumnListener);
+
     private final WeakChangeListener<Boolean> weakCornerPaddingListener =
             new WeakChangeListener<>(cornerPaddingListener);
-
-
 
     /* *************************************************************************
      *                                                                         *
@@ -580,9 +589,7 @@ public class TableHeaderRow extends StackPane {
         CheckMenuItem item = columnMenuItems.remove(col);
         if (item != null) {
             col.textProperty().removeListener(weakColumnTextListener);
-            item.selectedProperty().unbindBidirectional(col.visibleProperty());
-
-            columnPopupMenu.getItems().remove(item);
+            col.visibleProperty().removeListener(weakVisibleColumnListener);
         }
 
         if (! col.getColumns().isEmpty()) {
@@ -627,24 +634,28 @@ public class TableHeaderRow extends StackPane {
         if (item == null) {
             item = new CheckMenuItem();
             columnMenuItems.put(col, item);
+
+            item.setSelected(col.isVisible());
+
+            final CheckMenuItem _item = item;
+            // fake bidrectional binding (a real one was used here but resulted in JBS-8136468)
+            item.selectedProperty().addListener(o -> {
+                if (col.visibleProperty().isBound()) return;
+                col.setVisible(_item.isSelected());
+            });
+
+            col.textProperty().addListener(weakColumnTextListener);
+            col.visibleProperty().addListener(weakVisibleColumnListener);
+        } else {
+            item.setSelected(col.isVisible());
         }
 
         // bind column text and isVisible so that the menu item is always correct
         item.setText(getText(col.getText(), col));
-        col.textProperty().addListener(weakColumnTextListener);
 
         // ideally we would have API to observe the binding status of a property,
         // but for now that doesn't exist, so we set this once and then forget
         item.setDisable(col.visibleProperty().isBound());
-
-        // fake bidrectional binding (a real one was used here but resulted in JBS-8136468)
-        item.setSelected(col.isVisible());
-        final CheckMenuItem _item = item;
-        item.selectedProperty().addListener(o -> {
-            if (col.visibleProperty().isBound()) return;
-            col.setVisible(_item.isSelected());
-        });
-        col.visibleProperty().addListener(o -> _item.setSelected(col.isVisible()));
 
         columnPopupMenu.getItems().add(item);
     }

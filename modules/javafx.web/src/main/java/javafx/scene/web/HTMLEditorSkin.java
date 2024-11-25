@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,10 +71,6 @@ import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
 import com.sun.webkit.WebPage;
 import com.sun.javafx.webkit.Accessor;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -779,7 +775,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         // JDK-8115747: Icon URLs are now specified in CSS.
         // fgColorButton.applyCss();
         // ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
-        // String fgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString());
+        // String fgIcon = HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString();
         // ((StyleableProperty)fgColorPickerSkin.imageUrlProperty()).applyStyle(null,fgIcon);
 
         fgColorButton.setValue(DEFAULT_FG_COLOR);
@@ -800,7 +796,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         // JDK-8115747: Icon URLs are now specified in CSS.
         // bgColorButton.applyCss();
         // ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
-        // String bgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString());
+        // String bgIcon = HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString();
         // ((StyleableProperty)bgColorPickerSkin.imageUrlProperty()).applyStyle(null,bgIcon);
 
         bgColorButton.setValue(DEFAULT_BG_COLOR);
@@ -830,10 +826,9 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         button.getStyleClass().add(styleClass);
         toolbar.getItems().add(button);
 
-        @SuppressWarnings("removal")
-        Image icon = AccessController.doPrivileged((PrivilegedAction<Image>) () -> new Image(HTMLEditorSkin.class.getResource(iconName).toString()));
-//        button.setGraphic(new ImageView(icon));
+        Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
         ((StyleableProperty)button.graphicProperty()).applyStyle(null, new ImageView(icon));
+//      button.setGraphic(new ImageView(icon));
         button.setTooltip(new Tooltip(tooltipText));
 
         button.setOnAction(event -> {
@@ -855,10 +850,9 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             toggleButton.setToggleGroup(toggleGroup);
         }
 
-        @SuppressWarnings("removal")
-        Image icon = AccessController.doPrivileged((PrivilegedAction<Image>) () -> new Image(HTMLEditorSkin.class.getResource(iconName).toString()));
+        Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
         ((StyleableProperty)toggleButton.graphicProperty()).applyStyle(null, new ImageView(icon));
-//        toggleButton.setGraphic(new ImageView(icon));
+//      toggleButton.setGraphic(new ImageView(icon));
 
         toggleButton.setTooltip(new Tooltip(tooltipText));
 
