@@ -122,9 +122,11 @@ jobject PlatformSupport::collectPreferences() const {
         g_object_get(settings, "gtk-enable-animations", &enableAnimations, NULL);
         putBoolean(env, prefs, "GTK.enable_animations", enableAnimations);
 
-        gboolean overlayScrolling = true;
-        g_object_get(settings, "gtk-overlay-scrolling", &overlayScrolling, NULL);
-        putBoolean(env, prefs, "GTK.overlay_scrolling", overlayScrolling);
+        if (g_object_class_find_property(G_OBJECT_GET_CLASS(settings), "gtk-overlay-scrolling")) {
+            gboolean overlayScrolling = true;
+            g_object_get(settings, "gtk-overlay-scrolling", &overlayScrolling, NULL);
+            putBoolean(env, prefs, "GTK.overlay_scrolling", overlayScrolling);
+        }
     }
 
     return prefs;
