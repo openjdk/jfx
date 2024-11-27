@@ -25,8 +25,8 @@
 
 package com.sun.javafx.application;
 
-import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.SecurityUtil;
 import com.sun.javafx.application.preferences.PlatformPreferences;
 import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.css.StyleManager;
@@ -56,17 +56,12 @@ import javafx.application.ConditionalFeature;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Scene;
-import javafx.util.FXPermission;
 
 public class PlatformImpl {
 
     static {
-        @SuppressWarnings("removal")
-        var sm = System.getSecurityManager();
-        if (sm != null) {
-            throw new UnsupportedOperationException("JavaFX does not support running with the Security Manager");
-        }
-
+        // Check for security manager (throws exception if enabled)
+        SecurityUtil.checkSecurityManager();
     }
 
     private static AtomicBoolean initialized = new AtomicBoolean(false);
@@ -105,10 +100,6 @@ public class PlatformImpl {
     private static final boolean verbose = Boolean.getBoolean("javafx.verbose");
 
     private static final boolean DEBUG = Boolean.getBoolean("com.sun.javafx.application.debug");
-
-    // Internal permission used by FXCanvas (SWT interop)
-    private static final FXPermission FXCANVAS_PERMISSION =
-            new FXPermission("accessFXCanvasInternals");
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -339,19 +330,6 @@ public class PlatformImpl {
 
     // FXCanvas-specific initialization
     private static void initFXCanvas() {
-        // Verify that we have the appropriate permission
-        @SuppressWarnings("removal")
-        final SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            try {
-                sm.checkPermission(FXCANVAS_PERMISSION);
-            } catch (SecurityException ex) {
-                System.err.println("FXCanvas: no permission to access JavaFX internals");
-                ex.printStackTrace();
-                return;
-            }
-        }
-
         // Find the calling class, ignoring any stack frames from FX application classes
         Predicate<StackWalker.StackFrame> classFilter = f ->
                 !f.getClassName().startsWith("javafx.application.")
@@ -635,26 +613,7 @@ public class PlatformImpl {
     }
 
     public static boolean isSupported(ConditionalFeature feature) {
-        final boolean supported = isSupportedImpl(feature);
-        if (supported && (feature == ConditionalFeature.TRANSPARENT_WINDOW)) {
-            // some features require the application to have the corresponding
-            // permissions, if the application doesn't have them, the platform
-            // will behave as if the feature wasn't supported
-            @SuppressWarnings("removal")
-            final SecurityManager securityManager =
-                    System.getSecurityManager();
-            if (securityManager != null) {
-                try {
-                    securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
-                } catch (final SecurityException e) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        return supported;
+        return isSupportedImpl(feature);
    }
 
     public static interface FinishListener {

@@ -36,8 +36,6 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -46,15 +44,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private native static void _initIDs(boolean disableSyncRendering);
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            Application.loadNativeLibrary();
-            return null;
-        });
-        @SuppressWarnings("removal")
-        boolean disableSyncRendering = AccessController
-                .doPrivileged((PrivilegedAction<Boolean>) () ->
-                        Boolean.getBoolean("glass.disableSyncRendering"));
+        Application.loadNativeLibrary();
+        boolean disableSyncRendering =
+            Boolean.getBoolean("glass.disableSyncRendering");
         _initIDs(disableSyncRendering);
     }
 
@@ -100,9 +92,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     MacApplication() {
         // Embedded in SWT, with shared event thread
-        @SuppressWarnings("removal")
-        boolean isEventThread = AccessController
-                .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
+        boolean isEventThread = Boolean.getBoolean("javafx.embed.isEventThread");
         if (!isEventThread) {
             invokeLaterDispatcher = new InvokeLaterDispatcher(this);
             invokeLaterDispatcher.start();
@@ -131,14 +121,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             launchable.run();
         };
 
-        @SuppressWarnings("removal")
-        boolean tmp =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                String taskbarAppProp = System.getProperty("glass.taskbarApplication");
-                return  !"false".equalsIgnoreCase(taskbarAppProp);
-            });
-        isTaskbarApplication = tmp;
-
+        String taskbarAppProp = System.getProperty("glass.taskbarApplication");
+        isTaskbarApplication = !"false".equalsIgnoreCase(taskbarAppProp);
         // Create a non-daemon KeepAlive thread so the FX toolkit
         // doesn't exit prematurely.
         startKeepAliveThread();
@@ -512,16 +496,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     private static final String AWT_APPLICATION_CLASS = "NSApplicationAWT";
     private static final String AWT_SYSTEM_APPEARANCE = "system";
 
-    @SuppressWarnings("removal")
-    private boolean checkSystemAppearance = AccessController.doPrivileged(
-            (PrivilegedAction<Boolean>) () -> !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY));
+    private boolean checkSystemAppearance = !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY);
 
     @Override
     public void checkPlatformPreferencesSupport() {
         if (checkSystemAppearance && AWT_APPLICATION_CLASS.equals(applicationClassName)) {
-            @SuppressWarnings("removal")
-            String awtAppearanceProperty = AccessController.doPrivileged(
-                (PrivilegedAction<String>) () -> System.getProperty(AWT_APPEARANCE_PROPERTY));
+            String awtAppearanceProperty = System.getProperty(AWT_APPEARANCE_PROPERTY);
 
             if (!AWT_SYSTEM_APPEARANCE.equals(awtAppearanceProperty)) {
                 Logging.getJavaFXLogger().warning(String.format(
