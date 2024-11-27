@@ -73,6 +73,7 @@ import java.util.concurrent.Future
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import java.lang.Runtime.Version
 
 /******************************************************************************
  *                              Utility methods                               *
@@ -232,29 +233,6 @@ void setupTools(String name, Closure loader, Closure processor) {
     } finally {
         try { propStream.close() } catch (Exception e) { }
     }
-}
-
-String[] parseJavaVersion(String jRuntimeVersion) {
-    def jVersion = jRuntimeVersion.split("[-\\+]")[0]
-    def tmpBuildNumber = "0"
-    if (jVersion.startsWith("1.")) {
-        // This is a pre-JEP-223 version string
-        def dashbIdx = jRuntimeVersion.lastIndexOf("-b")
-        if (dashbIdx != -1) {
-            tmpBuildNumber = jRuntimeVersion.substring(dashbIdx + 2)
-        }
-    } else {
-        // This is a post-JEP-223 version string
-        def plusIdx = jRuntimeVersion.indexOf("+")
-        if (plusIdx != -1) {
-            tmpBuildNumber = jRuntimeVersion.substring(plusIdx + 1)
-        }
-    }
-    def jBuildNumber = tmpBuildNumber.split("[-\\+]")[0]
-    def versionInfo = new String[2];
-    versionInfo[0] = jVersion
-    versionInfo[1] = jBuildNumber
-    return versionInfo
 }
 
 /**
@@ -417,11 +395,6 @@ defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
 defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/21/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
-
-defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
-def javaVersionInfo = parseJavaVersion(javaRuntimeVersion)
-defineProperty("javaVersion", javaVersionInfo[0])
-defineProperty("javaBuildNumber", javaVersionInfo[1])
 
 defineProperty("libAVRepositoryURL", "https://github.com/libav/libav/archive")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
@@ -775,36 +748,29 @@ if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to '
 // Java HotSpot(TM) 64-Bit Server VM (build 24.45-b08, mixed mode)
 //
 // We need to parse the second line
-def inStream = new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.ProcessBuilder(JAVA, "-fullversion").start().getErrorStream()));
-try {
+Version jdkVersionInfo;
+try (BufferedReader inStream = new java.io.BufferedReader(new java.io.InputStreamReader(
+        new java.lang.ProcessBuilder(JAVA, "-fullversion").start().getErrorStream()))) {
     String v = inStream.readLine().trim();
     if (v != null) {
         int ib = v.indexOf("full version \"");
         if (ib != -1) {
             String str = v.substring(ib);
             String ver = str.substring(str.indexOf("\"") + 1, str.size() - 1);
-
-            defineProperty("jdkRuntimeVersion", ver)
-            def jdkVersionInfo = parseJavaVersion(ver)
-            defineProperty("jdkVersion", jdkVersionInfo[0])
-            defineProperty("jdkBuildNumber", jdkVersionInfo[1])
+            jdkVersionInfo = Version.parse(ver);
 
             // Define global properties based on the version of Java
             // For example, we could define a "jdk18OrLater" property as
             // follows that could then be used to implement conditional build
             // logic based on whether we were running on JDK 18 or later,
             // should the need arise.
-//            def status = compareJdkVersion(jdkVersion, "18")
-//            ext.jdk18OrLater = (status >= 0)
+//            ext.jdk18OrLater = jdkVersionInfo.feature() >= 18
 
-            def status = compareJdkVersion(jdkVersion, "24")
-            ext.jdk24OrLater = (status >= 0)
+            ext.jdk24OrLater = jdkVersionInfo.feature() >= 24
         }
     }
-} finally {
-    inStream.close();
 }
-if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
+if (jdkVersionInfo == null) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
 
 // Use --upgrade-module-path instead of --module-path when compiling and
 // running tests if we are using a JDK that includes an upgradable
@@ -1523,12 +1489,15 @@ logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
 logger.quiet("JDK_HOME: $JDK_HOME")
-logger.quiet("java.runtime.version: ${javaRuntimeVersion}")
-logger.quiet("java version: ${javaVersion}")
-logger.quiet("java build number: ${javaBuildNumber}")
-logger.quiet("jdk.runtime.version: ${jdkRuntimeVersion}")
-logger.quiet("jdk version: ${jdkVersion}")
-logger.quiet("jdk build number: ${jdkBuildNumber}")
+
+Version javaVersionInfo = Runtime.version()
+logger.quiet("java.runtime.version: " + javaVersionInfo)
+logger.quiet("java version: " + javaVersionInfo.feature())
+logger.quiet("java build number: " + javaVersionInfo.build().orElse(0))
+
+logger.quiet("jdk.runtime.version: " + jdkVersionInfo)
+logger.quiet("jdk version: " + jdkVersionInfo.feature())
+logger.quiet("jdk build: " + javaVersionInfo.build().orElse(0))
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("Java target version: ${JAVA_TARGET_VERSION}")
@@ -1962,41 +1931,6 @@ void addValidateSourceSets(Project project, Collection<SourceSet> sourceSets) {
     addValidateSourceSets(project, sourceSets, []);
 }
 
-
-/**
- * Parses a JDK version string. The string must be in one of the following
- * two formats:
- *
- *     major.minor.subminor
- * or
- *     major.minor.subminor_update
- *
- * In both cases a list of 4 integers is returned, with element 3 set to
- * 0 in the former case.
- */
-List parseJdkVersion(String version) {
-    def arr = version.split("[_\\.]");
-    def intArr = [];
-    arr.each { s -> intArr += Integer.parseInt(s); }
-    while (intArr.size() < 4) intArr += 0;
-    return intArr;
-}
-
-/**
- * Returns -1, 0, or 1 depending on whether JDK version "a" is less than,
- * equal to, or grater than version "b".
- */
-int compareJdkVersion(String a, String b) {
-    def aIntArr = parseJdkVersion(a);
-    def bIntArr = parseJdkVersion(b);
-
-    for (int i = 0; i < 4; i++) {
-        if (aIntArr[i] < bIntArr[i]) return -1;
-        if (aIntArr[i] > bIntArr[i]) return  1;
-    }
-    return 0;
-}
-
 /**
  * Returns true if the name of task or name of task's project contains word test/Test.
  */
@@ -2008,15 +1942,9 @@ boolean isTestTask(Task task) {
 // Task to verify the minimum level of Java needed to build JavaFX
 task verifyJava() {
     doLast {
-        def status = compareJdkVersion(jdkVersion, jfxBuildJdkVersionMin);
-        if (status < 0) {
-            fail("java version mismatch: JDK version (${jdkVersion}) < minimum version (${jfxBuildJdkVersionMin})")
-        } else if (status == 0) {
-            def buildNum = Integer.parseInt(jdkBuildNumber)
-            def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
-            if (buildNum != 0 && buildNum < minBuildNum) {
-                fail("JDK build number ($buildNum) < minimum build number ($minBuildNum)")
-            }
+        Version minVersionInfo = Version.parse("${jfxBuildJdkVersionMin}+${jfxBuildJdkBuildnumMin}") // from build.properties
+        if (jdkVersionInfo.compareTo(minVersionInfo) < 0) {
+            fail("java version mismatch: JDK version (${jdkVersionInfo}) < minimum version (${minVersionInfo})")
         }
     }
 }
