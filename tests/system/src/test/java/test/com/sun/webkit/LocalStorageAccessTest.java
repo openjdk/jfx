@@ -25,10 +25,10 @@
 
 package test.com.sun.webkit;
 
-import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -64,14 +64,21 @@ public class LocalStorageAccessTest {
         final String javaLibraryPath = System.getProperty("java.library.path");
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
 
-        final List<String> cmd = asList(
-            workerJavaCmd,
+        final List<String> cmd = new ArrayList<>();
+        cmd.add(workerJavaCmd);
+
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (Runtime.version().feature() >= 23) {
+            cmd.add("--sun-misc-unsafe-memory-access=allow");
+        }
+
+        cmd.addAll(List.of(
             "--enable-native-access=ALL-UNNAMED",
             "-cp", appModulePath + "/mymod",
             "-Djava.library.path=" + javaLibraryPath,
             "-Dmodule.path=" + appModulePath + "/mymod" + File.pathSeparator + workerModulePath,
             "myapp7.LocalStorageAccessWithModuleLayerLauncher"
-        );
+        ));
 
         final ProcessBuilder builder = new ProcessBuilder(cmd);
 
