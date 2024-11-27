@@ -1485,7 +1485,7 @@ logger.quiet("java build number: " + javaVersionInfo.build().orElse(0))
 
 logger.quiet("jdk.runtime.version: " + jdkVersionInfo)
 logger.quiet("jdk version: " + jdkVersionInfo.feature())
-logger.quiet("jdk build " + javaVersionInfo.build().orElse(0))
+logger.quiet("jdk build: " + javaVersionInfo.build().orElse(0))
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("Java target version: ${JAVA_TARGET_VERSION}")
