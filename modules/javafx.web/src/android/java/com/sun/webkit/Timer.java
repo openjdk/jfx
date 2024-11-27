@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package com.sun.webkit;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 public class Timer {
     private static Timer instance;
     private static Mode mode;
@@ -44,14 +41,8 @@ public class Timer {
 
     public synchronized static Mode getMode() {
         if (mode == null) {
-            mode = Boolean.valueOf(AccessController.doPrivileged(
-                new PrivilegedAction<String>() {
-                    @Override
-                    public String run() {
-                        return System.getProperty(
-                                "com.sun.webkit.platformticks", "true");
-                    }
-                })) ? Mode.PLATFORM_TICKS : Mode.SEPARATE_THREAD;
+            mode = Boolean.valueOf(System.getProperty("com.sun.webkit.platformticks", "true"))
+                    ? Mode.PLATFORM_TICKS : Mode.SEPARATE_THREAD;
         }
         return mode;
     }

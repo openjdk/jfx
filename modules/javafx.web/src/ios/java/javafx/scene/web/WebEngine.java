@@ -49,9 +49,6 @@ import org.xml.sax.InputSource;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import java.io.StringReader;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javafx.beans.property.*;
 import javafx.geometry.Rectangle2D;
 
@@ -517,9 +514,6 @@ final public class WebEngine {
      * Creates a new engine and loads a Web page into it.
      */
     public WebEngine(String url) {
-        @SuppressWarnings("removal")
-        AccessControlContext tmpAcc = AccessController.getContext();
-        accessControlContext = tmpAcc;
         js2javaBridge = new JS2JavaBridge(this);
         load(url);
     }
@@ -949,23 +943,8 @@ final public class WebEngine {
         }
     }
 
-    @SuppressWarnings("removal")
-    final private AccessControlContext accessControlContext;
-
-    @SuppressWarnings("removal")
-    AccessControlContext getAccessControlContext() {
-        return accessControlContext;
-    }
-
     private void dispatchWebEvent(final EventHandler handler, final WebEvent ev) {
-        @SuppressWarnings("removal")
-        Void result = AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                handler.handle(ev);
-                return null;
-            }
-        }, getAccessControlContext());
+        handler.handle(ev);
     }
 
     private class DebuggerImpl implements Debugger {
