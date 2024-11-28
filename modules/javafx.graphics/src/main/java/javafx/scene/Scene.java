@@ -1204,8 +1204,6 @@ public class Scene implements EventTarget {
     public final ObjectProperty<Parent> rootProperty() {
         if (root == null) {
             root = new ObjectPropertyBase<>() {
-                static final PseudoClass ROOT_PSEUDO_CLASS = PseudoClass.getPseudoClass("root");
-
                 private void forceUnbind() {
                     System.err.println("Unbinding illegal root.");
                     unbind();
@@ -1239,11 +1237,11 @@ public class Scene implements EventTarget {
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
                         oldRoot.getStyleClass().remove("root");
-                        oldRoot.pseudoClassStateChanged(ROOT_PSEUDO_CLASS, false);
+                        oldRoot.pseudoClassStateChanged(PseudoClass.getPseudoClass("root"), false);
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
-                    _value.pseudoClassStateChanged(ROOT_PSEUDO_CLASS, true);
+                    _value.pseudoClassStateChanged(PseudoClass.getPseudoClass("root"), true);
                     _value.setScenes(Scene.this, null);
                     markDirty(DirtyBits.ROOT_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
