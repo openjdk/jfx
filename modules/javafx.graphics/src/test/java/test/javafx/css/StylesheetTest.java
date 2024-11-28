@@ -465,7 +465,7 @@ public class StylesheetTest {
     public void testRT_30953_parse() {
 
         try {
-            // Make sure JDK-8123343.css can be parsed, serialized and deserialized with the current code,
+            // Make sure RT-30953.css can be parsed, serialized and deserialized with the current code,
             // no matter the bss version
             URL url = StylesheetTest.class.getResource("RT-30953.css");
             if (url == null) {
@@ -484,7 +484,7 @@ public class StylesheetTest {
     }
 
     @Test public void testRT_30953_deserialize_from_v4() {
-        // JDK-8123343-v4.bss was generated with version 4
+        // RT-30953-v4.bss was generated with version 4
         Stylesheet ss = deserialize("RT-30953-v4.bss");
         checkConvert(ss);
     }
@@ -492,7 +492,7 @@ public class StylesheetTest {
     @Test
     public void testRT_30953_deserialize_from_2_2_45() {
 
-        // JDK-8123343-2.2.4bss was generated with javafx version 2.2.45 from 7u??
+        // RT-30953-2.2.45.bss was generated with javafx version 2.2.45 from 7u??
         Stylesheet ss = deserialize("RT-30953-2.2.45.bss");
         checkConvert(ss);
     }
@@ -500,7 +500,7 @@ public class StylesheetTest {
     @Test
     public void testRT_30953_deserialize_from_2_2_4() {
 
-        // JDK-8123343-2.2.4bss was generated with javafx version 2.2.4 from 7u10
+        // RT-30953-2.2.4.bss was generated with javafx version 2.2.4 from 7u10
         Stylesheet ss = deserialize("RT-30953-2.2.4.bss");
         checkConvert(ss);
     }
@@ -508,7 +508,7 @@ public class StylesheetTest {
     @Test
     public void testRT_30953_deserialize_from_2_2_21() {
 
-        // JDK-8123343-2.2.21.bss was generated with javafx version 2.2.21 from 7u21
+        // RT-30953-2.2.21.bss was generated with javafx version 2.2.21 from 7u21
         Stylesheet ss = deserialize("RT-30953-2.2.21.bss");
         checkConvert(ss);
 
