@@ -70,6 +70,7 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.Stylesheet;
 import javafx.event.*;
@@ -1183,7 +1184,9 @@ public class Scene implements EventTarget {
      * layout of the scene graph.    If a resizable node (layout {@code Region} or
      * {@code Control}) is set as the root, then the root's size will track the
      * scene's size, causing the contents to be relayed out as necessary.
-     *
+     * <p>
+     * The {@code :root} pseudo-class matches the root node.
+     * <p>
      * Scene doesn't accept null root.
      *
      */
@@ -1201,6 +1204,7 @@ public class Scene implements EventTarget {
     public final ObjectProperty<Parent> rootProperty() {
         if (root == null) {
             root = new ObjectPropertyBase<>() {
+                static final PseudoClass ROOT_PSEUDO_CLASS = PseudoClass.getPseudoClass("root");
 
                 private void forceUnbind() {
                     System.err.println("Unbinding illegal root.");
@@ -1235,9 +1239,11 @@ public class Scene implements EventTarget {
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
                         oldRoot.getStyleClass().remove("root");
+                        oldRoot.pseudoClassStateChanged(ROOT_PSEUDO_CLASS, false);
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
+                    _value.pseudoClassStateChanged(ROOT_PSEUDO_CLASS, true);
                     _value.setScenes(Scene.this, null);
                     markDirty(DirtyBits.ROOT_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
