@@ -26,7 +26,10 @@
 package com.sun.glass.ui.gtk.screencast;
 
 import static com.sun.glass.ui.gtk.screencast.ScreencastHelper.SCREENCAST_DEBUG;
-import static java.nio.file.StandardWatchEventKinds.*;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
