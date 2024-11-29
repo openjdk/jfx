@@ -195,9 +195,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     [self->parentWindow release];
     self->parentWindow = nil;
 
-    [self->fullscreenWindow release];
-    self->fullscreenWindow = nil;
-
     [self->nativeFullScreenModeWindow release];
     self->nativeFullScreenModeWindow = nil;
 
@@ -1282,40 +1279,6 @@ static jstring convertNSStringToJString(id aString, int length)
             [GlassApplication enterFullScreenExitingLoop];
             return;
         }
-
-        [self->fullscreenWindow toggleFullScreen:self->fullscreenWindow];
-
-        NSRect frame = [self->parentHost bounds];
-        frame.origin = [self->fullscreenWindow point];
-        [self->fullscreenWindow setFrame:frame display:YES animate:animate];
-
-        [self->fullscreenWindow disableFlushWindow];
-        {
-            [self->nsView retain];
-            {
-                [self->nsView removeFromSuperviewWithoutNeedingDisplay];
-                [self->parentHost addSubview:self->nsView];
-            }
-            [self->nsView release];
-
-            [self->parentWindow setInitialFirstResponder:self->nsView];
-            [self->parentWindow makeFirstResponder:self->nsView];
-
-            if ([[self->parentWindow delegate] isKindOfClass:[GlassWindow class]])
-            {
-                GlassWindow *window = (GlassWindow*)[self->parentWindow delegate];
-                [window setFullscreenWindow: nil];
-            }
-        }
-        [self->fullscreenWindow enableFlushWindow];
-        [self->parentWindow enableFlushWindow];
-
-        [self->fullscreenWindow orderOut:nil];
-        [self->fullscreenWindow close];
-        self->fullscreenWindow = nil;
-
-        // It was retained upon entering the FS mode
-        [self->nsView release];
     }
     @catch (NSException *e)
     {

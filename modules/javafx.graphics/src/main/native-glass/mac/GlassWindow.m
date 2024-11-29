@@ -291,35 +291,6 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 @implementation GlassWindow
 
-- (void)setFullscreenWindow:(NSWindow*)fsWindow
-{
-    if (self->fullscreenWindow == fsWindow) {
-        return;
-    }
-
-    [self _ungrabFocus];
-
-    NSWindow *from, *to;
-    from = self->fullscreenWindow ? self->fullscreenWindow : self->nsWindow;
-    to = fsWindow ? fsWindow : self->nsWindow;
-
-    NSArray * children = [from childWindows];
-    for (NSUInteger i=0; i<[children count]; i++)
-    {
-        NSWindow *child = (NSWindow*)[children objectAtIndex:i];
-        if ([[child delegate] isKindOfClass: [GlassWindow class]]) {
-            [from removeChildWindow: child];
-            [to addChildWindow:child ordered:NSWindowAbove];
-        }
-    }
-
-    self->fullscreenWindow = fsWindow;
-
-    GET_MAIN_JENV;
-    (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyDelegatePtr, ptr_to_jlong(fsWindow));
-    GLASS_CHECK_EXCEPTION(env);
-}
-
 - (void)close
 {
     [self _ungrabFocus];
@@ -502,8 +473,6 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setHasShadow:YES];
             [window->nsWindow setOpaque:YES];
         }
-
-        window->fullscreenWindow = nil;
 
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;

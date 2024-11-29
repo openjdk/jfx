@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,9 +77,6 @@ import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -762,11 +759,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
 
         // fgColorButton.applyCss();
         // ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
-        // String fgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            // @Override public String run() {
-                // return HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString();
-            // }
-        // });
+        // String fgIcon = HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString();
         // ((StyleableProperty)fgColorPickerSkin.imageUrlProperty()).applyStyle(null,fgIcon);
 
         fgColorButton.setValue(DEFAULT_FG_COLOR);
@@ -788,11 +781,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
 
         // bgColorButton.applyCss();
         // ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
-        // String bgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            // @Override public String run() {
-                // return HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString();
-            // }
-        // });
+        // String bgIcon = HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString();
         // ((StyleableProperty)bgColorPickerSkin.imageUrlProperty()).applyStyle(null,bgIcon);
 
         bgColorButton.setValue(DEFAULT_BG_COLOR);
@@ -823,12 +812,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
         button.getStyleClass().add(styleClass);
         toolbar.getItems().add(button);
 
-        @SuppressWarnings("removal")
-        Image icon = AccessController.doPrivileged(new PrivilegedAction<Image>() {
-            @Override public Image run() {
-                return new Image(HTMLEditorSkin.class.getResource(iconName).toString());
-            }
-        });
+        Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
 //        button.setGraphic(new ImageView(icon));
         ((StyleableProperty)button.graphicProperty()).applyStyle(null,new ImageView(icon));
         button.setTooltip(new Tooltip(tooltipText));
@@ -855,12 +839,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
             toggleButton.setToggleGroup(toggleGroup);
         }
 
-        @SuppressWarnings("removal")
-        Image icon = AccessController.doPrivileged(new PrivilegedAction<Image>() {
-            @Override public Image run() {
-                return new Image(HTMLEditorSkin.class.getResource(iconName).toString());
-            }
-        });
+        Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
         ((StyleableProperty)toggleButton.graphicProperty()).applyStyle(null,new ImageView(icon));
 //        toggleButton.setGraphic(new ImageView(icon));
 
@@ -903,12 +882,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
         if (orientation == RIGHT_TO_LEFT) {
             try {
                 final String iconName = resources.getString("numbersIcon-rtl");
-                @SuppressWarnings("removal")
-                Image icon = AccessController.doPrivileged(new PrivilegedAction<Image>() {
-                    @Override public Image run() {
-                        return new Image(HTMLEditorSkin.class.getResource(iconName).toString());
-                    }
-                });
+                Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
                 numbersButton.setGraphic(new ImageView(icon));
             } catch (java.util.MissingResourceException ex) {
                 // ignore

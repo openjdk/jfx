@@ -467,10 +467,6 @@
 {
     KEYLOG("performKeyEquivalent");
 
-    // Crash if the FS window is released while performing a key equivalent
-    // Local copy of the id keeps the retain/release calls balanced.
-    id fsWindow = [self->_delegate->fullscreenWindow retain];
-
     // JDK-8093711, JDK-8094601 Command-EQUALS and Command-DOT needs special casing on Mac
     // as it is passed through as two calls to performKeyEquivalent, which in turn
     // create extra KeyEvents.
@@ -500,13 +496,11 @@
             (*env)->DeleteLocalRef(env, jKeyChars);
 
             GLASS_CHECK_EXCEPTION(env);
-            [fsWindow release];
             return YES;
         }
     }
 
     BOOL result = [self handleKeyDown: theEvent];
-    [fsWindow release];
     return result;
 }
 
