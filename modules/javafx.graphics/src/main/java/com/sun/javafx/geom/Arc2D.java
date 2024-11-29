@@ -270,7 +270,7 @@ public class Arc2D extends RectangularShape {
      */
     public void setArc(Point2D loc, Dimension2D size,
                float angSt, float angExt, int closure) {
-        setArc(loc.x, loc.y, size.width, size.height, angSt, angExt, closure);
+        setArc(loc.x, loc.y, size.width(), size.height(), angSt, angExt, closure);
     }
 
     /**

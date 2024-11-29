@@ -181,7 +181,7 @@ public abstract class RectangularShape extends Shape {
      * @see #getFrame
      */
     public void setFrame(Point2D loc, Dimension2D size) {
-        setFrame(loc.x, loc.y, size.width, size.height);
+        setFrame(loc.x, loc.y, size.width(), size.height());
     }
 
     /**
