@@ -44,7 +44,7 @@ import test.util.Util;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.BiConsumer;
 
-public class StageMixedSizingTest {
+public class StageMixedSizeTest {
     private static CountDownLatch startupLatch = new CountDownLatch(1);
     private Stage mainStage;
 
