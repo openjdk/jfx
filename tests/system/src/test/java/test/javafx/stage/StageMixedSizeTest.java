@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.robot.javafx.stage;
+package test.javafx.stage;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
