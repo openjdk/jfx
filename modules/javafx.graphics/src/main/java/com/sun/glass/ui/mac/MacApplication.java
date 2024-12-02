@@ -424,13 +424,14 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     public native Map<String, Object> getPlatformPreferences();
 
     @Override
-    public Map<String, PreferenceMapping<?>> getPlatformKeyMappings() {
+    public Map<String, PreferenceMapping<?, ?>> getPlatformKeyMappings() {
         return Map.of(
             "macOS.NSColor.textColor", new PreferenceMapping<>("foregroundColor", Color.class),
             "macOS.NSColor.textBackgroundColor", new PreferenceMapping<>("backgroundColor", Color.class),
             "macOS.NSColor.controlAccentColor", new PreferenceMapping<>("accentColor", Color.class),
             "macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", new PreferenceMapping<>("reducedMotion", Boolean.class),
-            "macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class)
+            "macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class),
+            "macOS.NSScroller.preferredScrollerStyle", new PreferenceMapping<>("persistentScrollBars", String.class, "NSScrollerStyleLegacy"::equals)
         );
     }
 
@@ -485,7 +486,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("macOS.NSColor.systemTealColor", Color.class),
             Map.entry("macOS.NSColor.systemYellowColor", Color.class),
             Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", Boolean.class),
-            Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", Boolean.class)
+            Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", Boolean.class),
+            Map.entry("macOS.NSScroller.preferredScrollerStyle", String.class)
         );
     }
 
