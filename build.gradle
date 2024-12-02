@@ -2810,6 +2810,20 @@ project(":controls") {
     addValidateSourceSets(project, sourceSets)
 }
 
+// Add a project declaration for each incubator module here, leaving the
+// incubator placeholder lines as an example.
+// See CSR JDK-8344644 for more information.
+// BEGIN: incubator placeholder
+//project(":incubator.mymod") {
+//    project.ext.buildModule = true
+//    project.ext.includeSources = true
+//    project.ext.moduleRuntime = true
+//    project.ext.moduleName = "jfx.incubator.mymod"
+//    project.ext.incubating = true
+//    ...
+//}
+// END: incubator placeholder
+
 project(":incubator.input") {
     project.ext.buildModule = true
     project.ext.includeSources = true
@@ -4144,6 +4158,11 @@ project(":systemTests") {
         'base',
         'graphics',
         'controls',
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //'incubator.mymod',
+        // END: incubator placeholder
         'incubator.input',
         'incubator.richtext',
         'media',
@@ -4597,6 +4616,11 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         project(":base"),
         project(":graphics"),
         project(":controls"),
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //project(":incubator.mymod"),
+        // END: incubator placeholder
         project(":incubator.input"),
         project(":incubator.richtext"),
         project(":media"),

@@ -114,6 +114,11 @@ static jobject currentPreferences = nil;
                      key:"macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency"
                      value:[[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceTransparency]];
 
+    [PlatformSupport putString:preferences
+                     key:"macOS.NSScroller.preferredScrollerStyle"
+                     value:[NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay
+                        ? "NSScrollerStyleOverlay" : "NSScrollerStyleLegacy"];
+
     return preferences;
 }
 

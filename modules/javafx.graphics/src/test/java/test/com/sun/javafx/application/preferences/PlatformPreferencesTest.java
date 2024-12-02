@@ -70,7 +70,8 @@ public class PlatformPreferencesTest {
                 "test.backgroundColor", new PreferenceMapping<>("backgroundColor", Color.class),
                 "test.accentColor", new PreferenceMapping<>("accentColor", Color.class),
                 "test.reducedMotion", new PreferenceMapping<>("reducedMotion", Boolean.class),
-                "test.enableTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b)
+                "test.enableTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b),
+                "test.persistentScrollBars", new PreferenceMapping<>("persistentScrollBars", String.class, "yes"::equals)
             ));
     }
 
@@ -364,5 +365,23 @@ public class PlatformPreferencesTest {
         assertEquals(2, trace.size());
         assertEquals(Boolean.FALSE, trace.get(1));
         assertFalse(prefs.isReducedTransparency());
+    }
+
+    @Test
+    void testPersistentScrollBarsProperty() {
+        var trace = new ArrayList<Boolean>();
+        prefs.persistentScrollBarsProperty().addListener((observable, ov, nv) -> trace.add(nv));
+
+        assertFalse(prefs.isPersistentScrollBars());
+        prefs.update(Map.of("test.persistentScrollBars", "yes"));
+
+        assertEquals(1, trace.size());
+        assertEquals(Boolean.TRUE, trace.get(0));
+        assertTrue(prefs.isPersistentScrollBars());
+
+        prefs.update(new HashMap<>() {{ put("test.persistentScrollBars", "no"); }});
+        assertEquals(2, trace.size());
+        assertEquals(Boolean.FALSE, trace.get(1));
+        assertFalse(prefs.isPersistentScrollBars());
     }
 }
