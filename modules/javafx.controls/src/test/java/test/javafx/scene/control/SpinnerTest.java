@@ -1603,8 +1603,6 @@ public class SpinnerTest {
         stage.setWidth(200);
         stage.setHeight(200);
 
-        intSpinner.setEditable(true);
-
         Button defaultButton = new Button("OK");
         defaultButton.setOnAction(arg0 -> { enterDefaultPass = true; });
         defaultButton.setDefaultButton(true);
