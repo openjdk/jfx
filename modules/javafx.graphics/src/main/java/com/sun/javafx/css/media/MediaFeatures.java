@@ -1,0 +1,100 @@
+/*
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.sun.javafx.css.media;
+
+import com.sun.javafx.css.media.expression.FunctionExpression;
+import javafx.css.MediaQuery;
+import javafx.css.MediaQueryContext;
+import javafx.application.ColorScheme;
+import java.util.Locale;
+import java.util.function.Function;
+
+/**
+ * Contains the implementations of all supported media feature queries.
+ */
+final class MediaFeatures {
+
+    private MediaFeatures() {}
+
+    /**
+     * Returns a {@code MediaQuery} that evaluates the specified feature.
+     *
+     * @param featureName the name of the media feature
+     * @param featureValue the value of the media feature, or {@code null} to indicate no value
+     * @throws IllegalArgumentException if {@code featureName} or {@code featureValue} is invalid
+     * @return the {@code MediaQuery}
+     */
+    public static MediaQuery featureQueryExpression(String featureName, String featureValue) {
+        featureName = featureName.toLowerCase(Locale.ROOT).intern();
+
+        if (featureValue != null) {
+            featureValue = featureValue.toLowerCase(Locale.ROOT).intern();
+        }
+
+        return switch (featureName) {
+            case "prefers-color-scheme" -> new FunctionExpression<>(
+                featureName,
+                checkNotNullValue(featureName, featureValue),
+                MediaQueryContext::getColorScheme,
+                ColorScheme.valueOf(featureValue.toUpperCase(Locale.ROOT)));
+
+            case "prefers-reduced-motion" -> booleanReduceQueryExpression(
+                featureName, featureValue, MediaQueryContext::isReducedMotion);
+
+            case "prefers-reduced-transparency" -> booleanReduceQueryExpression(
+                featureName, featureValue, MediaQueryContext::isReducedTransparency);
+
+            default -> throw new IllegalArgumentException(
+                String.format("Unknown media feature <%s>", featureName));
+        };
+    }
+
+    private static MediaQuery booleanReduceQueryExpression(String featureName,
+                                                           String featureValue,
+                                                           Function<MediaQueryContext, Boolean> argument) {
+        return switch (featureValue) {
+            case "no-preference":
+                yield new FunctionExpression<>(featureName, featureValue, argument, false);
+
+            case "reduce": // fall through
+            case null:
+                yield new FunctionExpression<>(featureName, featureValue, argument, true);
+
+            default:
+                throw new IllegalArgumentException(
+                    String.format("Unknown value <%s> for media feature <%s>", featureValue, featureName));
+        };
+    }
+
+    private static String checkNotNullValue(String featureName, String featureValue) {
+        if (featureValue == null) {
+            throw new IllegalArgumentException(
+                String.format("Media feature <%s> cannot be evaluated in a boolean context", featureName));
+        }
+
+        return featureValue;
+    }
+}

@@ -27,6 +27,8 @@ package javafx.scene;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Accessible;
+import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
+import com.sun.javafx.scene.SceneMediaQueryContext;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
@@ -59,17 +61,20 @@ import com.sun.prism.impl.PrismSettings;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.ColorScheme;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.NamedArg;
 import javafx.beans.property.*;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
+import javafx.css.MediaQueryContext;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.Stylesheet;
 import javafx.event.*;
@@ -173,6 +178,8 @@ root.getChildren().add(r);
  */
 @DefaultProperty("root")
 public class Scene implements EventTarget {
+
+    private final MediaQueryContext mediaQueryContext = new SceneMediaQueryContext(this);
 
     private double widthSetByUser = -1.0;
     private double heightSetByUser = -1.0;
@@ -472,6 +479,11 @@ public class Scene implements EventTarget {
                         @Override
                         public Accessible getAccessible(Scene scene) {
                             return scene.getAccessible();
+                        }
+
+                        @Override
+                        public MediaQueryContext getMediaQueryContext(Scene scene) {
+                            return scene.mediaQueryContext;
                         }
                     });
         }
@@ -1173,6 +1185,155 @@ public class Scene implements EventTarget {
             };
         }
         return fill;
+    }
+
+    /**
+     * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
+     * on light backgrounds.
+     * <p>
+     * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
+     * value of {@link Platform.Preferences#colorSchemeProperty()}. Therefore, specifying a value
+     * for this property overrides the platform-provided value.
+     * <p>
+     * This property corresponds to the following CSS media feature:
+     * <table class="striped">
+     *     <caption>Media Feature</caption>
+     *     <tbody>
+     *         <tr><th>Name</th><td><code>prefers-color-scheme</code></td></tr>
+     *         <tr><th>For</th><td><code>@media</code></td></tr>
+     *         <tr><th>Value</th><td><code>light</code> | <code>dark</code></td></tr>
+     *         <tr><th>Boolean Context</th><td>no</td></tr>
+     *     </tbody>
+     * </table>
+     *
+     * @defaultValue {@link Platform.Preferences#getColorScheme()}
+     * @since 24
+     */
+    private final ObjectProperty<ColorScheme> colorScheme = new MediaProperty<>(
+            "colorScheme", PlatformImpl.getPlatformPreferences().colorSchemeProperty());
+
+    public final ObjectProperty<ColorScheme> colorSchemeProperty() {
+        return colorScheme;
+    }
+
+    public final ColorScheme getColorScheme() {
+        return colorScheme.get();
+    }
+
+    public final void setColorScheme(ColorScheme colorScheme) {
+        this.colorScheme.set(colorScheme);
+    }
+
+    private final ObjectProperty<Boolean> reducedMotion = new MediaProperty<>(
+            "reducedMotion", PlatformImpl.getPlatformPreferences().reducedMotionProperty());
+
+    /**
+     * Specifies whether the scene should minimize the amount of non-essential animations,
+     * reducing discomfort for users who experience motion sickness or vertigo.
+     * <p>
+     * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
+     * value of {@link Platform.Preferences#reducedMotionProperty()}. Therefore, specifying a
+     * value for this property overrides the platform-provided value.
+     * <p>
+     * This property corresponds to the following CSS media feature:
+     * <table class="striped">
+     *     <caption>Media Feature</caption>
+     *     <tbody>
+     *         <tr><th>Name</th><td><code>prefers-reduced-motion</code></td></tr>
+     *         <tr><th>For</th><td><code>@media</code></td></tr>
+     *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
+     *         <tr><th>Boolean Context</th>
+     *             <td>yes, <code>no-preference</code> evaluates as <code>false</code></td>
+     *         </tr>
+     *     </tbody>
+     * </table>
+     *
+     * @return the {@code reducedMotion} property
+     * @defaultValue {@link Platform.Preferences#isReducedMotion()}
+     * @since 24
+     */
+    public final ObjectProperty<Boolean> reducedMotionProperty() {
+        return reducedMotion;
+    }
+
+    /**
+     * Gets the value of the {@code reducedMotion} property.
+     *
+     * @return the value of the {@code reducedMotion} property
+     * @see #reducedMotionProperty()
+     * @see #setReducedMotion(Boolean)
+     * @since 24
+     */
+    public final boolean isReducedMotion() {
+        return reducedMotion.get();
+    }
+
+    /**
+     * Sets the value of the {@code reducedMotion} property.
+     *
+     * @param value the value
+     * @see #reducedMotionProperty()
+     * @see #isReducedMotion()
+     * @since 24
+     */
+    public final void setReducedMotion(Boolean value) {
+        this.reducedMotion.set(value);
+    }
+
+    private final ObjectProperty<Boolean> reducedTransparency = new MediaProperty<>(
+            "reducedTransparency", PlatformImpl.getPlatformPreferences().reducedTransparencyProperty());
+
+    /**
+     * Specifies whether the scene should minimize the amount of transparent or translucent
+     * layer effects, which can help to increase contrast and readability for some users.
+     * <p>
+     * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
+     * value of {@link Platform.Preferences#reducedTransparencyProperty()}. Therefore, specifying
+     * a value for this property overrides the platform-provided value.
+     * <p>
+     * This property corresponds to the following CSS media feature:
+     * <table class="striped">
+     *     <caption>Media Feature</caption>
+     *     <tbody>
+     *         <tr><th>Name</th><td><code>prefers-reduced-transparency</code></td></tr>
+     *         <tr><th>For</th><td><code>@media</code></td></tr>
+     *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
+     *         <tr><th>Boolean Context</th>
+     *             <td>yes, <code>no-preference</code> evaluates as <code>false</code></td>
+     *         </tr>
+     *     </tbody>
+     * </table>
+     *
+     * @return the {@code reducedTransparency} property
+     * @defaultValue {@link Platform.Preferences#isReducedTransparency()}
+     * @since 24
+     */
+    public final ObjectProperty<Boolean> reducedTransparencyProperty() {
+        return reducedTransparency;
+    }
+
+    /**
+     * Gets the value of the {@code reducedTransparency} property.
+     *
+     * @return the value of the {@code reducedTransparency} property
+     * @see #reducedTransparencyProperty()
+     * @see #setReducedTransparency(Boolean)
+     * @since 24
+     */
+    public final boolean isReducedTransparency() {
+        return reducedTransparency.get();
+    }
+
+    /**
+     * Sets the value of the {@code reducedTransparency} property.
+     *
+     * @param value the value
+     * @see #reducedTransparencyProperty()
+     * @see #isReducedTransparency()
+     * @since 24
+     */
+    public final void setReducedTransparency(Boolean value) {
+        this.reducedTransparency.set(value);
     }
 
     /**
@@ -6481,5 +6642,32 @@ public class Scene implements EventTarget {
             PlatformImpl.accessibilityActiveProperty().set(true);
         }
         return accessible;
+    }
+
+    private class MediaProperty<T> extends NullCoalescingPropertyBase<T> {
+        private final String name;
+
+        MediaProperty(String name, ObservableValue<T> defaultValue) {
+            super(defaultValue);
+            this.name = name;
+        }
+
+        @Override
+        public Object getBean() {
+            return Scene.this;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        protected void invalidated() {
+            Node root = getRoot();
+            if (root != null) {
+                NodeHelper.reapplyCSS(root);
+            }
+        }
     }
 }

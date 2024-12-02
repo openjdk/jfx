@@ -8,7 +8,10 @@
 --add-exports javafx.graphics/com.sun.javafx.animation=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.application.preferences=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.beans.property=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.css=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.css.media=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.css.media.expression=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.css.parser=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.embed=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.font=ALL-UNNAMED
@@ -54,6 +57,7 @@
 --add-opens javafx.graphics/javafx.scene.robot=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene.layout=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene.paint=ALL-UNNAMED
+--add-opens javafx.graphics/javafx.stage=ALL-UNNAMED
 --add-opens java.desktop/javax.imageio=ALL-UNNAMED
 #
 # compile time additions

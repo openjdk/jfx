@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -136,6 +136,18 @@ final public class Rule {
         return observables.getSelectors();
     }
 
+    private final MediaRule mediaRule;
+
+    /**
+     * Gets the {@code MediaRule} associated with this {@code Rule}.
+     *
+     * @return the {@code MediaRule} or {@code null}
+     * @since 24
+     */
+    public MediaRule getMediaRule() {
+        return mediaRule;
+    }
+
     private Stylesheet stylesheet;
 
     /**
@@ -169,12 +181,11 @@ final public class Rule {
         return stylesheet != null ? stylesheet.getOrigin() : null;
     }
 
-
-    Rule(List<Selector> selectors, List<Declaration> declarations) {
-
+    Rule(MediaRule mediaRule, List<Selector> selectors, List<Declaration> declarations) {
+        this.mediaRule = mediaRule;
         this.selectors = selectors;
         this.declarations = declarations;
-        serializedDecls = null;
+        this.serializedDecls = null;
         this.bssVersion = Stylesheet.BINARY_CSS_VERSION;
 
         int sMax = selectors != null ? selectors.size() : 0;
@@ -193,8 +204,8 @@ final public class Rule {
     private byte[] serializedDecls;
     private final int bssVersion;
 
-    private Rule(List<Selector> selectors, byte[] buf, int bssVersion) {
-
+    private Rule(MediaRule mediaRule, List<Selector> selectors, byte[] buf, int bssVersion) {
+        this.mediaRule = mediaRule;
         this.selectors = selectors;
         this.declarations = null;
         this.serializedDecls = buf;
@@ -327,6 +338,12 @@ final public class Rule {
 
     final void writeBinary(DataOutputStream os, StyleConverter.StringStore stringStore)
             throws IOException {
+        if (mediaRule != null) {
+            os.writeBoolean(true); // flag to indicate whether we have a media rule
+            mediaRule.writeBinary(os, stringStore);
+        } else {
+            os.writeBoolean(false);
+        }
 
         final int nSelectors = this.selectors != null ? this.selectors.size() : 0;
         os.writeShort(nSelectors);
@@ -361,6 +378,15 @@ final public class Rule {
     static Rule readBinary(int bssVersion, DataInputStream is, String[] strings)
             throws IOException
     {
+        MediaRule mediaRule = null;
+
+        if (bssVersion >= 7) {
+            boolean hasMediaRule = is.readBoolean();
+            if (hasMediaRule) {
+                mediaRule = MediaRule.readBinary(is, strings);
+            }
+        }
+
         short nSelectors = is.readShort();
         List<Selector> selectors = new ArrayList<>(nSelectors);
         for (int i = 0; i < nSelectors; i++) {
@@ -376,7 +402,7 @@ final public class Rule {
                 declarations.add(d);
             }
 
-            return new Rule(selectors, declarations);
+            return new Rule(null, selectors, declarations);
         }
 
         // de-serialize decls into byte array
@@ -386,6 +412,6 @@ final public class Rule {
         if (nBytes > 0) {
             is.readFully(buf);
         }
-        return new Rule(selectors, buf, bssVersion);
+        return new Rule(mediaRule, selectors, buf, bssVersion);
     }
 }

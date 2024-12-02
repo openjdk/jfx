@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,57 +23,52 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css.parser;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.sun.javafx.css.parser.LexerState;
-import com.sun.javafx.css.parser.Recognizer;
-import com.sun.javafx.css.parser.Token;
-
-
-final class CssLexer {
-    final static int STRING = 10;
-    final static int IDENT = 11;
-    final static int FUNCTION = 12;
-    final static int NUMBER = 13;
-    final static int CM = 14;
-    final static int EMS = 15;
-    final static int EXS = 16;
-    final static int IN = 17;
-    final static int MM = 18;
-    final static int PC = 19;
-    final static int PT = 20;
-    final static int PX = 21;
-    final static int PERCENTAGE = 22;
-    final static int DEG = 23;
-    final static int GRAD = 24;
-    final static int RAD = 25;
-    final static int TURN = 26;
-    final static int GREATER = 27;
-    final static int LBRACE = 28;
-    final static int RBRACE = 29;
-    final static int SEMI = 30;
-    final static int COLON = 31;
-    final static int SOLIDUS = 32;
-    final static int STAR = 33;
-    final static int LPAREN = 34;
-    final static int RPAREN = 35;
-    final static int COMMA = 36;
-    final static int HASH = 37;
-    final static int DOT = 38;
-    final static int IMPORTANT_SYM = 39;
-    final static int WS = 40;
-    final static int NL = 41;
-    final static int FONT_FACE = 42;
-    final static int URL = 43;
-    final static int IMPORT = 44;
-    final static int SECONDS = 45;
-    final static int MS = 46;
-    final static int AT_KEYWORD = 47;
+public final class CssLexer {
+    public final static int STRING = 10;
+    public final static int IDENT = 11;
+    public final static int FUNCTION = 12;
+    public final static int NUMBER = 13;
+    public final static int CM = 14;
+    public final static int EMS = 15;
+    public final static int EXS = 16;
+    public final static int IN = 17;
+    public final static int MM = 18;
+    public final static int PC = 19;
+    public final static int PT = 20;
+    public final static int PX = 21;
+    public final static int PERCENTAGE = 22;
+    public final static int DEG = 23;
+    public final static int GRAD = 24;
+    public final static int RAD = 25;
+    public final static int TURN = 26;
+    public final static int GREATER = 27;
+    public final static int LBRACE = 28;
+    public final static int RBRACE = 29;
+    public final static int SEMI = 30;
+    public final static int COLON = 31;
+    public final static int SOLIDUS = 32;
+    public final static int STAR = 33;
+    public final static int LPAREN = 34;
+    public final static int RPAREN = 35;
+    public final static int COMMA = 36;
+    public final static int HASH = 37;
+    public final static int DOT = 38;
+    public final static int IMPORTANT_SYM = 39;
+    public final static int WS = 40;
+    public final static int NL = 41;
+    public final static int FONT_FACE = 42;
+    public final static int URL = 43;
+    public final static int IMPORT = 44;
+    public final static int SECONDS = 45;
+    public final static int MS = 46;
+    public final static int AT_KEYWORD = 47;
 
     private final Recognizer A = (c) -> c == 'a' || c == 'A';
     private final Recognizer B = (c) -> c == 'b' || c == 'B';
@@ -348,13 +343,13 @@ final class CssLexer {
         return map;
     }
 
-    CssLexer() {
+    public CssLexer() {
         this.stateMap = createStateMap();
         this.text = new StringBuilder(64);
         this.currentState = initState;
     }
 
-    void setReader(Reader reader) {
+    public void setReader(Reader reader) {
         this.reader = reader;
         lastc = -1;
         pos = offset = 0;
@@ -746,7 +741,7 @@ final class CssLexer {
         return c;
     }
 
-    Token nextToken() {
+    public Token nextToken() {
 
         Token tok = null;
         if (token != null) {

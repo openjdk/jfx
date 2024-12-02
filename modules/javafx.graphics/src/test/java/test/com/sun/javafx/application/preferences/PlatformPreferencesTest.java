@@ -53,7 +53,8 @@ public class PlatformPreferencesTest {
 
     @BeforeEach
     void setup() {
-        prefs = new PlatformPreferences(
+        prefs = new PlatformPreferences();
+        prefs.initialize(
             // Well-known platform keys and their associated type
             Map.of(
                 "test.anInt", Integer.class,

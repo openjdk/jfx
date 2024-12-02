@@ -768,14 +768,16 @@
     </p>
 
     <h3><a id="introatrules">&#64; Rules</a></h3>
+    <h4>@import</h4>
     <p>
         Beginning with JavaFX 8u20, the CSS
-        <a href="http://www.w3.org/TR/CSS21/cascade.html#at-import">@import</a> is also partially supported.
+        <a href="http://www.w3.org/TR/CSS21/cascade.html#at-import">@import</a> is partially supported.
         Only unconditional import is supported. In other words, the media&#8209;type qualifier is not supported.
         Also, the JavaFX CSS parser is non-compliant with regard to where an @import may appear within a stylesheet
         (see <a href="http://www.w3.org/TR/CSS21/syndata.html#at-rules">At&#8209;rules</a>).
         Users are cautioned that this will be fixed in a future release. Adherence to the W3C standard is strongly advised.
     </p>
+    <h4>@font-face</h4>
     <p>Since JavaFX 8, the implementation partially supports the CSS3 syntax to load a font from a URL using the
     <a href="http://www.w3.org/TR/css3-fonts/#the-font-face-rule">@font&#8209;face</a> rule:</p>
     <textarea rows="8" cols="132">
@@ -815,6 +817,76 @@
     <p>Although the parser will parse the syntax, all @font&#8209;face descriptors are ignored except for
         the <code>src</code> descriptor. The <code>src</code> descriptor is expected to be a
         <a href="#typeurl" class="typelink">&lt;url&gt;</a>. The <code>format</code> hint is ignored.</p>
+    <h4>@media</h4>
+    <p>A media query is a method of testing certain aspects of the <a href="../../../javafx/scene/Scene.html">Scene</a>.
+        Media queries are independent of the contents of the scene graph, its styling, or any other internal aspect;
+        they’re only dependent on "external" configuration of the <code>Scene</code>.
+    <p>Several media queries can be combined into a comma-separated <strong>media query list</strong>.
+        A media query list evaluates to <code>true</code> if <em>any</em> of the media queries is <code>true</code>,
+        and evaluates to <code>false</code> only if <em>all</em> the media queries are <code>false</code>.
+        An empty media query list evaluates to <code>true</code>.
+        <figure style="margin: 0">
+            <img src="media-query.svg" width="210" alt="Media Query List">
+            <figcaption style="float: left; margin-top: 27px">
+                <span class="grammar">&lt;media-query-list&gt;:</span>
+            </figcaption>
+        </figure>
+    <p>A <strong>media query</strong> consists of one or more <strong>media features</strong>.
+        A media feature tests a single, specific feature of the <code>Scene</code>.
+        <figure style="margin: 0">
+            <img src="media-feature.svg" width="430" alt="Media Feature">
+            <figcaption style="float: left; margin-top: 16px">
+                <span class="grammar">&lt;media-feature&gt;:</span>
+            </figcaption>
+        </figure>
+    <p>Syntactically, media features resemble CSS properties: they consist of a feature name, a colon, and a value to
+        test for. Media features are always enclosed in parentheses. They may also be written in boolean form as just a
+        feature name. In this case, the media feature is evaluated in a <strong>boolean context</strong>. This is a
+        convenient shorthand for features that have a reasonable default value. A media feature that is evaluated in a
+        boolean context evaluates to <code>true</code> if it would be <code>true</code> for any value <em>other</em>
+        than the reasonable default value.
+    <p>For example, the <code>prefers-reduced-motion</code> media feature has a default value of <code>no-preference</code>.
+        When evaluated in a boolean context, the media feature evaluates to <code>false</code> if the user has indicated no
+        preference, and evaluates to <code>true</code> if the user has indicated the <code>reduce</code> preference.
+    <p>Media features can be combined using boolean algebra (<code>not</code>, <code>and</code>, <code>or</code>):
+    <ul>
+        <li>Any media feature can be negated by placing the <code>not</code> operator before it.
+        <li>Two or more media features can be chained together, such that the query is only true if <em>all</em> the
+            media features are true, by placing the <code>and</code> operator between them.
+        <li>Two or more media features can be chained together, such that the query is true if <em>any</em> of the
+            media features are true, by placing the <code>or</code> operator between them.
+        <li>Expressions can be grouped by wrapping them in parentheses.
+        <li>It is invalid to mix different boolean operators at the same "level" of a media query. For example,
+            <code>(prefers-color-scheme: dark) and (prefers-reduced-motion) or (prefers-reduced-transparency)</code>
+            is illegal, as it is unclear what was meant. In this case, parentheses must be used to group expressions.
+    </ul>
+    <table class="cssmisctable">
+        <caption>Available media features</caption>
+        <thead>
+            <tr>
+                <th>Media feature</th>
+                <th>Values</th>
+                <th>Boolean Context</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="value">prefers-color-scheme</td>
+                <td class="value">light | dark</td>
+                <td>not applicable</td>
+            </tr>
+        <tr>
+            <td class="value">prefers-reduced-motion</td>
+            <td class="value">no-preference | reduce</td>
+            <td>yes, <code>no-preference</code> evaluates as <code>false</code></td>
+        </tr>
+        <tr>
+            <td class="value">prefers-reduced-transparency</td>
+            <td class="value">no-preference | reduce</td>
+            <td>yes, <code>no-preference</code> evaluates as <code>false</code></td>
+        </tr>
+        </tbody>
+    </table>
     <h3><a id="introexamples">Examples</a></h3>
     <p>Consider the following simple JavaFX application: </p>
     <p class="example">Scene scene = new Scene(new Group()); <br>
