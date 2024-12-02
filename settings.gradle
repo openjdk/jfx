@@ -26,13 +26,11 @@
 include "base",
         "graphics",
         "controls",
-
         // Add an entry for each incubator module here, leaving the incubator
         // placeholder lines as an example.
         // BEGIN: incubator placeholder
         //"incubator.mymod",
         // END: incubator placeholder
-
         "swing",
         "swt",
         "fxml",
@@ -44,13 +42,11 @@ include "base",
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
-
 // Add an entry for each incubator module here, leaving the incubator
 // placeholder lines as an example.
 // BEGIN: incubator placeholder
 //project(":incubator.mymod").projectDir = file("modules/jfx.incubator.mymod")
 // END: incubator placeholder
-
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")
