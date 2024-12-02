@@ -52,4 +52,9 @@ public final class SceneMediaQueryContext implements MediaQueryContext {
     public boolean isReducedTransparency() {
         return scene.isReducedTransparency();
     }
+
+    @Override
+    public boolean isPersistentScrollBars() {
+        return scene.isPersistentScrollBars();
+    }
 }

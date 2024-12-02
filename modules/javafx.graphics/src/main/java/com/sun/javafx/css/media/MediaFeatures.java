@@ -61,32 +61,34 @@ final class MediaFeatures {
                 MediaQueryContext::getColorScheme,
                 ColorScheme.valueOf(featureValue.toUpperCase(Locale.ROOT)));
 
-            case "prefers-reduced-motion" -> booleanReduceQueryExpression(
-                featureName, featureValue, MediaQueryContext::isReducedMotion);
+            case "prefers-reduced-motion" -> booleanPreferenceExpression(
+                featureName, featureValue, "reduce", MediaQueryContext::isReducedMotion);
 
-            case "prefers-reduced-transparency" -> booleanReduceQueryExpression(
-                featureName, featureValue, MediaQueryContext::isReducedTransparency);
+            case "prefers-reduced-transparency" -> booleanPreferenceExpression(
+                featureName, featureValue, "reduce", MediaQueryContext::isReducedTransparency);
+
+            case "prefers-persistent-scrollbars" -> booleanPreferenceExpression(
+                featureName, featureValue, "persistent", MediaQueryContext::isPersistentScrollBars);
 
             default -> throw new IllegalArgumentException(
                 String.format("Unknown media feature <%s>", featureName));
         };
     }
 
-    private static MediaQuery booleanReduceQueryExpression(String featureName,
-                                                           String featureValue,
-                                                           Function<MediaQueryContext, Boolean> argument) {
-        return switch (featureValue) {
-            case "no-preference":
-                yield new FunctionExpression<>(featureName, featureValue, argument, false);
+    private static MediaQuery booleanPreferenceExpression(String featureName,
+                                                          String featureValue,
+                                                          String trueValue,
+                                                          Function<MediaQueryContext, Boolean> argument) {
+        if ("no-preference".equals(featureValue)) {
+            return new FunctionExpression<>(featureName, featureValue, argument, false);
+        }
 
-            case "reduce": // fall through
-            case null:
-                yield new FunctionExpression<>(featureName, featureValue, argument, true);
+        if (featureValue == null || trueValue.equals(featureValue)) {
+            return new FunctionExpression<>(featureName, featureValue, argument, true);
+        }
 
-            default:
-                throw new IllegalArgumentException(
-                    String.format("Unknown value <%s> for media feature <%s>", featureValue, featureName));
-        };
+        throw new IllegalArgumentException(
+            String.format("Unknown value <%s> for media feature <%s>", featureValue, featureName));
     }
 
     private static String checkNotNullValue(String featureName, String featureValue) {

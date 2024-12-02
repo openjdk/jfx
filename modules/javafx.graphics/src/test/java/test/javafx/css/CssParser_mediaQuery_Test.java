@@ -161,7 +161,7 @@ public class CssParser_mediaQuery_Test {
         Stylesheet stylesheet = new CssParser().parse("""
             @media (prefers-color-scheme: light) or
                    (prefers-reduced-motion: reduce) or
-                   (prefers-reduced-transparency: no-preference) {
+                   (prefers-persistent-scrollbars: persistent) {
                 .foo { bar: baz; }
             }
             """);
@@ -173,7 +173,7 @@ public class CssParser_mediaQuery_Test {
                 new DisjunctionExpression(
                     new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
                     new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> false, true)),
-                new FunctionExpression<>("prefers-reduced-transparency", "no-preference", _ -> false, false)
+                new FunctionExpression<>("prefers-persistent-scrollbars", "persistent", _ -> false, true)
             ),
             mediaRule.getQueries().getFirst()
         );
@@ -221,6 +221,21 @@ public class CssParser_mediaQuery_Test {
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
             new FunctionExpression<>("prefers-reduced-transparency", null, _ -> null, true),
+            mediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void parsePrefersPersistentScrollBars_booleanContext() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-persistent-scrollbars) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = stylesheet.getRules().getFirst().getMediaRule();
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(
+            new FunctionExpression<>("prefers-persistent-scrollbars", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
     }
 

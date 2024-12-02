@@ -1202,7 +1202,7 @@ public class Scene implements EventTarget {
      *         <tr><th>Name</th><td><code>prefers-color-scheme</code></td></tr>
      *         <tr><th>For</th><td><code>@media</code></td></tr>
      *         <tr><th>Value</th><td><code>light</code> | <code>dark</code></td></tr>
-     *         <tr><th>Boolean Context</th><td>no</td></tr>
+     *         <tr><th>Boolean Context</th><td>not applicable</td></tr>
      *     </tbody>
      * </table>
      *
@@ -1224,6 +1224,62 @@ public class Scene implements EventTarget {
         this.colorScheme.set(colorScheme);
     }
 
+    private final ObjectProperty<Boolean> persistentScrollBars = new MediaProperty<>(
+            "persistentScrollBars", PlatformImpl.getPlatformPreferences().persistentScrollBarsProperty());
+
+    /**
+     * Specifies whether applications should always show scroll bars. If set to {@code false}, applications
+     * may choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
+     * <p>
+     * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
+     * value of {@link Platform.Preferences#persistentScrollBarsProperty()}. Therefore, specifying
+     * a value for this property overrides the platform-provided value.
+     * <p>
+     * This property corresponds to the following CSS media feature:
+     * <table class="striped">
+     *     <caption>Media Feature</caption>
+     *     <tbody>
+     *         <tr><th>Name</th><td><code>prefers-persistent-scrollbars</code></td></tr>
+     *         <tr><th>For</th><td><code>@media</code></td></tr>
+     *         <tr><th>Value</th><td><code>no-preference</code> | <code>persistent</code></td></tr>
+     *         <tr><th>Boolean Context</th>
+     *             <td><code>no-preference</code> evaluates as <code>false</code></td>
+     *         </tr>
+     *     </tbody>
+     * </table>
+     *
+     * @return the {@code persistentScrollBars} property
+     * @defaultValue {@link Platform.Preferences#isPersistentScrollBars()}
+     * @since 24
+     */
+    public final ObjectProperty<Boolean> persistentScrollBarsProperty() {
+        return persistentScrollBars;
+    }
+
+    /**
+     * Gets the value of the {@code persistentScrollBars} property.
+     *
+     * @return the value of the {@code persistentScrollBars} property
+     * @see #persistentScrollBarsProperty()
+     * @see #setPersistentScrollBars(Boolean)
+     * @since 24
+     */
+    public final boolean isPersistentScrollBars() {
+        return persistentScrollBars.get();
+    }
+
+    /**
+     * Sets the value of the {@code persistentScrollBars} property.
+     *
+     * @param value the value
+     * @see #persistentScrollBarsProperty()
+     * @see #isPersistentScrollBars()
+     * @since 24
+     */
+    public final void setPersistentScrollBars(Boolean value) {
+        this.persistentScrollBars.set(value);
+    }
+
     private final ObjectProperty<Boolean> reducedMotion = new MediaProperty<>(
             "reducedMotion", PlatformImpl.getPlatformPreferences().reducedMotionProperty());
 
@@ -1243,7 +1299,7 @@ public class Scene implements EventTarget {
      *         <tr><th>For</th><td><code>@media</code></td></tr>
      *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
      *         <tr><th>Boolean Context</th>
-     *             <td>yes, <code>no-preference</code> evaluates as <code>false</code></td>
+     *             <td><code>no-preference</code> evaluates as <code>false</code></td>
      *         </tr>
      *     </tbody>
      * </table>
@@ -1299,7 +1355,7 @@ public class Scene implements EventTarget {
      *         <tr><th>For</th><td><code>@media</code></td></tr>
      *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
      *         <tr><th>Boolean Context</th>
-     *             <td>yes, <code>no-preference</code> evaluates as <code>false</code></td>
+     *             <td><code>no-preference</code> evaluates as <code>false</code></td>
      *         </tr>
      *     </tbody>
      * </table>
@@ -6644,6 +6700,10 @@ public class Scene implements EventTarget {
         return accessible;
     }
 
+    /**
+     * Property implementation for media features that causes CSS to be re-applied when the property
+     * value is changed. This is required to re-evaluate media queries in stylesheets.
+     */
     private class MediaProperty<T> extends NullCoalescingPropertyBase<T> {
         private final String name;
 

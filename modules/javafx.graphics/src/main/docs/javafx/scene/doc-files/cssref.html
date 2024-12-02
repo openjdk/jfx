@@ -820,7 +820,7 @@
     <h4>@media</h4>
     <p>A media query is a method of testing certain aspects of the <a href="../../../javafx/scene/Scene.html">Scene</a>.
         Media queries are independent of the contents of the scene graph, its styling, or any other internal aspect;
-        they’re only dependent on "external" configuration of the <code>Scene</code>.
+        they're only dependent on "external" configuration of the <code>Scene</code>.
     <p>Several media queries can be combined into a comma-separated <strong>media query list</strong>.
         A media query list evaluates to <code>true</code> if <em>any</em> of the media queries is <code>true</code>,
         and evaluates to <code>false</code> only if <em>all</em> the media queries are <code>false</code>.
@@ -875,16 +875,21 @@
                 <td class="value">light | dark</td>
                 <td>not applicable</td>
             </tr>
-        <tr>
-            <td class="value">prefers-reduced-motion</td>
-            <td class="value">no-preference | reduce</td>
-            <td>yes, <code>no-preference</code> evaluates as <code>false</code></td>
-        </tr>
-        <tr>
-            <td class="value">prefers-reduced-transparency</td>
-            <td class="value">no-preference | reduce</td>
-            <td>yes, <code>no-preference</code> evaluates as <code>false</code></td>
-        </tr>
+            <tr>
+                <td class="value">prefers-reduced-motion</td>
+                <td class="value">no-preference | reduce</td>
+                <td><code>no-preference</code> evaluates as <code>false</code></td>
+            </tr>
+            <tr>
+                <td class="value">prefers-reduced-transparency</td>
+                <td class="value">no-preference | reduce</td>
+                <td><code>no-preference</code> evaluates as <code>false</code></td>
+            </tr>
+            <tr>
+                <td class="value">prefers-persistent-scrollbars</td>
+                <td class="value">no-preference | persistent</td>
+                <td><code>no-preference</code> evaluates as <code>false</code></td>
+            </tr>
         </tbody>
     </table>
     <h3><a id="introexamples">Examples</a></h3>

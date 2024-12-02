@@ -56,4 +56,11 @@ public sealed interface MediaQueryContext permits SceneMediaQueryContext {
      * @return {@code true} if the application should reduce transparency
      */
     boolean isReducedTransparency();
+
+    /**
+     * Provides the value for the {@code prefers-persistent-scrollbars} media feature.
+     *
+     * @return {@code true} if the application should use persistent scroll bars
+     */
+    boolean isPersistentScrollBars();
 }
