@@ -91,7 +91,7 @@ class DefaultTreeCell<T> extends TreeCell<T> {
 
                     // the item is a Node, and the graphic exists, so
                     // we must insert both into an HBox and present that
-                    // to the user (see RT-15910)
+                    // to the user (see JDK-8115941)
                     if (hbox == null) {
                         hbox = new HBox(3);
                     }

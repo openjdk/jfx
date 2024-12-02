@@ -153,7 +153,7 @@ public final class PrismGraphicsManager extends WCGraphicsManager {
     @Override
     protected String[] getSupportedMediaTypes() {
         String[] types = MediaManager.getSupportedContentTypes();
-        // RT-19949: disable FLV support (workaround for youtube):
+        // JDK-8127495: disable FLV support (workaround for youtube):
         // if browser reports support for video/x-flv, youtube player sets
         // media source to FLV (H264+AAC) stream and does not switch to MP4 on error
         int len = types.length;

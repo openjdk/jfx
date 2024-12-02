@@ -427,7 +427,7 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
     bool enter = event->type == GDK_ENTER_NOTIFY;
     if (jview) {
         guint state = event->state;
-        if (enter) { // workaround for RT-21590
+        if (enter) { // workaround for JDK-8126843
             state &= ~MOUSE_BUTTONS_MASK;
         }
 

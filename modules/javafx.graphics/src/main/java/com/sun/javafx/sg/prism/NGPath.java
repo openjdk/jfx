@@ -97,7 +97,7 @@ public class NGPath extends NGShape {
                 BaseTransform.getRotateInstance(xAxisRotation,
                                                 arc.getCenterX(), arc.getCenterY());
         PathIterator pi = arc.getPathIterator(xform);
-        // RT-8926, append(true) converts the initial moveTo into a
+        // JDK-8109639, append(true) converts the initial moveTo into a
         // lineTo which can generate huge miter joins if the segment
         // is small enough.  So, we manually skip it here instead.
         pi.next();

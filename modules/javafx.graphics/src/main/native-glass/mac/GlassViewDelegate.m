@@ -490,7 +490,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     BOOL block = NO;
     {
-        // RT-5892
+        // JDK-8107811
         if ((type == com_sun_glass_events_MouseEvent_ENTER) || (type == com_sun_glass_events_MouseEvent_EXIT))
         {
             // userData indicates if this is a synthesized EXIT event that MUST pass through
@@ -615,7 +615,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             // Can be inertia from scroll gesture,
             // scroll gesture or mouse wheel itself
             //
-            // RT-22388, RT-25269
+            // JDK-8126339, JDK-8115029
             jint sender = com_sun_glass_ui_mac_MacGestureSupport_SCROLL_SRC_WHEEL;
             if (isInertialScroll(theEvent))
             {
@@ -669,7 +669,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     }
 }
 
-// RT-11707: zero out the keycode for TYPED events
+// JDK-8112726: zero out the keycode for TYPED events
 #define SEND_KEY_EVENT(type) \
     jboolean thisEventWasConsumed = (*env)->CallBooleanMethod(env, self->jView, jViewNotifyKeyAndReturnConsumed, (type), \
             (type) == com_sun_glass_events_KeyEvent_TYPED ? 0 : jKeyCode, \
@@ -1129,7 +1129,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd, mask);
     GLASS_CHECK_EXCEPTION(env);
 
-    // RT-36038: OS X won't send mouseUp after DnD is complete, so we synthesize them
+    // JDK-8095312: OS X won't send mouseUp after DnD is complete, so we synthesize them
     if (self->mouseDownMask & 1 << 0) [self synthesizeMouseUp:NSLeftMouseUp];
     if (self->mouseDownMask & 1 << 1) [self synthesizeMouseUp:NSRightMouseUp];
     if (self->mouseDownMask & 1 << 2) [self synthesizeMouseUp:NSOtherMouseUp];

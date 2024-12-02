@@ -580,7 +580,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
             task.cancel();
             task = null;
 
-            // RT-20880: IllegalStateException thrown from Service#restart()
+            // JDK-8127414: IllegalStateException thrown from Service#restart()
             // The problem is that the reset method explodes if the state
             // is SCHEDULED or RUNNING. Although we have cancelled the
             // task above, it is possible that cancelling does not change

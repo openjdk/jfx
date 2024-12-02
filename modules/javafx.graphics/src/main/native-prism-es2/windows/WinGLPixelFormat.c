@@ -62,7 +62,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLPixelFormat_nCreatePixelForm
     pfd = getPFD(attrs);
     (*env)->ReleaseIntArrayElements(env, attrArr, attrs, JNI_ABORT);
 
-    // RT-27438
+    // JDK-8090498
     // TODO: Need to use nativeScreen to create this requested pixelformat
     // currently hack to work on a single monitor system
     hwnd = createDummyWindow(szAppName);

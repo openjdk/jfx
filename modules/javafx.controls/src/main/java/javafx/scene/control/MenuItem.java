@@ -577,7 +577,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     /** {@inheritDoc} */
     @Override public Node getStyleableNode() {
-        // Fix for RT-20582. We dive into the visual representation
+        // Fix for JDK-8118568. We dive into the visual representation
         // of this MenuItem so that we may return it to the caller.
         ContextMenu parentPopup = MenuItem.this.getParentPopup();
         if (parentPopup == null || ! (parentPopup.getSkin() instanceof ContextMenuSkin)) return null;

@@ -1967,7 +1967,7 @@ public class ComboBoxTest {
         // not the ComboBox, but the FakeFocusTextField inside it
         cb1Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
         assertTrue(cb2.isFocused(), "Expect cb2 to be focused, but actual focus owner is: " + scene.getFocusOwner());
-        // Updated with fix for RT-34602: The TextField now never gets
+        // Updated with fix for JDK-8090788: The TextField now never gets
         // focus (it's just faking it).
         // assertEquals("Expect cb2 TextField to be focused, but actual focus owner is: " + scene.getFocusOwner(),
         //         cb2.getEditor(), scene.getFocusOwner());

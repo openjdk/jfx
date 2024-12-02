@@ -126,7 +126,7 @@ public abstract class VisualTestBase {
     // This must be called on the FX app thread
     protected Stage getStage(boolean alwaysOnTop) {
         Stage stage = new Stage();
-        // Undecorated stage to workaround RT-39904
+        // Undecorated stage to workaround JDK-8089784
         stage.initStyle(StageStyle.UNDECORATED);
         if (alwaysOnTop) {
             stage.setAlwaysOnTop(true);
@@ -217,14 +217,14 @@ public abstract class VisualTestBase {
 
     // Waits until the fist frame is rendered after the stage has been shown
     protected void waitFirstFrame() {
-        // This is a temporary workaround until RT-28683 is implemented
+        // This is a temporary workaround until JDK-8091284 is implemented
         frameWait(100);
     }
 
     // Waits until the frame containing the current state of the scene has
     // been rendered
     protected void waitNextFrame() {
-        // This is a temporary workaround until RT-28683 is implemented
+        // This is a temporary workaround until JDK-8091284 is implemented
         // Need to wait for the current frame in process and then the next frame
         // However, we get many intermittent failures with 2 and a very few with
         // 3, so we will wait for 5 frames.

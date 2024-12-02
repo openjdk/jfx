@@ -44,7 +44,7 @@ import java.util.*;
  * Note that a map that contains an empty bitset is used to represent that the
  * row is selected.
  *
- * Refer to RT-33442 for more information on this issue.
+ * Refer to JDK-8123472 for more information on this issue.
  */
 // T == TablePosition<S,?>
 public abstract class SelectedCellsMap<T extends TablePositionBase> {
