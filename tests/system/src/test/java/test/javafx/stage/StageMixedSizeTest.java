@@ -25,6 +25,8 @@
 
 package test.javafx.stage;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -34,6 +36,7 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -100,18 +103,27 @@ public class StageMixedSizeTest {
             mainStage.setScene(new Scene(sp));
 
             mainStage.setOnShown(e -> {
-                Util.sleep(500);
+                Timeline timeline = new Timeline();
+
+                long timeLine = 500;
                 if (afterShown != null) {
-                    afterShown.accept(mainStage, sp);
+                    timeline.getKeyFrames()
+                            .add(new KeyFrame(Duration.millis(timeLine),
+                                    ae -> afterShown.accept(mainStage, sp)));
                 }
 
-                showLatch.countDown();
+                timeLine += 500;
+
+                timeline.getKeyFrames().add(new KeyFrame(Duration.millis(timeLine),
+                                ae -> showLatch.countDown()));
+                timeline.setCycleCount(1);
+                timeline.play();
             });
 
             mainStage.show();
-            Util.sleep(500);
         });
 
         Util.waitForLatch(showLatch, 5, "Stage failed to setup and show");
+        Util.sleep(500);
     }
 }
