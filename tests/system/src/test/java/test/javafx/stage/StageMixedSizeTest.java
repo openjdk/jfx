@@ -110,9 +110,8 @@ public class StageMixedSizeTest {
                     timeline.getKeyFrames()
                             .add(new KeyFrame(Duration.millis(timeLine),
                                     ae -> afterShown.accept(mainStage, sp)));
+                    timeLine += 500;
                 }
-
-                timeLine += 500;
 
                 timeline.getKeyFrames().add(new KeyFrame(Duration.millis(timeLine),
                                 ae -> showLatch.countDown()));
