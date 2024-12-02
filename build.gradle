@@ -2812,6 +2812,7 @@ project(":controls") {
 
 // Add a project declaration for each incubator module here, leaving the
 // incubator placeholder lines as an example.
+// See CSR JDK-8344644 for more information.
 // BEGIN: incubator placeholder
 //project(":incubator.mymod") {
 //    project.ext.buildModule = true
