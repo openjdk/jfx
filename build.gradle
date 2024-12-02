@@ -4085,7 +4085,6 @@ project(":systemTests") {
 
         // TODO: incubator template -- rename module, then remove this TODO comment
         'incubator.myfeature',
-
         'media',
         'jsobject',
         'web',
