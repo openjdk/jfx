@@ -109,14 +109,14 @@ public class NGRectangle extends NGShape {
 
     private boolean renderEffectDirectly(Graphics g) {
         if (mode != Mode.FILL || isRounded()) {
-            // TODO: Allow solid strokes that are square in the corners... (RT-26974)
+            // TODO: Allow solid strokes that are square in the corners... (JDK-8091278)
             return false;
         }
         float alpha = g.getExtraAlpha();
         if (fillPaint instanceof Color) {
             alpha *= ((Color) fillPaint).getAlpha();
         } else {
-            // TODO: Check if all colors in a gradient have same alpha... (RT-26974)
+            // TODO: Check if all colors in a gradient have same alpha... (JDK-8091278)
             return false;
         }
         Effect effect = getEffect();
@@ -208,7 +208,7 @@ public class NGRectangle extends NGShape {
                 checkstroke = true;
             }
         } else {
-            // TODO: This should never happen... (RT-26974)
+            // TODO: This should never happen... (JDK-8091278)
             if (mode == Mode.STROKE_FILL) {
                 outerpad = 0.0f;
             }

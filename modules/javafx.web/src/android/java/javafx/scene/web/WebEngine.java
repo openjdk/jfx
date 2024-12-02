@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,8 +46,6 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URLConnection;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javafx.animation.AnimationTimer;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
@@ -947,7 +945,7 @@ final public class WebEngine {
      */
     private static final class PulseTimer {
 
-        // Used just to guarantee constant pulse activity. See RT-14433.
+        // Used just to guarantee constant pulse activity. See JDK-8114603.
         private static final AnimationTimer animation =
             new AnimationTimer() {
                 @Override public void handle(long l) {}
@@ -1328,12 +1326,7 @@ final public class WebEngine {
                 final Callback<String,Void> messageCallback =
                         webEngine.debugger.messageCallback;
                 if (messageCallback != null) {
-                    AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                        @Override public Void run() {
-                            messageCallback.call(message);
-                            return null;
-                        }
-                    }, webEngine.page.getAccessControlContext());
+                    messageCallback.call(message);
                     result = true;
                 }
             }

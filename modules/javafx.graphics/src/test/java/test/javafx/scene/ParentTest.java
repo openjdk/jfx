@@ -491,7 +491,7 @@ public class ParentTest {
         stage.setScene(scene);
         stage.show();
 
-        // there are assertions tested down the stack (see RT-21746)
+        // there are assertions tested down the stack (see JDK-8115729)
     }
 
     private static class LGroup extends Group {

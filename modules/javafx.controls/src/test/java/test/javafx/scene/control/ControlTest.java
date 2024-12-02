@@ -1082,15 +1082,15 @@ public class ControlTest {
                     }
                 }
             } catch (NoSuchMethodException ex) {
-                fail("NoSuchMethodException: RT-18097 cannot be tested on " + what);
+                fail("NoSuchMethodException: JDK-8128808 cannot be tested on " + what);
             } catch (IllegalAccessException ex) {
-                System.err.println("IllegalAccessException:  RT-18097 cannot be tested on " + what);
+                System.err.println("IllegalAccessException:  JDK-8128808 cannot be tested on " + what);
             } catch (IllegalArgumentException ex) {
-                fail("IllegalArgumentException:  RT-18097 cannot be tested on " + what);
+                fail("IllegalArgumentException:  JDK-8128808 cannot be tested on " + what);
             } catch (InvocationTargetException ex) {
-                fail("InvocationTargetException:  RT-18097 cannot be tested on " + what);
+                fail("InvocationTargetException:  JDK-8128808 cannot be tested on " + what);
             } catch (InstantiationException ex) {
-                fail("InstantiationException:  RT-18097 cannot be tested on " + what);
+                fail("InstantiationException:  JDK-8128808 cannot be tested on " + what);
             }
         }
     }

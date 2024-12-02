@@ -186,7 +186,7 @@ public abstract class GlyphLayout {
         if (checkBidi && length > 0) {
             int direction = layout.getDirection();
             bidi = new Bidi(chars, 0, null, 0, length, direction);
-            /* Temporary Code: See RT-26997 */
+            /* Temporary Code: See JDK-8115661 */
 //            bidiLevel = (byte)bidi.getRunLevel(bidiIndex);
             bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
             bidiEnd = bidi.getRunLimit(bidiIndex);
@@ -293,7 +293,7 @@ public abstract class GlyphLayout {
             }
             if (levelChanged) {
                 bidiIndex++;
-                /* Temporary Code: See RT-26997 */
+                /* Temporary Code: See JDK-8115661 */
 //                bidiLevel = (byte)bidi.getRunLevel(bidiIndex);
                 bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
                 bidiEnd = bidi.getRunLimit(bidiIndex);

@@ -118,7 +118,7 @@ public class Utils {
             layout.setBoundsType(0);
         }
 
-        // RT-37092: Use the line bounds specifically, to include font leading.
+        // JDK-8093957: Use the line bounds specifically, to include font leading.
         return layout.getLines()[0].getBounds().getHeight();
     }
 
@@ -295,7 +295,7 @@ public class Utils {
             //            LineBreakMeasurer m = new LineBreakMeasurer(a.getIterator(), frc);
             //            substring = text.substring(0, m.nextOffset((double)availableWidth));
             } else {
-                // RT-23458: Use a faster algorithm for the most common case
+                // JDK-8101897: Use a faster algorithm for the most common case
                 // where truncation happens at the end, i.e. for ELLIPSIS and
                 // CLIP, but not for other cases such as WORD_ELLIPSIS, etc.
                 if (style == ELLIPSIS && !new Bidi(text, Bidi.DIRECTION_LEFT_TO_RIGHT).isMixed()) {
@@ -492,7 +492,7 @@ public class Utils {
         if (width < eWidth || height < eHeight) {
             // The ellipsis doesn't fit.
             textTruncated.set(true);
-            return text; // JDK-8092895 (RT-30868) - return text, not empty string.
+            return text; // JDK-8092895 (JDK-8092895) - return text, not empty string.
         }
 
         helper.setText(text);

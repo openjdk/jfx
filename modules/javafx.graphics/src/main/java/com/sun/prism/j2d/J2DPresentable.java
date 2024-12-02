@@ -109,7 +109,7 @@ public abstract class J2DPresentable implements Presentable {
         public boolean prepare(Rectangle dirty) {
             if (pState.isViewClosed() == false) {
                 /*
-                 * RT-27385
+                 * JDK-8101778
                  * TODO: make sure the imgrep matches the Pixels.getNativeFormat()
                  * TODO: dirty region support
                  */

@@ -120,7 +120,7 @@ final class CssStyleHelper {
         if ( canReuseStyleHelper(node, styleMap) ) {
 
             //
-            // RT-33080
+            // JDK-8123731
             //
             // If we're reusing a style helper, clear the fontSizeCache in case either this node or some parent
             // node has changed font from a user calling setFont.
@@ -470,7 +470,7 @@ final class CssStyleHelper {
                 cacheContainer.cssSetProperties.isEmpty()) return;
 
         resetInProgress = true;
-        // RT-31714 - make a copy of the entry set and clear the cssSetProperties immediately.
+        // JDK-8094367 - make a copy of the entry set and clear the cssSetProperties immediately.
         Set<Entry<CssMetaData, CalculatedValue>> entrySet = new HashSet<>(cacheContainer.cssSetProperties.entrySet());
         cacheContainer.cssSetProperties.clear();
 
@@ -851,7 +851,7 @@ final class CssStyleHelper {
             CalculatedValue calculatedValue = cacheEntry.get(property);
 
             // If there is no calculatedValue and we're on the fast path,
-            // take the slow path if cssFlags is REAPPLY (RT-31691)
+            // take the slow path if cssFlags is REAPPLY (JDK-8116341)
             final boolean forceSlowpath =
                     fastpath && calculatedValue == null && isForceSlowpath;
 
@@ -885,7 +885,7 @@ final class CssStyleHelper {
             try {
 
                 //
-                // RT-19089
+                // JDK-8127435
                 // If the current value of the property was set by CSS
                 // and there is no style for the property, then reset this
                 // property to its initial value. If it was not set by CSS
@@ -930,7 +930,7 @@ final class CssStyleHelper {
                 final StyleOrigin originOfCurrentValue = styleableProperty.getStyleOrigin();
 
 
-                // RT-10522:
+                // JDK-8110994:
                 // If the user set the property and there is a style and
                 // the style came from the user agent stylesheet, then
                 // skip the value. A style from a user agent stylesheet should
@@ -958,7 +958,7 @@ final class CssStyleHelper {
                 final Object value = calculatedValue.getValue();
                 final Object currentValue = styleableProperty.getValue();
 
-                // RT-21185: Only apply the style if something has changed.
+                // JDK-8102176: Only apply the style if something has changed.
                 if ((originOfCurrentValue != originOfCalculatedValue)
                         || (currentValue != null
                         ? currentValue.equals(value) == false
@@ -997,7 +997,7 @@ final class CssStyleHelper {
                     logger.warning(msg);
                 }
 
-                // RT-27155: if setting value raises exception, reset value
+                // JDK-8125956: if setting value raises exception, reset value
                 // the value to initial and thereafter skip setting the property
                 cacheEntry.put(property, SKIP);
 
@@ -1217,7 +1217,7 @@ final class CssStyleHelper {
             StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(styleable);
             StyleOrigin origin = styleableProperty != null ? styleableProperty.getStyleOrigin() : null;
 
-            // RT-16308: if there is no matching style and the user set
+            // JDK-8117129: if there is no matching style and the user set
             // the property, do not look for inherited styles.
             if (origin == StyleOrigin.USER) {
 
@@ -1437,7 +1437,7 @@ final class CssStyleHelper {
         // Find value that could not be looked up. If the resolved value does not contain lookups, then the
         // ClassCastException is not because of trying to convert a String (which is the missing lookup)
         // to some value, but is because the convert method got some wrong value - like a paint when it should be a color.
-        // See RT-33319 for an example of this.
+        // See JDK-8097038 for an example of this.
         String missingLookup = resolved != null && resolved.isContainsLookups() ? getUnresolvedLookup(resolved) : null;
 
         StringBuilder sbuf = new StringBuilder();
@@ -1596,7 +1596,7 @@ final class CssStyleHelper {
                 }
 
                 final StyleConverter cssMetaDataConverter = cssMetaData.getConverter();
-                // RT-37727 - handling of properties that are insets is wonky. If the property is -fx-inset, then
+                // JDK-8095062 - handling of properties that are insets is wonky. If the property is -fx-inset, then
                 // there isn't an issue because the converter assigns the InsetsConverter to the ParsedValue.
                 // But -my-insets will parse as an array of numbers and the parser will assign the Size sequence
                 // converter to it. So, if the CssMetaData says it uses InsetsConverter, use the InsetsConverter
@@ -1830,7 +1830,7 @@ final class CssStyleHelper {
 
         Set<PseudoClass> states = styleable instanceof Node ? ((Node)styleable).pseudoClassStates : styleable.getPseudoClassStates();
 
-        // RT-20145 - if looking for font size and the node has a font,
+        // JDK-8127344 - if looking for font size and the node has a font,
         // use the font property's value if it was set by the user and
         // there is not an inline or author style.
 

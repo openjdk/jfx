@@ -80,7 +80,7 @@ extern "C" {
      */
     JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_ios_IOSMediaPlayer_iosGetAudioSyncDelay
     (JNIEnv *env, jobject obj, jlong mediaRef, jlongArray syncDelayArr) {
-        // Not implemented: http://javafx-jira.kenai.com/browse/RT-27005
+        // Not implemented: JDK-8096014
         return ERROR_NONE;
     }
 
@@ -91,7 +91,7 @@ extern "C" {
      */
     JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_ios_IOSMediaPlayer_iosSetAudioSyncDelay
     (JNIEnv *env, jobject obj, jlong mediaRef, jlong syncDelay) {
-        // Not implemented: http://javafx-jira.kenai.com/browse/RT-27005
+        // Not implemented: JDK-8096014
         return ERROR_NONE;
     }
 

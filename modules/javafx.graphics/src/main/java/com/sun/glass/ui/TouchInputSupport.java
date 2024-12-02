@@ -109,7 +109,7 @@ public class TouchInputSupport
 
         view.notifyEndTouchEvent();
 
-        // RT-21288. Notify outer world when touch point count changes
+        // JDK-8102493. Notify outer world when touch point count changes
         if (curTouchCount != 0 && touchCount != 0 && curTouchCount != touchCount &&
                 listener != null) {
             listener.touchCountChanged(this, curView, curModifiers, curIsDirect);

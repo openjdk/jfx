@@ -99,7 +99,7 @@ public class CompoundCoords {
 
     // find n that : array[n] <= x < array[n+1]
     private static int find1(int x, int array[]) {
-        // RT-27419
+        // JDK-8092081
         // TODO: we may use b-search, probably later
         // since the length is really small, plain 'for' is OK for now
         for (int i = 0; i < array.length - 1; ++i) {
@@ -112,7 +112,7 @@ public class CompoundCoords {
 
     // find n that : array[n] < x <= array[n+1]
     private static int find2(int x, int array[]) {
-        // RT-27419
+        // JDK-8092081
         // TODO: we may use b-search, probably later
         // since the length is really small, plain 'for' is OK for now
         for (int i = 0; i < array.length - 1; ++i) {

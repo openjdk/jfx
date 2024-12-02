@@ -406,7 +406,7 @@ public final class GraphicsDecoder  {
     {
         WCImage img = WCImage.getImage(imgFrame);
         if (img != null) {
-            // RT-10059: drawImage() may have to create the texture
+            // JDK-8111480: drawImage() may have to create the texture
             // lazily, and may fail with an OutOfMemory error
             // if the texture is too large. This is a legitimate
             // situation that should be handled gracefully. It should
@@ -432,7 +432,7 @@ public final class GraphicsDecoder  {
     {
         WCImage img = WCImage.getImage(imgFrame);
         if (img != null) {
-            // RT-10059: drawImage() may have to create the texture
+            // JDK-8111480: drawImage() may have to create the texture
             // lazily, and may fail with an OutOfMemory error
             // if the texture is too large. This is a legitimate
             // situation that should be handled gracefully. It should
