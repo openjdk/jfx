@@ -150,7 +150,7 @@ public class ListCell<T> extends IndexedCell<T> {
     private final ListChangeListener<T> itemsListener = c -> {
         boolean doUpdate = false;
         while (c.next()) {
-            // RT-35395: We only update the item in this cell if the current cell
+            // JDK-8091726: We only update the item in this cell if the current cell
             // index is within the range of the change and certain changes to the
             // list have occurred.
             final int currentIndex = getIndex();
@@ -328,7 +328,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
         if (isEditing() && newIndex == oldIndex) {
             // no-op
-            // Fix for RT-31165 - if we (needlessly) update the index whilst the
+            // Fix for JDK-8123482 - if we (needlessly) update the index whilst the
             // cell is being edited it will no longer be in an editing state.
             // This means that in certain (common) circumstances that it will
             // appear that a cell is uneditable as, despite being clicked, it
@@ -423,7 +423,7 @@ public class ListCell<T> extends IndexedCell<T> {
         // out of the editing state.
         // This MUST come before the updateItem call below, otherwise it will
         // call cancelEdit(), resulting in both commit and cancel events being
-        // fired (as identified in RT-29650)
+        // fired (as identified in JDK-8124615)
         super.commitEdit(newValue);
 
         ListView<T> list = getListView();
@@ -513,11 +513,11 @@ public class ListCell<T> extends IndexedCell<T> {
         outer: if (valid) {
             final T newValue = items.get(index);
 
-            // RT-35864 - if the index didn't change, then avoid calling updateItem
+            // JDK-8092593 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == index) {
                 if (!isItemChanged(oldValue, newValue)) {
-                    // RT-37054:  we break out of the if/else code here and
+                    // JDK-8096969:  we break out of the if/else code here and
                     // proceed with the code following this, so that we may
                     // still update references, listeners, etc as required.
                     break outer;
@@ -525,9 +525,9 @@ public class ListCell<T> extends IndexedCell<T> {
             }
             updateItem(newValue, false);
         } else {
-            // RT-30484 We need to allow a first run to be special-cased to allow
+            // JDK-8116529 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
-            // the correct visual state to be set up. In particular, in RT-30484
+            // the correct visual state to be set up. In particular, in JDK-8116529
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.

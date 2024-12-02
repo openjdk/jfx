@@ -159,7 +159,7 @@ public class NodeTest {
         // Test focus... (SHOULD NOT DEPEND ON KEY LISTENERS BEING INSTALLED!!)
 
         // Test that clip is taken into account for both "contains" and
-        // "intersects". See http://javafx-jira.kenai.com/browse/RT-646
+        // "intersects". See JDK-8105568
 
 
 

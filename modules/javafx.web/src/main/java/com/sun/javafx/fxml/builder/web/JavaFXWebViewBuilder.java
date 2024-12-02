@@ -35,7 +35,7 @@ import javafx.util.Builder;
 /**
  * JavaFX WebView builder.
  *
- * TODO: Implement this to fix RT-40037.
+ * TODO: Implement this to fix JDK-8089907.
  *
  * This should be implemented using the pattern from
  * JavaFXBuilderFactory$ObjectBuilderWrapper$ObjectBuilder modified to use

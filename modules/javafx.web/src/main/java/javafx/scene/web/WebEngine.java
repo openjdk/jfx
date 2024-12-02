@@ -1184,7 +1184,7 @@ final public class WebEngine {
      */
     private static final class PulseTimer {
 
-        // Used just to guarantee constant pulse activity. See RT-14433.
+        // Used just to guarantee constant pulse activity. See JDK-8114603.
         private static final AnimationTimer animation =
             new AnimationTimer() {
                 @Override public void handle(long l) {}
@@ -1393,7 +1393,7 @@ final public class WebEngine {
                     break;
                 case DOCUMENT_AVAILABLE:
                     if (this.state.get() != State.RUNNING) {
-                        // We have empty load; send a synthetic event (RT-32097)
+                        // We have empty load; send a synthetic event (JDK-8119247)
                         dispatchLoadEvent(frame, PAGE_STARTED, url, contentType, workDone, errorCode);
                     }
                     document.invalidate(true);

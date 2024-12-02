@@ -214,12 +214,12 @@ class ControlUtils {
             return;
         }
 
-        // Fix for RT-31577 - the selectedItems list was going to
+        // Fix for JDK-8123234 - the selectedItems list was going to
         // empty, but the selectedItem property was staying non-null.
         // There is a unit test for this, so if a more elegant solution
         // can be found in the future and this code removed, the unit
         // test will fail if it isn't fixed elsewhere.
-        // makeAtomic toggle added to resolve RT-32618
+        // makeAtomic toggle added to resolve JDK-8117117
         if (sm.getSelectedItems().isEmpty() && sm.getSelectedItem() != null) {
             sm.setSelectedItem(null);
         }

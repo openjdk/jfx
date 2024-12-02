@@ -395,7 +395,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
         response.setHTTPStatusCode(status);
     }
 
-    // Fix for RT-13802: If the mime type is not specified,
+    // Fix for JDK-8113134: If the mime type is not specified,
     // set the mime type to "text/html" as e.g. the CF port
     // does
     String contentTypeString(env, contentType);

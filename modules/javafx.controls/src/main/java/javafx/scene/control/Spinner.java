@@ -153,7 +153,7 @@ public class Spinner<T> extends Control {
 
         value.addListener((o, oldValue, newValue) -> setText(newValue));
 
-        // Fix for RT-29885
+        // Fix for JDK-8115009
         getProperties().addListener((MapChangeListener<Object, Object>) change -> {
             if (change.wasAdded()) {
                 if (change.getKey() == "FOCUSED") {
@@ -162,7 +162,7 @@ public class Spinner<T> extends Control {
                 }
             }
         });
-        // End of fix for RT-29885
+        // End of fix for JDK-8115009
 
         focusedProperty().addListener(o -> {
             if (!isFocused()) {

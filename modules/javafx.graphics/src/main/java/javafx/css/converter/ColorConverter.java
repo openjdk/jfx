@@ -70,10 +70,10 @@ public final class ColorConverter extends StyleConverter<String, Color> {
             try {
                 return Color.web((String)val);
             } catch (IllegalArgumentException iae) {
-                // fall through pending RT-34551
+                // fall through pending JDK-8087791
             }
         }
-        // pending RT-34551
+        // pending JDK-8087791
         System.err.println("not a color: " + value);
         return Color.BLACK;
     }

@@ -134,7 +134,7 @@ public class NGPhongMaterial {
     }
 
     public void setSpecularPower(float specularPower) {
-        // prevent undefined behavior in GLSL pow(0, 0), see RT-36235
+        // prevent undefined behavior in GLSL pow(0, 0), see JDK-8094279
         if (specularPower < 0.001f) {
             specularPower = 0.001f;
         }

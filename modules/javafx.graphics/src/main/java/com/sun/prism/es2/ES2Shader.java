@@ -256,7 +256,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      */
     @Override
     public void disable() throws RuntimeException {
-        // TODO: remove disable() method from Shader interface... (RT-27442)
+        // TODO: remove disable() method from Shader interface... (JDK-8091985)
         context.updateShaderProgram(0);
     }
 
@@ -511,7 +511,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
     @Override
     public void setConstants(String name, IntBuffer buf, int off, int count)
             throws RuntimeException {
-        // TODO: remove off param in favor of IntBuffer.position() (RT-27442)
+        // TODO: remove off param in favor of IntBuffer.position() (JDK-8091985)
         int loc = getUniform(name).location;
         if (loc == -1) {
             return;

@@ -336,13 +336,13 @@ class GlassViewEventHandler extends View.EventHandler {
             switch (type) {
                 case MouseEvent.MOVE:
                     if (button != MouseEvent.BUTTON_NONE) {
-                        //RT-11305: the drag hasn't been started on this window -- ignore the event
+                        //JDK-8110944: the drag hasn't been started on this window -- ignore the event
                         return null;
                     }
                     break;
                 case MouseEvent.UP:
                     if ((mouseButtonPressedMask & buttonMask) == 0) {
-                        //RT-11305: the mouse button hasn't been pressed on this window -- ignore the event
+                        //JDK-8110944: the mouse button hasn't been pressed on this window -- ignore the event
                         return null;
                     }
                     mouseButtonPressedMask &= ~buttonMask;
@@ -858,7 +858,7 @@ class GlassViewEventHandler extends View.EventHandler {
                 case ViewEvent.REPAINT: {
                     Window w = view.getWindow();
                     if (w != null && w.getMinimumWidth() == view.getWidth() && !w.isVisible()) {
-                        // RT-21057 - ignore initial minimum size setting if not visible
+                        // JDK-8127339 - ignore initial minimum size setting if not visible
                         break;
                     }
                     if (QuantumToolkit.drawInPaint && w != null && w.isVisible()) {

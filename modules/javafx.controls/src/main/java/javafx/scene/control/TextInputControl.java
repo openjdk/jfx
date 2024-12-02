@@ -249,7 +249,7 @@ public abstract class TextInputControl extends Control {
                 public void applyStyle(StyleOrigin newOrigin, Font value) {
 
                     //
-                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
+                    // JDK-8127428 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
                     //
                     try {
                         // super.applyStyle calls set which might throw if value is bound.
@@ -276,7 +276,7 @@ public abstract class TextInputControl extends Control {
 
                 @Override
                 protected void invalidated() {
-                    // RT-20727 - if font is changed by calling setFont, then
+                    // JDK-8127428 - if font is changed by calling setFont, then
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
                     if(fontSetByCss == false) {
@@ -1286,7 +1286,7 @@ public abstract class TextInputControl extends Control {
      *         new lines by the TextField)
      */
     private int replaceText(int start, int end, String value, int anchor, int caretPosition) {
-        // RT-16566: Need to take into account stripping of chars into the
+        // JDK-8120290: Need to take into account stripping of chars into the
         // final anchor & caret position
         blockSelectedTextUpdate = true;
         try {

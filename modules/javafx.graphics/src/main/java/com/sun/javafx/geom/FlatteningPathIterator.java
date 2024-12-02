@@ -45,7 +45,7 @@ public class FlatteningPathIterator implements PathIterator {
 
     int limit;              // Maximum number of recursion levels
 
-    // hold field must be volatile to work around a Mac runtime bug (see RT-12386)
+    // hold field must be volatile to work around a Mac runtime bug (see JDK-8111925)
     volatile float hold[] = new float[14];   // The cache of interpolated coords
                     // Note that this must be long enough
                     // to store a full cubic segment and

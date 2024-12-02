@@ -302,7 +302,7 @@ public class PhongLighting extends CoreEffect<RenderState> {
                                       Object renderHelper,
                                       Effect defaultInput)
     {
-        // RT-27564
+        // JDK-8091630
         // TODO: Since only the content input is used for the output bounds
         // we could attempt to factor the bounds of the content input in our
         // answer for the getInputClip() method of the RenderState, but for

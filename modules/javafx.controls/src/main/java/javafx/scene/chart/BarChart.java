@@ -243,7 +243,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             // note: cat axis categories can be updated only when autoranging is true.
             categoryAxis.getCategories().add(categoryIndex, category);
         } else if (categoryMap.containsKey(category)){
-            // RT-21162 : replacing the previous data, first remove the node from scenegraph.
+            // JDK-8115821 : replacing the previous data, first remove the node from scenegraph.
             Data<X,Y> data = categoryMap.get(category);
             getPlotChildren().remove(data.getNode());
             removeDataItemFromDisplay(series, data);
@@ -296,7 +296,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             item.getNode().getStyleClass().add(NEGATIVE_STYLE);
         } else if (currentVal < 0 && barVal > 0) { // going from negative to positive
             // remove style class negative
-            // RT-21164 upside down bars: was adding NEGATIVE_STYLE styleclass
+            // JDK-8115074 upside down bars: was adding NEGATIVE_STYLE styleclass
             // instead of removing it; when going from negative to positive
             item.getNode().getStyleClass().remove(NEGATIVE_STYLE);
         }
@@ -369,7 +369,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
         final double zeroPos = (valueAxis.getLowerBound() > 0) ?
                 valueAxis.getDisplayPosition(valueAxis.getLowerBound()) : valueAxis.getZeroPosition();
-        // RT-24813 : if the data in a series gets too large, barWidth can get negative.
+        // JDK-8125812 : if the data in a series gets too large, barWidth can get negative.
         if (barWidth <= 0) barWidth = 1;
         // update bar positions and sizes
         int catIndex = 0;

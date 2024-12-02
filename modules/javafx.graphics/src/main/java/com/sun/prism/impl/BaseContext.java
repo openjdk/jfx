@@ -564,7 +564,7 @@ public abstract class BaseContext {
                                         0, 0, paintW, paintH,
                                         bx, by, bw, bh);
 
-        // RT-27421
+        // JDK-8090715
         // TODO: could save some work here if we converted the *GradientContext
         // classes to produce ByteRgbaPre data instead of IntArgbPre data...
         byte[] bytePixels = paintBuffer.array();
