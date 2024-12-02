@@ -64,7 +64,7 @@ public final class PlatformPreferences extends AbstractMap<String, Object> imple
      * Contains mappings from platform-specific keys to well-known keys, which are used
      * in the implementation of the property-based API in {@link PreferenceProperties}.
      */
-    private final Map<String, PreferenceMapping<?>> platformKeyMappings = new HashMap<>();
+    private final Map<String, PreferenceMapping<?, ?>> platformKeyMappings = new HashMap<>();
 
     /**
      * Contains the current set of effective preferences, i.e. the set of preferences that
@@ -88,7 +88,7 @@ public final class PlatformPreferences extends AbstractMap<String, Object> imple
      *                              contains {@code null} keys or values
      */
     public void initialize(Map<String, Class<?>> platformKeys,
-                           Map<String, PreferenceMapping<?>> platformKeyMappings) {
+                           Map<String, PreferenceMapping<?, ?>> platformKeyMappings) {
         this.platformKeys.putAll(platformKeys);
         this.platformKeyMappings.putAll(platformKeyMappings);
     }
@@ -221,6 +221,16 @@ public final class PlatformPreferences extends AbstractMap<String, Object> imple
     @Override
     public boolean isReducedTransparency() {
         return properties.isReducedTransparency();
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty persistentScrollBarsProperty() {
+        return properties.persistentScrollBarsProperty();
+    }
+
+    @Override
+    public boolean isPersistentScrollBars() {
+        return properties.isPersistentScrollBars();
     }
 
     @Override
