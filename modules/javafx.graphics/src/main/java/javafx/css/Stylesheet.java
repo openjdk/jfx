@@ -134,7 +134,7 @@ public class Stylesheet {
 //        ClassLoader cl = Thread.currentThread().getContextClassLoader();
 //        this.url = (cl != null) ? cl.getResource("") : null;
         //
-        // RT-17344
+        // JDK-8120294
         // The above code is unreliable. The getResource call is intended
         // to return the root path of the Application instance, but it sometimes
         // returns null. Here, we'll set url to null and then when a url is
@@ -336,7 +336,7 @@ public class Stylesheet {
                 dataInputStream.reset();
 
                 if (bssVersion == 2) {
-                    // RT-31022
+                    // JDK-8116809
                     stylesheet.readBinary(3, dataInputStream, strings);
                 } else {
                     stylesheet.readBinary(Stylesheet.BINARY_CSS_VERSION, dataInputStream, strings);

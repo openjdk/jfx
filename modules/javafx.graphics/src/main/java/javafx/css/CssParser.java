@@ -263,7 +263,7 @@ final public class CssParser {
             // Sometimes bad syntax causes an exception. The code should be
             // fixed to handle the bad syntax, but the fallback is
             // to handle the exception here. Uncaught, the exception can cause
-            // problems like RT-20311
+            // problems like JDK-8127922
             reportException(ex);
         }
 
@@ -301,7 +301,7 @@ final public class CssParser {
                 // Sometimes bad syntax causes an exception. The code should be
                 // fixed to handle the bad syntax, but the fallback is
                 // to handle the exception here. Uncaught, the exception can cause
-                // problems like RT-20311
+                // problems like JDK-8127922
                 reportException(ex);
             }
             stylesheet.getRules().addAll(rules);
@@ -344,7 +344,7 @@ final public class CssParser {
             // Sometimes bad syntax causes an exception. The code should be
             // fixed to handle the bad syntax, but the fallback is
             // to handle the exception here. Uncaught, the exception can cause
-            // problems like RT-20311
+            // problems like JDK-8127922
             reportException(ex);
         }
         return value;
@@ -766,7 +766,7 @@ final public class CssParser {
              ParsedValueImpl pv = parse(root);
             if (pv.getConverter() == StyleConverter.getUrlConverter()) {
                 // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
-                // Pending RT-33574
+                // Pending JDK-8090988
                 pv = new ParsedValueImpl(new ParsedValue[] {pv},PaintConverter.ImagePatternConverter.getInstance());
             }
             return pv;
@@ -960,7 +960,7 @@ final public class CssParser {
                     // in the Declaration. If the value is not a lookup, then use str since the value might
                     // be a string which could have some case sensitive meaning
                     //
-                    // TODO: isIdent is needed here because of RT-38345. This effectively undoes RT-38201
+                    // TODO: isIdent is needed here because of JDK-8096053. This effectively undoes JDK-8095368
                     value = new ParsedValueImpl<String,String>(needsLookup ? text : str, null, isIdent || needsLookup);
                 }
             }
@@ -4599,7 +4599,7 @@ final public class CssParser {
             // When we load an imported stylesheet, the sourceOfStylesheet field
             // gets set to the new stylesheet. Once it is done loading we must reset
             // this field back to the previous value, otherwise we will potentially
-            // run into problems (for example, see RT-40346).
+            // run into problems (for example, see JDK-8093583).
             sourceOfStylesheet = _sourceOfStylesheet;
         }
         if (importedStylesheet == null) {
@@ -4685,7 +4685,7 @@ final public class CssParser {
             }
         }
 
-        // RT-15473
+        // JDK-8114387
         // We might return from selector with a NL token instead of an
         // LBRACE, so skip past the NL here.
         if (currentToken != null && currentToken.getType() == CssLexer.NL) {
@@ -4894,7 +4894,7 @@ final public class CssParser {
             }
 
             // declaration; declaration; ???
-            // RT-17830 - allow declaration;;
+            // JDK-8128890 - allow declaration;;
             while ((currentToken != null) &&
                     (currentToken.getType() == CssLexer.SEMI)) {
                 currentToken = nextToken(lexer);
@@ -4921,7 +4921,7 @@ final public class CssParser {
         if ((currentToken == null) ||
             (currentToken.getType() != CssLexer.IDENT)) {
 //
-//            RT-16547: this warning was misleading because an empty rule
+//            JDK-8128013: this warning was misleading because an empty rule
 //            not invalid. Some people put in empty rules just as placeholders.
 //
 //            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {

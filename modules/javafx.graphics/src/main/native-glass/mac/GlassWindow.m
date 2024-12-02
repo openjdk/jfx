@@ -813,7 +813,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
                 [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
             }
 
-            window->suppressWindowMoveEvent = YES; // RT-11215
+            window->suppressWindowMoveEvent = YES; // JDK-8111165
             {
                 NSRect viewFrame = [window->view frame];
                 if ((viewFrame.size.width != 0.0f) && (viewFrame.size.height != 0.0f))
@@ -892,7 +892,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
         // ensure that performKeyEquivalent returns YES.
         window->isClosed = YES;
 
-        // RT-39813 When closing a window as the result of a global right-click
+        // JDK-8095359 When closing a window as the result of a global right-click
         //          mouse event outside the bounds of the window, using an immediate
         //          [window->nsWindow close] crashes the JDK as the AppKit at this
         //          point still has another [NSWindow _resignKeyFocus] from the
@@ -1183,7 +1183,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
         }
         now = [window->nsWindow isVisible] ? JNI_TRUE : JNI_FALSE;
 
-        // RT-22502 temp workaround: bring plugin window in front of a browser
+        // JDK-8088691 temp workaround: bring plugin window in front of a browser
         if (now == YES)
         {
             static BOOL isBackgroundOnlyAppChecked = NO;

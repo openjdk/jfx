@@ -71,7 +71,7 @@ final class WCBufferedContext extends WCGraphicsPrismContext {
     // The shouldRender* methods below are used to figure out whether a
     // primitive being rendered is clipped out. In case it is, nothing is rendered
     // saving us a graphics/texture creation.
-    // See RT-34443.
+    // See JDK-8097381.
     //
 
     private final RectBounds TEMP_BOUNDS = new RectBounds();

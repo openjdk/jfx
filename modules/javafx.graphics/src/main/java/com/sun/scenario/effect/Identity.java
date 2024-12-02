@@ -128,7 +128,7 @@ public class Identity extends Effect {
                             Object renderHelper,
                             Effect defaultInput)
     {
-        // RT-27396
+        // JDK-8090910
         // TODO: cache needs to be cleared on display changes
         // TODO: cache based on transform?
         ImageData id = datacache.get(fctx);
@@ -161,7 +161,7 @@ public class Identity extends Effect {
 
     @Override
     public AccelType getAccelType(FilterContext fctx) {
-        // RT-27396
+        // JDK-8090910
         // TODO: perhaps we should look at the image type here...
         return AccelType.INTRINSIC;
     }

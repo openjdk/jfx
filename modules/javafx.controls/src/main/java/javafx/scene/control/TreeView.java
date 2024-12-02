@@ -404,7 +404,7 @@ public class TreeView<T> extends Control {
     private boolean expandedItemCountDirty = true;
 
     // Used in the getTreeItem(int row) method to act as a cache.
-    // See RT-26716 for the justification and performance gains.
+    // See JDK-8125681 for the justification and performance gains.
     private Map<Integer, SoftReference<TreeItem<T>>> treeItemCacheMap = new HashMap<>();
 
 
@@ -508,7 +508,7 @@ public class TreeView<T> extends Control {
                 weakOldItem = new WeakReference<>(root);
             }
 
-            // Fix for RT-37853
+            // Fix for JDK-8094887
             edit(null);
 
             expandedItemCountDirty = true;
@@ -1459,12 +1459,12 @@ public class TreeView<T> extends Control {
                     // shuffle selection by the number of added items
                     shift += ControlUtils.isTreeItemIncludingAncestorsExpanded(treeItem) ? addedSize : 0;
 
-                    // RT-32963: We were taking the startRow from the TreeItem
+                    // JDK-8117147: We were taking the startRow from the TreeItem
                     // in which the children were added, rather than from the
                     // actual position of the new child. This led to selection
                     // being moved off the parent TreeItem by mistake.
                     // The 'if (e.getAddedSize() == 1)' condition here was
-                    // subsequently commented out due to RT-33894.
+                    // subsequently commented out due to JDK-8123085.
                     startRow = treeView.getRow(e.getChange().getAddedSubList().get(0));
                 } else if (e.wasRemoved()) {
                     // the start row is incorrect - it is _not_ the index of the
@@ -1476,7 +1476,7 @@ public class TreeView<T> extends Control {
 
                     // whilst we are here, we should check if the removed items
                     // are part of the selectedItems list - and remove them
-                    // from selection if they are (as per RT-15446)
+                    // from selection if they are (as per JDK-8114236)
                     final List<Integer> selectedIndices1 = getSelectedIndices();
                     final int selectedIndex = getSelectedIndex();
                     final List<TreeItem<T>> selectedItems = getSelectedItems();
@@ -1504,7 +1504,7 @@ public class TreeView<T> extends Control {
                                 selectedItems.size() == 1 &&
                                 selectedItem != null &&
                                 selectedItem.equals(removedChildren.get(0))) {
-                            // Bug fix for RT-28637
+                            // Bug fix for JDK-8118846
                             if (selectedIndex < getItemCount()) {
                                 final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
                                 TreeItem<T> newSelectedItem = getModelItem(previousRow);
@@ -1560,7 +1560,7 @@ public class TreeView<T> extends Control {
             }
 
             // we firstly expand the path down such that the given object is
-            // visible. This fixes RT-14456, where selection was not happening
+            // visible. This fixes JDK-8113764, where selection was not happening
             // correctly on TreeItems that are not visible.
 
             if (obj != null) {
@@ -1571,7 +1571,7 @@ public class TreeView<T> extends Control {
                 }
             }
 
-            // Fix for RT-15419. We eagerly update the tree item count, such that
+            // Fix for JDK-8114413. We eagerly update the tree item count, such that
             // selection occurs on the row
             treeView.updateExpandedItemCount(treeView.getRoot());
 

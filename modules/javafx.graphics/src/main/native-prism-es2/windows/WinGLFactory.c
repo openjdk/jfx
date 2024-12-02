@@ -345,7 +345,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLFactory_nInitialize
  */
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_WinGLFactory_nGetAdapterOrdinal
 (JNIEnv *env, jclass class, jlong hMonitor) {
-    //TODO: Needs implementation to handle multi-monitors (RT-27437)
+    //TODO: Needs implementation to handle multi-monitors (JDK-8091992)
     return 0;
 }
 
@@ -356,7 +356,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_WinGLFactory_nGetAdapterOrdinal
  */
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_WinGLFactory_nGetAdapterCount
 (JNIEnv *env, jclass class) {
-    //TODO: Needs implementation to handle multi-monitors (RT-27437)
+    //TODO: Needs implementation to handle multi-monitors (JDK-8091992)
     return 1;
 }
 

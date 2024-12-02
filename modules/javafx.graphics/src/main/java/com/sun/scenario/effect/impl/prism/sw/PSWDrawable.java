@@ -171,7 +171,7 @@ public class PSWDrawable extends PrDrawable implements HeapImage {
     @Override
     public RTTexture getTextureObject() {
         if (heapDirty) {
-            // RT-27562
+            // JDK-8091374
             // TODO: inefficient approach: upload heap array to (cached)
             // texture, then render that texture to rtt
             int width = rtt.getContentWidth();

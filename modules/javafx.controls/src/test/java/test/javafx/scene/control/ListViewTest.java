@@ -935,7 +935,7 @@ public class ListViewTest {
         sl.dispose();
     }
 
-//--------- regression testing of JDK-8093144 (was: RT-35857)
+//--------- regression testing of JDK-8093144 (was: JDK-8093144)
 
     @Test
     public void test_rt35857_selectLast_retainAllSelected() {

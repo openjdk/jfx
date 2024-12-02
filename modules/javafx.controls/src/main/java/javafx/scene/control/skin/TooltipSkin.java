@@ -79,7 +79,7 @@ public class TooltipSkin implements Skin<Tooltip> {
         tipLabel.prefHeightProperty().bind(t.prefHeightProperty());
         tipLabel.maxHeightProperty().bind(t.maxHeightProperty());
 
-        // RT-7512 - skin needs to have styleClass of the control
+        // JDK-8109380 - skin needs to have styleClass of the control
         // TODO - This needs to be bound together, not just set! Probably should
         // do the same for id and style as well.
         tipLabel.getStyleClass().setAll(t.getStyleClass());

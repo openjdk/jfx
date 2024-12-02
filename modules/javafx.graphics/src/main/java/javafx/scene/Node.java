@@ -1027,7 +1027,7 @@ public abstract class Node implements EventTarget, Styleable {
                         //
                         reapplyCSS();
                     } else {
-                        // RT-31168: reset CssFlag to clean so css will be reapplied if the node is added back later.
+                        // JDK-8123224: reset CssFlag to clean so css will be reapplied if the node is added back later.
                         // If flag is REAPPLY, then reapplyCSS() will just return and the call to
                         // notifyParentsOfInvalidatedCSS() will be skipped thus leaving the node un-styled.
                         cssFlag = CssFlags.CLEAN;
@@ -3913,7 +3913,7 @@ public abstract class Node implements EventTarget, Styleable {
         // actually be TEMP_BOUNDS, so we save off state
         if (getClip() != null
                 // FIXME: All 3D picking is currently ignored by rendering.
-                // Until this is fixed or defined differently (RT-28510),
+                // Until this is fixed or defined differently (JDK-8090485),
                 // we follow this behavior.
                 && !(this instanceof Shape3D) && !(getClip() instanceof Shape3D)) {
             double x1 = bounds.getMinX();
@@ -5458,7 +5458,7 @@ public abstract class Node implements EventTarget, Styleable {
         Node clip = getClip();
         if (clip != null
                 // FIXME: All 3D picking is currently ignored by rendering.
-                // Until this is fixed or defined differently (RT-28510),
+                // Until this is fixed or defined differently (JDK-8090485),
                 // we follow this behavior.
                 && !(this instanceof Shape3D) && !(clip instanceof Shape3D)) {
             final double dirX = dir.x;
@@ -9668,7 +9668,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @return  The Styles that match this CSS property for the given Node. The
      * list is sorted by descending specificity.
      */
-    // SB-dependency: RT-21096 has been filed to track this
+    // SB-dependency: JDK-8092096 has been filed to track this
     static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
          return CssStyleHelper.getMatchingStyles(styleable, cssMetaData);
     }
@@ -9685,9 +9685,9 @@ public abstract class Node implements EventTarget, Styleable {
      }
 
      /*
-      * RT-17293
+      * JDK-8091202
       */
-     // SB-dependency: RT-21096 has been filed to track this
+     // SB-dependency: JDK-8092096 has been filed to track this
      final void setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
          if (styleMap != null) getProperties().put("STYLEMAP", styleMap);
          else getProperties().remove("STYLEMAP");
@@ -9702,7 +9702,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
      * @return The Map populated with matching styles.
      */
-    // SB-dependency: RT-21096 has been filed to track this
+    // SB-dependency: JDK-8092096 has been filed to track this
     Map<StyleableProperty<?>,List<Style>> findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
 
         Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(styleMap, this);
@@ -9843,7 +9843,7 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // RT-36838 - don't reapply CSS in the middle of an update
+        // JDK-8095580 - don't reapply CSS in the middle of an update
         if (cssFlag == CssFlags.UPDATE) {
             cssFlag = CssFlags.REAPPLY;
             notifyParentsOfInvalidatedCSS();
@@ -10016,7 +10016,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (cssFlag != CssFlags.REAPPLY) cssFlag = CssFlags.UPDATE;
 
         //
-        // RT-28394 - need to see if any ancestor has a flag UPDATE
+        // JDK-8115093 - need to see if any ancestor has a flag UPDATE
         // If so, process css from the top-most CssFlags.UPDATE node
         // since my ancestor's styles may affect mine.
         //

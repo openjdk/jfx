@@ -135,7 +135,7 @@ final class TextBreakIterator {
         CharacterIterator text = iterator.getText();
         int length = text.getEndIndex() - text.getBeginIndex();
         if (method == TEXT_BREAK_PRECEDING && pos > length) {
-            // RT-15138
+            // JDK-8113893
             return length;
         }
         if ((pos < 0) || (pos > length)) {

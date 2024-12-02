@@ -467,7 +467,7 @@
 {
     KEYLOG("performKeyEquivalent");
 
-    // RT-37093, RT-37399 Command-EQUALS and Command-DOT needs special casing on Mac
+    // JDK-8093711, JDK-8094601 Command-EQUALS and Command-DOT needs special casing on Mac
     // as it is passed through as two calls to performKeyEquivalent, which in turn
     // create extra KeyEvents.
     //

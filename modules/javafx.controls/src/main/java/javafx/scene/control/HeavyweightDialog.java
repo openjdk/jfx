@@ -167,7 +167,7 @@ class HeavyweightDialog extends FXDialog {
             stage.hide();
         }
 
-        // Refer to RT-40687 for more context
+        // Refer to JDK-8094829 for more context
         if (scene != null) {
             scene.setRoot(DUMMY_ROOT);
         }

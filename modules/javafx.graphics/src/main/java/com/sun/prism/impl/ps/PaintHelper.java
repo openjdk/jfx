@@ -296,7 +296,7 @@ class PaintHelper {
 
         stopVals.clear();
         for (int i = 0; i < MULTI_MAX_FRACTIONS; i++) {
-            // TODO: optimize this... (RT-27377)
+            // TODO: optimize this... (JDK-8090612)
             stopVals.put((i < numStops)   ?
                          stops.get(i).getOffset() : 0f);
             stopVals.put((i < numStops-1) ?
