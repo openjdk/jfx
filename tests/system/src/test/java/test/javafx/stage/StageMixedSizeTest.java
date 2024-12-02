@@ -77,7 +77,9 @@ public class StageMixedSizeTest {
             s.setTitle("Width only after content size window");
             sp.setPrefWidth(contentSize);
             sp.setPrefHeight(contentSize);
-        }, (s, sp) -> s.setWidth(windowWidth));
+        }, (s, sp) -> {
+            s.setWidth(windowWidth);
+        });
 
         Assertions.assertEquals(windowWidth, mainStage.getWidth(), "Window width should be " + windowWidth);
     }
@@ -96,7 +98,9 @@ public class StageMixedSizeTest {
             }
 
             mainStage.setScene(new Scene(sp));
+
             mainStage.setOnShown(e -> {
+                Util.sleep(500);
                 if (afterShown != null) {
                     afterShown.accept(mainStage, sp);
                 }
@@ -105,9 +109,9 @@ public class StageMixedSizeTest {
             });
 
             mainStage.show();
+            Util.sleep(500);
         });
 
         Util.waitForLatch(showLatch, 5, "Stage failed to setup and show");
-        Util.sleep(500);
     }
 }
