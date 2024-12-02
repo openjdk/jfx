@@ -137,7 +137,7 @@ public class ListChangeBuilderTest {
         observer.checkAddRemove(1, observableList, Collections.EMPTY_LIST, 4, 5);
     }
 
-    //RT-37089
+    //JDK-8095966
     @Test
     public void testAddRemove_5() {
         builder.beginChange();

@@ -203,7 +203,7 @@ public class FloatMap {
             cacheValid = true;
         }
 
-        // RT-27553
+        // JDK-8090740
         // TODO: ideally this method wouldn't be public in the first place,
         // but even worse, we're assuming that it is called on the QFT from
         // HWTwoSamplerPeer.filter()...

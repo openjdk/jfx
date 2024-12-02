@@ -57,7 +57,7 @@ typedef enum _Encoding Encoding;
 @interface EventDispatcher : NSObject {
 
     // TODO: these fields should be static global variables, no need to initialize them for every instance
-    // http://javafx-jira.kenai.com/browse/RT-27005
+    // JDK-8096014
     jmethodID midSendPlayerStateEvent;
     jmethodID midSendPlayerMediaErrorEvent;
     jmethodID midSendPlayerHaltEvent;

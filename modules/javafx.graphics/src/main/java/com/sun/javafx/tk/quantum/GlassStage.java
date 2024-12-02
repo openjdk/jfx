@@ -127,7 +127,7 @@ abstract class GlassStage implements TKStage {
     }
 
     void windowsSetEnabled(boolean enabled) {
-        // TODO: Need to solve RT-12605:
+        // TODO: Need to solve JDK-8087800:
         // If Window #1 pops up an APPLICATION modal dialog #2 it should block
         // Window #1, but will also block Window #3, #4, etc., unless those
         // windows are descendants of #2.

@@ -26,7 +26,6 @@
 include "base",
         "graphics",
         "controls",
-
         // Add an entry for each incubator module here, leaving the incubator
         // placeholder lines as an example.
         // BEGIN: incubator placeholder
@@ -35,7 +34,6 @@ include "base",
 
         // TODO: incubator template -- rename module, then remove this TODO comment
         "incubator.myfeature",
-
         "swing",
         "swt",
         "fxml",
@@ -47,7 +45,6 @@ include "base",
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
-
 // Add an entry for each incubator module here, leaving the incubator
 // placeholder lines as an example.
 // BEGIN: incubator placeholder
@@ -56,7 +53,6 @@ project(":controls").projectDir = file("modules/javafx.controls")
 
 // TODO: incubator template -- rename module, then remove this TODO comment
 project(":incubator.myfeature").projectDir = file("modules/jfx.incubator.myfeature")
-
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")

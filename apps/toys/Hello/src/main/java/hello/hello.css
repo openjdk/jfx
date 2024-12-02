@@ -73,7 +73,7 @@
     -fx-scale-shape: true;
 }
 
- /* for HelloFontSize as regards RT-28635 */
+ /* for HelloFontSize as regards JDK-8120561 */
 .special-button:mouse_pressed {-fx-font-size : 20;}
 
 /* For HelloControls */

@@ -73,7 +73,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
         flow = createVirtualFlow();
 
         ListenerHelper.get(this).addEventHandler(control, ScrollToEvent.scrollToTopIndex(), (ev) -> {
-            // Fix for RT-24630: The row count in VirtualFlow was incorrect
+            // Fix for JDK-8119687: The row count in VirtualFlow was incorrect
             // (normally zero), so the scrollTo call was misbehaving.
             if (itemCountDirty) {
                 // update row count before we do a scroll

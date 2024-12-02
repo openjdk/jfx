@@ -999,7 +999,7 @@ public class TableViewKeyInputTest {
     }
 
     /***************************************************************************
-     * Tests for discontinuous multiple row selection (RT-18951)
+     * Tests for discontinuous multiple row selection (JDK-8120523)
      **************************************************************************/
 
     // Test 1
@@ -1221,7 +1221,7 @@ public class TableViewKeyInputTest {
 
 
     /***************************************************************************
-     * Tests for discontinuous multiple cell selection (RT-18951)
+     * Tests for discontinuous multiple cell selection (JDK-8120523)
      **************************************************************************/
 
     // Test 1
@@ -4389,7 +4389,7 @@ public class TableViewKeyInputTest {
         expectedColumn = r.apply(expectedColumn);
         assertEquals(4, sm.getSelectedCells().size());
 
-        // this should not cause any issue, but it does - as noted in RT-39792
+        // this should not cause any issue, but it does - as noted in JDK-8093052
         /*expectedColumn = */r.apply(expectedColumn);
         assertEquals(4, sm.getSelectedCells().size());
 

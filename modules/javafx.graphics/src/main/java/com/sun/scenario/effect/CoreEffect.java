@@ -75,7 +75,7 @@ abstract class CoreEffect<T extends RenderState> extends FilterEffect<T> {
      * dimensions of the first input.
      */
     final EffectPeer getPeer(FilterContext fctx, ImageData[] inputs) {
-        // RT-27395
+        // JDK-8091908
         // TODO: we would be much better off using getResultBounds() here
         // to infer the size of the operation since some effects (e.g. Flood)
         // do not have any inputs to consult...

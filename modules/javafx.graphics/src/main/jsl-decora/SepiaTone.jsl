@@ -34,7 +34,7 @@ param float level;
 
 void main()
 {
-    // TODO: these should be defined as const... (RT-27394)
+    // TODO: these should be defined as const... (JDK-8091603)
     float3 weightBW  = float3(0.30, 0.59, 0.11);
     float3 weightSep = float3(1.60, 1.20, 0.90);
 

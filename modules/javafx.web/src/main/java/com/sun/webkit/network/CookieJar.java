@@ -103,7 +103,7 @@ final class CookieJar {
     private static URI rewriteToFilterOutHttpOnlyCookies(URI uri)
         throws URISyntaxException
     {
-        // RT-12200, RT-31072: Rewrite the 'https' scheme to
+        // JDK-8112702, JDK-8119520: Rewrite the 'https' scheme to
         // 'javascripts' to filter out HttpOnly cookies but
         // keep Secure cookies. Rewrite any other scheme
         // to 'javascript' to filter out both HttpOnly and

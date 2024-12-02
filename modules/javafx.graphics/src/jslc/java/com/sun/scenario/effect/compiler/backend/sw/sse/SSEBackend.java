@@ -128,7 +128,7 @@ public class SSEBackend extends TreeScanner {
         // this step isn't strictly necessary but helps give some predictability
         // to the generated jar/nativelib so that the method signatures have
         // a consistent parameter ordering on all platforms for each build,
-        // which may help debugging (see RT-4475)
+        // which may help debugging (see JDK-8107477)
         SortedSet<Variable> sortedVars = getSortedVars(vars.values());
         for (Variable v : sortedVars) {
             if (v.getQualifier() == Qualifier.CONST && v.getConstValue() == null) {
