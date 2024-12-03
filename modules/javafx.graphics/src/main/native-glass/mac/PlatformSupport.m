@@ -64,6 +64,8 @@
     }
 
 static jobject currentPreferences = nil;
+static bool currentPathConstrained = false;
+static bool currentPathExpensive = false;
 
 @implementation PlatformSupport
 
@@ -118,6 +120,14 @@ static jobject currentPreferences = nil;
                      key:"macOS.NSScroller.preferredScrollerStyle"
                      value:[NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay
                         ? "NSScrollerStyleOverlay" : "NSScrollerStyleLegacy"];
+
+    [PlatformSupport putBoolean:preferences
+                     key:"macOS.NWPathMonitor.currentPathConstrained"
+                     value:currentPathConstrained];
+
+    [PlatformSupport putBoolean:preferences
+                     key:"macOS.NWPathMonitor.currentPathExpensive"
+                     value:currentPathExpensive];
 
     return preferences;
 }
@@ -233,6 +243,12 @@ static jobject currentPreferences = nil;
     }
 
     (*env)->DeleteLocalRef(env, newPreferences);
+}
+
++ (void)updateNetworkPath:(jobject)application constrained:(bool)constrained expensive:(bool)expensive {
+    currentPathConstrained = constrained;
+    currentPathExpensive = expensive;
+    [PlatformSupport updatePreferences:application];
 }
 
 + (void)putBoolean:(jobject)preferences key:(const char*)key value:(bool)value {

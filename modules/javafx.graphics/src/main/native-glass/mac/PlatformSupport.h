@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,5 +42,10 @@
  * The change notification includes all preferences, not only the changed preferences.
  */
 + (void)updatePreferences:(jobject)application;
+
+/**
+ * Notify the JavaFX application about changes of the current network path.
+ */
++ (void)updateNetworkPath:(jobject)application constrained:(bool)constrained expensive:(bool)expensive;
 
 @end

@@ -40,6 +40,7 @@
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
 #import <Carbon/Carbon.h>
+#import <Network/Network.h>
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -255,6 +256,15 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                             selector:@selector(platformPreferencesDidChange)
                             name:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
                             object:nil];
+
+                        nw_path_monitor_t pathMonitor = nw_path_monitor_create();
+                        nw_path_monitor_set_update_handler(pathMonitor, ^(nw_path_t path) {
+                            [PlatformSupport updateNetworkPath:self->jApplication
+                                             constrained:nw_path_is_constrained(path)
+                                             expensive:nw_path_is_expensive(path)];
+                        });
+                        nw_path_monitor_set_queue(pathMonitor, dispatch_get_main_queue());
+                        nw_path_monitor_start(pathMonitor);
 
                         // localMonitor = [NSEvent addLocalMonitorForEventsMatchingMask: NSRightMouseDownMask
                         //                                                      handler:^(NSEvent *incomingEvent) {

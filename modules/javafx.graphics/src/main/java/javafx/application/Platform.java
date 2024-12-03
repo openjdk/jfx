@@ -498,6 +498,7 @@ public final class Platform {
      *         <tr><td>{@code Windows.UIColor.AccentLight3}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code Windows.UISettings.AdvancedEffectsEnabled}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code Windows.UISettings.AutoHideScrollBars}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code Windows.NetworkInformation.InternetCostType}</td><td>{@link String}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
@@ -553,6 +554,8 @@ public final class Platform {
      *         <tr><td>{@code macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code macOS.NSScroller.preferredScrollerStyle}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code macOS.NWPathMonitor.currentPathConstrained}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code macOS.NWPathMonitor.currentPathExpensive}</td><td>{@link Boolean}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
@@ -580,6 +583,7 @@ public final class Platform {
      *         <tr><td>{@code GTK.success_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.enable_animations}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code GTK.overlay_scrolling}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code GTK.network_metered}</td><td>{@link Boolean}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
