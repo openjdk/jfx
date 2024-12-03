@@ -85,10 +85,10 @@ public final class SingleSelectionModel implements SelectionModel {
         if (a == null) {
             a = pos;
         } else {
-            if(pos.compareTo(sel.getMin()) < 0) {
+            if (pos.compareTo(sel.getMin()) < 0) {
                 // extend before
                 a = sel.getMax();
-            } else if(pos.compareTo(sel.getMax()) > 0) {
+            } else if (pos.compareTo(sel.getMax()) > 0) {
                 // extend after
                 a = sel.getMin();
             } else {

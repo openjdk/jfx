@@ -79,7 +79,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * <li> {@link StyledTextModel paragraph-oriented model}, up to ~2 billion rows
  * <li> virtualized text cell flow
  * <li> support for text styling with an application stylesheet or {@link StyleAttributeMap inline attributes}
- * <li> supports for multiple views connected to the same model
+ * <li> support for multiple views connected to the same model
  * <li> {@link SelectionModel single selection}
  * <li> {@link InputMap input map} which allows for easy behavior customization and extension
  * </ul>
@@ -108,7 +108,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * </p>
  * <p>
  * A view-only information control requires a different model.  The following example illustrates how to
- * create a model that uses a style sheet for styling:
+ * create a model that uses a stylesheet for styling:
  * <pre>{@code
  *     SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
  *     // add text segment using CSS style name (requires a stylesheet)
@@ -387,9 +387,6 @@ public class RichTextArea extends Control {
     /**
      * Determines the caret blink period.  This property cannot be set to {@code null}.
      * <p>
-     * This is a {@link StyleableProperty} with the name {@code -fx-caret-blink-period}.
-     * <p>
-     * alternative:<br>
      * This property can be styled with CSS using {@code -fx-caret-blink-period} name.
      * @implNote The property object implements {@link StyleableProperty} interface.
      *
