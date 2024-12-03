@@ -40,6 +40,7 @@ import com.sun.javafx.util.TempState;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.VetoableListDecorator;
+import javafx.css.PseudoClass;
 import javafx.css.Selector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
@@ -316,7 +317,25 @@ public abstract class Parent extends Node {
     private boolean geomChanged;
     private boolean childSetModified;
     private final ObservableList<Node> children = new VetoableListDecorator<Node>(new TrackableObservableList<Node>() {
+        private static final PseudoClass FIRST_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("first-child");
+        private static final PseudoClass LAST_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("last-child");
+        private static final PseudoClass ONLY_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("only-child");
+        private static final PseudoClass NTH_EVEN_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("nth-child(even)");
+        private static final PseudoClass NTH_ODD_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("nth-child(odd)");
 
+        private static final List<PseudoClass> ONLY_CHILD_CLASSES = List.of(ONLY_CHILD_PSEUDO_CLASS,
+                                                                            FIRST_CHILD_PSEUDO_CLASS,
+                                                                            LAST_CHILD_PSEUDO_CLASS);
+
+        private static final List<PseudoClass> FIRST_CHILD_CLASSES = List.of(FIRST_CHILD_PSEUDO_CLASS);
+
+        private static void toggleStructuralPseudoClasses(Node node, List<PseudoClass> active) {
+            node.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, active.contains(FIRST_CHILD_PSEUDO_CLASS));
+            node.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, active.contains(LAST_CHILD_PSEUDO_CLASS));
+            node.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, active.contains(ONLY_CHILD_PSEUDO_CLASS));
+            node.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, active.contains(NTH_EVEN_CHILD_PSEUDO_CLASS));
+            node.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, active.contains(NTH_ODD_CHILD_PSEUDO_CLASS));
+        }
 
         @Override
         protected void onChanged(Change<Node> c) {
@@ -324,6 +343,7 @@ public abstract class Parent extends Node {
             unmodifiableManagedChildren = null;
             boolean relayout = false;
             boolean viewOrderChildrenDirty = false;
+            int firstDirtyChildIndex = -1;
 
             if (childSetModified) {
                 while (c.next()) {
@@ -351,6 +371,14 @@ public abstract class Parent extends Node {
                         if (n.isManaged()) {
                             relayout = true;
                         }
+
+                        toggleStructuralPseudoClasses(n, List.of());
+                    }
+
+                    // Sub-changes are sorted by their 'from' index, so it is sufficient to record
+                    // the index of the first change to separate unchanged from changed elements.
+                    if (firstDirtyChildIndex < 0) {
+                        firstDirtyChildIndex = from;
                     }
 
                     // Mark viewOrderChildrenDirty if there is modification to children list
@@ -402,6 +430,12 @@ public abstract class Parent extends Node {
                 // If childSet was not modified, we still need to check whether the permutation
                 // did change the layout
                 layout_loop:while (c.next()) {
+                    // Sub-changes are sorted by their 'from' index, so it is sufficient to record
+                    // the index of the first change to separate unchanged from changed elements.
+                    if (firstDirtyChildIndex < 0) {
+                        firstDirtyChildIndex = c.getFrom();
+                    }
+
                     List<Node> removed = c.getRemoved();
                     for (int i = 0, removedSize = removed.size(); i < removedSize; ++i) {
                         if (removed.get(i).isManaged()) {
@@ -419,6 +453,31 @@ public abstract class Parent extends Node {
                 }
             }
 
+            // Toggle the "only-child" / "first-child" pseudo-classes on the first child.
+            if (size() == 1) {
+                toggleStructuralPseudoClasses(getFirst(), ONLY_CHILD_CLASSES);
+            } else if (size() > 1 && firstDirtyChildIndex == 0) {
+                toggleStructuralPseudoClasses(getFirst(), FIRST_CHILD_CLASSES);
+            }
+
+            // Clear the "last-child" pseudo-class if it was set on the last non-modified child.
+            if (firstDirtyChildIndex > 0) {
+                get(firstDirtyChildIndex - 1).pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+            }
+
+            // Add the "last-child" pseudo-class to the last child.
+            if (size() > 0) {
+                getLast().pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
+            }
+
+            // Toggle the "nth-child(even)" and "nth-child(odd)" pseudo-classes on all modified children.
+            if (firstDirtyChildIndex >= 0) {
+                for (int i = firstDirtyChildIndex, max = size(); i < max; ++i) {
+                    Node n = get(i);
+                    n.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, i % 2 != 0);
+                    n.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, i % 2 == 0);
+                }
+            }
 
             //
             // Note that the styles of a child do not affect the parent or
@@ -449,10 +508,8 @@ public abstract class Parent extends Node {
 
             // Note the starting index at which we need to update the
             // PGGroup on the next update, and mark the children dirty
-            c.reset();
-            c.next();
-            if (startIdx > c.getFrom()) {
-                startIdx = c.getFrom();
+            if (startIdx > firstDirtyChildIndex) {
+                startIdx = firstDirtyChildIndex;
             }
 
             NodeHelper.markDirty(Parent.this, DirtyBits.PARENT_CHILDREN);
