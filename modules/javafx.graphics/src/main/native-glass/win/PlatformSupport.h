@@ -34,6 +34,7 @@
 #include <common.h>
 #include <wrl.h>
 #include <windows.ui.viewmanagement.h>
+#include <windows.networking.connectivity.h>
 
 class PlatformSupport final
 {
@@ -64,6 +65,7 @@ private:
     jobject application;
     bool initialized;
     Microsoft::WRL::ComPtr<ABI::Windows::UI::ViewManagement::IUISettings> settings;
+    ABI::Windows::Networking::Connectivity::INetworkInformationStatics* networkInformation;
     mutable JGlobalRef<jobject> preferences;
 
     struct {
@@ -78,6 +80,7 @@ private:
     void querySystemColors(jobject properties) const;
     void querySystemParameters(jobject properties) const;
     void queryUISettings(jobject properties) const;
+    void queryNetworkInformation(jobject properties) const;
 
     void putString(jobject properties, const char* key, const char* value) const;
     void putString(jobject properties, const char* key, const wchar_t* value) const;

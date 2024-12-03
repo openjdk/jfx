@@ -632,6 +632,20 @@ public final class Platform {
         boolean isReducedTransparency();
 
         /**
+         * Specifies whether applications should minimize the amount of internet traffic, which users
+         * might request because they are on a metered network or a limited data plan.
+         * <p>
+         * If the platform does not report this preference, this property defaults to {@code false}.
+         *
+         * @return the {@code reducedData} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty reducedDataProperty();
+
+        boolean isReducedData();
+
+        /**
          * The platform color scheme, which specifies whether applications should prefer light text on
          * dark backgrounds, or dark text on light backgrounds.
          * <p>

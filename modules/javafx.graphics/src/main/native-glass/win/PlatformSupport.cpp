@@ -31,9 +31,10 @@ using namespace Microsoft::WRL;
 using namespace ABI::Windows::Foundation;
 using namespace ABI::Windows::UI;
 using namespace ABI::Windows::UI::ViewManagement;
+using namespace ABI::Windows::Networking::Connectivity;
 
 PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
-    : env(env), application(application), initialized(false), preferences(NULL)
+    : env(env), application(application), initialized(false), networkInformation(NULL), preferences(NULL)
 {
     javaClasses.Object = (jclass)env->FindClass("java/lang/Object");
     if (CheckAndClearException(env)) return;
@@ -88,14 +89,7 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
     try {
         RO_CHECKED("RoActivateInstance",
                    RoActivateInstance(hstring("Windows.UI.ViewManagement.UISettings"), (IInspectable**)&settings));
-    } catch (RoException const&) {
-        // If an activation exception occurs, it probably means that we're on a Windows system
-        // that doesn't support the UISettings API. This is not a problem, it simply means that
-        // we don't report the UISettings properties back to the JavaFX application.
-        return;
-    }
 
-    try {
         ComPtr<IUISettings5> settings5;
         RO_CHECKED("IUISettings::QueryInterface<IUISettings5>",
                    settings->QueryInterface<IUISettings5>(&settings5));
@@ -109,7 +103,33 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
                 }).Get(),
             &token);
     } catch (RoException const&) {
-        return;
+        // If an activation exception occurs, it probably means that we're on a Windows system
+        // that doesn't support the UISettings API. This is not a problem, it simply means that
+        // we don't report the UISettings properties back to the JavaFX application.
+    }
+
+    try {
+        IActivationFactory* activationFactory = NULL;
+
+        RO_CHECKED("RoGetActivationFactory",
+                   RoGetActivationFactory(hstring("Windows.Networking.Connectivity.NetworkInformation"),
+                                          IID_IActivationFactory,
+                                          (void**)&activationFactory));
+
+        RO_CHECKED("IActivationFactory::QueryInterface",
+                   activationFactory->QueryInterface(&networkInformation));
+
+        EventRegistrationToken token;
+        networkInformation->add_NetworkStatusChanged(
+            Callback<INetworkStatusChangedEventHandler>(
+                [this](IInspectable*) {
+                    updatePreferences();
+                    return S_OK;
+                }).Get(),
+            &token);
+    } catch (RoException const&) {
+        // If an activation exception occurs, it probably means that we're on a Windows system
+        // that doesn't support the NetworkInformation API.
     }
 }
 
@@ -131,6 +151,7 @@ jobject PlatformSupport::collectPreferences() const
     querySystemParameters(prefs);
     querySystemColors(prefs);
     queryUISettings(prefs);
+    queryNetworkInformation(prefs);
     return prefs;
 }
 
@@ -276,6 +297,39 @@ void PlatformSupport::queryUISettings(jobject properties) const
     }
 }
 
+void PlatformSupport::queryNetworkInformation(jobject properties) const
+{
+    if (!this->networkInformation) {
+        return;
+    }
+
+    try {
+        ComPtr<IConnectionProfile> connectionProfile;
+        ComPtr<IConnectionCost> connectionCost;
+        NetworkCostType networkCostType;
+        const char* internetCostType;
+
+        RO_CHECKED("INetworkInformation::GetInternetConnectionProfile",
+                   this->networkInformation->GetInternetConnectionProfile(&connectionProfile));
+
+        RO_CHECKED("IConnectionProfile::GetConnectionCost",
+                   connectionProfile->GetConnectionCost(&connectionCost));
+
+        RO_CHECKED("IConnectionCost::get_NetworkCostType",
+                   connectionCost->get_NetworkCostType(&networkCostType));
+
+        switch (networkCostType) {
+            case NetworkCostType_Unrestricted: internetCostType = "Unrestricted"; break;
+            case NetworkCostType_Variable: internetCostType = "Variable"; break;
+            case NetworkCostType_Fixed: internetCostType = "Fixed"; break;
+            default: internetCostType = "Unknown"; break;
+        }
+
+        putString(properties, "Windows.NetworkInformation.InternetCostType", internetCostType);
+    } catch (RoException const&) {
+    }
+}
+
 void PlatformSupport::putString(jobject properties, const char* key, const char* value) const
 {
     jobject prefKey = env->NewStringUTF(key);
@@ -298,7 +352,7 @@ void PlatformSupport::putString(jobject properties, const char* key, const wchar
 
     jobject prefValue = NULL;
     if (value != NULL) {
-        prefValue = env->NewString((jchar*)value, wcslen(value));
+        prefValue = env->NewString((jchar*)value, (jsize)wcslen(value));
         if (CheckAndClearException(env)) return;
     }
 
