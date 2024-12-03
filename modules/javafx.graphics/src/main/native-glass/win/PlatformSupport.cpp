@@ -116,7 +116,7 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
                                           IID_IActivationFactory,
                                           (void**)&activationFactory));
 
-        RO_CHECKED("IActivationFactory::QueryInterface",
+        RO_CHECKED("IActivationFactory::QueryInterface<INetworkInformationStatics>",
                    activationFactory->QueryInterface(&networkInformation));
 
         EventRegistrationToken token;
