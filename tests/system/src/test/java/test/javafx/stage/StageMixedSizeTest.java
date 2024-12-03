@@ -44,11 +44,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
 
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.BiConsumer;
 
 public class StageMixedSizeTest {
-    private static CountDownLatch startupLatch = new CountDownLatch(1);
+    private static final CountDownLatch startupLatch = new CountDownLatch(1);
     private Stage mainStage;
 
     @BeforeAll
@@ -80,7 +81,10 @@ public class StageMixedSizeTest {
             s.setTitle("Width only after content size window");
             sp.setPrefWidth(contentSize);
             sp.setPrefHeight(contentSize);
-        }, (s, sp) -> s.setWidth(windowWidth));
+        },
+        //Height is set here to trigger the native code to report the real size, including the width
+        (s, sp) -> doTimeLine(Map.of(500L, () -> s.setWidth(windowWidth),
+                                                   1000L, () -> s.setHeight(250))));
 
         Assertions.assertEquals(windowWidth, mainStage.getWidth(), "Window width should be " + windowWidth);
     }
@@ -94,7 +98,10 @@ public class StageMixedSizeTest {
             s.setTitle("Height only after content size window");
             sp.setPrefWidth(contentSize);
             sp.setPrefHeight(contentSize);
-        }, (s, sp) -> s.setHeight(windowHeight));
+        },
+        //Width is set here to trigger the native code to report the real size, including the height
+        (s, sp) -> doTimeLine(Map.of(500L, () -> s.setHeight(windowHeight),
+                                        1000L, () -> s.setWidth(250))));
 
         Assertions.assertEquals(windowHeight, mainStage.getHeight(), "Window height should be " + windowHeight);
     }
@@ -108,33 +115,23 @@ public class StageMixedSizeTest {
 
             var sp = new StackPane();
             sp.setBackground(new Background(new BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY)));
-            if (beforeShown != null) {
-                beforeShown.accept(mainStage, sp);
-            }
-
+            beforeShown.accept(mainStage, sp);
             mainStage.setScene(new Scene(sp));
-
-            mainStage.setOnShown(e -> {
-                Timeline timeline = new Timeline();
-
-                long timeLine = 500;
-                if (afterShown != null) {
-                    timeline.getKeyFrames()
-                            .add(new KeyFrame(Duration.millis(timeLine),
-                                    ae -> afterShown.accept(mainStage, sp)));
-                    timeLine += 500;
-                }
-
-                timeline.getKeyFrames().add(new KeyFrame(Duration.millis(timeLine),
-                                ae -> showLatch.countDown()));
-                timeline.setCycleCount(1);
-                timeline.play();
-            });
+            mainStage.setOnShown(e -> doTimeLine(Map.of(500L, () -> afterShown.accept(mainStage, sp),
+                                                                    1000L, showLatch::countDown)));
 
             mainStage.show();
         });
 
         Util.waitForLatch(showLatch, 5, "Stage failed to setup and show");
         Util.sleep(500);
+    }
+
+    private void doTimeLine(Map<Long, Runnable> keyFrames) {
+        Timeline timeline = new Timeline();
+        timeline.setCycleCount(1);
+        keyFrames.forEach((duration, runnable) ->
+                timeline.getKeyFrames().add(new KeyFrame(Duration.millis(duration), e -> runnable.run())));
+        timeline.play();
     }
 }
