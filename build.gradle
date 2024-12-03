@@ -4101,9 +4101,10 @@ project(":systemTests") {
         // Add an entry for each incubator module here, leaving the incubator
         // placeholder lines as an example.
         // BEGIN: incubator placeholder
+        //'incubator.mymod',
+        // END: incubator placeholder
         'incubator.input',
         'incubator.richtext',
-        // END: incubator placeholder
         'media',
         'jsobject',
         'web',
@@ -4557,9 +4558,10 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         // Add an entry for each incubator module here, leaving the incubator
         // placeholder lines as an example.
         // BEGIN: incubator placeholder
+        //project(":incubator.mymod"),
+        // END: incubator placeholder
         project(":incubator.input"),
         project(":incubator.richtext"),
-        // END: incubator placeholder
         project(":media"),
         project(":swing"),
         /*project(":swt"),*/

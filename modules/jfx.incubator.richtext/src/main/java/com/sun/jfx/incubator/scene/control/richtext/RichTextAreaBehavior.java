@@ -165,13 +165,13 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerKey(KeyCode.DOWN, RichTextArea.Tags.MOVE_DOWN);
         registerKey(KeyBinding.shift(KeyCode.DOWN), RichTextArea.Tags.SELECT_DOWN);
         registerKey(KeyCode.END, RichTextArea.Tags.MOVE_TO_LINE_END);
-        registerKey(KeyBinding.ctrl(KeyCode.END), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
-        registerKey(KeyBinding.ctrlShift(KeyCode.END), RichTextArea.Tags.SELECT_TO_DOCUMENT_END);
+        registerKey(KeyBinding.control(KeyCode.END), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
+        registerKey(KeyBinding.controlShift(KeyCode.END), RichTextArea.Tags.SELECT_TO_DOCUMENT_END);
         registerKey(KeyBinding.shift(KeyCode.END), RichTextArea.Tags.SELECT_TO_LINE_END);
         registerKey(KeyCode.ENTER, RichTextArea.Tags.INSERT_LINE_BREAK);
         registerKey(KeyCode.HOME, RichTextArea.Tags.MOVE_TO_LINE_START);
-        registerKey(KeyBinding.ctrl(KeyCode.HOME), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
-        registerKey(KeyBinding.ctrlShift(KeyCode.HOME), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
+        registerKey(KeyBinding.control(KeyCode.HOME), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
+        registerKey(KeyBinding.controlShift(KeyCode.HOME), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
         registerKey(KeyBinding.shift(KeyCode.HOME), RichTextArea.Tags.SELECT_TO_LINE_START);
         registerKey(KeyBinding.shift(KeyCode.INSERT), RichTextArea.Tags.PASTE);
         registerKey(KeyBinding.shortcut(KeyCode.INSERT), RichTextArea.Tags.COPY);
@@ -185,8 +185,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerKey(KeyCode.RIGHT, RichTextArea.Tags.MOVE_RIGHT);
         registerKey(KeyBinding.shift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_RIGHT);
         registerKey(KeyCode.TAB, RichTextArea.Tags.INSERT_TAB);
-        registerKey(KeyBinding.ctrl(KeyCode.TAB), RichTextArea.Tags.FOCUS_NEXT);
-        registerKey(KeyBinding.ctrlShift(KeyCode.TAB), RichTextArea.Tags.FOCUS_PREVIOUS);
+        registerKey(KeyBinding.control(KeyCode.TAB), RichTextArea.Tags.FOCUS_NEXT);
+        registerKey(KeyBinding.controlShift(KeyCode.TAB), RichTextArea.Tags.FOCUS_PREVIOUS);
         registerKey(KeyBinding.shift(KeyCode.TAB), RichTextArea.Tags.FOCUS_PREVIOUS);
         registerKey(KeyCode.UP, RichTextArea.Tags.MOVE_UP);
         registerKey(KeyBinding.shift(KeyCode.UP), RichTextArea.Tags.SELECT_UP);
@@ -212,30 +212,30 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             registerKey(KeyBinding.shiftOption(KeyCode.RIGHT), RichTextArea.Tags.SELECT_WORD_RIGHT);
             registerKey(KeyBinding.shiftShortcut(KeyCode.RIGHT), RichTextArea.Tags.SELECT_TO_LINE_END);
             registerKey(KeyBinding.shortcut(KeyCode.RIGHT), RichTextArea.Tags.MOVE_TO_LINE_END);
-            registerKey(KeyBinding.builder(KeyCode.TAB).ctrl().option().shift().build(), RichTextArea.Tags.FOCUS_NEXT);
+            registerKey(KeyBinding.builder(KeyCode.TAB).control().option().shift().build(), RichTextArea.Tags.FOCUS_NEXT);
             registerKey(KeyBinding.option(KeyCode.UP), RichTextArea.Tags.MOVE_PARAGRAPH_UP);
             registerKey(KeyBinding.shiftOption(KeyCode.UP), RichTextArea.Tags.SELECT_PARAGRAPH_UP);
             registerKey(KeyBinding.shiftShortcut(KeyCode.UP), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
             registerKey(KeyBinding.shortcut(KeyCode.UP), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
             registerKey(KeyBinding.builder(KeyCode.Z).shift().command().build(), RichTextArea.Tags.REDO);
         } else {
-            registerKey(KeyBinding.ctrl(KeyCode.BACK_SLASH), RichTextArea.Tags.DESELECT);
-            registerKey(KeyBinding.ctrl(KeyCode.BACK_SPACE), RichTextArea.Tags.DELETE_WORD_PREVIOUS);
-            registerKey(KeyBinding.ctrl(KeyCode.DELETE), RichTextArea.Tags.DELETE_WORD_NEXT_START);
-            registerKey(KeyBinding.ctrl(KeyCode.DOWN), RichTextArea.Tags.MOVE_PARAGRAPH_DOWN);
-            registerKey(KeyBinding.ctrlShift(KeyCode.DOWN), RichTextArea.Tags.SELECT_PARAGRAPH_DOWN);
-            registerKey(KeyBinding.ctrl(KeyCode.H), RichTextArea.Tags.BACKSPACE);
-            registerKey(KeyBinding.ctrl(KeyCode.LEFT), RichTextArea.Tags.MOVE_WORD_LEFT);
-            registerKey(KeyBinding.ctrlShift(KeyCode.LEFT), RichTextArea.Tags.SELECT_WORD_LEFT);
-            registerKey(KeyBinding.ctrl(KeyCode.RIGHT), RichTextArea.Tags.MOVE_WORD_RIGHT);
-            registerKey(KeyBinding.ctrlShift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_WORD_RIGHT);
-            registerKey(KeyBinding.ctrl(KeyCode.UP), RichTextArea.Tags.MOVE_PARAGRAPH_UP);
-            registerKey(KeyBinding.ctrlShift(KeyCode.UP), RichTextArea.Tags.SELECT_PARAGRAPH_UP);
+            registerKey(KeyBinding.control(KeyCode.BACK_SLASH), RichTextArea.Tags.DESELECT);
+            registerKey(KeyBinding.control(KeyCode.BACK_SPACE), RichTextArea.Tags.DELETE_WORD_PREVIOUS);
+            registerKey(KeyBinding.control(KeyCode.DELETE), RichTextArea.Tags.DELETE_WORD_NEXT_START);
+            registerKey(KeyBinding.control(KeyCode.DOWN), RichTextArea.Tags.MOVE_PARAGRAPH_DOWN);
+            registerKey(KeyBinding.controlShift(KeyCode.DOWN), RichTextArea.Tags.SELECT_PARAGRAPH_DOWN);
+            registerKey(KeyBinding.control(KeyCode.H), RichTextArea.Tags.BACKSPACE);
+            registerKey(KeyBinding.control(KeyCode.LEFT), RichTextArea.Tags.MOVE_WORD_LEFT);
+            registerKey(KeyBinding.controlShift(KeyCode.LEFT), RichTextArea.Tags.SELECT_WORD_LEFT);
+            registerKey(KeyBinding.control(KeyCode.RIGHT), RichTextArea.Tags.MOVE_WORD_RIGHT);
+            registerKey(KeyBinding.controlShift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_WORD_RIGHT);
+            registerKey(KeyBinding.control(KeyCode.UP), RichTextArea.Tags.MOVE_PARAGRAPH_UP);
+            registerKey(KeyBinding.controlShift(KeyCode.UP), RichTextArea.Tags.SELECT_PARAGRAPH_UP);
 
             if (isWindows()) {
-                registerKey(KeyBinding.ctrl(KeyCode.Y), RichTextArea.Tags.REDO);
+                registerKey(KeyBinding.control(KeyCode.Y), RichTextArea.Tags.REDO);
             } else {
-                registerKey(KeyBinding.ctrlShift(KeyCode.Z), RichTextArea.Tags.REDO);
+                registerKey(KeyBinding.controlShift(KeyCode.Z), RichTextArea.Tags.REDO);
             }
         }
 
