@@ -30,12 +30,6 @@
 class PlatformSupport final
 {
 public:
-    static constexpr const char* observedSettings[] = {
-        "notify::gtk-theme-name",
-        "notify::gtk-enable-animations",
-        "notify::gtk-overlay-scrolling"
-    };
-
     PlatformSupport(JNIEnv*, jobject);
     ~PlatformSupport();
     PlatformSupport(PlatformSupport const&) = delete;
@@ -53,7 +47,17 @@ public:
     void updatePreferences() const;
 
 private:
+    static constexpr const char* OBSERVED_SETTINGS[] = {
+        "notify::gtk-theme-name",
+        "notify::gtk-enable-animations",
+        "notify::gtk-overlay-scrolling"
+    };
+
+    static constexpr int NUM_OBSERVED_SETTINGS = sizeof(OBSERVED_SETTINGS) / sizeof(const char*);
+
     JNIEnv* env;
     jobject application;
+    unsigned long settingChangedHandlers[NUM_OBSERVED_SETTINGS] = {};
+    unsigned long networkChangedHandler = 0;
     mutable jobject preferences;
 };
