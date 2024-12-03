@@ -98,7 +98,7 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer<LinearConvolveRenderSta
         if (!src0Transform.isIdentity() ||
             !dstBounds.contains(dstRawBounds.x, dstRawBounds.y))
         {
-            // RT-27387
+            // JDK-8092042
             // TODO: Fix the optimized loops to deal with non-zero srcxy0
             // and transforms...
             type = PassType.GENERAL_VECTOR;

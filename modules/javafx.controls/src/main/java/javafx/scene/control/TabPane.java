@@ -671,7 +671,7 @@ public class TabPane extends Control {
                 }
                 if (getSelectedIndex() == -1 && getSelectedItem() == null && tabPane.getTabs().size() > 0) {
                     // we go looking for the first non-disabled tab, as opposed to
-                    // just selecting the first tab (fix for RT-36908)
+                    // just selecting the first tab (fix for JDK-8092665)
                     findNearestAvailableTab(0, true);
                 } else if (tabPane.getTabs().isEmpty()) {
                     clearSelection();

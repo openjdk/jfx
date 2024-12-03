@@ -208,7 +208,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         caretPath.setStrokeWidth(1);
         caretPath.fillProperty().bind(textFillProperty());
         caretPath.strokeProperty().bind(textFillProperty());
-        // modifying visibility of the caret forces a layout-pass (RT-32373), so
+        // modifying visibility of the caret forces a layout-pass (JDK-8123291), so
         // instead we modify the opacity.
         caretPath.opacityProperty().bind(new DoubleBinding() {
             { bind(caretVisibleProperty()); }
@@ -560,7 +560,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             // The caret is split
             // TODO: Find a better way to get the primary caret position
             // instead of depending on the internal implementation.
-            // See RT-25465.
+            // See JDK-8089958.
             caretBounds = new Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds();
         }
         double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
@@ -1265,7 +1265,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
                 caretPath.setLayoutX(paragraphNode.getLayoutX());
 
-                // TODO: Remove this temporary workaround for RT-27533
+                // TODO: Remove this temporary workaround for JDK-8115242
                 paragraphNode.setLayoutX(2 * paragraphNode.getLayoutX() - paragraphNode.getBoundsInParent().getMinX());
 
                 caretPath.setLayoutY(paragraphNode.getLayoutY());
@@ -1329,7 +1329,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 }
             }
 
-            // RT-36454 (JDK-8097060): Fit to width/height only if smaller than viewport.
+            // JDK-8097060 (JDK-8097060): Fit to width/height only if smaller than viewport.
             // That is, grow to fit but don't shrink to fit.
             Bounds viewportBounds = scrollPane.getViewportBounds();
             boolean wasFitToWidth = scrollPane.isFitToWidth();

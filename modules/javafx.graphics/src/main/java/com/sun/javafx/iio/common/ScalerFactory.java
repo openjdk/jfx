@@ -54,7 +54,7 @@ public class ScalerFactory {
 
         if (isMagnifying) {
             if (isSmooth) {
-                // RT-27408
+                // JDK-8090523
                 // TODO: bpb 2009-10-05 Need SmoothMagnifier class; use RoughScaler for now.
                 scaler = new RoughScaler(sourceWidth, sourceHeight, numBands,
                         destWidth, destHeight);

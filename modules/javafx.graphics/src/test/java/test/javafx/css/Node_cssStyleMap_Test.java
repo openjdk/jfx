@@ -331,7 +331,7 @@ public class Node_cssStyleMap_Test {
         StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
         Scene scene = new Scene(group);
 
-        group.applyCss(); // TODO: force StyleHelper to be created, remove pending RT-34812
+        group.applyCss(); // TODO: force StyleHelper to be created, remove pending JDK-8095679
 
         int nExpected = expectedStyles.size();
         assert(nExpected > 0);

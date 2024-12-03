@@ -39,7 +39,7 @@ public class PasswordFieldBehavior extends TextFieldBehavior {
         super(c, skin);
     }
 
-    // RT-18711 & RT-18854: Stub out word based navigation and editing
+    // JDK-8127160 & JDK-8127849: Stub out word based navigation and editing
     // for security reasons.
     @Override
     protected void deletePreviousWord() {

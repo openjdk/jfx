@@ -271,7 +271,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Now update the graphic (since it may have changed)
         graphic = labeled.getGraphic();
 
-        // RT-19851 Only setMouseTransparent(true) for an ImageView.  This allows the button
+        // JDK-8117199 Only setMouseTransparent(true) for an ImageView.  This allows the button
         // to be picked regardless of the changing images on top of it.
         if (graphic instanceof ImageView) {
             graphic.setMouseTransparent(true);
@@ -337,7 +337,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         if (isIgnoreGraphic()) {
             width = txWidth;
         } else {
-            // Fix for RT-39889
+            // Fix for JDK-8093977
             double graphicWidth = graphic == null ? 0.0 :
                     Utils.boundedSize(graphic.prefWidth(-1), graphic.minWidth(-1), graphic.maxWidth(-1));
 

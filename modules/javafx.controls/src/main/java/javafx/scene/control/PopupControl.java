@@ -957,7 +957,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
     private void recomputeSkinSize() {
         if (!skinSizeComputed) {
-            // RT-14094, RT-16754: We need the skins of the popup
+            // JDK-8113199, JDK-8128650: We need the skins of the popup
             // and it children before the stage is visible so we
             // can calculate the popup position based on content
             // size.
@@ -1141,7 +1141,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             minHeightCache = -1;
             maxWidthCache = -1;
             maxHeightCache = -1;
-            //skinSizeComputed = false; -- RT-33073 disabled this
+            //skinSizeComputed = false; -- JDK-8096434 disabled this
             super.requestLayout();
         }
 
@@ -1188,7 +1188,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                     final List<CssParser.ParseError> errors = StyleManager.getErrors();
                     if (errors != null) {
                         CssParser.ParseError error = new CssParser.ParseError(msg);
-                        errors.add(error); // RT-19884
+                        errors.add(error); // JDK-8120505
                     }
                     Logging.getControlsLogger().severe(msg);
                 }

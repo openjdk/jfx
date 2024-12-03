@@ -120,7 +120,7 @@ public class CallbackTest extends TestBase {
         popupUi.checkCalled(VISIBILITY_CHANGED, true);
     }
 
-    // Tests that no exceptions occur when createPopupHandler is null (RT-15512).
+    // Tests that no exceptions occur when createPopupHandler is null (JDK-8113962).
     // Exceptions are cleared in native code and we cannot catch them at Java
     // level. So we check stderr output to detect them.
     @Test public void testNullPopupHandler() {
@@ -135,7 +135,7 @@ public class CallbackTest extends TestBase {
         checkErrorOutput(bytes);
     }
 
-    // Tests that no exceptions occur when createPopupHandler returns null (RT-15512).
+    // Tests that no exceptions occur when createPopupHandler returns null (JDK-8113962).
     // See comment to testNullPopupHandler().
     @Test public void testBlockingPopupHandler() {
         PrintStream err = System.err;

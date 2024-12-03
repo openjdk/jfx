@@ -124,7 +124,7 @@ public abstract class Control extends Region implements Skinnable {
             // Try just loading the class
             return Class.forName(className, false, Control.class.getClassLoader());
         } catch (ClassNotFoundException ex) {
-            // RT-17525 : Use context class loader only if Class.forName fails.
+            // JDK-8114970 : Use context class loader only if Class.forName fails.
             if (Thread.currentThread().getContextClassLoader() != null) {
                 try {
                     final ClassLoader ccl = Thread.currentThread().getContextClassLoader();
@@ -134,7 +134,7 @@ public abstract class Control extends Region implements Skinnable {
                 }
             }
 
-            // RT-14177: Try looking up the class using the class loader of the
+            // JDK-8112993: Try looking up the class using the class loader of the
             //           current class, walking up the list of superclasses
             //           and checking each of them, before bailing and using
             //           the context class loader.
@@ -413,7 +413,7 @@ public abstract class Control extends Region implements Skinnable {
 
             if (ctx != null) {
                 // set this flag so contextmenu show will be relative to parent window not anchor
-                ctx.setShowRelativeToWindow(true); //RT-15160
+                ctx.setShowRelativeToWindow(true); //JDK-8114638
 
                 // if a context menu is set, we need to install any accelerators
                 // belonging to its menu items ASAP into the scene that this
@@ -744,7 +744,7 @@ public abstract class Control extends Region implements Skinnable {
             final List<CssParser.ParseError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssParser.ParseError error = new CssParser.ParseError(msg);
-                errors.add(error); // RT-19884
+                errors.add(error); // JDK-8120505
             }
             Logging.getControlsLogger().severe(msg);
             return;
@@ -758,7 +758,7 @@ public abstract class Control extends Region implements Skinnable {
                 final List<CssParser.ParseError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssParser.ParseError error = new CssParser.ParseError(msg);
-                    errors.add(error); // RT-19884
+                    errors.add(error); // JDK-8120505
                 }
                 Logging.getControlsLogger().severe(msg);
                 return;
@@ -781,7 +781,7 @@ public abstract class Control extends Region implements Skinnable {
                 final List<CssParser.ParseError> errors = StyleManager.getErrors();
                 if (errors != null) {
                     CssParser.ParseError error = new CssParser.ParseError(msg);
-                    errors.add(error); // RT-19884
+                    errors.add(error); // JDK-8120505
                 }
                 Logging.getControlsLogger().severe(msg);
             } else {
@@ -796,7 +796,7 @@ public abstract class Control extends Region implements Skinnable {
             final List<CssParser.ParseError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssParser.ParseError error = new CssParser.ParseError(msg + " :" + e.getLocalizedMessage());
-                errors.add(error); // RT-19884
+                errors.add(error); // JDK-8120505
             }
             Logging.getControlsLogger().severe(msg, e.getCause());
         } catch (Exception e) {
@@ -805,7 +805,7 @@ public abstract class Control extends Region implements Skinnable {
             final List<CssParser.ParseError> errors = StyleManager.getErrors();
             if (errors != null) {
                 CssParser.ParseError error = new CssParser.ParseError(msg + " :" + e.getLocalizedMessage());
-                errors.add(error); // RT-19884
+                errors.add(error); // JDK-8120505
             }
             Logging.getControlsLogger().severe(msg, e);
         }
@@ -868,7 +868,7 @@ public abstract class Control extends Region implements Skinnable {
     public final List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         if (styleableProperties == null) {
 
-            // RT-29162: make sure properties only show up once in the list
+            // JDK-8118782: make sure properties only show up once in the list
             java.util.Map<String, CssMetaData<? extends Styleable, ?>> map =
                 new java.util.HashMap<>();
 
@@ -940,7 +940,7 @@ public abstract class Control extends Region implements Skinnable {
                     final List<CssParser.ParseError> errors = StyleManager.getErrors();
                     if (errors != null) {
                         CssParser.ParseError error = new CssParser.ParseError(msg);
-                        errors.add(error); // RT-19884
+                        errors.add(error); // JDK-8120505
                     }
                     Logging.getControlsLogger().severe(msg);
                 }

@@ -212,7 +212,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         disarm();
 
         // The showPopupOnMouseRelease boolean was added to resolve
-        // RT-18151: namely, clicking on the comboBox button shouldn't hide,
+        // JDK-8118434: namely, clicking on the comboBox button shouldn't hide,
         // and then immediately show the popup, which was occurring because we
         // can't know whether the popup auto-hide was coming because of a MOUSE_PRESS
         // since PopupWindow calls hide() before it calls onAutoHide().
@@ -274,7 +274,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     private boolean showPopupOnMouseRelease = true;
     private boolean mouseInsideButton = false;
     public void onAutoHide(PopupControl popup) {
-        // RT-18151: if the ComboBox button was clicked, and it was this that forced the
+        // JDK-8118434: if the ComboBox button was clicked, and it was this that forced the
         // popup to disappear, we don't want the popup to immediately reappear.
         // If the mouse was not within the comboBox button at the time of the auto-hide occurring,
         // then showPopupOnMouseRelease returns to its default of true; otherwise, it toggles.

@@ -225,7 +225,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             { bind(control.focusedProperty(), control.anchorProperty(), control.caretPositionProperty(),
                     control.disabledProperty(), control.editableProperty(), displayCaret, blinkProperty());}
             @Override protected boolean computeValue() {
-                // RT-10682: On Windows, we show the caret during selection, but on others we hide it
+                // JDK-8111037: On Windows, we show the caret during selection, but on others we hide it
                 return !blinkProperty().get() && displayCaret.get() && control.isFocused() &&
                         (PlatformUtil.isWindows() || (control.getCaretPosition() == control.getAnchor())) &&
                         !control.isDisabled() &&

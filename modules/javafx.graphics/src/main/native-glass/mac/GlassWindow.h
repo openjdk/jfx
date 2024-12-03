@@ -43,7 +43,6 @@
     NSScreen            *currentScreen;
     GlassMenubar        *menubar;
     NSRect              preZoomedRect;
-    NSWindow            *fullscreenWindow;
 
     BOOL                isFocusable;
     BOOL                isEnabled;
@@ -67,8 +66,6 @@
 @private
     BOOL                isWindowResizable;
 }
-
-- (void)setFullscreenWindow:(NSWindow *)fsWindow;
 
 // NSWindow overrides delegate methods
 - (void)close;
