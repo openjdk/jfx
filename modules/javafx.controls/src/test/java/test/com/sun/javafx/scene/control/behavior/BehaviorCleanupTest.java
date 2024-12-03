@@ -270,7 +270,7 @@ public class BehaviorCleanupTest {
                 System.out.println(expectedMac);
                 assertTrue(keys.contains(expectedMac), "code=" + c);
             } else {
-                KeyBinding expectedNotMac = KeyBinding.ctrl(c);
+                KeyBinding expectedNotMac = KeyBinding.control(c);
                 assertTrue(keys.contains(expectedNotMac), "code=" + c);
             }
         }

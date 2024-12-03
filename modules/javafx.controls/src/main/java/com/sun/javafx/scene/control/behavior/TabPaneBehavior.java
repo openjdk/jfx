@@ -67,10 +67,10 @@ public class TabPaneBehavior {
         m.registerKey(KeyBinding.of(KeyCode.RIGHT), TabPane.Tag.SELECT_RIGHT_TAB);
         m.registerKey(KeyBinding.of(KeyCode.UP), TabPane.Tag.SELECT_PREV_TAB);
 
-        m.registerKey(KeyBinding.ctrl(KeyCode.PAGE_DOWN), TabPane.Tag.SELECT_NEXT_TAB);
-        m.registerKey(KeyBinding.ctrl(KeyCode.PAGE_UP), TabPane.Tag.SELECT_PREV_TAB);
-        m.registerKey(KeyBinding.ctrl(KeyCode.TAB), TabPane.Tag.SELECT_NEXT_TAB);
-        m.registerKey(KeyBinding.ctrlShift(KeyCode.TAB), TabPane.Tag.SELECT_PREV_TAB);
+        m.registerKey(KeyBinding.control(KeyCode.PAGE_DOWN), TabPane.Tag.SELECT_NEXT_TAB);
+        m.registerKey(KeyBinding.control(KeyCode.PAGE_UP), TabPane.Tag.SELECT_PREV_TAB);
+        m.registerKey(KeyBinding.control(KeyCode.TAB), TabPane.Tag.SELECT_NEXT_TAB);
+        m.registerKey(KeyBinding.controlShift(KeyCode.TAB), TabPane.Tag.SELECT_PREV_TAB);
 
         m.addHandler(MouseEvent.MOUSE_PRESSED, true, TabPaneBehavior::requestFocus);
 

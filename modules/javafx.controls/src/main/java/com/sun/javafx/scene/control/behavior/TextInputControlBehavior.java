@@ -154,9 +154,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         registerKey(KeyBinding.shift(KeyCode.LEFT), TextInputControl.SELECT_LEFT);
         registerKey(KeyBinding.shift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT);
         registerKey(KeyBinding.of(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
-        registerKey(KeyBinding.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
+        registerKey(KeyBinding.control(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
         registerKey(KeyBinding.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
-        registerKey(KeyBinding.ctrlShift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
+        registerKey(KeyBinding.controlShift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
         registerKey(KeyBinding.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
         registerKey(KeyBinding.shortcut(KeyCode.Z), TextInputControl.UNDO);
 
@@ -178,26 +178,26 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             registerKey(KeyBinding.shiftOption(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT_WORD);
         } else {
             // not-mac key bindings
-            registerKey(KeyBinding.ctrl(KeyCode.DELETE), TextInputControl.DELETE_NEXT_WORD);
-            registerKey(KeyBinding.ctrl(KeyCode.H), TextInputControl.DELETE_PREVIOUS_CHAR);
-            registerKey(KeyBinding.ctrl(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_WORD);
-            registerKey(KeyBinding.ctrl(KeyCode.BACK_SLASH), TextInputControl.DESELECT);
-            registerKey(KeyBinding.ctrl(KeyCode.LEFT), TextInputControl.LEFT_WORD);
-            registerKey(KeyBinding.ctrl(KeyCode.RIGHT), TextInputControl.RIGHT_WORD);
+            registerKey(KeyBinding.control(KeyCode.DELETE), TextInputControl.DELETE_NEXT_WORD);
+            registerKey(KeyBinding.control(KeyCode.H), TextInputControl.DELETE_PREVIOUS_CHAR);
+            registerKey(KeyBinding.control(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_WORD);
+            registerKey(KeyBinding.control(KeyCode.BACK_SLASH), TextInputControl.DESELECT);
+            registerKey(KeyBinding.control(KeyCode.LEFT), TextInputControl.LEFT_WORD);
+            registerKey(KeyBinding.control(KeyCode.RIGHT), TextInputControl.RIGHT_WORD);
             registerKey(KeyBinding.shift(KeyCode.HOME), TextInputControl.SELECT_HOME);
             registerKey(KeyBinding.shift(KeyCode.END), TextInputControl.SELECT_END);
-            registerKey(KeyBinding.ctrlShift(KeyCode.LEFT), TextInputControl.SELECT_LEFT_WORD);
-            registerKey(KeyBinding.ctrlShift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT_WORD);
+            registerKey(KeyBinding.controlShift(KeyCode.LEFT), TextInputControl.SELECT_LEFT_WORD);
+            registerKey(KeyBinding.controlShift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT_WORD);
         }
 
         // windows key bindings
         if (isWindows()) {
-            registerKey(KeyBinding.ctrl(KeyCode.Y), TextInputControl.REDO);
+            registerKey(KeyBinding.control(KeyCode.Y), TextInputControl.REDO);
         }
 
         // linux key bindings
         if (isLinux()) {
-            registerKey(KeyBinding.ctrlShift(KeyCode.Z), TextInputControl.REDO);
+            registerKey(KeyBinding.controlShift(KeyCode.Z), TextInputControl.REDO);
         }
 
         // key pad mappings
@@ -236,7 +236,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
         if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-            addHandler(KeyBinding.ctrlShift(KeyCode.DIGIT9), true, (ev) -> {
+            addHandler(KeyBinding.controlShift(KeyCode.DIGIT9), true, (ev) -> {
                 FXVK.toggleUseVK(getControl());
             });
         }

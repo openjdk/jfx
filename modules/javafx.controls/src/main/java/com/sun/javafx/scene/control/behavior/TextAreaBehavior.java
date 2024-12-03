@@ -136,10 +136,10 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             registerKey(KeyBinding.builder(KeyCode.UP).shortcut().shift().build(), TextArea.SELECT_HOME_EXTEND);
         } else {
             // non-macOS specific mappings
-            registerKey(KeyBinding.ctrl(KeyCode.DOWN), TextArea.PARAGRAPH_DOWN);
-            registerKey(KeyBinding.ctrlShift(KeyCode.DOWN), TextArea.SELECT_PARAGRAPH_DOWN);
-            registerKey(KeyBinding.ctrl(KeyCode.UP), TextArea.PARAGRAPH_UP);
-            registerKey(KeyBinding.ctrlShift(KeyCode.UP), TextArea.SELECT_PARAGRAPH_UP);
+            registerKey(KeyBinding.control(KeyCode.DOWN), TextArea.PARAGRAPH_DOWN);
+            registerKey(KeyBinding.controlShift(KeyCode.DOWN), TextArea.SELECT_PARAGRAPH_DOWN);
+            registerKey(KeyBinding.control(KeyCode.UP), TextArea.PARAGRAPH_UP);
+            registerKey(KeyBinding.controlShift(KeyCode.UP), TextArea.SELECT_PARAGRAPH_UP);
         }
 
         addKeyPadMappings();

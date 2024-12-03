@@ -40,9 +40,9 @@ import org.junit.jupiter.api.Test;
  * Tests the basic functionality of InputMap.
  */
 public class TestInputMap {
-    private static final KeyBinding KB1 = KeyBinding.ctrl(KeyCode.C);
-    private static final KeyBinding KB2 = KeyBinding.ctrl(KeyCode.J);
-    private static final KeyBinding KB3 = KeyBinding.ctrl(KeyCode.V);
+    private static final KeyBinding KB1 = KeyBinding.control(KeyCode.C);
+    private static final KeyBinding KB2 = KeyBinding.control(KeyCode.J);
+    private static final KeyBinding KB3 = KeyBinding.control(KeyCode.V);
     private static final FunctionTag TAG1 = new FunctionTag();
     private static final FunctionTag TAG2 = new FunctionTag();
     private static final FunctionTag TAG3 = new FunctionTag();

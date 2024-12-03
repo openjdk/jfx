@@ -142,7 +142,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
      * @param code the key code
      * @return the KeyBinding
      */
-    public static KeyBinding ctrl(KeyCode code) {
+    public static KeyBinding control(KeyCode code) {
         return create(code, KCondition.KEY_PRESSED, KCondition.CTRL);
     }
 
@@ -153,7 +153,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
      * @param code the key code
      * @return the KeyBinding
      */
-    public static KeyBinding ctrlShift(KeyCode code) {
+    public static KeyBinding controlShift(KeyCode code) {
         return create(code, KCondition.KEY_PRESSED, KCondition.CTRL, KCondition.SHIFT);
     }
 
@@ -162,6 +162,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
      * and the {@code option} key modifier on macOS.
      * <p>
      * This method returns {@code null} on non-macOS platforms.
+     * On macOS, it is equivalent to calling {@link #alt(KeyCode)}.
      *
      * @param code the key code
      * @return the KeyBinding, or null
@@ -208,8 +209,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     /**
      * Creates a KeyBinding which corresponds to the key press with the specified {@code KeyCode}
      * and the {@code shift} + shortcut key modifier ({@code ⌘ command} on macOS, {@code ctrl} elsewhere).
-     * <p>
-     * This method returns {@code null} on non-macOS platforms.
      *
      * @param code the key code
      * @return the KeyBinding, or null
@@ -270,7 +269,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
-     * Creates a {@link Builder} with the specified KeyCode.
+     * Creates a {@link Builder} with the specified {@code KeyCode}.
      * @param code the key code
      * @return the Builder instance
      */
@@ -454,7 +453,22 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         return equals(KeyBinding.from(ev));
     }
 
-    /** Key bindings builder */
+    /**
+     * A builder for {@code KeyBinding} objects.
+     * <p>
+     * By default, its {@code build} method creates a key {@code KEY_PRESSED} binding.  This can be changed
+     * by calling either {@link #keyReleased()} or {@link #keyTyped()}.
+     * <p>
+     * The builder pattern can be used when convenience methods such as
+     * {@link KeyBinding#control(KeyCode)} or
+     * {@link KeyBinding#shiftShortcut(KeyCode)}
+     * are not sufficient.
+     * <p>
+     * Example:
+     * {@code
+     * KeyBinding.builder(KeyCode.TAB).control().option().shift().build()
+     * }
+     */
     public static class Builder {
         private final Object key; // KeyCode or String
         private final EnumSet<KCondition> m = EnumSet.noneOf(KCondition.class);
@@ -465,10 +479,10 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets on KEY_RELEASED condition.
+         * Sets the KEY_RELEASED condition, clearing KEY_PRESSED and KEY_TYPED.
          * @return the Builder instance
          */
-        public Builder onKeyReleased() {
+        public Builder keyReleased() {
             m.remove(KCondition.KEY_PRESSED);
             m.remove(KCondition.KEY_TYPED);
             m.add(KCondition.KEY_RELEASED);
@@ -476,10 +490,10 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets on KEY_TYPED condition.
+         * Sets the KEY_TYPED condition, clearing KEY_PRESSED and KEY_RELEASED.
          * @return the Builder instance
          */
-        public Builder onKeyTyped() {
+        public Builder keyTyped() {
             m.remove(KCondition.KEY_PRESSED);
             m.add(KCondition.KEY_TYPED);
             m.remove(KCondition.KEY_RELEASED);
@@ -487,7 +501,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets the {@code alt} key down condition (the {@code Option} key on macOS).
+         * Sets the {@code alt} key down condition (the {@code option} key on macOS).
          * @return this Builder
          */
         public Builder alt() {
@@ -496,7 +510,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets the {@code alt} key down condition (the {@code Option} key on macOS).
+         * Sets or clears the {@code alt} key down condition (the {@code option} key on macOS).
          * @param on condition
          * @return this Builder
          */
@@ -508,7 +522,11 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code command} key down condition.
+         * Sets the {@code command} key down condition on macOS.
+         * <p>
+         * Setting this condition on non-macOS platforms will result in the
+         * {@code build} method returning {@code null}.
+         *
          * @return this Builder
          */
         public Builder command() {
@@ -517,7 +535,11 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code command} key down condition.
+         * Sets or clears the {@code command} key down condition on macOS.
+         * <p>
+         * Setting this condition on non-macOS platforms will result in the
+         * {@code build} method returning {@code null}.
+         *
          * @param on condition
          * @return this Builder
          */
@@ -529,20 +551,20 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code control} key down condition.
+         * Sets the {@code control} key down condition.
          * @return this Builder
          */
-        public Builder ctrl() {
+        public Builder control() {
             m.add(KCondition.CTRL);
             return this;
         }
 
         /**
-         * Sets {@code control} key down condition.
+         * Sets or clears the {@code control} key down condition.
          * @param on condition
          * @return this Builder
          */
-        public Builder ctrl(boolean on) {
+        public Builder control(boolean on) {
             if (on) {
                 m.add(KCondition.CTRL);
             }
@@ -550,7 +572,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code meta} key down condition.
+         * Sets the {@code meta} key down condition.
          * @return this Builder
          */
         public Builder meta() {
@@ -559,7 +581,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code meta} key down condition.
+         * Sets or clears the {@code meta} key down condition.
          * @param on condition
          * @return this Builder
          */
@@ -571,7 +593,11 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code option} key down condition.
+         * Sets the {@code option} key down condition on macOS.
+         * <p>
+         * Setting this condition on non-macOS platforms will result in the
+         * {@code build} method returning {@code null}.
+         *
          * @return this Builder
          */
         public Builder option() {
@@ -580,7 +606,11 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code option} key down condition.
+         * Sets or clears the {@code option} key down condition on macOS.
+         * <p>
+         * Setting this condition on non-macOS platforms will result in the
+         * {@code build} method returning {@code null}.
+         *
          * @param on condition
          * @return this Builder
          */
@@ -592,7 +622,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code shift} key down condition.
+         * Sets the {@code shift} key down condition.
          * @return this Builder
          */
         public Builder shift() {
@@ -601,7 +631,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code shift} key down condition.
+         * Sets or clears the {@code shift} key down condition.
          * @param on condition
          * @return this Builder
          */
@@ -613,7 +643,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code shortcut} key down condition.
+         * Sets the {@code shortcut} key down condition.
          * @return this Builder
          */
         public Builder shortcut() {
@@ -622,7 +652,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets {@code shortcut} key down condition.
+         * Sets or clears the {@code shortcut} key down condition.
          * @param on condition
          * @return this Builder
          */
@@ -648,7 +678,8 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Creates a new {@link KeyBinding} instance.
+         * Creates a new {@link KeyBinding} instance from the current settings.
+         *
          * @return a new key binding instance.
          */
         public KeyBinding build() {
