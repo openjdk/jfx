@@ -80,11 +80,23 @@ public class StageMixedSizeTest {
             s.setTitle("Width only after content size window");
             sp.setPrefWidth(contentSize);
             sp.setPrefHeight(contentSize);
-        }, (s, sp) -> {
-            s.setWidth(windowWidth);
-        });
+        }, (s, sp) -> s.setWidth(windowWidth));
 
         Assertions.assertEquals(windowWidth, mainStage.getWidth(), "Window width should be " + windowWidth);
+    }
+
+    @Test
+    public void testSetHeightOnlyAfterShownOnContentSizeWindow() throws Exception {
+        int contentSize = 300;
+        int windowHeight = 200;
+
+        createStage((s, sp) -> {
+            s.setTitle("Height only after content size window");
+            sp.setPrefWidth(contentSize);
+            sp.setPrefHeight(contentSize);
+        }, (s, sp) -> s.setHeight(windowHeight));
+
+        Assertions.assertEquals(windowHeight, mainStage.getHeight(), "Window height should be " + windowHeight);
     }
 
     private void createStage(BiConsumer<Stage, StackPane> beforeShown,
