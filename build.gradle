@@ -2875,36 +2875,6 @@ project(":incubator.input") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-    // FIXME: KCR
-//    processResources {
-//      doLast {
-//        def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
-//        cssFiles.include "**/*.css"
-//        cssFiles.each { css ->
-//            logger.info("converting CSS to BSS ${css}");
-//
-//            javaexec {
-//                executable = JAVA
-//                workingDir = project.projectDir
-//                jvmArgs += patchModuleArgs
-//                jvmArgs += "--module-path=$modulePath"
-//                jvmArgs += "--add-modules=javafx.graphics"
-//                mainClass = "com.sun.javafx.css.parser.Css2Bin"
-//                args css
-//            }
-//        }
-//      }
-//    }
-//
-//    def copyShimBssTask = project.task("copyShimBss", type: Copy,
-//                            dependsOn: [project.tasks.getByName("compileJava"),
-//                                        project.tasks.getByName("processResources")]) {
-//        from project.moduleDir
-//        into project.moduleShimsDir
-//        include "**/*.bss"
-//    }
-//    processShimsResources.dependsOn(copyShimBssTask)
-
     addMavenPublication(project, [ 'graphics' , 'controls'])
 
     addValidateSourceSets(project, sourceSets)
@@ -2963,36 +2933,6 @@ project(":incubator.richtext") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
-
-    // FIXME: KCR
-//    processResources {
-//      doLast {
-//        def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
-//        cssFiles.include "**/*.css"
-//        cssFiles.each { css ->
-//            logger.info("converting CSS to BSS ${css}");
-//
-//            javaexec {
-//                executable = JAVA
-//                workingDir = project.projectDir
-//                jvmArgs += patchModuleArgs
-//                jvmArgs += "--module-path=$modulePath"
-//                jvmArgs += "--add-modules=javafx.graphics"
-//                mainClass = "com.sun.javafx.css.parser.Css2Bin"
-//                args css
-//            }
-//        }
-//      }
-//    }
-//
-//    def copyShimBssTask = project.task("copyShimBss", type: Copy,
-//                            dependsOn: [project.tasks.getByName("compileJava"),
-//                                        project.tasks.getByName("processResources")]) {
-//        from project.moduleDir
-//        into project.moduleShimsDir
-//        include "**/*.bss"
-//    }
-//    processShimsResources.dependsOn(copyShimBssTask)
 
     addMavenPublication(project, [ 'graphics' , 'controls'])
 
@@ -4161,17 +4101,15 @@ project(":systemTests") {
         // Add an entry for each incubator module here, leaving the incubator
         // placeholder lines as an example.
         // BEGIN: incubator placeholder
-        //'incubator.mymod',
-        // END: incubator placeholder
         'incubator.input',
         'incubator.richtext',
+        // END: incubator placeholder
         'media',
         'jsobject',
         'web',
         'swing',
         'fxml'
     ]
-
     commonModuleSetup(project, dependentProjects)
 
     File testRunArgsFile = new File(rootProject.buildDir,TESTRUNARGSFILE);
@@ -4619,10 +4557,9 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         // Add an entry for each incubator module here, leaving the incubator
         // placeholder lines as an example.
         // BEGIN: incubator placeholder
-        //project(":incubator.mymod"),
-        // END: incubator placeholder
         project(":incubator.input"),
         project(":incubator.richtext"),
+        // END: incubator placeholder
         project(":media"),
         project(":swing"),
         /*project(":swt"),*/
@@ -4630,7 +4567,6 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         project(":jsobject"),
         project(":web")
     ]
-
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
     }));
@@ -5954,7 +5890,6 @@ compileTargets { t ->
                 def modnames = []
                 moduleProjList.each { project ->
                     if (project.hasProperty("moduleName") && project.buildModule) {
-                        def incubating = project.hasProperty("incubating") && project.ext.incubating
                         modnames << project.ext.moduleName
                         File dir;
                         if (project.sourceSets.hasProperty('shims')) {
