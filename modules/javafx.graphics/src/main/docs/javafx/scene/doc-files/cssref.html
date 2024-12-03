@@ -539,8 +539,7 @@
     <p>
         JavaFX CSS also supports pseudo&#8209;classes, but does not implement the full range of pseudo&#8209;classes as
         specified in <a href="http://www.w3.org/TR/css3-selectors/#pseudo-classes">Pseudo&#8209;classes</a>. The pseudo&#8209;classes
-        supported by each Node type are given in the tables within this reference. Note that JavaFX does not currently
-        support structural pseudo&#8209;classes.
+        supported by each Node type are given in the tables within this reference.
     </p>
     <p>
         Each node honors a set of properties that depends on the node's JavaFX
@@ -869,7 +868,7 @@
         syntax not specified in this document.</li>
     <li>With the exception of @font&#8209;face and @import, @-keyword statements are ignored.</li>
     <li>The &lt;media-query-list&gt; of the @import statement is not parsed.</li>
-    <li>The structural pseudo&#8209;classes are not supported. </li>
+    <li>Only the ":root" structural pseudo&#8209;class is supported.</li>
     <li>The ":active" and ":focus" dynamic pseudo&#8209;classes are not supported.
         However, <a href="#node">Nodes</a> do support the ":pressed" and
         ":focused" pseudo&#8209;classes, which are similar. </li>
@@ -1529,7 +1528,7 @@
       with the "style" property on a node.</p>
     <p>In the following example, all background color of all buttons uses the
       looked up color "abc".</p>
-    <p class="example">.root { abc: #f00 }<br>
+    <p class="example">:root { abc: #f00 }<br>
       .button { -fx-background-color: abc }</p>
     <h4>RGB Colors <span class="grammar" style="font-size: smaller;">&lt;rgb-color&gt;</span></h4>
     <p>The RGB color model is used in numerical color specifications. It has a
@@ -1825,11 +1824,11 @@
         </tbody>
     </table>
     <h4><a id="popupwindow">Group</a></h4>
-    <p class="styleclass">Style class: .root.popup</p>
+    <p class="styleclass">Style class: :root.popup</p>
     <p>PopupWindow does not have any properties that can be styled by CSS, but a PopupWindow does have its own Scene.
-        Scene's root gets the .root style-class by default. If the Scene is the root scene of a PopupWindow, then the
+        Scene's root gets the :root pseudo-class by default. If the Scene is the root scene of a PopupWindow, then the
         .popup style-class is also added. This allows the root scene of a PopupWindow to have distinct styles via
-        the CSS rule <code>.root.popup { /* declarations */ }</code>
+        the CSS rule <code>:root.popup { /* declarations */ }</code>
     <h2><a id="nodes">Nodes</a></h2>
     <table class="package" width="100%">
       <tbody>
@@ -4294,7 +4293,7 @@
     <p>The PasswordField control has all the properties of <a href="#textfield">TextField</a></p>
     <h4><a id="popupcontrol">PopupControl</a></h4>
     <p>PopupControl is also a <a href="#popupwindow">PopupWindow</a> and as such, its root node has the
-    style-class .root.popup</p>
+    style-class :root.popup</p>
     <h4><a id="progressbar">ProgressBar</a></h4>
     <p class="styleclass">Style class: progress-bar</p>
     <table class="csspropertytable">
