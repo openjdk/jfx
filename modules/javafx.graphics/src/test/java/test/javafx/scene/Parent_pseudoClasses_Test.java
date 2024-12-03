@@ -94,7 +94,7 @@ public class Parent_pseudoClasses_Test {
         group.getChildren().removeFirst();
         assertNotPseudoClass(LAST_CHILD, child2);
     }
-    
+
     @Test
     void nthChildEvenOddPseudoClass() {
         var group = new Group();
