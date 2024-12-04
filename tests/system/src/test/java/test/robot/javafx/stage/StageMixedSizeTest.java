@@ -57,14 +57,16 @@ public class StageMixedSizeTest extends VisualTestBase {
     public void testSetWidthOnlyAfterShownOnContentSizeWindow() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         final int finalWidth = 200;
+        final int initialContentSize = 300;
 
-        setupContentSizeTestStage(300, 300,
+        setupContentSizeTestStage(initialContentSize, initialContentSize,
                 () -> doTimeLine(Map.of(500L, () -> testStage.setWidth(finalWidth),
                                         1000L, latch::countDown)));
 
         assertTrue(latch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
 
-        runAndWait(() -> assertColorDoesNotEqual(BACKGROUND_COLOR, getColor(290, 100), TOLERANCE));
+        runAndWait(() -> assertColorDoesNotEqual(BACKGROUND_COLOR,
+                getColor(initialContentSize - 10, initialContentSize / 2), TOLERANCE));
         Assertions.assertEquals(finalWidth, testStage.getWidth(), "Window width should be " + finalWidth);
     }
 
@@ -72,14 +74,16 @@ public class StageMixedSizeTest extends VisualTestBase {
     public void testSetHeightOnlyAfterShownOnContentSizeWindow() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         final int finalHeight = 200;
+        final int initialContentSize = 300;
 
-        setupContentSizeTestStage(300, 300,
+        setupContentSizeTestStage(initialContentSize, initialContentSize,
                 () -> doTimeLine(Map.of(500L, () -> testStage.setHeight(finalHeight),
                                         1000L, latch::countDown)));
 
         assertTrue(latch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
 
-        runAndWait(() -> assertColorDoesNotEqual(BACKGROUND_COLOR, getColor(100, 290), TOLERANCE));
+        runAndWait(() -> assertColorDoesNotEqual(BACKGROUND_COLOR,
+                getColor(initialContentSize / 2, initialContentSize - 10), TOLERANCE));
         Assertions.assertEquals(finalHeight, testStage.getHeight(), "Window height should be " + finalHeight);
     }
 
@@ -98,7 +102,6 @@ public class StageMixedSizeTest extends VisualTestBase {
             testStage.show();
         });
     }
-
 
     private void doTimeLine(Map<Long, Runnable> keyFrames) {
         Timeline timeline = new Timeline();
