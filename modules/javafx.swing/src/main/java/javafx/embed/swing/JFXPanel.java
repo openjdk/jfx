@@ -57,8 +57,6 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.nio.IntBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 
@@ -237,10 +235,7 @@ public class JFXPanel extends JComponent {
         if (fxInitialized) {
             return;
         }
-        @SuppressWarnings("removal")
-        EventQueue eventQueue = AccessController.doPrivileged(
-                                (PrivilegedAction<EventQueue>) java.awt.Toolkit
-                                .getDefaultToolkit()::getSystemEventQueue);
+        EventQueue eventQueue = java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue();
         if (eventQueue.isDispatchThread()) {
             // We won't block EDT by FX initialization
             SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
@@ -321,10 +316,7 @@ public class JFXPanel extends JComponent {
         if (Toolkit.getToolkit().isFxUserThread()) {
             setSceneImpl(newScene);
         } else {
-            @SuppressWarnings("removal")
-            EventQueue eventQueue = AccessController.doPrivileged(
-                    (PrivilegedAction<EventQueue>) java.awt.Toolkit
-                            .getDefaultToolkit()::getSystemEventQueue);
+            EventQueue eventQueue = java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue();
             SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
             Platform.runLater(() -> {
                 try {
@@ -440,7 +432,7 @@ public class JFXPanel extends JComponent {
         }
 
         int extModifiers = e.getModifiersEx();
-        // Fix for RT-15457: we should report no mouse button upon mouse release, so
+        // Fix for JDK-8114341: we should report no mouse button upon mouse release, so
         // *BtnDown values are calculated based on extMofifiers, not e.getButton()
         boolean primaryBtnDown = (extModifiers & MouseEvent.BUTTON1_DOWN_MASK) != 0;
         boolean middleBtnDown = (extModifiers & MouseEvent.BUTTON2_DOWN_MASK) != 0;
@@ -448,7 +440,7 @@ public class JFXPanel extends JComponent {
         boolean backBtnDown = (extModifiers & MouseEvent.getMaskForButton(4)) != 0;
         boolean forwardBtnDown = (extModifiers & MouseEvent.getMaskForButton(5)) != 0;
 
-        // Fix for RT-16558: if a PRESSED event is consumed, e.g. by a Swing Popup,
+        // Fix for JDK-8128809: if a PRESSED event is consumed, e.g. by a Swing Popup,
         // subsequent DRAGGED and RELEASED events should not be sent to FX as well
         if (e.getID() == MouseEvent.MOUSE_DRAGGED) {
             if (!isCapturingMouse) {
@@ -949,19 +941,15 @@ public class JFXPanel extends JComponent {
      * method is invoked, the chain of parent components is set up with
      * KeyboardAction event listeners.
      */
-    @SuppressWarnings("removal")
     @Override
     public void addNotify() {
         super.addNotify();
 
         registerFinishListener();
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            JFXPanel.this.getToolkit().addAWTEventListener(ungrabListener,
-                                               jfxPanelIOP.getMask());
-            return null;
-        });
-        updateComponentSize(); // see RT-23603
+        getToolkit().addAWTEventListener(ungrabListener, jfxPanelIOP.getMask());
+
+        updateComponentSize(); // see JDK-8117363
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && !stage.isShowing()) {
                 stage.show();
@@ -984,7 +972,6 @@ public class JFXPanel extends JComponent {
      * When this method is invoked, any KeyboardActions set up in the the
      * chain of parent components are removed.
      */
-    @SuppressWarnings("removal")
     @Override public void removeNotify() {
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && stage.isShowing()) {
@@ -998,10 +985,7 @@ public class JFXPanel extends JComponent {
 
         super.removeNotify();
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            JFXPanel.this.getToolkit().removeAWTEventListener(ungrabListener);
-            return null;
-        });
+        getToolkit().removeAWTEventListener(ungrabListener);
 
         /* see CR 4867453 */
         getInputContext().removeNotify(this);

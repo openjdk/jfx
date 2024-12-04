@@ -440,7 +440,7 @@ public final class NumberAxis extends ValueAxis<Number> {
             reqLength = (count-1) * maxReqTickGap;
             tickUnit = tickUnitRounded;
 
-            // fix for RT-35600 where a massive tick unit was being selected
+            // fix for JDK-8094132 where a massive tick unit was being selected
             // unnecessarily. There is probably a better solution, but this works
             // well enough for now.
             if (numOfTickMarks == 2 && reqLength > length) {

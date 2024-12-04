@@ -142,7 +142,7 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         @Override
         public FontPosture convert(ParsedValue<String, FontPosture> value, Font font) {
 
-            // Testing for RT-31022 exposed a ClassCastException where value
+            // Testing for JDK-8116809 exposed a ClassCastException where value
             // wraps a String (e.g., "ITALIC", not a FontUnits.Style).
             final Object val = value.getValue();
 
@@ -197,7 +197,7 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         @Override
         public FontWeight convert(ParsedValue<String, FontWeight> value, Font font) {
 
-            // Testing for RT-31022 exposed a ClassCastException where value
+            // Testing for JDK-8116809 exposed a ClassCastException where value
             // wraps a String (e.g., "ITALIC", not a FontUnits.Style).
             final Object val = value.getValue();
 

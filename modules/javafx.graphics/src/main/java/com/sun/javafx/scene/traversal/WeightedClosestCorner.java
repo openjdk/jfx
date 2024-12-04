@@ -42,7 +42,7 @@ import static com.sun.javafx.scene.traversal.Direction.*;
  * If there is a tie for the closest on-axis node, the tie is broken
  * by choosing the one whose center is closest to the center of the
  * originating node. TODO: investigate alternative tiebreaker algorithms
- * (filed as RT-19470).
+ * (filed as JDK-8090927).
  *
  * If there are no on-axis nodes, compute the distance OUT (in the traversal
  * direction) and the distance to the SIDE (perpendicular to the traversal
@@ -52,7 +52,7 @@ import static com.sun.javafx.scene.traversal.Direction.*;
  * TODO: presumably WEIGHT is greater than one, so that nodes farther OUT
  * but close (and not on) axis are chosen in preference to nodes that are
  * physically closer but are farther off to the side. Determine WEIGHT
- * somehow, possibly empirically (filed as RT-19471).
+ * somehow, possibly empirically (filed as JDK-8091219).
  */
 
 public class WeightedClosestCorner implements Algorithm {

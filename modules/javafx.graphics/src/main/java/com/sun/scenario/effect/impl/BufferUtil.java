@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,6 @@ import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedExceptionAction;
 
 /**
  * Utility routines for dealing with direct buffers.
@@ -57,13 +55,11 @@ public class BufferUtil {
     private BufferUtil() {
     }
 
-    @SuppressWarnings("removal")
     public static void nativeOrder(ByteBuffer buf) {
         if (!isCDCFP) {
             try {
                 if (byteOrderClass == null) {
-                    byteOrderClass = (Class) AccessController.doPrivileged(
-                            (PrivilegedExceptionAction) () -> Class.forName("java.nio.ByteOrder", true, null));
+                    byteOrderClass = Class.forName("java.nio.ByteOrder", true, null);
                     orderMethod = ByteBuffer.class.getMethod("order", new Class[]{byteOrderClass});
                     Method nativeOrderMethod = byteOrderClass.getMethod("nativeOrder", (Class[])null);
                     nativeOrderObject = nativeOrderMethod.invoke(null, (Object[])null);

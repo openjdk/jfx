@@ -524,7 +524,7 @@ abstract class GLContext {
     boolean isShaderCompilerSupported() {
         // GL2
         return true;
-        // else TODO: glGetBooleanv(GL_SHADER_COMPILER, supported, 0); (RT-27526)
+        // else TODO: glGetBooleanv(GL_SHADER_COMPILER, supported, 0); (JDK-8091367)
     }
 
     abstract void makeCurrent(GLDrawable drawable);

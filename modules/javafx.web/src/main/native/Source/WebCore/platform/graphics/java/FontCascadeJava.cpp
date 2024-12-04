@@ -40,7 +40,7 @@ namespace WebCore {
 void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBufferGlyph* glyphs,
     const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode)
 {
-    // we need to call freeSpace() before refIntArr() and refFloatArr(), see RT-19695.
+    // we need to call freeSpace() before refIntArr() and refFloatArr(), see JDK-8127455.
     RenderingQueue& rq = context.platformContext()->rq().freeSpace(24);
 
     JNIEnv* env = WTF::GetJavaEnv();

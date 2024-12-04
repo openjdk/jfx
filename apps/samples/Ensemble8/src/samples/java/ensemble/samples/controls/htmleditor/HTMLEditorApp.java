@@ -78,7 +78,7 @@ public class HTMLEditorApp extends Application {
 
         ScrollPane htmlSP = new ScrollPane();
         htmlSP.setFitToWidth(true);
-        htmlSP.setPrefWidth(htmlEditor.prefWidth(-1)); // Workaround of RT-21495
+        htmlSP.setPrefWidth(htmlEditor.prefWidth(-1)); // Workaround of JDK-8096877
         htmlSP.setPrefHeight(245);
         htmlSP.setVbarPolicy(ScrollBarPolicy.NEVER);
         htmlSP.setContent(htmlEditor);

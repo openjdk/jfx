@@ -62,7 +62,6 @@ import com.sun.javafx.stage.PopupWindowPeerListener;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 
 import com.sun.javafx.stage.PopupWindowHelper;
 import com.sun.javafx.stage.WindowHelper;
@@ -145,7 +144,7 @@ public abstract class PopupWindow extends Window {
             };
 
     /**
-     * RT-28454: When a parent node or parent window we are associated with is not
+     * JDK-8088846: When a parent node or parent window we are associated with is not
      * visible anymore, possibly because the scene was not valid anymore, we should hide.
      */
     private ChangeListener<Boolean> changeListener = (observable, oldValue, newValue) -> {
@@ -477,7 +476,7 @@ public abstract class PopupWindow extends Window {
             // We do show() first so that the width and height of the
             // popup window are initialized. This way the x,y location of the
             // popup calculated below uses the right width and height values for
-            // its calculation. (fix for part of RT-10675).
+            // its calculation. (fix for part of JDK-8111578).
             show();
         }
     }
@@ -531,18 +530,8 @@ public abstract class PopupWindow extends Window {
         if (visible && (getPeer() == null)) {
             // Setup the peer
             StageStyle popupStyle;
-            try {
-                @SuppressWarnings("removal")
-                final SecurityManager securityManager =
-                        System.getSecurityManager();
-                if (securityManager != null) {
-                    securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
-                }
-                popupStyle = StageStyle.TRANSPARENT;
-            } catch (final SecurityException e) {
-                popupStyle = StageStyle.UNDECORATED;
-            }
-            setPeer(toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().getPeer(), acc));
+            popupStyle = StageStyle.TRANSPARENT;
+            setPeer(toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().getPeer()));
             setPeerListener(new PopupWindowPeerListener(PopupWindow.this));
         }
     }

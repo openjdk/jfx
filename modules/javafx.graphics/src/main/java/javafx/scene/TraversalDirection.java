@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,16 +22,25 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene;
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
-
-@interface GlassFullscreenWindow : NSWindow
-{
-        NSPoint                                        point;
+/**
+ * Specifies the direction of focus traversal.
+ *
+ * @since 24
+ * @see Node#requestFocusTraversal(TraversalDirection)
+ */
+public enum TraversalDirection {
+    /** Indicates a focus change to the node below the currently focused node. */
+    DOWN,
+    /** Indicates a focus change to the node to the left of the currently focused node. */
+    LEFT,
+    /** Indicates a focus change to the next focusable node. */
+    NEXT,
+    /** Indicates a focus change to the previous focusable node. */
+    PREVIOUS,
+    /** Indicates a focus change to the node to the right of the currently focused node. */
+    RIGHT,
+    /** Indicates a focus change to the node above the currently focused node. */
+    UP;
 }
-
-- (id)initWithContentRect:(NSRect)contentRect withHostView:(NSView *)hostView withView:(NSView *)view withScreen:(NSScreen *)screen withPoint:(NSPoint)point;
-- (NSPoint)point;
-
-@end

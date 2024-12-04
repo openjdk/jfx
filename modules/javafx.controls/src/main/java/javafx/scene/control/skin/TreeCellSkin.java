@@ -75,7 +75,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
      * disclosureNode width per TreeView. We use WeakHashMap to help prevent
      * any memory leaks.
      *
-     * RT-19656 identifies a related issue, which is that we may not provide
+     * JDK-8119169 identifies a related issue, which is that we may not provide
      * indentation to any TreeItems because we have not yet encountered a cell
      * which has a disclosureNode. Once we scroll and encounter one, indentation
      * happens in a displeasing way.
@@ -183,7 +183,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     /** {@inheritDoc} */
     @Override protected void layoutChildren(double x, final double y,
                                             double w, final double h) {
-        // RT-25876: can not null-check here as this prevents empty rows from
+        // JDK-8125816: can not null-check here as this prevents empty rows from
         // being cleaned out.
         // if (treeItem == null) return;
 
@@ -207,7 +207,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         boolean disclosureVisible = disclosureNode != null && treeItem != null && ! treeItem.isLeaf();
 
         final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(tree) ?
-                maxDisclosureWidthMap.get(tree) : 18;   // RT-19656: default width of default disclosure node
+                maxDisclosureWidthMap.get(tree) : 18;   // JDK-8119169: default width of default disclosure node
         double disclosureWidth = defaultDisclosureWidth;
 
         if (disclosureVisible) {
@@ -236,7 +236,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         x += disclosureWidth + padding;
         w -= (leftMargin + disclosureWidth + padding);
 
-        // Rather ugly fix for RT-38519, where graphics are disappearing in
+        // Rather ugly fix for JDK-8094112, where graphics are disappearing in
         // certain circumstances
         Node graphic = getSkinnable().getGraphic();
         if (graphic != null && !getChildren().contains(graphic)) {
@@ -271,8 +271,8 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         final Node d = cell.getDisclosureNode();
         final double prefHeight = (d == null) ? pref : Math.max(d.prefHeight(-1), pref);
 
-        // RT-30212: TreeCell does not honor minSize of cells.
-        // snapSize for RT-36460
+        // JDK-8124039: TreeCell does not honor minSize of cells.
+        // snapSize for JDK-8093097
         return snapSizeY(Math.max(cell.getMinHeight(), prefHeight));
     }
 
@@ -348,8 +348,8 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
             disclosureNode.toBack();
         }
 
-        // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
-        // RT-28668: Ensemble tree arrow disappears
+        // JDK-8125162: [TreeView, TreeTableView] can lose arrows while scrolling
+        // JDK-8124825: Ensemble tree arrow disappears
         if (disclosureNode.getScene() != null) {
             disclosureNode.applyCss();
         }

@@ -295,11 +295,11 @@ public class StylesheetTest {
             stage.setScene(scene);
             stage.show();
         } catch (NullPointerException e) {
-            // RT-23140 is supposed to fix the NPE. Did it?
+            // JDK-8126949 is supposed to fix the NPE. Did it?
             fail("Test purpose failed: " + e.toString());
         } catch (Exception e) {
             // Something other than an NPE should still raise a red flag,
-            // but the exception is not what RT-23140 fixed.
+            // but the exception is not what JDK-8126949 fixed.
 
             fail("Exception not expected: " + e.toString());
         }
@@ -492,7 +492,7 @@ public class StylesheetTest {
     @Test
     public void testRT_30953_deserialize_from_2_2_45() {
 
-        // RT-30953-2.2.4bss was generated with javafx version 2.2.45 from 7u??
+        // RT-30953-2.2.45.bss was generated with javafx version 2.2.45 from 7u??
         Stylesheet ss = deserialize("RT-30953-2.2.45.bss");
         checkConvert(ss);
     }
@@ -500,7 +500,7 @@ public class StylesheetTest {
     @Test
     public void testRT_30953_deserialize_from_2_2_4() {
 
-        // RT-30953-2.2.4bss was generated with javafx version 2.2.4 from 7u10
+        // RT-30953-2.2.4.bss was generated with javafx version 2.2.4 from 7u10
         Stylesheet ss = deserialize("RT-30953-2.2.4.bss");
         checkConvert(ss);
     }

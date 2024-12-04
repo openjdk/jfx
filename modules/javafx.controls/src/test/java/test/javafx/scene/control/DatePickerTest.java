@@ -620,7 +620,7 @@ public class DatePickerTest {
         // not the ComboBox, but the FakeFocusTextField inside it
         dp1Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
         assertTrue(dp2.isFocused(), "Expect dp2 to be focused, but actual focus owner is: " + scene.getFocusOwner());
-        // Updated with fix for RT-34602: The TextField now never gets
+        // Updated with fix for JDK-8090788: The TextField now never gets
         // focus (it's just faking it).
         // assertEquals("Expect dp2 TextField to be focused, but actual focus owner is: " + scene.getFocusOwner(),
         //         dp2.getEditor(), scene.getFocusOwner());

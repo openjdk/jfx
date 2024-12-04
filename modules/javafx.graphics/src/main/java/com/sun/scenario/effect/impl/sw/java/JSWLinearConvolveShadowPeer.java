@@ -69,7 +69,7 @@ public class JSWLinearConvolveShadowPeer extends JSWLinearConvolvePeer {
                         int ix = (int) sampx;
                         int iy = (int) sampy;
                         if (ix < srcw && iy < srch) {
-                            // TODO: Usine linear interpolation here... (RT-27388)
+                            // TODO: Usine linear interpolation here... (JDK-8090445)
                             int argb = srcPixels[iy * srcscan + ix];
                             sum += (argb >>> 24) * weights[i];
                         }
