@@ -1030,7 +1030,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setView
 
         if (window->view != nil)
         {
-            window->suppressWindowMoveEvent = YES; // RT-11215
+            window->suppressWindowMoveEvent = YES; // JDK-8111165
             {
                 CGRect viewFrame = [window->view bounds];
                 if ((viewFrame.size.width != 0.0f) && (viewFrame.size.height != 0.0f))

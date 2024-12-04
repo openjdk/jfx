@@ -562,11 +562,11 @@ public class Scene implements EventTarget {
     private void doCSSPass() {
         final Parent sceneRoot = getRoot();
         //
-        // RT-17547: when the tree is synchronized, the dirty bits are
+        // JDK-8120624: when the tree is synchronized, the dirty bits are
         // are cleared but the cssFlag might still be something other than
         // clean.
         //
-        // Before RT-17547, the code checked the dirty bit. But this is
+        // Before JDK-8120624, the code checked the dirty bit. But this is
         // superfluous since the dirty bit will be set if the flag is not clean,
         // but the flag will never be anything other than clean if the dirty
         // bit is not set. The dirty bit is still needed, however, since setting
@@ -1608,7 +1608,7 @@ public class Scene implements EventTarget {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().stylesheetsChanged(Scene.this, c);
-            // RT-9784 - if stylesheet is removed, reset styled properties to
+            // JDK-8110059 - if stylesheet is removed, reset styled properties to
             // their initial value.
             c.reset();
             while(c.next()) {

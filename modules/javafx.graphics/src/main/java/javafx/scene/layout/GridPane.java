@@ -1676,7 +1676,7 @@ public class GridPane extends Pane {
     }
 
     @Override public void requestLayout() {
-        // RT-18878: Do not update metrics dirty if we are performing layout.
+        // JDK-8119502: Do not update metrics dirty if we are performing layout.
         // If metricsDirty is set true during a layout pass the next call to computeGridMetrics()
         // will clear all the cell bounds resulting in out of date info until the
         // next layout pass.
@@ -2024,7 +2024,7 @@ public class GridPane extends Pane {
         boolean handleRemainder = false;
         double portion = 0;
 
-        // RT-25684: We have to be careful that when subtracting change
+        // JDK-8125641: We have to be careful that when subtracting change
         // that we don't jump right past 0 - this leads to an infinite
         // loop
         final boolean wasPositive = available >= 0.0;
@@ -2268,7 +2268,7 @@ public class GridPane extends Pane {
         boolean handleRemainder = false;
         double portion = 0;
 
-        // RT-25684: We have to be careful that when subtracting change
+        // JDK-8125641: We have to be careful that when subtracting change
         // that we don't jump right past 0 - this leads to an infinite
         // loop
         final boolean wasPositive = available >= 0.0;

@@ -97,7 +97,7 @@ public class J2DPipeline extends GraphicsPipeline {
 
     @Override
     public void dispose() {
-        // TODO: implement (RT-27375)
+        // TODO: implement (JDK-8092378)
         super.dispose();
     }
 

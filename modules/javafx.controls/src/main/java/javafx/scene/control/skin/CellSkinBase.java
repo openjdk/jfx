@@ -114,7 +114,7 @@ public class CellSkinBase<C extends Cell> extends LabeledSkinBase<C> {
 
 
                 @Override public void set(double value) {
-//                    // Commented this out due to RT-19794, because otherwise
+//                    // Commented this out due to JDK-8120853, because otherwise
 //                    // cellSizeSet would be false when the default caspian.css
 //                    // cell size was set. This would lead to
 //                    // ListCellSkin.computePrefHeight computing the pref height

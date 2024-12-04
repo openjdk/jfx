@@ -385,7 +385,7 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         modified |= (maskOne.length > max);
 
         //
-        // RT-32872 - If the intersection is empty, then set bits to the EMPTY_SET.
+        // JDK-8123530 - If the intersection is empty, then set bits to the EMPTY_SET.
         // This ensures that {a,b,c}.retainAll({}) yields bits = EMPTY_SET as
         // opposed to bits = long[1] and bits[0] == 0.
         //
@@ -460,7 +460,7 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         final long[] difference = max > 0 ? new long[max] : EMPTY_SET;
 
         //
-        // RT-32872 - If the intersection is empty, then set bits to the EMPTY_SET.
+        // JDK-8123530 - If the intersection is empty, then set bits to the EMPTY_SET.
         // This ensures that {a,b,c}.retainAll({}) yields bits = EMPTY_SET as
         // opposed to bits = long[1] and bits[0] == 0.
         //

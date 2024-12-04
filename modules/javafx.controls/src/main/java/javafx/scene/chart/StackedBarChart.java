@@ -72,7 +72,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     private CategoryAxis categoryAxis;
     private ValueAxis valueAxis;
     private ParallelTransition parallelTransition;
-    // RT-23125 handling data removal when a category is removed.
+    // JDK-8115252 handling data removal when a category is removed.
     private ListChangeListener<String> categoriesListener = new ListChangeListener<>() {
         @Override public void onChanged(ListChangeListener.Change<? extends String> c) {
             while (c.next()) {

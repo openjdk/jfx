@@ -107,7 +107,7 @@ public class SimpleViewerApp extends Application {
         stage.show();
 
         // MEASURE FPS
-        //TODO: RT-40270 - Public PerformanceTracker support should be added
+        //TODO: JDK-8091546 - Public PerformanceTracker support should be added
 //        Timeline fpsTimeline = new Timeline(new KeyFrame(Duration.seconds(2), t ->
 //                System.out.println("fps = " + PerformanceTracker.getSceneTracker(scene).getInstantFPS())));
 //        fpsTimeline.setCycleCount(Timeline.INDEFINITE);

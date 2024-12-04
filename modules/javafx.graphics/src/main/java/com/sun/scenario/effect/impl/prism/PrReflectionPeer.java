@@ -63,7 +63,7 @@ public class PrReflectionPeer extends EffectPeer {
         int irefH = irefY2 - irefY1;
 
         int dstH = (irefY2 > srcH) ? irefY2 : srcH;
-        // RT-27389: take clipping into account...
+        // JDK-8090465: take clipping into account...
         PrDrawable dst = (PrDrawable)getRenderer().getCompatibleImage(srcW, dstH);
         if (!inputs[0].validate(fctx) || dst == null) {
             return new ImageData(fctx, null, inputbounds);

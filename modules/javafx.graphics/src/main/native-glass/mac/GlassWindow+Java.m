@@ -160,14 +160,9 @@ extern NSSize maxScreenDimensions;
     return self;
 }
 
-- (NSWindow*)_getCurrentWindow
-{
-    return self->fullscreenWindow ? self->fullscreenWindow : self->nsWindow;
-}
-
 - (void)_ungrabFocus
 {
-    NSWindow *window = [self _getCurrentWindow];
+    NSWindow *window = self->nsWindow;
 
     if (s_grabWindow != window) {
         return;
@@ -207,7 +202,7 @@ extern NSSize maxScreenDimensions;
 
 - (void)_grabFocus
 {
-    NSWindow *window = [self _getCurrentWindow];
+    NSWindow *window = self->nsWindow;
 
     if (s_grabWindow == window) {
         return;

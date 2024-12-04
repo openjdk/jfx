@@ -127,7 +127,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
             boolean streaming = true;
             boolean connectionResetRetry = true;
             while (true) {
-                // RT-14438
+                // JDK-8114159
                 String actualUrl = url;
                 if (url.startsWith("file:")) {
                     int questionMarkPosition = url.indexOf('?');
@@ -138,7 +138,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
 
                 URL urlObject = newURL(actualUrl);
 
-                // RT-22458
+                // JDK-8126749
                 workaround7177996(urlObject);
 
                 URLConnection c = urlObject.openConnection();
@@ -148,7 +148,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
                     sendRequest(c, streaming);
                     receiveResponse(c);
                 } catch (HttpRetryException ex) {
-                    // RT-19914
+                    // JDK-8118819
                     if (streaming) {
                         streaming = false;
                         continue; // retry without streaming
@@ -255,7 +255,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         // any URLConnection caches, even if someone installs them.
         // As a side effect, this fixes the problem of WebPane not
         // working well with the plug-in cache, which was one of
-        // the causes for RT-11880.
+        // the causes for JDK-8112030.
         c.setUseCaches(false);
 
         Locale loc = Locale.getDefault();
@@ -395,7 +395,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
                 return;
             }
 
-            // See RT-17435
+            // See JDK-8128279
             switch (code) {
                 case 301: // Moved Permanently
                 case 302: // Found

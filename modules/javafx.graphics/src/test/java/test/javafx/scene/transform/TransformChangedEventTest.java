@@ -55,7 +55,7 @@ public class TransformChangedEventTest {
         assertSame(trg, e.getTarget());
     }
 
-    // RT-28932
+    // JDK-8124701
     @Test
     public void canCreateActionEventToo() {
         TransformChangedEvent event = new TransformChangedEvent(null, null);

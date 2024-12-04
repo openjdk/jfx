@@ -743,7 +743,7 @@ public class TableView<S> extends Control {
         @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
             final List<TableColumn<S,?>> columns = getColumns();
 
-            // Fix for RT-39822 - don't allow the same column to be installed twice
+            // Fix for JDK-8097509 - don't allow the same column to be installed twice
             while (c.next()) {
                 if (c.wasAdded()) {
                     List<TableColumn<S,?>> duplicates = new ArrayList<>();
@@ -773,7 +773,7 @@ public class TableView<S> extends Control {
             }
             c.reset();
 
-            // Fix for RT-15194: Need to remove removed columns from the
+            // Fix for JDK-8114644: Need to remove removed columns from the
             // sortOrder list.
             List<TableColumn<S,?>> toRemove = new ArrayList<>();
             while (c.next()) {
@@ -816,7 +816,7 @@ public class TableView<S> extends Control {
 
             sortOrder.removeAll(toRemove);
 
-            // Fix for RT-38892.
+            // Fix for JDK-8096633.
             final TableViewFocusModel<S> fm = getFocusModel();
             final TableViewSelectionModel<S> sm = getSelectionModel();
             c.reset();
@@ -983,12 +983,12 @@ public class TableView<S> extends Control {
                 final ObservableList<S> oldItems = oldItemsRef == null ? null : oldItemsRef.get();
                 final ObservableList<S> newItems = getItems();
 
-                // Fix for RT-36425
+                // Fix for JDK-8096819
                 if (newItems != null && newItems == oldItems) {
                     return;
                 }
 
-                // Fix for RT-35763
+                // Fix for JDK-8092759
                 if (! (newItems instanceof SortedList)) {
                     getSortOrder().clear();
                 }
@@ -2360,7 +2360,7 @@ public class TableView<S> extends Control {
                         ! c.wasAdded() &&
                         selectedItem != null &&
                         selectedItem.equals(c.getRemoved().get(0))) {
-                    // Bug fix for RT-28637
+                    // Bug fix for JDK-8118846
                     if (getSelectedIndex() < getItemCount()) {
                         final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
                         S newSelectedItem = getModelItem(previousRow);
@@ -2428,14 +2428,14 @@ public class TableView<S> extends Control {
                             // all items were removed from the model
                             clearSelection();
                         } else if (index < getItemCount() && index >= 0) {
-                            // Fix for RT-18969: the list had setAll called on it
-                            // Use of makeAtomic is a fix for RT-20945
+                            // Fix for JDK-8120433: the list had setAll called on it
+                            // Use of makeAtomic is a fix for JDK-8116954
                             startAtomic();
                             clearSelection(index);
                             stopAtomic();
                             select(index);
                         } else {
-                            // Fix for RT-22079
+                            // Fix for JDK-8126088
                             clearSelection();
                         }
                     }
@@ -2588,10 +2588,10 @@ public class TableView<S> extends Control {
                 }
             }
 
-            // RT-32411 We used to call quietClearSelection() here, but this
+            // JDK-8120351 We used to call quietClearSelection() here, but this
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.
-            // makeAtomic toggle added to resolve RT-32618
+            // makeAtomic toggle added to resolve JDK-8117117
             startAtomic();
 
             // then clear the current selection
@@ -2616,7 +2616,7 @@ public class TableView<S> extends Control {
             }
 
             // fire off a single add/remove/replace notification (rather than
-            // individual remove and add notifications) - see RT-33324
+            // individual remove and add notifications) - see JDK-8119264
             ListChangeListener.Change<TablePosition<S, ?>> change;
 
             /*

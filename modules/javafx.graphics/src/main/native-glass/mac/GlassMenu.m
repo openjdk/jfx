@@ -176,7 +176,7 @@ static jfieldID  jPixelsScaleYField = 0;
     }
 }
 
-// RT-37304: do not use menuNeedsUpdate here, even though Cocoa prohibits
+// JDK-8096139: do not use menuNeedsUpdate here, even though Cocoa prohibits
 // changing the menu structure during menuWillOpen...
 - (void)menuWillOpen: (NSMenu *)menu
 {

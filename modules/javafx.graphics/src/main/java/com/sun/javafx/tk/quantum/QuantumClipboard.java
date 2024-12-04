@@ -129,7 +129,7 @@ final class QuantumClipboard implements TKClipboard {
     }
 
     static void releaseCurrentDragboard() {
-        // RT-34510: assert currentDragboard != null;
+        // JDK-8088771: assert currentDragboard != null;
         currentDragboard = null;
     }
 
@@ -417,7 +417,7 @@ final class QuantumClipboard implements TKClipboard {
                 set.add(DataFormat.FILES);
             } else if (t.equalsIgnoreCase(Clipboard.HTML_TYPE)) {
                 set.add(DataFormat.HTML);
-                // RT-16812 - IE puts images on the clipboard in a HTML IMG url
+                // JDK-8128413 - IE puts images on the clipboard in a HTML IMG url
                 try {
                     //HTML header could be improperly formatted and we can get an exception here
                     if (parseIMG(assistant.getData(Clipboard.HTML_TYPE)) != null) {

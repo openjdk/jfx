@@ -218,7 +218,7 @@ final public class SwingDnD {
     }
 
     public void removeNotify() {
-        // RT-22049: Multi-JFrame/JFXPanel app leaks JFXPanels
+        // JDK-8126546: Multi-JFrame/JFXPanel app leaks JFXPanels
         // Don't forget to unregister drag source listener!
         dragSource.removeDragSourceListener(dragSourceListener);
     }

@@ -36,7 +36,6 @@
 - (void)_sendJavaWindowNotifyScaleChanged:(CGFloat)newScale;
 
 - (id)_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle screen:(NSScreen *)screen jwindow:(jobject)jwindow;
-- (NSWindow*)_getCurrentWindow;
 - (void)_ungrabFocus;
 + (void)_resetGrab;
 - (void)_checkUngrab;

@@ -65,7 +65,7 @@ final class NativeMediaAudioClip extends AudioClip {
 
     /*
      * TODO: Implement unsupported methods
-     * http://javafx-jira.kenai.com/browse/RT-27007
+     * JDK-8089356
      */
     public static AudioClip create(byte[] data, int dataOffset, int sampleCount, int sampleFormat, int channels, int sampleRate) {
         throw new UnsupportedOperationException("NativeMediaAudioClip does not support creating clips from raw sample data");
