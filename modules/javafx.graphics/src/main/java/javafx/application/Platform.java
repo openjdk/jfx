@@ -456,7 +456,7 @@ public final class Platform {
     }
 
     /**
-     * Contains UI preferences of the current platform.
+     * Contains preferences of the current platform.
      * <p>
      * {@code Preferences} extends {@link ObservableMap} to expose platform preferences as key-value pairs.
      * The map is unmodifiable, which means that keys and values cannot be added, removed, or updated.
