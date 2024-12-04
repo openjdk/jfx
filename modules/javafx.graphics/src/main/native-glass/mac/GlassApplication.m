@@ -40,7 +40,6 @@
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
 #import <Carbon/Carbon.h>
-#import <Network/Network.h>
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -140,7 +139,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 #pragma mark --- GlassApplication
 
-@implementation GlassApplication
+@implementation GlassApplication {
+    PlatformSupport* platformSupport;
+}
 
 - (id)initWithEnv:(JNIEnv*)env application:(jobject)application launchable:(jobject)launchable taskbarApplication:(jboolean)isTaskbarApplication classLoader:(jobject)classLoader
 {
@@ -178,25 +179,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
 }
 
-- (void)platformPreferencesDidChange {
-    // Some dynamic colors like NSColor.controlAccentColor don't seem to be reliably updated
-    // at the exact moment AppleColorPreferencesChangedNotification is received.
-    // As a workaround, we wait for a short period of time (one second seems sufficient) before
-    // we query the updated platform preferences.
-
-    [NSObject cancelPreviousPerformRequestsWithTarget:self
-              selector:@selector(updatePlatformPreferences)
-              object:nil];
-
-    [self performSelector:@selector(updatePlatformPreferences)
-          withObject:nil
-          afterDelay:1.0];
-}
-
-- (void)updatePlatformPreferences {
-    [PlatformSupport updatePreferences:self->jApplication];
-}
-
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
 {
     LOG("GlassApplication:applicationWillFinishLaunching");
@@ -205,6 +187,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
         // unblock main thread. Glass is started at this point.
+        self->platformSupport = [[PlatformSupport alloc] initWithEnv:env application:jApplication];
         self->started = YES;
 
         if (self->jLaunchable != NULL)
@@ -235,36 +218,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                                                                  selector:@selector(GlassApplicationDidChangeScreenParameters)
                                                                      name:NSApplicationDidChangeScreenParametersNotification
                                                                    object:nil];
-
-                        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                              selector:@selector(platformPreferencesDidChange)
-                                                              name:NSPreferredScrollerStyleDidChangeNotification
-                                                              object:nil];
-
-                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
-                                                                         selector:@selector(platformPreferencesDidChange)
-                                                                         name:@"AppleInterfaceThemeChangedNotification"
-                                                                         object:nil];
-
-                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
-                                                                         selector:@selector(platformPreferencesDidChange)
-                                                                         name:@"AppleColorPreferencesChangedNotification"
-                                                                         object:nil];
-
-                        [[[NSWorkspace sharedWorkspace] notificationCenter]
-                            addObserver:self
-                            selector:@selector(platformPreferencesDidChange)
-                            name:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
-                            object:nil];
-
-                        nw_path_monitor_t pathMonitor = nw_path_monitor_create();
-                        nw_path_monitor_set_update_handler(pathMonitor, ^(nw_path_t path) {
-                            [PlatformSupport updateNetworkPath:self->jApplication
-                                             constrained:nw_path_is_constrained(path)
-                                             expensive:nw_path_is_expensive(path)];
-                        });
-                        nw_path_monitor_set_queue(pathMonitor, dispatch_get_main_queue());
-                        nw_path_monitor_start(pathMonitor);
 
                         // localMonitor = [NSEvent addLocalMonitorForEventsMatchingMask: NSRightMouseDownMask
                         //                                                      handler:^(NSEvent *incomingEvent) {
@@ -789,6 +742,11 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return self->started;
 }
 
+- (jobject)getPlatformPreferences
+{
+    return platformSupport != nil ? [platformSupport collectPreferences] : nil;
+}
+
 + (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env
 {
     jobject ret = NULL;
@@ -1309,5 +1267,6 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getApplicat
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication_getPlatformPreferences
 (JNIEnv *env, jobject self)
 {
-    return [PlatformSupport collectPreferences];
+    GlassApplication* app = (GlassApplication*)[NSApp delegate];
+    return [app getPlatformPreferences];
 }

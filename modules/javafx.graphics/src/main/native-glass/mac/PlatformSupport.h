@@ -28,24 +28,21 @@
 #import <Cocoa/Cocoa.h>
 #import <jni.h>
 
-@interface PlatformSupport : NSObject
+@interface PlatformSupport : NSObject {
+    JNIEnv* env;
+    jobject application;
+}
 
 + (void)initIDs:(JNIEnv*)env;
 
 /**
+ * Initializes a new PlatformSupport instance.
+ */
+- (id)initWithEnv:(JNIEnv*)env application:(jobject)app;
+
+/**
  * Collect all platform preferences and return them as a new java/util/Map.
  */
-+ (jobject)collectPreferences;
-
-/**
- * Collect all platform preferences and notify the JavaFX application when a preference has changed.
- * The change notification includes all preferences, not only the changed preferences.
- */
-+ (void)updatePreferences:(jobject)application;
-
-/**
- * Notify the JavaFX application about changes of the current network path.
- */
-+ (void)updateNetworkPath:(jobject)application constrained:(bool)constrained expensive:(bool)expensive;
+- (jobject)collectPreferences;
 
 @end
