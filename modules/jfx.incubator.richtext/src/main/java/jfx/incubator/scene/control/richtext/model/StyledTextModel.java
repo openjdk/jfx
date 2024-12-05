@@ -535,8 +535,8 @@ public abstract class StyledTextModel {
     /**
      * Returns the text position guaranteed to be within the document and paragraph limits.
      *
-     * @param p text position, cannot be null
-     * @return text position
+     * @param p the text position, cannot be null
+     * @return the text position within the document and paragraph limits
      */
     public final TextPos clamp(TextPos p) {
         Objects.nonNull(p);
@@ -545,7 +545,6 @@ public abstract class StyledTextModel {
         if (ix < 0) {
             return TextPos.ZERO;
         } else if (ix < ct) {
-            // clamp to paragraph length
             int len = getParagraphLength(ix);
             if (p.offset() < len) {
                 return p;
@@ -557,7 +556,7 @@ public abstract class StyledTextModel {
             } else {
                 ix = ct - 1;
                 int len = getParagraphLength(ix);
-                return TextPos.ofLeading(ct - 1, len);
+                return TextPos.ofLeading(ix, len);
             }
         }
     }
