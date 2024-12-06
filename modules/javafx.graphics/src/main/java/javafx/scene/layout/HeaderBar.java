@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.geom.Vec2d;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.css.CssMetaData;
@@ -280,7 +281,7 @@ public class HeaderBar extends HeaderBarBase {
         }
     };
 
-    public final StyleableBooleanProperty overlappingSystemInsetProperty() {
+    public final BooleanProperty overlappingSystemInsetProperty() {
         return overlappingSystemInset;
     }
 
