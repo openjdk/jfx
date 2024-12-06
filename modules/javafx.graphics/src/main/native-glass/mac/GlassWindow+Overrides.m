@@ -62,11 +62,6 @@
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
-    if (self->fullscreenWindow)
-    {
-        return;
-    }
-
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
@@ -86,11 +81,6 @@
 
 - (void)windowDidResignKey:(NSNotification *)notification
 {
-    if (self->fullscreenWindow)
-    {
-        return;
-    }
-
     [self _ungrabFocus];
 
     GET_MAIN_JENV_NOWARN;

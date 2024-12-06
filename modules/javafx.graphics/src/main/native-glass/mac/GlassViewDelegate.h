@@ -27,7 +27,6 @@
 #import <jni.h>
 
 #import "GlassHostView.h"
-#import "GlassFullscreenWindow.h"
 #import "GlassDragSource.h"
 #import "GlassDraggingSource.h"
 #import "GlassAccessible.h"
@@ -69,8 +68,6 @@ typedef enum GestureMaskType {
 
 @public
     jobject                 jView;
-    // not nil when we create a new FS window ourselves
-    GlassFullscreenWindow   *fullscreenWindow;
 }
 
 - (id)initWithView:(NSView*)view withJview:(jobject)jview;

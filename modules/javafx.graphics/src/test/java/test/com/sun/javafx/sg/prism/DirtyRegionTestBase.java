@@ -318,13 +318,13 @@ public class DirtyRegionTestBase extends NGTestBase {
      *
      */
     protected void assertDirtyRegionEquals(NGNode start, RectBounds expected) {
-        // TODO The root might have changes to its bounds and we should reset these. (RT-26928)
+        // TODO The root might have changes to its bounds and we should reset these. (JDK-8091760)
         //DirtyRegionTestBase.resetGroupBounds(root);
         // Accumulate the dirty region, using the windowClip.
         // TODO if we wanted to, we could also make the device space transform parameterized
         // such that we could test that the dirty region accumulation logic all works
         // correctly even in the presence of a non-identity device space transform
-        // (RT-26928)
+        // (JDK-8091760)
         DirtyRegionPool pool = new DirtyRegionPool(1);
         DirtyRegionContainer drc = pool.checkOut();
         int status = start.accumulateDirtyRegions(

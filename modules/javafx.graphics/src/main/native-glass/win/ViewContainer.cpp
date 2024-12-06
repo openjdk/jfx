@@ -428,7 +428,7 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         // No translation available
         keyCharCount = 0;
         // This includes SHIFT, CONTROL, ALT, etc.
-        // RT-17062: suppress auto-repeated events for modifier keys
+        // JDK-8100645: suppress auto-repeated events for modifier keys
         if (isAutoRepeat) {
             switch (jKeyCode) {
                 case com_sun_glass_events_KeyEvent_VK_SHIFT:
@@ -729,13 +729,13 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
                 } else {
                     m_lastMouseMovePosition = lParam;
                 }
-                // See RT-11305 regarding the GetCapture() check
+                // See JDK-8110944 regarding the GetCapture() check
                 if ((wParam & (MK_LBUTTON | MK_RBUTTON | MK_MBUTTON | MK_XBUTTON1 | MK_XBUTTON2)) != 0 && ::GetCapture() == hwnd) {
                     type = com_sun_glass_events_MouseEvent_DRAG;
                 } else {
                     type = com_sun_glass_events_MouseEvent_MOVE;
                 }
-                // Due to RT-11305 we should report the pressed button for both
+                // Due to JDK-8110944 we should report the pressed button for both
                 // MOVE and DRAG. This also enables one to filter out these
                 // events in client code in case they're undesired.
                 if (wParam & MK_RBUTTON) {

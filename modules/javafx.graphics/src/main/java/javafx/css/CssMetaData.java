@@ -127,7 +127,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
         final StyleOrigin currentOrigin = styleableProperty.getStyleOrigin();
         final V currentValue = styleableProperty.getValue();
 
-        // RT-21185: Only apply the style if something has changed.
+        // JDK-8102176: Only apply the style if something has changed.
         if ((currentOrigin != origin)
             || (currentValue != null
                 ? currentValue.equals(value) == false

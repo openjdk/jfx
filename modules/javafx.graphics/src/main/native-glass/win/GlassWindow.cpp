@@ -448,7 +448,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             HandleViewInputLangChange(GetHWND(), msg, wParam, lParam);
             return 0;
         case WM_NCCALCSIZE:
-// Workaround for RT-13998. It has some side effects and thus commented out
+// Workaround for JDK-8112996. It has some side effects and thus commented out
 //            if ((BOOL)wParam && !IsDecorated()) {
 //                NCCALCSIZE_PARAMS *p = (NCCALCSIZE_PARAMS *)lParam;
 //                p->rgrc[0].right++;
@@ -1077,7 +1077,7 @@ void GlassWindow::CheckUngrab()
 
     // If this window doesn't belong to an owned windows hierarchy that
     // holds the grab currently, then the grab should be released.
-    // Fix RT-16490: use GetAncestor() instead of ::GetParent() to support embedded windows
+    // Fix JDK-8128445: use GetAncestor() instead of ::GetParent() to support embedded windows
     for (BaseWnd * window = this; window != NULL; window = BaseWnd::FromHandle(window->GetAncestor())) {
         if (window->GetHWND() == sm_grabWindow) {
             return;
@@ -1855,7 +1855,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setVisible
                 if (pWindow->IsFocusable()) {
                     ::SetForegroundWindow(hWnd);
                 } else {
-                    // RT-14197:
+                    // JDK-8112905:
                     // On some latest platform versions, unfocusable windows
                     // are shown below the currently active window, so we
                     // need to pull them to front explicitly. However,

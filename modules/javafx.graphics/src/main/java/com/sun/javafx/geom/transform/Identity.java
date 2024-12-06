@@ -232,7 +232,7 @@ public final class Identity extends BaseTransform {
 
     @Override
     public Shape createTransformedShape(Shape s) {
-        // TODO: Can we just return s? (RT-26884)
+        // TODO: Can we just return s? (JDK-8092003)
         return new Path2D(s);
     }
 

@@ -309,7 +309,7 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(0), "Selection should not change");
     }
 
-    // Tests for discontinuous multiple cell selection (RT-18951)
+    // Tests for discontinuous multiple cell selection (JDK-8120523)
     @ParameterizedTest
     @MethodSource("parameters")
     public void test_rt18591_select_forward_then_backward(NodeOrientation orientation) {

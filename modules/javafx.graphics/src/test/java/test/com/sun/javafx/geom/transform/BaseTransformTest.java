@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  *
  * This Unit Test covers BaseTransform and some of its calculations.
- * TODO: cover more of BaseTransform's functionality. (RT-26882)
+ * TODO: cover more of BaseTransform's functionality. (JDK-8092141)
  */
 public class BaseTransformTest {
 

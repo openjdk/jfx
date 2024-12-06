@@ -67,7 +67,7 @@ public class CssParserTest {
 
         CssParser instance = new CssParser();
 
-        // RT-16959 is an infinite loop on incomplete linear gradient
+        // JDK-8119841 is an infinite loop on incomplete linear gradient
         ParsedValue result = new CssParserShim(instance)
                 .parseExpr("-fx-background-color", "linear-gradient(from 0% 0% to 0% 100%, )");
         assertNull(result, "parseExpr");
@@ -106,7 +106,7 @@ public class CssParserTest {
     @Test
     public void testRT_17770() {
 
-        // RT-17770 is an infinite loop on a dangling comma.
+        // JDK-8116301 is an infinite loop on a dangling comma.
         // Missing term should be ignored
         String stylesheetText =
             "* {"
@@ -152,7 +152,7 @@ public class CssParserTest {
 
         CssParser instance = new CssParser();
 
-        // RT-16959 is an infinite loop on incomplete linear gradient
+        // JDK-8119841 is an infinite loop on incomplete linear gradient
         ParsedValue result = new CssParserShim(instance).parseExpr("-fx-font-size", "10ptx");
         assertNull(result, "parseExpr");
 

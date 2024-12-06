@@ -614,11 +614,11 @@
             }
             else if ([itemValue isKindOfClass: [NSNumber class]]) {
                 // TODO: distinguish long/int/double, now passing all numbers as double
-                // http://javafx-jira.kenai.com/browse/RT-27005
+                // JDK-8096014
                 jValue = [self createDouble: [(NSNumber *) itemValue doubleValue]];
             }
             // TODO: handle duration as Duration object
-            // http://javafx-jira.kenai.com/browse/RT-27005
+            // JDK-8096014
             else {
                 [ErrorHandler logMsg: LOGGER_WARNING message: "Metadata conversion failed. Unrecognized value type"];
             }

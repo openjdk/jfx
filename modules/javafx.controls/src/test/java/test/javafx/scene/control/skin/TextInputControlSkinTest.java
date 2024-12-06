@@ -76,7 +76,7 @@ public class TextInputControlSkinTest {
     }
 
     @Test public void skinsCanHandleNullValues_RT34178() {
-        // RT-34178: NPE in TextFieldSkin of PasswordField
+        // JDK-8118506: NPE in TextFieldSkin of PasswordField
 
         // The skins should always use textProperty().getValueSafe()
         // instead of getText().

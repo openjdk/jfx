@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import java.security.AccessControlContext;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
@@ -86,9 +85,6 @@ public interface TKScene {
     public void entireSceneNeedsRepaint();
 
     public TKClipboard createDragboard(boolean isDragSource);
-
-    @SuppressWarnings("removal")
-    public AccessControlContext getAccessControlContext();
 
     default void processOverlayCSS() {}
 

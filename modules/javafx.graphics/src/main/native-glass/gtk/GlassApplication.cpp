@@ -243,7 +243,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop
     // event loop and should be restored when the event loop exits. Unfortunately,
     // this is too early. The fix is to never restore X errors.
     //
-    // See RT-21408 & RT-20756
+    // See JDK-8126059 & JDK-8118745
 
     // Restore X error handling
     // #ifndef VERBOSE

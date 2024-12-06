@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import java.security.AccessControlContext;
 import java.util.Set;
 import javafx.scene.image.Image;
 
@@ -39,11 +38,6 @@ import javafx.util.Pair;
  * callers (and so forth).
  */
 public interface TKClipboard {
-
-    /**
-     * This method is used to set security context of the Stage.
-     */
-    public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext ctx);
 
     /**
      * Gets the set of DataFormat types on this Clipboard instance which have
