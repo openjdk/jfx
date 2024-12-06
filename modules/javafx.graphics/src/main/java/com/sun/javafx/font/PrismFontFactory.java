@@ -1367,15 +1367,9 @@ public abstract class PrismFontFactory implements FontFactory {
                                      float size,
                                      boolean register,
                                      boolean loadAll) {
-        if (!hasPermission()) {
-            return new PGFont[] { createFont(DEFAULT_FULLNAME, size) } ;
-        }
-        if (FontFileWriter.hasTempPermission()) {
-            return loadEmbeddedFont0(name, fontStream, size, register, loadAll);
-        }
 
-        // Otherwise, be extra conscious of pending temp file creation and
-        // resourcefully handle the temp file resources, among other things.
+        // Be extra conscious of pending temp file creation and resourcefully
+        // handle the temp file resources, among other things.
         FontFileWriter.FontTracker tracker =
             FontFileWriter.FontTracker.getTracker();
         boolean acquired = false;
@@ -1476,9 +1470,6 @@ public abstract class PrismFontFactory implements FontFactory {
                                      float size,
                                      boolean register,
                                      boolean loadAll) {
-        if (!hasPermission()) {
-            return new PGFont[] { createFont(DEFAULT_FULLNAME, size) };
-        }
         addFileCloserHook();
         FontResource[] frArr =
           loadEmbeddedFont1(name, path, register, false, false, loadAll);
@@ -1747,11 +1738,6 @@ public abstract class PrismFontFactory implements FontFactory {
 //             }
         }
         return fontToFileMap;
-    }
-
-    @Override
-    public final boolean hasPermission() {
-        return true;
     }
 
     private static class TTFilter implements FilenameFilter {
