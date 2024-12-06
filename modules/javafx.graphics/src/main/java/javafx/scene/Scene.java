@@ -3073,15 +3073,11 @@ public class Scene implements EventTarget {
                 DragEvent dragEvent =
                         new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                                 transferMode, null, null, pick(x, y));
-                // Data dropped to the app can be accessed without restriction
-                DragboardHelper.setDataAccessRestriction(dndGesture.dragboard, false);
 
                 TransferMode tm;
                 try {
                     tm = dndGesture.processTargetDrop(dragEvent);
                 } finally {
-                    DragboardHelper.setDataAccessRestriction(
-                            dndGesture.dragboard, true);
                 }
 
                 if (dndGesture.source == null) {
@@ -3219,11 +3215,6 @@ public class Scene implements EventTarget {
                         try {
                             fireEvent(target, detectedEvent);
                         } finally {
-                            // Putting data to dragboard finished, restrict access to them
-                            if (dragboard != null) {
-                                DragboardHelper.setDataAccessRestriction(
-                                        dragboard, true);
-                            }
                         }
                     }
 
@@ -3255,11 +3246,6 @@ public class Scene implements EventTarget {
             try {
                 fireEvent(target != null ? target : Scene.this, me);
             } finally {
-                // Putting data to dragboard finished, restrict access to them
-                if (dragboard != null) {
-                    DragboardHelper.setDataAccessRestriction(
-                            dragboard, true);
-                }
             }
 
             dragDetectedProcessed();
@@ -3469,9 +3455,6 @@ public class Scene implements EventTarget {
                 dragboard = createDragboard(null, true);
             }
 
-            // The app can see what it puts to dragboard without restriction
-            DragboardHelper.setDataAccessRestriction(dragboard, false);
-
             this.source = source;
             potentialTarget = source;
             sourceTransferModes = t;
@@ -3521,13 +3504,9 @@ public class Scene implements EventTarget {
                         new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                         transferMode, null, null, null);
 
-                // DRAG_DONE event is delivered to gesture source, it can access
-                // its own data without restriction
-                DragboardHelper.setDataAccessRestriction(dndGesture.dragboard, false);
                 try {
                     dndGesture.processDropEnd(dragEvent);
                 } finally {
-                    DragboardHelper.setDataAccessRestriction(dndGesture.dragboard, true);
                 }
                 dndGesture = null;
             }

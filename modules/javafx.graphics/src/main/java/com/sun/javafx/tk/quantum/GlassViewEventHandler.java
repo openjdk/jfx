@@ -97,34 +97,6 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
-    // TODO: JDK-8344111: Consider removing this obsolete method
-    // Default fullscreen allows limited keyboard input.
-    // It will only receive events from the following keys:
-    // DOWN, UP, LEFT, RIGHT, SPACE, TAB, PAGE_UP, PAGE_DOWN,
-    // HOME, END, ENTER.
-    private static boolean allowableFullScreenKeys(int key) {
-        switch (key) {
-            case KeyEvent.VK_DOWN:
-            case KeyEvent.VK_UP:
-            case KeyEvent.VK_LEFT:
-            case KeyEvent.VK_RIGHT:
-            case KeyEvent.VK_SPACE:
-            case KeyEvent.VK_TAB:
-            case KeyEvent.VK_PAGE_DOWN:
-            case KeyEvent.VK_PAGE_UP:
-            case KeyEvent.VK_HOME:
-            case KeyEvent.VK_END:
-            case KeyEvent.VK_ENTER:
-                return true;
-        }
-        return false;
-    }
-
-    // TODO: JDK-8344111: Consider removing this obsolete method
-    private boolean checkFullScreenKeyEvent(int type, int key, char chars[], int modifiers) {
-        return scene.getWindowStage().isTrustedFullScreen() || allowableFullScreenKeys(key);
-    }
-
     private final PaintCollector collector = PaintCollector.getInstance();
 
     private static EventType<javafx.scene.input.KeyEvent> keyEventType(int glassType) {
@@ -207,11 +179,6 @@ class GlassViewEventHandler extends View.EventHandler {
                         /* NOBREAK */
                     case com.sun.glass.events.KeyEvent.RELEASE:
                     case com.sun.glass.events.KeyEvent.TYPED:
-                        if (view.isInFullscreen()) {
-                            if (!checkFullScreenKeyEvent(type, key, chars, modifiers)) {
-                                break;
-                            }
-                        }
                         if (scene.sceneListener != null) {
                             consumed = scene.sceneListener.keyEvent(keyEvent);
                         }

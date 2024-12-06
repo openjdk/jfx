@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,6 @@ public class WindowStage extends GlassStage {
     private StageStyle style;
     private GlassStage owner = null;
     private Modality modality = Modality.NONE;
-    private final boolean securityDialog;
 
     private OverlayWarning warning = null;
     private boolean rtl = false;
@@ -88,11 +87,10 @@ public class WindowStage extends GlassStage {
                                  ".QuantumMessagesBundle", LOCALE);
 
 
-    public WindowStage(javafx.stage.Window peerWindow, boolean securityDialog, final StageStyle stageStyle, Modality modality, TKStage owner) {
+    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
-        this.securityDialog = securityDialog;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
@@ -114,10 +112,6 @@ public class WindowStage extends GlassStage {
 
     final void setIsPopup() {
         isPopupStage = true;
-    }
-
-    final boolean isSecurityDialog() {
-        return securityDialog;
     }
 
     // Called by QuantumToolkit, so we can override initPlatformWindow in subclasses
@@ -181,9 +175,6 @@ public class WindowStage extends GlassStage {
                     app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
             platformWindow.setResizable(resizable);
             platformWindow.setFocusable(focusable);
-            if (securityDialog) {
-                platformWindow.setLevel(Window.Level.FLOATING);
-            }
             if (fxStage != null && fxStage.getScene() != null) {
                 javafx.scene.paint.Paint paint = fxStage.getScene().getFill();
                 if (paint instanceof javafx.scene.paint.Color) {
@@ -560,9 +551,6 @@ public class WindowStage extends GlassStage {
 
     @Override
     public void setAlwaysOnTop(boolean alwaysOnTop) {
-        // The securityDialog flag takes precedence over alwaysOnTop
-        if (securityDialog) return;
-
         if (isAlwaysOnTop == alwaysOnTop) {
             return;
         }
@@ -580,18 +568,11 @@ public class WindowStage extends GlassStage {
         // note: for child windows this is ignored and we fail silently
     }
 
-    // TODO: JDK-8344111: Consider removing this obsolete method
-    // Return true if this stage is trusted for full screen (it always is)
-    boolean isTrustedFullScreen() {
-        return true;
-    }
-
     // Safely exit full screen
     void exitFullScreen() {
         setFullScreen(false);
     }
 
-    // TODO: JDK-8344111: Consider removing this obsolete field
     private boolean fullScreenFromUserEvent = false;
 
     private KeyCombination savedFullScreenExitKey = null;
@@ -613,8 +594,7 @@ public class WindowStage extends GlassStage {
                 // indicating that the fullscreen request came from an input
                 // event handler.
                 // If not notify the stageListener to reset fullscreen to false.
-                final boolean isTrusted = isTrustedFullScreen();
-                if (!isTrusted && !fullScreenFromUserEvent) {
+                if (!fullScreenFromUserEvent) {
                     exitFullScreen();
                     fullscreenChanged(false);
                 } else {
@@ -627,7 +607,7 @@ public class WindowStage extends GlassStage {
                         KeyCombination key = null;
                         String exitMessage = null;
 
-                        if (isTrusted && (fxStage != null)) {
+                        if (fxStage != null) {
                             // copy the user set definitions for later use.
                             key = fxStage.getFullScreenExitKeyCombination();
 
