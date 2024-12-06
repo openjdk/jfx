@@ -210,10 +210,10 @@ public abstract class HeaderBarBase extends Region {
     }
 
     /**
-     * The absolute minimum height of {@link #leftSystemInsetProperty() leftSystemInset} and
-     * {@link #rightSystemInsetProperty() rightSystemInset}. This is a platform-dependent value
-     * that a {@code HeaderBarBase} implementation can use to define a reasonable minimum height
-     * for the header bar area.
+     * The system-provided reasonable minimum height of {@link #leftSystemInsetProperty() leftSystemInset}
+     * {@link #rightSystemInsetProperty() rightSystemInset}. This is a platform-dependent value that a
+     * {@code HeaderBarBase} implementation can use to define a reasonable minimum height for the header
+     * bar area.
      */
     private final ReadOnlyDoubleWrapper minSystemHeight =
         new ReadOnlyDoubleWrapper(this, "minSystemHeight") {

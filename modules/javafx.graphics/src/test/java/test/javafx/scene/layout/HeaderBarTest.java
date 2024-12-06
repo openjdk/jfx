@@ -251,7 +251,6 @@ public class HeaderBarTest {
     }
 
     @ParameterizedTest
-    @SuppressWarnings("unchecked")
     @CsvSource({
         "TOP_LEFT, 160, 10, 100, 80",
         "TOP_CENTER, 450, 10, 100, 80",
@@ -264,6 +263,7 @@ public class HeaderBarTest {
         "BOTTOM_RIGHT, 740, 10, 100, 80"
     })
     void alignmentOfCenterChild_withLeftSystemInset(Pos pos, double x, double y, double width, double height) {
+        @SuppressWarnings("unchecked")
         var leftSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
         leftSystemInset.set(new Dimension2D(100, 100));
         var leading = new MockResizable(50, 50);
@@ -281,7 +281,6 @@ public class HeaderBarTest {
     }
 
     @ParameterizedTest
-    @SuppressWarnings("unchecked")
     @CsvSource({
         "TOP_LEFT, 60, 10, 100, 80",
         "TOP_CENTER, 450, 10, 100, 80",
@@ -294,6 +293,7 @@ public class HeaderBarTest {
         "BOTTOM_RIGHT, 640, 10, 100, 80"
     })
     void alignmentOfCenterChild_withRightSystemInset(Pos pos, double x, double y, double width, double height) {
+        @SuppressWarnings("unchecked")
         var rightSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
         rightSystemInset.set(new Dimension2D(100, 100));
         var leading = new MockResizable(50, 50);
@@ -311,7 +311,6 @@ public class HeaderBarTest {
     }
 
     @ParameterizedTest
-    @SuppressWarnings("unchecked")
     @CsvSource({
         "TOP_CENTER, 260, 10, 80, 80",
         "CENTER, 260, 10, 80, 80",
@@ -319,6 +318,7 @@ public class HeaderBarTest {
     })
     void alignmentOfCenterChild_withLeftSystemInset_andOffsetCausedByInsufficientHorizontalSpace(
             Pos pos, double x, double y, double width, double height) {
+        @SuppressWarnings("unchecked")
         var leftSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
         leftSystemInset.set(new Dimension2D(200, 100));
         var leading = new MockResizable(50, 50);
@@ -336,7 +336,6 @@ public class HeaderBarTest {
     }
 
     @ParameterizedTest
-    @SuppressWarnings("unchecked")
     @CsvSource({
         "TOP_CENTER, 60, 10, 80, 80",
         "CENTER, 60, 10, 80, 80",
@@ -344,6 +343,7 @@ public class HeaderBarTest {
     })
     void alignmentOfCenterChild_withRightSystemInset_andOffsetCausedByInsufficientHorizontalSpace(
             Pos pos, double x, double y, double width, double height) {
+        @SuppressWarnings("unchecked")
         var rightSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
         rightSystemInset.set(new Dimension2D(200, 100));
         var leading = new MockResizable(50, 50);
@@ -358,6 +358,50 @@ public class HeaderBarTest {
         headerBar.layout();
 
         assertBounds(x, y, width, height, center);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "TOP_LEFT, 10, 10, 50, 50",
+        "CENTER, 10, 25, 50, 50",
+        "BOTTOM_LEFT, 10, 40, 50, 50"
+    })
+    void alignmentOfLeadingChild_notResizable_withOverlappingLeftSystemInset(
+            Pos pos, double x, double y, double width, double height) {
+        @SuppressWarnings("unchecked")
+        var leftSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
+        leftSystemInset.set(new Dimension2D(100, 100));
+        var leading = new Rectangle(50, 50);
+        HeaderBar.setAlignment(leading, pos);
+        HeaderBar.setMargin(leading, new Insets(10));
+        headerBar.setOverlappingSystemInset(true);
+        headerBar.setLeading(leading);
+        headerBar.resize(1000, 100);
+        headerBar.layout();
+
+        assertBounds(x, y, width, height, leading);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "TOP_RIGHT, 940, 10, 50, 50",
+        "CENTER, 940, 25, 50, 50",
+        "BOTTOM_RIGHT, 940, 40, 50, 50"
+    })
+    void alignmentOfTrailingChild_notResizable_withOverlappingRightSystemInset(
+            Pos pos, double x, double y, double width, double height) {
+        @SuppressWarnings("unchecked")
+        var rightSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
+        rightSystemInset.set(new Dimension2D(100, 100));
+        var trailing = new Rectangle(50, 50);
+        HeaderBar.setAlignment(trailing, pos);
+        HeaderBar.setMargin(trailing, new Insets(10));
+        headerBar.setOverlappingSystemInset(true);
+        headerBar.setTrailing(trailing);
+        headerBar.resize(1000, 100);
+        headerBar.layout();
+
+        assertBounds(x, y, width, height, trailing);
     }
 
     private void assertBounds(double x, double y, double width, double height, Node node) {
