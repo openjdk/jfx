@@ -266,7 +266,7 @@ public final class RotateTest extends ParameterizedTestBase {
     /**
      * Tap two fingers, rotate the object right by only 1 very big step - 80 degrees
      */
-    @Disabled //RT-36616
+    @Disabled //JDK-8088641
     @ParameterizedTest
     @MethodSource("parameters")
     public void testRotateRightOneBigStep(TestTouchDevice device) throws Exception {
@@ -319,7 +319,7 @@ public final class RotateTest extends ParameterizedTestBase {
     /**
      * Tap two fingers, rotate the object left by only 1 very big step - 70 degrees
      */
-    @Disabled //RT-36616
+    @Disabled //JDK-8088641
     @ParameterizedTest
     @MethodSource("parameters")
     public void testRotateLeftOneBigStep(TestTouchDevice device) throws Exception {

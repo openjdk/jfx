@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * PRELIMINARY unit tests for Vec3d.
  *
- * TODO: expand this to cover the entire class (RT-26882)
+ * TODO: expand this to cover the entire class (JDK-8092141)
  */
 public class Vec3dTest {
 

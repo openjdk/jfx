@@ -110,7 +110,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         /*
         ** we used to consume mouse wheel rotations here,
         ** be we've switched to ScrollEvents, and only consume those which we use.
-        ** See RT-13995 & RT-14480
+        ** See JDK-8113240 & JDK-8092752
         */
         event.consume();
     };

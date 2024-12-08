@@ -862,7 +862,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt16019() {
-        // RT-16019: NodeMemory TableView tests fail with
+        // JDK-8128207: NodeMemory TableView tests fail with
         // IndexOutOfBoundsException (ObservableListWrapper.java:336)
         TableView table = new TableView();
         for (int i = 0; i < 1000; i++) {
@@ -1350,7 +1350,7 @@ public class TableViewTest {
 
         // now (0,0), (1,0) and (1,1) should be selected, but selected indices
         // should remain as [0, 1], as we don't want selected indices to become
-        // [0,1,1] (which is what RT-29313 is about)
+        // [0,1,1] (which is what JDK-8102348 is about)
         sm.select(1, lastNameCol);
         assertEquals(2, sm.getSelectedIndices().size());
         assertEquals(0, sm.getSelectedIndices().get(0));
@@ -1394,7 +1394,7 @@ public class TableViewTest {
 
         // now (0,0), (1,0) and (1,1) should be selected, but selected items
         // should remain as [p0, p1], as we don't want selected items to become
-        // [p0,p1,p1] (which is what RT-29313 is about)
+        // [p0,p1,p1] (which is what JDK-8102348 is about)
         sm.select(1, lastNameCol);
         assertEquals(2, sm.getSelectedItems().size());
         assertEquals(p0, sm.getSelectedItems().get(0));
@@ -2110,7 +2110,7 @@ public class TableViewTest {
 
     /**
      * JDK-8093986
-     * @ Ignore("Test started intermittently failing, most probably due to RT-36855/JDK-8096512 changeset")
+     * @ Ignore("Test started intermittently failing, most probably due to JDK-8096512/JDK-8096512 changeset")
      */
     @Test
     public void noAutoresizeOnColumnRemoval() {
@@ -3015,7 +3015,7 @@ public class TableViewTest {
         selectedCellsSeq.subList(from, to);
     }
 
-  //--------- regression testing of JDK-8093144 (was: RT-35857)
+  //--------- regression testing of JDK-8093144 (was: JDK-8093144)
 
     @Test
     public void test_rt35857_selectLast_retainAllSelected() {
@@ -3077,7 +3077,7 @@ public class TableViewTest {
         assertEquals("C", fxList.get(1));
     }
 
-//--------- end regression testing of JDK-8093144 (was: RT-35857)
+//--------- end regression testing of JDK-8093144 (was: JDK-8093144)
 
     @Test public void test_getColumnHeaderForColumn() {
         TableView<Person> table = new TableView<>();
@@ -3222,7 +3222,7 @@ public class TableViewTest {
 
     // This test ensures that we reuse column headers when the columns still
     // exist after a change to the columns list - rather than recreating new
-    // column headers. The issue in RT-36290 was that we were creating new column
+    // column headers. The issue in JDK-8096568 was that we were creating new column
     // headers that were then in their initial states, allowing them to call
     // TableColumnHeader#updateScene(), which would resize the column based on the
     // data within it.
@@ -3502,7 +3502,7 @@ public class TableViewTest {
         Toolkit.getToolkit().firePulse();
 
         // only the Michael row should have changed state - but the bug
-        // identified in RT-36670 shows that row 0 is also selected
+        // identified in JDK-8096643 shows that row 0 is also selected
         assertFalse(row0CheckBox.isSelected());
         assertTrue(row1CheckBox.isSelected());
         assertTrue(row2CheckBox.isSelected());
@@ -3625,10 +3625,10 @@ public class TableViewTest {
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
-        // move as per first instructions in RT-37057. Note that the moveColumn
+        // move as per first instructions in JDK-8095341. Note that the moveColumn
         // positions seem counter-intuitive. I got these numbers by printing
         // the positions when in a manual test run (using the test script in
-        // RT-37057).
+        // JDK-8095341).
 
         // Drag column 1 to slot 1. As expected, the column position doesn't change.
         TableColumnHeaderUtil.moveColumn(column1, 0);
@@ -3688,9 +3688,9 @@ public class TableViewTest {
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
-        // move as per first instructions in RT-37057. The dragOffset and sceneX
+        // move as per first instructions in JDK-8095341. The dragOffset and sceneX
         // values passed into moveColumn have been derived from a manual run of
-        // the test application attached to RT-37057 with debug output printed
+        // the test application attached to JDK-8095341 with debug output printed
         // in TableColumnHeader
 
         // Drag column 1 to slot 1. As expected, the column position doesn't change.
@@ -3751,10 +3751,10 @@ public class TableViewTest {
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
-        // move as per second instructions in RT-37057. Note that the moveColumn
+        // move as per second instructions in JDK-8095341. Note that the moveColumn
         // positions seem counter-intuitive. I got these numbers by printing
         // the positions when in a manual test run (using the test script in
-        // RT-37057).
+        // JDK-8095341).
 
         // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions
         TableColumnHeaderUtil.moveColumn(column1, 1);
@@ -3811,9 +3811,9 @@ public class TableViewTest {
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
-        // move as per second instructions in RT-37057. The dragOffset and sceneX
+        // move as per second instructions in JDK-8095341. The dragOffset and sceneX
         // values passed into moveColumn have been derived from a manual run of
-        // the test application attached to RT-37057 with debug output printed
+        // the test application attached to JDK-8095341 with debug output printed
         // in TableColumnHeader
 
         // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions
@@ -4481,7 +4481,7 @@ public class TableViewTest {
 
     /**************************************************************************
      *
-     * Tests (and related code) for RT-38892
+     * Tests (and related code) for JDK-8096633
      *
      *************************************************************************/
 
@@ -6328,5 +6328,55 @@ public class TableViewTest {
         table.edit(0, col);
 
         assertEquals(1, startEditCounter.get());
+    }
+
+    @Test
+    void testReSetItemsWithSameItemShouldUpdateCellIndices() {
+        table.setFixedCellSize(24);
+
+        final TableColumn<String, String> c = new TableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+        table.getColumns().add(c);
+
+        for (int i = 0; i < 60; i++) {
+            table.getItems().add(String.valueOf(i));
+        }
+        String lastItem = "UniqueLastItem";
+        table.getItems().add(lastItem);
+
+        stageLoader = new StageLoader(table);
+        stageLoader.getStage().setWidth(300);
+        stageLoader.getStage().setHeight(300);
+
+        // Scroll to the bottom.
+        VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        scrollBar.setValue(1);
+
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<String> row = VirtualFlowTestUtils.getCell(table, 60);
+        assertEquals(lastItem, row.getItem());
+
+        List<TableCell<String, String>> cells = row.getChildrenUnmodifiable().stream()
+                .filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+
+        for (TableCell<String, String> cell : cells) {
+            assertEquals(60, cell.getIndex());
+        }
+
+        // Re-set the items, but reuse one item from the previous items list.
+        table.setItems(FXCollections.observableArrayList(lastItem));
+
+        Toolkit.getToolkit().firePulse();
+
+        row = VirtualFlowTestUtils.getCell(table, 0);
+        assertEquals(lastItem, row.getItem());
+
+        cells = row.getChildrenUnmodifiable().stream()
+                .filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+
+        for (TableCell<String, String> cell : cells) {
+            assertEquals(0, cell.getIndex());
+        }
     }
 }

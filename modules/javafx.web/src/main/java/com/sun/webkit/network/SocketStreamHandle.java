@@ -103,10 +103,7 @@ final class SocketStreamHandle {
         if (webPage == null) {
             logger.finest("{0} is not associated with any web "
                     + "page, aborted", this);
-            // In theory we could pump this error through the doRun()'s
-            // error handling code but in that case that error handling
-            // code would have to run outside the doPrivileged block,
-            // which is something we want to avoid.
+
             didFail(0, "Web socket is not associated with any web page");
             didClose();
             return;
@@ -189,12 +186,6 @@ final class SocketStreamHandle {
     }
 
     private void connect() throws IOException {
-        @SuppressWarnings("removal")
-        SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkConnect(host, port);
-        }
-
         // The proxy trial logic here is meant to mimic
         // sun.net.www.protocol.http.HttpURLConnection.plainConnect
         boolean success = false;
@@ -411,10 +402,7 @@ final class SocketStreamHandle {
         private final AtomicInteger index = new AtomicInteger(1);
 
         private CustomThreadFactory() {
-            @SuppressWarnings("removal")
-            SecurityManager sm = System.getSecurityManager();
-            group = (sm != null) ? sm.getThreadGroup()
-                    : Thread.currentThread().getThreadGroup();
+            group = Thread.currentThread().getThreadGroup();
         }
 
         @Override

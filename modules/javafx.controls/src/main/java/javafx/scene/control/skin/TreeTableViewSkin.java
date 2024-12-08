@@ -132,7 +132,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         behavior.setOnVerticalUnitScroll(this::verticalUnitScroll);
 
         lh.addChangeListener(control.rootProperty(), (ev) -> {
-            // fix for RT-37853
+            // fix for JDK-8094887
             getSkinnable().edit(-1, null);
             setRoot(getSkinnable().getRoot());
         });
@@ -293,7 +293,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             // which would throw an NPE.  Perhaps we should simply use newRoot instance instead of getRoot().
             rootListener = ListenerHelper.get(this).addEventHandler(getRoot(), TreeItem.<T>treeNotificationEvent(), e -> {
                 if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
-                    // Fix for RT-14842, where the children of a TreeItem were changing,
+                    // Fix for JDK-8114432, where the children of a TreeItem were changing,
                     // but because the overall item count was staying the same, there was
                     // no event being fired to the skin to be informed that the items
                     // had changed. So, here we just watch for the case where the number
@@ -301,10 +301,10 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
                     markItemCountDirty();
                     getSkinnable().requestLayout();
                 } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
-                    // Fix for RT-14971 and RT-15338.
+                    // Fix for JDK-8114657 and JDK-8114610.
                     requestRebuildCells();
                 } else {
-                    // Fix for RT-20090. We are checking to see if the event coming
+                    // Fix for JDK-8115929. We are checking to see if the event coming
                     // from the TreeItem root is an event where the count has changed.
                     EventType<?> eventType = e.getEventType();
                     while (eventType != null) {
@@ -317,7 +317,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
                     }
                 }
 
-                // fix for RT-37853
+                // fix for JDK-8094887
                 getSkinnable().edit(-1, null);
             });
         }

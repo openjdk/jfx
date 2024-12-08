@@ -103,7 +103,6 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.stage.Window;
 import javafx.util.Callback;
-import java.security.AccessControlContext;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1028,7 +1027,7 @@ public abstract class Node implements EventTarget, Styleable {
                         //
                         reapplyCSS();
                     } else {
-                        // RT-31168: reset CssFlag to clean so css will be reapplied if the node is added back later.
+                        // JDK-8123224: reset CssFlag to clean so css will be reapplied if the node is added back later.
                         // If flag is REAPPLY, then reapplyCSS() will just return and the call to
                         // notifyParentsOfInvalidatedCSS() will be skipped thus leaving the node un-styled.
                         cssFlag = CssFlags.CLEAN;
@@ -3914,7 +3913,7 @@ public abstract class Node implements EventTarget, Styleable {
         // actually be TEMP_BOUNDS, so we save off state
         if (getClip() != null
                 // FIXME: All 3D picking is currently ignored by rendering.
-                // Until this is fixed or defined differently (RT-28510),
+                // Until this is fixed or defined differently (JDK-8090485),
                 // we follow this behavior.
                 && !(this instanceof Shape3D) && !(getClip() instanceof Shape3D)) {
             double x1 = bounds.getMinX();
@@ -5459,7 +5458,7 @@ public abstract class Node implements EventTarget, Styleable {
         Node clip = getClip();
         if (clip != null
                 // FIXME: All 3D picking is currently ignored by rendering.
-                // Until this is fixed or defined differently (RT-28510),
+                // Until this is fixed or defined differently (JDK-8090485),
                 // we follow this behavior.
                 && !(this instanceof Shape3D) && !(clip instanceof Shape3D)) {
             final double dirX = dir.x;
@@ -8656,6 +8655,23 @@ public abstract class Node implements EventTarget, Styleable {
         return getScene().traverse(this, dir, method);
     }
 
+    /**
+     * Requests to move the focus from this {@code Node} in the specified direction.
+     * The {@code Node} serves as a reference point and does not have to be focused or focusable.
+     * A successful traversal results in a new {@code Node} being focused.
+     * <p>
+     * This method is expected to be called in response to a {@code KeyEvent}; therefore the {@code Node}
+     * receiving focus will have the {@link #focusVisibleProperty() focusVisible} property set.
+     *
+     * @param direction the direction of focus traversal, non-null
+     * @return {@code true} if traversal was successful
+     * @since 24
+     */
+    public final boolean requestFocusTraversal(TraversalDirection direction) {
+        Direction d = Direction.of(direction);
+        return traverse(d, TraversalMethod.KEY);
+    }
+
     //--------------------------
     //  Private Implementation
     //--------------------------
@@ -9814,7 +9830,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @return  The Styles that match this CSS property for the given Node. The
      * list is sorted by descending specificity.
      */
-    // SB-dependency: RT-21096 has been filed to track this
+    // SB-dependency: JDK-8092096 has been filed to track this
     static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
          return CssStyleHelper.getMatchingStyles(styleable, cssMetaData);
     }
@@ -9831,9 +9847,9 @@ public abstract class Node implements EventTarget, Styleable {
      }
 
      /*
-      * RT-17293
+      * JDK-8091202
       */
-     // SB-dependency: RT-21096 has been filed to track this
+     // SB-dependency: JDK-8092096 has been filed to track this
      final void setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
          if (styleMap != null) getProperties().put("STYLEMAP", styleMap);
          else getProperties().remove("STYLEMAP");
@@ -9848,7 +9864,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
      * @return The Map populated with matching styles.
      */
-    // SB-dependency: RT-21096 has been filed to track this
+    // SB-dependency: JDK-8092096 has been filed to track this
     Map<StyleableProperty<?>,List<Style>> findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
 
         Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(styleMap, this);
@@ -9989,7 +10005,7 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // RT-36838 - don't reapply CSS in the middle of an update
+        // JDK-8095580 - don't reapply CSS in the middle of an update
         if (cssFlag == CssFlags.UPDATE) {
             cssFlag = CssFlags.REAPPLY;
             notifyParentsOfInvalidatedCSS();
@@ -10162,7 +10178,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (cssFlag != CssFlags.REAPPLY) cssFlag = CssFlags.UPDATE;
 
         //
-        // RT-28394 - need to see if any ancestor has a flag UPDATE
+        // JDK-8115093 - need to see if any ancestor has a flag UPDATE
         // If so, process css from the top-most CssFlags.UPDATE node
         // since my ancestor's styles may affect mine.
         //
@@ -10578,26 +10594,6 @@ public abstract class Node implements EventTarget, Styleable {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
-                @SuppressWarnings("removal")
-                @Override public AccessControlContext getAccessControlContext() {
-                    Scene scene = getScene();
-                    if (scene == null) {
-                        /* This can happen during the release process of an accessible object. */
-                        throw new RuntimeException("Accessbility requested for node not on a scene");
-                    }
-                    if (scene.getPeer() != null) {
-                        return scene.getPeer().getAccessControlContext();
-                    } else {
-                        /* In some rare cases the accessible for a Node is needed
-                         * before its scene is made visible. For example, the screen reader
-                         * might ask a Menu for its ContextMenu before the ContextMenu
-                         * is made visible. That is a problem because the Window for the
-                         * ContextMenu is only created immediately before the first time
-                         * it is shown.
-                         */
-                        return scene.acc;
-                    }
-                }
                 @Override public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
                     return queryAccessibleAttribute(attribute, parameters);
                 }

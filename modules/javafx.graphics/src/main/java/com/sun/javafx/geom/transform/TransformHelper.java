@@ -49,7 +49,7 @@ public class TransformHelper {
         double srcMaxY = src.getMaxY();
         double srcMaxZ = src.getMaxZ();
 
-        // TODO: Optimize... (RT-26884)
+        // TODO: Optimize... (JDK-8092003)
         tempV3d.set(srcMaxX, srcMaxY, srcMaxZ);
         tempV3d = tx.transform(tempV3d, tempV3d);
         double minX = tempV3d.x;

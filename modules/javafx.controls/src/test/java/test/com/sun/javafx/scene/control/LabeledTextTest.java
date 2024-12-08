@@ -383,7 +383,7 @@ public class LabeledTextTest {
         stage.setScene(scene);
         stage.show();
 
-        // If the actual size is 10 * 1.5 * 1.5 = 22.5, then we've encountered RT-37787!
+        // If the actual size is 10 * 1.5 * 1.5 = 22.5, then we've encountered JDK-8093937!
         double expected = Font.getDefault().getSize() * 1.5;
         double actual = label.getFont().getSize();
         assertEquals(expected, actual, .1);

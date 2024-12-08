@@ -312,7 +312,7 @@ public abstract class NGShape extends NGNode {
 
     @Override
     protected void geometryChanged() {
-        // TODO: consider caching the stroke shape (RT-26940)
+        // TODO: consider caching the stroke shape (JDK-8090812)
         super.geometryChanged();
         if (shapeRep != null) {
             shapeRep.invalidate(LOCATION_AND_GEOMETRY);

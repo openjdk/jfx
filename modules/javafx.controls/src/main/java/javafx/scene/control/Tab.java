@@ -693,7 +693,7 @@ public class Tab implements EventTarget, Styleable {
         boolean disabled = isDisable() || (getTabPane() != null && getTabPane().isDisabled());
         setDisabled(disabled);
 
-        // Fix for RT-24658 - content should be disabled if the tab is disabled
+        // Fix for JDK-8094969 - content should be disabled if the tab is disabled
         Node content = getContent();
         if (content != null) {
             content.setDisable(disabled);

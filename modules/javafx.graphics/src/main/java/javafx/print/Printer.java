@@ -68,22 +68,12 @@ public final class Printer {
      * @return may be null if there are no printers.
      */
     public static ObservableSet<Printer> getAllPrinters() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPrintJobAccess();
-        }
         return PrintPipeline.getPrintPipeline().getAllPrinters();
     }
 
     private static ReadOnlyObjectWrapper<Printer> defaultPrinter;
 
     private static ReadOnlyObjectWrapper<Printer> defaultPrinterImpl() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPrintJobAccess();
-        }
         Printer p = PrintPipeline.getPrintPipeline().getDefaultPrinter();
         if (defaultPrinter == null) {
             defaultPrinter =

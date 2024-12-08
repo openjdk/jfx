@@ -25,7 +25,6 @@
 
 package com.sun.javafx.application;
 
-import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.SecurityUtil;
 import com.sun.javafx.application.preferences.PlatformPreferences;
@@ -614,26 +613,7 @@ public class PlatformImpl {
     }
 
     public static boolean isSupported(ConditionalFeature feature) {
-        final boolean supported = isSupportedImpl(feature);
-        if (supported && (feature == ConditionalFeature.TRANSPARENT_WINDOW)) {
-            // some features require the application to have the corresponding
-            // permissions, if the application doesn't have them, the platform
-            // will behave as if the feature wasn't supported
-            @SuppressWarnings("removal")
-            final SecurityManager securityManager =
-                    System.getSecurityManager();
-            if (securityManager != null) {
-                try {
-                    securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
-                } catch (final SecurityException e) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        return supported;
+        return isSupportedImpl(feature);
    }
 
     public static interface FinishListener {
@@ -949,7 +929,7 @@ public class PlatformImpl {
      * @param preferences the initial set of platform preferences
      */
     public static void initPreferences(Map<String, Class<?>> platformKeys,
-                                       Map<String, PreferenceMapping<?>> platformKeyMappings,
+                                       Map<String, PreferenceMapping<?, ?>> platformKeyMappings,
                                        Map<String, Object> preferences) {
         platformPreferences = new PlatformPreferences(platformKeys, platformKeyMappings);
         platformPreferences.update(preferences);

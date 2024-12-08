@@ -176,20 +176,20 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         lh.addChangeListener(textField.focusedProperty(), (op) -> {
             boolean hasFocus = textField.isFocused();
 
-            // RT-21454 starts here
+            // JDK-8120120 starts here
             if (! hasFocus) {
                 pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, false);
             } else {
                 pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
             }
-            // --- end of RT-21454
+            // --- end of JDK-8120120
         });
 
         textField.focusTraversableProperty().bind(control.editableProperty());
 
         // Following code borrowed from ComboBoxPopupControl, to resolve the
-        // issue initially identified in RT-36902, but specifically (for Spinner)
-        // identified in RT-40625
+        // issue initially identified in JDK-8094715, but specifically (for Spinner)
+        // identified in JDK-8092584
         ParentHelper.setTraversalEngine(control,
                 new ParentTraversalEngine(control, new Algorithm() {
 
@@ -376,7 +376,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
     }
 
     // Overridden so that we use the textfield as the baseline, rather than the arrow.
-    // See RT-30754 for more information.
+    // See JDK-8115826 for more information.
     /** {@inheritDoc} */
     @Override protected double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         return textField.getLayoutBounds().getMinY() + textField.getLayoutY() + textField.getBaselineOffset();

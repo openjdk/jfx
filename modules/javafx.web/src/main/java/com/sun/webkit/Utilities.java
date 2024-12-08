@@ -27,7 +27,6 @@ package com.sun.webkit;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.AccessControlContext;
 import java.util.List;
 import java.util.Set;
 
@@ -89,14 +88,11 @@ public abstract class Utilities {
         "sun.misc"
     );
 
-    @SuppressWarnings("removal")
     private static Object fwkInvokeWithContext(final Method method,
                                                final Object instance,
                                                final Object[] args,
-                                               Object accObj)
+                                               Object dummyAcc) // UNUSED
             throws Throwable {
-
-        AccessControlContext acc = (AccessControlContext) accObj;
 
         final Class<?> clazz = method.getDeclaringClass();
         if (clazz.equals(java.lang.Class.class)) {

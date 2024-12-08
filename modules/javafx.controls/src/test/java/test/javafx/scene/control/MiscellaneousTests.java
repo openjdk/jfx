@@ -52,7 +52,7 @@ public class MiscellaneousTests {
         // Make sure that a control added and removed from the scene-graph before css is processed
         // gets css processed when it is added back in.
 
-        Button button = new Button("RT-31168");
+        Button button = new Button("JDK-8123224");
         Rectangle rectangle = new Rectangle(50,50);
 
         Group container = new Group();

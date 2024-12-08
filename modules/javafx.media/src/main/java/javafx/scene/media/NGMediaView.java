@@ -116,7 +116,7 @@ class NGMediaView extends NGNode {
             newH = h;
         } else if (preserveRatio) {
             // FIXME: we should get the aspect ratio from the Media itself instead of assuming
-            // (RT-26934)
+            // (JDK-8092177)
             if (fitWidth <= 0.0) {
                 newW = h > 0 ? w * (fitHeight / h) : 0.0f;
                 newH = fitHeight;

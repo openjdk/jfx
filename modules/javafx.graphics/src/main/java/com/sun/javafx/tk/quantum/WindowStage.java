@@ -26,8 +26,6 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
-import java.security.Permission;
-import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -51,7 +49,6 @@ import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
-import static com.sun.javafx.FXPermissions.*;
 
 public class WindowStage extends GlassStage {
 
@@ -241,9 +238,8 @@ public class WindowStage extends GlassStage {
         return style;
     }
 
-    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc) {
+    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa) {
         ViewScene scene = new ViewScene(depthBuffer, msaa);
-        scene.setSecurityContext(acc);
         return scene;
     }
 
@@ -258,7 +254,7 @@ public class WindowStage extends GlassStage {
             // Nothing to do
             return;
         }
-        // RT-21465, RT-28490
+        // JDK-8126842, JDK-8124937
         // We don't support scene changes in full-screen mode.
         exitFullScreen();
         super.setScene(scene);
@@ -499,7 +495,7 @@ public class WindowStage extends GlassStage {
                 windowsSetEnabled(true);
             }
             // Note: This method is required to workaround a glass issue
-            // mentioned in RT-12607
+            // mentioned in JDK-8112637
             // If the hiding stage is unfocusable (i.e. it's a PopupStage),
             // then we don't do this to avoid stealing the focus.
             // JDK-8210973: APPLICATION_MODAL window can have owner.
@@ -572,14 +568,7 @@ public class WindowStage extends GlassStage {
         }
 
         if (alwaysOnTop) {
-            if (hasPermission(SET_WINDOW_ALWAYS_ON_TOP_PERMISSION)) {
-                platformWindow.setLevel(Level.FLOATING);
-            } else {
-                alwaysOnTop = false;
-                if (stageListener != null) {
-                    stageListener.changedAlwaysOnTop(alwaysOnTop);
-                }
-            }
+            platformWindow.setLevel(Level.FLOATING);
         } else {
             platformWindow.setLevel(Level.NORMAL);
         }
@@ -591,11 +580,10 @@ public class WindowStage extends GlassStage {
         // note: for child windows this is ignored and we fail silently
     }
 
-    // Return true if this stage is trusted for full screen - doesn't have a
-    // security manager, or a permission check doesn't result in a security
-    // exeception.
+    // TODO: JDK-8344111: Consider removing this obsolete method
+    // Return true if this stage is trusted for full screen (it always is)
     boolean isTrustedFullScreen() {
-        return hasPermission(UNRESTRICTED_FULL_SCREEN_PERMISSION);
+        return true;
     }
 
     // Safely exit full screen
@@ -603,19 +591,7 @@ public class WindowStage extends GlassStage {
         setFullScreen(false);
     }
 
-    private boolean hasPermission(Permission perm) {
-        try {
-            @SuppressWarnings("removal")
-            final SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                sm.checkPermission(perm, getAccessControlContext());
-            }
-            return true;
-        } catch (SecurityException se) {
-            return false;
-        }
-    }
-
+    // TODO: JDK-8344111: Consider removing this obsolete field
     private boolean fullScreenFromUserEvent = false;
 
     private KeyCombination savedFullScreenExitKey = null;
@@ -757,7 +733,7 @@ public class WindowStage extends GlassStage {
     }
 
     @Override public void toFront() {
-        platformWindow.requestFocus(); // RT-17836
+        platformWindow.requestFocus(); // JDK-8128222
         platformWindow.toFront();
     }
 
@@ -880,7 +856,7 @@ public class WindowStage extends GlassStage {
             ((WindowStage) owner).setEnabled(enabled);
         }
         /*
-         * RT-17588 - exit if stage is closed from under us as
+         * JDK-8128168 - exit if stage is closed from under us as
          *            any further access to the Glass layer
          *            will throw an exception
          */
@@ -895,7 +871,7 @@ public class WindowStage extends GlassStage {
        return platformWindow.getRawHandle();
     }
 
-    // Note: This method is required to workaround a glass issue mentioned in RT-12607
+    // Note: This method is required to workaround a glass issue mentioned in JDK-8112637
     protected void requestToFront() {
         if (platformWindow != null) {
             platformWindow.toFront();

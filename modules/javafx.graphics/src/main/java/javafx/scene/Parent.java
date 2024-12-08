@@ -760,7 +760,7 @@ public abstract class Parent extends Node {
                        final Scene oldScene, final SubScene oldSubScene) {
 
         if (oldScene != null && newScene == null) {
-            // RT-34863 - clean up CSS cache when Parent is removed from scene-graph
+            // JDK-8094828 - clean up CSS cache when Parent is removed from scene-graph
             StyleManager.getInstance().forget(this);
 
             // Clear removed list on parent who is no longer in a scene
@@ -1285,7 +1285,7 @@ public abstract class Parent extends Node {
                 // styleManager will get recreated in NodeHelper.processCSS.
                 StyleManager.getInstance().stylesheetsChanged(Parent.this, c);
 
-                // RT-9784 - if stylesheet is removed, reset styled properties to
+                // JDK-8110059 - if stylesheet is removed, reset styled properties to
                 // their initial value.
                 c.reset();
                 while(c.next()) {
@@ -1322,7 +1322,7 @@ public abstract class Parent extends Node {
      *
      * Note: This method MUST only be called via its accessor method.
      */
-     // SB-dependency: RT-21247 has been filed to track this
+     // SB-dependency: JDK-8091352 has been filed to track this
     private List<String> doGetAllParentStylesheets() {
 
         List<String> list = null;
@@ -1359,7 +1359,7 @@ public abstract class Parent extends Node {
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
 
-        // RT-29254 - If DIRTY_BRANCH, pass control to Node#processCSS. This avoids calling NodeHelper.processCSS on
+        // JDK-8124385 - If DIRTY_BRANCH, pass control to Node#processCSS. This avoids calling NodeHelper.processCSS on
         // this node and all of its children when css doesn't need updated, recalculated, or reapplied.
         if (cssFlag == CssFlags.DIRTY_BRANCH) {
             super.processCSS();
@@ -1373,7 +1373,7 @@ public abstract class Parent extends Node {
         if (children.isEmpty()) return;
 
         //
-        // RT-33103
+        // JDK-8117203
         //
         // It is possible for a child to be removed from children in the middle of
         // the following loop. Iterating over the children may result in an IndexOutOfBoundsException.
@@ -1394,7 +1394,7 @@ public abstract class Parent extends Node {
 
             // If the parent styles are being updated, recalculated or
             // reapplied, then make sure the children get the same treatment.
-            // Unless the child is already more dirty than this parent (RT-29074).
+            // Unless the child is already more dirty than this parent (JDK-8124468).
             if(CssFlags.UPDATE.compareTo(child.cssFlag) > 0) {
                 child.cssFlag = CssFlags.UPDATE;
             }
@@ -1847,7 +1847,7 @@ public abstract class Parent extends Node {
     }
 
     // Note: this marks the currently processed child in terms of transformed bounds. In rare situations like
-    // in RT-37879, it might happen that the child bounds will be marked as invalid. Due to optimizations,
+    // in JDK-8096304, it might happen that the child bounds will be marked as invalid. Due to optimizations,
     // the invalidation must *always* be propagated to the parent, because the parent with some transformation
     // calls child's getTransformedBounds non-idenitity transform and the child's transformed bounds are thus not validated.
     // This does not apply to the call itself however, because the call will yield the correct result even if something
