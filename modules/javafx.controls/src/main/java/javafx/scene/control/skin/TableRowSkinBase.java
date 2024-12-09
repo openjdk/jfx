@@ -315,12 +315,13 @@ public abstract class TableRowSkinBase<T,
         int index = control.getIndex();
         if (index < 0/* || row >= itemsProperty().get().size()*/) return;
 
+        double fixedCellSize = getFixedCellSize();
         for (int column = 0, max = cells.size(); column < max; column++) {
             R tableCell = cells.get(column);
             TableColumnBase<T, ?> tableColumn = getTableColumn(tableCell);
 
             boolean isVisible = true;
-            if (getFixedCellSize() > 0) {
+            if (fixedCellSize > 0) {
                 // we determine if the cell is visible, and if not we have the
                 // ability to take it out of the scenegraph to help improve
                 // performance. However, we only do this when there is a
@@ -333,13 +334,13 @@ public abstract class TableRowSkinBase<T,
                 isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
 
                 y = 0;
-                height = getFixedCellSize();
+                height = fixedCellSize;
             } else {
                 height = h;
             }
 
             if (isVisible) {
-                if (getFixedCellSize() > 0 && tableCell.getParent() == null) {
+                if (fixedCellSize > 0 && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
                 // Note: prefWidth() has to be called only after the tableCell is added to the tableRow, if it wasn't
@@ -417,12 +418,10 @@ public abstract class TableRowSkinBase<T,
                 tableCell.requestLayout();
             } else {
                 width = tableCell.prefWidth(height);
-                if (getFixedCellSize() > 0) {
-                    // we only add/remove to the scenegraph if the fixed cell
-                    // length support is enabled - otherwise we keep all
-                    // TableCells in the scenegraph
-                    getChildren().remove(tableCell);
-                }
+                // we only add/remove to the scenegraph if the fixed cell
+                // length support is enabled - otherwise we keep all
+                // TableCells in the scenegraph
+                getChildren().remove(tableCell);
             }
 
             x += width;
