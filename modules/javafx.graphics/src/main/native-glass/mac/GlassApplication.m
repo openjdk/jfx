@@ -235,6 +235,11 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                                                                      name:NSApplicationDidChangeScreenParametersNotification
                                                                    object:nil];
 
+                        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                              selector:@selector(platformPreferencesDidChange)
+                                                              name:NSPreferredScrollerStyleDidChangeNotification
+                                                              object:nil];
+
                         [[NSDistributedNotificationCenter defaultCenter] addObserver:self
                                                                          selector:@selector(platformPreferencesDidChange)
                                                                          name:@"AppleInterfaceThemeChangedNotification"

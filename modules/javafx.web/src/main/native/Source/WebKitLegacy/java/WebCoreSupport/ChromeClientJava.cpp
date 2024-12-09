@@ -784,7 +784,7 @@ void ChromeClientJava::contentsSizeChanged(LocalFrame&, const IntSize&) const
 void ChromeClientJava::invalidateRootView(const IntRect&)
 {
     // Nothing to do here as all necessary repaints are scheduled
-    // by ChromeClientJava::scroll(). See also RT-29123.
+    // by ChromeClientJava::scroll(). See also JDK-8124810.
 }
 
 void ChromeClientJava::invalidateContentsAndRootView(const IntRect& updateRect)

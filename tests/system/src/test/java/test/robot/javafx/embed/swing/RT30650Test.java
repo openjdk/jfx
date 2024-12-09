@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 /**
- * RT-30650: SwingNode is not Resizable
+ * JDK-8120292: SwingNode is not Resizable
  */
 @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class RT30650Test {

@@ -527,7 +527,7 @@ final public class StyleManager {
         if (parent == null) return;
 
         synchronized (styleLock) {
-            // RT-34863 - clean up CSS cache when Parent is removed from scene-graph
+            // JDK-8094828 - clean up CSS cache when Parent is removed from scene-graph
             CacheContainer removedContainer = cacheContainerMap.remove(parent);
             if (removedContainer != null) {
                 removedContainer.clearCache();
@@ -758,7 +758,7 @@ final public class StyleManager {
                 if (image == null) {
                     try {
                         image = new Image(url);
-                        // RT-31865
+                        // JDK-8117908
                         if (image.isError()) {
                             final PlatformLogger logger = getLogger();
                             if (logger != null && logger.isLoggable(Level.WARNING)) {
@@ -965,7 +965,7 @@ final public class StyleManager {
 
                     if ((url != null) && !parse) {
                         try {
-                            // RT-36332: if loadBinary throws an IOException, make sure to try .css
+                            // JDK-8095691: if loadBinary throws an IOException, make sure to try .css
                             stylesheet = Stylesheet.loadBinary(url);
                         } catch (IOException ignored) {
                         }
@@ -1191,7 +1191,7 @@ final public class StyleManager {
      * @param scene Only used in CssError for tracking back to the scene that loaded the stylesheet
      * @param url  The file URL, either relative or absolute, as a String.
      */
-    // For RT-20643
+    // For JDK-8127659
     public void addUserAgentStylesheet(Scene scene, String url) {
 
         final String fname = (url != null) ? url.trim() : null;
@@ -1276,7 +1276,7 @@ final public class StyleManager {
      * @param scene Only used in CssError for tracking back to the scene that loaded the stylesheet
      * @param url  The file URL, either relative or absolute, as a String.
      */
-    // For RT-20643
+    // For JDK-8127659
     public void setDefaultUserAgentStylesheet(Scene scene, String url) {
 
         final String fname = (url != null) ? url.trim() : null;
@@ -1467,7 +1467,7 @@ final public class StyleManager {
                         list.add(container);
                     }
 
-                    // RT-22565: remember that this parent or scene uses this stylesheet.
+                    // JDK-8117492: remember that this parent or scene uses this stylesheet.
                     // Later, if the cache is cleared, the parent or scene is told to
                     // reapply css.
                     container.parentUsers.add(parent);
@@ -1479,7 +1479,7 @@ final public class StyleManager {
                     // stylesheetContainerMap anyway as this will prevent further
                     // attempts to parse the file
                     container = new StylesheetContainer(fname, stylesheet);
-                    // RT-22565: remember that this parent or scene uses this stylesheet.
+                    // JDK-8117492: remember that this parent or scene uses this stylesheet.
                     // Later, if the cache is cleared, the parent or scene is told to
                     // reapply css.
                     container.parentUsers.add(parent);

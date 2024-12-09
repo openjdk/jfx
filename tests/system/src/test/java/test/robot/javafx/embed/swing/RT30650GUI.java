@@ -48,7 +48,7 @@ import javafx.stage.Stage;
 import javax.swing.JPanel;
 
 /**
- * RT-30650: SwingNode is not Resizable
+ * JDK-8120292: SwingNode is not Resizable
  *
  * The scenario: SwingNode contains JPanel. It should be initialized with the same layout bounds.
  * SwingNode is added to StackPane. The JPanel's max size is unbounded, so SwingNode is expected
@@ -89,7 +89,7 @@ public class RT30650GUI extends Application {
         Scene scene = new Scene(pane, SIZE, SIZE);
 
         stage.setScene(scene);
-        stage.setTitle("RT-30650");
+        stage.setTitle("JDK-8120292");
         stage.show();
 
         robot = new Robot();

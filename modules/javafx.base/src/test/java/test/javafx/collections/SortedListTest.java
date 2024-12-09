@@ -195,7 +195,7 @@ public class SortedListTest {
 
 
    /**
-     * A slightly updated test provided by "Kleopatra" (http://javafx-jira.kenai.com/browse/RT-14400)
+     * A slightly updated test provided by "Kleopatra" (JDK-8112763)
      */
     @Test
     public void testSourceIndex() {

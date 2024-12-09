@@ -57,7 +57,7 @@ public class SSELinearConvolvePeer extends SSEEffectPeer<LinearConvolveRenderSta
         setRenderState(lcrstate);
         Rectangle inputBounds = inputs[0].getTransformedBounds(null);
         // If the non-VECTOR loops below could handle clipped output, then
-        // we would not need to call getPassResultBounds twice (RT-27406)
+        // we would not need to call getPassResultBounds twice (JDK-8091117)
         Rectangle dstRawBounds = lcrstate.getPassResultBounds(inputBounds, null);
         Rectangle dstBounds = lcrstate.getPassResultBounds(inputBounds, outputClip);
         setDestBounds(dstBounds);
@@ -91,7 +91,7 @@ public class SSELinearConvolvePeer extends SSEEffectPeer<LinearConvolveRenderSta
         if (!src0Transform.isIdentity() ||
             !dstBounds.contains(dstRawBounds.x, dstRawBounds.y))
         {
-            // RT-27406
+            // JDK-8091117
             // TODO: Fix the optimized loops to deal with non-zero srcxy0
             // and transforms...
             type = PassType.GENERAL_VECTOR;

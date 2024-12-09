@@ -53,7 +53,7 @@ final class SWPresentable extends SWRTTexture implements Presentable {
     public boolean prepare(Rectangle dirtyregion) {
         if (!pState.isViewClosed()) {
             /*
-             * RT-27374
+             * JDK-8092310
              * TODO: make sure the imgrep matches the Pixels.getNativeFormat()
              * TODO: dirty region support
              */

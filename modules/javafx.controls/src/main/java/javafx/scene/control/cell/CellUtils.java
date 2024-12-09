@@ -231,7 +231,7 @@ class CellUtils {
         textField.selectAll();
 
         // requesting focus so that key input can immediately go into the
-        // TextField (see RT-28132)
+        // TextField (see JDK-8117464)
         textField.requestFocus();
     }
 
@@ -244,7 +244,7 @@ class CellUtils {
         final TextField textField = new TextField(getItemText(cell, converter));
 
         // Use onAction here rather than onKeyReleased (with check for Enter),
-        // as otherwise we encounter RT-34685
+        // as otherwise we encounter JDK-8096726
         textField.setOnAction(event -> {
             if (converter == null) {
                 throw new IllegalStateException(

@@ -261,7 +261,7 @@ public class SwingNode extends Node {
              activateLwFrame(newValue);
         });
 
-        //Workaround for RT-34170
+        //Workaround for JDK-8120878
         javafx.scene.text.Font.getFamilies();
     }
 
@@ -848,7 +848,7 @@ public class SwingNode extends Node {
                 mouseClickedAllowed.clear();
             } else if (type == MouseEvent.MOUSE_CLICKED) {
                 if (event.getClickCount() == 1 && !mouseClickedAllowed.contains(event.getButton())) {
-                    // RT-34610: In FX, CLICKED events are generated even after dragging the mouse pointer
+                    // JDK-8122146: In FX, CLICKED events are generated even after dragging the mouse pointer
                     // Note that this is only relevant for single clicks. Double clicks use a smudge factor.
                     return;
                 }

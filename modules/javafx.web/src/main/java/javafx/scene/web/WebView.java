@@ -1061,7 +1061,7 @@ final public class WebView extends Parent {
             return;
         }
 
-        // RT-24511
+        // JDK-8116116
         EventType<? extends MouseEvent> type = ev.getEventType();
         double x = ev.getX();
         double y = ev.getY();

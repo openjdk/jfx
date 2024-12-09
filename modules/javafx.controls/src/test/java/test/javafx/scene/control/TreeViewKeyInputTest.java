@@ -828,7 +828,7 @@ public class TreeViewKeyInputTest {
 
 
     /***************************************************************************
-     * Tests for discontinuous multiple selection (RT-18952)
+     * Tests for discontinuous multiple selection (JDK-8127476)
      **************************************************************************/
 
     // Test 1

@@ -79,7 +79,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         handleFocusChange();
 
         focusOwnerListener = (observable, oldValue, newValue) -> {
-            // RT-23699: The selection is now only affected when the TextField
+            // JDK-8116975: The selection is now only affected when the TextField
             // gains or loses focus within the Scene, and not when the whole
             // stage becomes active or inactive.
             if (newValue == textField) {

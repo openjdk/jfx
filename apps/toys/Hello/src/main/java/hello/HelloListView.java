@@ -243,7 +243,7 @@ public class HelloListView extends Application implements InvalidationListener {
         tabPane.getTabs().add(cellEditingTab);
 
         // Cell Editing Tab
-        Tab disappearingNodesTab = new Tab("RT-12822");
+        Tab disappearingNodesTab = new Tab("JDK-8112018");
         buildDisappearingNodesTab(disappearingNodesTab);
         tabPane.getTabs().add(disappearingNodesTab);
 
