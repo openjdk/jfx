@@ -1367,33 +1367,6 @@ public abstract class PrismFontFactory implements FontFactory {
                                      float size,
                                      boolean register,
                                      boolean loadAll) {
-
-        // Be extra conscious of pending temp file creation and resourcefully
-        // handle the temp file resources, among other things.
-        FontFileWriter.FontTracker tracker =
-            FontFileWriter.FontTracker.getTracker();
-        boolean acquired = false;
-        try {
-            acquired = tracker.acquirePermit();
-            if (!acquired) {
-                // Timed out waiting for resources.
-                return null;
-            }
-            return loadEmbeddedFont0(name, fontStream, size, register, loadAll);
-        } catch (InterruptedException e) {
-            // Interrupted while waiting to acquire a permit.
-            return null;
-        } finally {
-            if (acquired) {
-                tracker.releasePermit();
-            }
-        }
-    }
-
-    private PGFont[] loadEmbeddedFont0(String name, InputStream fontStream,
-                                       float size,
-                                       boolean register,
-                                       boolean loadAll) {
         PrismFontFile[] fr = null;
         FontFileWriter fontWriter = new FontFileWriter();
         try {
