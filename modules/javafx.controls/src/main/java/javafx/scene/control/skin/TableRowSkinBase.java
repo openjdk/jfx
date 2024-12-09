@@ -74,7 +74,7 @@ public abstract class TableRowSkinBase<T,
     // There appears to be a memory leak when using the stub toolkit. Therefore,
     // to prevent tests from failing we disable the animations below when the
     // stub toolkit is being used.
-    // Filed as RT-29163.
+    // Filed as JDK-8120657.
     private static boolean IS_STUB_TOOLKIT = Toolkit.getToolkit().toString().contains("StubToolkit");
 
     // lets save the CPU and not do animations when on embedded platforms
@@ -149,7 +149,7 @@ public abstract class TableRowSkinBase<T,
 
 
         // use invalidation listener here to update even when item equality is true
-        // (e.g. see RT-22463)
+        // (e.g. see JDK-8098235)
         registerInvalidationListener(control.itemProperty(), o -> requestCellUpdate());
         registerChangeListener(control.indexProperty(), e -> requestCellUpdate());
     }
@@ -270,7 +270,7 @@ public abstract class TableRowSkinBase<T,
                     if (disclosureWidth > defaultDisclosureWidth) {
                         maxDisclosureWidthMap.put(treeColumn, disclosureWidth);
 
-                        // RT-36359: The recorded max width of the disclosure node
+                        // JDK-8094321: The recorded max width of the disclosure node
                         // has increased. We need to go back and request all
                         // earlier rows to update themselves to take into account
                         // this increased indentation.
@@ -294,7 +294,7 @@ public abstract class TableRowSkinBase<T,
         double height;
 
         /**
-         * RT-26743:TreeTableView: Vertical Line looks unfinished.
+         * JDK-8125142:TreeTableView: Vertical Line looks unfinished.
          * We used to not do layout on cells whose row exceeded the number
          * of items, but now we do so as to ensure we get vertical lines
          * where expected in cases where the vertical height exceeds the
@@ -334,7 +334,7 @@ public abstract class TableRowSkinBase<T,
                     getChildren().add(tableCell);
                 }
 
-                // Added for RT-32700, and then updated for RT-34074.
+                // Added for JDK-8115536, and then updated for JDK-8122708.
                 // We change the alignment from CENTER_LEFT to TOP_LEFT if the
                 // height of the row is greater than the default size, and if
                 // the alignment is the default alignment.
@@ -350,7 +350,7 @@ public abstract class TableRowSkinBase<T,
                 if (! centreContent && origin == null) {
                     tableCell.setAlignment(Pos.TOP_LEFT);
                 }
-                // --- end of RT-32700 fix
+                // --- end of JDK-8115536 fix
 
                 //-----------------------------------------
                 // further indentation code starts here
@@ -400,7 +400,7 @@ public abstract class TableRowSkinBase<T,
                 tableCell.resize(width, height);
                 tableCell.relocate(x, y);
 
-                // Request layout is here as (partial) fix for RT-28684.
+                // Request layout is here as (partial) fix for JDK-8118040.
                 // This does not appear to impact performance...
                 tableCell.requestLayout();
             } else {
@@ -516,10 +516,10 @@ public abstract class TableRowSkinBase<T,
             return fixedCellSize;
         }
 
-        // fix for RT-29080
+        // fix for JDK-8118823
         checkState();
 
-        // Support for RT-18467: making it easier to specify a height for
+        // Support for JDK-8119085: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
         // of the TableCells. Essentially, -fx-cell-size is given higher
         // precedence now
@@ -549,10 +549,10 @@ public abstract class TableRowSkinBase<T,
             return fixedCellSize;
         }
 
-        // fix for RT-29080
+        // fix for JDK-8118823
         checkState();
 
-        // Support for RT-18467: making it easier to specify a height for
+        // Support for JDK-8119085: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
         // of the TableCells. Essentially, -fx-cell-size is given higher
         // precedence now
@@ -616,11 +616,11 @@ public abstract class TableRowSkinBase<T,
 
     private void requestCellUpdate() {
         getSkinnable().requestLayout();
-        // update the index of all children cells (RT-29849).
+        // update the index of all children cells (JDK-8119094).
         // Note that we do this after the TableRow item has been updated,
         // rather than when the TableRow index has changed (as this will be
         // before the row has updated its item). This will result in the
-        // issue highlighted in RT-33602, where the table cell had the correct
+        // issue highlighted in JDK-8115269, where the table cell had the correct
         // item whilst the row had the old item.
         final int newIndex = getSkinnable().getIndex();
         for (int i = 0, max = cells.size(); i < max; i++) {

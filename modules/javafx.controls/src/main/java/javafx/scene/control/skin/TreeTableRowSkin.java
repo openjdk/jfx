@@ -331,7 +331,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         ObjectProperty<Node> graphicProperty = graphicProperty();
         Node newGraphic = graphicProperty == null ? null : graphicProperty.get();
         if (newGraphic != null) {
-            // RT-30466: remove the old graphic
+            // JDK-8118024: remove the old graphic
             if (newGraphic != graphic) {
                 getChildren().remove(graphic);
             }
@@ -356,8 +356,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 disclosureNode.toBack();
             }
 
-            // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
-            // RT-28668: Ensemble tree arrow disappears
+            // JDK-8125162: [TreeView, TreeTableView] can lose arrows while scrolling
+            // JDK-8124825: Ensemble tree arrow disappears
             if (disclosureNode.getScene() != null) {
                 disclosureNode.applyCss();
             }

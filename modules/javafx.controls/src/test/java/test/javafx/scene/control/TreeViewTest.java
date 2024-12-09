@@ -1742,7 +1742,7 @@ public class TreeViewTest {
         sl.dispose();
     }
 
-    //--------- regression testing of JDK-8093144 (was: RT-35857)
+    //--------- regression testing of JDK-8093144 (was: JDK-8093144)
 
     /**
      * Note: 8093144 is not an issue for the current implementation of TreeView/SelectionModel
@@ -1825,7 +1825,7 @@ public class TreeViewTest {
         assertEquals("B", root.getChildren().get(0).getValue());
         assertEquals("C", root.getChildren().get(1).getValue());
     }
-  //--------- end regression testing of JDK-8093144 (was: RT-35857)
+  //--------- end regression testing of JDK-8093144 (was: JDK-8093144)
 
     private int rt_35889_cancel_count = 0;
     @Test public void test_rt35889() {
@@ -3475,7 +3475,7 @@ public class TreeViewTest {
         sl.dispose();
     }
 
-    @Disabled("RT-39674 not yet fixed")
+    @Disabled("JDK-8090273 not yet fixed")
     @Test public void test_rt_39674_dynamicChildren() {
         TreeItem<Integer> root = createTreeItem(0);
         root.setExpanded(true);

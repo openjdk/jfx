@@ -371,7 +371,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
     /** {@inheritDoc} */
     @Override void updateProgress() {
         ProgressIndicator control = getSkinnable();
-        // RT-33789: if the ProgressBar was indeterminate and still is indeterminate, don't update the bar width
+        // JDK-8092936: if the ProgressBar was indeterminate and still is indeterminate, don't update the bar width
         final boolean isIndeterminate = control.isIndeterminate();
         if (!(isIndeterminate && wasIndeterminate)) {
             barWidth = ((int) (control.getWidth() - snappedLeftInset() - snappedRightInset()) * 2 * Math.min(1, Math.max(0, control.getProgress()))) / 2.0F;

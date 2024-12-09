@@ -153,7 +153,7 @@ public class TreeCellEditingTest {
     }
 
     /**
-     * Test do-nothing block in indexChanged (was RT-31165, is JDK-8123482)
+     * Test do-nothing block in indexChanged (was JDK-8123482, is JDK-8123482)
      */
     @ParameterizedTest
     @MethodSource("parameters")
@@ -173,7 +173,7 @@ public class TreeCellEditingTest {
     }
 
     /**
-     * Test do-nothing block in indexChanged (was RT-31165, is JDK-8123482)
+     * Test do-nothing block in indexChanged (was JDK-8123482, is JDK-8123482)
      */
     @ParameterizedTest
     @MethodSource("parameters")

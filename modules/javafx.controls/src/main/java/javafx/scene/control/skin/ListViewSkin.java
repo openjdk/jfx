@@ -72,7 +72,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      *                                                                         *
      **************************************************************************/
 
-    // RT-34744 : IS_PANNABLE will be false unless
+    // JDK-8094803 : IS_PANNABLE will be false unless
     // javafx.scene.control.skin.ListViewSkin.pannable
     // is set to true. This is done in order to make ListView functional
     // on embedded systems with touch screens which do not generate scroll
@@ -131,9 +131,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
                 if (c.wasReplaced()) {
-                    // RT-28397: Support for when an item is replaced with itself (but
+                    // JDK-8118897: Support for when an item is replaced with itself (but
                     // updated internal values that should be shown visually).
-                    // This code was updated for RT-36714 to not update all cells,
+                    // This code was updated for JDK-8097146 to not update all cells,
                     // just those affected by the change
                     for (int i = c.getFrom(); i < c.getTo(); i++) {
                         flow.setCellDirty(i);
@@ -141,7 +141,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
                     break;
                 } else if (c.getRemovedSize() == itemCount) {
-                    // RT-22463: If the user clears out an items list then we
+                    // JDK-8098235: If the user clears out an items list then we
                     // should reset all cells (in particular their contained
                     // items) such that a subsequent addition to the list of
                     // an item which equals the old item (but is rendered
@@ -152,7 +152,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
                 }
             }
 
-            // fix for RT-37853
+            // fix for JDK-8094887
             getSkinnable().edit(-1);
 
             markItemCountDirty();
@@ -547,7 +547,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         int pos = sm.getSelectedIndex();
         flow.scrollTo(pos);
 
-        // Fix for RT-11299
+        // Fix for JDK-8111061
         IndexedCell<T> cell = flow.getFirstVisibleCell();
         if (cell == null || pos < cell.getIndex()) {
             flow.setPosition(pos / (double) getItemCount());
@@ -561,7 +561,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         int pos = sm.getSelectedIndex();
         flow.scrollTo(pos);
 
-        // Fix for RT-11299
+        // Fix for JDK-8111061
         ListCell<T> cell = flow.getLastVisibleCell();
         if (cell == null || cell.getIndex() < pos) {
             flow.setPosition(pos / (double) getItemCount());

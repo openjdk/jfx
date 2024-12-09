@@ -357,12 +357,13 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for Windows.
     @Override
-    public Map<String, PreferenceMapping<?>> getPlatformKeyMappings() {
+    public Map<String, PreferenceMapping<?, ?>> getPlatformKeyMappings() {
         return Map.of(
             "Windows.UIColor.Foreground", new PreferenceMapping<>("foregroundColor", Color.class),
             "Windows.UIColor.Background", new PreferenceMapping<>("backgroundColor", Color.class),
             "Windows.UIColor.Accent", new PreferenceMapping<>("accentColor", Color.class),
             "Windows.UISettings.AdvancedEffectsEnabled", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b),
+            "Windows.UISettings.AutoHideScrollBars", new PreferenceMapping<>("persistentScrollBars", Boolean.class, b -> !b),
             "Windows.SPI.ClientAreaAnimation", new PreferenceMapping<>("reducedMotion", Boolean.class, b -> !b)
         );
     }
@@ -391,7 +392,8 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("Windows.UIColor.AccentLight1", Color.class),
             Map.entry("Windows.UIColor.AccentLight2", Color.class),
             Map.entry("Windows.UIColor.AccentLight3", Color.class),
-            Map.entry("Windows.UISettings.AdvancedEffectsEnabled", Boolean.class)
+            Map.entry("Windows.UISettings.AdvancedEffectsEnabled", Boolean.class),
+            Map.entry("Windows.UISettings.AutoHideScrollBars", Boolean.class)
         );
     }
 }

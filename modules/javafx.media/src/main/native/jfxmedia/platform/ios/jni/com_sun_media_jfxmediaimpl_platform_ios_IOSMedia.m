@@ -77,7 +77,7 @@ extern "C" {
         [pool release];
 
         // TODO: check for errors and return an appropriate code
-        // http://javafx-jira.kenai.com/browse/RT-27005
+        // JDK-8096014
         return ERROR_NONE;
     }
 

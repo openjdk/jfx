@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 
 /**
- * Tests structural aspects of scene graph manipulation. See RT-4095.
+ * Tests structural aspects of scene graph manipulation. See JDK-8106612.
  *
  * The following notation is used in test names to indicate various
  * relationships:
@@ -324,7 +324,7 @@ public class StructureTest {
         });
     }
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST DISABLED
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST DISABLED
 
 //    @Test
 //    public void testSwitchGG() {
@@ -343,7 +343,7 @@ public class StructureTest {
 //        assertNull(child.getScene(), "child.getScene() is null");
 //    }
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST DISABLED
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST DISABLED
 
 //    @Test
 //    public void testSwitchGS() {
@@ -361,7 +361,7 @@ public class StructureTest {
 //        assertNull(child.getScene(), "child.getScene() is null");
 //    }
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST OF STOPGAP POLICY
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST OF STOPGAP POLICY
 
     @Test
     public void testSwitchGGStopgap() {
@@ -393,7 +393,7 @@ public class StructureTest {
     }
 
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST DISABLED
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST DISABLED
 
 //    @Test
 //    public void testSwitchSG() {
@@ -411,7 +411,7 @@ public class StructureTest {
 //        assertSame(p1, child.getScene(), "child.getScene() is p1");
 //    }
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST DISABLED
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST DISABLED
 
 //    @Test
 //    public void testSwitchSS() {

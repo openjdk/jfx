@@ -33,7 +33,7 @@ import java.util.function.Function;
  * A mapping from platform-specific keys to platform-independent keys defined by JavaFX, including a
  * function that maps the platform-specific value to the platform-independent value.
  */
-public record PreferenceMapping<T>(String keyName, Class<T> valueType, Function<T, T> valueMapper) {
+public record PreferenceMapping<T, U>(String keyName, Class<T> valueType, Function<T, U> valueMapper) {
 
     public PreferenceMapping {
         Objects.requireNonNull(keyName, "keyName cannot be null");
@@ -41,12 +41,13 @@ public record PreferenceMapping<T>(String keyName, Class<T> valueType, Function<
         Objects.requireNonNull(valueMapper, "valueMapper cannot be null");
     }
 
+    @SuppressWarnings("unchecked")
     public PreferenceMapping(String keyName, Class<T> valueType) {
-        this(keyName, valueType, Function.identity());
+        this(keyName, valueType, value -> (U)value);
     }
 
     @SuppressWarnings("unchecked")
-    public T map(Object value) {
+    public U map(Object value) {
         if (valueType.isInstance(value)) {
             return valueMapper.apply((T)value);
         }

@@ -879,7 +879,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     // initialization flow.
     JSC::initialize();
     WTF::initializeMainThread();
-    // RT-17330: Allow local loads for substitute data, that is,
+    // JDK-8128763: Allow local loads for substitute data, that is,
     // for content loaded with twkLoad
     WebCore::SecurityPolicy::setLocalLoadPolicy(
             WebCore::SecurityPolicy::AllowLocalLoadsForLocalAndSubstituteData);
@@ -2571,8 +2571,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDispatchInspectorMessageFr
     if (!page) {
         return;
     }
-    //utatodo: seems that RT-21428 will back again
-    //JSDOMWindowBase::commonVM()->timeoutChecker.reset(); // RT-21428
+    //utatodo: seems that JDK-8126646 will back again
+    //JSDOMWindowBase::commonVM()->timeoutChecker.reset(); // JDK-8126646
     page->inspectorController().dispatchMessageFromFrontend(
             String(env, message));
 }

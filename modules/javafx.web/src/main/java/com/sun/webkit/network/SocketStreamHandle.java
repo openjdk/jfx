@@ -103,10 +103,7 @@ final class SocketStreamHandle {
         if (webPage == null) {
             logger.finest("{0} is not associated with any web "
                     + "page, aborted", this);
-            // In theory we could pump this error through the doRun()'s
-            // error handling code but in that case that error handling
-            // code would have to run outside the doPrivileged block,
-            // which is something we want to avoid.
+
             didFail(0, "Web socket is not associated with any web page");
             didClose();
             return;

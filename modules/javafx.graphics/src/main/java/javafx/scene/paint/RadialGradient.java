@@ -460,7 +460,6 @@ public final class RadialGradient extends Paint {
      */
     @Override public int hashCode() {
         // We should be able to just call focusAngle.hashCode(),
-        // see http://javafx-jira.kenai.com/browse/JFXC-4247
         if (hash == 0) {
             long bits = 17;
             bits = 37 * bits + Double.doubleToLongBits(focusAngle);

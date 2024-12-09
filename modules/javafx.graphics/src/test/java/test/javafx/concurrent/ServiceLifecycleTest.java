@@ -242,7 +242,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * a task which is not marked as CANCELLED, such as when it is already run
      * or cancelled). In such a case, the bindings have not fired yet and the
      * state of the service is off. At least, that is what is happening with
-     * RT-20880. The fix allows this test to pass.
+     * JDK-8127414. The fix allows this test to pass.
      */
     @Test
     public void callingRestartInScheduledStateShouldCancelAndReschedule_RT_20880() {
