@@ -213,7 +213,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         super.updateChildren();
 
         updateDisclosureNodeAndGraphic();
-        disclosureNodeDirty = false;
     }
 
     /** {@inheritDoc} */
@@ -225,7 +224,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         if (disclosureNodeDirty) {
             updateDisclosureNodeAndGraphic();
-            disclosureNodeDirty = false;
         }
 
         super.layoutChildren(x, y, w, h);
@@ -254,7 +252,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         super.updateCells();
 
         updateDisclosureNodeAndGraphic();
-        disclosureNodeDirty = false;
     }
 
     /** {@inheritDoc} */
@@ -323,6 +320,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     private void updateDisclosureNodeAndGraphic() {
+        disclosureNodeDirty = false;
+
         if (getSkinnable().isEmpty()) {
             getChildren().remove(graphic);
             return;
