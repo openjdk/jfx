@@ -610,7 +610,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 //        vbar.addChangedListener(ScrollBar.VALUE, listenerY);
 
         ChangeListener<Number> listenerY = (ov, t, t1) -> {
-            setContentY(isVertical() ? 0 : vbar.getValue());
+            setClipLayoutY(isVertical() ? 0 : vbar.getValue());
         };
         vbar.valueProperty().addListener(listenerY);
 
@@ -2414,12 +2414,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // the hbar isn't visible (fix for RT-11666)
         if (isVertical()) {
             if (needBreadthBar) {
-                setContentX(hbar.getValue());
+                setClipLayoutX(hbar.getValue());
             } else {
                 // all cells are now less than the width of the flow,
                 // so we should shift the hbar/clip such that
                 // everything is visible in the viewport.
-                setContentX(0);
+                setClipLayoutX(0);
                 hbar.setValue(0);
             }
         }
@@ -3212,13 +3212,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         this.estimatedSize = 1d;
     }
 
-    private void setContentX(double x) {
+    private void setClipLayoutX(double x) {
         double snappedX = snapPositionX(x);
         clipView.setLayoutX(-snappedX);
         clipRect.setLayoutX(snappedX);
     }
 
-    private void setContentY(double y) {
+    private void setClipLayoutY(double y) {
         double snappedY = snapPositionY(y);
         clipView.setLayoutY(-snappedY);
         clipRect.setLayoutY(snappedY);
