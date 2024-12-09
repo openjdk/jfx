@@ -3074,11 +3074,7 @@ public class Scene implements EventTarget {
                         new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                                 transferMode, null, null, pick(x, y));
 
-                TransferMode tm;
-                try {
-                    tm = dndGesture.processTargetDrop(dragEvent);
-                } finally {
-                }
+                TransferMode tm = dndGesture.processTargetDrop(dragEvent);
 
                 if (dndGesture.source == null) {
                     dndGesture.dragboard = null;
@@ -3212,10 +3208,7 @@ public class Scene implements EventTarget {
                                 mouseEvent.getSource(), target,
                                 MouseEvent.DRAG_DETECTED);
 
-                        try {
-                            fireEvent(target, detectedEvent);
-                        } finally {
-                        }
+                        fireEvent(target, detectedEvent);
                     }
 
                     dragDetectedProcessed();
@@ -3243,10 +3236,7 @@ public class Scene implements EventTarget {
             processingDragDetected();
 
             final EventTarget target = de.getPickResult().getIntersectedNode();
-            try {
-                fireEvent(target != null ? target : Scene.this, me);
-            } finally {
-            }
+            fireEvent(target != null ? target : Scene.this, me);
 
             dragDetectedProcessed();
 
@@ -3504,10 +3494,7 @@ public class Scene implements EventTarget {
                         new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                         transferMode, null, null, null);
 
-                try {
-                    dndGesture.processDropEnd(dragEvent);
-                } finally {
-                }
+                dndGesture.processDropEnd(dragEvent);
                 dndGesture = null;
             }
         }

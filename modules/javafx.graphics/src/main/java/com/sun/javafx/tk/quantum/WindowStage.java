@@ -68,10 +68,6 @@ public class WindowStage extends GlassStage {
     private boolean isInFullScreen = false;
     private boolean isAlwaysOnTop = false;
 
-    // A flag to indicate whether a call was generated from
-    // an allowed input event handler.
-    private boolean inAllowedEventHandler = false;
-
     // An active window is visible && enabled && focusable.
     // The list is maintained in the z-order, so that the last element
     // represents the topmost window (or more accurately, the last
@@ -573,8 +569,6 @@ public class WindowStage extends GlassStage {
         setFullScreen(false);
     }
 
-    private boolean fullScreenFromUserEvent = false;
-
     private KeyCombination savedFullScreenExitKey = null;
 
     public final KeyCombination getSavedFullScreenExitKey() {
@@ -590,61 +584,52 @@ public class WindowStage extends GlassStage {
         View v = platformWindow.getView();
         if (isVisible() && v != null && v.isInFullscreen() != isInFullScreen) {
             if (isInFullScreen) {
-                // Check whether app is full screen trusted or flag is set
-                // indicating that the fullscreen request came from an input
-                // event handler.
-                // If not notify the stageListener to reset fullscreen to false.
-                if (!fullScreenFromUserEvent) {
-                    exitFullScreen();
-                    fullscreenChanged(false);
+                v.enterFullscreen(false, false, false);
+                if (warning != null && warning.inWarningTransition()) {
+                    warning.setView(getViewScene());
                 } else {
-                    v.enterFullscreen(false, false, false);
-                    if (warning != null && warning.inWarningTransition()) {
-                        warning.setView(getViewScene());
-                    } else {
-                        boolean showWarning = true;
+                    boolean showWarning = true;
 
-                        KeyCombination key = null;
-                        String exitMessage = null;
+                    KeyCombination key = null;
+                    String exitMessage = null;
 
-                        if (fxStage != null) {
-                            // copy the user set definitions for later use.
-                            key = fxStage.getFullScreenExitKeyCombination();
+                    if (fxStage != null) {
+                        // copy the user set definitions for later use.
+                        key = fxStage.getFullScreenExitKeyCombination();
 
-                            exitMessage = fxStage.getFullScreenExitHint();
+                        exitMessage = fxStage.getFullScreenExitHint();
+                    }
+
+                    savedFullScreenExitKey =
+                            key == null
+                            ? defaultFullScreenExitKeycombo
+                            : key;
+
+                    if (
+                        // the hint is ""
+                        "".equals(exitMessage) ||
+                        // if the key is NO_MATCH
+                        (savedFullScreenExitKey.equals(KeyCombination.NO_MATCH))
+                            ) {
+                        showWarning = false;
+                    }
+
+                    // the hint is not set, use the key for the message
+                    if (showWarning && exitMessage == null) {
+                        if (key == null) {
+                            exitMessage = RESOURCES.getString("OverlayWarningESC");
+                        } else {
+                            String f = RESOURCES.getString("OverlayWarningKey");
+                            exitMessage = f.format(f, savedFullScreenExitKey.toString());
                         }
+                    }
 
-                        savedFullScreenExitKey =
-                                key == null
-                                ? defaultFullScreenExitKeycombo
-                                : key;
+                    if (showWarning && warning == null) {
+                        setWarning(new OverlayWarning(getViewScene()));
+                    }
 
-                        if (
-                            // the hint is ""
-                            "".equals(exitMessage) ||
-                            // if the key is NO_MATCH
-                            (savedFullScreenExitKey.equals(KeyCombination.NO_MATCH))
-                                ) {
-                            showWarning = false;
-                        }
-
-                        // the hint is not set, use the key for the message
-                        if (showWarning && exitMessage == null) {
-                            if (key == null) {
-                                exitMessage = RESOURCES.getString("OverlayWarningESC");
-                            } else {
-                                String f = RESOURCES.getString("OverlayWarningKey");
-                                exitMessage = f.format(f, savedFullScreenExitKey.toString());
-                            }
-                        }
-
-                        if (showWarning && warning == null) {
-                            setWarning(new OverlayWarning(getViewScene()));
-                        }
-
-                        if (showWarning && warning != null) {
-                            warning.warn(exitMessage);
-                        }
+                    if (showWarning && warning != null) {
+                        warning.warn(exitMessage);
                     }
                 }
             } else {
@@ -654,8 +639,6 @@ public class WindowStage extends GlassStage {
                 }
                 v.exitFullscreen(false);
             }
-            // Reset flag once we are done process fullscreen
-            fullScreenFromUserEvent = false;
         } else if (!isVisible() && warning != null) {
             // if the window is closed - re-open with fresh warning
             warning.cancel();
@@ -675,12 +658,6 @@ public class WindowStage extends GlassStage {
     @Override public void setFullScreen(boolean fullScreen) {
         if (isInFullScreen == fullScreen) {
             return;
-        }
-
-       // Set a flag indicating whether this method was called from
-        // an allowed input event handler.
-        if (isInAllowedEventHandler()) {
-            fullScreenFromUserEvent = true;
         }
 
         GlassStage fsWindow = activeFSWindow.get();
@@ -857,14 +834,6 @@ public class WindowStage extends GlassStage {
             platformWindow.toFront();
             platformWindow.requestFocus();
         }
-    }
-
-    public void setInAllowedEventHandler(boolean inAllowedEventHandler) {
-        this.inAllowedEventHandler = inAllowedEventHandler;
-    }
-
-    private boolean isInAllowedEventHandler() {
-        return inAllowedEventHandler;
     }
 
     @Override
