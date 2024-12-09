@@ -28,8 +28,6 @@ package com.sun.javafx.tk.quantum;
 import javafx.application.Platform;
 import javafx.scene.input.InputMethodRequests;
 import javafx.stage.StageStyle;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
@@ -74,9 +72,6 @@ abstract class GlassScene implements TKScene {
 
     SceneState sceneState;
 
-    @SuppressWarnings("removal")
-    private AccessControlContext accessCtrlCtx = null;
-
     protected GlassScene(boolean depthBuffer, boolean msaa) {
         this.msaa = msaa;
         this.depthBuffer = depthBuffer;
@@ -96,28 +91,6 @@ abstract class GlassScene implements TKScene {
         dropTargetListener = null;
         inputMethodRequests = null;
         sceneState = null;
-    }
-
-    // To be used by subclasses to enforce context check
-    @SuppressWarnings("removal")
-    @Override
-    public final AccessControlContext getAccessControlContext() {
-        if (accessCtrlCtx == null) {
-            throw new RuntimeException("Scene security context has not been set!");
-        }
-        return accessCtrlCtx;
-    }
-
-    @SuppressWarnings("removal")
-    public final void setSecurityContext(AccessControlContext ctx) {
-        if (accessCtrlCtx != null) {
-            throw new RuntimeException("Scene security context has been already set!");
-        }
-        AccessControlContext acc = AccessController.getContext();
-        // JDK doesn't provide public APIs to get ACC intersection,
-        // so using this ugly workaround
-        accessCtrlCtx = GlassStage.doIntersectionPrivilege(
-                () -> AccessController.getContext(), acc, ctx);
     }
 
     @Override

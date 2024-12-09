@@ -238,7 +238,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
     }
 
     // Overridden so that we use the displayNode as the baseline, rather than the arrow.
-    // See RT-30754 for more information.
+    // See JDK-8115826 for more information.
     /** {@inheritDoc} */
     @Override protected double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         if (displayNode == null) {

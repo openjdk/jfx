@@ -408,17 +408,17 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             final T newValue = newTreeItem == null ? null : newTreeItem.getValue();
             final T oldValue = oldTreeItem == null ? null : oldTreeItem.getValue();
 
-            // For the sake of RT-14279, it is important that the order of these
+            // For the sake of JDK-8113226, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
 
-            // RT-35864 - if the index didn't change, then avoid calling updateItem
+            // JDK-8092593 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == newIndex) {
                 if (!isItemChanged(oldValue, newValue)) {
-                    // RT-37054:  we break out of the if/else code here and
+                    // JDK-8096969:  we break out of the if/else code here and
                     // proceed with the code following this, so that we may
                     // still update references, listeners, etc as required.
                     return;
@@ -428,9 +428,9 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             updateTreeItem(newTreeItem);
             updateItem(newValue, false);
         } else {
-            // RT-30484 We need to allow a first run to be special-cased to allow
+            // JDK-8116529 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
-            // the correct visual state to be set up. In particular, in RT-30484
+            // the correct visual state to be set up. In particular, in JDK-8116529
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.

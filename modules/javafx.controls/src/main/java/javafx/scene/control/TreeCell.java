@@ -399,7 +399,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         // out of the editing state.
         // This MUST come before the updateItem call below, otherwise it will
         // call cancelEdit(), resulting in both commit and cancel events being
-        // fired (as identified in RT-29650)
+        // fired (as identified in JDK-8124615)
         super.commitEdit(newValue);
 
         final TreeItem<T> treeItem = getTreeItem();
@@ -488,7 +488,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         // changing state to be selected and/or focused.
         if (isEditing() && newIndex == oldIndex) {
             // no-op
-            // Fix for RT-31165 - if we (needlessly) update the index whilst the
+            // Fix for JDK-8123482 - if we (needlessly) update the index whilst the
             // cell is being edited it will no longer be in an editing state.
             // This means that in certain (common) circumstances that it will
             // appear that a cell is uneditable as, despite being clicked, it
@@ -521,17 +521,17 @@ public class TreeCell<T> extends IndexedCell<T> {
             T newValue = newTreeItem == null ? null : newTreeItem.getValue();
             T oldValue = oldTreeItem == null ? null : oldTreeItem.getValue();
 
-            // For the sake of RT-14279, it is important that the order of these
+            // For the sake of JDK-8113226, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
 
-            // RT-35864 - if the index didn't change, then avoid calling updateItem
+            // JDK-8092593 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == index) {
                 if (!isItemChanged(oldValue, newValue)) {
-                    // RT-37054:  we break out of the if/else code here and
+                    // JDK-8096969:  we break out of the if/else code here and
                     // proceed with the code following this, so that we may
                     // still update references, listeners, etc as required.
                     break outer;
@@ -540,9 +540,9 @@ public class TreeCell<T> extends IndexedCell<T> {
             updateTreeItem(newTreeItem);
             updateItem(newValue, false);
         } else {
-            // RT-30484 We need to allow a first run to be special-cased to allow
+            // JDK-8116529 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
-            // the correct visual state to be set up. In particular, in RT-30484
+            // the correct visual state to be set up. In particular, in JDK-8116529
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.

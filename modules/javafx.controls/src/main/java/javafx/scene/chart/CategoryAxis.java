@@ -291,7 +291,7 @@ public final class CategoryAxis extends Axis<String> {
         double newCategorySpacing = 1;
         if(categories != null) {
             double bVal = (isGapStartAndEnd() ? (categories.size()) : (categories.size() - 1));
-            // RT-14092 flickering  : check if bVal is 0
+            // JDK-8113502 flickering  : check if bVal is 0
             newCategorySpacing = (bVal == 0) ? 1 : (length-getStartMargin()-getEndMargin()) / bVal;
         }
         // if autoranging is off setRange is not called so we update categorySpacing
@@ -459,7 +459,7 @@ public final class CategoryAxis extends Axis<String> {
         // Create unique set of category names
         List<String> categoryNames = new ArrayList<>();
         categoryNames.addAll(allDataCategories);
-        //RT-21141 allDataCategories needs to be updated based on data -
+        //JDK-8127602 allDataCategories needs to be updated based on data -
         // and should maintain the order it originally had for the categories already present.
         // and remove categories not present in data
         for(String cat : allDataCategories) {

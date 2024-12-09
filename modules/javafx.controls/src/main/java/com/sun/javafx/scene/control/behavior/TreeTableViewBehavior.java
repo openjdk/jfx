@@ -91,7 +91,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
         addDefaultChildMap(getInputMap(), expandCollapseInputMap);
 
 
-        // Fix for RT-16565
+        // Fix for JDK-8128723
         control.selectionModelProperty().addListener(weakSelectionModelListener);
         if (getSelectionModel() != null) {
             control.getSelectionModel().getSelectedCells().addListener(selectedCellsListener);
@@ -177,7 +177,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
 
     /** {@inheritDoc} */
     @Override protected void selectAllToFocus(boolean setAnchorToFocusIndex) {
-        // Fix for RT-31241
+        // Fix for JDK-8123409
         if (getNode().getEditingCell() != null) return;
 
         super.selectAllToFocus(setAnchorToFocusIndex);

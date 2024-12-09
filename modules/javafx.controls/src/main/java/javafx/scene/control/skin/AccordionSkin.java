@@ -116,7 +116,7 @@ public class AccordionSkin extends SkinBase<Accordion> {
                 initTitledPaneListeners(c.getAddedSubList());
             }
 
-            // added to resolve RT-32787
+            // added to resolve JDK-8123268
             forceRelayout = true;
         });
 

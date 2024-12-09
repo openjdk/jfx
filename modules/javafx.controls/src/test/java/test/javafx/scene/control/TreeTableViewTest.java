@@ -1001,7 +1001,7 @@ public class TreeTableViewTest {
      * Tests for specific bugs                                           *
      ********************************************************************/
 //    @Test public void test_rt16019() {
-//        // RT-16019: NodeMemory TableView tests fail with
+//        // JDK-8128207: NodeMemory TableView tests fail with
 //        // IndexOutOfBoundsException (ObservableListWrapper.java:336)
 //        TreeTableView treeTableView = new TreeTableView();
 //        for (int i = 0; i < 1000; i++) {
@@ -2077,7 +2077,7 @@ public class TreeTableViewTest {
 
         // now (0,0), (1,0) and (1,1) should be selected, but selected indices
         // should remain as [0, 1], as we don't want selected indices to become
-        // [0,1,1] (which is what RT-29313 is about)
+        // [0,1,1] (which is what JDK-8102348 is about)
         sm.select(1, lastNameCol);
         assertEquals(2, sm.getSelectedIndices().size());
         assertEquals(0, sm.getSelectedIndices().get(0));
@@ -2128,7 +2128,7 @@ public class TreeTableViewTest {
 
         // now (0,0), (1,0) and (1,1) should be selected, but selected items
         // should remain as [p0, p1], as we don't want selected items to become
-        // [p0,p1,p1] (which is what RT-29313 is about)
+        // [p0,p1,p1] (which is what JDK-8102348 is about)
         sm.select(1, lastNameCol);
         assertEquals(2, sm.getSelectedItems().size());
         assertEquals(p0, sm.getSelectedItems().get(0));
@@ -2970,7 +2970,7 @@ public class TreeTableViewTest {
 
     @Test public void test_rt_34327() {
         // by default the comparator is null.
-        // NOTE: this method (prior to the fix as part of RT-34327) would have
+        // NOTE: this method (prior to the fix as part of JDK-8122045) would have
         // returned Comparator<String>, but after the fix it correctly returns
         // a Comparator<TreeItem<String>>
         Comparator nonGenericComparator = treeTableView.getComparator();
@@ -3057,7 +3057,7 @@ public class TreeTableViewTest {
         assertEquals(3, treeTableView.getFocusModel().getFocusedIndex());
     }
 
-//    @Ignore("Test started intermittently failing, most probably due to RT-36855 changeset")
+//    @Ignore("Test started intermittently failing, most probably due to JDK-8096512 changeset")
     @Test public void test_rt_34493() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
             new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com"))
@@ -3719,7 +3719,7 @@ public class TreeTableViewTest {
 
         assertTrue(treeView.getSortOrder().isEmpty());
     }
-    //--------- regression testing of JDK-8093144 (was: RT-35857)
+    //--------- regression testing of JDK-8093144 (was: JDK-8093144)
 
     /**
      * Note: 8093144 is not an issue for the current implementation of TreeTableView/SelectionModel
@@ -3803,7 +3803,7 @@ public class TreeTableViewTest {
         assertEquals("B", root.getChildren().get(0).getValue());
         assertEquals("C", root.getChildren().get(1).getValue());
     }
-    //--------- end regression testing of JDK-8093144 (was: RT-35857)
+    //--------- end regression testing of JDK-8093144 (was: JDK-8093144)
 
     private int rt36452_instanceCount = 0;
     @Test public void test_rt36452() {
@@ -4802,7 +4802,7 @@ public class TreeTableViewTest {
 
     /**************************************************************************
      *
-     * Tests (and related code) for RT-38892
+     * Tests (and related code) for JDK-8096633
      *
      *************************************************************************/
 

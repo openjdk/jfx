@@ -120,7 +120,7 @@ class GlassSystemMenu implements TKSystemMenu {
         }
     }
 
-    // Clear the menu to prevent a memory leak, as outlined in RT-34779
+    // Clear the menu to prevent a memory leak, as outlined in JDK-8094232
     private void clearMenu(Menu menu) {
         ListChangeListener<MenuItemBase> lcl = menuListeners.get(menu);
         if (lcl != null) {
@@ -388,7 +388,7 @@ class GlassSystemMenu implements TKSystemMenu {
         }
         if (kcc.getMeta() == KeyCombination.ModifierValue.DOWN) {
             if (PlatformUtil.isLinux()) {
-                ret += KeyEvent.MODIFIER_WINDOWS;   // RT-19326 - Linux shortcut support
+                ret += KeyEvent.MODIFIER_WINDOWS;   // JDK-8127216 - Linux shortcut support
             } else if (PlatformUtil.isMac()) {
                 ret += KeyEvent.MODIFIER_COMMAND;
             }

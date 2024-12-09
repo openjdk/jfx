@@ -204,7 +204,7 @@
 
         success = TRUE;
     } else {
-        // NOTE: see what went wrong (RT-27439)
+        // NOTE: see what went wrong (JDK-8090625)
         //CGImageSourceStatus status = CGImageSourceGetStatus(sourceRef);
         /*enum CGImageSourceStatus {
          kCGImageStatusUnexpectedEOF = -5,

@@ -27,8 +27,6 @@ package javafx.scene.input;
 
 import com.sun.javafx.scene.input.ClipboardHelper;
 import java.io.File;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -177,9 +175,6 @@ public class Clipboard {
      * the system will invoke the provided callback to stream the image data over to the client.
      */
 
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
-
     /**
      * Gets the current system clipboard, through which data can be stored and
      * retrieved. There is ever only one system clipboard for a JavaFX application.
@@ -197,7 +192,6 @@ public class Clipboard {
         if (peer == null) {
             throw new NullPointerException();
         }
-        peer.setSecurityContext(acc);
         this.peer = peer;
     }
 

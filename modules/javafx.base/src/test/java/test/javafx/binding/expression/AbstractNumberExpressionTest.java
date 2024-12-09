@@ -452,7 +452,7 @@ public class AbstractNumberExpressionTest {
         assertEquals("42", s.get());
     }
 
-    @Disabled("RT-33413")
+    @Disabled("JDK-8089771")
     @Test
     public void testAsString_Format() {
         final Locale defaultLocale = Locale.getDefault();
@@ -477,7 +477,7 @@ public class AbstractNumberExpressionTest {
         }
     }
 
-    @Disabled("RT-33413")
+    @Disabled("JDK-8089771")
     @Test
     public void testAsString_LocaleFormat() {
         // checking German default

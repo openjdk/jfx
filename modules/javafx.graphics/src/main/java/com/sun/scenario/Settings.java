@@ -54,7 +54,7 @@ public class Settings {
 
         // It seems no longer necessary to force loading of PrimaryTimer to pick
         // up the hi-res timer workaround. Also, this is causing some init
-        // order problems (RT-5572), so it's being commented out.
+        // order problems (JDK-8107671), so it's being commented out.
         // Object obj = ToolkitAccessor.getPrimaryTimer();
     }
 

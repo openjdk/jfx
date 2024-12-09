@@ -103,12 +103,12 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
 
         chart.setAnimated(true);
         ControlTestUtils.runWithExceptionHandler(() -> {
-            // tests RT-22124
+            // tests JDK-8117583
             chart.getData().remove(0);
         });
         toolkit.setAnimationTime(seriesFadeOutTime/2);
         assertEquals(1, XYChartShim.getPlotChildren(chart).size());
-        // tests RT-46086
+        // tests JDK-8095927
         assertEquals(0.5, XYChartShim.getPlotChildren(chart).get(0).getOpacity(), 0.0);
         toolkit.setAnimationTime(seriesFadeOutTime);
         assertEquals(0, XYChartShim.getPlotChildren(chart).size());

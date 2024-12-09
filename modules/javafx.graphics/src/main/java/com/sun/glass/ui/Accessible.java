@@ -27,7 +27,6 @@ package com.sun.glass.ui;
 
 import static javafx.scene.AccessibleAttribute.PARENT;
 import static javafx.scene.AccessibleAttribute.ROLE;
-import java.security.AccessControlContext;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.quantum.QuantumToolkit;
@@ -51,9 +50,6 @@ public abstract class Accessible {
 
         public void executeAction(AccessibleAction action, Object... parameters) {
         }
-
-        @SuppressWarnings("removal")
-        public abstract AccessControlContext getAccessControlContext();
     }
 
     public EventHandler getEventHandler() {
@@ -120,21 +116,6 @@ public abstract class Accessible {
             node = (Node)acc.getAttribute(PARENT);
         }
         return null;
-    }
-
-    /*
-     * IMPORTANT: Calling to the user code should not proceed if
-     * this method returns NULL.
-     */
-    @SuppressWarnings("removal")
-    private final AccessControlContext getAccessControlContext() {
-        AccessControlContext acc = null;
-        try {
-            acc = eventHandler.getAccessControlContext();
-        } catch (Exception e) {
-            /* The node was already removed from the scene */
-        }
-        return acc;
     }
 
     private class GetAttribute implements Supplier<Object> {

@@ -562,8 +562,8 @@ public class TreeTableCellTest {
         assertNull(cell.getItem());
         assertFalse(cell.isEmpty());
 
-        // This test used to be as shown below....but due to RT-33108, it changed
-        // to the enabled code beneath. Refer to the first comment in RT-33108
+        // This test used to be as shown below....but due to JDK-8122970, it changed
+        // to the enabled code beneath. Refer to the first comment in JDK-8122970
         // for more detail, but in short we can't optimise and not call updateItem
         // when the new and old items are the same - doing so means we can end
         // up with bad bindings, etc in the individual cells (in other words,

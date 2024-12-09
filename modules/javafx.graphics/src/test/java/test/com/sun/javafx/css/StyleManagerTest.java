@@ -938,7 +938,7 @@ public class StyleManagerTest {
     public void testRT_37025() {
 
         //
-        // The issue in RT-37025 was that the stylesheet container wasn't getting removed even
+        // The issue in JDK-8096738 was that the stylesheet container wasn't getting removed even
         // though the parent had been forgotten. The StyleManager#forget(Parent) method didn't
         // look to see if _any_ stylesheet container had the parent as a reference.
         //

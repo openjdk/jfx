@@ -320,7 +320,7 @@ public class PSWRenderer extends PrRenderer {
         if (dst == null) {
             return null;
         }
-        // RT-27561
+        // JDK-8091213
         // TODO: it is wasteful to create an RTT here; eventually it would
         // be nice if we could use plain Textures as a source Filterable...
         Graphics g = dst.createGraphics();

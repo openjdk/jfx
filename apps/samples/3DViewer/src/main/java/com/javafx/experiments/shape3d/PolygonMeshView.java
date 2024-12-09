@@ -270,7 +270,7 @@ public class PolygonMeshView extends Parent {
         if(isWireframe) {
             // The current triangleMesh implementation gives buggy behavior when the size of faces are shrunken
             // Create a new TriangleMesh as a work around
-            // [JIRA] (RT-31178)
+            // [JIRA] (JDK-8117423)
             if (texCoordsDirty || facesDirty || pointsSizeDirty) {
                 triangleMesh = new TriangleMesh();
                 pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true; // to fill in the new triangle mesh
@@ -340,7 +340,7 @@ public class PolygonMeshView extends Parent {
         } else {
             // The current triangleMesh implementation gives buggy behavior when the size of faces are shrunken
             // Create a new TriangleMesh as a work around
-            // [JIRA] (RT-31178)
+            // [JIRA] (JDK-8117423)
             if (texCoordsDirty || facesDirty || pointsSizeDirty) {
                 triangleMesh = new TriangleMesh();
                 pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true; // to fill in the new triangle mesh
