@@ -69,10 +69,10 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
     final ComboBoxMode getMode() { return mode; }
     final void setMode(ComboBoxMode value) { mode = value; }
 
-    private final EventHandler<MouseEvent> mouseEnteredEventHandler  = e ->   getBehavior().mouseEntered(e);
-    private final EventHandler<MouseEvent> mousePressedEventHandler  = e -> { getBehavior().mousePressed(e);  e.consume(); };
-    private final EventHandler<MouseEvent> mouseReleasedEventHandler = e -> { getBehavior().mouseReleased(e); e.consume(); };
-    private final EventHandler<MouseEvent> mouseExitedEventHandler   = e ->   getBehavior().mouseExited(e);
+    private final EventHandler<MouseEvent> mouseEnteredEventHandler  = e -> getBehavior().mouseEntered(e);
+    private final EventHandler<MouseEvent> mousePressedEventHandler  = e -> getBehavior().mousePressed(e);
+    private final EventHandler<MouseEvent> mouseReleasedEventHandler = e -> getBehavior().mouseReleased(e);
+    private final EventHandler<MouseEvent> mouseExitedEventHandler   = e -> getBehavior().mouseExited(e);
 
 
 

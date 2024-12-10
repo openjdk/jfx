@@ -203,7 +203,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // key pad mappings
         addKeyPadMappings();
 
-        addHandler(KeyEvent.KEY_TYPED, true, this::defaultKeyTyped);
+        addHandler(KeyEvent.KEY_TYPED, this::defaultKeyTyped);
 
         // However, we want to consume other key press / release events too, for
         // things that would have been handled by the InputCharacter normally
@@ -229,24 +229,24 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                         !ev.isShortcutDown();
                 }
             },
-            false,
             (ev) -> ev.consume()
         );
 
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
         if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-            addHandler(KeyBinding.controlShift(KeyCode.DIGIT9), true, (ev) -> {
+            addHandler(KeyBinding.controlShift(KeyCode.DIGIT9), (ev) -> {
                 FXVK.toggleUseVK(getControl());
+                ev.consume();
             });
         }
 
         // mouse and context menu mappings
-        addHandler(MouseEvent.MOUSE_PRESSED, true, this::mousePressed);
-        addHandler(MouseEvent.MOUSE_DRAGGED, true, this::mouseDragged);
-        addHandler(MouseEvent.MOUSE_RELEASED, true, this::mouseReleased);
+        addHandler(MouseEvent.MOUSE_PRESSED, this::mousePressed);
+        addHandler(MouseEvent.MOUSE_DRAGGED, this::mouseDragged);
+        addHandler(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
 
-        addHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, true, this::contextMenuRequested);
+        addHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested);
     }
 
     /**
@@ -318,36 +318,42 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * @param event not null
      */
     private void defaultKeyTyped(KeyEvent event) {
-        final TextInputControl textInput = getControl();
-        // I'm not sure this case can actually ever happen, maybe this
-        // should be an assert instead?
-        if (!textInput.isEditable() || textInput.isDisabled()) return;
+        try {
+            final TextInputControl textInput = getControl();
+            // I'm not sure this case can actually ever happen, maybe this
+            // should be an assert instead?
+            if (!textInput.isEditable() || textInput.isDisabled()) return;
 
-        // Sometimes we get events with no key character, in which case
-        // we need to bail.
-        String character = event.getCharacter();
-        if (character.length() == 0) return;
+            // Sometimes we get events with no key character, in which case
+            // we need to bail.
+            String character = event.getCharacter();
+            if (character.length() == 0) return;
 
-        // Filter out control keys except control+Alt on PC or Alt on Mac
-        if (event.isControlDown() || event.isAltDown() || (isMac() && event.isMetaDown())) {
-            if (!((event.isControlDown() || isMac()) && event.isAltDown())) return;
+            // Filter out control keys except control+Alt on PC or Alt on Mac
+            if (event.isControlDown() || event.isAltDown() || (isMac() && event.isMetaDown())) {
+                if (!((event.isControlDown() || isMac()) && event.isAltDown())) return;
+            }
+
+            setEditing(true);
+
+            // Ignore characters in the control range and the ASCII delete
+            // character as well as meta key presses
+            if (character.charAt(0) > 0x1F
+                    && character.charAt(0) != 0x7F
+                    && !event.isMetaDown()) { // Not sure about this one
+                final IndexRange selection = textInput.getSelection();
+                final int start = selection.getStart();
+                final int end = selection.getEnd();
+
+                replaceText(start, end, character);
+            }
+
+            setEditing(false);
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            event.consume();
         }
-
-        setEditing(true);
-
-        // Ignore characters in the control range and the ASCII delete
-        // character as well as meta key presses
-        if (character.charAt(0) > 0x1F
-                && character.charAt(0) != 0x7F
-                && !event.isMetaDown()) { // Not sure about this one
-            final IndexRange selection = textInput.getSelection();
-            final int start = selection.getStart();
-            final int end = selection.getEnd();
-
-            replaceText(start, end, character);
-        }
-
-        setEditing(false);
     }
 
     private Bidi bidi = null;

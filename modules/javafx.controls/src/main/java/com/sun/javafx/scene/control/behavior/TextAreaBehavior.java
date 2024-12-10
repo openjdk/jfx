@@ -239,106 +239,128 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     private boolean shiftDown = false;
     private boolean deferClick = false;
 
-    @Override public void mousePressed(MouseEvent e) {
-        TextArea textArea = getControl();
-        // We never respond to events if disabled
-        if (!textArea.isDisabled()) {
-            // If the text field doesn't have focus, then we'll attempt to set
-            // the focus and we'll indicate that we gained focus by a mouse
-            // click, TODO which will then NOT honor the selectOnFocus variable
-            // of the textInputControl
-            if (!textArea.isFocused()) {
-                focusGainedByMouseClick = true;
-                textArea.requestFocus();
-            }
-
-            // stop the caret animation
-            setCaretAnimating(false);
-            // only if there is no selection should we see the caret
-//            setCaretOpacity(if (textInputControl.dot == textInputControl.mark) then 1.0 else 0.0);
-
-            // if the primary button was pressed
-            if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                HitInfo hit = skin.getIndex(e.getX(), e.getY());
-                int i = hit.getInsertionIndex();
-                final int anchor = textArea.getAnchor();
-                final int caretPosition = textArea.getCaretPosition();
-                if (e.getClickCount() < 2 &&
-                    (e.isSynthesized() ||
-                     (anchor != caretPosition &&
-                      ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
-                    // if there is a selection, then we will NOT handle the
-                    // press now, but will defer until the release. If you
-                    // select some text and then press down, we change the
-                    // caret and wait to allow you to drag the text (TODO).
-                    // When the drag concludes, then we handle the click
-
-                    deferClick = true;
-                    // TODO start a timer such that after some millis we
-                    // switch into text dragging mode, change the cursor
-                    // to indicate the text can be dragged, etc.
-                } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown() || e.isShortcutDown())) {
-                    switch (e.getClickCount()) {
-                        case 1: skin.positionCaret(hit, false); break;
-                        case 2: mouseDoubleClick(hit); break;
-                        case 3: mouseTripleClick(hit); break;
-                        default: // no-op
-                    }
-                } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown() || e.isShortcutDown()) && e.getClickCount() == 1) {
-                    // didn't click inside the selection, so select
-                    shiftDown = true;
-                    // if we are on mac os, then we will accumulate the
-                    // selection instead of just moving the dot. This happens
-                    // by figuring out past which (dot/mark) are extending the
-                    // selection, and set the mark to be the other side and
-                    // the dot to be the new position.
-                    // everywhere else we just move the dot.
-                    if (PlatformUtil.isMac()) {
-                        textArea.extendSelection(i);
-                    } else {
-                        skin.positionCaret(hit, true);
-                    }
+    @Override
+    public void mousePressed(MouseEvent e) {
+        try {
+            TextArea textArea = getControl();
+            // We never respond to events if disabled
+            if (!textArea.isDisabled()) {
+                // If the text field doesn't have focus, then we'll attempt to set
+                // the focus and we'll indicate that we gained focus by a mouse
+                // click, TODO which will then NOT honor the selectOnFocus variable
+                // of the textInputControl
+                if (!textArea.isFocused()) {
+                    focusGainedByMouseClick = true;
+                    textArea.requestFocus();
                 }
-//                 skin.setForwardBias(hit.isLeading());
-//                if (textInputControl.editable)
-//                    displaySoftwareKeyboard(true);
+
+                // stop the caret animation
+                setCaretAnimating(false);
+                // only if there is no selection should we see the caret
+    //            setCaretOpacity(if (textInputControl.dot == textInputControl.mark) then 1.0 else 0.0);
+
+                // if the primary button was pressed
+                if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
+                    HitInfo hit = skin.getIndex(e.getX(), e.getY());
+                    int i = hit.getInsertionIndex();
+                    final int anchor = textArea.getAnchor();
+                    final int caretPosition = textArea.getCaretPosition();
+                    if (e.getClickCount() < 2 &&
+                        (e.isSynthesized() ||
+                         (anchor != caretPosition &&
+                          ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
+                        // if there is a selection, then we will NOT handle the
+                        // press now, but will defer until the release. If you
+                        // select some text and then press down, we change the
+                        // caret and wait to allow you to drag the text (TODO).
+                        // When the drag concludes, then we handle the click
+
+                        deferClick = true;
+                        // TODO start a timer such that after some millis we
+                        // switch into text dragging mode, change the cursor
+                        // to indicate the text can be dragged, etc.
+                    } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown() || e.isShortcutDown())) {
+                        switch (e.getClickCount()) {
+                            case 1: skin.positionCaret(hit, false); break;
+                            case 2: mouseDoubleClick(hit); break;
+                            case 3: mouseTripleClick(hit); break;
+                            default: // no-op
+                        }
+                    } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown() || e.isShortcutDown()) && e.getClickCount() == 1) {
+                        // didn't click inside the selection, so select
+                        shiftDown = true;
+                        // if we are on mac os, then we will accumulate the
+                        // selection instead of just moving the dot. This happens
+                        // by figuring out past which (dot/mark) are extending the
+                        // selection, and set the mark to be the other side and
+                        // the dot to be the new position.
+                        // everywhere else we just move the dot.
+                        if (PlatformUtil.isMac()) {
+                            textArea.extendSelection(i);
+                        } else {
+                            skin.positionCaret(hit, true);
+                        }
+                    }
+    //                 skin.setForwardBias(hit.isLeading());
+    //                if (textInputControl.editable)
+    //                    displaySoftwareKeyboard(true);
+                }
+                if (contextMenu.isShowing()) {
+                    contextMenu.hide();
+                }
             }
-            if (contextMenu.isShowing()) {
-                contextMenu.hide();
-            }
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            e.consume();
         }
     }
 
-    @Override public void mouseDragged(MouseEvent e) {
-        final TextArea textArea = getControl();
-        // we never respond to events if disabled, but we do notify any onXXX
-        // event listeners on the control
-        if (!textArea.isDisabled() && !e.isSynthesized()) {
-            if (e.getButton() == MouseButton.PRIMARY &&
-                    !(e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
-                            e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
-                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true);
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        try {
+            final TextArea textArea = getControl();
+            // we never respond to events if disabled, but we do notify any onXXX
+            // event listeners on the control
+            if (!textArea.isDisabled() && !e.isSynthesized()) {
+                if (e.getButton() == MouseButton.PRIMARY &&
+                        !(e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
+                                e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
+                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true);
+                }
             }
-        }
-        deferClick = false;
-    }
-
-    @Override public void mouseReleased(final MouseEvent e) {
-        final TextArea textArea = getControl();
-        // we never respond to events if disabled, but we do notify any onXXX
-        // event listeners on the control
-        if (!textArea.isDisabled()) {
-            setCaretAnimating(false);
-            if (deferClick) {
-                deferClick = false;
-                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown);
-                shiftDown = false;
-            }
-            setCaretAnimating(true);
+            deferClick = false;
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            e.consume();
         }
     }
 
-    @Override public void contextMenuRequested(ContextMenuEvent e) {
+    @Override
+    public void mouseReleased(final MouseEvent e) {
+        try {
+            final TextArea textArea = getControl();
+            // we never respond to events if disabled, but we do notify any onXXX
+            // event listeners on the control
+            if (!textArea.isDisabled()) {
+                setCaretAnimating(false);
+                if (deferClick) {
+                    deferClick = false;
+                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown);
+                    shiftDown = false;
+                }
+                setCaretAnimating(true);
+            }
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            e.consume();
+        }
+    }
+
+    @Override
+    public void contextMenuRequested(ContextMenuEvent e) {
         final TextArea textArea = getControl();
 
         if (contextMenu.isShowing()) {

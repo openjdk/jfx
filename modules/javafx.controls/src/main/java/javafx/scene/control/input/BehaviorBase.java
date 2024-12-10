@@ -201,11 +201,10 @@ public abstract class BehaviorBase<C extends Control> {
      *
      * @param <T> the actual event type
      * @param type the event type
-     * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected final <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
-        getSkinInputMap().addHandler(type, consume, handler);
+    protected final <T extends Event> void addHandler(EventType<T> type, EventHandler<T> handler) {
+        getSkinInputMap().addHandler(type, handler);
     }
 
     /**
@@ -214,11 +213,10 @@ public abstract class BehaviorBase<C extends Control> {
      *
      * @param <T> the actual event type
      * @param criteria the matching criteria
-     * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected final <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
-        getSkinInputMap().addHandler(criteria, consume, handler);
+    protected final <T extends Event> void addHandler(EventCriteria<T> criteria, EventHandler<T> handler) {
+        getSkinInputMap().addHandler(criteria, handler);
     }
 
     /**

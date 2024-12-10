@@ -122,8 +122,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             tlFocus = new TwoLevelFocusBehavior(textField); // needs to be last.
         }
 
-        addHandler(KeyBinding.of(KeyCode.ENTER), false, this::fire);
-        addHandler(KeyBinding.of(KeyCode.ESCAPE), false, this::cancelEdit);
+        addHandler(KeyBinding.of(KeyCode.ENTER), this::fire);
+        addHandler(KeyBinding.of(KeyCode.ESCAPE), this::cancelEdit);
     }
 
     @Override
@@ -225,105 +225,127 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private boolean shiftDown = false;
     private boolean deferClick = false;
 
-    @Override public void mousePressed(MouseEvent e) {
-        TextField textField = getControl();
-        // We never respond to events if disabled
-        if (!textField.isDisabled()) {
-            // If the text field doesn't have focus, then we'll attempt to set
-            // the focus and we'll indicate that we gained focus by a mouse
-            // click, which will then NOT honor the selectOnFocus variable
-            // of the textInputControl
-            if (!textField.isFocused()) {
-                focusGainedByMouseClick = true;
-                textField.requestFocus();
-            }
-
-            // stop the caret animation
-            setCaretAnimating(false);
-            // only if there is no selection should we see the caret
-//            setCaretOpacity(if (textInputControl.dot == textInputControl.mark) then 1.0 else 0.0);
-
-            // if the primary button was pressed
-            if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                HitInfo hit = skin.getIndex(e.getX(), e.getY());
-                int i = hit.getInsertionIndex();
-                final int anchor = textField.getAnchor();
-                final int caretPosition = textField.getCaretPosition();
-                if (e.getClickCount() < 2 &&
-                    (Properties.IS_TOUCH_SUPPORTED ||
-                     (anchor != caretPosition &&
-                      ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
-                    // if there is a selection, then we will NOT handle the
-                    // press now, but will defer until the release. If you
-                    // select some text and then press down, we change the
-                    // caret and wait to allow you to drag the text (TODO).
-                    // When the drag concludes, then we handle the click
-
-                    deferClick = true;
-                    // TODO start a timer such that after some millis we
-                    // switch into text dragging mode, change the cursor
-                    // to indicate the text can be dragged, etc.
-                } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
-                    switch (e.getClickCount()) {
-                        case 1: mouseSingleClick(hit); break;
-                        case 2: mouseDoubleClick(hit); break;
-                        case 3: mouseTripleClick(hit); break;
-                        default: // no-op
-                    }
-                } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown()) && e.getClickCount() == 1) {
-                    // didn't click inside the selection, so select
-                    shiftDown = true;
-                    // if we are on mac os, then we will accumulate the
-                    // selection instead of just moving the dot. This happens
-                    // by figuring out past which (dot/mark) are extending the
-                    // selection, and set the mark to be the other side and
-                    // the dot to be the new position.
-                    // everywhere else we just move the dot.
-                    if (PlatformUtil.isMac()) {
-                        textField.extendSelection(i);
-                    } else {
-                        skin.positionCaret(hit, true);
-                    }
+    @Override
+    public void mousePressed(MouseEvent e) {
+        try {
+            TextField textField = getControl();
+            // We never respond to events if disabled
+            if (!textField.isDisabled()) {
+                // If the text field doesn't have focus, then we'll attempt to set
+                // the focus and we'll indicate that we gained focus by a mouse
+                // click, which will then NOT honor the selectOnFocus variable
+                // of the textInputControl
+                if (!textField.isFocused()) {
+                    focusGainedByMouseClick = true;
+                    textField.requestFocus();
                 }
-                skin.setForwardBias(hit.isLeading());
-//                if (textInputControl.editable)
-//                    displaySoftwareKeyboard(true);
-            }
-        }
-        if (contextMenu.isShowing()) {
-            contextMenu.hide();
-        }
-    }
 
-    @Override public void mouseDragged(MouseEvent e) {
-        final TextField textField = getControl();
-        // we never respond to events if disabled, but we do notify any onXXX
-        // event listeners on the control
-        if (!textField.isDisabled() && !deferClick) {
-            if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
-                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true);
+                // stop the caret animation
+                setCaretAnimating(false);
+                // only if there is no selection should we see the caret
+    //            setCaretOpacity(if (textInputControl.dot == textInputControl.mark) then 1.0 else 0.0);
+
+                // if the primary button was pressed
+                if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
+                    HitInfo hit = skin.getIndex(e.getX(), e.getY());
+                    int i = hit.getInsertionIndex();
+                    final int anchor = textField.getAnchor();
+                    final int caretPosition = textField.getCaretPosition();
+                    if (e.getClickCount() < 2 &&
+                        (Properties.IS_TOUCH_SUPPORTED ||
+                         (anchor != caretPosition &&
+                          ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
+                        // if there is a selection, then we will NOT handle the
+                        // press now, but will defer until the release. If you
+                        // select some text and then press down, we change the
+                        // caret and wait to allow you to drag the text (TODO).
+                        // When the drag concludes, then we handle the click
+
+                        deferClick = true;
+                        // TODO start a timer such that after some millis we
+                        // switch into text dragging mode, change the cursor
+                        // to indicate the text can be dragged, etc.
+                    } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
+                        switch (e.getClickCount()) {
+                            case 1: mouseSingleClick(hit); break;
+                            case 2: mouseDoubleClick(hit); break;
+                            case 3: mouseTripleClick(hit); break;
+                            default: // no-op
+                        }
+                    } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown()) && e.getClickCount() == 1) {
+                        // didn't click inside the selection, so select
+                        shiftDown = true;
+                        // if we are on mac os, then we will accumulate the
+                        // selection instead of just moving the dot. This happens
+                        // by figuring out past which (dot/mark) are extending the
+                        // selection, and set the mark to be the other side and
+                        // the dot to be the new position.
+                        // everywhere else we just move the dot.
+                        if (PlatformUtil.isMac()) {
+                            textField.extendSelection(i);
+                        } else {
+                            skin.positionCaret(hit, true);
+                        }
+                    }
+                    skin.setForwardBias(hit.isLeading());
+    //                if (textInputControl.editable)
+    //                    displaySoftwareKeyboard(true);
                 }
             }
-        }
-    }
-
-    @Override public void mouseReleased(MouseEvent e) {
-        final TextField textField = getControl();
-        // we never respond to events if disabled, but we do notify any onXXX
-        // event listeners on the control
-        if (!textField.isDisabled()) {
-            setCaretAnimating(false);
-            if (deferClick) {
-                deferClick = false;
-                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown);
-                shiftDown = false;
+            if (contextMenu.isShowing()) {
+                contextMenu.hide();
             }
-            setCaretAnimating(true);
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            e.consume();
         }
     }
 
-    @Override public void contextMenuRequested(ContextMenuEvent e) {
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        try {
+            final TextField textField = getControl();
+            // we never respond to events if disabled, but we do notify any onXXX
+            // event listeners on the control
+            if (!textField.isDisabled() && !deferClick) {
+                if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
+                    if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
+                        skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true);
+                    }
+                }
+            }
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            e.consume();
+        }
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        try {
+            final TextField textField = getControl();
+            // we never respond to events if disabled, but we do notify any onXXX
+            // event listeners on the control
+            if (!textField.isDisabled()) {
+                setCaretAnimating(false);
+                if (deferClick) {
+                    deferClick = false;
+                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown);
+                    shiftDown = false;
+                }
+                setCaretAnimating(true);
+            }
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            e.consume();
+        }
+    }
+
+    @Override
+    public void contextMenuRequested(ContextMenuEvent e) {
         final TextField textField = getControl();
 
         if (contextMenu.isShowing()) {

@@ -77,20 +77,20 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         registerKey(KeyBinding.alt(KeyCode.DOWN), ComboBoxBase.TOGGLE_POPUP);
         registerKey(KeyBinding.alt(KeyCode.UP), ComboBoxBase.TOGGLE_POPUP);
 
-        addHandler(KeyBinding.of(KeyCode.SPACE), true, this::keyPressed);
-        addHandler(KeyBinding.builder(KeyCode.SPACE).keyReleased().build(), true, this::keyReleased);
+        addHandler(KeyBinding.of(KeyCode.SPACE), (ev) -> keyPressed(ev, true));
+        addHandler(KeyBinding.builder(KeyCode.SPACE).keyReleased().build(), (ev) -> keyReleased(ev, true));
 
         // these two should not consume the event
-        addHandler(KeyBinding.of(KeyCode.ENTER), false, this::keyPressed);
-        addHandler(KeyBinding.builder(KeyCode.ENTER).keyReleased().build(), false, this::keyReleased);
+        addHandler(KeyBinding.of(KeyCode.ENTER), (ev) -> keyPressed(ev, false));
+        addHandler(KeyBinding.builder(KeyCode.ENTER).keyReleased().build(), (ev) -> keyReleased(ev, false));
 
-        addHandler(KeyBinding.of(KeyCode.ESCAPE), true, this::cancelEdit);
-        addHandler(KeyBinding.of(KeyCode.F10), true, this::forwardToParent);
+        addHandler(KeyBinding.of(KeyCode.ESCAPE), this::cancelEdit);
+        addHandler(KeyBinding.of(KeyCode.F10), this::forwardToParent);
 
-        addHandler(MouseEvent.MOUSE_PRESSED, true, this::mousePressed);
-        addHandler(MouseEvent.MOUSE_RELEASED, true, this::mouseReleased);
-        addHandler(MouseEvent.MOUSE_ENTERED, true, this::mouseEntered);
-        addHandler(MouseEvent.MOUSE_EXITED, true, this::mouseExited);
+        addHandler(MouseEvent.MOUSE_PRESSED, this::mousePressed);
+        addHandler(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
+        addHandler(MouseEvent.MOUSE_ENTERED, this::mouseEntered);
+        addHandler(MouseEvent.MOUSE_EXITED, this::mouseExited);
     }
 
     public void dispose() {
@@ -135,7 +135,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      * causes this button to be armed if it is not already armed by a mouse
      * press.
      */
-    private void keyPressed(KeyEvent e) {
+    private void keyPressed(KeyEvent e, boolean consume) {
         // If popup is shown, KeyEvent causes popup to close
         showPopupOnMouseRelease = true;
 
@@ -151,13 +151,16 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
                 getControl().arm();
             }
         }
+        if (consume) {
+            e.consume();
+        }
     }
 
     /**
      * Invoked when a valid keystroke release occurs which causes the button
      * to fire if it was armed by a keyPress.
      */
-    private void keyReleased(KeyEvent e) {
+    private void keyReleased(KeyEvent e, boolean consume) {
         // If popup is shown, KeyEvent causes popup to close
         showPopupOnMouseRelease = true;
 
@@ -169,11 +172,20 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
                 }
             }
         }
+        if (consume) {
+            e.consume();
+        }
     }
 
     private void forwardToParent(KeyEvent event) {
-        if (getControl().getParent() != null) {
-            getControl().getParent().fireEvent(event);
+        try {
+            if (getControl().getParent() != null) {
+                getControl().getParent().fireEvent(event);
+            }
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            event.consume();
         }
     }
 
@@ -195,6 +207,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         } else {
             forwardToParent(event);
         }
+        event.consume();
     }
 
 
@@ -206,6 +219,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     public void mousePressed(MouseEvent e) {
         arm(e);
+        e.consume();
     }
 
     public void mouseReleased(MouseEvent e) {
@@ -222,6 +236,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             showPopupOnMouseRelease = true;
             hide();
         }
+        e.consume();
     }
 
     public void mouseEntered(MouseEvent e) {
@@ -233,11 +248,13 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             mouseInsideButton = (target instanceof Node && "arrow-button".equals(((Node) target).getId()));
         }
         arm();
+        e.consume();
     }
 
     public void mouseExited(MouseEvent e) {
         mouseInsideButton = false;
         disarm();
+        e.consume();
     }
 
 //    private void getFocus() {

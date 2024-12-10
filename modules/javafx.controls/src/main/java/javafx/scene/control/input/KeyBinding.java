@@ -510,18 +510,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets or clears the {@code alt} key down condition (the {@code option} key on macOS).
-         * @param on condition
-         * @return this Builder
-         */
-        public Builder alt(boolean on) {
-            if (on) {
-                m.add(KCondition.ALT);
-            }
-            return this;
-        }
-
-        /**
          * Sets the {@code command} key down condition on macOS.
          * <p>
          * Setting this condition on non-macOS platforms will result in the
@@ -535,22 +523,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets or clears the {@code command} key down condition on macOS.
-         * <p>
-         * Setting this condition on non-macOS platforms will result in the
-         * {@code build} method returning {@code null}.
-         *
-         * @param on condition
-         * @return this Builder
-         */
-        public Builder command(boolean on) {
-            if (on) {
-                m.add(KCondition.COMMAND);
-            }
-            return this;
-        }
-
-        /**
          * Sets the {@code control} key down condition.
          * @return this Builder
          */
@@ -560,35 +532,11 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets or clears the {@code control} key down condition.
-         * @param on condition
-         * @return this Builder
-         */
-        public Builder control(boolean on) {
-            if (on) {
-                m.add(KCondition.CTRL);
-            }
-            return this;
-        }
-
-        /**
          * Sets the {@code meta} key down condition.
          * @return this Builder
          */
         public Builder meta() {
             m.add(KCondition.META);
-            return this;
-        }
-
-        /**
-         * Sets or clears the {@code meta} key down condition.
-         * @param on condition
-         * @return this Builder
-         */
-        public Builder meta(boolean on) {
-            if (on) {
-                m.add(KCondition.META);
-            }
             return this;
         }
 
@@ -606,22 +554,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets or clears the {@code option} key down condition on macOS.
-         * <p>
-         * Setting this condition on non-macOS platforms will result in the
-         * {@code build} method returning {@code null}.
-         *
-         * @param on condition
-         * @return this Builder
-         */
-        public Builder option(boolean on) {
-            if (on) {
-                m.add(KCondition.OPTION);
-            }
-            return this;
-        }
-
-        /**
          * Sets the {@code shift} key down condition.
          * @return this Builder
          */
@@ -631,35 +563,11 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Sets or clears the {@code shift} key down condition.
-         * @param on condition
-         * @return this Builder
-         */
-        public Builder shift(boolean on) {
-            if (on) {
-                m.add(KCondition.SHIFT);
-            }
-            return this;
-        }
-
-        /**
          * Sets the {@code shortcut} key down condition.
          * @return this Builder
          */
         public Builder shortcut() {
             m.add(KCondition.SHORTCUT);
-            return this;
-        }
-
-        /**
-         * Sets or clears the {@code shortcut} key down condition.
-         * @param on condition
-         * @return this Builder
-         */
-        public Builder shortcut(boolean on) {
-            if (on) {
-                m.add(KCondition.SHORTCUT);
-            }
             return this;
         }
 
