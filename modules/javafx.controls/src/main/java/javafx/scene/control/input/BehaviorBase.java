@@ -209,7 +209,7 @@ public abstract class BehaviorBase<C extends Control> {
 
     /**
      * Adds an event handler for the specific event criteria, in the context of this Behavior.
-     * This is a more specific version of {@link #addHandler(EventType,boolean,EventHandler)} method.
+     * This is a more specific version of {@link #addHandler(EventType,EventHandler)} method.
      *
      * @param <T> the actual event type
      * @param criteria the matching criteria

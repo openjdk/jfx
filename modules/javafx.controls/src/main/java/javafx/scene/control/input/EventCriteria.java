@@ -29,7 +29,7 @@ import javafx.event.EventType;
 
 /**
  * This interface enables wider control in specifying conditional matching logic when adding skin/behavior handlers
- * via {@link SkinInputMap#addHandler(EventCriteria, boolean, javafx.event.EventHandler) SkinInputMap.addHandler()}.
+ * via {@link SkinInputMap#addHandler(EventCriteria, javafx.event.EventHandler) SkinInputMap.addHandler()}.
  *
  * @param <T> the type of the event
  * @since 999 TODO
