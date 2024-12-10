@@ -1248,8 +1248,8 @@ void GlassWindow::ShowSystemMenu(int x, int y)
     }
 
     // Mirror the X coordinate we get from JavaFX if this is a RTL window.
-    LONG style = ::GetWindowLong(GetHWND(), GWL_EXSTYLE);
-    if (style & WS_EX_LAYOUTRTL) {
+    LONG exStyle = ::GetWindowLong(GetHWND(), GWL_EXSTYLE);
+    if (exStyle & WS_EX_LAYOUTRTL) {
         RECT rect = {0};
         ::GetClientRect(GetHWND(), &rect);
         x = max(0, rect.right - rect.left) - x;
@@ -1257,6 +1257,10 @@ void GlassWindow::ShowSystemMenu(int x, int y)
 
     HMENU systemMenu = GetSystemMenu(GetHWND(), FALSE);
     bool maximized = placement.showCmd == SW_SHOWMAXIMIZED;
+
+    LONG style = ::GetWindowLong(GetHWND(), GWL_STYLE);
+    bool canMinimize = (style & WS_MINIMIZEBOX) && !(exStyle & WS_EX_TOOLWINDOW);
+    bool canMaximize = (style & WS_MAXIMIZEBOX) && !maximized;
 
     MENUITEMINFO menuItemInfo { sizeof(MENUITEMINFO) };
     menuItemInfo.fMask = MIIM_STATE;
@@ -1268,13 +1272,13 @@ void GlassWindow::ShowSystemMenu(int x, int y)
     menuItemInfo.fState = maximized ? MF_DISABLED : MF_ENABLED;
     SetMenuItemInfo(systemMenu, SC_MOVE, FALSE, &menuItemInfo);
 
-    menuItemInfo.fState = maximized ? MF_DISABLED : MF_ENABLED;
+    menuItemInfo.fState = !m_isResizable || maximized ? MF_DISABLED : MF_ENABLED;
     SetMenuItemInfo(systemMenu, SC_SIZE, FALSE, &menuItemInfo);
 
-    menuItemInfo.fState = MF_ENABLED;
+    menuItemInfo.fState = canMinimize ? MF_ENABLED : MF_DISABLED;
     SetMenuItemInfo(systemMenu, SC_MINIMIZE, FALSE, &menuItemInfo);
 
-    menuItemInfo.fState = maximized ? MF_DISABLED : MF_ENABLED;
+    menuItemInfo.fState = canMaximize ? MF_ENABLED : MF_DISABLED;
     SetMenuItemInfo(systemMenu, SC_MAXIMIZE, FALSE, &menuItemInfo);
 
     menuItemInfo.fState = MF_ENABLED;
