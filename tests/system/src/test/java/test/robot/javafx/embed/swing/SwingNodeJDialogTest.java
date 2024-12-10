@@ -30,12 +30,21 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javax.swing.SwingUtilities;
+
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class SwingNodeJDialogTest extends SwingNodeBase {
+
+    @BeforeAll
+    public static void init() throws Exception {
+        if (Util.isOnWayland()) {
+            assumeTrue(Runtime.version().feature() >= 24);
+        }
+    }
 
     @Test
     public void testJDialogAbove() throws InterruptedException, InvocationTargetException {

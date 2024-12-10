@@ -57,6 +57,7 @@ public class LinuxScreencastHangCrashTest {
     @BeforeAll
     public static void init() throws Exception {
         Assumptions.assumeTrue(Util.isOnWayland());
+        Assumptions.assumeTrue(Runtime.version().feature() >= 24);
         robot = new Robot();
     }
 
