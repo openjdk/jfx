@@ -68,60 +68,27 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      *
      * @param <T> the actual event type
      * @param type the event type
-     * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    public final <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
-        addHandler(type, consume, EventHandlerPriority.SKIN_HIGH, handler);
+    public final <T extends Event> void addHandler(EventType<T> type, EventHandler<T> handler) {
+        putHandler(type, EventHandlerPriority.SKIN_HIGH, handler);
     }
 
     /**
      * Adds an event handler for the specific event criteria, in the context of this skin.
-     * This is a more specific version of {@link #addHandler(EventType,boolean,EventHandler)} method.
+     * This is a more specific version of {@link #addHandler(EventType,EventHandler)} method.
      *
      * @param <T> the actual event type
      * @param criteria the matching criteria
-     * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    public final <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
-        addHandler(criteria, consume, EventHandlerPriority.SKIN_HIGH, handler);
-    }
-
-    private <T extends Event> void addHandler(
-        EventType<T> type,
-        boolean consume,
-        EventHandlerPriority pri,
-        EventHandler<T> handler)
-    {
-        if (consume) {
-            putHandler(type, pri, new EventHandler<T>() {
-                @Override
-                public void handle(T ev) {
-                    handler.handle(ev);
-                    ev.consume();
-                }
-            });
-        } else {
-            putHandler(type, pri, handler);
-        }
-    }
-
-    private <T extends Event> void addHandler(
-        EventCriteria<T> criteria,
-        boolean consume,
-        EventHandlerPriority pri,
-        EventHandler<T> handler)
-    {
+    public final <T extends Event> void addHandler(EventCriteria<T> criteria, EventHandler<T> handler) {
         EventType<T> type = criteria.getEventType();
-        putHandler(type, pri, new EventHandler<T>() {
+        putHandler(type, EventHandlerPriority.SKIN_HIGH, new EventHandler<T>() {
             @Override
             public void handle(T ev) {
                 if (criteria.isEventAcceptable(ev)) {
                     handler.handle(ev);
-                    if (consume) {
-                        ev.consume();
-                    }
                 }
             }
         });

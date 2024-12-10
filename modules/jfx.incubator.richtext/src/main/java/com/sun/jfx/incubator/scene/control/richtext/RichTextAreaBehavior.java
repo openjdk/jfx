@@ -248,8 +248,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         cp.addEventHandler(ScrollEvent.SCROLL_FINISHED, this::handleScrollEventFinished);
         cp.addEventHandler(ScrollEvent.SCROLL, this::handleScrollEvent);
 
-        addHandler(KeyEvent.KEY_TYPED, true, this::handleKeyTyped);
-        addHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, true, this::contextMenuRequested);
+        addHandler(KeyEvent.KEY_TYPED, this::handleKeyTyped);
+        addHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested);
     }
 
     protected boolean isRTL() {
@@ -266,13 +266,10 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             return;
         }
 
-        // TODO something about consuming all key presses (yes) and key releases (not really)
-        // in TextInputControlBehavior:194
-
-        String character = getValidKeyTyped(ev);
-        if (character != null) {
+        String typed = getValidKeyTyped(ev);
+        if (typed != null) {
             vflow.setSuppressBlink(true);
-            boolean consume = handleTypedChar(character);
+            boolean consume = handleTypedChar(typed);
             if (consume) {
                 ev.consume();
             }
