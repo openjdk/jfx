@@ -43,24 +43,23 @@ import com.sun.javafx.scene.control.input.PHList;
 
 /**
  * InputMap is a property of the {@link Control} class which enables customization
- * by allowing for custom key mappings and event handlers.
+ * by allowing creation of custom key mappings and event handlers.
  * <p>
- * The {@code InputMap} serves as an integration point between the Control and its Skin.
- * The {@code InputMap} The InputMap provides an ordered repository of event handlers,
+ * The {@code InputMap} serves as a bridge between the Control and its Skin.
+ * The {@code InputMap} provides an ordered repository of event handlers,
  * working together with the input map managed by the skin, which
- * guarantees the order in which handers are invoked.
+ * guarantees the order in which handlers are invoked.
  * It also stores key mappings with a similar guarantee that the application mappings
  * always take precedence over mappings created by the skin,
  * regardless of when the skin was created or replaced.
  * <p>
  * The class supports the following scenarios:
  * <ul>
- * <li>map a key binding to a function
- * <li>un-map a key binding
- * <li>map a new function to an existing key binding
- * <li>obtain the default function
- * <li>add an event handler at specific priority (applies to application-defined and skin-defined handlers)
- * <li>ensure that the application key mappings take priority over mappings created by the skin
+ * <li>Mapping a key binding to a function
+ * <li>Removing a key binding
+ * <li>Mapping a new function to an existing key binding
+ * <li>Retrieving the default function
+ * <li>Ensuring that the application key mappings take priority over mappings created by the skin
  * </ul>
  * For key mappings, the {@code InputMap} utilizes a two-stage lookup.
  * First, the key event is matched to a {@link FunctionTag} which identifies a function provided either by the skin
