@@ -34,6 +34,8 @@ import com.sun.jfx.incubator.scene.control.richtext.MarkerHelper;
 
 /**
  * Tracks the text position in a document in the presence of edits.
+ *
+ * @since 24
  */
 public final class Marker implements Comparable<Marker> {
     static {

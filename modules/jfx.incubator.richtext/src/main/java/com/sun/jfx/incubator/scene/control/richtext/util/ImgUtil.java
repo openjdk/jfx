@@ -66,7 +66,6 @@ public class ImgUtil {
      *        used to store the returned pixel data
      * @return an {@code Image} object representing a snapshot of the
      *         current pixels in the {@code BufferedImage}.
-     * @since JavaFX 2.2
      */
     public static WritableImage toFXImage(BufferedImage bimg, WritableImage wimg) {
         int bw = bimg.getWidth();
@@ -237,7 +236,6 @@ public class ImgUtil {
      *        used to store the returned pixel data
      * @return a {@code BufferedImage} containing a snapshot of the JavaFX
      *         {@code Image}, or null if the {@code Image} is not readable.
-     * @since JavaFX 2.2
      */
     public static BufferedImage fromFXImage(Image img, BufferedImage bimg) {
         PixelReader pr = img.getPixelReader();

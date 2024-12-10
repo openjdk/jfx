@@ -33,6 +33,8 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * The base class for view-only {@link StyledTextModel}s.
  * <p>
  * Models extending this class will not be user editable.
+ *
+ * @since 24
  */
 public abstract class StyledTextModelViewOnlyBase extends StyledTextModel {
     /** The constructor. */

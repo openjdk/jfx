@@ -30,7 +30,7 @@
  * Will be removed in a future release.</b>
  *
  * @moduleGraph
- * @since 999
+ * @since 24
  */
 module jfx.incubator.richtext {
     requires transitive javafx.base;

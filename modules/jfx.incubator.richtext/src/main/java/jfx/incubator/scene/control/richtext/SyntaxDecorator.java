@@ -30,6 +30,8 @@ import jfx.incubator.scene.control.richtext.model.RichParagraph;
 
 /**
  * Decorates plain text by producing a {@link RichParagraph}.
+ *
+ * @since 24
  */
 public interface SyntaxDecorator {
     /**

@@ -27,6 +27,8 @@ package jfx.incubator.scene.control.richtext.model;
 
 /**
  * Paragraph direction attribute.
+ *
+ * @since 24
  */
 public enum ParagraphDirection {
     /** Indicates the left-to-right writing direction. */

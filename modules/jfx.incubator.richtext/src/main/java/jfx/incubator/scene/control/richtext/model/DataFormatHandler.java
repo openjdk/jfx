@@ -33,6 +33,8 @@ import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * Facilitates import/export of styled text into/from a StyledTextModel.
+ *
+ * @since 24
  */
 public abstract class DataFormatHandler {
     /**

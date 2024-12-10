@@ -41,6 +41,8 @@ import jfx.incubator.scene.control.richtext.StyleResolver;
  * <li>a paragraph containing a single Region
  * <li>paragraph attributes
  * </ol>
+ *
+ * @since 24
  */
 // TODO perhaps add guarded/unguarded factory methods (of(), ofGuarded()) that check for <0x20, or specify that
 // text must not include those characters.

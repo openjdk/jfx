@@ -66,6 +66,8 @@ import jfx.incubator.scene.control.richtext.model.StyledTextModel;
  * <li>horizontal scroll bar
  * <li>vertical scroll bar
  * </ul>
+ *
+ * @since 24
  */
 public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final ListenerHelper listenerHelper;

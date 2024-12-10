@@ -79,6 +79,8 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * <li>Line numbers: the {@code CodeArea} sets the {@link #leftDecoratorProperty()} to support the line numbers,
  * so applications should not set or bind that property.
  * </ul>
+ *
+ * @since 24
  */
 public class CodeArea extends RichTextArea {
     private BooleanProperty lineNumbers;

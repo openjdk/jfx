@@ -35,6 +35,8 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * The skin for {@link CodeArea}.
+ *
+ * @since 24
  */
 public class CodeAreaSkin extends RichTextAreaSkin {
     /**

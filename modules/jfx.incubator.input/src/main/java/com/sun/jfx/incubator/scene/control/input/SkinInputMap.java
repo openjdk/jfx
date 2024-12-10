@@ -46,8 +46,6 @@ import jfx.incubator.scene.control.input.KeyBinding;
  * <p>
  * Skins whose behavior requires no state, or when state is fully encapsulated by the Control itself,
  * could use a Stateless variant obtained with the {@link #createStateless()} method.
- *
- * @since 24
  */
 public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInputMap.Stateless {
     /**

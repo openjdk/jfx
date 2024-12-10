@@ -47,6 +47,8 @@ import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * A simple, view-only, in-memory, styled text model.
+ *
+ * @since 24
  */
 public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     private final ArrayList<Paragraph> paragraphs = new ArrayList<>();

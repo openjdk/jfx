@@ -39,6 +39,8 @@ import javafx.scene.Node;
  * <li>otherwise, the {@link #getMeasurementNode(int)} method is called.
  * The preferred width of the {@code Node} returned will be used to size all other nodes for that side.
  * </ul>
+ *
+ * @since 24
  */
 public interface SideDecorator {
     /**

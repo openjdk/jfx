@@ -32,6 +32,7 @@ import java.util.Objects;
  *
  * @param <T> the attribute value type
  * @see StyleAttributeMap
+ * @since 24
  */
 public final class StyleAttribute<T> {
     private final String name;

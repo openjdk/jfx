@@ -96,6 +96,8 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * {c|ff00ff}text{b}bold{!rtl}\n
  * {1}line 2{!0}\n
  * </pre>
+ *
+ * @since 24
  */
 public class RichTextFormatHandler extends DataFormatHandler {
     static { initAccessor(); }

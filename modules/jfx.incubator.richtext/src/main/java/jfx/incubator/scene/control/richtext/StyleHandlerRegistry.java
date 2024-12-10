@@ -35,6 +35,8 @@ import jfx.incubator.scene.control.richtext.skin.CellContext;
  *
  * This class is needed when extending the RichTextArea with support for other style attributes.
  * Applications should not normally use this interface.
+ *
+ * @since 24
  */
 public class StyleHandlerRegistry {
     private final HashMap<StyleAttribute,StyleAttributeHandler> parStyleHandlerMap;

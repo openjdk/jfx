@@ -45,6 +45,8 @@ import jfx.incubator.scene.control.richtext.StyleResolver;
  * <li>A number of {@code StyledSegments} such as styled text or {@code Supplier}s of embedded {@code Node}s
  * <li>A supplier of a single {@code Region} which fills the entire paragraph
  * </ul>
+ *
+ * @since 24
  */
 public abstract class RichParagraph {
     static { initAccessor(); }

@@ -34,6 +34,8 @@ import javafx.scene.control.Label;
 /**
  * Side decorator which shows paragraph (line) numbers.
  * The numbering starts at line 1.
+ *
+ * @since 24
  */
 public class LineNumberDecorator implements SideDecorator {
     private final DecimalFormat format;

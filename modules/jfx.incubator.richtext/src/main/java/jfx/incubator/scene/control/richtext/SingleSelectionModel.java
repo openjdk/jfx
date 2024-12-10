@@ -34,6 +34,8 @@ import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * This {@link SelectionModel} supports a single selection segment.
+ *
+ * @since 24
  */
 public final class SingleSelectionModel implements SelectionModel {
     private final ReadOnlyObjectWrapper<SelectionSegment> segment = new ReadOnlyObjectWrapper<>();

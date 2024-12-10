@@ -36,6 +36,8 @@ import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
 
 /**
  * This immutable object contains a map of {@link StyleAttribute}s.
+ *
+ * @since 24
  */
 public final class StyleAttributeMap {
     /** Paragraph background color attribute. */

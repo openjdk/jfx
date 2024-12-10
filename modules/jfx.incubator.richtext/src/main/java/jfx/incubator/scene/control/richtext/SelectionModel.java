@@ -32,6 +32,8 @@ import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * A Selection model that maintains a single {@link SelectionSegment}.
+ *
+ * @since 24
  */
 // TODO perhaps we should support, at least theoretically, the concept of multiple selection
 // and multiple carets.  The impacted areas:

@@ -39,6 +39,8 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
  * This interface is a part of API layer between the model and the view, and only comes to play when the
  * model refers to CSS styles.
  * Applications should not normally use this interface.
+ *
+ * @since 24
  */
 public interface StyleResolver {
     /**

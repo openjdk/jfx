@@ -38,6 +38,8 @@ import jfx.incubator.scene.control.richtext.skin.CellContext;
  *
  * @param <C> the actual type of RichTextArea control
  * @param <T> the attribute value type
+ *
+ * @since 24
  */
 @FunctionalInterface
 public interface StyleAttributeHandler<C extends RichTextArea, T> {

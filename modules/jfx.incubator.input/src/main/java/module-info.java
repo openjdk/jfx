@@ -31,7 +31,7 @@
  * Will be removed in a future release.</b>
  *
  * @moduleGraph
- * @since 999
+ * @since 24
  */
 module jfx.incubator.input {
     requires transitive javafx.base;

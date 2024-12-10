@@ -41,6 +41,8 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * <p>
  * This model supports custom content storage mechanism via {@link BasicTextModel.Content}.  By default,
  * the model provides an in-memory storage via its {@link BasicTextModel.InMemoryContent} implementation.
+ *
+ * @since 24
  */
 public class BasicTextModel extends StyledTextModel {
     /**

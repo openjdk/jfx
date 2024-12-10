@@ -39,6 +39,8 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * <p>
  * This model is suitable for relatively small documents as it has neither disk storage backing
  * nor storage of incremental changes.
+ *
+ * @since 24
  */
 public class RichTextModel extends StyledTextModel {
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();

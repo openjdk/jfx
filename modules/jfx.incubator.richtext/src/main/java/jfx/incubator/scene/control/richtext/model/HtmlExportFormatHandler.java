@@ -38,6 +38,8 @@ import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * This partial {@link DataFormatHandler} supports export of styled text in a simple HTML format.
+ *
+ * @since 24
  */
 public class HtmlExportFormatHandler extends DataFormatHandler {
     /** when true, style attributes are inlined, this seems to work better in Thunderbird */

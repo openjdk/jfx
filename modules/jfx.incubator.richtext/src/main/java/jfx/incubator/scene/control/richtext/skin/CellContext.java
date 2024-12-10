@@ -34,6 +34,7 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
  * to either the paragraph Node (typically {@code TextFlow}) or the text segment Node ({@code Text}).
  *
  * @see RichTextAreaSkin#applyStyles(CellContext, StyleAttributeMap, boolean)
+ * @since 24
  */
 public interface CellContext {
     /**
