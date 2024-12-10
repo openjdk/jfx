@@ -52,12 +52,6 @@ public interface FontFactory {
     public String[] getFontFullNames();
     public String[] getFontFullNames(String family);
 
-    // TODO: JDK-8344114: Consider removing this obsolete method
-    /*
-     * Indicates permission to load an embedded font
-     */
-    public boolean hasPermission();
-
     /**
      * Loads a font from the specified input stream.
      * If the load is successful such that the stream can be

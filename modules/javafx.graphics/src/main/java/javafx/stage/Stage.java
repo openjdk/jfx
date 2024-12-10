@@ -189,10 +189,6 @@ public class Stage extends Window {
                 ((Stage) window).doVisibleChanged(visible);
             }
 
-            @Override public void initSecurityDialog(Stage stage, boolean securityDialog) {
-                stage.initSecurityDialog(securityDialog);
-            }
-
             @Override
             public void setPrimary(Stage stage, boolean primary) {
                 stage.setPrimary(primary);
@@ -279,41 +275,6 @@ public class Stage extends Window {
     private boolean primary = false;
 
     //------------------------------------------------------------------
-
-    // Flag indicating that this stage is being used to show a security dialog
-    private boolean securityDialog = false;
-
-    // TODO: JDK-8344111: Consider removing this obsolete method
-    /**
-     * Sets a flag indicating that this stage is used for a security dialog and
-     * must always be on top. If set, this will cause the window to be always
-     * on top, regardless of the setting of the alwaysOnTop property.
-     * NOTE: this flag must be set prior to showing the stage the first time.
-     *
-     * @param securityDialog flag indicating that this Stage is being used to
-     * show a security dialog that should be always-on-top
-     *
-     * @throws IllegalStateException if this property is set after the stage
-     * has ever been made visible.
-     *
-     * @defaultValue false
-     */
-    final void initSecurityDialog(boolean securityDialog) {
-        if (hasBeenVisible) {
-            throw new IllegalStateException("Cannot set securityDialog once stage has been set visible");
-        }
-
-        this.securityDialog = securityDialog;
-    }
-
-    /**
-     * Returns the state of the securityDialog flag.
-     *
-     * @return a flag indicating whether or not this is a security dialog
-     */
-    final boolean isSecurityDialog() {
-        return securityDialog;
-    }
 
     /*
      * Sets this stage to be the primary stage.
@@ -1125,8 +1086,8 @@ public class Stage extends Window {
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
             StageStyle stageStyle = getStyle();
-            setPeer(toolkit.createTKStage(this, isSecurityDialog(),
-                    stageStyle, isPrimary(), getModality(), tkStage, rtl));
+            setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
+                    getModality(), tkStage, rtl));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
