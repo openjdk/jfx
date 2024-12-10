@@ -63,11 +63,6 @@ public class StageHelper extends WindowHelper {
         stageAccessor.doVisibleChanged(window, visible);
     }
 
-    // TODO: JDK-8344111: Consider removing this obsolete method
-    public static void initSecurityDialog(Stage stage, boolean securityDialog) {
-        stageAccessor.initSecurityDialog(stage, securityDialog);
-    }
-
     public static void setPrimary(Stage stage, boolean primary) {
         stageAccessor.setPrimary(stage, primary);
     }
@@ -91,7 +86,6 @@ public class StageHelper extends WindowHelper {
     public static interface StageAccessor {
         void doVisibleChanging(Window window, boolean visible);
         void doVisibleChanged(Window window, boolean visible);
-        public void initSecurityDialog(Stage stage, boolean securityDialog);
         public void setPrimary(Stage stage,  boolean primary);
         public void setImportant(Stage stage,  boolean important);
     }
