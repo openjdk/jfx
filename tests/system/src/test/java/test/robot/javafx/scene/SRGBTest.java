@@ -216,7 +216,6 @@ public class SRGBTest extends VisualTestBase {
     @Test
     @Timeout(value=15)
     public void sRGBPixelTest() throws Exception {
-        assumeTrue(!Util.isOnWayland()); // JDK-8335470
         Rectangle swatch = prepareStage();
 
         for (TestColor testColor : TestColor.values()) {
