@@ -90,11 +90,6 @@ final class J2DFontFactory implements FontFactory {
         return prismFontFactory.isPlatformFont(name);
     }
 
-    @Override
-    public final boolean hasPermission() {
-        return prismFontFactory.hasPermission();
-    }
-
     /* This is an important but tricky one. We need to copy the
      * stream. I don't want to have to manage the temp file deletion here,
      * so although its non-optimal I will create a temp file, provide
@@ -106,12 +101,6 @@ final class J2DFontFactory implements FontFactory {
                                      float size,
                                      boolean register,
                                      boolean loadAll) {
-
-        if (!hasPermission()) {
-            PGFont[] fonts = new PGFont[1];
-            fonts[0] = createFont(DEFAULT_FULLNAME, size);
-            return fonts;
-        }
 
         PGFont[] fonts =
           prismFontFactory.loadEmbeddedFont(name, fontStream,
@@ -154,12 +143,6 @@ final class J2DFontFactory implements FontFactory {
                                      float size,
                                      boolean register,
                                      boolean loadAll) {
-
-        if (!hasPermission()) {
-            PGFont[] fonts = new PGFont[1];
-            fonts[0] = createFont(DEFAULT_FULLNAME, size);
-            return fonts;
-        }
 
         PGFont[] fonts =
             prismFontFactory.loadEmbeddedFont(name, path,
