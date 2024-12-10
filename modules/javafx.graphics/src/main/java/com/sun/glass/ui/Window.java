@@ -694,29 +694,27 @@ public abstract class Window {
     protected abstract boolean _setVisible(long ptr, boolean visible);
     public void setVisible(final boolean visible) {
         Application.checkEventThread();
-        if (this.isVisible != visible) {
-            if (!visible) {
-                if (getView() != null) {
-                    getView().setVisible(visible);
-                }
-                // Avoid native call if the window has been closed already
-                if (this.ptr != 0L) {
-                    this.isVisible = _setVisible(this.ptr, visible);
-                } else {
-                    this.isVisible = visible;
-                }
-                remove(this);
-            } else {
-                checkNotClosed();
-                this.isVisible = _setVisible(this.ptr, visible);
-
-                if (getView() != null) {
-                    getView().setVisible(this.isVisible);
-                }
-                add(this);
-
-                synthesizeViewMoveEvent();
+        if (!visible) {
+            if (getView() != null) {
+                getView().setVisible(visible);
             }
+            // Avoid native call if the window has been closed already
+            if (this.ptr != 0L) {
+                this.isVisible = _setVisible(this.ptr, visible);
+            } else {
+                this.isVisible = visible;
+            }
+            remove(this);
+        } else {
+            checkNotClosed();
+            this.isVisible = _setVisible(this.ptr, visible);
+
+            if (getView() != null) {
+                getView().setVisible(this.isVisible);
+            }
+            add(this);
+
+            synthesizeViewMoveEvent();
         }
     }
 
@@ -724,11 +722,9 @@ public abstract class Window {
     public boolean setResizable(final boolean resizable) {
         Application.checkEventThread();
         checkNotClosed();
-        if (this.isResizable != resizable) {
-            if (_setResizable(this.ptr, resizable)) {
-                this.isResizable = resizable;
-                synthesizeViewMoveEvent();
-            }
+        if (_setResizable(this.ptr, resizable)) {
+            this.isResizable = resizable;
+            synthesizeViewMoveEvent();
         }
         return isResizable;
     }

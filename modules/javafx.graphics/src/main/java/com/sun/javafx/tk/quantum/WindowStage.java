@@ -129,7 +129,7 @@ public class WindowStage extends GlassStage {
             if (owner instanceof WindowStage) {
                 ownerWindow = ((WindowStage)owner).platformWindow;
             }
-            boolean resizable = false;
+            boolean resizable = fxStage != null && fxStage.isResizable();
             boolean focusable = true;
             int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
             if (isPopupStage) { // TODO: make it a stage style?
@@ -138,6 +138,7 @@ public class WindowStage extends GlassStage {
                     windowMask |= Window.TRANSPARENT;
                 }
                 focusable = false;
+                resizable = false;
             } else {
                 // Downgrade conditional stage styles if not supported
                 if (style == StageStyle.UNIFIED && !app.supportsUnifiedWindows()) {
@@ -153,14 +154,10 @@ public class WindowStage extends GlassStage {
                         windowMask |= Window.UNIFIED;
                         // fall through
                     case DECORATED:
-                        windowMask |=
-                            Window.TITLED | Window.CLOSABLE |
-                            Window.MINIMIZABLE | Window.MAXIMIZABLE;
-                        resizable = true;
+                        windowMask |= Window.TITLED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
                         break;
                     case EXTENDED:
                         windowMask |= Window.EXTENDED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
-                        resizable = true;
                         break;
                     case EXTENDED_UTILITY:
                         windowMask |= Window.EXTENDED | Window.CLOSABLE | Window.UTILITY;
@@ -169,8 +166,7 @@ public class WindowStage extends GlassStage {
                         windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
                         break;
                     default:
-                        windowMask |=
-                                (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
+                        windowMask |= (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
                         break;
                 }
 
@@ -181,8 +177,7 @@ public class WindowStage extends GlassStage {
             if (modality != Modality.NONE) {
                 windowMask |= Window.MODAL;
             }
-            platformWindow =
-                    app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+            platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
             platformWindow.setResizable(resizable);
             platformWindow.setFocusable(focusable);
             if (fxStage != null && fxStage.getScene() != null) {

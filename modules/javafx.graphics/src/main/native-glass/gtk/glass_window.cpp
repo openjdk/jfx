@@ -585,6 +585,10 @@ bool WindowContextBase::is_visible() {
     return gtk_widget_get_visible(gtk_widget);
 }
 
+bool WindowContextBase::is_resizable() {
+    return false;
+}
+
 bool WindowContextBase::set_view(jobject view) {
     if (jview) {
         mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
@@ -781,7 +785,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
         }
     }
 
-    if (type == UTILITY) {
+    if (type == UTILITY && frame_type != EXTENDED) {
         gtk_window_set_type_hint(GTK_WINDOW(gtk_widget), GDK_WINDOW_TYPE_HINT_UTILITY);
     }
 
@@ -1067,7 +1071,7 @@ void WindowContextTop::update_window_constraints() {
 
     GdkGeometry hints;
 
-    if (resizable.value && !is_disabled) {
+    if (is_resizable() && !is_disabled) {
         int w = std::max(resizable.sysminw, resizable.minw);
         int h = std::max(resizable.sysminh, resizable.minh);
 
@@ -1099,6 +1103,10 @@ void WindowContextTop::update_window_constraints() {
 void WindowContextTop::set_resizable(bool res) {
     resizable.value = res;
     update_window_constraints();
+}
+
+bool WindowContextTop::is_resizable() {
+    return resizable.value;
 }
 
 void WindowContextTop::set_visible(bool visible) {
@@ -1449,7 +1457,7 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
     }
 
     // Double-clicking on the drag area maximizes the window (or restores its size).
-    if (event->type == GDK_2BUTTON_PRESS) {
+    if (is_resizable() && event->type == GDK_2BUTTON_PRESS) {
         jboolean dragArea = mainEnv->CallBooleanMethod(
             jwindow, jGtkWindowDragAreaHitTest, (jint)event->x, (jint)event->y);
         CHECK_JNI_EXCEPTION(mainEnv);
@@ -1464,7 +1472,7 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
 
     if (event->button == 1 && event->type == GDK_BUTTON_PRESS) {
         GdkWindowEdge edge;
-        bool shouldStartResizeDrag = !is_maximized && get_window_edge(event->x, event->y, &edge);
+        bool shouldStartResizeDrag = is_resizable() && !is_maximized && get_window_edge(event->x, event->y, &edge);
 
         // Clicking on a window edge starts a move-resize operation.
         if (shouldStartResizeDrag) {
@@ -1515,6 +1523,7 @@ void WindowContextTop::process_mouse_motion(GdkEventMotion* event) {
     if (is_fullscreen
             || is_maximized
             || frame_type != EXTENDED
+            || !is_resizable()
             || !get_window_edge(event->x, event->y, &edge)) {
         set_cursor_override(NULL);
         WindowContextBase::process_mouse_motion(event);

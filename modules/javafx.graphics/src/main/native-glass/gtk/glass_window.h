@@ -112,6 +112,7 @@ public:
     virtual bool is_visible() = 0;
     virtual void set_bounds(int, int, bool, bool, int, int, int, int, float, float) = 0;
     virtual void set_resizable(bool) = 0;
+    virtual bool is_resizable() = 0;
     virtual void request_focus() = 0;
     virtual void set_focusable(bool)= 0;
     virtual bool grab_focus() = 0;
@@ -228,6 +229,7 @@ public:
     void remove_child(WindowContextTop*);
     void set_visible(bool);
     bool is_visible();
+    bool is_resizable();
     bool set_view(jobject);
     bool grab_focus();
     bool grab_mouse_drag_focus();
@@ -303,6 +305,7 @@ public:
     void set_maximized(bool);
     void set_bounds(int, int, bool, bool, int, int, int, int, float, float);
     void set_resizable(bool);
+    bool is_resizable();
     void request_focus();
     void set_focusable(bool);
     void set_title(const char*);
