@@ -144,6 +144,8 @@ public class WindowStage extends GlassStage {
                     style = StageStyle.DECORATED;
                 } else if (style == StageStyle.EXTENDED && !app.supportsExtendedWindows()) {
                     style = StageStyle.DECORATED;
+                } else if (style == StageStyle.EXTENDED_UTILITY && !app.supportsExtendedWindows()) {
+                    style = StageStyle.UTILITY;
                 }
 
                 switch (style) {
@@ -159,6 +161,9 @@ public class WindowStage extends GlassStage {
                     case EXTENDED:
                         windowMask |= Window.EXTENDED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
                         resizable = true;
+                        break;
+                    case EXTENDED_UTILITY:
+                        windowMask |= Window.EXTENDED | Window.CLOSABLE | Window.UTILITY;
                         break;
                     case UTILITY:
                         windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;

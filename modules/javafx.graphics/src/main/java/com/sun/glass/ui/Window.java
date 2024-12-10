@@ -747,6 +747,10 @@ public abstract class Window {
         return (this.styleMask & Window.EXTENDED) != 0;
     }
 
+    public boolean isUtilityWindow() {
+        return (this.styleMask & Window.UTILITY) != 0;
+    }
+
     public boolean isTransparentWindow() {
         //The TRANSPARENT flag is set only if it is supported
         return (this.styleMask & Window.TRANSPARENT) != 0;

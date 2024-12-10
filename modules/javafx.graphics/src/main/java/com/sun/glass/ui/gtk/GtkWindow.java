@@ -212,7 +212,7 @@ class GtkWindow extends Window {
     public WindowControlsOverlay getWindowOverlay() {
         if (windowControlsOverlay == null && isExtendedWindow()) {
             windowControlsOverlay = new WindowControlsOverlay(
-                PlatformThemeObserver.getInstance().stylesheetProperty());
+                PlatformThemeObserver.getInstance().stylesheetProperty(), isUtilityWindow());
 
             // Set the system-defined absolute minimum size to the size of the window buttons area,
             // regardless of whether the application has specified a smaller minimum size.

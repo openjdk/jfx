@@ -26,6 +26,7 @@
 package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
+import com.sun.javafx.binding.ObjectConstant;
 import com.sun.javafx.util.Utils;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -167,6 +168,7 @@ public final class WindowControlsOverlay extends Region {
     private static final PseudoClass ACTIVE_PSEUDOCLASS = PseudoClass.getPseudoClass("active");
     private static final String DARK_STYLE_CLASS = "dark";
     private static final String RESTORE_STYLE_CLASS = "restore";
+    private static final String UTILITY_STYLE_CLASS = "utility";
 
     /**
      * The metrics (placement and size) of the window buttons.
@@ -213,10 +215,13 @@ public final class WindowControlsOverlay extends Region {
     private final ButtonRegion maximizeButton = new ButtonRegion(ButtonType.MAXIMIZE, "maximize-button", 1);
     private final ButtonRegion closeButton = new ButtonRegion(ButtonType.CLOSE, "close-button", 2);
     private final Subscription subscriptions;
+    private final boolean utility;
 
     private Node buttonAtMouseDown;
 
-    public WindowControlsOverlay(ObservableValue<String> stylesheet) {
+    public WindowControlsOverlay(ObservableValue<String> stylesheet, boolean utility) {
+        this.utility = utility;
+
         var stage = sceneProperty()
             .flatMap(Scene::windowProperty)
             .map(w -> w instanceof Stage ? (Stage)w : null);
@@ -250,7 +255,15 @@ public final class WindowControlsOverlay extends Region {
             stylesheet.subscribe(this::updateStylesheet));
 
         getStyleClass().setAll("window-button-container");
-        getChildren().addAll(minimizeButton, maximizeButton, closeButton);
+
+        if (utility) {
+            minimizeButton.managedProperty().bind(ObjectConstant.valueOf(false));
+            maximizeButton.managedProperty().bind(ObjectConstant.valueOf(false));
+            getChildren().add(closeButton);
+            getStyleClass().add(UTILITY_STYLE_CLASS);
+        } else {
+            getChildren().addAll(minimizeButton, maximizeButton, closeButton);
+        }
     }
 
     public void dispose() {
@@ -270,10 +283,14 @@ public final class WindowControlsOverlay extends Region {
      * @return the {@code ButtonType} or {@code null}
      */
     public ButtonType buttonAt(double x, double y) {
-        for (var button : orderedButtons) {
-            if (button.isVisible() && button.getBoundsInParent().contains(x, y)) {
-                return button.getButtonType();
+        if (!utility) {
+            for (var button : orderedButtons) {
+                if (button.isVisible() && button.getBoundsInParent().contains(x, y)) {
+                    return button.getButtonType();
+                }
             }
+        } else if (closeButton.isVisible() && closeButton.getBoundsInParent().contains(x, y)) {
+            return ButtonType.CLOSE;
         }
 
         return null;

@@ -115,5 +115,15 @@ public enum StageStyle {
      *
      * @since 24
      */
-    EXTENDED
+    EXTENDED,
+
+    /**
+     * Defines a {@code Stage} style with the semantics of {@link #UTILITY} and the appearance of {@link #EXTENDED}.
+     * <p>
+     * This is a conditional feature, to check if it is supported see {@link Platform#isSupported(ConditionalFeature)}.
+     * If the feature is not supported by the platform, this style downgrades to {@link StageStyle#UTILITY}.
+     *
+     * @since 24
+     */
+    EXTENDED_UTILITY
 }

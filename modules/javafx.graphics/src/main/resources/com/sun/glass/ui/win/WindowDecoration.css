@@ -36,6 +36,10 @@
     -fx-pref-height: 29;
 }
 
+.window-button-container.utility > .close-button {
+    -fx-pref-width: 29;
+}
+
 .minimize-button:hover,
 .maximize-button:hover {
     -fx-background-color: #00000015;

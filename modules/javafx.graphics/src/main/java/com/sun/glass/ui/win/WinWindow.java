@@ -346,7 +346,9 @@ class WinWindow extends Window {
                 throw new RuntimeException("Resource not found: " + WINDOW_DECORATION_STYLESHEET);
             }
 
-            windowControlsOverlay = new WindowControlsOverlay(StringConstant.valueOf(url.toExternalForm()));
+            windowControlsOverlay = new WindowControlsOverlay(
+                StringConstant.valueOf(url.toExternalForm()), isUtilityWindow());
+
             windowOverlayMetrics.bind(windowControlsOverlay.metricsProperty());
         }
 
