@@ -50,9 +50,6 @@ class FontFileWriter implements FontConstants {
     RandomAccessFile raFile;
 
     public FontFileWriter() {
-        if (!hasTempPermission()) {
-            tracker = FontTracker.getTracker();
-        }
     }
 
     protected void setLength(int size) throws IOException {
@@ -229,16 +226,6 @@ class FontFileWriter implements FontConstants {
         checkSize(length);
         raFile.write(buffer, startPos, length);
         pos += length;
-    }
-
-    // TODO: JDK-8344114: Consider removing this obsolete method
-    /**
-     * Used with the byte count tracker for fonts created from streams.
-     * If a thread can create temp files anyway, there is no point in counting
-     * font bytes.
-     */
-    static boolean hasTempPermission() {
-        return true;
     }
 
     /* Like JDK, FX allows untrusted code to create fonts which consume
