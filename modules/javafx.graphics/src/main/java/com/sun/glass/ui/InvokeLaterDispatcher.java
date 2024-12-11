@@ -170,6 +170,8 @@ public final class InvokeLaterDispatcher extends Thread {
     public void notifyEnteringNestedEventLoop() {
         synchronized (LOCK) {
             nestedEventLoopEntered = true;
+            // The new loop will prevent the current loop from leaving.
+            leavingNestedEventLoop = false;
             LOCK.notifyAll();
         }
     }
