@@ -102,20 +102,23 @@
     self->currentPathConstrained = false;
     self->currentPathExpensive = false;
 
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                          selector:@selector(platformPreferencesDidChange)
-                                          name:NSPreferredScrollerStyleDidChangeNotification
-                                          object:nil];
+    [[NSNotificationCenter defaultCenter]
+        addObserver:self
+        selector:@selector(platformPreferencesDidChange)
+        name:NSPreferredScrollerStyleDidChangeNotification
+        object:nil];
 
-    [[NSDistributedNotificationCenter defaultCenter] addObserver:self
-                                                     selector:@selector(platformPreferencesDidChange)
-                                                     name:@"AppleInterfaceThemeChangedNotification"
-                                                     object:nil];
+    [[NSDistributedNotificationCenter defaultCenter]
+        addObserver:self
+        selector:@selector(platformPreferencesDidChange)
+        name:@"AppleInterfaceThemeChangedNotification"
+        object:nil];
 
-    [[NSDistributedNotificationCenter defaultCenter] addObserver:self
-                                                     selector:@selector(platformPreferencesDidChange)
-                                                     name:@"AppleColorPreferencesChangedNotification"
-                                                     object:nil];
+    [[NSDistributedNotificationCenter defaultCenter]
+        addObserver:self
+        selector:@selector(platformPreferencesDidChange)
+        name:@"AppleColorPreferencesChangedNotification"
+        object:nil];
 
     [[[NSWorkspace sharedWorkspace] notificationCenter]
         addObserver:self
