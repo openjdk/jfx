@@ -193,10 +193,10 @@ public class RichEditorDemoPane extends BorderPane {
     void setEndKey(EndKey v) {
         switch(v) {
         case END_OF_LINE:
-            editor.getInputMap().restoreDefaultFunction(RichTextArea.Tags.MOVE_TO_LINE_END);
+            editor.getInputMap().restoreDefaultFunction(RichTextArea.Tag.MOVE_TO_LINE_END);
             break;
         case END_OF_TEXT:
-            editor.getInputMap().registerFunction(RichTextArea.Tags.MOVE_TO_LINE_END, this::moveToEndOfText);
+            editor.getInputMap().registerFunction(RichTextArea.Tag.MOVE_TO_LINE_END, this::moveToEndOfText);
             break;
         }
     }
@@ -205,7 +205,7 @@ public class RichEditorDemoPane extends BorderPane {
     void moveToEndOfText() {
         TextPos p = editor.getCaretPosition();
         if (p != null) {
-            editor.executeDefault(RichTextArea.Tags.MOVE_TO_LINE_END);
+            editor.executeDefault(RichTextArea.Tag.MOVE_TO_LINE_END);
             TextPos p2 = editor.getCaretPosition();
             if (p2 != null) {
                 String text = editor.getPlainText(p2.index());

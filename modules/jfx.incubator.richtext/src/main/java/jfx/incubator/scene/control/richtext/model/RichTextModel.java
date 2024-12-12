@@ -50,10 +50,10 @@ public class RichTextModel extends StyledTextModel {
      * Constructs the empty model.
      */
     public RichTextModel() {
-        registerDataFormatHandler(RichTextFormatHandler.INSTANCE, true, true, 2000);
-        registerDataFormatHandler(RtfFormatHandler.INSTANCE, true, true, 1000);
-        registerDataFormatHandler(HtmlExportFormatHandler.INSTANCE, true, false, 100);
-        registerDataFormatHandler(PlainTextFormatHandler.INSTANCE, true, true, 0);
+        registerDataFormatHandler(RichTextFormatHandler.getInstance(), true, true, 2000);
+        registerDataFormatHandler(RtfFormatHandler.getInstance(), true, true, 1000);
+        registerDataFormatHandler(HtmlExportFormatHandler.getInstance(), true, false, 100);
+        registerDataFormatHandler(PlainTextFormatHandler.getInstance(), true, true, 0);
         // always has at least one paragraph
         paragraphs.add(new RParagraph());
     }
@@ -129,7 +129,6 @@ public class RichTextModel extends StyledTextModel {
 
     @Override
     protected void insertParagraph(int index, Supplier<Region> generator) {
-        // TODO
     }
 
     /** deduplicates style attributes. */
@@ -177,9 +176,7 @@ public class RichTextModel extends StyledTextModel {
      * @param model the model
      * @param out the output
      */
-    // TODO remove later
-    @Deprecated
-    public static void dump(StyledTextModel model, PrintStream out) {
+    private static void dump(StyledTextModel model, PrintStream out) {
         if (model instanceof RichTextModel m) {
             m.dump(out);
         }

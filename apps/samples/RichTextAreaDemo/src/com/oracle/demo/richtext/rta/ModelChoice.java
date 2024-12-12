@@ -182,7 +182,7 @@ public enum ModelChoice {
 
     private static StyledTextModel writingSystemsPlain() {
         try {
-            return SimpleViewOnlyStyledModel.from(WritingSystemsDemo.getText());
+            return SimpleViewOnlyStyledModel.of(WritingSystemsDemo.getText());
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -191,7 +191,7 @@ public enum ModelChoice {
 
     private static StyledTextModel tabs() {
         try {
-            return SimpleViewOnlyStyledModel.from("0123456789012345678901234567890\n0\n\t1\n\t\t2\n\t\t\t3\n\t\t\t\t4\n0\n");
+            return SimpleViewOnlyStyledModel.of("0123456789012345678901234567890\n0\n\t1\n\t\t2\n\t\t\t3\n\t\t\t\t4\n0\n");
         } catch (IOException e) {
             e.printStackTrace();
             return null;

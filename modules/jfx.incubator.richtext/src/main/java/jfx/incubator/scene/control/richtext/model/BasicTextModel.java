@@ -111,7 +111,7 @@ public class BasicTextModel extends StyledTextModel {
      */
     public BasicTextModel(Content c) {
         this.content = c;
-        registerDataFormatHandler(PlainTextFormatHandler.INSTANCE, true, true, 0);
+        registerDataFormatHandler(PlainTextFormatHandler.getInstance(), true, true, 0);
     }
 
     /**

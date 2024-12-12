@@ -85,7 +85,7 @@ public class TestRichTextFormatHandler {
             )
         };
 
-        RichTextFormatHandler handler = RichTextFormatHandler.INSTANCE;
+        RichTextFormatHandler handler = RichTextFormatHandler.getInstance();
 
         for (Object x : ss) {
             testRoundTrip(handler, (List<StyledSegment>)x);
@@ -102,7 +102,7 @@ public class TestRichTextFormatHandler {
         };
 
         StringWriter wr = new StringWriter();
-        StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(RichTextFormatHandler.INSTANCE, null, wr);
+        StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(RichTextFormatHandler.getInstance(), null, wr);
         for (StyledSegment s : input) {
             out.consume(s);
         }
@@ -115,7 +115,7 @@ public class TestRichTextFormatHandler {
     @Test
     public void testEscapes() throws IOException {
         StringWriter wr = new StringWriter();
-        StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(RichTextFormatHandler.INSTANCE, null, wr);
+        StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(RichTextFormatHandler.getInstance(), null, wr);
         out.consume(StyledSegment.of("{|%}"));
         out.flush();
         String s = wr.toString();

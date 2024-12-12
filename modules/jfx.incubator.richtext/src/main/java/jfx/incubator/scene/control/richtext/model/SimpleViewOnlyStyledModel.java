@@ -60,12 +60,14 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
-     * Creates the model from the supplied text string by breaking it down into individual text segments.
+     * Creates the model from the supplied text string by breaking it down into individual text segments,
+     * by splitting on newline characters.
+     *
      * @param text the input multi-line text
      * @return the new instance
      * @throws IOException if an I/O error occurs
      */
-    public static SimpleViewOnlyStyledModel from(String text) throws IOException {
+    public static SimpleViewOnlyStyledModel of(String text) throws IOException {
         SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
         BufferedReader rd = new BufferedReader(new StringReader(text));
         String s;
@@ -93,10 +95,10 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
 
     /**
      * Appends a text segment to the last paragraph.
-     * The {@code text} cannot contain newline ({@code \n}) symbols.
+     * The caller must ensure that the {@code text} does not contain newline symbols.
      * This convenience method is equivalent to calling {@code addSegment(text, StyleAttributeMap.EMPTY);}
      *
-     * @param text the text to append, must not contain {@code \n}, cannot be null
+     * @param text the text to append, must not contain newline symbols, cannot be null
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel addSegment(String text) {
@@ -184,14 +186,14 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
-     * Adds a squiggly line (typically used as a spell checker indicator) to the specified range within the last paragraph.
+     * Adds a wave underline (typically used as a spell checker indicator) to the specified range within the last paragraph.
      *
      * @param start the start offset
      * @param length the length of the highlight
      * @param c the highlight color
      * @return this model instance
      */
-    public SimpleViewOnlyStyledModel squiggly(int start, int length, Color c) {
+    public SimpleViewOnlyStyledModel wavyUnderline(int start, int length, Color c) {
         Paragraph p = lastParagraph();
         p.addSquiggly(start, length, c);
         return this;

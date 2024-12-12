@@ -34,6 +34,7 @@ package com.oracle.demo.richtext.rta;
 
 import java.nio.charset.Charset;
 import java.util.Base64;
+import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -129,12 +130,11 @@ public class RichTextAreaDemoPane extends BorderPane {
         // custom functions
         System.out.println(
             """
-            F2: dump model
             F3: dump accessibility attributes at cursor
             """);
-        control.getInputMap().register(KeyBinding.of(KeyCode.F2), () -> {
-            RichTextModel.dump(control.getModel(), System.out);
-        });
+//        control.getInputMap().register(KeyBinding.of(KeyCode.F2), () -> {
+//            RichTextModel.dump(control.getModel(), System.out);
+//        });
         control.getInputMap().register(KeyBinding.of(KeyCode.F3), () -> {
             dumpAccessibilityAttributes();
         });
@@ -415,7 +415,7 @@ public class RichTextAreaDemoPane extends BorderPane {
 
         items.add(m = m2 = new Menu("Copy Special..."));
         {
-            DataFormat[] fs = control.getModel().getSupportedDataFormats(true);
+            List<DataFormat> fs = control.getModel().getSupportedDataFormats(true);
             for (DataFormat f : fs) {
                 String name = f.toString();
                 m2.getItems().add(m = new MenuItem(name));
@@ -430,7 +430,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         items.add(m = m2 = new Menu("Paste Special..."));
         m.setDisable(!paste);
         {
-            DataFormat[] fs = control.getModel().getSupportedDataFormats(false);
+            List<DataFormat> fs = control.getModel().getSupportedDataFormats(false);
             for (DataFormat f : fs) {
                 if (Clipboard.getSystemClipboard().hasContent(f)) {
                     String name = f.toString();

@@ -58,7 +58,7 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
         build();
 
     public ParagraphAttributesDemoModel() {
-        registerDataFormatHandler(RtfFormatHandler.INSTANCE, true, false, 1000);
+        registerDataFormatHandler(RtfFormatHandler.getInstance(), true, false, 1000);
         insert(this);
     }
 

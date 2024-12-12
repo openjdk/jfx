@@ -39,9 +39,12 @@ import jfx.incubator.scene.control.richtext.TextPos;
 public abstract class StyledTextModelViewOnlyBase extends StyledTextModel {
     /** The constructor. */
     public StyledTextModelViewOnlyBase() {
-        registerDataFormatHandler(RichTextFormatHandler.INSTANCE, true, false, 2000);
+        registerDataFormatHandler(RichTextFormatHandler.getInstance(), true, false, 2000);
     }
 
+    /**
+     * @return always returns {@code false}
+     */
     @Override
     public final boolean isWritable() {
         return false;

@@ -120,7 +120,7 @@ public class TestRichTextModelAttributes {
     private void t(String initial, Consumer<RichTextModel> op, String expected) {
         try {
             RichTextModel m = new RichTextModel();
-            RichTextFormatHandler h = RichTextFormatHandler.INSTANCE;
+            RichTextFormatHandler h = RichTextFormatHandler.getInstance();
 
             // set initial text
             if (initial != null) {

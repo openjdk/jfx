@@ -33,10 +33,12 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.scene.input.DataFormat;
@@ -116,12 +118,12 @@ public abstract class StyledTextModel {
      * {@code replace()},
      * {@code undo()},
      * {@code redo()}
-     * methods, i.e. editing via UI.
+     * methods.
      * <p>
      * Note that even when this method returns {@code false}, the model itself may still update its content
      * and fire the change events as a response, for example, to changes in its backing data storage.
      *
-     * @return true if the model supports content modifications via the UI
+     * @return true if the model supports content modifications
      */
     public abstract boolean isWritable();
 
@@ -135,7 +137,7 @@ public abstract class StyledTextModel {
     /**
      * Returns the plain text string for the specified paragraph.  The returned text string cannot be null
      * and must not contain any control characters other than TAB.
-     * The caller should never attempt to ask for a paragraph outside of the valid range.
+     * The caller must not attempt to ask for a paragraph outside of the valid range.
      *
      * @param index the paragraph index in the range (0...{@link #size()})
      * @return the non-null paragraph text string
@@ -146,8 +148,8 @@ public abstract class StyledTextModel {
      * Returns a {@link RichParagraph} at the given model index.
      * This method makes no guarantees that the same paragraph instance will be returned for the same model index.
      *
-     * @param index paragraph index in the range (0...{@link #size()})
-     * @return a new instance of TextCell created
+     * @param index the paragraph index in the range (0...{@link #size()})
+     * @return the instance of {@code RichParagraph}
      */
     public abstract RichParagraph getParagraph(int index);
 
@@ -219,7 +221,7 @@ public abstract class StyledTextModel {
     protected abstract void applyStyle(int index, int start, int end, StyleAttributeMap a, boolean merge);
 
     /**
-     * Returns the {@link StyleAttributeMap} of the first character at the specified position.
+     * Returns the {@link StyleAttributeMap} of the character at the specified position's {@code charIndex}.
      * When at the end of the document, returns the attributes of the last character.
      *
      * @param resolver the style resolver
@@ -284,9 +286,9 @@ public abstract class StyledTextModel {
      * This constructor registers data handlers for RTF, HTML (export only), and plain text.
      */
     public StyledTextModel() {
-        registerDataFormatHandler(RtfFormatHandler.INSTANCE, true, false, 1000);
-        registerDataFormatHandler(HtmlExportFormatHandler.INSTANCE, true, false, 100);
-        registerDataFormatHandler(PlainTextFormatHandler.INSTANCE, true, false, 0);
+        registerDataFormatHandler(RtfFormatHandler.getInstance(), true, false, 1000);
+        registerDataFormatHandler(HtmlExportFormatHandler.getInstance(), true, false, 100);
+        registerDataFormatHandler(PlainTextFormatHandler.getInstance(), true, false, 0);
     }
 
     /**
@@ -357,7 +359,7 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Returns an array of supported data formats for either export or import operations,
+     * Returns an immutable list of supported data formats for either export or import operations,
      * in the order of priority - from high to low.
      * <p>
      * The top priority format will be used by
@@ -365,9 +367,9 @@ public abstract class StyledTextModel {
      * {@link jfx.incubator.scene.control.richtext.RichTextArea#write(OutputStream)} methods.
      *
      * @param forExport determines whether the operation is export (true) or import (false)
-     * @return supported formats
+     * @return the immutable list of supported formats
      */
-    public final DataFormat[] getSupportedDataFormats(boolean forExport) {
+    public final List<DataFormat> getSupportedDataFormats(boolean forExport) {
         ArrayList<FHPriority> fs = new ArrayList<>(handlers.size());
         handlers.forEach((k, p) -> {
             if (k.forExport == forExport) {
@@ -375,12 +377,9 @@ public abstract class StyledTextModel {
             }
         });
         Collections.sort(fs);
-        int sz = fs.size();
-        DataFormat[] formats = new DataFormat[sz];
-        for (int i = 0; i < sz; i++) {
-            formats[i] = fs.get(i).handler().getDataFormat();
-        }
-        return formats;
+        return fs.stream().
+            map((h) -> h.handler().getDataFormat()).
+            collect(Collectors.toUnmodifiableList());
     }
 
     /**
@@ -441,6 +440,7 @@ public abstract class StyledTextModel {
     /**
      * Exports the stream of {@code StyledSegment}s in the given range to the specified
      * {@code StyledOutput}.
+     * This method does not close the {@code StyledOutput}.
      *
      * @param start start of the range
      * @param end end of the range

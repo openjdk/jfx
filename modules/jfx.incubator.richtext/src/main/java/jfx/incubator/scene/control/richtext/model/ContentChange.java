@@ -104,8 +104,8 @@ public abstract class ContentChange {
     }
 
     /**
-     * Determines whether the change is an edit (true) or affects styling only (false).
-     * @return true if change affects stylint only
+     * Determines whether the change is an edit ({@code true}) or affects styling only ({@code false}).
+     * @return true if change is an edit
      */
     public boolean isEdit() {
         return true;

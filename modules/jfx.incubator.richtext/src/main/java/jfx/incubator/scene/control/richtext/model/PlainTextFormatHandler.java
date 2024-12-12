@@ -39,12 +39,19 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * @since 24
  */
 public class PlainTextFormatHandler extends DataFormatHandler {
-    /** The singleton instance of {@code PlainTextFormatHandler}. */
-    public static final PlainTextFormatHandler INSTANCE = new PlainTextFormatHandler();
+    private static final PlainTextFormatHandler instance = new PlainTextFormatHandler();
 
     /** The constructor. */
     private PlainTextFormatHandler() {
         super(DataFormat.PLAIN_TEXT);
+    }
+
+    /**
+     * Returns the singleton instance of {@code PlainTextFormatHandler}.
+     * @return the singleton instance of {@code PlainTextFormatHandler}
+     */
+    public static final PlainTextFormatHandler getInstance() {
+        return instance;
     }
 
     @Override

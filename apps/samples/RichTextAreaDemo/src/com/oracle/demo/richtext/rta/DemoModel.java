@@ -68,14 +68,6 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         addWithInlineAndStyleNames("RichTextArea Control", "-fx-font-size:200%;", UNDERLINE);
         nl(2);
 
-//        addParagraph(() -> {
-//            Region r = new Region();
-//            r.getchi
-//            r.setw 300, 50);
-//            r.setFill(Color.RED);
-//            return r;
-//        });
-
         addWithStyleNames("/**", RED, CODE);
         nl();
         addWithStyleNames(" * Syntax Highlight Demo.", RED, CODE);
@@ -115,7 +107,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         });
         addSegment(" ");
         addNodeSegment(() -> new Button("OK"));
-        addSegment(" "); // FIX cannot navigate over this segment
+        addSegment(" ");
         nl(2);
         addWithStyleNames("A regular Arabic verb, كَتَبَ‎ kataba (to write).", ARABIC).nl();
         addWithStyleNames("Emojis: [🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]", LARGE).nl();
@@ -127,24 +119,16 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         nl(3);
         addWithStyleNames("Behold various types of highlights, including overlapping highlights.", LARGE);
         highlight(7, 7, Color.rgb(255, 255, 128, 0.7));
-        squiggly(36, 100, Color.RED);
+        wavyUnderline(36, 100, Color.RED);
         highlight(46, 11, Color.rgb(255, 255, 128, 0.7));
         highlight(50, 20, Color.rgb(0, 0, 128, 0.1));
         nl(2);
         addSegment("Behold various types of highlights, including overlapping highlights.");
         highlight(7, 7, Color.rgb(255, 255, 128, 0.7));
-        squiggly(36, 100, Color.RED);
+        wavyUnderline(36, 100, Color.RED);
         highlight(46, 11, Color.rgb(255, 255, 128, 0.7));
         highlight(50, 20, Color.rgb(0, 0, 128, 0.1));
         nl(2);
-
-        // FIX adding a control messes up the view with text wrap off
-//        addParagraph(() -> {
-//            TextField t = new TextField("yo");
-//            t.setMaxWidth(100);
-//            return t;
-//        });
-//        nl(2);
 
         addParagraph(this::createRect);
         nl(2);
@@ -155,35 +139,11 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         addWithStyleNames("  Fig. 1 Embedded animated GIF image.", GRAY, ITALIC);
         nl(2);
 
-        /*
-        Random r = new Random();
-        for(int line=0; line<100; line++) {
-            int ct = r.nextInt(10);
-            for (int word = 0; word < ct; word++) {
-                int len = 1 + r.nextInt(7);
-                char c = '*';
-
-                if (word == 0) {
-                    addSegment("L" + (size() + 1), null, GRAY);
-                }
-
-                addSegment(" ");
-
-                if (r.nextFloat() < 0.1) {
-                    addSegment(word + "." + word(c, len), null, RED);
-                } else {
-                    addSegment(word + "." + word(c, len));
-                }
-            }
-            nl();
-        }
-        */
-
         nl();
         addWithInlineStyle("\t\t終 The End.", "-fx-font-size:200%;");
         nl();
 
-        registerDataFormatHandler(RichTextFormatHandler.INSTANCE, true, false, 2000);
+        registerDataFormatHandler(RichTextFormatHandler.getInstance(), true, false, 2000);
     }
 
     private Region createRect() {

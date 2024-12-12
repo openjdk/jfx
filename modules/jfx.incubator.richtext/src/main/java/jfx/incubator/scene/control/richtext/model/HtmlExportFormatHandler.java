@@ -44,12 +44,19 @@ import jfx.incubator.scene.control.richtext.TextPos;
 public class HtmlExportFormatHandler extends DataFormatHandler {
     /** when true, style attributes are inlined, this seems to work better in Thunderbird */
     private static final boolean INLINE_STYLES = true;
-    /** The singleton instance of {@code HtmlExportFormatHandler}. */
-    public static final HtmlExportFormatHandler INSTANCE = new HtmlExportFormatHandler();
+    private static final HtmlExportFormatHandler instance = new HtmlExportFormatHandler();
 
     /** The constructor */
     private HtmlExportFormatHandler() {
         super(DataFormat.HTML);
+    }
+
+    /**
+     * Returns the singleton instance of {@code HtmlExportFormatHandler}.
+     * @return the singleton instance of {@code HtmlExportFormatHandler}
+     */
+    public static final HtmlExportFormatHandler getInstance() {
+        return instance;
     }
 
     @Override

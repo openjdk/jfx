@@ -116,9 +116,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     // String -> Handler
     // StyleAttribute -> Handler
     private final HashMap<Object,Handler> handlers = new HashMap<>(64);
-
-    /** The singleton instance of {@code RtfFormatHandler}. */
-    public static final RichTextFormatHandler INSTANCE = new RichTextFormatHandler();
+    private static final RichTextFormatHandler instance = new RichTextFormatHandler();
 
     /**
      * Constructor.
@@ -143,6 +141,14 @@ public class RichTextFormatHandler extends DataFormatHandler {
         addHandler(StyleAttributeMap.TEXT_ALIGNMENT, "alignment", TEXT_ALIGNMENT_CONVERTER);
         addHandler(StyleAttributeMap.TEXT_COLOR, "tc", COLOR_CONVERTER);
         addHandlerBoolean(StyleAttributeMap.UNDERLINE, "u");
+    }
+
+    /**
+     * Returns the singleton instance of {@code RtfFormatHandler}.
+     * @return the singleton instance of {@code RtfFormatHandler}
+     */
+    public static final RichTextFormatHandler getInstance() {
+        return instance;
     }
 
     private static void initAccessor() {

@@ -117,18 +117,18 @@ public class UsageExamples {
         });
 
         // unbind old key bindings
-        var old = richTextArea.getInputMap().getKeyBindingsFor(RichTextArea.Tags.PASTE_PLAIN_TEXT);
+        var old = richTextArea.getInputMap().getKeyBindingsFor(RichTextArea.Tag.PASTE_PLAIN_TEXT);
         for (KeyBinding k : old) {
-            richTextArea.getInputMap().unbind(k);
+            richTextArea.getInputMap().unregister(k);
         }
         // map a new key binding
-        richTextArea.getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), RichTextArea.Tags.PASTE_PLAIN_TEXT);
+        richTextArea.getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), RichTextArea.Tag.PASTE_PLAIN_TEXT);
 
         // redefine a function
-        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT, () -> { });
+        richTextArea.getInputMap().registerFunction(RichTextArea.Tag.PASTE_PLAIN_TEXT, () -> { });
         richTextArea.pastePlainText(); // becomes a no-op
         // revert back to the default behavior
-        richTextArea.getInputMap().restoreDefaultFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT);
+        richTextArea.getInputMap().restoreDefaultFunction(RichTextArea.Tag.PASTE_PLAIN_TEXT);
 
         // sets a side decorator
         richTextArea.setLeftDecorator(new LineNumberDecorator());
@@ -139,7 +139,7 @@ public class UsageExamples {
         });
 
         // change the functionality of an existing key binding
-        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_START, () -> {
+        richTextArea.getInputMap().registerFunction(RichTextArea.Tag.MOVE_WORD_NEXT_START, () -> {
             // refers to custom logic
             TextPos p = getCustomNextWordPosition(richTextArea);
             richTextArea.select(p);

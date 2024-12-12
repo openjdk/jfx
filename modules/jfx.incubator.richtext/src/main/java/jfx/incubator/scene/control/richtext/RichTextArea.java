@@ -165,7 +165,7 @@ public class RichTextArea extends Control {
      * {@link InputMap#registerKey(jfx.incubator.scene.control.input.KeyBinding, FunctionTag)} or
      * {@link  InputMap#register(jfx.incubator.scene.control.input.KeyBinding, FunctionHandler)}.
      */
-    public static class Tags {
+    public static class Tag {
         /** Deletes the symbol before the caret. */
         public static final FunctionTag BACKSPACE = new FunctionTag();
         /** Copies selected text to the clipboard. */
@@ -287,7 +287,7 @@ public class RichTextArea extends Control {
         /** If possible, undoes the last modification. */
         public static final FunctionTag UNDO = new FunctionTag();
 
-        private Tags() { }
+        private Tag() { }
     }
 
     private SimpleObjectProperty<StyledTextModel> model;
@@ -520,7 +520,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Indicates whether this RichTextArea can be edited by the user, provided the model is also editable.
+     * Indicates whether this RichTextArea can be edited by the user, provided the model is also writable.
      * Changing the value of this property with a view-only model or a null model has no effect.
      *
      * @return the editable property
@@ -1111,15 +1111,15 @@ public class RichTextArea extends Control {
      * When selection exists, deletes selected text.  Otherwise, deletes the character preceding the caret,
      * possibly breaking up the grapheme clusters.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      *
-     * @see RichTextArea.Tags#BACKSPACE
+     * @see RichTextArea.Tag#BACKSPACE
      */
     public void backspace() {
-        execute(Tags.BACKSPACE);
+        execute(Tag.BACKSPACE);
     }
 
     /**
@@ -1158,10 +1158,10 @@ public class RichTextArea extends Control {
      * This method does nothing if the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#COPY
+     * @see RichTextArea.Tag#COPY
      */
     public void copy() {
-        execute(Tags.COPY);
+        execute(Tag.COPY);
     }
 
     /**
@@ -1181,116 +1181,116 @@ public class RichTextArea extends Control {
      * Transfers the currently selected text to the clipboard,
      * removing the current selection.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#CUT
+     * @see RichTextArea.Tag#CUT
      */
     public void cut() {
-        execute(Tags.CUT);
+        execute(Tag.CUT);
     }
 
     /**
      * When selection exists, deletes selected text.  Otherwise, deletes the symbol at the caret.
      * When the symbol at the caret is a grapheme cluster, deletes the whole cluster.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#DELETE
+     * @see RichTextArea.Tag#DELETE
      */
     public void delete() {
-        execute(Tags.DELETE);
+        execute(Tag.DELETE);
     }
 
     /**
      * When selection exists, deletes selected paragraphs.  Otherwise, deletes the paragraph at the caret.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#DELETE_PARAGRAPH
+     * @see RichTextArea.Tag#DELETE_PARAGRAPH
      */
     public void deleteParagraph() {
-        execute(Tags.DELETE_PARAGRAPH);
+        execute(Tag.DELETE_PARAGRAPH);
     }
 
     /**
      * Deletes text from the caret position to the start of the paragraph, ignoring existing selection.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#DELETE_PARAGRAPH_START
+     * @see RichTextArea.Tag#DELETE_PARAGRAPH_START
      */
     public void deleteParagraphStart() {
-        execute(Tags.DELETE_PARAGRAPH_START);
+        execute(Tag.DELETE_PARAGRAPH_START);
     }
 
     /**
      * Deletes from the caret positon to the end of next word, ignoring existing selection.
      * When the caret is in an empty paragraph, deletes the paragraph.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#DELETE_WORD_NEXT_END
+     * @see RichTextArea.Tag#DELETE_WORD_NEXT_END
      */
     public void deleteWordNextEnd() {
-        execute(Tags.DELETE_WORD_NEXT_END);
+        execute(Tag.DELETE_WORD_NEXT_END);
     }
 
     /**
      * Deletes from the caret positon to the start of next word, ignoring existing selection.
      * When the caret is in an empty paragraph, deletes the paragraph.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#DELETE_WORD_NEXT_START
+     * @see RichTextArea.Tag#DELETE_WORD_NEXT_START
      */
     public void deleteWordNextStart() {
-        execute(Tags.DELETE_WORD_NEXT_START);
+        execute(Tag.DELETE_WORD_NEXT_START);
     }
 
     /**
      * Deletes (multiple) empty paragraphs or text from the caret position to the start of the previous word,
      * ignoring existing selection.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#DELETE_WORD_PREVIOUS
+     * @see RichTextArea.Tag#DELETE_WORD_PREVIOUS
      */
     public void deleteWordPrevious() {
-        execute(Tags.DELETE_WORD_PREVIOUS);
+        execute(Tag.DELETE_WORD_PREVIOUS);
     }
 
     /**
      * Clears the selected text range by moving anchor to the caret position.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#DESELECT
+     * @see RichTextArea.Tag#DESELECT
      */
     public void deselect() {
-        execute(Tags.DESELECT);
+        execute(Tag.DESELECT);
     }
 
     /**
      * Provides audio and/or visual error feedback.  The default implementation does nothing.
      *
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#ERROR_FEEDBACK
+     * @see RichTextArea.Tag#ERROR_FEEDBACK
      */
     public void errorFeedback() {
-        execute(Tags.ERROR_FEEDBACK);
+        execute(Tag.ERROR_FEEDBACK);
     }
 
     /**
@@ -1446,27 +1446,27 @@ public class RichTextArea extends Control {
     /**
      * Inserts a line break at the caret.  If selection exists, first deletes the selected text.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#INSERT_LINE_BREAK
+     * @see RichTextArea.Tag#INSERT_LINE_BREAK
      */
     public void insertLineBreak() {
-        execute(Tags.INSERT_LINE_BREAK);
+        execute(Tag.INSERT_LINE_BREAK);
     }
 
     /**
      * Inserts a tab symbol at the caret.  If selection exists, first deletes the selected text.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#INSERT_TAB
+     * @see RichTextArea.Tag#INSERT_TAB
      */
     public void insertTab() {
-        execute(Tags.INSERT_TAB);
+        execute(Tag.INSERT_TAB);
     }
 
     /**
@@ -1502,20 +1502,20 @@ public class RichTextArea extends Control {
      * Moves the caret to after the last character of the text, clearing an existing selection.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_TO_DOCUMENT_END
+     * @see RichTextArea.Tag#MOVE_TO_DOCUMENT_END
      */
     public void moveDocumentEnd() {
-        execute(Tags.MOVE_TO_DOCUMENT_END);
+        execute(Tag.MOVE_TO_DOCUMENT_END);
     }
 
     /**
      * Moves the caret to before the first character of the text, clearing an existing selection.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_TO_DOCUMENT_START
+     * @see RichTextArea.Tag#MOVE_TO_DOCUMENT_START
      */
     public void moveDocumentStart() {
-        execute(Tags.MOVE_TO_DOCUMENT_START);
+        execute(Tag.MOVE_TO_DOCUMENT_START);
     }
 
     /**
@@ -1524,10 +1524,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_DOWN
+     * @see RichTextArea.Tag#MOVE_DOWN
      */
     public void moveDown() {
-        execute(Tags.MOVE_DOWN);
+        execute(Tag.MOVE_DOWN);
     }
 
     /**
@@ -1536,10 +1536,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_LEFT
+     * @see RichTextArea.Tag#MOVE_LEFT
      */
     public void moveLeft() {
-        execute(Tags.MOVE_LEFT);
+        execute(Tag.MOVE_LEFT);
     }
 
     /**
@@ -1548,10 +1548,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_TO_LINE_END
+     * @see RichTextArea.Tag#MOVE_TO_LINE_END
      */
     public void moveLineEnd() {
-        execute(Tags.MOVE_TO_LINE_END);
+        execute(Tag.MOVE_TO_LINE_END);
     }
 
     /**
@@ -1560,10 +1560,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_TO_LINE_START
+     * @see RichTextArea.Tag#MOVE_TO_LINE_START
      */
     public void moveLineStart() {
-        execute(Tags.MOVE_TO_LINE_START);
+        execute(Tag.MOVE_TO_LINE_START);
     }
 
     /**
@@ -1572,10 +1572,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_PARAGRAPH_DOWN
+     * @see RichTextArea.Tag#MOVE_PARAGRAPH_DOWN
      */
     public void moveParagraphDown() {
-        execute(Tags.MOVE_PARAGRAPH_DOWN);
+        execute(Tag.MOVE_PARAGRAPH_DOWN);
     }
 
     /**
@@ -1584,10 +1584,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_TO_PARAGRAPH_END
+     * @see RichTextArea.Tag#MOVE_TO_PARAGRAPH_END
      */
     public void moveParagraphEnd() {
-        execute(Tags.MOVE_TO_PARAGRAPH_END);
+        execute(Tag.MOVE_TO_PARAGRAPH_END);
     }
 
     /**
@@ -1596,10 +1596,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_TO_PARAGRAPH_START
+     * @see RichTextArea.Tag#MOVE_TO_PARAGRAPH_START
      */
     public void moveParagraphStart() {
-        execute(Tags.MOVE_TO_PARAGRAPH_START);
+        execute(Tag.MOVE_TO_PARAGRAPH_START);
     }
 
     /**
@@ -1608,10 +1608,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_PARAGRAPH_UP
+     * @see RichTextArea.Tag#MOVE_PARAGRAPH_UP
      */
     public void moveParagraphUp() {
-        execute(Tags.MOVE_PARAGRAPH_UP);
+        execute(Tag.MOVE_PARAGRAPH_UP);
     }
 
     /**
@@ -1620,10 +1620,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_RIGHT
+     * @see RichTextArea.Tag#MOVE_RIGHT
      */
     public void moveRight() {
-        execute(Tags.MOVE_RIGHT);
+        execute(Tag.MOVE_RIGHT);
     }
 
     /**
@@ -1632,10 +1632,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_UP
+     * @see RichTextArea.Tag#MOVE_UP
      */
     public void moveUp() {
-        execute(Tags.MOVE_UP);
+        execute(Tag.MOVE_UP);
     }
 
     /**
@@ -1645,10 +1645,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_WORD_LEFT
+     * @see RichTextArea.Tag#MOVE_WORD_LEFT
      */
     public void moveWordLeft() {
-        execute(Tags.MOVE_WORD_LEFT);
+        execute(Tag.MOVE_WORD_LEFT);
     }
 
     /**
@@ -1657,10 +1657,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_WORD_NEXT_END
+     * @see RichTextArea.Tag#MOVE_WORD_NEXT_END
      */
     public void moveWordNextEnd() {
-        execute(Tags.MOVE_WORD_NEXT_END);
+        execute(Tag.MOVE_WORD_NEXT_END);
     }
 
     /**
@@ -1669,10 +1669,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_WORD_NEXT_START
+     * @see RichTextArea.Tag#MOVE_WORD_NEXT_START
      */
     public void moveWordNextStart() {
-        execute(Tags.MOVE_WORD_NEXT_START);
+        execute(Tag.MOVE_WORD_NEXT_START);
     }
 
     /**
@@ -1681,10 +1681,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_WORD_PREVIOUS
+     * @see RichTextArea.Tag#MOVE_WORD_PREVIOUS
      */
     public void moveWordPrevious() {
-        execute(Tags.MOVE_WORD_PREVIOUS);
+        execute(Tag.MOVE_WORD_PREVIOUS);
     }
 
     /**
@@ -1694,10 +1694,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#MOVE_WORD_RIGHT
+     * @see RichTextArea.Tag#MOVE_WORD_RIGHT
      */
     public void moveWordRight() {
-        execute(Tags.MOVE_WORD_RIGHT);
+        execute(Tag.MOVE_WORD_RIGHT);
     }
 
     /**
@@ -1706,10 +1706,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#PAGE_DOWN
+     * @see RichTextArea.Tag#PAGE_DOWN
      */
     public void pageDown() {
-        execute(Tags.PAGE_DOWN);
+        execute(Tag.PAGE_DOWN);
     }
 
     /**
@@ -1718,10 +1718,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#PAGE_UP
+     * @see RichTextArea.Tag#PAGE_UP
      */
     public void pageUp() {
-        execute(Tags.PAGE_UP);
+        execute(Tag.PAGE_UP);
     }
 
     /**
@@ -1729,20 +1729,20 @@ public class RichTextArea extends Control {
      * This method clears the selection afterward.
      * It is up to the model to pick the best data format to paste.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#PASTE
+     * @see RichTextArea.Tag#PASTE
      */
     public void paste() {
-        execute(Tags.PASTE);
+        execute(Tag.PASTE);
     }
 
     /**
      * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model is {@code null},
      * or if the specified format is not supported by the model.
      *
@@ -1758,14 +1758,14 @@ public class RichTextArea extends Control {
     /**
      * Pastes the plain text clipboard content at the caret, or, if selection exists, replacing the selected text.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#PASTE_PLAIN_TEXT
+     * @see RichTextArea.Tag#PASTE_PLAIN_TEXT
      */
     public final void pastePlainText() {
-        execute(Tags.PASTE_PLAIN_TEXT);
+        execute(Tag.PASTE_PLAIN_TEXT);
     }
 
     /**
@@ -1812,10 +1812,10 @@ public class RichTextArea extends Control {
      * false, then calling this method has no effect.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#REDO
+     * @see RichTextArea.Tag#REDO
      */
     public void redo() {
-        execute(Tags.REDO);
+        execute(Tag.REDO);
     }
 
     /**
@@ -1880,10 +1880,10 @@ public class RichTextArea extends Control {
      * at the end of the document.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_ALL
+     * @see RichTextArea.Tag#SELECT_ALL
      */
     public void selectAll() {
-        execute(Tags.SELECT_ALL);
+        execute(Tag.SELECT_ALL);
     }
 
     /**
@@ -1892,10 +1892,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_DOWN
+     * @see RichTextArea.Tag#SELECT_DOWN
      */
     public void selectDown() {
-        execute(Tags.SELECT_DOWN);
+        execute(Tag.SELECT_DOWN);
     }
 
     /**
@@ -1904,10 +1904,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_LEFT
+     * @see RichTextArea.Tag#SELECT_LEFT
      */
     public void selectLeft() {
-        execute(Tags.SELECT_LEFT);
+        execute(Tag.SELECT_LEFT);
     }
 
     /**
@@ -1916,10 +1916,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_PAGE_DOWN
+     * @see RichTextArea.Tag#SELECT_PAGE_DOWN
      */
     public void selectPageDown() {
-        execute(Tags.SELECT_PAGE_DOWN);
+        execute(Tag.SELECT_PAGE_DOWN);
     }
 
     /**
@@ -1928,10 +1928,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_PAGE_UP
+     * @see RichTextArea.Tag#SELECT_PAGE_UP
      */
     public void selectPageUp() {
-        execute(Tags.SELECT_PAGE_UP);
+        execute(Tag.SELECT_PAGE_UP);
     }
 
     /**
@@ -1940,10 +1940,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_PARAGRAPH
+     * @see RichTextArea.Tag#SELECT_PARAGRAPH
      */
     public void selectParagraph() {
-        execute(Tags.SELECT_PARAGRAPH);
+        execute(Tag.SELECT_PARAGRAPH);
     }
 
     /**
@@ -1953,10 +1953,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_PARAGRAPH_DOWN
+     * @see RichTextArea.Tag#SELECT_PARAGRAPH_DOWN
      */
     public void selectParagraphDown() {
-        execute(Tags.SELECT_PARAGRAPH_DOWN);
+        execute(Tag.SELECT_PARAGRAPH_DOWN);
     }
 
     /**
@@ -1965,10 +1965,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_PARAGRAPH_END
+     * @see RichTextArea.Tag#SELECT_PARAGRAPH_END
      */
     public void selectParagraphEnd() {
-        execute(Tags.SELECT_PARAGRAPH_END);
+        execute(Tag.SELECT_PARAGRAPH_END);
     }
 
     /**
@@ -1977,10 +1977,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_PARAGRAPH_START
+     * @see RichTextArea.Tag#SELECT_PARAGRAPH_START
      */
     public void selectParagraphStart() {
-        execute(Tags.SELECT_PARAGRAPH_START);
+        execute(Tag.SELECT_PARAGRAPH_START);
     }
 
     /**
@@ -1990,10 +1990,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_PARAGRAPH_UP
+     * @see RichTextArea.Tag#SELECT_PARAGRAPH_UP
      */
     public void selectParagraphUp() {
-        execute(Tags.SELECT_PARAGRAPH_UP);
+        execute(Tag.SELECT_PARAGRAPH_UP);
     }
 
     /**
@@ -2002,10 +2002,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_RIGHT
+     * @see RichTextArea.Tag#SELECT_RIGHT
      */
     public void selectRight() {
-        execute(Tags.SELECT_RIGHT);
+        execute(Tag.SELECT_RIGHT);
     }
 
     /**
@@ -2014,20 +2014,20 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_TO_DOCUMENT_END
+     * @see RichTextArea.Tag#SELECT_TO_DOCUMENT_END
      */
     public void selectToDocumentEnd() {
-        execute(Tags.SELECT_TO_DOCUMENT_END);
+        execute(Tag.SELECT_TO_DOCUMENT_END);
     }
 
     /**
      * Extends selection to the start of the document.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_TO_DOCUMENT_START
+     * @see RichTextArea.Tag#SELECT_TO_DOCUMENT_START
      */
     public void selectToDocumentStart() {
-        execute(Tags.SELECT_TO_DOCUMENT_START);
+        execute(Tag.SELECT_TO_DOCUMENT_START);
     }
 
     /**
@@ -2036,20 +2036,20 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_TO_LINE_END
+     * @see RichTextArea.Tag#SELECT_TO_LINE_END
      */
     public void selectToLineEnd() {
-        execute(Tags.SELECT_TO_LINE_END);
+        execute(Tag.SELECT_TO_LINE_END);
     }
 
     /**
      * Extends selection to the start of the visual text line at caret.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_TO_LINE_START
+     * @see RichTextArea.Tag#SELECT_TO_LINE_START
      */
     public void selectToLineStart() {
-        execute(Tags.SELECT_TO_LINE_START);
+        execute(Tag.SELECT_TO_LINE_START);
     }
 
     /**
@@ -2058,10 +2058,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_UP
+     * @see RichTextArea.Tag#SELECT_UP
      */
     public void selectUp() {
-        execute(Tags.SELECT_UP);
+        execute(Tag.SELECT_UP);
     }
 
     /**
@@ -2070,10 +2070,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_WORD
+     * @see RichTextArea.Tag#SELECT_WORD
      */
     public void selectWord() {
-        execute(Tags.SELECT_WORD);
+        execute(Tag.SELECT_WORD);
     }
 
     /**
@@ -2086,10 +2086,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_WORD_LEFT
+     * @see RichTextArea.Tag#SELECT_WORD_LEFT
      */
     public void selectWordLeft() {
-        execute(Tags.SELECT_WORD_LEFT);
+        execute(Tag.SELECT_WORD_LEFT);
     }
 
     /**
@@ -2098,10 +2098,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_WORD_NEXT_END
+     * @see RichTextArea.Tag#SELECT_WORD_NEXT_END
      */
     public void selectWordNextEnd() {
-        execute(Tags.SELECT_WORD_NEXT_END);
+        execute(Tag.SELECT_WORD_NEXT_END);
     }
 
     /**
@@ -2112,10 +2112,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_WORD_NEXT
+     * @see RichTextArea.Tag#SELECT_WORD_NEXT
      */
     public void selectWordNextStart() {
-        execute(Tags.SELECT_WORD_NEXT);
+        execute(Tag.SELECT_WORD_NEXT);
     }
 
     /**
@@ -2126,10 +2126,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_WORD_PREVIOUS
+     * @see RichTextArea.Tag#SELECT_WORD_PREVIOUS
      */
     public void selectWordPrevious() {
-        execute(Tags.SELECT_WORD_PREVIOUS);
+        execute(Tag.SELECT_WORD_PREVIOUS);
     }
 
     /**
@@ -2142,10 +2142,10 @@ public class RichTextArea extends Control {
      * This method does nothing when the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#SELECT_WORD_RIGHT
+     * @see RichTextArea.Tag#SELECT_WORD_RIGHT
      */
     public void selectWordRight() {
-        execute(Tags.SELECT_WORD_RIGHT);
+        execute(Tag.SELECT_WORD_RIGHT);
     }
 
     /**
@@ -2169,14 +2169,14 @@ public class RichTextArea extends Control {
      * If possible, undoes the last modification. If {@link #isUndoable()} returns
      * false, then calling this method has no effect.
      * <p>
-     * This method does nothing if either the control or the model is not editable,
+     * This method does nothing if the control is not editable or the model is not writable,
      * or the model or the caret position is {@code null}.
      *
      * This action can be changed by remapping the default behavior via {@link InputMap}.
-     * @see RichTextArea.Tags#UNDO
+     * @see RichTextArea.Tag#UNDO
      */
     public void undo() {
-        execute(Tags.UNDO);
+        execute(Tag.UNDO);
     }
 
     /**
@@ -2364,9 +2364,9 @@ public class RichTextArea extends Control {
     private DataFormat bestDataFormat(boolean forExport) {
         StyledTextModel m = getModel();
         if (m != null) {
-            DataFormat[] fs = m.getSupportedDataFormats(forExport);
-            if (fs.length > 0) {
-                return fs[0];
+            List<DataFormat> fs = m.getSupportedDataFormats(forExport);
+            if (fs.size() > 0) {
+                return fs.get(0);
             }
         }
         return null;
