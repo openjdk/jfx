@@ -34,7 +34,7 @@ namespace
     typedef HRESULT WINAPI FnRoInitialize(RO_INIT_TYPE initType);
     typedef void WINAPI FnRoUninitialize();
     typedef HRESULT WINAPI FnRoActivateInstance(HSTRING activatableClassId, IInspectable** instance);
-    typedef HRESULT WINAPI FnRoGetActivationFactory(HSTRING activatableClassId, REFIID  iid, void** factory);
+    typedef HRESULT WINAPI FnRoGetActivationFactory(HSTRING activatableClassId, REFIID iid, void** factory);
     typedef HRESULT WINAPI FnWindowsCreateString(PCNZWCH sourceString, UINT32 length, HSTRING* string);
     typedef HRESULT WINAPI FnWindowsDeleteString(HSTRING string);
 
