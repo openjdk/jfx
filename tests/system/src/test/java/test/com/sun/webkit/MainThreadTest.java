@@ -62,7 +62,7 @@ public class MainThreadTest {
         cmd.add(workerJavaCmd);
 
         // FIXME: Remove this when JDK-8334137 is fixed
-        if (Runtime.version().feature() >= 23) {
+        if (Runtime.version().feature() >= 24) {
             cmd.add("--sun-misc-unsafe-memory-access=allow");
         }
 

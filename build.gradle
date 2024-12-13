@@ -767,7 +767,6 @@ try (BufferedReader inStream = new java.io.BufferedReader(new java.io.InputStrea
             // should the need arise.
 //            ext.jdk18OrLater = jdkVersionInfo.feature() >= 18
 
-            ext.jdk23OrLater = jdkVersionInfo.feature() >= 23
             ext.jdk24OrLater = jdkVersionInfo.feature() >= 24
         }
     }
@@ -1188,7 +1187,7 @@ void writeArgsFile(boolean isCompile, File dest, List<String> libpath, List<Stri
             dest << enableNativeAll
             dest << "\n"
             // FIXME: Remove this when JDK-8334137 is fixed
-            if (jdk23OrLater) {
+            if (jdk24OrLater) {
                 dest << allowSunMiscUnsafe
                 dest << "\n"
             }
@@ -2690,7 +2689,7 @@ project(":graphics") {
         def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk23OrLater) {
+        if (jdk24OrLater) {
             jvmArgs allowSunMiscUnsafe
         }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
@@ -2783,7 +2782,7 @@ project(":controls") {
         def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk23OrLater) {
+        if (jdk24OrLater) {
             jvmArgs allowSunMiscUnsafe
         }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
@@ -2895,7 +2894,7 @@ project(":swing") {
         jvmArgs enableNativeGraphics
 
         // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk23OrLater) {
+        if (jdk24OrLater) {
             jvmArgs allowSunMiscUnsafe
         }
     }
@@ -2966,7 +2965,7 @@ project(":swt") {
         jvmArgs enableNativeGraphics
 
         // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk23OrLater) {
+        if (jdk24OrLater) {
             jvmArgs allowSunMiscUnsafe
         }
 
@@ -3020,7 +3019,7 @@ project(":fxml") {
         // we have to use the stub toolkit for now.
         jvmArgs enableNativeGraphics
         // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk23OrLater) {
+        if (jdk24OrLater) {
             jvmArgs allowSunMiscUnsafe
         }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
@@ -3766,7 +3765,7 @@ project(":web") {
         jvmArgs enableNativeAll
 
         // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk23OrLater) {
+        if (jdk24OrLater) {
             jvmArgs allowSunMiscUnsafe
         }
 
@@ -4158,7 +4157,7 @@ project(":systemTests") {
         jvmArgs enableNativeAll
 
         // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk23OrLater) {
+        if (jdk24OrLater) {
             jvmArgs allowSunMiscUnsafe
         }
 
