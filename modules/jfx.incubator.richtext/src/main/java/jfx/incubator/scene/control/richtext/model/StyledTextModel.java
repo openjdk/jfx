@@ -146,6 +146,9 @@ public abstract class StyledTextModel {
 
     /**
      * Returns a {@link RichParagraph} at the given model index.
+     * The callers must ensure that the value of {@code index} is within the valid document range,
+     * since doing otherwise might result in an exception or undetermied behavior.
+     * <p>
      * This method makes no guarantees that the same paragraph instance will be returned for the same model index.
      *
      * @param index the paragraph index in the range (0...{@link #size()})

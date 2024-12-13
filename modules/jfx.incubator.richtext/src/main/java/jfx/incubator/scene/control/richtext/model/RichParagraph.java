@@ -207,13 +207,13 @@ public abstract class RichParagraph {
         }
 
         /**
-         * Adds a squiggly line (as seen in a spell checker) with the given color.
+         * Adds a wave underline (typically used as a spell checker indicator) with the given color.
          * @param start the start offset
          * @param length the end offset
          * @param color the background color
          * @return this {@code Builder} instance
          */
-        public Builder addSquiggly(int start, int length, Color color) {
+        public Builder wavyUnderline(int start, int length, Color color) {
             int end = start + length;
             highlights().add((cell) -> {
                 cell.addSquiggly(start, end, color);

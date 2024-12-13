@@ -42,7 +42,7 @@ import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
  * This component gets added to TextFlow to provide various types of highlight:
  * <ol>
  * <li>text highlight</li>
- * <li>squiggly line</li>
+ * <li>wavy underline</li>
  * </ol>
  */
 public class HighlightShape extends Path {

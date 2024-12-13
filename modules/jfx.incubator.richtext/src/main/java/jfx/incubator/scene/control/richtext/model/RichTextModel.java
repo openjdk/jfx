@@ -129,6 +129,7 @@ public class RichTextModel extends StyledTextModel {
 
     @Override
     protected void insertParagraph(int index, Supplier<Region> generator) {
+        throw new UnsupportedOperationException();
     }
 
     /** deduplicates style attributes. */

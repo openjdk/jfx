@@ -95,7 +95,9 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
 
     /**
      * Appends a text segment to the last paragraph.
-     * The caller must ensure that the {@code text} does not contain newline symbols.
+     * The caller must ensure that the {@code text} does not contain newline symbols, as the behavior might be
+     * undefined.
+     * <p>
      * This convenience method is equivalent to calling {@code addSegment(text, StyleAttributeMap.EMPTY);}
      *
      * @param text the text to append, must not contain newline symbols, cannot be null
