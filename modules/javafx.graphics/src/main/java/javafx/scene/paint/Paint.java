@@ -45,7 +45,8 @@ import javafx.animation.Interpolatable;
  *
  * @since JavaFX 2.0
  */
-public abstract class Paint implements Interpolatable<Paint> {
+public abstract sealed class Paint implements Interpolatable<Paint>
+                                   permits Color, LinearGradient, RadialGradient, ImagePattern {
 
     static {
         Toolkit.setPaintAccessor(new Toolkit.PaintAccessor() {
