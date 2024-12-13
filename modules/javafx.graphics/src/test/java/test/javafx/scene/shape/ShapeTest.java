@@ -200,7 +200,7 @@ public class ShapeTest {
         assertEquals(expected, actual);
     }
 
-    // RT-18647: ClassCastException: [Ljava.lang.Double; cannot be cast to javafx.collections.ObservableList
+    // JDK-8127534: ClassCastException: [Ljava.lang.Double; cannot be cast to javafx.collections.ObservableList
     @Test
     public void testRT_18647() {
         final Scene scene = new Scene(new Group(), 500, 500);

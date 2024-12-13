@@ -505,7 +505,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         // update the content
         updateContent();
 
-        // RT-33596: Do CSS now, as we are in the middle of layout pass and the headers are new Nodes w/o CSS done
+        // JDK-8123569: Do CSS now, as we are in the middle of layout pass and the headers are new Nodes w/o CSS done
         for (TableColumnHeader header : getColumnHeaders()) {
             header.applyCss();
         }
@@ -601,7 +601,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         Callback<ResizeFeaturesBase,Boolean> columnResizePolicy = TableSkinUtils.columnResizePolicyProperty(tableSkin).get();
         boolean isConstrainedResize = TableSkinUtils.isConstrainedResizePolicy(columnResizePolicy);
 
-        // RT-32547 - don't show resize cursor when in constrained resize mode
+        // JDK-8123497 - don't show resize cursor when in constrained resize mode
         // and there is only one column
         if (isConstrainedResize && TableSkinUtils.getVisibleLeafColumns(tableSkin).size() == 1) {
             return;

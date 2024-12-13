@@ -39,10 +39,10 @@ import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
 /**
- * This is a regression test for RT-33771 - Lens:FXML-LoginDemo throws
+ * This is a regression test for JDK-8119854 - Lens:FXML-LoginDemo throws
  * java.lang.RuntimeException: Platform reported wrong touch point ID.
  *
- * and  RT-33687 - Lens:some touch events are been dropped in native
+ * and  JDK-8123356 - Lens:some touch events are been dropped in native
  * causing exceptions to be thrown.
  *
  */
@@ -67,11 +67,11 @@ public final class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
     }
 
     /**
-     * RT-33771 stated that exceptions are been thrown because the state of the
+     * JDK-8119854 stated that exceptions are been thrown because the state of the
      * point, when entering the window, is wrong.
      * Test check that states are ok and no exception is been thrown
      *
-     * Test update for RT-34191 - make sure no touch event received if drag
+     * Test update for JDK-8122329 - make sure no touch event received if drag
      * started outside the window
      */
     @ParameterizedTest
@@ -107,7 +107,7 @@ public final class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
     }
 
     /**
-     * This test is also related to RT-33687 - Lens:some touch events are been
+     * This test is also related to JDK-8123356 - Lens:some touch events are been
      * dropped in native causing exceptions to be thrown.
      * In short there was a problem that when touch point moved outside a window
      * no notifications were sent, especially releases.
@@ -234,7 +234,7 @@ public final class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
      * right side) to the window's center.
      * No "move", "press" or "release" events should be sent.
      */
-    @Disabled("RT-38482")
+    @Disabled("JDK-8087675")
     @ParameterizedTest
     @MethodSource("parameters")
     public void multiTouch_dragTwoPointsIntoTheWindow(TestTouchDevice device) throws Exception {

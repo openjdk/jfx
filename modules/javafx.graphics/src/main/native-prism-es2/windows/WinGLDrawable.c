@@ -55,7 +55,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLDrawable_nCreateDrawable
         fprintf(stderr, "nCreateHdc: Invalid hwnd");
         return 0;
     }
-    // TODO: Need to get the screen info in pfInfo to handle multi-monitor case. (RT-27445)
+    // TODO: Need to get the screen info in pfInfo to handle multi-monitor case. (JDK-8092267)
     hdc = GetDC(hwnd);
 
     if (!SetPixelFormat(hdc, pfInfo->pixelFormat, NULL)) {

@@ -234,7 +234,7 @@ public class ToggleGroupTest {
         assertEquals(b3, g2.getSelectedToggle());
     }
 
-    // RT-3977
+    // JDK-8106999
     @Test public void testAddMultipleSelected() {
         b1.setSelected(true);
         b2.setSelected(true);

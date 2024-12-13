@@ -193,7 +193,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 
         if (useEventTap) {
             //
-            // Notes after fixing RT-23199:
+            // Notes after fixing JDK-8097372:
             //
             //  Don't use NSMachPort and NSRunLoop to integrate CFMachPortRef
             //  instance into run loop.
@@ -272,7 +272,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
     // Known issues with OSX touch input:
     // - multiple 'NSTouchPhaseBegan' for the same touch point;
     // - missing 'NSTouchPhaseEnded' for released touch points
-    //  (RT-20139, RT-20375);
+    //  (JDK-8127622, JDK-8127136);
     //
 
     //

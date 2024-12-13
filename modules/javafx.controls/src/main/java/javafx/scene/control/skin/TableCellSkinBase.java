@@ -73,12 +73,12 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
     public TableCellSkinBase(final C control) {
         super(control);
 
-        // RT-22038
+        // JDK-8126489
         Rectangle clip = new Rectangle();
         clip.widthProperty().bind(control.widthProperty());
         clip.heightProperty().bind(control.heightProperty());
         getSkinnable().setClip(clip);
-        // --- end of RT-22038
+        // --- end of JDK-8126489
 
         TableColumnBase<?,?> tableColumn = getTableColumn();
         if (tableColumn != null) {

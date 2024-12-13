@@ -430,7 +430,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             }
 
             // we need to size all tabs, even if they aren't visible. For example,
-            // see RT-29167
+            // see JDK-8116643
             tabContent.resize(contentWidth, contentHeight);
             tabContent.relocate(contentStartX, contentStartY);
         }
@@ -550,7 +550,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     private void addTabs(List<? extends Tab> addedList, int from) {
         int i = 0;
 
-        // RT-39984: check if any other tabs are animating - they must be completed first.
+        // JDK-8093620: check if any other tabs are animating - they must be completed first.
         List<Node> headers = new ArrayList<>(tabHeaderArea.headersRegion.getChildren());
         for (Node n : headers) {
             TabHeaderSkin header = (TabHeaderSkin) n;
@@ -558,7 +558,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 stopCurrentAnimation(header.tab);
             }
         }
-        // end of fix for RT-39984
+        // end of fix for JDK-8093620
 
         for (final Tab tab : addedList) {
             stopCurrentAnimation(tab); // Note that this must happen before addTab() call below
@@ -669,7 +669,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 }
             }
 
-            // Fix for RT-34692
+            // Fix for JDK-8122662
             getSkinnable().requestLayout();
         };
         weakTabsListener = new WeakListChangeListener<>(tabsListener);
@@ -1113,7 +1113,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 // need to make sure the right-most tab is attached to the
                 // right-hand side of the tab header (e.g. if the tab header area width
                 // is expanded), and if it isn't modify the scroll offset to bring
-                // it into line. See RT-35194 for a test case.
+                // it into line. See JDK-8095332 for a test case.
                 actualNewScrollOffset = visibleWidth - offset;
             } else if (newScrollOffset > 0) {
                 // need to prevent the left-most tab from becoming detached
@@ -1404,7 +1404,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                                 /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
                     }
 
-                    // Magic numbers regretfully introduced for RT-28944 (so that
+                    // Magic numbers regretfully introduced for JDK-8124860 (so that
                     // the focus rect appears as expected on Windows and Mac).
                     // In short we use the vPadding to shift the focus rect down
                     // into the content area (whereas previously it was being clipped

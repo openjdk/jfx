@@ -259,7 +259,7 @@ public class SamplePageTableHelper {
         countryCol = new TableColumn<Person, String>();
         countryCol.setText("Country");
         countryCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<String>("New Zealand"));
-        // Test case for RT-28410 MODENA: can't make tree/table cell factories change color based
+        // Test case for JDK-8117108 MODENA: can't make tree/table cell factories change color based
         // on background when setGraphic(...) is used
         countryCol.setCellFactory(param -> {
             final Label label = new Label();

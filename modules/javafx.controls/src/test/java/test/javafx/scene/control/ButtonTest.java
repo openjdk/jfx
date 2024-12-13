@@ -540,7 +540,7 @@ public class ButtonTest {
         // did green change after green hover=true?
         assertFalse(greenStops0.equals(greenStops2));
         // did green revert to original after green hover=false?
-        // This is the acid test. If this fails, then RT-23207 is present.
+        // This is the acid test. If this fails, then JDK-8126478 is present.
         assertTrue(greenStops0.equals(greenStops3));
 
     }

@@ -186,7 +186,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
     private static final String SIZE_X_LARGE = "6";
     private static final String SIZE_XX_LARGE = "7";
 
-    // As per RT-16330: default format -> bold/size mappings are as follows:
+    // As per JDK-8128317: default format -> bold/size mappings are as follows:
     private static final String[][] DEFAULT_FORMAT_MAPPINGS = {
         { FORMAT_PARAGRAPH,   "",                  SIZE_SMALL     },
         { FORMAT_HEADING_1,   BOLD.getCommand(),   SIZE_X_LARGE   },
@@ -220,7 +220,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             if (c.getRemovedSize() > 0) {
                 for (Node n : c.getList()) {
                     if (n instanceof WebView) {
-                        // RT-28611 webView removed - set associated webPage to null
+                        // JDK-8120698 webView removed - set associated webPage to null
                         webPage.dispose();
                     }
                 }
@@ -407,7 +407,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         });
 
         webView.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            // disabling as a fix for RT-30081
+            // disabling as a fix for JDK-8095707
 //                if (newValue) {
 //                    webPage.dispatchFocusEvent(new WCFocusEvent(WCFocusEvent.FOCUS_GAINED, WCFocusEvent.FORWARD));
 //                    enableToolbar(true);
@@ -634,7 +634,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                 executeCommand(FORMAT.getCommand(), formatValue);
                 updateToolbarState(false);
 
-                // RT-16330 match the new font format with the required weight and size
+                // JDK-8128317 match the new font format with the required weight and size
                 for (int i = 0; i < DEFAULT_FORMAT_MAPPINGS.length; i++) {
                     String[] mapping = DEFAULT_FORMAT_MAPPINGS[i];
                     if (mapping[0].equalsIgnoreCase(formatValue)) {
@@ -655,7 +655,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         fontFamilyComboBox.setTooltip(new Tooltip(resources.getString("fontFamily")));
         toolbar2.getItems().add(fontFamilyComboBox);
 
-        // Fix for RT-32906, where all rows were being put through the cell factory
+        // Fix for JDK-8123740, where all rows were being put through the cell factory
         // so that they could be measured. Because we have a fixed width for the
         // button this is unnecessary and so we tell the ComboBox to not measure
         // any rows.
@@ -760,7 +760,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
         insertHorizontalRuleButton = addButton(toolbar2, resources.getString("insertHorizontalRuleIcon"),
             resources.getString("insertHorizontalRule"), INSERT_HORIZONTAL_RULE.getCommand(), "html-editor-hr");
-        // We override setOnAction to insert a new line.  This fixes RT-16453
+        // We override setOnAction to insert a new line.  This fixes JDK-8128749
         insertHorizontalRuleButton.setOnAction(event -> {
             executeCommand(INSERT_NEW_LINE.getCommand(), null);
             executeCommand(INSERT_HORIZONTAL_RULE.getCommand(), null);
@@ -775,7 +775,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         // JDK-8115747: Icon URLs are now specified in CSS.
         // fgColorButton.applyCss();
         // ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
-        // String fgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString());
+        // String fgIcon = HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString();
         // ((StyleableProperty)fgColorPickerSkin.imageUrlProperty()).applyStyle(null,fgIcon);
 
         fgColorButton.setValue(DEFAULT_FG_COLOR);
@@ -796,7 +796,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         // JDK-8115747: Icon URLs are now specified in CSS.
         // bgColorButton.applyCss();
         // ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
-        // String bgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString());
+        // String bgIcon = HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString();
         // ((StyleableProperty)bgColorPickerSkin.imageUrlProperty()).applyStyle(null,bgIcon);
 
         bgColorButton.setValue(DEFAULT_BG_COLOR);
@@ -1002,7 +1002,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         fontSizeComboBox.setDisable(!isCommandEnabled(FONT_SIZE.getCommand()));
         String fontSizeValue = getCommandValue(FONT_SIZE.getCommand());
 
-        // added test for fontSizeValue == null to combat RT-28847
+        // added test for fontSizeValue == null to combat JDK-8118879
         if (resetToolbarState && fontSizeValue == null) {
             fontSizeComboBox.setValue(sizeFontMap.get(SIZE_SMALL));
         } else {
@@ -1090,7 +1090,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
     }
 
     private boolean executeCommand(String command, String value) {
-        // The mentions of atomicity throughout this class relate back to RT-39941,
+        // The mentions of atomicity throughout this class relate back to JDK-8096536,
         // refer to that jira issue for more context.
         if (!enableAtomicityCheck || (enableAtomicityCheck && atomicityCount == 0)) {
             return webPage.executeCommand(command, value);

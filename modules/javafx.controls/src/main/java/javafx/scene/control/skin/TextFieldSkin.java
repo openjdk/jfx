@@ -237,7 +237,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         caretPath.fillProperty().bind(textFillProperty());
         caretPath.strokeProperty().bind(textFillProperty());
 
-        // modifying visibility of the caret forces a layout-pass (RT-32373), so
+        // modifying visibility of the caret forces a layout-pass (JDK-8123291), so
         // instead we modify the opacity.
         caretPath.opacityProperty().bind(new DoubleBinding() {
             { bind(caretVisibleProperty()); }
@@ -591,7 +591,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             // The caret is split
             // TODO: Find a better way to get the primary caret position
             // instead of depending on the internal implementation.
-            // See RT-25465.
+            // See JDK-8089958.
             caretBounds = new Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds();
         }
         double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();

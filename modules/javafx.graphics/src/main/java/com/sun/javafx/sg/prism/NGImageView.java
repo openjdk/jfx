@@ -170,7 +170,7 @@ public class NGImageView extends NGNode {
         }
     }
 
-    // RT-18701: this method does nothing
+    // JDK-8127343: this method does nothing
     public void setSmooth(boolean s) {}
 
     @Override

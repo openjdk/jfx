@@ -269,7 +269,7 @@ class SWTEvents {
         {0x7B /*KeyEvent.VK_F12*/,   SWT.F12},
     };
 
-    // RT-27940: map these to Fx keys
+    // JDK-8090271: map these to Fx keys
 //    /* Numeric Keypad Keys */
 //    {KeyEvent.VK_MULTIPLY,    SWT.KEYPAD_MULTIPLY},
 //    {KeyEvent.VK_ADD,         SWT.KEYPAD_ADD},

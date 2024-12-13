@@ -44,7 +44,7 @@ public class PrRenderInfo implements ImageDataRenderer {
         return g;
     }
 
-    // RT-27390
+    // JDK-8091138
     // TODO: Have Graphics implement ImageRenderer directly to avoid
     // needing a wrapper object...
     @Override

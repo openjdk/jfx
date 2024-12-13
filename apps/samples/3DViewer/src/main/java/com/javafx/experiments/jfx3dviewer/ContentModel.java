@@ -402,8 +402,8 @@ public class ContentModel {
 
     public ContentModel() {
         // CAMERA
-        camera.setNearClip(1.0); // TODO: Workaround as per RT-31255
-        camera.setFarClip(10000.0); // TODO: Workaround as per RT-31255
+        camera.setNearClip(1.0); // TODO: Workaround as per JDK-8118078
+        camera.setFarClip(10000.0); // TODO: Workaround as per JDK-8118078
 
         camera.getTransforms().addAll(
                 yUpRotate,

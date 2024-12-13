@@ -36,7 +36,6 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import java.security.AccessControlContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -72,15 +71,6 @@ final class QuantumClipboard implements TKClipboard {
      * Handle to the Glass peer.
      */
     private ClipboardAssistance systemAssistant;
-
-    /**
-     * Security access context for image loading
-     *      com.sun.javafx.tk.quantum.QuantumClipboard
-     *      javafx.scene.input.Clipboard
-     *          ... user code ...
-     */
-    @SuppressWarnings("removal")
-    private AccessControlContext accessContext = null;
 
     /**
      * Distinguishes between clipboard and dragboard. This is needed
@@ -121,21 +111,6 @@ final class QuantumClipboard implements TKClipboard {
     private QuantumClipboard() {
     }
 
-    @Override public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext acc) {
-        if (accessContext != null) {
-            throw new RuntimeException("Clipboard security context has been already set!");
-        }
-        accessContext = acc;
-    }
-
-    @SuppressWarnings("removal")
-    private AccessControlContext getAccessControlContext() {
-        if (accessContext == null) {
-            throw new RuntimeException("Clipboard security context has not been set!");
-        }
-        return accessContext;
-    }
-
     /**
      * Gets an instance of QuantumClipboard for the given assistant. This may be
      * a new instance after each call.
@@ -154,7 +129,7 @@ final class QuantumClipboard implements TKClipboard {
     }
 
     static void releaseCurrentDragboard() {
-        // RT-34510: assert currentDragboard != null;
+        // JDK-8088771: assert currentDragboard != null;
         currentDragboard = null;
     }
 
@@ -442,7 +417,7 @@ final class QuantumClipboard implements TKClipboard {
                 set.add(DataFormat.FILES);
             } else if (t.equalsIgnoreCase(Clipboard.HTML_TYPE)) {
                 set.add(DataFormat.HTML);
-                // RT-16812 - IE puts images on the clipboard in a HTML IMG url
+                // JDK-8128413 - IE puts images on the clipboard in a HTML IMG url
                 try {
                     //HTML header could be improperly formatted and we can get an exception here
                     if (parseIMG(assistant.getData(Clipboard.HTML_TYPE)) != null) {

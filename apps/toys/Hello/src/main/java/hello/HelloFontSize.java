@@ -164,7 +164,7 @@ public class HelloFontSize extends Application {
             }
         });
 
-        // RT-28635
+        // JDK-8120561
         final SpecialButton specialButton = new SpecialButton("Button");
 
         final VBox rt28635 = new VBox(5);
