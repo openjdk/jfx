@@ -91,9 +91,6 @@ public class InputMethodStateManager {
      * Add a new Scene to the stack.
      */
     public void addScene(Scene scene) {
-        if (scenes.contains(scene)) {
-            System.err.println("Popup scene already present");
-        }
         scenes.addFirst(scene);
         updateInputMethodEventEnableState();
     }
@@ -102,10 +99,6 @@ public class InputMethodStateManager {
      * Remove a Scene from the stack.
      */
     public void removeScene(Scene scene) {
-        if (scene != scenes.peekFirst()) {
-            System.err.println("Popup scene removed out of order");
-        }
-
         /**
          * If this scene is going away we should cleanup any composition
          * state. Hiding a window doesn't ensure proper cleanup.

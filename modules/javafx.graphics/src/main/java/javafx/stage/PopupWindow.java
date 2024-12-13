@@ -556,11 +556,11 @@ public abstract class PopupWindow extends Window {
      */
     private void doVisibleChanged(boolean visible) {
         final Window ownerWindowValue = getOwnerWindow();
+        Scene scene = getScene();
         if (visible) {
             rootWindow = getRootWindow(ownerWindowValue);
 
             startMonitorOwnerEvents(ownerWindowValue);
-            Scene scene = getScene();
             SceneHelper.getInputMethodStateManager(scene).addScene(scene);
             // currently we consider popup window to be focused when it is
             // visible and its owner window is focused (we need to track
@@ -574,7 +574,6 @@ public abstract class PopupWindow extends Window {
         } else {
             // This may generate events so it must be done while we're
             // still monitoring owner events.
-            Scene scene = getScene();
             SceneHelper.getInputMethodStateManager(scene).removeScene(scene);
             stopMonitorOwnerEvents(ownerWindowValue);
             unbindOwnerFocusedProperty(ownerWindowValue);
