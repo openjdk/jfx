@@ -2827,6 +2827,20 @@ project(":controls") {
     addValidateSourceSets(project, sourceSets)
 }
 
+// Add a project declaration for each incubator module here, leaving the
+// incubator placeholder lines as an example.
+// See CSR JDK-8344644 for more information.
+// BEGIN: incubator placeholder
+//project(":incubator.mymod") {
+//    project.ext.buildModule = true
+//    project.ext.includeSources = true
+//    project.ext.moduleRuntime = true
+//    project.ext.moduleName = "jfx.incubator.mymod"
+//    project.ext.incubating = true
+//    ...
+//}
+// END: incubator placeholder
+
 project(":swing") {
 
     // We need to skip setting compiler.options.release for this module,
@@ -4001,7 +4015,21 @@ project(":systemTests") {
         testImplementation project(":swing").sourceSets.test.output
     }
 
-    def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web', 'swing', 'fxml' ]
+    def dependentProjects = [
+        'base',
+        'graphics',
+        'controls',
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //'incubator.mymod',
+        // END: incubator placeholder
+        'media',
+        'jsobject',
+        'web',
+        'swing',
+        'fxml'
+    ]
     commonModuleSetup(project, dependentProjects)
 
     File testRunArgsFile = new File(rootProject.buildDir,TESTRUNARGSFILE);
@@ -4448,8 +4476,21 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
     def projectsToDocument = [
-            project(":base"), project(":graphics"), project(":controls"), project(":media"),
-            project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":jsobject"), project(":web")]
+        project(":base"),
+        project(":graphics"),
+        project(":controls"),
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //project(":incubator.mymod"),
+        // END: incubator placeholder
+        project(":media"),
+        project(":swing"),
+        /*project(":swt"),*/
+        project(":fxml"),
+        project(":jsobject"),
+        project(":web")
+    ]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
     }));
@@ -5828,6 +5869,8 @@ compileTargets { t ->
             def jmodName = "${moduleName}.jmod"
             def jmodFile = "${jmodsDir}/${jmodName}"
 
+            def incubating = project.hasProperty("incubating") && project.ext.incubating
+
             // On Windows, copy the native libraries in the jmod image
             // to a "javafx" subdir to avoid conflicting with the Microsoft
             // DLLs that are shipped with the JDK
@@ -5868,6 +5911,10 @@ compileTargets { t ->
                         args(srcLegalDir)
                         if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
+                        }
+                        if (incubating) {
+                            args("--do-not-resolve-by-default")
+                            args("--warn-if-resolved=incubating")
                         }
                         args(jmodFile)
                     }

@@ -253,7 +253,7 @@ public class ChoiceBox<T> extends Control {
                 final SingleSelectionModel<T> sm = getSelectionModel();
                 if (sm != null) {
                     if (newItems != null && newItems.isEmpty()) {
-                        // RT-29433 - clear selection.
+                        // JDK-8124891 - clear selection.
                         sm.clearSelection();
                     } else if (sm.getSelectedIndex() == -1 && sm.getSelectedItem() != null) {
                         int newIndex = getItems().indexOf(sm.getSelectedItem());

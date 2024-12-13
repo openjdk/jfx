@@ -105,7 +105,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Indicates that this is a newly created cell and we need call processCSS for it.
      *
-     * See RT-23616 for more details.
+     * See JDK-8102238 for more details.
      */
     private static final String NEW_CELL = "newcell";
 
@@ -468,7 +468,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     // We check here to see if the current focus owner is within
                     // this VirtualFlow, and if so we back-off from requesting
                     // focus back to the VirtualFlow itself. This is particularly
-                    // relevant given the bug identified in RT-32869. In this
+                    // relevant given the bug identified in JDK-8119995. In this
                     // particular case TextInputControl was clearing selection
                     // when the focus on the TextField changed, meaning that the
                     // right-click context menu was not showing the correct
@@ -608,7 +608,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         vbar.valueProperty().addListener(listenerY);
 
         super.heightProperty().addListener((observable, oldHeight, newHeight) -> {
-            // Fix for RT-8480, where the VirtualFlow does not show its content
+            // Fix for JDK-8109812, where the VirtualFlow does not show its content
             // after changing size to 0 and back.
             if (oldHeight.doubleValue() == 0 && newHeight.doubleValue() > 0) {
                 recreateCells();
@@ -890,7 +890,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // scroll bars would erroneously reset as well. So I do not reset
             // the maxPrefBreadth here.
 
-            // Fix for RT-12512, RT-14301 and RT-14864.
+            // Fix for JDK-8111753, JDK-8113660 and JDK-8114287.
             // Without this, the VirtualFlow length-wise scrollbar would not change
             // as expected. This would leave items unable to be shown, as they
             // would exist outside of the visible area, even when the scrollbar
@@ -1029,9 +1029,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 // Note: This block is commented as it was relaying on a bad assumption on how
 //       layout request was handled in parent class that is now fixed.
 //
-//        // isNeedsLayout() is commented out due to RT-21417. This does not
+//        // isNeedsLayout() is commented out due to JDK-8126753. This does not
 //        // appear to impact performance (indeed, it may help), and resolves the
-//        // issue identified in RT-21417.
+//        // issue identified in JDK-8126753.
 //        setNeedsLayout(true);
 
         // The fix is to prograte this layout request to its parent class.
@@ -1390,7 +1390,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     protected T getAvailableCell(int prefIndex) {
         T cell = null;
-        // Fix for RT-12822. We try to retrieve the cell from the pile rather
+        // Fix for JDK-8112018. We try to retrieve the cell from the pile rather
         // than just grab a random cell from the pile (or create another cell).
         for (int i = 0, max = pile.size(); i < max; i++) {
             T _cell = pile.get(i);
@@ -1668,7 +1668,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
-            // Fix for RT-32908
+            // Fix for JDK-8120237
             T firstCell = cells.getFirst();
             double layoutY = firstCell == null ? 0 : getCellPosition(firstCell);
             for (int i = 0; i < cells.size(); i++) {
@@ -1682,7 +1682,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
                 layoutY += getCellLength(cell);
             }
-            // end of fix for RT-32908
+            // end of fix for JDK-8120237
             cull();
             firstCell = cells.getFirst();
 
@@ -1832,7 +1832,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         // make sure the cell is sized correctly. This is important for both
         // general layout of cells in a VirtualFlow, but also in cases such as
-        // RT-34333, where the sizes were being reported incorrectly to the
+        // JDK-8122624, where the sizes were being reported incorrectly to the
         // ComboBox popup.
         if ((cell.isNeedsLayout() && cell.getScene() != null) || cell.getProperties().containsKey(NEW_CELL)) {
             cell.applyCss();
@@ -2062,7 +2062,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             final double cellEnd = cellStart + getCellLength(cell);
 
             // we use the magic +2 to allow for a little bit of fuzziness,
-            // this is to help in situations such as RT-34407
+            // this is to help in situations such as JDK-8097503
             if (cellEnd <= (max + 2)) {
                 return cell;
             }
@@ -2195,13 +2195,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         final double viewportLength = getViewportLength();
 
-        // Fix for RT-37421, which was a regression caused by RT-36556
+        // Fix for JDK-8095487, which was a regression caused by JDK-8095592
         if (offset < 0 && !fillEmptyCells) {
             return false;
         }
 
         //
-        // RT-36507: viewportLength gives the maximum number of
+        // JDK-8093564: viewportLength gives the maximum number of
         // additional cells that should ever be able to fit in the viewport if
         // every cell had a height of 1. If index ever exceeds this count,
         // then offset is not incrementing fast enough, or at all, which means
@@ -2212,7 +2212,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             if (index >= cellCount) {
                 if (offset < viewportLength) filledWithNonEmpty = false;
                 if (! fillEmptyCells) return filledWithNonEmpty;
-                // RT-36507 - return if we've exceeded the maximum
+                // JDK-8093564 - return if we've exceeded the maximum
                 if (index > maxCellCount) {
                     final PlatformLogger logger = Logging.getControlsLogger();
                     if (logger.isLoggable(PlatformLogger.Level.INFO)) {
@@ -2404,7 +2404,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     void updateHbar() {
         if (! isVisible() || getScene() == null) return;
         // Bring the clipView.clipX back to 0 if control is vertical or
-        // the hbar isn't visible (fix for RT-11666)
+        // the hbar isn't visible (fix for JDK-8112383)
         if (isVertical()) {
             if (needBreadthBar) {
                 clipView.setClipX(hbar.getValue());
@@ -2648,7 +2648,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             lengthBar.setMax(1);
             if (numCellsVisibleOnScreen == 0 && cellCount == 1) {
-                // special case to help resolve RT-17701 and the case where we have
+                // special case to help resolve JDK-8128348 and the case where we have
                 // only a single row and it is bigger than the viewport
                 lengthBar.setVisibleAmount(flowLength / sumCellLength);
             } else {
@@ -2657,13 +2657,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         if (lengthBar.isVisible()) {
-            // Fix for RT-11873. If this isn't here, we can have a situation where
+            // Fix for JDK-8112227. If this isn't here, we can have a situation where
             // the scrollbar scrolls endlessly. This is possible when the cell
             // count grows as the user hits the maximal position on the scrollbar
             // (i.e. the list size dynamically grows as the user needs more).
             //
-            // This code was commented out to resolve RT-14477 after testing
-            // whether RT-11873 can be recreated. It could not, and therefore
+            // This code was commented out to resolve JDK-8114498 after testing
+            // whether JDK-8112227 can be recreated. It could not, and therefore
             // for now this code will remained uncommented until it is deleted
             // following further testing.
 //            if (lengthBar.getValue() == 1.0 && lastCellCount != cellCount) {
@@ -2722,7 +2722,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     private void fitCells() {
         // Note: Do not optimise this loop by pre-calculating the cells size and
-        // storing that into a int value - this can lead to RT-32828
+        // storing that into a int value - this can lead to JDK-8123184
         for (int i = 0; i < cells.size(); i++) {
             T cell = cells.get(i);
             resizeCell(cell);
@@ -2836,7 +2836,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             cell.setVisible(false);
         }
 
-        // Fix for RT-35876: Rather than have the cells do weird things with
+        // Fix for JDK-8095710: Rather than have the cells do weird things with
         // focus (in particular, have focus jump between cells), we return focus
         // to the VirtualFlow itself.
         if (wasFocusOwner) {
@@ -3372,7 +3372,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         @Override
         public T get(int index) {
             if (index > (lastIndex - firstIndex) || index < 0) {
-                // Commented out exception due to RT-29111
+                // Commented out exception due to JDK-8124175
                 // throw new java.lang.ArrayIndexOutOfBoundsException();
                 return null;
             }

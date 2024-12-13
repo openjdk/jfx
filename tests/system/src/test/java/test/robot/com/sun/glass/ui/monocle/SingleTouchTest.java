@@ -298,7 +298,7 @@ public final class SingleTouchTest extends ParameterizedTestBase {
     /**
      * Touch down, change scene, release finger.
      */
-    @Disabled("RT-37283")
+    @Disabled("JDK-8093836")
     @ParameterizedTest
     @MethodSource("parameters")
     public void testChangeSceneDuringTap(TestTouchDevice device) throws Exception {

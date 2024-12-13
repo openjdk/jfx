@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * AKA: RT-7401. Tests that the pattern used works by testing opacity
+ * AKA: JDK-8109200. Tests that the pattern used works by testing opacity
  * specifically. Tests for font and text-fill should be done in the tests
  * for Label and Labeled.
  */
@@ -263,7 +263,7 @@ public class HonorDeveloperSettingsTest {
         scene.getRoot().applyCss();
         //
         // Stroke width is set to 1em in the author stylesheet. If
-        // RT-20145 is not working, then the code will pick up the 20px
+        // JDK-8127344 is not working, then the code will pick up the 20px
         // font size.
         //
         assertEquals(14, text.getStrokeWidth(), 0.00001);
@@ -282,7 +282,7 @@ public class HonorDeveloperSettingsTest {
         scene.getRoot().applyCss();
 
         //
-        // If RT-20513 is not working, then the code will _not_
+        // If JDK-8120245 is not working, then the code will _not_
         // pick up the inline style
         //
         assertEquals(18, text.getStrokeWidth(), 0.00001);

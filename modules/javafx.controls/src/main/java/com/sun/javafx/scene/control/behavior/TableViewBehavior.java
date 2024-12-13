@@ -74,7 +74,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
     public TableViewBehavior(TableView<T> control) {
         super(control);
 
-        // Fix for RT-16565
+        // Fix for JDK-8128723
         control.selectionModelProperty().addListener(weakSelectionModelListener);
         TableViewSelectionModel<T> sm = control.getSelectionModel();
         if (sm != null) {
@@ -173,7 +173,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
 
     /** {@inheritDoc} */
     @Override protected void selectAllToFocus(boolean setAnchorToFocusIndex) {
-        // Fix for RT-31241
+        // Fix for JDK-8123409
         if (getNode().getEditingCell() != null) return;
 
         super.selectAllToFocus(setAnchorToFocusIndex);

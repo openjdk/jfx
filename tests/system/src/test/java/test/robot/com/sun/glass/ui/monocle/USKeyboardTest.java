@@ -171,7 +171,7 @@ public class USKeyboardTest {
         TestLogShim.waitForLog("Key released: CAPS");
     }
 
-    /** Key presses and releases are allowed to overlap. RT-37425. */
+    /** Key presses and releases are allowed to overlap. JDK-8090306. */
     @Test
     public void testPressReleaseOrder() throws Exception {
         TestApplication.showFullScreenScene();

@@ -234,7 +234,7 @@ public class CacheFilter {
             }
         }
 
-        // TODO: is == sufficient for floating point comparison here? (RT-23963)
+        // TODO: is == sufficient for floating point comparison here? (JDK-8091390)
         if (cachedXform.getMxx() == renderXform.getMxx() &&
             cachedXform.getMyy() == renderXform.getMyy() &&
             cachedXform.getMxy() == renderXform.getMxy() &&
@@ -427,7 +427,7 @@ public class CacheFilter {
         // [   cos(theta)    -sin(theta)    ]
         // [   sin(theta)     cos(theta)    ]
         //
-        // TODO: assert: all 4 values are sane (RT-23962)
+        // TODO: assert: all 4 values are sane (JDK-8091701)
         //
         double sin = row[1][0];
         double cos = row[0][0];
@@ -608,7 +608,7 @@ public class CacheFilter {
                 // xform should be needed, so use identity.
 
                 // TODO: assert cachedXform == render xform (ignoring translate)
-                //   or  assert xforminfo == cachedXform info (RT-23962)
+                //   or  assert xforminfo == cachedXform info (JDK-8091701)
                 screenXform.setTransform(BaseTransform.IDENTITY_TRANSFORM);
             } else {
                 updateScreenXform(xformInfo);
@@ -690,7 +690,7 @@ public class CacheFilter {
 
     /**
      * Render the node directly to the screen, in the case that the cached
-     * image is unexpectedly null.  See RT-6428.
+     * image is unexpectedly null.  See JDK-8108473.
      */
     void renderNodeToScreen(Object implGraphics) {
         Graphics g = (Graphics)implGraphics;
@@ -823,7 +823,7 @@ public class CacheFilter {
         // round them out before the transforms.
         // Later, we could use the bounds of the cache
         // to compute the dirty region directly (and more accurately).
-        // See RT-34928 for more details.
+        // See JDK-8096788 for more details.
         if (!node.dirtyBounds.isEmpty()) {
             region = region.deriveWithNewBounds(node.dirtyBounds);
         } else {

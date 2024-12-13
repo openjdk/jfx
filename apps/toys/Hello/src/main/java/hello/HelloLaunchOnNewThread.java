@@ -93,7 +93,7 @@ public class HelloLaunchOnNewThread extends Application {
                 + Thread.currentThread().getName());
         new Thread(() -> {
             // Sleep for a very short time to ensure main thread exits,
-            // since that will provoke RT-9824
+            // since that will provoke JDK-8109685
             try {
                 Thread.sleep(100);
             } catch (InterruptedException ex) {}

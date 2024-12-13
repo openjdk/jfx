@@ -31,7 +31,7 @@ import javafx.scene.input.KeyCode;
 
 /**
  * Map from int codes to KeyCode.
- * Should be removed once RT-20448 is fixed.
+ * Should be removed once JDK-8090319 is fixed.
  */
 public final class KeyCodeMap {
 

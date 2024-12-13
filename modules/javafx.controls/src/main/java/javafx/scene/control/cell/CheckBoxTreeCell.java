@@ -481,7 +481,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     @Override void updateDisplay(T item, boolean empty) {
         // no-op
-        // This was done to resolve RT-33603, but will impact the ability for
+        // This was done to resolve JDK-8120095, but will impact the ability for
         // TreeItem.graphic to change dynamically.
     }
 

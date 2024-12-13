@@ -386,7 +386,7 @@ public class DataURLConnectionTest {
         // URLs that have associated Jira issues //
         //-----------------------------------------
 
-        // RT-14528
+        // JDK-8114591
         execute(new TestCase(
                 "data:text/html,%3Ca%20id=%22a%22%20href=%22#\" onclick=\"" +
                 "document.write(window != top ? '<p>FAIL</p>' : '<p>PASS</p>'" +

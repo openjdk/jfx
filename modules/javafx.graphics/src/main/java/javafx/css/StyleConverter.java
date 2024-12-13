@@ -494,7 +494,7 @@ public class StyleConverter<F, T> {
         case "com.sun.javafx.scene.layout.region.Margins$SequenceConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.Margins.SequenceConverter.getInstance();
             break;
-        case "javafx.scene.layout.CornerRadiiConverter" :  // Fix for RT-39665
+        case "javafx.scene.layout.CornerRadiiConverter" :  // Fix for JDK-8096129
         case "com.sun.javafx.scene.layout.region.CornerRadiiConverter" :
             styleConverter = CornerRadiiConverter.getInstance();
             break;

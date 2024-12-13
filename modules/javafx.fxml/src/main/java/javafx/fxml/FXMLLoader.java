@@ -2450,7 +2450,7 @@ public class FXMLLoader {
      * Returns the static load flag.
      */
     boolean isStaticLoad() {
-        // SB-dependency: RT-21226 has been filed to track this
+        // SB-dependency: JDK-8102312 has been filed to track this
         return staticLoad;
     }
 
@@ -2460,7 +2460,7 @@ public class FXMLLoader {
      * @param staticLoad
      */
     void setStaticLoad(boolean staticLoad) {
-        // SB-dependency: RT-21226 has been filed to track this
+        // SB-dependency: JDK-8102312 has been filed to track this
         this.staticLoad = staticLoad;
     }
 
@@ -2472,7 +2472,7 @@ public class FXMLLoader {
      * @since 9
      */
     public LoadListener getLoadListener() {
-        // SB-dependency: RT-21228 has been filed to track this
+        // SB-dependency: JDK-8091571 has been filed to track this
         return loadListener;
     }
 
@@ -2484,7 +2484,7 @@ public class FXMLLoader {
      * @since 9
      */
     public final void setLoadListener(LoadListener loadListener) {
-        // SB-dependency: RT-21228 has been filed to track this
+        // SB-dependency: JDK-8091571 has been filed to track this
         this.loadListener = loadListener;
     }
 
