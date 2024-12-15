@@ -79,10 +79,9 @@ static void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) 
 
 void WindowContextBase::commitIME(gchar *str) {
     int len = g_utf8_strlen(str, -1);
-    gunichar unicode_char = g_utf8_get_char(str);
 
-    // The committed IME is the same as keypress, so send keypress
-    if (len == 1 && unicode_char == gdk_keyval_to_unicode(im_ctx.keyval)) {
+    // The commited IME is the same as keypress, so send keypress
+    if (len == 1 && gdk_unicode_to_keyval(str[0]) == im_ctx.keyval) {
         im_ctx.send_keypress = true;
     } else {
         jstring jstr = mainEnv->NewStringUTF(str);
@@ -117,6 +116,7 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
         return false;
     }
 
+    g_print("Filtered: %d\n", filtered);
     return filtered;
 }
 
