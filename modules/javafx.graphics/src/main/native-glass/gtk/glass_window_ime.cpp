@@ -43,6 +43,7 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
 
     gtk_im_context_get_preedit_string(im_context, &preedit_text, &attrList, &cursor_pos);
     ctx->updateCaretPos();
+    ctx->setOnPreEdit(true);
 
     jstring jstr = mainEnv->NewStringUTF(preedit_text);
     EXCEPTION_OCCURED(mainEnv);
@@ -97,7 +98,7 @@ static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) 
 }
 
 void WindowContextBase::commitIME(gchar *str) {
-    if (im_ctx.on_preedit) {
+    if (im_ctx.on_preedit || !im_ctx.on_key_event) {
         jstring jstr = mainEnv->NewStringUTF(str);
         EXCEPTION_OCCURED(mainEnv);
         jsize slen = mainEnv->GetStringLength(jstr);
@@ -123,13 +124,15 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
         return false;
     }
 
+    im_ctx.on_key_event = true;
     bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 
     if (filtered && im_ctx.send_keypress) {
-        process_key(&event->key);
         im_ctx.send_keypress = false;
+        return false;
     }
 
+    im_ctx.on_key_event = false;
     return filtered;
 }
 
@@ -166,6 +169,7 @@ void WindowContextBase::enableOrResetIME() {
     if (!im_ctx.enabled) {
         im_ctx.ctx = gtk_im_multicontext_new();
         gtk_im_context_set_client_window(GTK_IM_CONTEXT(im_ctx.ctx), gdk_window);
+        gtk_im_context_set_use_preedit(GTK_IM_CONTEXT(im_ctx.ctx), true);
         g_signal_connect(im_ctx.ctx, "preedit-start", G_CALLBACK(on_preedit_start), this);
         g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
         g_signal_connect(im_ctx.ctx, "preedit-end", G_CALLBACK(on_preedit_end), this);
