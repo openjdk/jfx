@@ -102,6 +102,7 @@ public:
     virtual void enableOrResetIME() = 0;
     virtual void updateCaretPos() = 0;
     virtual void disableIME() = 0;
+    virtual void setOnPreEdit(bool) = 0;
     virtual void commitIME(gchar *) = 0;
 
     virtual void paint(void* data, jint width, jint height) = 0;
@@ -174,8 +175,8 @@ class WindowContextBase: public WindowContext {
     struct ImContext {
         GtkIMContext *ctx;
         bool enabled;
+        bool on_preedit;
         bool send_keypress;
-        guint keyval;
     } im_ctx;
 
     size_t events_processing_cnt;
@@ -216,6 +217,7 @@ public:
     bool hasIME();
     bool filterIME(GdkEvent *);
     void enableOrResetIME();
+    void setOnPreEdit(bool);
     void commitIME(gchar *);
     void updateCaretPos();
     void disableIME();

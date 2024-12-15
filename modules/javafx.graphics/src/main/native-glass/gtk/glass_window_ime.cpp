@@ -30,6 +30,11 @@
 #include "glass_general.h"
 #include "glass_key.h"
 
+static void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
+    WindowContext *ctx = (WindowContext *) user_data;
+    ctx->setOnPreEdit(true);
+}
+
 static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
     WindowContext *ctx = (WindowContext *) user_data;
     gchar *preedit_text;
@@ -72,28 +77,40 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
     LOG_EXCEPTION(mainEnv)
 }
 
+static void on_preedit_end(GtkIMContext *im_context, gpointer user_data) {
+    WindowContext *ctx = (WindowContext *) user_data;
+    ctx->setOnPreEdit(false);
+}
+
 static void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->commitIME(str);
 }
 
-void WindowContextBase::commitIME(gchar *str) {
-    int len = g_utf8_strlen(str, -1);
+// Note: JavaFX did not have surround support at this time
+static gboolean on_delete_surrounding(GtkIMContext* self, gint offset, gint n_chars, gpointer user_data) {
+    return TRUE;
+}
 
-    // The commited IME is the same as keypress, so send keypress
-    if (len == 1 && gdk_unicode_to_keyval(str[0]) == im_ctx.keyval) {
-        im_ctx.send_keypress = true;
-    } else {
+static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) {
+    return TRUE;
+}
+
+void WindowContextBase::commitIME(gchar *str) {
+    if (im_ctx.on_preedit) {
         jstring jstr = mainEnv->NewStringUTF(str);
         EXCEPTION_OCCURED(mainEnv);
+        jsize slen = mainEnv->GetStringLength(jstr);
 
         mainEnv->CallVoidMethod(jview,
                 jViewNotifyInputMethodLinux,
                 jstr,
-                len,
-                len,
+                slen,
+                slen,
                 0);
         LOG_EXCEPTION(mainEnv)
+    } else {
+        im_ctx.send_keypress = true;
     }
 }
 
@@ -106,18 +123,18 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
         return false;
     }
 
-    GdkEventKey* ke = &event->key;
-
-    im_ctx.send_keypress = false;
-    im_ctx.keyval = ke->keyval;
-    bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, ke);
+    bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 
     if (filtered && im_ctx.send_keypress) {
-        return false;
+        process_key(&event->key);
+        im_ctx.send_keypress = false;
     }
 
-    g_print("Filtered: %d\n", filtered);
     return filtered;
+}
+
+void WindowContextBase::setOnPreEdit(bool preedit) {
+    im_ctx.on_preedit = preedit;
 }
 
 void WindowContextBase::updateCaretPos() {
@@ -142,20 +159,25 @@ void WindowContextBase::updateCaretPos() {
 }
 
 void WindowContextBase::enableOrResetIME() {
-    if (im_ctx.enabled) {
+    if (im_ctx.on_preedit) {
         gtk_im_context_focus_out(im_ctx.ctx);
     }
 
     if (!im_ctx.enabled) {
         im_ctx.ctx = gtk_im_multicontext_new();
         gtk_im_context_set_client_window(GTK_IM_CONTEXT(im_ctx.ctx), gdk_window);
+        g_signal_connect(im_ctx.ctx, "preedit-start", G_CALLBACK(on_preedit_start), this);
         g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
+        g_signal_connect(im_ctx.ctx, "preedit-end", G_CALLBACK(on_preedit_end), this);
         g_signal_connect(im_ctx.ctx, "commit", G_CALLBACK(on_commit), this);
+        g_signal_connect(im_ctx.ctx, "retrieve-surrounding", G_CALLBACK(on_retrieve_surrounding), this);
+        g_signal_connect(im_ctx.ctx, "delete-surrounding", G_CALLBACK(on_delete_surrounding), this);
     }
 
     gtk_im_context_reset(im_ctx.ctx);
     gtk_im_context_focus_in(im_ctx.ctx);
 
+    im_ctx.on_preedit = false;
     im_ctx.enabled = true;
 }
 
