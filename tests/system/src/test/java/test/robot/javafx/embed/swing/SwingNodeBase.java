@@ -53,6 +53,7 @@ public class SwingNodeBase {
     public static final int LONG_WAIT_TIME = 2500;
 
     protected static Robot robot;
+    protected static boolean doShutdown = true;
 
     // Used to launch the application before running any test
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -78,7 +79,9 @@ public class SwingNodeBase {
 
     @AfterAll
     public static void teardownOnce() {
-        Util.shutdown();
+        if (doShutdown) {
+            Util.shutdown();
+        }
     }
 
     public static void runWaitSleep(Runnable run) {
