@@ -348,17 +348,20 @@ public class HtmlStyledOutput implements StyledOutput {
     }
 
     public void writePrologue() throws IOException {
-        wr.write("<html>");
+        wr.write("<html>\n");
+        wr.write("<head>\n");
+        wr.write("<meta charset=\"utf-8\">\n");
         if (!inlineStyles) {
-            wr.write("<head><style>\n");
+            wr.write("<style>\n");
             for (Val v : styles.values()) {
                 wr.write(v.name);
                 wr.write(" { ");
                 wr.write(v.css);
                 wr.write(" }\n");
             }
-            wr.write("</style></head>\n");
+            wr.write("</style>\n");
         }
+        wr.write("</head>\n");
         wr.write("<body>\n");
     }
 
