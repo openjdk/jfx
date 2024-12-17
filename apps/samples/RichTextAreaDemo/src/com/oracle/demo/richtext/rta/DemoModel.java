@@ -119,13 +119,13 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         nl(3);
         addWithStyleNames("Behold various types of highlights, including overlapping highlights.", LARGE);
         highlight(7, 7, Color.rgb(255, 255, 128, 0.7));
-        wavyUnderline(36, 100, Color.RED);
+        addWavyUnderline(36, 100, Color.RED);
         highlight(46, 11, Color.rgb(255, 255, 128, 0.7));
         highlight(50, 20, Color.rgb(0, 0, 128, 0.1));
         nl(2);
         addSegment("Behold various types of highlights, including overlapping highlights.");
         highlight(7, 7, Color.rgb(255, 255, 128, 0.7));
-        wavyUnderline(36, 100, Color.RED);
+        addWavyUnderline(36, 100, Color.RED);
         highlight(46, 11, Color.rgb(255, 255, 128, 0.7));
         highlight(50, 20, Color.rgb(0, 0, 128, 0.1));
         nl(2);

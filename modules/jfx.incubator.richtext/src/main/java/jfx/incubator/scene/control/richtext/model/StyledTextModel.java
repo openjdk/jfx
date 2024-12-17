@@ -137,7 +137,8 @@ public abstract class StyledTextModel {
     /**
      * Returns the plain text string for the specified paragraph.  The returned text string cannot be null
      * and must not contain any control characters other than TAB.
-     * The caller must not attempt to ask for a paragraph outside of the valid range.
+     * The callers must ensure that the value of {@code index} is within the valid document range,
+     * since doing otherwise might result in an exception or undetermined behavior.
      *
      * @param index the paragraph index in the range (0...{@link #size()})
      * @return the non-null paragraph text string
@@ -147,7 +148,7 @@ public abstract class StyledTextModel {
     /**
      * Returns a {@link RichParagraph} at the given model index.
      * The callers must ensure that the value of {@code index} is within the valid document range,
-     * since doing otherwise might result in an exception or undetermied behavior.
+     * since doing otherwise might result in an exception or undetermined behavior.
      * <p>
      * This method makes no guarantees that the same paragraph instance will be returned for the same model index.
      *
@@ -163,6 +164,7 @@ public abstract class StyledTextModel {
      *
      * @param start the start of the range to be removed
      * @param end the end of the range to be removed, expected to be greater than the start position
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     protected abstract void removeRange(TextPos start, TextPos end);
 
@@ -174,6 +176,7 @@ public abstract class StyledTextModel {
      * @param text the text to insert
      * @param attrs the style attributes
      * @return the number of characters inserted
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     protected abstract int insertTextSegment(int index, int offset, String text, StyleAttributeMap attrs);
 
@@ -182,6 +185,7 @@ public abstract class StyledTextModel {
      *
      * @param index the model index
      * @param offset the text offset
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     protected abstract void insertLineBreak(int index, int offset);
 
@@ -198,6 +202,7 @@ public abstract class StyledTextModel {
      *
      * @param index model index
      * @param generator code that will be used to create a Node instance
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     protected abstract void insertParagraph(int index, Supplier<Region> generator);
 
@@ -206,6 +211,7 @@ public abstract class StyledTextModel {
      *
      * @param index the paragraph index
      * @param paragraphAttrs the paragraph attributes
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     protected abstract void setParagraphStyle(int index, StyleAttributeMap paragraphAttrs);
 
@@ -220,6 +226,7 @@ public abstract class StyledTextModel {
      * @param end the end offset
      * @param a the character attributes
      * @param merge determines whether to merge with or overwrite the existing attributes
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     protected abstract void applyStyle(int index, int start, int end, StyleAttributeMap a, boolean merge);
 

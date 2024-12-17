@@ -116,10 +116,10 @@ public class UsageExamples {
             System.out.println("console!");
         });
 
-        // unbind old key bindings
+        // disable old key bindings
         var old = richTextArea.getInputMap().getKeyBindingsFor(RichTextArea.Tag.PASTE_PLAIN_TEXT);
         for (KeyBinding k : old) {
-            richTextArea.getInputMap().unregister(k);
+            richTextArea.getInputMap().disableKeyBinding(k);
         }
         // map a new key binding
         richTextArea.getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), RichTextArea.Tag.PASTE_PLAIN_TEXT);

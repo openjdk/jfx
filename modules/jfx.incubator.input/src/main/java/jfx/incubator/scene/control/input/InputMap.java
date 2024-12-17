@@ -280,7 +280,7 @@ public final class InputMap {
     }
 
     /**
-     * Unregister the specified key binding.
+     * Disables the specified key binding.
      * Calling this method will disable any mappings made with
      * {@link #register(KeyBinding, Runnable)},
      * {@link #registerKey(KeyBinding, FunctionTag)},
@@ -288,7 +288,7 @@ public final class InputMap {
      *
      * @param k the key binding
      */
-    public void unregister(KeyBinding k) {
+    public void disableKeyBinding(KeyBinding k) {
         map.put(k, NULL);
     }
 
@@ -367,8 +367,7 @@ public final class InputMap {
      * This is an irreversible operation.
      * @param tag the function tag
      */
-    // TODO this should not affect the skin input map, but perhaps place NULL for each found KeyBinding
-    public void unregister(FunctionTag tag) {
+    public void removeKeyBindingsFor(FunctionTag tag) {
         if (skinInputMap != null) {
             skinInputMap.unbind(tag);
         }

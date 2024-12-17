@@ -77,7 +77,7 @@ public class ExamplesModel extends StyledTextModelViewOnlyBase {
                 RichParagraph.Builder b = RichParagraph.builder();
                 b.addSegment("Example: ", a1);
                 b.addSegment("spelling, highlights");
-                b.wavyUnderline(9, 8, Color.RED);
+                b.addWavyUnderline(9, 8, Color.RED);
                 b.addHighlight(19, 4, Color.rgb(255, 128, 128, 0.5));
                 b.addHighlight(20, 7, Color.rgb(128, 255, 128, 0.5));
                 return b.build();

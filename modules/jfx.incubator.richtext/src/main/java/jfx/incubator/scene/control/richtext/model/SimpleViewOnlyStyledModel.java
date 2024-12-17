@@ -95,8 +95,8 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
 
     /**
      * Appends a text segment to the last paragraph.
-     * The caller must ensure that the {@code text} does not contain newline symbols, as the behavior might be
-     * undefined.
+     * The caller must ensure that the {@code text} does not contain newline symbols, as the behavior
+     * is undefined in this case.
      * <p>
      * This convenience method is equivalent to calling {@code addSegment(text, StyleAttributeMap.EMPTY);}
      *
@@ -188,14 +188,14 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
-     * Adds a wave underline (typically used as a spell checker indicator) to the specified range within the last paragraph.
+     * Adds a wavy underline (typically used as a spell checker indicator) to the specified range within the last paragraph.
      *
      * @param start the start offset
      * @param length the length of the highlight
      * @param c the highlight color
      * @return this model instance
      */
-    public SimpleViewOnlyStyledModel wavyUnderline(int start, int length, Color c) {
+    public SimpleViewOnlyStyledModel addWavyUnderline(int start, int length, Color c) {
         Paragraph p = lastParagraph();
         p.addSquiggly(start, length, c);
         return this;
