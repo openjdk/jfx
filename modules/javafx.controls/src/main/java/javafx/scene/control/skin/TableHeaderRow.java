@@ -426,7 +426,7 @@ public class TableHeaderRow extends StackPane {
      * @since 12
      */
     protected void updateScrollX() {
-        scrollX = flow.getHbar().isVisible() ? -flow.getHbar().getValue() : 0.0F;
+        scrollX = flow.getHbar().isVisible() ? snapPositionX(-flow.getHbar().getValue()) : 0.0F;
         requestLayout();
 
         // Fix for JDK-8094852: without this call even though we call requestLayout()
