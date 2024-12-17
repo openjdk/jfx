@@ -66,6 +66,10 @@ import com.sun.javafx.scene.control.input.PHList;
  * or the associated behavior (the "default" function), or by the application.
  * When such a mapping exists, the found function tag is matched to a function registered either by
  * the application or by the skin.
+ * <p>
+ * Additionally, the {@link #register(KeyBinding, Runnable)} method allows mapping to a function directly,
+ * bypassing the function tag.
+ * <p>
  * This mechanism allows for customizing the key mappings and the underlying functions independently and separately.
  *
  * @since 999 TODO
@@ -96,8 +100,8 @@ public final class InputMap {
     }
 
     /**
-     * Adds an event handler for the specified event type, at the control level.
-     * This mapping always consumes the matching event.
+     * Adds an event handler for the specified event type.
+     * Event handlers added with this method will always be called before any handlers registered by the skin.
      *
      * @param <T> the actual event type
      * @param type the event type
@@ -273,11 +277,15 @@ public final class InputMap {
     }
 
     /**
-     * Unbinds the specified key binding.
+     * Disables the specified key binding.
+     * Calling this method will disable any mappings made with
+     * {@link #register(KeyBinding, Runnable)},
+     * {@link #registerKey(KeyBinding, FunctionTag)},
+     * or registered by the skin.
      *
      * @param k the key binding
      */
-    public void unbind(KeyBinding k) {
+    public void disableKeyBinding(KeyBinding k) {
         map.put(k, NULL);
     }
 
@@ -296,7 +304,7 @@ public final class InputMap {
     }
 
     /**
-     * Restores the specified key binding to the value set by the behavior, if any.
+     * Restores the specified key binding to the value set by the skin, if any.
      *
      * @param k the key binding
      */
@@ -308,7 +316,7 @@ public final class InputMap {
     }
 
     /**
-     * Restores the specified function tag to the value set by the behavior, if any.
+     * Restores the specified function tag to the value set by the skin, if any.
      *
      * @param tag the function tag
      */
@@ -356,8 +364,7 @@ public final class InputMap {
      * This is an irreversible operation.
      * @param tag the function tag
      */
-    // TODO this should not affect the skin input map, but perhaps place NULL for each found KeyBinding
-    public void unbind(FunctionTag tag) {
+    public void removeKeyBindingsFor(FunctionTag tag) {
         if (skinInputMap != null) {
             skinInputMap.unbind(tag);
         }
