@@ -994,7 +994,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1runLoop
     {
         GlassApplication* glass = (GlassApplication*)appDelegate;
         if ([NSThread isMainThread] == YES) {
-            [glass runLoop: glassApplication];
+            [glass runLoop: glass];
         } else {
             [glass performSelectorOnMainThread:@selector(runLoop:) withObject:glass waitUntilDone:[NSThread isMainThread]];
 
