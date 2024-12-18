@@ -952,32 +952,49 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _runLoop
- * Signature: (Ljava/lang/ClassLoader;Ljava/lang/Runnable;Z)V
+ * Method:    _initDelegate
+ * Signature: (Ljava/lang/ClassLoader;Ljava/lang/Runnable;Z)J
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1runLoop
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initDelegate
 (JNIEnv *env, jobject japplication, jobject classLoader,
  jobject jlaunchable, jboolean isTaskbarApplication)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1initDelegate");
+
+    if ([NSThread isMainThread] == YES)
+    {
+        //            fprintf(stderr, "\nWARNING: Glass was started on 1st thread and will block this thread.\nYou most likely do not want to do this - please remove \"-XstartOnFirstThread\" from VM arguments.\n\n");
+    }
+    else
+    {
+        if ([[NSThread currentThread] name] == nil)
+        {
+            [[NSThread currentThread] setName:@"Main Java Thread"];
+        }
+    }
+
+    return (jlong)[[GlassApplication alloc] initWithEnv:env
+                                            application:japplication
+                                            launchable:jlaunchable
+                                            taskbarApplication:isTaskbarApplication
+                                            classLoader:classLoader];
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _runLoop
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1runLoop
+(JNIEnv *env, jobject japplication, jlong appDelegate)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1runLoop");
 
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        if ([NSThread isMainThread] == YES)
-        {
-            //            fprintf(stderr, "\nWARNING: Glass was started on 1st thread and will block this thread.\nYou most likely do not want to do this - please remove \"-XstartOnFirstThread\" from VM arguments.\n\n");
-        }
-        else
-        {
-            if ([[NSThread currentThread] name] == nil)
-            {
-                [[NSThread currentThread] setName:@"Main Java Thread"];
-            }
-        }
-
-        GlassApplication *glass = [[GlassApplication alloc] initWithEnv:env application:japplication launchable:jlaunchable taskbarApplication:isTaskbarApplication classLoader:classLoader];
+        GlassApplication* glass = (GlassApplication*)appDelegate;
         if ([NSThread isMainThread] == YES) {
-            [glass runLoop: glass];
+            [glass runLoop: glassApplication];
         } else {
             [glass performSelectorOnMainThread:@selector(runLoop:) withObject:glass waitUntilDone:[NSThread isMainThread]];
 
@@ -998,12 +1015,16 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1runLoop
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _finishTerminating
- * Signature: ()V
+ * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1finishTerminating
-(JNIEnv *env, jobject japplication)
+(JNIEnv *env, jobject japplication, jlong appDelegate)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1finishTerminating");
+
+    if (appDelegate) {
+        [(GlassApplication*)appDelegate release];
+    }
 
     if (isEmbedded) {
         return;
@@ -1262,11 +1283,12 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getApplicat
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    getPlatformPreferences
- * Signature: ()Ljava/util/Map;
+ * Signature: (J)Ljava/util/Map;
  */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication_getPlatformPreferences
-(JNIEnv *env, jobject self)
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getPlatformPreferences
+(JNIEnv *env, jobject self, jlong appDelegate)
 {
-    GlassApplication* app = (GlassApplication*)[NSApp delegate];
-    return [app getPlatformPreferences];
+    return appDelegate
+        ? [(GlassApplication*)appDelegate getPlatformPreferences]
+        : nil;
 }
