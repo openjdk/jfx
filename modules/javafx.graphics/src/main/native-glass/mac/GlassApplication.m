@@ -961,18 +961,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initDelegate
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1initDelegate");
 
-    if ([NSThread isMainThread] == YES)
-    {
-        //            fprintf(stderr, "\nWARNING: Glass was started on 1st thread and will block this thread.\nYou most likely do not want to do this - please remove \"-XstartOnFirstThread\" from VM arguments.\n\n");
-    }
-    else
-    {
-        if ([[NSThread currentThread] name] == nil)
-        {
-            [[NSThread currentThread] setName:@"Main Java Thread"];
-        }
-    }
-
     return (jlong)[[GlassApplication alloc] initWithEnv:env
                                             application:japplication
                                             launchable:jlaunchable
@@ -992,6 +980,18 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1runLoop
 
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
+        if ([NSThread isMainThread] == YES)
+        {
+            //            fprintf(stderr, "\nWARNING: Glass was started on 1st thread and will block this thread.\nYou most likely do not want to do this - please remove \"-XstartOnFirstThread\" from VM arguments.\n\n");
+        }
+        else
+        {
+            if ([[NSThread currentThread] name] == nil)
+            {
+                [[NSThread currentThread] setName:@"Main Java Thread"];
+            }
+        }
+
         GlassApplication* glass = (GlassApplication*)appDelegate;
         if ([NSThread isMainThread] == YES) {
             [glass runLoop: glass];
