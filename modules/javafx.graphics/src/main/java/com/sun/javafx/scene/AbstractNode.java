@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,12 +23,12 @@
  * questions.
  */
 
-package javafx.stage;
+package com.sun.javafx.scene;
 
-public class StageShim {
+import javafx.scene.Node;
 
-    public static boolean isPrimary(Stage stage) {
-        return stage.isPrimary();
-    }
-
-}
+/**
+ * This class only exists so that JavaFX code can extend the {@code Node} class across module
+ * boundaries, as classes in other modules cannot be permitted subclasses.
+ */
+public abstract non-sealed class AbstractNode extends Node {}

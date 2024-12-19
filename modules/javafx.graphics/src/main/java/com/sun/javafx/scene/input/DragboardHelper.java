@@ -42,11 +42,6 @@ public class DragboardHelper {
     private DragboardHelper() {
     }
 
-    public static void setDataAccessRestriction(Dragboard dragboard,
-            boolean restricted) {
-        dragboardAccessor.setDataAccessRestriction(dragboard, restricted);
-    }
-
     public static TKClipboard getPeer(Dragboard dragboard) {
         return dragboardAccessor.getPeer(dragboard);
     }
@@ -64,7 +59,6 @@ public class DragboardHelper {
     }
 
     public interface DragboardAccessor {
-        void setDataAccessRestriction(Dragboard dragboard, boolean restricted);
         TKClipboard getPeer(Dragboard dragboard);
         Dragboard createDragboard(TKClipboard peer);
     }
