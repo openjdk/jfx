@@ -98,7 +98,7 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
         settings5->add_AutoHideScrollBarsChanged(
             Callback<ITypedEventHandler<UISettings*, UISettingsAutoHideScrollBarsChangedEventArgs*>>(
                 [this](IUISettings*, IUISettingsAutoHideScrollBarsChangedEventArgs*) {
-                    updatePreferences(PreferenceType::UI_SETTINGS);
+                    updatePreferences(PT_UI_SETTINGS);
                     return S_OK;
                 }).Get(),
             &token);
@@ -123,7 +123,7 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
         networkInformation->add_NetworkStatusChanged(
             Callback<INetworkStatusChangedEventHandler>(
                 [this](IInspectable*) {
-                    updatePreferences(PreferenceType::NETWORK_INFORMATION);
+                    updatePreferences(PT_NETWORK_INFORMATION);
                     return S_OK;
                 }).Get(),
             &token);
@@ -148,19 +148,19 @@ jobject PlatformSupport::collectPreferences(PreferenceType preferenceType) const
     jobject prefs = env->NewObject(javaClasses.HashMap, javaIDs.HashMap.init);
     if (CheckAndClearException(env)) return NULL;
 
-    if (preferenceType & PreferenceType::SYSTEM_COLORS) {
+    if (preferenceType & PT_SYSTEM_COLORS) {
         querySystemColors(prefs);
     }
 
-    if (preferenceType & PreferenceType::SYSTEM_PARAMS) {
+    if (preferenceType & PT_SYSTEM_PARAMS) {
         querySystemParameters(prefs);
     }
 
-    if (preferenceType & PreferenceType::UI_SETTINGS) {
+    if (preferenceType & PT_UI_SETTINGS) {
         queryUISettings(prefs);
     }
 
-    if (preferenceType & PreferenceType::NETWORK_INFORMATION) {
+    if (preferenceType & PT_NETWORK_INFORMATION) {
         queryNetworkInformation(prefs);
     }
 
@@ -203,11 +203,11 @@ bool PlatformSupport::onSettingChanged(WPARAM wParam, LPARAM lParam) const
     switch ((UINT)wParam) {
         case SPI_SETHIGHCONTRAST:
         case SPI_SETCLIENTAREAANIMATION:
-            return updatePreferences(PreferenceType::SYSTEM_PARAMS);
+            return updatePreferences(PT_SYSTEM_PARAMS);
     }
 
     if (lParam != NULL && wcscmp(LPCWSTR(lParam), L"ImmersiveColorSet") == 0) {
-        return updatePreferences(PreferenceType::UI_SETTINGS);
+        return updatePreferences(PT_UI_SETTINGS);
     }
 
     return false;
@@ -217,20 +217,21 @@ void PlatformSupport::querySystemParameters(jobject properties) const
 {
     HIGHCONTRAST contrastInfo;
     contrastInfo.cbSize = sizeof(HIGHCONTRAST);
-    ::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0);
-
-    // Property names need to be kept in sync with WinApplication.java:
-    if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
-        putBoolean(properties, "Windows.SPI.HighContrast", true);
-        putString(properties, "Windows.SPI.HighContrastColorScheme", contrastInfo.lpszDefaultScheme);
-    } else {
-        putBoolean(properties, "Windows.SPI.HighContrast", false);
-        putString(properties, "Windows.SPI.HighContrastColorScheme", (const char*)NULL);
+    if (::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0)) {
+        // Property names need to be kept in sync with WinApplication.java:
+        if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
+            putBoolean(properties, "Windows.SPI.HighContrast", true);
+            putString(properties, "Windows.SPI.HighContrastColorScheme", contrastInfo.lpszDefaultScheme);
+        } else {
+            putBoolean(properties, "Windows.SPI.HighContrast", false);
+            putString(properties, "Windows.SPI.HighContrastColorScheme", (const char*)NULL);
+        }
     }
 
     BOOL value;
-    ::SystemParametersInfo(SPI_GETCLIENTAREAANIMATION, 0, &value, 0);
-    putBoolean(properties, "Windows.SPI.ClientAreaAnimation", value);
+    if (::SystemParametersInfo(SPI_GETCLIENTAREAANIMATION, 0, &value, 0)) {
+        putBoolean(properties, "Windows.SPI.ClientAreaAnimation", value);
+    }
 }
 
 void PlatformSupport::querySystemColors(jobject properties) const
