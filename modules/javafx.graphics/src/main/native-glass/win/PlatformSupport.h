@@ -39,21 +39,29 @@
 class PlatformSupport final
 {
 public:
+    enum PreferenceType {
+        SYSTEM_COLORS = 1,
+        SYSTEM_PARAMS = 2,
+        UI_SETTINGS = 4,
+        NETWORK_INFORMATION = 8,
+        ANY = SYSTEM_COLORS | SYSTEM_PARAMS | UI_SETTINGS | NETWORK_INFORMATION
+    };
+
     PlatformSupport(JNIEnv*, jobject application);
     ~PlatformSupport();
     PlatformSupport(PlatformSupport const&) = delete;
     PlatformSupport& operator=(PlatformSupport const&) = delete;
 
     /**
-     * Collect all platform preferences and return them as a new java/util/Map.
+     * Collect the specified platform preferences and return them as a new java/util/Map.
      */
-    jobject collectPreferences() const;
+    jobject collectPreferences(PreferenceType = ANY) const;
 
     /**
-     * Collect all platform preferences and notify the JavaFX application when a preference has changed.
-     * The change notification includes all preferences, not only the changed preferences.
+     * Collect the specified platform preferences and notify the JavaFX application when a preference has changed.
+     * The change notification includes all specified preferences, not only the changed preferences.
      */
-    bool updatePreferences() const;
+    bool updatePreferences(PreferenceType = ANY) const;
 
     /**
      * Handles the WM_SETTINGCHANGE message.

@@ -98,7 +98,7 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
         settings5->add_AutoHideScrollBarsChanged(
             Callback<ITypedEventHandler<UISettings*, UISettingsAutoHideScrollBarsChangedEventArgs*>>(
                 [this](IUISettings*, IUISettingsAutoHideScrollBarsChangedEventArgs*) {
-                    updatePreferences();
+                    updatePreferences(PreferenceType::UI_SETTINGS);
                     return S_OK;
                 }).Get(),
             &token);
@@ -123,7 +123,7 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
         networkInformation->add_NetworkStatusChanged(
             Callback<INetworkStatusChangedEventHandler>(
                 [this](IInspectable*) {
-                    updatePreferences();
+                    updatePreferences(PreferenceType::NETWORK_INFORMATION);
                     return S_OK;
                 }).Get(),
             &token);
@@ -139,7 +139,7 @@ PlatformSupport::~PlatformSupport()
     uninitializeRoActivationSupport();
 }
 
-jobject PlatformSupport::collectPreferences() const
+jobject PlatformSupport::collectPreferences(PreferenceType preferenceType) const
 {
     if (!initialized) {
         return NULL;
@@ -148,20 +148,32 @@ jobject PlatformSupport::collectPreferences() const
     jobject prefs = env->NewObject(javaClasses.HashMap, javaIDs.HashMap.init);
     if (CheckAndClearException(env)) return NULL;
 
-    querySystemParameters(prefs);
-    querySystemColors(prefs);
-    queryUISettings(prefs);
-    queryNetworkInformation(prefs);
+    if (preferenceType & PreferenceType::SYSTEM_COLORS) {
+        querySystemColors(prefs);
+    }
+
+    if (preferenceType & PreferenceType::SYSTEM_PARAMS) {
+        querySystemParameters(prefs);
+    }
+
+    if (preferenceType & PreferenceType::UI_SETTINGS) {
+        queryUISettings(prefs);
+    }
+
+    if (preferenceType & PreferenceType::NETWORK_INFORMATION) {
+        queryNetworkInformation(prefs);
+    }
+
     return prefs;
 }
 
-bool PlatformSupport::updatePreferences() const
+bool PlatformSupport::updatePreferences(PreferenceType preferenceType) const
 {
     if (!initialized) {
         return false;
     }
 
-    jobject newPreferences = collectPreferences();
+    jobject newPreferences = collectPreferences(preferenceType);
 
     jboolean preferencesChanged =
         newPreferences != NULL &&
@@ -191,11 +203,11 @@ bool PlatformSupport::onSettingChanged(WPARAM wParam, LPARAM lParam) const
     switch ((UINT)wParam) {
         case SPI_SETHIGHCONTRAST:
         case SPI_SETCLIENTAREAANIMATION:
-            return updatePreferences();
+            return updatePreferences(PreferenceType::SYSTEM_PARAMS);
     }
 
     if (lParam != NULL && wcscmp(LPCWSTR(lParam), L"ImmersiveColorSet") == 0) {
-        return updatePreferences();
+        return updatePreferences(PreferenceType::UI_SETTINGS);
     }
 
     return false;
@@ -307,25 +319,27 @@ void PlatformSupport::queryNetworkInformation(jobject properties) const
         ComPtr<IConnectionProfile> connectionProfile;
         ComPtr<IConnectionCost> connectionCost;
         NetworkCostType networkCostType;
-        const char* internetCostType;
+        const char* internetCostType = NULL;
 
         RO_CHECKED("INetworkInformation::GetInternetConnectionProfile",
                    this->networkInformation->GetInternetConnectionProfile(&connectionProfile));
 
-        RO_CHECKED("IConnectionProfile::GetConnectionCost",
-                   connectionProfile->GetConnectionCost(&connectionCost));
+        if (connectionProfile) {
+            RO_CHECKED("IConnectionProfile::GetConnectionCost",
+                       connectionProfile->GetConnectionCost(&connectionCost));
 
-        RO_CHECKED("IConnectionCost::get_NetworkCostType",
-                   connectionCost->get_NetworkCostType(&networkCostType));
+            RO_CHECKED("IConnectionCost::get_NetworkCostType",
+                       connectionCost->get_NetworkCostType(&networkCostType));
 
-        switch (networkCostType) {
-            case NetworkCostType_Unrestricted: internetCostType = "Unrestricted"; break;
-            case NetworkCostType_Variable: internetCostType = "Variable"; break;
-            case NetworkCostType_Fixed: internetCostType = "Fixed"; break;
-            default: internetCostType = "Unknown"; break;
+            switch (networkCostType) {
+                case NetworkCostType_Unrestricted: internetCostType = "Unrestricted"; break;
+                case NetworkCostType_Variable: internetCostType = "Variable"; break;
+                case NetworkCostType_Fixed: internetCostType = "Fixed"; break;
+            }
         }
 
-        putString(properties, "Windows.NetworkInformation.InternetCostType", internetCostType);
+        putString(properties, "Windows.NetworkInformation.InternetCostType",
+                  internetCostType != NULL ? internetCostType : "Unknown");
     } catch (RoException const&) {
     }
 }
