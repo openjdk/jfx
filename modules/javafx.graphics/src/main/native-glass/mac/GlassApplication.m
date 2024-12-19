@@ -1282,7 +1282,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getApplicat
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    getPlatformPreferences
+ * Method:    _getPlatformPreferences
  * Signature: (J)Ljava/util/Map;
  */
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getPlatformPreferences
