@@ -100,7 +100,7 @@ import com.sun.javafx.logging.PlatformLogger;
  *
  * @since JavaFX 8.0
  */
-public class SubScene extends Node {
+public non-sealed class SubScene extends Node {
     static {
         // This is used by classes in different packages to get access to
         // private and package private methods.
