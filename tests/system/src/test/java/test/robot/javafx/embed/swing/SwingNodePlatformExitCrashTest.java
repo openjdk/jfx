@@ -29,8 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
 import javax.swing.SwingUtilities;
 import javafx.application.Platform;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
 
@@ -52,9 +51,10 @@ public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
         myApp.disposeDialog();
     }
 
-    @AfterAll
-    public static void teardownOnce() {
-        // No-op as Toolkit shutdown is already done in Platform.exit
-        // and calling superclass teardownOnce will cause hang
+    @BeforeAll
+    public static void skipShutDown() {
+        // Skip shutdown as Toolkit shutdown is already done in Platform.exit
+        // and will cause hang if called
+        doShutdown = false;
     }
 }
