@@ -46,7 +46,7 @@ public interface TextSpan {
     public Object getFont();
 
     /**
-     * The bounds for embedded object, only used the font returns null.
+     * The bounds for embedded object, only used when the font returns null.
      * The text for a embedded object should be a single char ("\uFFFC" is
      * recommended).
      */
