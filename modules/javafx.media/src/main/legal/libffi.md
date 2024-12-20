@@ -35,7 +35,7 @@ Copyright (C) 2002  Roger Sayle
 Copyright (C) 2013  The Written Word, Inc.
 Copyright (C) 2002-2007  Bo Thorsen <bo@suse.de>
 Copyright (C) 2021  Microsoft, Inc.
-Copyright (c) 2022 Oracle and/or its affiliates.
+Copyright (c) 2022, 2024, Oracle and/or its affiliates.
 
 ```
 
