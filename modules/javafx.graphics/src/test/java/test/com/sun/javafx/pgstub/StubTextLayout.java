@@ -127,48 +127,6 @@ public class StubTextLayout implements TextLayout {
         return getBounds(null, new RectBounds());
     }
 
-//    @Override
-//    public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
-//        ensureLayout();
-//        double fontSizeH = nullFontSize;
-//        double fontSizeW = nullFontSize;
-//        if (font != null) {
-//            fontSizeH = font.getSize();
-//            fontSizeW = font.getSize();
-//
-//            // For better testing, we make bold text a little bit bigger.
-//            boolean bold = font.getStyle().toLowerCase().contains("bold");
-//            if (bold) {
-//                fontSizeW++;
-//            }
-//        }
-//
-//        final String[] lines = getText().split("\n");
-//        double width = 0.0;
-//        double height = fontSizeH * lines.length + lineSpacing * (lines.length - 1);
-//        for (String line : lines) {
-//            final int length;
-//            if (line.contains("\t")) {
-//                // count chars but when encountering a tab round up to a tabSize boundary
-//                char [] chrs = line.toCharArray();
-//                int spaces = 0;
-//                for (int i = 0; i < chrs.length; i++) {
-//                    if (chrs[i] == '\t') {
-//                        if (tabSize != 0) {
-//                            while ((++spaces % tabSize) != 0) {}
-//                        }
-//                    } else {
-//                        spaces++;
-//                    }
-//                }
-//                length = spaces;
-//            } else {
-//                length = line.length();
-//            }
-//            width = Math.max(width, fontSizeW * length);
-//        }
-//        return bounds.deriveWithNewBounds(0, (float)-fontSizeH, 0, (float)width, (float)(height-fontSizeH), 0);
-//    }
     @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
         ensureLayout();
@@ -455,7 +413,7 @@ public class StubTextLayout implements TextLayout {
         private final double charWidth;
         private final double charHeight;
         private final boolean linebreak;
-        
+
         public StubGlyphList(
             TextSpan span,
             int start,
@@ -593,7 +551,7 @@ public class StubTextLayout implements TextLayout {
             }
             lineBreak = false;
         }
-        
+
         private void addLine() {
             int len = runStart - lineStart;
             StubGlyphList[] rs = runs.toArray(StubGlyphList[]::new);
@@ -626,7 +584,7 @@ public class StubTextLayout implements TextLayout {
                         addLine();
                     }
                 }
-                
+
                 char c = text.charAt(i);
                 switch (c) {
                 case '\t':
