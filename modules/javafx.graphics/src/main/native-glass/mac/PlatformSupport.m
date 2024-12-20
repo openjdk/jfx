@@ -65,6 +65,7 @@
     }
 
 @implementation PlatformSupport {
+    nw_path_monitor_t pathMonitor;
     jobject currentPreferences;
     bool currentPathConstrained;
     bool currentPathExpensive;
@@ -126,7 +127,7 @@
         name:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
         object:nil];
 
-    nw_path_monitor_t pathMonitor = nw_path_monitor_create();
+    pathMonitor = nw_path_monitor_create();
     nw_path_monitor_set_update_handler(pathMonitor, ^(nw_path_t path) {
         self->currentPathConstrained = nw_path_is_constrained(path);
         self->currentPathExpensive = nw_path_is_expensive(path);
@@ -137,6 +138,13 @@
     nw_path_monitor_start(pathMonitor);
 
     return self;
+}
+
+- (void)stopEventProcessing {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[NSDistributedNotificationCenter defaultCenter] removeObserver:self];
+    [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:self];
+    nw_path_monitor_cancel(pathMonitor);
 }
 
 - (void)platformPreferencesDidChange {

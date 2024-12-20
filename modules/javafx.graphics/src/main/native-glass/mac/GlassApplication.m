@@ -165,6 +165,15 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return self;
 }
 
+- (void)dealloc {
+    if (platformSupport) {
+        [platformSupport stopEventProcessing];
+        [platformSupport release];
+    }
+
+    [super dealloc];
+}
+
 #pragma mark --- delegate methods
 
 - (void)GlassApplicationDidChangeScreenParameters

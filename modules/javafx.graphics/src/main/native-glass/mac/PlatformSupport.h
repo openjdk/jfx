@@ -41,6 +41,11 @@
 - (id)initWithEnv:(JNIEnv*)env application:(jobject)app;
 
 /**
+ * Stops event processing, which must be done prior to releasing this PlatformSupport instance.
+ */
+- (void)stopEventProcessing;
+
+/**
  * Collect all platform preferences and return them as a new java/util/Map.
  */
 - (jobject)collectPreferences;
