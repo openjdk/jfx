@@ -536,7 +536,7 @@ public class StubTextLayout implements TextLayout {
         }
 
         public StubTextLine[] getLines() {
-            if (!runs.isEmpty()) {
+            if (lines.isEmpty() || !runs.isEmpty()) {
                 addLine();
             }
             return lines.toArray(StubTextLine[]::new);
