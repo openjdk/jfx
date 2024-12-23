@@ -130,6 +130,7 @@ public class StubTextLayout implements TextLayout {
     @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
         ensureLayout();
+        // copied from PrismTextLayout
         float left = Float.POSITIVE_INFINITY;
         float top = Float.POSITIVE_INFINITY;
         float right = Float.NEGATIVE_INFINITY;
@@ -324,6 +325,9 @@ public class StubTextLayout implements TextLayout {
     }
 
     private char[] getText() {
+        if (text != null) {
+            return text.toCharArray();
+        }
         char[] text;
         int count = 0;
         for (int i = 0; i < spans.length; i++) {
@@ -555,13 +559,13 @@ public class StubTextLayout implements TextLayout {
         private void addLine() {
             int len = runStart - lineStart;
             StubGlyphList[] rs = runs.toArray(StubGlyphList[]::new);
-            RectBounds bounds = new RectBounds(0, 0, (float)x, (float)(charHeight /*+ lineSpacing*/));
+            RectBounds bounds = new RectBounds(0, 0, (float)x, (float)(charHeight));
             lines.add(new StubTextLine(rs, bounds, lineStart, len));
 
             column = 0;
             x = 0.0;
             runStartX = 0.0;
-            y += charHeight;
+            y += (charHeight + lineSpacing);
             lineStart += len;
         }
 
