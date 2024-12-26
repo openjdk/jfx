@@ -80,7 +80,7 @@ class RunnableProcessor implements Runnable {
         } catch (InterruptedException e) { }
     }
 
-    private Object runLoop() {
+    private void runLoop() {
         final RunLoopControl control = new RunLoopControl();
 
         //push this new instance on the stack
@@ -94,23 +94,17 @@ class RunnableProcessor implements Runnable {
                 Application.reportException(e);
             }
         }
-
-        return control.release;
-
     }
 
-    Object enterNestedEventLoop() {
+    void enterNestedEventLoop() {
         // we are being called on the current active event thread
         // via dispatch, so it is stalled until we return.
 
         // start our nested loop, which will block until that exits
-        Object ret = runLoop();
-
-        // and return the value that was passed into leaveNested
-        return ret;
+        runLoop();
     }
 
-    void leaveNestedEventLoop(Object retValue) {
+    void leaveNestedEventLoop() {
         // we are being called from dispatch of the current running
         // event thread. We want to cause this thread to exit, and
         // restart the nested on.
@@ -120,13 +114,10 @@ class RunnableProcessor implements Runnable {
 
         // let the current run loop die when we return to dispatch.
         current.active = false;
-        // and give it the ret object so it will return it to the
-        // blocked nesting call.
-        current.release = retValue;
 
         // when we return from this dispatched event, we will exit
         // because we are no longer active, and then the nested
-        // call can return the release value we just provided.
+        // call can return.
     }
 
     void shutdown() {

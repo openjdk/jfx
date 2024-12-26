@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -111,7 +111,6 @@ static int postEventPipe[2];
 static int haveIDs = 0;
 
 static BOOL shouldKeepRunningNestedLoop = YES;
-static jobject nestedLoopReturnValue = NULL;
 
 //Library entrypoint
 JNIEXPORT jint JNICALL
@@ -544,9 +543,8 @@ jclass classForName(JNIEnv *env, char *className)
 }
 
 
-+ (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env
++ (void)enterNestedEventLoopWithEnv:(JNIEnv*)env
 {
-    jobject ret = NULL;
     GLASS_LOG("entering nestedEventLoop");
 
     NSRunLoop *theRL = [NSRunLoop currentRunLoop];
@@ -559,22 +557,11 @@ jclass classForName(JNIEnv *env, char *className)
     }
     GLASS_LOG("leaving enterNestedEventLoop");
 
-    if (nestedLoopReturnValue != NULL) {
-        ret = (*env)->NewLocalRef(env, nestedLoopReturnValue);
-        (*env)->DeleteGlobalRef(env, nestedLoopReturnValue);
-        nestedLoopReturnValue = NULL;
-    }
-
     shouldKeepRunningNestedLoop = YES;
-
-    return ret;
 }
 
-+ (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env retValue:(jobject)retValue
++ (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env
 {
-    if (retValue != NULL) {
-        nestedLoopReturnValue = (*env)->NewGlobalRef(env, retValue);
-    }
     shouldKeepRunningNestedLoop = NO;
 }
 
@@ -821,38 +808,34 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1runLoop
 /*
  *  * Class:     com_sun_glass_ui_ios_IosApplication
  *   * Method:    _enterNestedEventLoopImpl
- *    * Signature: ()Ljava/lang/Object;
+ *    * Signature: ()V
  *     */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_ios_IosApplication__1enterNestedEventLoopImpl
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1enterNestedEventLoopImpl
 (JNIEnv *env, jobject japplication)
 {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1enterNestedEventLoopImpl");
 
-    jobject ret;
-
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        ret = [GlassApplication enterNestedEventLoopWithEnv:env];
+        [GlassApplication enterNestedEventLoopWithEnv:env];
     }
     [glasspool drain]; glasspool=nil;
      GLASS_CHECK_EXCEPTION(env);
-
-    return ret;
 }
 
 /*
  *  * Class:     com_sun_glass_ui_ios_IosApplication
  *   * Method:    _leaveNestedEventLoopImpl
- *    * Signature: (Ljava/lang/Object;)V
+ *    * Signature: ()V
  *     */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1leaveNestedEventLoopImpl
-(JNIEnv *env, jobject japplication, jobject retValue)
+(JNIEnv *env, jobject japplication)
 {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1leaveNestedEventLoopImpl");
 
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        [GlassApplication leaveNestedEventLoopWithEnv:env retValue:retValue];
+        [GlassApplication leaveNestedEventLoopWithEnv:env];
     }
     [glasspool drain]; glasspool=nil;
      GLASS_CHECK_EXCEPTION(env);
@@ -1013,4 +996,3 @@ Java_com_sun_glass_ui_ios_IosApplication_staticScreen_1getScreens
 
     return createJavaScreens(env);
 }
-

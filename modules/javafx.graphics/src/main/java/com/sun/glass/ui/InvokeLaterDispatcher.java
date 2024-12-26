@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -170,6 +170,9 @@ public final class InvokeLaterDispatcher extends Thread {
     public void notifyEnteringNestedEventLoop() {
         synchronized (LOCK) {
             nestedEventLoopEntered = true;
+            // We may enter a new nested event loop while we are leaving another one which is not yet left.
+            // Therefore, this nested event loop will prevent the current nested event loop from leaving.
+            leavingNestedEventLoop = false;
             LOCK.notifyAll();
         }
     }
@@ -194,4 +197,3 @@ public final class InvokeLaterDispatcher extends Thread {
         }
     }
 }
-
