@@ -99,7 +99,7 @@ jobs:
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -184,7 +184,7 @@ jobs:
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -270,7 +270,7 @@ jobs:
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -347,7 +347,7 @@ jobs:
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
