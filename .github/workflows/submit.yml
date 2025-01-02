@@ -362,7 +362,7 @@ jobs:
 
       - name: Restore cygwin packages from cache
         id: cygwin
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/cygwin/packages
           key: cygwin-packages-${{ runner.os }}-v1
