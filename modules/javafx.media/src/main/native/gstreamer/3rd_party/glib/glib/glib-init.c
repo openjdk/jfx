@@ -22,6 +22,7 @@
 #include "config.h"
 
 #include "glib-init.h"
+#include "glib-private.h"
 #include "gmacros.h"
 #include "gtypes.h"
 #include "gutils.h"     /* for GDebugKey */
@@ -41,6 +42,10 @@
 
 /* This seems as good a place as any to make static assertions about platform
  * assumptions we make throughout GLib. */
+
+/* Test that private macro G_SIGNEDNESS_OF() works as intended */
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (int) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (unsigned int) == 0);
 
 /* We do not support 36-bit bytes or other historical curiosities. */
 G_STATIC_ASSERT (CHAR_BIT == 8);
@@ -77,6 +82,11 @@ G_STATIC_ASSERT (G_ALIGNOF (TestInt) == G_ALIGNOF (int));
 
 G_STATIC_ASSERT (sizeof (gchar) == 1);
 G_STATIC_ASSERT (sizeof (guchar) == 1);
+
+/* It is platform-dependent whether gchar is signed or unsigned, so there
+ * is no assertion here for it */
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (guchar) == 0);
+
 G_STATIC_ASSERT (sizeof (gint8) * CHAR_BIT == 8);
 G_STATIC_ASSERT (sizeof (guint8) * CHAR_BIT == 8);
 G_STATIC_ASSERT (sizeof (gint16) * CHAR_BIT == 16);
@@ -95,12 +105,16 @@ G_STATIC_ASSERT (G_MINSHORT == SHRT_MIN);
 G_STATIC_ASSERT (G_MAXSHORT == SHRT_MAX);
 G_STATIC_ASSERT (sizeof (unsigned short) == sizeof (gushort));
 G_STATIC_ASSERT (G_MAXUSHORT == USHRT_MAX);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gshort) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gushort) == 0);
 
 G_STATIC_ASSERT (sizeof (int) == sizeof (gint));
 G_STATIC_ASSERT (G_MININT == INT_MIN);
 G_STATIC_ASSERT (G_MAXINT == INT_MAX);
 G_STATIC_ASSERT (sizeof (unsigned int) == sizeof (guint));
 G_STATIC_ASSERT (G_MAXUINT == UINT_MAX);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gint) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (guint) == 0);
 
 G_STATIC_ASSERT (sizeof (long) == GLIB_SIZEOF_LONG);
 G_STATIC_ASSERT (sizeof (long) == sizeof (glong));
@@ -108,6 +122,8 @@ G_STATIC_ASSERT (G_MINLONG == LONG_MIN);
 G_STATIC_ASSERT (G_MAXLONG == LONG_MAX);
 G_STATIC_ASSERT (sizeof (unsigned long) == sizeof (gulong));
 G_STATIC_ASSERT (G_MAXULONG == ULONG_MAX);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (glong) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gulong) == 0);
 
 G_STATIC_ASSERT (G_HAVE_GINT64 == 1);
 
@@ -127,6 +143,10 @@ G_STATIC_ASSERT (G_ALIGNOF (gssize) == G_ALIGNOF (size_t));
  * However, we do not assume that GPOINTER_TO_SIZE can store an arbitrary
  * pointer in a gsize (known to be false on CHERI). */
 G_STATIC_ASSERT (sizeof (size_t) <= sizeof (void *));
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (size_t) == 0);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gsize) == 0);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gssize) == 1);
+
 /* Standard C does not guarantee that size_t is the same as uintptr_t,
  * but GLib currently assumes they are the same: see
  * <https://gitlab.gnome.org/GNOME/glib/-/issues/2842>.
@@ -139,10 +159,13 @@ G_STATIC_ASSERT (sizeof (size_t) <= sizeof (void *));
 G_STATIC_ASSERT (sizeof (size_t) == sizeof (uintptr_t));
 G_STATIC_ASSERT (G_ALIGNOF (size_t) == G_ALIGNOF (uintptr_t));
 #endif
+
 /* goffset is always 64-bit, even if off_t is only 32-bit
  * (compiling without large-file-support on 32-bit) */
 G_STATIC_ASSERT (sizeof (goffset) == sizeof (gint64));
 G_STATIC_ASSERT (G_ALIGNOF (goffset) == G_ALIGNOF (gint64));
+/* goffset is always signed */
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (goffset) == 1);
 
 G_STATIC_ASSERT (sizeof (gfloat) == sizeof (float));
 G_STATIC_ASSERT (G_ALIGNOF (gfloat) == G_ALIGNOF (float));
@@ -153,26 +176,48 @@ G_STATIC_ASSERT (sizeof (gintptr) == sizeof (intptr_t));
 G_STATIC_ASSERT (sizeof (guintptr) == sizeof (uintptr_t));
 G_STATIC_ASSERT (G_ALIGNOF (gintptr) == G_ALIGNOF (intptr_t));
 G_STATIC_ASSERT (G_ALIGNOF (guintptr) == G_ALIGNOF (uintptr_t));
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gintptr) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (guintptr) == 0);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (intptr_t) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (uintptr_t) == 0);
 
 G_STATIC_ASSERT (sizeof (gint8) == sizeof (int8_t));
 G_STATIC_ASSERT (sizeof (guint8) == sizeof (uint8_t));
 G_STATIC_ASSERT (G_ALIGNOF (gint8) == G_ALIGNOF (int8_t));
 G_STATIC_ASSERT (G_ALIGNOF (guint8) == G_ALIGNOF (uint8_t));
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gint8) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (guint8) == 0);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (int8_t) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (uint8_t) == 0);
 
 G_STATIC_ASSERT (sizeof (gint16) == sizeof (int16_t));
 G_STATIC_ASSERT (sizeof (guint16) == sizeof (uint16_t));
 G_STATIC_ASSERT (G_ALIGNOF (gint16) == G_ALIGNOF (int16_t));
 G_STATIC_ASSERT (G_ALIGNOF (guint16) == G_ALIGNOF (uint16_t));
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (int16_t) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (uint16_t) == 0);
 
 G_STATIC_ASSERT (sizeof (gint32) == sizeof (int32_t));
 G_STATIC_ASSERT (sizeof (guint32) == sizeof (uint32_t));
 G_STATIC_ASSERT (G_ALIGNOF (gint32) == G_ALIGNOF (int32_t));
 G_STATIC_ASSERT (G_ALIGNOF (guint32) == G_ALIGNOF (uint32_t));
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gint32) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (guint32) == 0);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (int32_t) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (uint32_t) == 0);
 
 G_STATIC_ASSERT (sizeof (gint64) == sizeof (int64_t));
 G_STATIC_ASSERT (sizeof (guint64) == sizeof (uint64_t));
 G_STATIC_ASSERT (G_ALIGNOF (gint64) == G_ALIGNOF (int64_t));
 G_STATIC_ASSERT (G_ALIGNOF (guint64) == G_ALIGNOF (uint64_t));
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (gint64) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (guint64) == 0);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (int64_t) == 1);
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (uint64_t) == 0);
+
+/* C11 §6.7, item 3 allows us to rely on this being allowed */
+typedef struct Foo Foo;
+typedef struct Foo Foo;
 
 /**
  * g_mem_gc_friendly:
