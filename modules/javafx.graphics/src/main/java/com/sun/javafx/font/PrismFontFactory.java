@@ -41,7 +41,6 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.text.GlyphLayout;
-import static com.sun.javafx.FXPermissions.LOAD_FONT_PERMISSION;
 
 public abstract class PrismFontFactory implements FontFactory {
 
@@ -1368,39 +1367,6 @@ public abstract class PrismFontFactory implements FontFactory {
                                      float size,
                                      boolean register,
                                      boolean loadAll) {
-        if (!hasPermission()) {
-            return new PGFont[] { createFont(DEFAULT_FULLNAME, size) } ;
-        }
-        if (FontFileWriter.hasTempPermission()) {
-            return loadEmbeddedFont0(name, fontStream, size, register, loadAll);
-        }
-
-        // Otherwise, be extra conscious of pending temp file creation and
-        // resourcefully handle the temp file resources, among other things.
-        FontFileWriter.FontTracker tracker =
-            FontFileWriter.FontTracker.getTracker();
-        boolean acquired = false;
-        try {
-            acquired = tracker.acquirePermit();
-            if (!acquired) {
-                // Timed out waiting for resources.
-                return null;
-            }
-            return loadEmbeddedFont0(name, fontStream, size, register, loadAll);
-        } catch (InterruptedException e) {
-            // Interrupted while waiting to acquire a permit.
-            return null;
-        } finally {
-            if (acquired) {
-                tracker.releasePermit();
-            }
-        }
-    }
-
-    private PGFont[] loadEmbeddedFont0(String name, InputStream fontStream,
-                                       float size,
-                                       boolean register,
-                                       boolean loadAll) {
         PrismFontFile[] fr = null;
         FontFileWriter fontWriter = new FontFileWriter();
         try {
@@ -1477,9 +1443,6 @@ public abstract class PrismFontFactory implements FontFactory {
                                      float size,
                                      boolean register,
                                      boolean loadAll) {
-        if (!hasPermission()) {
-            return new PGFont[] { createFont(DEFAULT_FULLNAME, size) };
-        }
         addFileCloserHook();
         FontResource[] frArr =
           loadEmbeddedFont1(name, path, register, false, false, loadAll);
@@ -1748,20 +1711,6 @@ public abstract class PrismFontFactory implements FontFactory {
 //             }
         }
         return fontToFileMap;
-    }
-
-    @Override
-    @SuppressWarnings("removal")
-    public final boolean hasPermission() {
-        try {
-            SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                sm.checkPermission(LOAD_FONT_PERMISSION);
-            }
-            return true;
-        } catch (SecurityException ex) {
-            return false;
-        }
     }
 
     private static class TTFilter implements FilenameFilter {

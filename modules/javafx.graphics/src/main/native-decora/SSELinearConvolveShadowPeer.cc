@@ -78,7 +78,7 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSELinearConvolveShadowPeer_filterVecto
                     jint ix = (jint) sampx;
                     jint iy = (jint) sampy;
                     if (ix < srcw && iy < srch) {
-                        // TODO: linear interp the alphas... (RT-27407)
+                        // TODO: linear interp the alphas... (JDK-8091113)
                         jint argb = srcPixels[iy * srcscan + ix];
                         sum += ((jfloat) ((argb >> 24) & 0xff)) * weights[i];
                     }

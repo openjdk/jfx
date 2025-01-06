@@ -58,6 +58,7 @@ import java.nio.IntBuffer;
 import com.sun.javafx.embed.swing.Disposer;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGExternalNode;
 import com.sun.javafx.sg.prism.NGNode;
@@ -114,7 +115,7 @@ import com.sun.javafx.embed.swing.newimpl.SwingNodeInteropN;
  * </pre>
  * @since JavaFX 8.0
  */
-public class SwingNode extends Node {
+public class SwingNode extends AbstractNode {
     private static boolean isThreadMerged = Boolean.valueOf(System.getProperty("javafx.embed.singleThread"));
 
     static {
@@ -261,7 +262,7 @@ public class SwingNode extends Node {
              activateLwFrame(newValue);
         });
 
-        //Workaround for RT-34170
+        //Workaround for JDK-8120878
         javafx.scene.text.Font.getFamilies();
     }
 
@@ -848,7 +849,7 @@ public class SwingNode extends Node {
                 mouseClickedAllowed.clear();
             } else if (type == MouseEvent.MOUSE_CLICKED) {
                 if (event.getClickCount() == 1 && !mouseClickedAllowed.contains(event.getButton())) {
-                    // RT-34610: In FX, CLICKED events are generated even after dragging the mouse pointer
+                    // JDK-8122146: In FX, CLICKED events are generated even after dragging the mouse pointer
                     // Note that this is only relevant for single clicks. Double clicks use a smudge factor.
                     return;
                 }

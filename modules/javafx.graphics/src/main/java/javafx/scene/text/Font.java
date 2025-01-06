@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package javafx.scene.text;
 
 import com.sun.javafx.scene.text.FontHelper;
-import java.io.FilePermission;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
@@ -455,17 +454,6 @@ public final class Font {
             // via ClassLoader. This can cause problems on Windows.
             // Getting the path from a File fixes this.
             path = new java.io.File(path).getPath();
-            try {
-                @SuppressWarnings("removal")
-                SecurityManager sm = System.getSecurityManager();
-                if (sm != null) {
-                    FilePermission filePermission =
-                        new FilePermission(path, "read");
-                    sm.checkPermission(filePermission);
-                }
-            } catch (Exception e) {
-                return null;
-            }
             return
             Toolkit.getToolkit().getFontLoader().loadFont(path, size, loadAll);
         }

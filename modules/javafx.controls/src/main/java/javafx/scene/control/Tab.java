@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -693,7 +693,7 @@ public class Tab implements EventTarget, Styleable {
         boolean disabled = isDisable() || (getTabPane() != null && getTabPane().isDisabled());
         setDisabled(disabled);
 
-        // Fix for RT-24658 - content should be disabled if the tab is disabled
+        // Fix for JDK-8094969 - content should be disabled if the tab is disabled
         Node content = getContent();
         if (content != null) {
             content.setDisable(disabled);

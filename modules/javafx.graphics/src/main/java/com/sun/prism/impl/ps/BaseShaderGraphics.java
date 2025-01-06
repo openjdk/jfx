@@ -1646,7 +1646,7 @@ public abstract class BaseShaderGraphics
 
     private static final double SQRT_2 = Math.sqrt(2.0);
     private static boolean canUseStrokeShader(BasicStroke bs) {
-        // RT-27378
+        // JDK-8090624
         // TODO: Expand the cases that renderGeneralRoundRect() can handle...
         return (!bs.isDashed() &&
                 (bs.getType() == BasicStroke.TYPE_INNER ||
@@ -1708,7 +1708,7 @@ public abstract class BaseShaderGraphics
         // otherwise it will not be approximated by a "parallel ellipse"
         // very well and we should just use shape rendering.
 
-        // RT-27378
+        // JDK-8090624
         // TODO: Implement better "distance to ellipse" formulas in the shaders
         float inset = stroke.getLineWidth() *
             (1f - getStrokeExpansionFactor(stroke));
@@ -1776,7 +1776,7 @@ public abstract class BaseShaderGraphics
             bh = y1 - y2;
         }
 
-        // RT-27378
+        // JDK-8090624
         // TODO: casting down to floats everywhere here; evaluate later
         // to see if this is enough precision...
         // TODO: stroke normalization control?
@@ -2191,7 +2191,7 @@ public abstract class BaseShaderGraphics
     @Override
     public void releaseReadBackBuffer(RTTexture rtt) {
         // This will be needed when we track LCD buffer locks and uses.
-        // (See RT-29488)
+        // (See JDK-8091015)
 //        context.releaseLCDBuffer();
     }
 

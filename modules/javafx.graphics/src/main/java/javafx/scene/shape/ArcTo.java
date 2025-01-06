@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -541,7 +541,7 @@ public class ArcTo extends PathElement {
             BaseTransform xform = (xAxisRotationR == 0) ? null :
                 BaseTransform.getRotateInstance(xAxisRotationR, cx, cy);
             PathIterator pi = arc.getPathIterator(xform);
-            // RT-8926, append(true) converts the initial moveTo into a
+            // JDK-8109639, append(true) converts the initial moveTo into a
             // lineTo which can generate huge miter joins if the segment
             // is small enough.  So, we manually skip it here instead.
             pi.next();

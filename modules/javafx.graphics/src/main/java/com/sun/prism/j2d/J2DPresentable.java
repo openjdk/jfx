@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,7 +109,7 @@ public abstract class J2DPresentable implements Presentable {
         public boolean prepare(Rectangle dirty) {
             if (pState.isViewClosed() == false) {
                 /*
-                 * RT-27385
+                 * JDK-8101778
                  * TODO: make sure the imgrep matches the Pixels.getNativeFormat()
                  * TODO: dirty region support
                  */

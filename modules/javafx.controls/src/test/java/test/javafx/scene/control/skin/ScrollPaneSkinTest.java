@@ -71,7 +71,7 @@ public class ScrollPaneSkinTest {
     }
 
     /*
-    ** RT-16641 : root cause, you shouldn't be able to drag
+    ** JDK-8128277 : root cause, you shouldn't be able to drag
     ** contents if they don't fill the scrollpane
     */
     @Test public void shouldntDragContentSmallerThanViewport() {
@@ -683,12 +683,12 @@ public class ScrollPaneSkinTest {
 
         double skinWidth = scrollPane.getWidth();
         double right = scrollPane.getPadding().getRight();
-        // 1 px of padding is on the outside - see RT-21251
+        // 1 px of padding is on the outside - see JDK-8127431
         double vsbPosAndWidth = (right >= 1 ? 1 : 0) + skin.getVsbX()+skin.getVsbWidth()+(scrollPane.getInsets().getRight() - right);
         assertEquals(skinWidth,  vsbPosAndWidth, 0.1);
 
         double skinHeight = scrollPane.getHeight();
-        // 1 px of padding is on the outside - see RT-21251
+        // 1 px of padding is on the outside - see JDK-8127431
         double bottom = scrollPane.getPadding().getBottom();
         double hsbPosAndHeight = (bottom >= 1 ? 1 : 0) + skin.getHsbY()+skin.getHsbHeight()+(scrollPane.getInsets().getBottom() - bottom);
         assertEquals(skinHeight,  hsbPosAndHeight, 0.1);
