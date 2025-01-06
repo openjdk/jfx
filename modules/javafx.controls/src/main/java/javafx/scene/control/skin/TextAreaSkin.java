@@ -38,6 +38,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -61,6 +62,7 @@ import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
+import com.sun.javafx.scene.shape.TextHelper;
 /**
  * Default skin implementation for the {@link TextArea} control.
  *
@@ -383,7 +385,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 Point2D tp = textNode.localToScene(0, 0);
                 Point2D p = new Point2D(e.getSceneX() - tp.getX() - pressX + caretHandle.getWidth() / 2,
                                         e.getSceneY() - tp.getY() - pressY - 6);
-                HitInfo hit = textNode.hitTest(translateCaretPosition(p));
+                HitInfo hit = hitTest(p);
                 positionCaret(hit, false);
                 e.consume();
             });
@@ -394,7 +396,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 Point2D tp = textNode.localToScene(0, 0);
                 Point2D p = new Point2D(e.getSceneX() - tp.getX() - pressX + selectionHandle1.getWidth() / 2,
                                         e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5);
-                HitInfo hit = textNode.hitTest(translateCaretPosition(p));
+                HitInfo hit = hitTest(p);
                 if (control1.getAnchor() < control1.getCaretPosition()) {
                     // Swap caret and anchor
                     control1.selectRange(control1.getCaretPosition(), control1.getAnchor());
@@ -415,7 +417,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 Point2D tp = textNode.localToScene(0, 0);
                 Point2D p = new Point2D(e.getSceneX() - tp.getX() - pressX + selectionHandle2.getWidth() / 2,
                                         e.getSceneY() - tp.getY() - pressY - 6);
-                HitInfo hit = textNode.hitTest(translateCaretPosition(p));
+                HitInfo hit = hitTest(p);
                 if (control1.getAnchor() > control1.getCaretPosition()) {
                     // Swap caret and anchor
                     control1.selectRange(control1.getCaretPosition(), control1.getAnchor());
@@ -474,8 +476,20 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         // text content of the textInputControl
         Text textNode = getTextNode();
         Point2D p = new Point2D(x - textNode.getLayoutX(), y - getTextTranslateY());
-        HitInfo hit = textNode.hitTest(translateCaretPosition(p));
-        return hit;
+        return hitTest(p);
+    }
+
+    private HitInfo hitTest(Point2D p) {
+        Text textNode = getTextNode();
+        if (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            double w = textNode.getWrappingWidth();
+            if (w == 0.0) {
+                w = TextHelper.getVisualWidth(textNode);
+            }
+            double x = w - p.getX();
+            p = new Point2D(x, p.getY());
+        }
+        return textNode.hitTest(p);
     }
 
     /** {@inheritDoc} */
@@ -565,7 +579,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         }
         double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
         double hitY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
-        HitInfo hit = textNode.hitTest(new Point2D(hitX, hitY));
+        HitInfo hit = hitTest(new Point2D(hitX, hitY));
         boolean leading = hit.isLeading();
         Path charShape = new Path(textNode.rangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
         if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
@@ -604,7 +618,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         double x = (targetCaretX >= 0) ? targetCaretX : (caretBounds.getMaxX());
 
         // Find a text position for the target x,y.
-        HitInfo hit = textNode.hitTest(translateCaretPosition(new Point2D(x, targetLineMidY)));
+        HitInfo hit = hitTest(new Point2D(x, targetLineMidY));
         int pos = hit.getCharIndex();
 
         // Save the old pos temporarily while testing the new one.
@@ -821,23 +835,20 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     @Override
     protected int getInsertionPoint(double x, double y) {
         TextArea textArea = getSkinnable();
-        Text paragraphNode = getTextNode();
+        Text n = getTextNode();
 
         if (y < contentView.snappedTopInset()) {
             return 0;
         } else if (y > contentView.snappedTopInset() + contentView.getHeight()) {
-            return (textArea.getLength() - paragraphNode.getText().length());
+            return (textArea.getLength() - n.getText().length());
         } else {
-            Bounds bounds = paragraphNode.getBoundsInLocal();
-            double paragraphViewY = paragraphNode.getLayoutY() + bounds.getMinY();
-            if (y >= paragraphViewY
-                    && y < paragraphViewY + paragraphNode.getBoundsInLocal().getHeight()) {
-                return getInsertionPoint(paragraphNode,
-                        x - paragraphNode.getLayoutX(),
-                        y - paragraphNode.getLayoutY());
+            Bounds bounds = n.getBoundsInLocal();
+            double dy = n.getLayoutY() + bounds.getMinY();
+            if ((y >= dy) && (y < dy + n.getBoundsInLocal().getHeight())) {
+                Point2D p = new Point2D(x - n.getLayoutX(), y - n.getLayoutY());
+                return hitTest(p).getInsertionIndex();
             }
         }
-
         return -1;
     }
 
@@ -955,11 +966,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         return Math.max(0, contentView.getWidth() - scrollPane.getViewportBounds().getWidth());
     }
 
-    private int getInsertionPoint(Text paragraphNode, double x, double y) {
-        HitInfo hitInfo = paragraphNode.hitTest(new Point2D(x, y));
-        return hitInfo.getInsertionIndex();
-    }
-
     private void scrollCaretToVisible() {
         TextArea textArea = getSkinnable();
         Bounds bounds = caretPath.getLayoutBounds();
@@ -1047,14 +1053,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
     private double getTextTranslateY() {
         return contentView.snappedTopInset();
-    }
-
-    private double getTextLeft() {
-        return 0;
-    }
-
-    private Point2D translateCaretPosition(Point2D p) {
-        return p;
     }
 
     // package protected for testing
