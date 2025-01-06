@@ -31,9 +31,10 @@ using namespace Microsoft::WRL;
 using namespace ABI::Windows::Foundation;
 using namespace ABI::Windows::UI;
 using namespace ABI::Windows::UI::ViewManagement;
+using namespace ABI::Windows::Networking::Connectivity;
 
 PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
-    : env(env), application(application), initialized(false), preferences(NULL)
+    : env(env), application(application), initialized(false), networkInformation(NULL), preferences(NULL)
 {
     javaClasses.Object = (jclass)env->FindClass("java/lang/Object");
     if (CheckAndClearException(env)) return;
@@ -88,14 +89,7 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
     try {
         RO_CHECKED("RoActivateInstance",
                    RoActivateInstance(hstring("Windows.UI.ViewManagement.UISettings"), (IInspectable**)&settings));
-    } catch (RoException const&) {
-        // If an activation exception occurs, it probably means that we're on a Windows system
-        // that doesn't support the UISettings API. This is not a problem, it simply means that
-        // we don't report the UISettings properties back to the JavaFX application.
-        return;
-    }
 
-    try {
         ComPtr<IUISettings5> settings5;
         RO_CHECKED("IUISettings::QueryInterface<IUISettings5>",
                    settings->QueryInterface<IUISettings5>(&settings5));
@@ -104,12 +98,38 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
         settings5->add_AutoHideScrollBarsChanged(
             Callback<ITypedEventHandler<UISettings*, UISettingsAutoHideScrollBarsChangedEventArgs*>>(
                 [this](IUISettings*, IUISettingsAutoHideScrollBarsChangedEventArgs*) {
-                    updatePreferences();
+                    updatePreferences(PT_UI_SETTINGS);
                     return S_OK;
                 }).Get(),
             &token);
     } catch (RoException const&) {
-        return;
+        // If an activation exception occurs, it probably means that we're on a Windows system
+        // that doesn't support the UISettings API. This is not a problem, it simply means that
+        // we don't report the UISettings properties back to the JavaFX application.
+    }
+
+    try {
+        IActivationFactory* activationFactory = NULL;
+
+        RO_CHECKED("RoGetActivationFactory",
+                   RoGetActivationFactory(hstring("Windows.Networking.Connectivity.NetworkInformation"),
+                                          IID_IActivationFactory,
+                                          (void**)&activationFactory));
+
+        RO_CHECKED("IActivationFactory::QueryInterface<INetworkInformationStatics>",
+                   activationFactory->QueryInterface(&networkInformation));
+
+        EventRegistrationToken token;
+        networkInformation->add_NetworkStatusChanged(
+            Callback<INetworkStatusChangedEventHandler>(
+                [this](IInspectable*) {
+                    updatePreferences(PT_NETWORK_INFORMATION);
+                    return S_OK;
+                }).Get(),
+            &token);
+    } catch (RoException const&) {
+        // If an activation exception occurs, it probably means that we're on a Windows system
+        // that doesn't support the NetworkInformation API.
     }
 }
 
@@ -119,7 +139,7 @@ PlatformSupport::~PlatformSupport()
     uninitializeRoActivationSupport();
 }
 
-jobject PlatformSupport::collectPreferences() const
+jobject PlatformSupport::collectPreferences(PreferenceType preferenceType) const
 {
     if (!initialized) {
         return NULL;
@@ -128,19 +148,32 @@ jobject PlatformSupport::collectPreferences() const
     jobject prefs = env->NewObject(javaClasses.HashMap, javaIDs.HashMap.init);
     if (CheckAndClearException(env)) return NULL;
 
-    querySystemParameters(prefs);
-    querySystemColors(prefs);
-    queryUISettings(prefs);
+    if (preferenceType & PT_SYSTEM_COLORS) {
+        querySystemColors(prefs);
+    }
+
+    if (preferenceType & PT_SYSTEM_PARAMS) {
+        querySystemParameters(prefs);
+    }
+
+    if (preferenceType & PT_UI_SETTINGS) {
+        queryUISettings(prefs);
+    }
+
+    if (preferenceType & PT_NETWORK_INFORMATION) {
+        queryNetworkInformation(prefs);
+    }
+
     return prefs;
 }
 
-bool PlatformSupport::updatePreferences() const
+bool PlatformSupport::updatePreferences(PreferenceType preferenceType) const
 {
     if (!initialized) {
         return false;
     }
 
-    jobject newPreferences = collectPreferences();
+    jobject newPreferences = collectPreferences(preferenceType);
 
     jboolean preferencesChanged =
         newPreferences != NULL &&
@@ -170,11 +203,11 @@ bool PlatformSupport::onSettingChanged(WPARAM wParam, LPARAM lParam) const
     switch ((UINT)wParam) {
         case SPI_SETHIGHCONTRAST:
         case SPI_SETCLIENTAREAANIMATION:
-            return updatePreferences();
+            return updatePreferences(PT_SYSTEM_PARAMS);
     }
 
     if (lParam != NULL && wcscmp(LPCWSTR(lParam), L"ImmersiveColorSet") == 0) {
-        return updatePreferences();
+        return updatePreferences(PT_UI_SETTINGS);
     }
 
     return false;
@@ -184,20 +217,21 @@ void PlatformSupport::querySystemParameters(jobject properties) const
 {
     HIGHCONTRAST contrastInfo;
     contrastInfo.cbSize = sizeof(HIGHCONTRAST);
-    ::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0);
-
-    // Property names need to be kept in sync with WinApplication.java:
-    if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
-        putBoolean(properties, "Windows.SPI.HighContrast", true);
-        putString(properties, "Windows.SPI.HighContrastColorScheme", contrastInfo.lpszDefaultScheme);
-    } else {
-        putBoolean(properties, "Windows.SPI.HighContrast", false);
-        putString(properties, "Windows.SPI.HighContrastColorScheme", (const char*)NULL);
+    if (::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0)) {
+        // Property names need to be kept in sync with WinApplication.java:
+        if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
+            putBoolean(properties, "Windows.SPI.HighContrast", true);
+            putString(properties, "Windows.SPI.HighContrastColorScheme", contrastInfo.lpszDefaultScheme);
+        } else {
+            putBoolean(properties, "Windows.SPI.HighContrast", false);
+            putString(properties, "Windows.SPI.HighContrastColorScheme", (const char*)NULL);
+        }
     }
 
     BOOL value;
-    ::SystemParametersInfo(SPI_GETCLIENTAREAANIMATION, 0, &value, 0);
-    putBoolean(properties, "Windows.SPI.ClientAreaAnimation", value);
+    if (::SystemParametersInfo(SPI_GETCLIENTAREAANIMATION, 0, &value, 0)) {
+        putBoolean(properties, "Windows.SPI.ClientAreaAnimation", value);
+    }
 }
 
 void PlatformSupport::querySystemColors(jobject properties) const
@@ -276,6 +310,41 @@ void PlatformSupport::queryUISettings(jobject properties) const
     }
 }
 
+void PlatformSupport::queryNetworkInformation(jobject properties) const
+{
+    if (!this->networkInformation) {
+        return;
+    }
+
+    try {
+        ComPtr<IConnectionProfile> connectionProfile;
+        ComPtr<IConnectionCost> connectionCost;
+        NetworkCostType networkCostType;
+        const char* internetCostType = NULL;
+
+        RO_CHECKED("INetworkInformation::GetInternetConnectionProfile",
+                   this->networkInformation->GetInternetConnectionProfile(&connectionProfile));
+
+        if (connectionProfile) {
+            RO_CHECKED("IConnectionProfile::GetConnectionCost",
+                       connectionProfile->GetConnectionCost(&connectionCost));
+
+            RO_CHECKED("IConnectionCost::get_NetworkCostType",
+                       connectionCost->get_NetworkCostType(&networkCostType));
+
+            switch (networkCostType) {
+                case NetworkCostType_Unrestricted: internetCostType = "Unrestricted"; break;
+                case NetworkCostType_Variable: internetCostType = "Variable"; break;
+                case NetworkCostType_Fixed: internetCostType = "Fixed"; break;
+            }
+        }
+
+        putString(properties, "Windows.NetworkInformation.InternetCostType",
+                  internetCostType != NULL ? internetCostType : "Unknown");
+    } catch (RoException const&) {
+    }
+}
+
 void PlatformSupport::putString(jobject properties, const char* key, const char* value) const
 {
     jobject prefKey = env->NewStringUTF(key);
@@ -298,7 +367,7 @@ void PlatformSupport::putString(jobject properties, const char* key, const wchar
 
     jobject prefValue = NULL;
     if (value != NULL) {
-        prefValue = env->NewString((jchar*)value, wcslen(value));
+        prefValue = env->NewString((jchar*)value, (jsize)wcslen(value));
         if (CheckAndClearException(env)) return;
     }
 
