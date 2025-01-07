@@ -596,6 +596,11 @@ public abstract sealed class Node
             }
 
             @Override
+            public boolean isInitialCssState(Node node) {
+                return node.initialCssState;
+            }
+
+            @Override
             public void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
                 node.recalculateRelativeSizeProperties(fontForRelativeSizes);
             }
@@ -1010,6 +1015,8 @@ public abstract sealed class Node
                     }
                     updateDisabled();
                     computeDerivedDepthTest();
+                    resetInitialCssStateFlag();
+
                     final Parent newParent = get();
 
                     // Update the focus bits before calling reapplyCss(), as the focus bits can affect CSS styling.
@@ -1104,8 +1111,14 @@ public abstract sealed class Node
             getClip().setScenes(newScene, newSubScene);
         }
         if (sceneChanged) {
+            if (oldScene != null) {
+                oldScene.unregisterClearInitialCssStageFlag(this);
+            }
+
             if (newScene == null) {
                 completeTransitionTimers();
+            } else {
+                resetInitialCssStateFlag();
             }
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
@@ -10083,6 +10096,25 @@ public abstract sealed class Node
         }
     }
 
+    /**
+     * A node is considered to be in its initial CSS state if it wasn't shown in a scene graph before.
+     * This flag is cleared after CSS processing was completed in a Scene pulse event. Note that manual
+     * calls to {@link #applyCss()} or similar methods will not clear this flag, since we consider all
+     * CSS processing before the Scene pulse to be part of the node's initial state.
+     */
+    private boolean initialCssState = true;
+
+    private void resetInitialCssStateFlag() {
+        initialCssState = true;
+        Scene scene = getScene();
+        if (scene != null) {
+            scene.registerClearInitialCssStateFlag(this);
+        }
+    }
+
+    void clearInitialCssStateFlag() {
+        initialCssState = false;
+    }
 
     /**
      * A StyleHelper for this node.
