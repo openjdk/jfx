@@ -52,6 +52,8 @@ module javafx.base {
         // BEGIN: incubator placeholder
         //jfx.incubator.mymod,
         // END: incubator placeholder
+        jfx.incubator.input,
+        jfx.incubator.richtext,
         javafx.graphics,
         javafx.fxml,
         javafx.media,
