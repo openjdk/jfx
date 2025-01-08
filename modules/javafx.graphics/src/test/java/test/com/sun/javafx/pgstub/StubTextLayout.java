@@ -356,7 +356,14 @@ public class StubTextLayout implements TextLayout {
             b.append(null, text, font);
         } else if (spans != null) {
             for(TextSpan s: spans) {
-                b.append(s, s.getText(), (Font)s.getFont());
+                Object v = s.getFont();
+                Font font;
+                if(v instanceof StubFontLoader.StubFont sf) {
+                    font = sf.font;
+                } else {
+                    font = (Font)v;
+                }
+                b.append(s, s.getText(), font);
             }
         }
         return b.getLines();
