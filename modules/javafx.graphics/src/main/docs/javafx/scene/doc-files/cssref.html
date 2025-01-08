@@ -2056,7 +2056,8 @@
         <tr>
           <th class="propertyname" scope="row">nth-child()</th>
           <td>applies when the node is the n-th child in its <code>Parent</code> container
-              (the only acceptable arguments are "even" and "odd")</td>
+              (the only acceptable arguments are "even" and "odd": the first child at index 0
+              matches "odd", the second child at index 1 matches "even", etc.)</td>
         </tr>
       </tbody>
     </table>
@@ -2106,7 +2107,8 @@
     <p class="styleclass">Style class: not applicable<br>
     </p>
     <p>The Scene object has no settable CSS properties, nor does it have any
-      pseudo&#8209;classes. However, the root node of the scene is assigned the style
+      pseudo&#8209;classes. However, the root node of the scene matches the
+      structural pseudo-class <code>:root</code>, as well as the legacy style
       class "root" (in addition to style classes already assigned to the node).
       This is useful because the root node of Scene is the root container for
       all active scene&#8209;graph nodes. Thus, it can serve as a container for
