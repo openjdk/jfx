@@ -323,14 +323,6 @@ public abstract non-sealed class Parent extends Node {
         private static final PseudoClass NTH_EVEN_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("nth-child(even)");
         private static final PseudoClass NTH_ODD_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("nth-child(odd)");
 
-        private static void clearStructuralPseudoClasses(Node node) {
-            node.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, false);
-            node.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
-            node.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, false);
-            node.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, false);
-            node.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, false);
-        }
-
         @Override
         protected void onChanged(Change<Node> c) {
             // proceed with updating the scene graph
@@ -365,8 +357,6 @@ public abstract non-sealed class Parent extends Node {
                         if (n.isManaged()) {
                             relayout = true;
                         }
-
-                        clearStructuralPseudoClasses(n);
                     }
 
                     // Sub-changes are sorted by their 'from' index, so it is sufficient to record
@@ -447,39 +437,6 @@ public abstract non-sealed class Parent extends Node {
                 }
             }
 
-            int size = size();
-
-            // Toggle the "only-child" / "first-child" / "last-child" pseudo-classes.
-            if (size == 1) {
-                Node first = getFirst();
-                first.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, true);
-                first.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
-                first.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, true);
-            } else if (size > 1) {
-                Node first = getFirst(), last = getLast();
-                first.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, true);
-                first.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
-                first.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, false);
-                last.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
-
-                if (firstDirtyChildIndex > 0) {
-                    // Clear the "last-child" pseudo-class on the last non-modified child.
-                    Node lastNonModified = get(firstDirtyChildIndex - 1);
-                    if (last != lastNonModified) {
-                        lastNonModified.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
-                    }
-                }
-            }
-
-            // Toggle the "nth-child(even)" and "nth-child(odd)" pseudo-classes on all modified children.
-            if (firstDirtyChildIndex >= 0) {
-                for (int i = firstDirtyChildIndex; i < size; ++i) {
-                    Node n = get(i);
-                    n.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, i % 2 != 0);
-                    n.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, i % 2 == 0);
-                }
-            }
-
             //
             // Note that the styles of a child do not affect the parent or
             // its siblings. Thus, it is only necessary to reapply css to
@@ -521,8 +478,57 @@ public abstract non-sealed class Parent extends Node {
             if (viewOrderChildrenDirty) {
                 markViewOrderChildrenDirty();
             }
+
+            c.reset();
+            updateStructuralPseudoClasses(c, firstDirtyChildIndex);
         }
 
+        private void updateStructuralPseudoClasses(Change<Node> change, int firstDirtyChildIndex) {
+            while (change.next()) {
+                if (change.wasRemoved()) {
+                    for (Node node : change.getRemoved()) {
+                        node.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, false);
+                        node.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+                        node.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, false);
+                        node.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, false);
+                        node.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, false);
+                    }
+                }
+            }
+
+            int size = size();
+
+            // Toggle the "only-child" / "first-child" / "last-child" pseudo-classes.
+            if (size == 1) {
+                Node first = getFirst();
+                first.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, true);
+                first.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
+                first.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, true);
+            } else if (size > 1) {
+                Node first = getFirst(), last = getLast();
+                first.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, true);
+                first.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+                first.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, false);
+                last.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
+
+                if (firstDirtyChildIndex > 0) {
+                    // Clear the "last-child" pseudo-class on the last non-modified child.
+                    Node lastNonModified = get(firstDirtyChildIndex - 1);
+                    if (last != lastNonModified) {
+                        lastNonModified.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+                    }
+                }
+            }
+
+            // Toggle the "nth-child(even)" and "nth-child(odd)" pseudo-classes on all modified children.
+            if (firstDirtyChildIndex >= 0) {
+                for (int i = firstDirtyChildIndex; i < size; ++i) {
+                    Node n = get(i);
+                    n.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, i % 2 != 0);
+                    n.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, i % 2 == 0);
+                }
+            }
+        }
     }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int... toBeRemoved) {
