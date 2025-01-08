@@ -929,7 +929,7 @@ public class PlatformImpl {
      * @param preferences the initial set of platform preferences
      */
     public static void initPreferences(Map<String, Class<?>> platformKeys,
-                                       Map<String, PreferenceMapping<?>> platformKeyMappings,
+                                       Map<String, PreferenceMapping<?, ?>> platformKeyMappings,
                                        Map<String, Object> preferences) {
         platformPreferences = new PlatformPreferences(platformKeys, platformKeyMappings);
         platformPreferences.update(preferences);

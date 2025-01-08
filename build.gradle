@@ -303,6 +303,8 @@ void setFileTimestamps(Provider<RegularFile> archive, Instant instant) {
  *                                                                            *
  *****************************************************************************/
 
+loadProperties("$projectDir/build.properties")
+
 // If the ../rt-closed directory exists, then we are doing a closed build.
 // In this case, build and property files will be read from
 // ../rt-closed/closed-build.gradle and ../rt-closed/closed-properties.gradle
@@ -341,6 +343,9 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 // Enable native access from modules with native code
 ext.enableNativeGraphics='--enable-native-access=javafx.graphics'
 ext.enableNativeAll='--enable-native-access=javafx.graphics,javafx.media,javafx.web'
+
+// FIXME: Remove this when JDK-8334137 is fixed
+ext.allowSunMiscUnsafe = '--sun-misc-unsafe-memory-access=allow'
 
 // Verify that the architecture & OS are supported configurations. Note that
 // at present building on PI is not supported, but we would only need to make
@@ -393,14 +398,12 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/21/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/${jdkDocsVersion}/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
 defineProperty("libAVRepositoryURL", "https://github.com/libav/libav/archive")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
-
-loadProperties("$projectDir/build.properties")
 
 def supplementalPreBuildFile = file("$closedDir/closed-pre-build.gradle");
 def supplementalBuildFile = file("$closedDir/closed-build.gradle");
@@ -1183,6 +1186,11 @@ void writeArgsFile(boolean isCompile, File dest, List<String> libpath, List<Stri
         if (!isCompile) {
             dest << enableNativeAll
             dest << "\n"
+            // FIXME: Remove this when JDK-8334137 is fixed
+            if (jdk24OrLater) {
+                dest << allowSunMiscUnsafe
+                dest << "\n"
+            }
         }
     }
 }
@@ -2680,6 +2688,10 @@ project(":graphics") {
     test {
         def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
@@ -2769,6 +2781,10 @@ project(":controls") {
     test {
         def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
@@ -2809,6 +2825,20 @@ project(":controls") {
 
     addValidateSourceSets(project, sourceSets)
 }
+
+// Add a project declaration for each incubator module here, leaving the
+// incubator placeholder lines as an example.
+// See CSR JDK-8344644 for more information.
+// BEGIN: incubator placeholder
+//project(":incubator.mymod") {
+//    project.ext.buildModule = true
+//    project.ext.includeSources = true
+//    project.ext.moduleRuntime = true
+//    project.ext.moduleName = "jfx.incubator.mymod"
+//    project.ext.incubating = true
+//    ...
+//}
+// END: incubator placeholder
 
 project(":swing") {
 
@@ -2862,6 +2892,11 @@ project(":swing") {
         enabled = IS_FULL_TEST && IS_AWT_TEST
 
         jvmArgs enableNativeGraphics
+
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
     }
 
     if (COMPILE_SWING) {
@@ -2929,6 +2964,11 @@ project(":swt") {
 
         jvmArgs enableNativeGraphics
 
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
+
         if (IS_MAC) {
             enabled = false
             logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
@@ -2978,6 +3018,10 @@ project(":fxml") {
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
         jvmArgs enableNativeGraphics
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
@@ -3720,6 +3764,11 @@ project(":web") {
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
 
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
+
         // Run web tests in headless mode
         systemProperty 'glass.platform', 'Monocle'
         systemProperty 'monocle.platform', 'Headless'
@@ -3965,7 +4014,21 @@ project(":systemTests") {
         testImplementation project(":swing").sourceSets.test.output
     }
 
-    def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web', 'swing', 'fxml' ]
+    def dependentProjects = [
+        'base',
+        'graphics',
+        'controls',
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //'incubator.mymod',
+        // END: incubator placeholder
+        'media',
+        'jsobject',
+        'web',
+        'swing',
+        'fxml'
+    ]
     commonModuleSetup(project, dependentProjects)
 
     File testRunArgsFile = new File(rootProject.buildDir,TESTRUNARGSFILE);
@@ -4092,6 +4155,11 @@ project(":systemTests") {
 
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
+
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
 
         // Parse testPatchModuleArgs looking for "*module-path".
         // Save path if found so we can pass it to the module launcher tests
@@ -4407,8 +4475,21 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
     def projectsToDocument = [
-            project(":base"), project(":graphics"), project(":controls"), project(":media"),
-            project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":jsobject"), project(":web")]
+        project(":base"),
+        project(":graphics"),
+        project(":controls"),
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //project(":incubator.mymod"),
+        // END: incubator placeholder
+        project(":media"),
+        project(":swing"),
+        /*project(":swt"),*/
+        project(":fxml"),
+        project(":jsobject"),
+        project(":web")
+    ]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
     }));
@@ -5787,6 +5868,8 @@ compileTargets { t ->
             def jmodName = "${moduleName}.jmod"
             def jmodFile = "${jmodsDir}/${jmodName}"
 
+            def incubating = project.hasProperty("incubating") && project.ext.incubating
+
             // On Windows, copy the native libraries in the jmod image
             // to a "javafx" subdir to avoid conflicting with the Microsoft
             // DLLs that are shipped with the JDK
@@ -5827,6 +5910,10 @@ compileTargets { t ->
                         args(srcLegalDir)
                         if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
+                        }
+                        if (incubating) {
+                            args("--do-not-resolve-by-default")
+                            args("--warn-if-resolved=incubating")
                         }
                         args(jmodFile)
                     }

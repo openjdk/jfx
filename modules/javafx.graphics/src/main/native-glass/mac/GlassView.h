@@ -27,7 +27,6 @@
 #import <jni.h>
 
 #import "GlassHostView.h"
-#import "GlassFullscreenWindow.h"
 #import "GlassViewDelegate.h"
 
 // main GlassView protocol

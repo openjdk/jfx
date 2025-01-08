@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,11 +42,6 @@ public class DragboardHelper {
     private DragboardHelper() {
     }
 
-    public static void setDataAccessRestriction(Dragboard dragboard,
-            boolean restricted) {
-        dragboardAccessor.setDataAccessRestriction(dragboard, restricted);
-    }
-
     public static TKClipboard getPeer(Dragboard dragboard) {
         return dragboardAccessor.getPeer(dragboard);
     }
@@ -64,7 +59,6 @@ public class DragboardHelper {
     }
 
     public interface DragboardAccessor {
-        void setDataAccessRestriction(Dragboard dragboard, boolean restricted);
         TKClipboard getPeer(Dragboard dragboard);
         Dragboard createDragboard(TKClipboard peer);
     }

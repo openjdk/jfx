@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,7 @@ float4 paint(float2 texCoord)
 {
     float4 UYVY = sample(inputTex, texCoord);
 
-    // TODO: select Y based on whether pixel is even/odd (RT-27382)
+    // TODO: select Y based on whether pixel is even/odd (JDK-8091282)
     float Y = UYVY.g;
     // subtract 0.5 to put UV values in the range [-0.5, 0.5]
     float U = UYVY.r - 0.5;

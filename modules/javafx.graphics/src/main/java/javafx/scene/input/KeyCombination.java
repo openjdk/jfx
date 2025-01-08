@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -300,7 +300,7 @@ public abstract class KeyCombination {
             if (getMeta() == KeyCombination.ModifierValue.DOWN || getShortcut() == KeyCombination.ModifierValue.DOWN) {
                 stringBuilder.append("\u2318");
             }
-            // TODO refer to RT-14486 for remaining glyphs
+            // TODO refer to JDK-8114084 for remaining glyphs
         }
         else {
             if (getControl() == KeyCombination.ModifierValue.DOWN || getShortcut() == KeyCombination.ModifierValue.DOWN ) {

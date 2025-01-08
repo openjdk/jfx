@@ -853,7 +853,7 @@ public class Window implements EventTarget {
                 // Set scene impl on stage impl
                 updatePeerScene(SceneHelper.getPeer(newScene));
 
-                // Fix for RT-15432: we should update new Scene's stylesheets, if the
+                // Fix for JDK-8113774: we should update new Scene's stylesheets, if the
                 // window is already showing. For not yet shown windows, the update is
                 // performed in doVisibleChanging()
                 if (isShowing()) {

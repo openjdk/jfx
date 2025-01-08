@@ -813,7 +813,7 @@ public class ListViewKeyInputTest {
 
 
     /***************************************************************************
-     * Tests for discontinuous multiple selection (RT-18953)
+     * Tests for discontinuous multiple selection (JDK-8117952)
      **************************************************************************/
 
     // Test 1

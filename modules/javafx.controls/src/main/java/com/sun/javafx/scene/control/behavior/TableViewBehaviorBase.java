@@ -66,7 +66,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     private final EventHandler<KeyEvent> keyEventListener = e -> {
         if (!e.isConsumed()) {
-            // RT-12751: we want to keep an eye on the user holding down the shift key,
+            // JDK-8114799: we want to keep an eye on the user holding down the shift key,
             // so that we know when they enter/leave multiple selection mode. This
             // changes what happens when certain key combinations are pressed.
             isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
@@ -1090,7 +1090,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             if (sm.isCellSelectionEnabled()) {
                 sm.selectRange(leadIndex, col, leadSelectedIndex, col);
             } else {
-                // fix for RT-34407
+                // fix for JDK-8097503
                 int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
                 sm.selectRange(leadIndex, leadSelectedIndex + adjust);
             }
@@ -1127,7 +1127,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             if (sm.isCellSelectionEnabled()) {
                 sm.selectRange(leadIndex, col, leadSelectedIndex, col);
             } else {
-                // fix for RT-34407
+                // fix for JDK-8097503
                 int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
                 sm.selectRange(leadIndex, leadSelectedIndex + adjust);
             }
@@ -1160,7 +1160,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     // be re-enabled then.
     /*
     protected void moveToLeftMostColumn() {
-        // Functionality as described in RT-12752
+        // Functionality as described in JDK-8112552
         if (onMoveToLeftMostColumn != null) onMoveToLeftMostColumn.run();
 
         TableSelectionModel sm = getSelectionModel();
@@ -1176,7 +1176,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
 
     protected void moveToRightMostColumn() {
-        // Functionality as described in RT-12752
+        // Functionality as described in JDK-8112552
         if (onMoveToRightMostColumn != null) onMoveToRightMostColumn.run();
 
         TableSelectionModel sm = getSelectionModel();

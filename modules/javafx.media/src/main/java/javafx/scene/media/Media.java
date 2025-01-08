@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -453,7 +453,7 @@ public final class Media {
         return null;
     }
 
-    // http://javafx-jira.kenai.com/browse/RT-24594
+    // JDK-8092403
     // TODO: Remove this entire method (and associated stuff) when we switch to track parsing in MetadataParser
     void _updateMedia(com.sun.media.jfxmedia.Media _media) {
         try {

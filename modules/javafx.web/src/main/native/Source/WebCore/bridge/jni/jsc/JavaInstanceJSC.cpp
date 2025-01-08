@@ -176,7 +176,7 @@ JSValue JavaInstance::numberValue(JSGlobalObject*) const
         return numberValueForCharacter(obj);
     if (aClass->isBooleanClass())
         return jsNumber((int)
-                        // Replaced the following line to work around possible GCC bug, see RT-22725
+                        // Replaced the following line to work around possible GCC bug, see JDK-8126601
                     // callJNIMethod<jboolean>(obj, "booleanValue", "()Z"));
                         callJNIMethod(obj, JavaTypeBoolean, "booleanValue", "()Z", 0).z);
     return numberValueForNumber(obj);
@@ -192,7 +192,7 @@ JSValue JavaInstance::booleanValue() const
         return jsUndefined();
     }
 
-    // Changed the call to work around possible GCC bug, see RT-22725
+    // Changed the call to work around possible GCC bug, see JDK-8126601
     jboolean booleanValue = callJNIMethod(m_instance->instance(), JavaTypeBoolean, "booleanValue", "()Z", 0).z;
     return jsBoolean(booleanValue);
 }

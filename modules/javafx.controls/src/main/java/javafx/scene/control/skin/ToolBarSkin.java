@@ -791,7 +791,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 } else {
                     CustomMenuItem customMenuItem = new CustomMenuItem(node);
 
-                    // RT-36455 (JDK-8096292):
+                    // JDK-8096292 (JDK-8096292):
                     // We can't be totally certain of all nodes, but for the
                     // most common nodes we can check to see whether we should
                     // hide the menu when the node is clicked on. The common

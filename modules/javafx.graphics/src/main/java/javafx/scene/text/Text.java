@@ -126,7 +126,7 @@ text.setText("The quick brown fox jumps over the lazy dog");
  * @since JavaFX 2.0
  */
 @DefaultProperty("text")
-public class Text extends Shape {
+public non-sealed class Text extends Shape {
     static {
         TextHelper.setTextAccessor(new TextHelper.TextAccessor() {
             @Override
@@ -163,6 +163,11 @@ public class Text extends Shape {
             @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Text) shape).doConfigShape();
+            }
+
+            @Override
+            public float getVisualWidth(Text t) {
+                return t.getVisualBounds().getWidth();
             }
         });
     }

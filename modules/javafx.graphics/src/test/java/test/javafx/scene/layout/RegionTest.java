@@ -437,7 +437,7 @@ public class RegionTest {
         assertEquals(40, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableCenterLeft() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -468,7 +468,7 @@ public class RegionTest {
         assertEquals(40, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableCenter() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -514,7 +514,7 @@ public class RegionTest {
         assertEquals(70, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBottomLeft() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -544,7 +544,7 @@ public class RegionTest {
         assertEquals(70, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBottomCenter() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -574,7 +574,7 @@ public class RegionTest {
         assertEquals(70, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBottomRight() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -604,7 +604,7 @@ public class RegionTest {
         assertEquals(30, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBaselineLeft() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -634,7 +634,7 @@ public class RegionTest {
         assertEquals(30, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBaselineCenter() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -664,7 +664,7 @@ public class RegionTest {
         assertEquals(30, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBaselineRight() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -1320,7 +1320,7 @@ public class RegionTest {
         }
     }
 
-    // Test for RT-13820
+    // Test for JDK-8112908
     @Test
     public void changingShapeElementsShouldResultInRender() {
         Region r = new Region();

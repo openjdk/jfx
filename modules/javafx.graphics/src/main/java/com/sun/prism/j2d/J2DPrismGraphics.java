@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,7 +79,7 @@ import static java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON;
 public class J2DPrismGraphics
     // Do not subclass BaseGraphics without fixing drawTextureVO below...
     implements ReadbackGraphics, MaskTextureGraphics
-    // Do not implement RectShadowGraphics without fixing RT-15016 (note that
+    // Do not implement RectShadowGraphics without fixing JDK-8097116 (note that
     // BaseGraphics implements RectShadowGraphics).
 {
     static {
@@ -700,7 +700,7 @@ public class J2DPrismGraphics
 
     @Override
     public void setTransform(BaseTransform xform) {
-        // TODO: Modify PrEffectHelper to not pass a null... (RT-27384)
+        // TODO: Modify PrEffectHelper to not pass a null... (JDK-8090854)
         if (xform == null) xform = BaseTransform.IDENTITY_TRANSFORM;
         transform.setTransform(xform);
         setTransformG2D(tmpJ2DTransform(transform));
@@ -1026,7 +1026,7 @@ public class J2DPrismGraphics
     {
         java.awt.Image img = ((J2DTexture) tex).getBufferedImage();
         // Simply casting the subimage coordinates to integers does not
-        // produce the same behavior as the Prism hw pipelines (see RT-19270).
+        // produce the same behavior as the Prism hw pipelines (see JDK-8089654).
         g2d.drawImage(img,
                 (int) dx1, (int) dy1, (int) dx2, (int) dy2,
                 (int) sx1, (int) sy1, (int) sx2, (int) sy2,
@@ -1122,7 +1122,7 @@ public class J2DPrismGraphics
         // ISOLATE_NONE, but given that the source coordinates are rounded to
         // integers in drawTexture() there is not much it can do to get exact
         // edge condition behavior until that deficiency is fixed (see
-        // RT-19270 and RT-19271).
+        // JDK-8089654 and JDK-8087886).
         java.awt.Paint savepaint = g2d.getPaint();
         java.awt.Composite savecomp = g2d.getComposite();
         java.awt.Color c1 = new java.awt.Color(1f, 1f, 1f, topopacity);
@@ -1333,7 +1333,7 @@ public class J2DPrismGraphics
     @Override
     public void releaseReadBackBuffer(RTTexture view) {
         // This will be needed when we track LCD buffer locks and uses.
-        // (See RT-29488)
+        // (See JDK-8091015)
 //        target.getReadbackBuffer().unlock();
     }
 

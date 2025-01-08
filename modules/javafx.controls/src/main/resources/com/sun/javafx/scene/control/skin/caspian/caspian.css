@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -786,7 +786,7 @@
 }
 
 /*
- * RT-33312 - if the context-menu is belongs to a menu-button, then set the context-menu's -fx-color to -fx-base
+ * JDK-8094080 - if the context-menu is belongs to a menu-button, then set the context-menu's -fx-color to -fx-base
  * effectively overriding the menu-button:armed, menu-button:hover styling of -fx-color
  */
 .menu-button > * > .context-menu {
@@ -1094,7 +1094,7 @@
     -fx-color: -fx-hover-base;
 }
 
-/* Uncomment when RT-10521 is fixed.
+/* Uncomment when JDK-8111191 is fixed.
 .slider .thumb:pressed {
     -fx-color: -fx-pressed-base;
 }
@@ -1190,7 +1190,7 @@
     -fx-color: -fx-hover-base;
 }
 
-/* Uncomment when RT-10521 is fixed.
+/* Uncomment when JDK-8111191 is fixed.
 .scroll-bar .thumb:pressed {
     -fx-color: -fx-pressed-base;
 }
@@ -1725,7 +1725,7 @@
 }
 
 .menu-button > .label {
-    /* TODO workaround for RT-19062 */
+    /* TODO workaround for JDK-8127609 */
     -fx-text-fill: -fx-text-base-color;
 
     /* The MenuButton skin uses an inner Label part */
@@ -2224,7 +2224,7 @@
 
 /* When in constrained resize mode, the right-most visible cell should not have
    a right-border, as it is not possible to get this cleanly out of view without
-   introducing horizontal scrollbars (see RT-14886). */
+   introducing horizontal scrollbars (see JDK-8114045). */
 .table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:last-visible,
 .tree-table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:last-visible {
     -fx-border-color: transparent;
@@ -2340,7 +2340,7 @@
     -fx-border-color:
         /*
           Inner border: we have different colours along the top, right, bottom and left.
-          Refer to RT-12298 for the spec.
+          Refer to JDK-8111760 for the spec.
         */
         derive(-fx-base, 80%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
@@ -2359,7 +2359,7 @@
     -fx-border-color:
         /*
           Inner border: we have different colours along the top, right, bottom and left.
-          Refer to RT-12298 for the spec.
+          Refer to JDK-8111760 for the spec.
         */
         derive(-fx-base, 80%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
@@ -3256,7 +3256,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-color: -fx-base;
 }
 
-/** Fix for RT-35422 where border was being shown incorrectly on non-split-buttons */
+/** Fix for JDK-8092518 where border was being shown incorrectly on non-split-buttons */
 .combo-box-base.color-picker:hover > .arrow-button {
     -fx-background-insets: 0, 1 1 1 0, 2 2 2 0;
 }
@@ -3389,7 +3389,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-spacing: 1.25em;
 }
 
-/* The fix for RT-37494 forces the web color text's major direction to
+/* The fix for JDK-8095846 forces the web color text's major direction to
  * LTR. The following keeps the text right-aligned when in RTL mode. */
 .custom-color-dialog .webcolor-field:dir(rtl) > .text-field:dir(ltr) {
     -fx-alignment: baseline-right;

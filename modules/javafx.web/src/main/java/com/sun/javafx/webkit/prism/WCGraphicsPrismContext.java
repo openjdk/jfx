@@ -799,7 +799,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 @Override void doPaint(Graphics g) {
                     Image img = ((PrismImage)texture).getImage();
 
-                    // Create subImage only if srcRect doesn't fit the texture bounds. See RT-20193.
+                    // Create subImage only if srcRect doesn't fit the texture bounds. See JDK-8116190.
                     if (!srcRect.contains(new WCRectangle(0, 0, texture.getWidth(), texture.getHeight()))) {
 
                         img = img.createSubImage(srcRect.getIntX(),
@@ -1002,7 +1002,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             }
         }
 
-        // adjust x coordinate (see RT-29908)
+        // adjust x coordinate (see JDK-8115418)
         if (rtl) {
             x += (TextUtilities.getLayoutWidth(str.substring(from), f.getPlatformFont()) -
                   layout.getBounds().getWidth());
@@ -1372,7 +1372,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             this.bounds = new Rectangle(bounds);
             this.permanent = permanent;
 
-            // avoid creating zero-size drawable, see also RT-21410
+            // avoid creating zero-size drawable, see also JDK-8117714
             int w = Math.max(bounds.width, 1);
             int h = Math.max(bounds.height, 1);
             fctx = getFilterContext(g);
@@ -1667,7 +1667,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 Object renderHelper,
                 Effect defaultInput) {
             // We have an unpaired lock() here, because unlocking is done
-            // internally by ImageData. See RT-33625 for details.
+            // internally by ImageData. See JDK-8095424 for details.
             img.lock();
             ImageData imgData = new ImageData(fctx, img, new Rectangle(
                                               (int) transform.getMxt(),

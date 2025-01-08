@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -167,7 +167,7 @@ class HeavyweightDialog extends FXDialog {
             stage.hide();
         }
 
-        // Refer to RT-40687 for more context
+        // Refer to JDK-8094829 for more context
         if (scene != null) {
             scene.setRoot(DUMMY_ROOT);
         }

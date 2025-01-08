@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,10 +86,10 @@ public class JavaScriptBridgeTest extends TestBase {
             Object bd2 = win.getMember("bd");
             assertSame(bodyNode, bd2);
 
-            // RT-14174
+            // JDK-8113479
             ((JSObject) web.executeScript("new String('test me')"))
                 .call("charAt", new Object[] {1.0});
-            // RT-14175
+            // JDK-8113008
             try {
                 ((JSObject) web.executeScript("new String('test me')"))
                     .call("toUpperCase", (Object[]) null);
@@ -113,10 +113,10 @@ public class JavaScriptBridgeTest extends TestBase {
             catch (Throwable ex) {
                 assertTrue(ex instanceof NullPointerException);
             }
-            // RT-14178
+            // JDK-8113243
             ((JSObject) web.executeScript("new String('test me')"))
                 .setMember("iamwrong", null);
-            // RT-14241
+            // JDK-8112761
             ((JSObject) web.executeScript("new Array(1, 2, 3);"))
                 .setSlot(0, 155);
         });
@@ -162,7 +162,7 @@ public class JavaScriptBridgeTest extends TestBase {
         final WebEngine web = getEngine();
 
         submit(() -> {
-            // Based on RT-19205 "JavaScript2Java Bridge: float and double
+            // Based on JDK-8127135 "JavaScript2Java Bridge: float and double
             // values can be lost when assigned to JS variables".
             float a = (float) 15.5;
             double b = 26.75;
@@ -188,7 +188,7 @@ public class JavaScriptBridgeTest extends TestBase {
             assertEquals(26.75, d.b, 0.1);
             assertEquals(26.75, e.b, 0.1);
 
-            // Based on RT-19209 "JavaScript2Java Bridge: assigning a JS
+            // Based on JDK-8127580 "JavaScript2Java Bridge: assigning a JS
             // object to a field of Java object produces garbage value"
             Carry carry = new Carry();
             bind("carry", carry);
@@ -197,7 +197,7 @@ public class JavaScriptBridgeTest extends TestBase {
             assertEquals(Boolean.TRUE, o);
             assertEquals("[object Window]", carry.o.toString());
 
-            // Based on RT-19204 "JavaScript2Java Bridge:
+            // Based on JDK-8118086 "JavaScript2Java Bridge:
             // setting a char field of an object produces an exception"
             char ch = 'C';
             carry = new Carry();
@@ -304,7 +304,7 @@ public class JavaScriptBridgeTest extends TestBase {
         final WebEngine web = getEngine();
 
         submit(() -> {
-            // Test RT-19099
+            // Test JDK-8119560
             java.io.File x = new java.io.File("foo.txt1");
             bind("x", x);
             try {
@@ -619,7 +619,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    // RT-37859
+    // JDK-8097240
     public @Test void testThrowJava2() {
         final WebEngine web = getEngine();
 
