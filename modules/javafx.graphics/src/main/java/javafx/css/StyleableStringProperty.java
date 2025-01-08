@@ -71,10 +71,9 @@ public abstract class StyleableStringProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, String newValue) {
-        // If this.origin == null, we're setting the value for the first time.
-        // No transition should be started in this case.
+        // If the value is applied for the first time, we don't start a transition.
         TransitionDefinition transition =
-            this.origin != null && getBean() instanceof Node node ?
+            getBean() instanceof Node node && !NodeHelper.isInitialCssState(node) ?
             NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
         if (transition == null) {

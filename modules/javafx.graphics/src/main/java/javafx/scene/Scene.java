@@ -583,6 +583,29 @@ public class Scene implements EventTarget {
             sceneRoot.clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
             sceneRoot.processCSS();
         }
+
+        if (!clearInitialCssStateNodes.isEmpty()) {
+            for (var node : clearInitialCssStateNodes) {
+                node.clearInitialCssStateFlag();
+            }
+
+            clearInitialCssStateNodes.clear();
+        }
+    }
+
+    /**
+     * A list of nodes that have expressed their interest to be notified when the next CSS pass
+     * is completed. Nodes will use this event to determine whether they are in their initial
+     * CSS state (see {@link Node#initialCssState}.
+     */
+    private final Set<Node> clearInitialCssStateNodes = new HashSet<>();
+
+    void registerClearInitialCssStateFlag(Node node) {
+        clearInitialCssStateNodes.add(node);
+    }
+
+    void unregisterClearInitialCssStageFlag(Node node) {
+        clearInitialCssStateNodes.remove(node);
     }
 
     void doLayoutPass() {

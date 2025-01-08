@@ -83,7 +83,7 @@ public:
     void UnregisterClipboardViewer();
 
     static jobject GetPlatformPreferences() {
-        return pInstance ? pInstance->m_platformSupport.collectPreferences() : NULL;
+        return pInstance ? pInstance->m_platformSupport.collectPreferences(PlatformSupport::PT_ALL) : NULL;
     }
 
     inline static DWORD GetMainThreadId()
