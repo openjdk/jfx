@@ -323,18 +323,12 @@ public abstract non-sealed class Parent extends Node {
         private static final PseudoClass NTH_EVEN_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("nth-child(even)");
         private static final PseudoClass NTH_ODD_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("nth-child(odd)");
 
-        private static final List<PseudoClass> ONLY_CHILD_CLASSES = List.of(ONLY_CHILD_PSEUDO_CLASS,
-                                                                            FIRST_CHILD_PSEUDO_CLASS,
-                                                                            LAST_CHILD_PSEUDO_CLASS);
-
-        private static final List<PseudoClass> FIRST_CHILD_CLASSES = List.of(FIRST_CHILD_PSEUDO_CLASS);
-
-        private static void toggleStructuralPseudoClasses(Node node, List<PseudoClass> active) {
-            node.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, active.contains(FIRST_CHILD_PSEUDO_CLASS));
-            node.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, active.contains(LAST_CHILD_PSEUDO_CLASS));
-            node.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, active.contains(ONLY_CHILD_PSEUDO_CLASS));
-            node.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, active.contains(NTH_EVEN_CHILD_PSEUDO_CLASS));
-            node.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, active.contains(NTH_ODD_CHILD_PSEUDO_CLASS));
+        private static void clearStructuralPseudoClasses(Node node) {
+            node.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, false);
+            node.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+            node.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, false);
+            node.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, false);
+            node.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, false);
         }
 
         @Override
@@ -372,7 +366,7 @@ public abstract non-sealed class Parent extends Node {
                             relayout = true;
                         }
 
-                        toggleStructuralPseudoClasses(n, List.of());
+                        clearStructuralPseudoClasses(n);
                     }
 
                     // Sub-changes are sorted by their 'from' index, so it is sufficient to record
@@ -453,26 +447,33 @@ public abstract non-sealed class Parent extends Node {
                 }
             }
 
-            // Toggle the "only-child" / "first-child" pseudo-classes on the first child.
-            if (size() == 1) {
-                toggleStructuralPseudoClasses(getFirst(), ONLY_CHILD_CLASSES);
-            } else if (size() > 1 && firstDirtyChildIndex == 0) {
-                toggleStructuralPseudoClasses(getFirst(), FIRST_CHILD_CLASSES);
-            }
+            int size = size();
 
-            // Clear the "last-child" pseudo-class if it was set on the last non-modified child.
-            if (firstDirtyChildIndex > 0) {
-                get(firstDirtyChildIndex - 1).pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
-            }
+            // Toggle the "only-child" / "first-child" / "last-child" pseudo-classes.
+            if (size == 1) {
+                Node first = getFirst();
+                first.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, true);
+                first.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
+                first.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, true);
+            } else if (size > 1) {
+                Node first = getFirst(), last = getLast();
+                first.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, true);
+                first.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+                first.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, false);
+                last.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
 
-            // Add the "last-child" pseudo-class to the last child.
-            if (size() > 0) {
-                getLast().pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
+                if (firstDirtyChildIndex > 0) {
+                    // Clear the "last-child" pseudo-class on the last non-modified child.
+                    Node lastNonModified = get(firstDirtyChildIndex - 1);
+                    if (last != lastNonModified) {
+                        lastNonModified.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+                    }
+                }
             }
 
             // Toggle the "nth-child(even)" and "nth-child(odd)" pseudo-classes on all modified children.
             if (firstDirtyChildIndex >= 0) {
-                for (int i = firstDirtyChildIndex, max = size(); i < max; ++i) {
+                for (int i = firstDirtyChildIndex; i < size; ++i) {
                     Node n = get(i);
                     n.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, i % 2 != 0);
                     n.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, i % 2 == 0);

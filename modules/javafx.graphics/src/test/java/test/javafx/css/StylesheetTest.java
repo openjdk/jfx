@@ -780,6 +780,10 @@ public class StylesheetTest {
     @Test
     public void testRootPseudoClassSelectsRootNode() {
         var root = new StackPane();
+        var _ = new Scene(root);
+
+        root.applyCss();
+        assertNotEquals(Background.fill(Color.RED), root.getBackground());
 
         root.getStylesheets().add("data:base64," + Base64.getEncoder().encodeToString("""
             :root {
@@ -787,11 +791,7 @@ public class StylesheetTest {
             }
             """.getBytes(StandardCharsets.UTF_8)));
 
-        assertNotEquals(Background.fill(Color.RED), root.getBackground());
-
-        Scene scene = new Scene(root);
-        scene.getRoot().applyCss();
-
+        root.applyCss();
         assertEquals(Background.fill(Color.RED), root.getBackground());
     }
 }
