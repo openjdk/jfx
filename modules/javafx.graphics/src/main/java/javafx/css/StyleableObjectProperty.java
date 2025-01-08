@@ -103,10 +103,9 @@ public abstract class StyleableObjectProperty<T>
      * @param metadata the CSS metadata of the value
      */
     private void applyValue(T oldValue, T newValue, CssMetaData<? extends Styleable, T> metadata) {
-        // If this.origin == null, we're setting the value for the first time.
-        // No transition should be started in this case.
+        // If the value is applied for the first time, we don't start a transition.
         TransitionDefinition transition =
-            this.origin != null && getBean() instanceof Node node ?
+            getBean() instanceof Node node && !NodeHelper.isInitialCssState(node) ?
             NodeHelper.findTransitionDefinition(node, metadata) : null;
 
         // We only start a new transition if the new target value is different from the target
@@ -146,10 +145,9 @@ public abstract class StyleableObjectProperty<T>
     private void applyComponents(T oldValue, T newValue,
                                  CssMetaData<? extends Styleable, T> metadata,
                                  SubPropertyConverter<T> converter) {
-        // If this.origin == null, we're setting the value for the first time.
-        // No transition should be started in this case.
+        // If the value is applied for the first time, we don't start a transition.
         Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> transitions =
-            this.origin != null && getBean() instanceof Node node ?
+            getBean() instanceof Node node && !NodeHelper.isInitialCssState(node) ?
             NodeHelper.findTransitionDefinitions(node, metadata) : null;
 
         List<CssMetaData<? extends Styleable, ?>> subMetadata = metadata.getSubProperties();
