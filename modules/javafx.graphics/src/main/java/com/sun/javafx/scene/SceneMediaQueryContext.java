@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,47 +22,39 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css.parser;
 
-public class TokenShim {
+package com.sun.javafx.scene;
 
-    public static final int EOF = Token.EOF;
-    public static final int INVALID = Token.INVALID;
-    public static final int SKIP = Token.SKIP;
+import javafx.application.ColorScheme;
+import javafx.css.MediaQueryContext;
+import javafx.scene.Scene;
+import java.util.Objects;
 
-    public final static TokenShim EOF_TOKEN = new TokenShim(Token.EOF_TOKEN);
-    public final static TokenShim INVALID_TOKEN = new TokenShim(Token.INVALID_TOKEN);
-    public final static TokenShim SKIP_TOKEN = new TokenShim(Token.SKIP_TOKEN);
+public final class SceneMediaQueryContext implements MediaQueryContext {
 
-    private final Token token;
+    private final Scene scene;
 
-    public TokenShim(int type, String text, int line, int offset) {
-        token = new Token(type, text, line, offset);
+    public SceneMediaQueryContext(Scene scene) {
+        this.scene = Objects.requireNonNull(scene);
     }
 
-    public TokenShim(int type, String text) {
-        token = new Token(type, text);
+    @Override
+    public ColorScheme getColorScheme() {
+        return scene.getColorScheme();
     }
 
-    public TokenShim(Token t) {
-        token = t;
+    @Override
+    public boolean isReducedMotion() {
+        return scene.isReducedMotion();
     }
 
-    public int getType() {
-        return token.getType();
+    @Override
+    public boolean isReducedTransparency() {
+        return scene.isReducedTransparency();
     }
 
-    public int getLine() {
-        return token.getLine();
+    @Override
+    public boolean isPersistentScrollBars() {
+        return scene.isPersistentScrollBars();
     }
-
-    public int getOffset() {
-        return token.getOffset();
-    }
-
-    public String getText() {
-        return token.getText();
-    }
-
-
 }

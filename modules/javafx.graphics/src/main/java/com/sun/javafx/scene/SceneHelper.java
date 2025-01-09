@@ -28,6 +28,7 @@ package com.sun.javafx.scene;
 import com.sun.glass.ui.Accessible;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.util.Utils;
+import javafx.css.MediaQueryContext;
 import javafx.scene.Camera;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -102,6 +103,10 @@ public final class SceneHelper {
         return sceneAccessor.getAccessible(scene);
     }
 
+    public static MediaQueryContext getMediaQueryContext(Scene scene) {
+        return sceneAccessor.getMediaQueryContext(scene);
+    }
+
     public static void setSceneAccessor(final SceneAccessor newAccessor) {
         if (sceneAccessor != null) {
             throw new IllegalStateException();
@@ -143,6 +148,8 @@ public final class SceneHelper {
         void setTransientFocusContainer(Scene scene, Node node);
 
         Accessible getAccessible(Scene scene);
+
+        MediaQueryContext getMediaQueryContext(Scene scene);
     }
 
 }

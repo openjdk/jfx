@@ -27,6 +27,8 @@ package test.javafx.css;
 
 import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.media.expression.FunctionExpression;
+import javafx.application.ColorScheme;
 import javafx.css.StyleConverter.StringStore;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.StringConverter;
@@ -778,4 +780,22 @@ public class StylesheetTest {
         assertEquals(Color.BLUE, rect.getFill());
     }
 
+    @Test
+    void serializeStylesheetWithMediaRule() throws IOException {
+        byte[] data = convertCssTextToBinary("""
+            .rect { -fx-fill: blue; }
+            @media (prefers-color-scheme: dark) {
+                .rect { -fx-fill: red; }
+            }
+            """);
+
+        var stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+        assertEquals(2, stylesheet.getRules().size());
+        assertNull(stylesheet.getRules().get(0).getMediaRule());
+
+        var mediaRule = stylesheet.getRules().get(1).getMediaRule();
+        assertEquals(
+            new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+            mediaRule.getQueries().getFirst());
+    }
 }
