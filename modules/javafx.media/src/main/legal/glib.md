@@ -88,8 +88,8 @@ Copyright (C) 1999-2019 Free Software
 Copyright (C) 1999-2003 Red Hat Software
 Copyright (C) 2004       Anders Carlsson <andersca@gnome.org>
 Copyright (C) 2000 Eazel, Inc.
-Copyright (C) 2002-2007
- Copyright (C)t 1991, 92, 95, 96, 97, 98, 99 Free Software Foundation, Inc.
+Copyright (C) 2002-2007 Soeren Sandmann (sandmann@daimi.au.dk)
+Copyright (C) 1991, 92, 95, 96, 97, 98, 99 Free Software Foundation, Inc.
 Copyright (C) 2017-2019 Руслан Ижбулатов
 Copyright (C) 2005-2007 Imendio AB
 Copyright (C) 2018-2020 Endless Mobile, Inc.
