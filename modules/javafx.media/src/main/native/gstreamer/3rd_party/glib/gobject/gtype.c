@@ -1506,7 +1506,7 @@ type_iface_add_prerequisite_W (TypeNode *iface,
   prerequisites = IFACE_NODE_PREREQUISITES (iface);
   for (i = 0; i < IFACE_NODE_N_PREREQUISITES (iface); i++)
     if (prerequisites[i] == prerequisite_type)
-      return;			/* we already have that prerequisiste */
+      return;      /* we already have that prerequisiste */
     else if (prerequisites[i] > prerequisite_type)
       break;
   IFACE_NODE_N_PREREQUISITES (iface) += 1;
@@ -1555,7 +1555,7 @@ g_type_interface_add_prerequisite (GType interface_type,
   TypeNode *iface, *prerequisite_node;
   IFaceHolder *holders;
 
-  g_return_if_fail (G_TYPE_IS_INTERFACE (interface_type));	/* G_TYPE_IS_INTERFACE() is an external call: _U */
+  g_return_if_fail (G_TYPE_IS_INTERFACE (interface_type));  /* G_TYPE_IS_INTERFACE() is an external call: _U */
   g_return_if_fail (!g_type_is_a (interface_type, prerequisite_type));
   g_return_if_fail (!g_type_is_a (prerequisite_type, interface_type));
 
@@ -1777,7 +1777,7 @@ type_iface_retrieve_holder_info_Wm (TypeNode *iface,
       iholder->info = g_memdup2 (&tmp_info, sizeof (tmp_info));
     }
 
-  return iholder;	/* we don't modify write lock upon returning NULL */
+  return iholder;  /* we don't modify write lock upon returning NULL */
 }
 
 static void

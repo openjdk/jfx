@@ -2992,7 +2992,7 @@ g_object_constructor (GType                  type,
     GParamSpec *pspec = construct_params->pspec;
 
     construct_params++;
-	  object_set_property (object, pspec, value, nqueue, FALSE);
+    object_set_property (object, pspec, value, nqueue, FALSE);
   }
       g_object_notify_queue_thaw (object, nqueue, FALSE);
       /* the notification queue is still frozen from g_object_init(), so

@@ -3313,7 +3313,7 @@ escape_string (GString *string)
 
     pos = p - string->str;
 
-	  /* Largest char we escape is 0x9f, so we don't have to worry
+    /* Largest char we escape is 0x9f, so we don't have to worry
      * about 8-digit \Uxxxxyyyy
      */
     tmp = g_strdup_printf ("\\u%04x", wc);

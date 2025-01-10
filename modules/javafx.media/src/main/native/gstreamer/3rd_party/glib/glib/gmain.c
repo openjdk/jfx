@@ -3865,7 +3865,7 @@ g_main_context_prepare_unlocked (GMainContext *context,
   {
     n_ready++;
     current_priority = source->priority;
-	  context->timeout_usec = 0;
+    context->timeout_usec = 0;
   }
 
       if (source_timeout_usec >= 0)
@@ -3911,7 +3911,7 @@ g_main_context_prepare_unlocked (GMainContext *context,
 gint
 g_main_context_query (GMainContext *context,
           gint          max_priority,
-		      gint         *timeout_msec,
+          gint         *timeout_msec,
           GPollFD      *fds,
           gint          n_fds)
 {

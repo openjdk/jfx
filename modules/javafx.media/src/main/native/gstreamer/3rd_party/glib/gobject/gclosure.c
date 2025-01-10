@@ -260,7 +260,7 @@ closure_invoke_notifiers (GClosure *closure,
       while (closure->n_fnotifiers)
   {
           guint n;
-	  ATOMIC_DEC_ASSIGN (closure, n_fnotifiers, &n);
+    ATOMIC_DEC_ASSIGN (closure, n_fnotifiers, &n);
 
     ndata = closure->notifiers + CLOSURE_N_MFUNCS (closure) + n;
     closure->marshal = (GClosureMarshal) ndata->notify;
@@ -510,7 +510,7 @@ closure_try_remove_inotify (GClosure       *closure,
   for (ndata = nlast + 1 - closure->n_inotifiers; ndata <= nlast; ndata++)
     if (ndata->notify == notify_func && ndata->data == notify_data)
       {
-	ATOMIC_DEC (closure, n_inotifiers);
+  ATOMIC_DEC (closure, n_inotifiers);
   if (ndata < nlast)
     *ndata = *nlast;
 
@@ -530,7 +530,7 @@ closure_try_remove_fnotify (GClosure       *closure,
   for (ndata = nlast + 1 - closure->n_fnotifiers; ndata <= nlast; ndata++)
     if (ndata->notify == notify_func && ndata->data == notify_data)
       {
-	ATOMIC_DEC (closure, n_fnotifiers);
+  ATOMIC_DEC (closure, n_fnotifiers);
   if (ndata < nlast)
     *ndata = *nlast;
   if (closure->n_inotifiers)

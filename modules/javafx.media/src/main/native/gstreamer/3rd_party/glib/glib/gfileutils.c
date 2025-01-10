@@ -401,7 +401,7 @@ g_file_test (const gchar *filename,
     const gchar *q = strchr (p, ';');
     if (q == NULL)
       q = p + strlen (p);
-	  if (extlen == (size_t) (q - p) &&
+      if (extlen == (size_t) (q - p) &&
         memcmp (lastdot, p, extlen) == 0)
       {
         g_free ((gchar *) pathext);

@@ -212,7 +212,7 @@ g_spawn_sync_impl (const gchar           *working_directory,
   GString *errstr = NULL;
   gboolean failed;
   gint status;
-  
+
   g_return_val_if_fail (argv != NULL, FALSE);
   g_return_val_if_fail (argv[0] != NULL, FALSE);
   g_return_val_if_fail (!(flags & G_SPAWN_DO_NOT_REAP_CHILD), FALSE);
@@ -220,7 +220,7 @@ g_spawn_sync_impl (const gchar           *working_directory,
                         !(flags & G_SPAWN_STDOUT_TO_DEV_NULL), FALSE);
   g_return_val_if_fail (standard_error == NULL ||
                         !(flags & G_SPAWN_STDERR_TO_DEV_NULL), FALSE);
-  
+
   /* Just to ensure segfaults if callers try to use
    * these when an error is reported.
    */
@@ -229,7 +229,7 @@ g_spawn_sync_impl (const gchar           *working_directory,
 
   if (standard_error)
     *standard_error = NULL;
-  
+
   if (!fork_exec (FALSE,
                   working_directory,
                   (const gchar * const *) argv,
@@ -254,14 +254,14 @@ g_spawn_sync_impl (const gchar           *working_directory,
     return FALSE;
 
   /* Read data from child. */
-  
+
   failed = FALSE;
 
   if (outpipe >= 0)
     {
       outstr = g_string_new (NULL);
     }
-      
+
   if (errpipe >= 0)
     {
       errstr = g_string_new (NULL);
@@ -287,8 +287,8 @@ g_spawn_sync_impl (const gchar           *working_directory,
         {
           int errsv = errno;
 
-	  if (errno == EINTR)
-	    continue;
+    if (errno == EINTR)
+      continue;
 
           failed = TRUE;
 
@@ -297,7 +297,7 @@ g_spawn_sync_impl (const gchar           *working_directory,
                        G_SPAWN_ERROR_READ,
                        _("Unexpected error in reading data from a child process (%s)"),
                        g_strerror (errsv));
-              
+
           break;
         }
 
@@ -346,7 +346,7 @@ g_spawn_sync_impl (const gchar           *working_directory,
    * an error pending.
    */
  again:
-      
+
   ret = waitpid (pid, &status, 0);
 
   if (ret < 0)
@@ -371,7 +371,7 @@ g_spawn_sync_impl (const gchar           *working_directory,
               int errsv = errno;
 
               failed = TRUE;
-                  
+
               g_set_error (error,
                            G_SPAWN_ERROR,
                            G_SPAWN_ERROR_READ,
@@ -380,7 +380,7 @@ g_spawn_sync_impl (const gchar           *working_directory,
             }
         }
     }
-  
+
   if (failed)
     {
       if (outstr)
@@ -394,8 +394,8 @@ g_spawn_sync_impl (const gchar           *working_directory,
     {
       if (wait_status)
         *wait_status = status;
-      
-      if (standard_output)        
+
+      if (standard_output)
         *standard_output = g_string_free (outstr, FALSE);
 
       if (standard_error)
@@ -478,31 +478,31 @@ g_spawn_check_wait_status_impl (gint     wait_status,
   if (WIFEXITED (wait_status))
     {
       if (WEXITSTATUS (wait_status) != 0)
-	{
-	  g_set_error (error, G_SPAWN_EXIT_ERROR, WEXITSTATUS (wait_status),
-		       _("Child process exited with code %ld"),
-		       (long) WEXITSTATUS (wait_status));
-	  goto out;
-	}
+  {
+    g_set_error (error, G_SPAWN_EXIT_ERROR, WEXITSTATUS (wait_status),
+           _("Child process exited with code %ld"),
+           (long) WEXITSTATUS (wait_status));
+    goto out;
+  }
     }
   else if (WIFSIGNALED (wait_status))
     {
       g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
-		   _("Child process killed by signal %ld"),
-		   (long) WTERMSIG (wait_status));
+       _("Child process killed by signal %ld"),
+       (long) WTERMSIG (wait_status));
       goto out;
     }
   else if (WIFSTOPPED (wait_status))
     {
       g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
-		   _("Child process stopped by signal %ld"),
-		   (long) WSTOPSIG (wait_status));
+       _("Child process stopped by signal %ld"),
+       (long) WSTOPSIG (wait_status));
       goto out;
     }
   else
     {
       g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
-		   _("Child process exited abnormally"));
+       _("Child process exited abnormally"));
       goto out;
     }
 
@@ -517,7 +517,7 @@ static gssize
 write_all (gint fd, gconstpointer vbuf, gsize to_write)
 {
   gchar *buf = (gchar *) vbuf;
-  
+
   while (to_write > 0)
     {
       gssize count = write (fd, buf, to_write);
@@ -532,7 +532,7 @@ write_all (gint fd, gconstpointer vbuf, gsize to_write)
           buf += count;
         }
     }
-  
+
   return TRUE;
 }
 
@@ -543,10 +543,10 @@ static void
 write_err_and_exit (gint fd, gint msg)
 {
   gint en = errno;
-  
+
   write_all (fd, &msg, sizeof(msg));
   write_all (fd, &en, sizeof(en));
-  
+
   _exit (1);
 }
 
@@ -947,28 +947,28 @@ do_exec (gint                  child_err_report_fd,
 static gboolean
 read_ints (int      fd,
            gint*    buf,
-           gint     n_ints_in_buf,    
-           gint    *n_ints_read,      
+           gint     n_ints_in_buf,
+           gint    *n_ints_read,
            GError **error)
 {
-  gsize bytes = 0;    
-  
+  gsize bytes = 0;
+
   while (TRUE)
     {
-      gssize chunk;    
+      gssize chunk;
 
       if (bytes >= sizeof(gint)*2)
         break; /* give up, who knows what happened, should not be
                 * possible.
                 */
-          
+
     again:
       chunk = read (fd,
                     ((gchar*)buf) + bytes,
                     sizeof(gint) * n_ints_in_buf - bytes);
       if (chunk < 0 && errno == EINTR)
         goto again;
-          
+
       if (chunk < 0)
         {
           int errsv = errno;
@@ -985,7 +985,7 @@ read_ints (int      fd,
       else if (chunk == 0)
         break; /* EOF */
       else /* chunk > 0 */
-	bytes += chunk;
+  bytes += chunk;
     }
 
   *n_ints_read = (gint)(bytes / sizeof(gint));
@@ -1472,7 +1472,7 @@ fork_exec (gboolean              intermediate_child,
       if (source_fds_collide_with_pipe (&child_pid_report_pipe, source_fds, n_fds, error))
         goto cleanup_and_fail;
     }
-  
+
   pid = fork ();
 
   if (pid < 0)
@@ -1498,7 +1498,7 @@ fork_exec (gboolean              intermediate_child,
       signal (SIGINT, SIG_DFL);
       signal (SIGTERM, SIG_DFL);
       signal (SIGHUP, SIG_DFL);
-      
+
       /* Be sure we crash if the parent exits
        * and we write to the err_report_pipe
        */
@@ -1516,7 +1516,7 @@ fork_exec (gboolean              intermediate_child,
            while (child_close_fds[++i] != -1)
              g_clear_fd (&child_close_fds[i], NULL);
         }
-      
+
       if (intermediate_child)
         {
           /* We need to fork an intermediate child that launches the
@@ -1533,9 +1533,9 @@ fork_exec (gboolean              intermediate_child,
               /* report -1 as child PID */
               write_all (g_unix_pipe_get (&child_pid_report_pipe, G_UNIX_PIPE_END_WRITE),
                          &grandchild_pid, sizeof(grandchild_pid));
-              
+
               write_err_and_exit (g_unix_pipe_get (&child_err_report_pipe, G_UNIX_PIPE_END_WRITE),
-                                  CHILD_FORK_FAILED);              
+                                  CHILD_FORK_FAILED);
             }
           else if (grandchild_pid == 0)
             {
@@ -1568,7 +1568,7 @@ fork_exec (gboolean              intermediate_child,
               write_all (g_unix_pipe_get (&child_pid_report_pipe, G_UNIX_PIPE_END_WRITE),
                          &grandchild_pid, sizeof(grandchild_pid));
               g_unix_pipe_close (&child_pid_report_pipe, G_UNIX_PIPE_END_WRITE, NULL);
-              
+
               _exit (0);
             }
         }
@@ -1604,9 +1604,9 @@ fork_exec (gboolean              intermediate_child,
   else
     {
       /* Parent */
-      
+
       gint buf[2];
-      gint n_ints = 0;    
+      gint n_ints = 0;
 
       /* Close the uncared-about ends of the pipes */
       g_unix_pipe_close (&child_err_report_pipe, G_UNIX_PIPE_END_WRITE, NULL);
@@ -1626,13 +1626,13 @@ fork_exec (gboolean              intermediate_child,
                 g_warning ("waitpid() should not fail in 'fork_exec'");
             }
         }
-      
+
 
       if (!read_ints (g_unix_pipe_get (&child_err_report_pipe, G_UNIX_PIPE_END_READ),
                       buf, 2, &n_ints,
                       error))
         goto cleanup_and_fail;
-        
+
       if (n_ints >= 2)
         {
           /* Error from the child. */
@@ -1648,7 +1648,7 @@ fork_exec (gboolean              intermediate_child,
                            g_strerror (buf[1]));
 
               break;
-              
+
             case CHILD_EXEC_FAILED:
               g_set_error (error,
                            G_SPAWN_ERROR,
@@ -1708,7 +1708,7 @@ fork_exec (gboolean              intermediate_child,
       if (intermediate_child)
         {
           n_ints = 0;
-          
+
           if (!read_ints (g_unix_pipe_get (&child_pid_report_pipe, G_UNIX_PIPE_END_READ),
                           buf, 1, &n_ints, error))
             goto cleanup_and_fail;
@@ -1730,7 +1730,7 @@ fork_exec (gboolean              intermediate_child,
               pid = buf[0];
             }
         }
-      
+
       /* Success against all odds! return the information */
       g_unix_pipe_close (&child_err_report_pipe, G_UNIX_PIPE_END_READ, NULL);
       g_unix_pipe_close (&child_pid_report_pipe, G_UNIX_PIPE_END_READ, NULL);
@@ -1870,7 +1870,7 @@ g_execute (const gchar  *file,
         execve (file, argv, envp);
       else
         execv (file, argv);
-      
+
       if (errno == ENOEXEC &&
           !script_execute (file, argv, argv_buffer, argv_buffer_len, envp))
         {
@@ -1905,26 +1905,26 @@ g_execute (const gchar  *file,
 
       p = path;
       do
-	{
-	  char *startp;
+  {
+    char *startp;
 
-	  path = p;
-	  p = my_strchrnul (path, ':');
+    path = p;
+    p = my_strchrnul (path, ':');
 
-	  if (p == path)
-	    /* Two adjacent colons, or a colon at the beginning or the end
+    if (p == path)
+      /* Two adjacent colons, or a colon at the beginning or the end
              * of 'PATH' means to search the current directory.
              */
-	    startp = name + 1;
-	  else
-	    startp = memcpy (name - (p - path), path, p - path);
+      startp = name + 1;
+    else
+      startp = memcpy (name - (p - path), path, p - path);
 
-	  /* Try to execute this name.  If it works, execv will not return.  */
+    /* Try to execute this name.  If it works, execv will not return.  */
           if (envp)
             execve (startp, argv, envp);
           else
             execv (startp, argv);
-          
+
           if (errno == ENOEXEC &&
               !script_execute (startp, argv, argv_buffer, argv_buffer_len, envp))
             {
@@ -1932,50 +1932,50 @@ g_execute (const gchar  *file,
               return -1;
             }
 
-	  switch (errno)
-	    {
-	    case EACCES:
-	      /* Record the we got a 'Permission denied' error.  If we end
+    switch (errno)
+      {
+      case EACCES:
+        /* Record the we got a 'Permission denied' error.  If we end
                * up finding no executable we can use, we want to diagnose
                * that we did find one but were denied access.
                */
-	      got_eacces = TRUE;
+        got_eacces = TRUE;
 
               G_GNUC_FALLTHROUGH;
-	    case ENOENT:
+      case ENOENT:
 #ifdef ESTALE
-	    case ESTALE:
+      case ESTALE:
 #endif
 #ifdef ENOTDIR
-	    case ENOTDIR:
+      case ENOTDIR:
 #endif
-	      /* Those errors indicate the file is missing or not executable
+        /* Those errors indicate the file is missing or not executable
                * by us, in which case we want to just try the next path
                * directory.
                */
-	      break;
+        break;
 
-	    case ENODEV:
-	    case ETIMEDOUT:
-	      /* Some strange filesystems like AFS return even
-	       * stranger error numbers.  They cannot reasonably mean anything
-	       * else so ignore those, too.
-	       */
-	      break;
+      case ENODEV:
+      case ETIMEDOUT:
+        /* Some strange filesystems like AFS return even
+         * stranger error numbers.  They cannot reasonably mean anything
+         * else so ignore those, too.
+         */
+        break;
 
-	    default:
-	      /* Some other error means we found an executable file, but
+      default:
+        /* Some other error means we found an executable file, but
                * something went wrong executing it; return the error to our
                * caller.
                */
-	      return -1;
-	    }
-	}
+        return -1;
+      }
+  }
       while (*p++ != '\0');
 
       /* We tried every element and none of them worked.  */
       if (got_eacces)
-	/* At least one failure was due to permissions, so report that
+        /* At least one failure was due to permissions, so report that
          * error.
          */
         errno = EACCES;
