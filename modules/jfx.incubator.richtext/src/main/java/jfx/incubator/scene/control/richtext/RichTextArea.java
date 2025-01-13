@@ -112,7 +112,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * <pre>{@code
  *     SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
  *     // add text segment using CSS style name (requires a stylesheet)
- *     m.addWithStyles("RichTextArea ", "HEADER");
+ *     m.addWithStyleNames("RichTextArea ", "HEADER");
  *     // add text segment using inline styles
  *     m.addWithInlineStyle("Demo", "-fx-font-size:200%; -fx-font-weight:bold;");
  *     // add newline

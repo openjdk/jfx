@@ -74,8 +74,8 @@
 |shortcut-A            |           |SELECT_ALL                |
 |ctrl-BACK_SLASH       |linux, win |DESELECT                  |
 |BACKSPACE             |           |BACKSPACE                 |7
-|ctrl-BACKSPACE        |linux, win |DELETE_WORD_NEXT_START    |
-|option-BACKSPACE      |mac        |DELETE_WORD_NEXT_START    |7
+|ctrl-BACKSPACE        |linux, win |DELETE_WORD_PREVIOUS      |
+|option-BACKSPACE      |mac        |DELETE_WORD_PREVIOUS      |7
 |shift-BACKSPACE       |           |BACKSPACE                 |7
 |shortcut-BACKSPACE    |mac        |DELETE_PARAGRAPH_START    |7, mac only
 |shortcut-C            |           |COPY                      |
