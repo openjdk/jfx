@@ -16,6 +16,27 @@ for the purposes of demonstration of capabilities as well as testing.
 
 ## Building
 
-Using Eclipse: import and run the project.
+### Using Eclipse IDE
 
-Using command line: TBD.
+Import and run the project.
+
+
+
+### Using Command Line
+
+Execute `ant` command in this directory. 
+
+
+
+## Running Demos
+
+Use the following commands to run demos build in the previous section:
+
+Code Area Demo: `ant run-codearea-demo`
+
+Notebook Demo: `ant run-notebook-demo`
+
+Rich Editor Demo: `ant run-richeditor-demo`
+
+RichTextArea Tester: `ant run-richtextarea-demo`
+
