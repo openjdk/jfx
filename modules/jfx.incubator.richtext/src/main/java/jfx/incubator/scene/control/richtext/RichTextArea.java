@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -385,13 +385,13 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Determines the caret blink period.  This property cannot be set to {@code null}.
+     * Determines the caret blink period.  A {@code null} value will be interpreted as 1000 ms.
      * <p>
      * This property can be styled with CSS using {@code -fx-caret-blink-period} name.
      * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the caret blink period property
-     * @defaultValue 1000 ms
+     * @defaultValue null
      */
     public final ObjectProperty<Duration> caretBlinkPeriodProperty() {
         if (caretBlinkPeriod == null) {
@@ -399,20 +399,8 @@ public class RichTextArea extends Control {
                 StyleableProperties.CARET_BLINK_PERIOD,
                 this,
                 "caretBlinkPeriod",
-                Params.DEFAULT_CARET_BLINK_PERIOD
-            ) {
-                private Duration old;
-
-                @Override
-                public void invalidated() {
-                    final Duration v = get();
-                    if (v == null) {
-                        set(old);
-                        throw new NullPointerException("cannot set caretBlinkPeriodProperty to null");
-                    }
-                    old = v;
-                }
-            };
+                null
+            );
         }
         return caretBlinkPeriod;
     }
@@ -422,7 +410,7 @@ public class RichTextArea extends Control {
     }
 
     public final Duration getCaretBlinkPeriod() {
-        return caretBlinkPeriod == null ? Params.DEFAULT_CARET_BLINK_PERIOD : caretBlinkPeriod.get();
+        return caretBlinkPeriod == null ? null : caretBlinkPeriod.get();
     }
 
     /**
@@ -826,7 +814,7 @@ public class RichTextArea extends Control {
     }
 
     public final void setUseContentHeight(boolean on) {
-        useContentHeightProperty().set(true);
+        useContentHeightProperty().set(on);
     }
 
     /**
@@ -866,7 +854,7 @@ public class RichTextArea extends Control {
     }
 
     public final void setUseContentWidth(boolean on) {
-        useContentWidthProperty().set(true);
+        useContentWidthProperty().set(on);
     }
 
     /**
