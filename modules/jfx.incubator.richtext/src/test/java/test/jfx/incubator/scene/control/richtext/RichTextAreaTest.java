@@ -25,8 +25,11 @@
 
 package test.jfx.incubator.scene.control.richtext;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.geometry.Insets;
+import javafx.scene.Scene;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +44,7 @@ import test.jfx.incubator.scene.util.TUtil;
 /**
  * Tests the RichTextArea control.
  */
-public class TestRichTextArea {
+public class RichTextAreaTest {
     private RichTextArea control;
 
     @BeforeEach
@@ -111,6 +114,91 @@ public class TestRichTextArea {
     }
 
     // css
+
+    @Test
+    void testCaretBlinkPeriodCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-caret-blink-period: 1ms");
+        control.applyCss();
+        assertEquals(Duration.millis(1), control.getCaretBlinkPeriod());
+
+        control.setStyle("-fx-caret-blink-period: 99ms");
+        control.applyCss();
+        assertEquals(Duration.millis(99), control.getCaretBlinkPeriod());
+    }
+
+    @Test
+    void testContentPaddingCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-content-padding: 99");
+        control.applyCss();
+        assertEquals(new Insets(99), control.getContentPadding());
+
+        control.setStyle("-fx-content-padding: null");
+        control.applyCss();
+        assertEquals(null, control.getContentPadding());
+    }
+
+    @Test
+    void testDisplayCaretCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-display-caret: false");
+        control.applyCss();
+        assertFalse(control.isDisplayCaret());
+
+        control.setStyle("-fx-display-caret: true");
+        control.applyCss();
+        assertTrue(control.isDisplayCaret());
+    }
+
+    @Test
+    void testHighlightCurrentParagraphCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-highlight-current-paragraph: false");
+        control.applyCss();
+        assertFalse(control.isHighlightCurrentParagraph());
+
+        control.setStyle("-fx-highlight-current-paragraph: true");
+        control.applyCss();
+        assertTrue(control.isHighlightCurrentParagraph());
+    }
+
+    @Test
+    void testUseContentHeightCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-use-content-height: false");
+        control.applyCss();
+        assertFalse(control.isUseContentHeight());
+
+        control.setStyle("-fx-use-content-height: true");
+        control.applyCss();
+        assertTrue(control.isUseContentHeight());
+    }
+
+    @Test
+    void testUseContentWidthCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-use-content-width: false");
+        control.applyCss();
+        assertFalse(control.isUseContentWidth());
+
+        control.setStyle("-fx-use-content-width: true");
+        control.applyCss();
+        assertTrue(control.isUseContentWidth());
+    }
+
+    @Test
+    void testWrapTextCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-wrap-text: false");
+        control.applyCss();
+        assertFalse(control.isWrapText());
+
+        control.setStyle("-fx-wrap-text: true");
+        control.applyCss();
+        assertTrue(control.isWrapText());
+    }
+
     // property binding
     // misc tests: certain steps on changing properties (clears selection on model change etc)
 

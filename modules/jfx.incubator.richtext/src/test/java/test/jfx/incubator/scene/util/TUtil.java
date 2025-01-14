@@ -204,7 +204,7 @@ public class TUtil {
      * @param <T> the value type
      * @param prop the property
      * @param getter the value getter, can be null
-     * @param expected the expected value 
+     * @param expected the expected value
      */
     public static <T> void testDefaultValue(Property<T> prop, Supplier<T> getter, T expected) {
         T v = prop.getValue();

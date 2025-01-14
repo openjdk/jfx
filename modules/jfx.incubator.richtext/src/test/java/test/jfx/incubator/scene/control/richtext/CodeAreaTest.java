@@ -28,6 +28,7 @@ package test.jfx.incubator.scene.control.richtext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +41,7 @@ import test.jfx.incubator.scene.util.TUtil;
 /**
  * Tests the CodeArea control.
  */
-public class TestCodeArea {
+public class CodeAreaTest {
     private CodeArea control;
 
     @BeforeEach
@@ -94,6 +95,32 @@ public class TestCodeArea {
         TUtil.testDefaultValue(control.lineNumbersEnabledProperty(), control::isLineNumbersEnabled, false);
         TUtil.testDefaultValue(control.lineSpacingProperty(), control::getLineSpacing, 0.0);
         TUtil.testDefaultValue(control.tabSizeProperty(), control::getTabSize, 8);
+    }
+
+    // css
+
+    @Test
+    void testFontCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-font: 24 Amble");
+        control.applyCss();
+        assertEquals(Font.font("Amble", 24), control.getFont());
+    }
+
+    @Test
+    void testLineSpacingCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-line-spacing: 5.55");
+        control.applyCss();
+        assertEquals(5.55, control.getLineSpacing());
+    }
+
+    @Test
+    void testTabSizeCSS() {
+        Scene s = new Scene(control);
+        control.setStyle("-fx-tab-size: 17");
+        control.applyCss();
+        assertEquals(17, control.getTabSize());
     }
 
     /** can set a null and non-null CodeTextModel */
