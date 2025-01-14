@@ -500,8 +500,8 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
       const gchar *subs;
       gint w_sub, h_sub, n_semi;
 
-      w_sub = GST_VIDEO_FORMAT_INFO_W_SUB (finfo, 1);
-      h_sub = GST_VIDEO_FORMAT_INFO_H_SUB (finfo, 1);
+      w_sub = 1 << GST_VIDEO_FORMAT_INFO_W_SUB (finfo, 1);
+      h_sub = 1 << GST_VIDEO_FORMAT_INFO_H_SUB (finfo, 1);
 
       if (w_sub == 1 && h_sub == 1) {
         subs = "4:4:4";
