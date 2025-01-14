@@ -385,13 +385,13 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Determines the caret blink period.  A {@code null} value will be interpreted as 1000 ms.
+     * Determines the caret blink period.  This property cannot be set to {@code null}.
      * <p>
      * This property can be styled with CSS using {@code -fx-caret-blink-period} name.
      * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the caret blink period property
-     * @defaultValue null
+     * @defaultValue 1000 ms
      */
     public final ObjectProperty<Duration> caretBlinkPeriodProperty() {
         if (caretBlinkPeriod == null) {
@@ -399,8 +399,20 @@ public class RichTextArea extends Control {
                 StyleableProperties.CARET_BLINK_PERIOD,
                 this,
                 "caretBlinkPeriod",
-                null
-            );
+                Params.DEFAULT_CARET_BLINK_PERIOD
+            ) {
+                private Duration old;
+
+                @Override
+                public void invalidated() {
+                    final Duration v = get();
+                    if (v == null) {
+                        set(old);
+                        throw new NullPointerException("cannot set caretBlinkPeriodProperty to null");
+                    }
+                    old = v;
+                }
+            };
         }
         return caretBlinkPeriod;
     }
@@ -410,7 +422,7 @@ public class RichTextArea extends Control {
     }
 
     public final Duration getCaretBlinkPeriod() {
-        return caretBlinkPeriod == null ? null : caretBlinkPeriod.get();
+        return caretBlinkPeriod == null ? Params.DEFAULT_CARET_BLINK_PERIOD : caretBlinkPeriod.get();
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -603,9 +603,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     public final void updateRateRestartBlink() {
         Duration t2 = control.getCaretBlinkPeriod();
-        if (t2 == null) {
-            t2 = Params.DEFAULT_CARET_BLINK_PERIOD;
-        }
         Duration t1 = t2.divide(2.0);
 
         caretAnimation.stop();
