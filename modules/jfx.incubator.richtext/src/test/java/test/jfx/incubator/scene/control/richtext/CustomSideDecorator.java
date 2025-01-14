@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,32 @@
  * questions.
  */
 
-package test.com.sun.jfx.incubator.scene.control.richtext;
+package test.jfx.incubator.scene.control.richtext;
 
-import org.junit.jupiter.api.Test;
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
-import jfx.incubator.scene.control.richtext.RichTextArea;
-import jfx.incubator.scene.control.richtext.RichTextAreaShim;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import jfx.incubator.scene.control.richtext.SideDecorator;
 
 /**
- * Tests RichTextArea control.
+ * "Custom" SideDecorator for testing.
  */
-public class TestRichTextArea {
-    /**
-     * Tests the shim.
-     */
-    // TODO remove once a real test which needs the shim is added.
-    @Test
-    public void testShim() {
-        RichTextArea t = new RichTextArea();
-        VFlow f = RichTextAreaShim.vflow(t);
+public class CustomSideDecorator implements SideDecorator {
+    public CustomSideDecorator() {
     }
+
+    @Override
+    public double getPrefWidth(double viewWidth) {
+        return 100;
+    }
+
+    @Override
+    public Node getMeasurementNode(int index) {
+        return new Label();
+    }
+
+    @Override
+    public Node getNode(int index) {
+        return new Label();
+    }
+
 }
