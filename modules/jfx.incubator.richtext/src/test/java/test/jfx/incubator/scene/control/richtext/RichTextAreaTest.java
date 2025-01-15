@@ -200,6 +200,25 @@ public class RichTextAreaTest {
     }
 
     // property binding
+
+    @Test
+    void testPropertyBinding() {
+        // caret blink period property is internally constrained and cannot be bound
+        //TUtil.testBinding(control.caretBlinkPeriodProperty(), control::getCaretBlinkPeriod, Duration.millis(10));
+        TUtil.testBinding(control.contentPaddingProperty(), control::getContentPadding, null, new Insets(40));
+        TUtil.testBinding(control.displayCaretProperty(), control::isDisplayCaret);
+        TUtil.testBinding(control.editableProperty(), control::isEditable);
+        TUtil.testBinding(control.highlightCurrentParagraphProperty(), control::isHighlightCurrentParagraph);
+        TUtil.testBinding(control.leftDecoratorProperty(), control::getLeftDecorator, null, new CustomSideDecorator());
+        TUtil.testBinding(control.modelProperty(), control::getModel, null, new RichTextModel(), new CodeTextModel());
+        TUtil.testBinding(control.rightDecoratorProperty(), control::getRightDecorator, null, new CustomSideDecorator());
+        TUtil.testBinding(control.useContentHeightProperty(), control::isUseContentHeight);
+        TUtil.testBinding(control.useContentWidthProperty(), control::isUseContentWidth);
+        TUtil.testBinding(control.wrapTextProperty(), control::isWrapText);
+    }
+
+    // other API tests
+    
     // misc tests: certain steps on changing properties (clears selection on model change etc)
 
     /**

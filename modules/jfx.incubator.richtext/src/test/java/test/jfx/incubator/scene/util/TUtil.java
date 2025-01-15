@@ -33,11 +33,15 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.Property;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 
 /**
  * There should be a common place for module-agnostic test utilities.
  */
 public class TUtil {
+    private static final Boolean[] BOOLEAN_VALUES = { null, Boolean.TRUE, Boolean.FALSE };
+
     /** Sets the uncaught exception handler to forward to the thread group */
     public static void setUncaughtExceptionHandler() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
@@ -66,12 +70,11 @@ public class TUtil {
      * @param setter the setter (or null)
      */
     public static void testBooleanProperty(BooleanProperty prop, Supplier<Boolean> getter, Consumer<Boolean> setter) {
-        Boolean[] values = { null, Boolean.TRUE, Boolean.FALSE };
         Boolean initialValue = prop.get();
 
         // directly using the property
         try {
-            for (Boolean val : values) {
+            for (Boolean val : BOOLEAN_VALUES) {
                 prop.setValue(val);
                 Boolean v = prop.get();
                 if (val == null) {
@@ -86,7 +89,7 @@ public class TUtil {
         // using the getter
         if (getter != null) {
             try {
-                for (Boolean val : values) {
+                for (Boolean val : BOOLEAN_VALUES) {
                     prop.setValue(val);
                     Boolean v = getter.get();
                     if (val == null) {
@@ -232,6 +235,62 @@ public class TUtil {
         if (getter != null) {
             T v2 = getter.get();
             assertTrue(checker.test(v2));
+        }
+    }
+
+    /**
+     * Verifies that the specified property can be bound and the corresponding getter
+     * reflects the source property values.
+     *
+     * @param <T> the value type
+     * @param prop the property to be tested
+     * @param getter the getter for the property value, cannot be null
+     * @param values the values to test with
+     */
+    public static <T> void testBinding(Property<T> prop, Supplier<T> getter, T... values) {
+        T initialValue = prop.getValue();
+        try {
+            Property<T> p = new SimpleObjectProperty<T>();
+            prop.bind(p);
+
+            // this code does not check for the initial value of the bound property 
+            for (T value : values) {
+                p.setValue(value);
+                T v = getter.get();
+                assertEquals(value, v);
+            }
+        } finally {
+            prop.unbind();
+            prop.setValue(initialValue);
+        }
+    }
+
+    /**
+     * Verifies that the specified boolean property can be bound and the corresponding getter
+     * reflects the source property values.  The property is tested with the values
+     * {@code null, Boolean.TRUE, Boolean.FALSE}.
+     *
+     * @param prop the property to be tested
+     * @param getter the getter for the property value, cannot be null
+     */
+    public static void testBinding(BooleanProperty prop, Supplier<Boolean> getter) {
+        Boolean initialValue = prop.getValue();
+        try {
+            SimpleBooleanProperty p = new SimpleBooleanProperty();
+            prop.bind(p);
+
+            // this code does not check for the initial value of the bound property 
+            for (Boolean value : BOOLEAN_VALUES) {
+                p.setValue(value);
+                Boolean v = getter.get();
+                if (value == null && v != null) {
+                    value = Boolean.FALSE;
+                }
+                assertEquals(value, v);
+            }
+        } finally {
+            prop.unbind();
+            prop.setValue(initialValue);
         }
     }
 }

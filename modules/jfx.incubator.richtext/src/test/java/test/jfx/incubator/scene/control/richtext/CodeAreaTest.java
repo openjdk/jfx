@@ -123,6 +123,18 @@ public class CodeAreaTest {
         assertEquals(17, control.getTabSize());
     }
 
+    // property binding
+
+    @Test
+    void testPropertyBinding() {
+        TUtil.testBinding(control.fontProperty(), control::getFont, new Font("Bogus", 22));
+        TUtil.testBinding(control.lineNumbersEnabledProperty(), control::isLineNumbersEnabled);
+        TUtil.testBinding(control.lineSpacingProperty(), control::getLineSpacing, 10.0, 22.0);
+        TUtil.testBinding(control.tabSizeProperty(), control::getTabSize, 1, 2, 5, 17);
+    }
+
+    // other API tests
+
     /** can set a null and non-null CodeTextModel */
     @Test
     public void nullModel() {
