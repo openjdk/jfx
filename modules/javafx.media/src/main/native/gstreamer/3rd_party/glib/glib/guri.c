@@ -103,7 +103,7 @@
  * references’ (sometimes referred to as ‘relative URIs’) or ‘URIs’ (for
  * clarity, ‘URIs’ are referred to in this documentation as
  * ‘absolute URIs’ — although
- * [in constrast to RFC 3986](https://tools.ietf.org/html/rfc3986#section-4.3),
+ * [in contrast to RFC 3986](https://tools.ietf.org/html/rfc3986#section-4.3),
  * fragment identifiers are always allowed).
  *
  * Relative references have one or more components of the URI missing. In

@@ -210,6 +210,12 @@ gst_osx_audio_src_change_state (GstElement * element, GstStateChange transition)
   GstStateChangeReturn ret;
 
   switch (transition) {
+    case GST_STATE_CHANGE_READY_TO_NULL:{
+      GST_OBJECT_LOCK (osxsrc);
+      osxsrc->device_id = kAudioDeviceUnknown;
+      GST_OBJECT_UNLOCK (osxsrc);
+      break;
+    }
     default:
       break;
   }
@@ -224,7 +230,10 @@ gst_osx_audio_src_change_state (GstElement * element, GstStateChange transition)
       ringbuffer =
           GST_OSX_AUDIO_RING_BUFFER (GST_AUDIO_BASE_SRC (osxsrc)->ringbuffer);
       if (ringbuffer->core_audio->device_id != osxsrc->device_id) {
+        GST_OBJECT_LOCK (osxsrc);
         osxsrc->device_id = ringbuffer->core_audio->device_id;
+        GST_OBJECT_UNLOCK (osxsrc);
+
         g_object_notify (G_OBJECT (osxsrc), "device");
       }
       break;

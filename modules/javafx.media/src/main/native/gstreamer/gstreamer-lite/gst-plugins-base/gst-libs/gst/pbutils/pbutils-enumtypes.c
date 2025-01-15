@@ -13,7 +13,9 @@
 #include "install-plugins.h"
 #endif // GSTREAMER_LITE
 #include "missing-plugins.h"
+#ifndef GSTREAMER_LITE
 #include "gstdiscoverer.h"
+#endif // GSTREAMER_LITE
 #include "gstaudiovisualizer.h"
 
 /* enumerations from "gstaudiovisualizer.h" */
@@ -41,6 +43,7 @@ gst_audio_visualizer_shader_get_type (void)
   return g_define_type_id__volatile;
 }
 
+#ifndef GSTREAMER_LITE
 /* enumerations from "gstdiscoverer.h" */
 GType
 gst_discoverer_result_get_type (void)
@@ -80,7 +83,6 @@ gst_discoverer_serialize_flags_get_type (void)
   return g_define_type_id__volatile;
 }
 
-#ifndef GSTREAMER_LITE
 /* enumerations from "install-plugins.h" */
 GType
 gst_install_plugins_return_get_type (void)

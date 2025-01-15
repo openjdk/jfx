@@ -73,6 +73,7 @@ C_SOURCES = \
         gshell.c \
         gslice.c \
         gslist.c \
+        gspawn.c \
         gspawn-win32-helper.c \
         gspawn-win32.c \
         gstdio.c \
@@ -81,7 +82,6 @@ C_SOURCES = \
         gstringchunk.c \
         gtestutils.c \
         gthread.c \
-        gthread-win32.c \
         gthreadpool.c \
         gtimer.c \
         gtimezone.c \

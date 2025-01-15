@@ -25,6 +25,7 @@
 package test.javafx.scene;
 
 import com.sun.javafx.scene.NodeHelper;
+import javafx.css.PseudoClass;
 import javafx.stage.Stage;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGSubScene;
@@ -147,6 +148,18 @@ public class SubSceneTest {
         assertTrue(g.getStyleClass().contains("root"));
         scene.setRoot(new Group());
         assertFalse(g.getStyleClass().contains("root"));
+    }
+
+    @Test
+    public void testRootPseudoClassIsSetOnRootNode() {
+        var root = PseudoClass.getPseudoClass("root");
+        SubScene scene = new SubScene(new Group(), 10, 10);
+        Group g = new Group();
+        assertFalse(g.getPseudoClassStates().contains(root));
+        scene.setRoot(g);
+        assertTrue(g.getPseudoClassStates().contains(root));
+        scene.setRoot(new Group());
+        assertFalse(g.getPseudoClassStates().contains(root));
     }
 
     @Test

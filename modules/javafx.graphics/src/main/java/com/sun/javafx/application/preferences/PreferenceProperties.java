@@ -51,9 +51,11 @@ final class PreferenceProperties {
     private final ColorSchemeProperty colorScheme = new ColorSchemeProperty();
     private final DeferredProperty<Boolean> reducedMotion = new DeferredProperty<>("reducedMotion", false);
     private final DeferredProperty<Boolean> reducedTransparency = new DeferredProperty<>("reducedTransparency", false);
+    private final DeferredProperty<Boolean> reducedData = new DeferredProperty<>("reducedData", false);
     private final DeferredProperty<Boolean> persistentScrollBars = new DeferredProperty<>("persistentScrollBars", false);
     private final ReadOnlyBooleanWrapper reducedMotionFlag;
     private final ReadOnlyBooleanWrapper reducedTransparencyFlag;
+    private final ReadOnlyBooleanWrapper reducedDataFlag;
     private final ReadOnlyBooleanWrapper persistentScrollBarsFlag;
     private final Object bean;
 
@@ -65,6 +67,9 @@ final class PreferenceProperties {
 
         reducedTransparencyFlag = new ReadOnlyBooleanWrapper(bean, reducedTransparency.getName());
         reducedTransparencyFlag.bind(reducedTransparency);
+
+        reducedDataFlag = new ReadOnlyBooleanWrapper(bean, reducedData.getName());
+        reducedDataFlag.bind(reducedData);
 
         persistentScrollBarsFlag = new ReadOnlyBooleanWrapper(bean, persistentScrollBars.getName());
         persistentScrollBarsFlag.bind(persistentScrollBars);
@@ -92,6 +97,18 @@ final class PreferenceProperties {
 
     public void setReducedTransparency(boolean value) {
         reducedTransparency.setValueOverride(value);
+    }
+
+    public ReadOnlyBooleanProperty reducedDataProperty() {
+        return reducedDataFlag.getReadOnlyProperty();
+    }
+
+    public boolean isReducedData() {
+        return reducedData.get();
+    }
+
+    public void setReducedData(boolean value) {
+        reducedData.setValueOverride(value);
     }
 
     public ReadOnlyBooleanProperty persistentScrollBarsProperty() {

@@ -106,7 +106,7 @@ typedef union {
   gint vint;
 } ClosureInt;
 
-#define CHANGE_FIELD(_closure, _field, _OP, _value, _must_set, _SET_OLD, _SET_NEW)      \
+#define ATOMIC_CHANGE_FIELD(_closure, _field, _OP, _value, _must_set, _SET_OLD, _SET_NEW)      \
 G_STMT_START {                                                                          \
   ClosureInt *cunion = (ClosureInt*) _closure;                                      \
   gint new_int, old_int, success;                                                   \
@@ -123,21 +123,12 @@ G_STMT_START {                                                                  
   while (!success && _must_set);                                                        \
 } G_STMT_END
 
-#define SWAP(_closure, _field, _value, _oldv)   CHANGE_FIELD (_closure, _field, =, _value, TRUE, *(_oldv) =,     (void) )
-#define SET(_closure, _field, _value)           CHANGE_FIELD (_closure, _field, =, _value, TRUE,     (void),     (void) )
-#define INC(_closure, _field)                   CHANGE_FIELD (_closure, _field, +=,     1, TRUE,     (void),     (void) )
-#define INC_ASSIGN(_closure, _field, _newv)     CHANGE_FIELD (_closure, _field, +=,     1, TRUE,     (void), *(_newv) = )
-#define DEC(_closure, _field)                   CHANGE_FIELD (_closure, _field, -=,     1, TRUE,     (void),     (void) )
-#define DEC_ASSIGN(_closure, _field, _newv)     CHANGE_FIELD (_closure, _field, -=,     1, TRUE,     (void), *(_newv) = )
-
-#if 0   /* for non-thread-safe closures */
-#define SWAP(cl,f,v,o)     (void) (*(o) = cl->f, cl->f = v)
-#define SET(cl,f,v)        (void) (cl->f = v)
-#define INC(cl,f)          (void) (cl->f += 1)
-#define INC_ASSIGN(cl,f,n) (void) (cl->f += 1, *(n) = cl->f)
-#define DEC(cl,f)          (void) (cl->f -= 1)
-#define DEC_ASSIGN(cl,f,n) (void) (cl->f -= 1, *(n) = cl->f)
-#endif
+#define ATOMIC_SWAP(_closure, _field, _value, _oldv)   ATOMIC_CHANGE_FIELD (_closure, _field, =, _value, TRUE, *(_oldv) =,     (void) )
+#define ATOMIC_SET(_closure, _field, _value)           ATOMIC_CHANGE_FIELD (_closure, _field, =, _value, TRUE,     (void),     (void) )
+#define ATOMIC_INC(_closure, _field)                   ATOMIC_CHANGE_FIELD (_closure, _field, +=,     1, TRUE,     (void),     (void) )
+#define ATOMIC_INC_ASSIGN(_closure, _field, _newv)     ATOMIC_CHANGE_FIELD (_closure, _field, +=,     1, TRUE,     (void), *(_newv) = )
+#define ATOMIC_DEC(_closure, _field)                   ATOMIC_CHANGE_FIELD (_closure, _field, -=,     1, TRUE,     (void),     (void) )
+#define ATOMIC_DEC_ASSIGN(_closure, _field, _newv)     ATOMIC_CHANGE_FIELD (_closure, _field, -=,     1, TRUE,     (void), *(_newv) = )
 
 enum {
   FNOTIFY,
@@ -233,8 +224,8 @@ g_closure_new_simple (guint           sizeof_closure,
 
   closure = (GClosure *) (allocated + private_size);
 
-  SET (closure, ref_count, 1);
-  SET (closure, floating, TRUE);
+  ATOMIC_SET (closure, ref_count, 1);
+  ATOMIC_SET (closure, floating, TRUE);
   closure->data = data;
 
   return closure;
@@ -269,7 +260,7 @@ closure_invoke_notifiers (GClosure *closure,
       while (closure->n_fnotifiers)
   {
           guint n;
-    DEC_ASSIGN (closure, n_fnotifiers, &n);
+    ATOMIC_DEC_ASSIGN (closure, n_fnotifiers, &n);
 
     ndata = closure->notifiers + CLOSURE_N_MFUNCS (closure) + n;
     closure->marshal = (GClosureMarshal) ndata->notify;
@@ -280,11 +271,11 @@ closure_invoke_notifiers (GClosure *closure,
       closure->data = NULL;
       break;
     case INOTIFY:
-      SET (closure, in_inotify, TRUE);
+      ATOMIC_SET (closure, in_inotify, TRUE);
       while (closure->n_inotifiers)
   {
           guint n;
-          DEC_ASSIGN (closure, n_inotifiers, &n);
+          ATOMIC_DEC_ASSIGN (closure, n_inotifiers, &n);
 
     ndata = closure->notifiers + CLOSURE_N_MFUNCS (closure) + closure->n_fnotifiers + n;
     closure->marshal = (GClosureMarshal) ndata->notify;
@@ -293,7 +284,7 @@ closure_invoke_notifiers (GClosure *closure,
   }
       closure->marshal = NULL;
       closure->data = NULL;
-      SET (closure, in_inotify, FALSE);
+      ATOMIC_SET (closure, in_inotify, FALSE);
       break;
     case PRE_NOTIFY:
       i = closure->n_guards;
@@ -437,7 +428,7 @@ g_closure_add_marshal_guards (GClosure      *closure,
   closure->notifiers[i].notify = pre_marshal_notify;
   closure->notifiers[i + 1].data = post_marshal_data;
   closure->notifiers[i + 1].notify = post_marshal_notify;
-  INC (closure, n_guards);
+  ATOMIC_INC (closure, n_guards);
 }
 
 /**
@@ -474,7 +465,7 @@ g_closure_add_finalize_notifier (GClosure      *closure,
   i = CLOSURE_N_MFUNCS (closure) + closure->n_fnotifiers;
   closure->notifiers[i].data = notify_data;
   closure->notifiers[i].notify = notify_func;
-  INC (closure, n_fnotifiers);
+  ATOMIC_INC (closure, n_fnotifiers);
 }
 
 /**
@@ -505,7 +496,7 @@ g_closure_add_invalidate_notifier (GClosure      *closure,
   i = CLOSURE_N_MFUNCS (closure) + closure->n_fnotifiers + closure->n_inotifiers;
   closure->notifiers[i].data = notify_data;
   closure->notifiers[i].notify = notify_func;
-  INC (closure, n_inotifiers);
+  ATOMIC_INC (closure, n_inotifiers);
 }
 
 static inline gboolean
@@ -519,7 +510,7 @@ closure_try_remove_inotify (GClosure       *closure,
   for (ndata = nlast + 1 - closure->n_inotifiers; ndata <= nlast; ndata++)
     if (ndata->notify == notify_func && ndata->data == notify_data)
       {
-  DEC (closure, n_inotifiers);
+  ATOMIC_DEC (closure, n_inotifiers);
   if (ndata < nlast)
     *ndata = *nlast;
 
@@ -539,7 +530,7 @@ closure_try_remove_fnotify (GClosure       *closure,
   for (ndata = nlast + 1 - closure->n_fnotifiers; ndata <= nlast; ndata++)
     if (ndata->notify == notify_func && ndata->data == notify_data)
       {
-  DEC (closure, n_fnotifiers);
+  ATOMIC_DEC (closure, n_fnotifiers);
   if (ndata < nlast)
     *ndata = *nlast;
   if (closure->n_inotifiers)
@@ -569,10 +560,21 @@ g_closure_ref (GClosure *closure)
   g_return_val_if_fail (closure->ref_count > 0, NULL);
   g_return_val_if_fail (closure->ref_count < CLOSURE_MAX_REF_COUNT, NULL);
 
-  INC_ASSIGN (closure, ref_count, &new_ref_count);
+  ATOMIC_INC_ASSIGN (closure, ref_count, &new_ref_count);
   g_return_val_if_fail (new_ref_count > 1, NULL);
 
   return closure;
+}
+
+static void
+closure_invalidate_internal (GClosure *closure)
+{
+  gboolean was_invalid;
+
+  ATOMIC_SWAP (closure, is_invalid, TRUE, &was_invalid);
+  /* invalidate only once */
+  if (!was_invalid)
+    closure_invoke_notifiers (closure, INOTIFY);
 }
 
 /**
@@ -602,12 +604,8 @@ g_closure_invalidate (GClosure *closure)
 
   if (!closure->is_invalid)
     {
-      gboolean was_invalid;
       g_closure_ref (closure);           /* preserve floating flag */
-      SWAP (closure, is_invalid, TRUE, &was_invalid);
-      /* invalidate only once */
-      if (!was_invalid)
-        closure_invoke_notifiers (closure, INOTIFY);
+      closure_invalidate_internal (closure);
       g_closure_unref (closure);
     }
 }
@@ -630,10 +628,11 @@ g_closure_unref (GClosure *closure)
   g_return_if_fail (closure != NULL);
   g_return_if_fail (closure->ref_count > 0);
 
-  if (closure->ref_count == 1)  /* last unref, invalidate first */
-    g_closure_invalidate (closure);
+  /* last unref, invalidate first */
+  if (closure->ref_count == 1 && !closure->is_invalid)
+    closure_invalidate_internal (closure);
 
-  DEC_ASSIGN (closure, ref_count, &new_ref_count);
+  ATOMIC_DEC_ASSIGN (closure, ref_count, &new_ref_count);
 
   if (new_ref_count == 0)
     {
@@ -727,7 +726,7 @@ g_closure_sink (GClosure *closure)
   if (closure->floating)
     {
       gboolean was_floating;
-      SWAP (closure, floating, FALSE, &was_floating);
+      ATOMIC_SWAP (closure, floating, FALSE, &was_floating);
       /* unref floating flag only once */
       if (was_floating)
         g_closure_unref (closure);
@@ -826,7 +825,7 @@ g_closure_invoke (GClosure       *closure,
 
       g_return_if_fail (closure->marshal || real_closure->meta_marshal);
 
-      SET (closure, in_marshal, TRUE);
+      ATOMIC_SET (closure, in_marshal, TRUE);
       if (real_closure->meta_marshal)
   {
     marshal_data = real_closure->meta_marshal_data;
@@ -846,7 +845,7 @@ g_closure_invoke (GClosure       *closure,
          marshal_data);
       if (!in_marshal)
   closure_invoke_notifiers (closure, POST_NOTIFY);
-      SET (closure, in_marshal, in_marshal);
+      ATOMIC_SET (closure, in_marshal, in_marshal);
     }
   g_closure_unref (closure);
 }
@@ -889,7 +888,7 @@ _g_closure_invoke_va (GClosure       *closure,
 
       g_return_if_fail (closure->marshal || real_closure->meta_marshal);
 
-      SET (closure, in_marshal, TRUE);
+      ATOMIC_SET (closure, in_marshal, TRUE);
       if (real_closure->va_meta_marshal)
   {
     marshal_data = real_closure->meta_marshal_data;
@@ -909,7 +908,7 @@ _g_closure_invoke_va (GClosure       *closure,
          n_params, param_types);
       if (!in_marshal)
   closure_invoke_notifiers (closure, POST_NOTIFY);
-      SET (closure, in_marshal, in_marshal);
+      ATOMIC_SET (closure, in_marshal, in_marshal);
     }
   g_closure_unref (closure);
 }
@@ -1027,7 +1026,7 @@ g_cclosure_new_swap (GCallback      callback_func,
   if (destroy_data)
     g_closure_add_finalize_notifier (closure, user_data, destroy_data);
   ((GCClosure*) closure)->callback = (gpointer) callback_func;
-  SET (closure, derivative_flag, TRUE);
+  ATOMIC_SET (closure, derivative_flag, TRUE);
 
   return closure;
 }

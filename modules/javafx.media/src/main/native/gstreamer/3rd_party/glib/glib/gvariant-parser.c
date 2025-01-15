@@ -327,10 +327,10 @@ static gboolean
 token_stream_peek_string (TokenStream *stream,
                           const gchar *token)
 {
-  gint length = strlen (token);
+  size_t length = strlen (token);
 
   return token_stream_prepare (stream) &&
-         stream->stream - stream->this == length &&
+         (size_t) (stream->stream - stream->this) == length &&
          memcmp (stream->this, token, length) == 0;
 }
 
@@ -2587,7 +2587,7 @@ g_variant_parse (const GVariantType  *type,
  *
  * Note that the arguments in @app must be of the correct width for their types
  * specified in @format when collected into the #va_list. See
- * the [GVariant varargs documentation][gvariant-varargs].
+ * the [GVariant varargs documentation](gvariant-format-strings.html#varargs).
  *
  * In order to behave correctly in all cases it is necessary for the
  * calling function to g_variant_ref_sink() the return result before
@@ -2646,7 +2646,7 @@ g_variant_new_parsed_va (const gchar *format,
  *
  * Note that the arguments must be of the correct width for their types
  * specified in @format. This can be achieved by casting them. See
- * the [GVariant varargs documentation][gvariant-varargs].
+ * the [GVariant varargs documentation](gvariant-format-strings.html#varargs).
  *
  * Consider this simple example:
  * |[<!-- language="C" -->
@@ -2699,7 +2699,7 @@ g_variant_new_parsed (const gchar *format,
  *
  * Note that the arguments must be of the correct width for their types
  * specified in @format_string. This can be achieved by casting them. See
- * the [GVariant varargs documentation][gvariant-varargs].
+ * the [GVariant varargs documentation](gvariant-format-strings.html#varargs).
  *
  * This function might be used as follows:
  *

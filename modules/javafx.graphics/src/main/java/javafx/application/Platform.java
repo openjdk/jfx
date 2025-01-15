@@ -456,7 +456,7 @@ public final class Platform {
     }
 
     /**
-     * Contains UI preferences of the current platform.
+     * Contains preferences of the current platform.
      * <p>
      * {@code Preferences} extends {@link ObservableMap} to expose platform preferences as key-value pairs.
      * The map is unmodifiable, which means that keys and values cannot be added, removed, or updated.
@@ -498,6 +498,7 @@ public final class Platform {
      *         <tr><td>{@code Windows.UIColor.AccentLight3}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code Windows.UISettings.AdvancedEffectsEnabled}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code Windows.UISettings.AutoHideScrollBars}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code Windows.NetworkInformation.InternetCostType}</td><td>{@link String}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
@@ -553,6 +554,8 @@ public final class Platform {
      *         <tr><td>{@code macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code macOS.NSScroller.preferredScrollerStyle}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code macOS.NWPathMonitor.currentPathConstrained}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code macOS.NWPathMonitor.currentPathExpensive}</td><td>{@link Boolean}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
@@ -580,6 +583,7 @@ public final class Platform {
      *         <tr><td>{@code GTK.success_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.enable_animations}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code GTK.overlay_scrolling}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code GTK.network_metered}</td><td>{@link Boolean}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
@@ -630,6 +634,20 @@ public final class Platform {
         ReadOnlyBooleanProperty reducedTransparencyProperty();
 
         boolean isReducedTransparency();
+
+        /**
+         * Specifies whether applications should minimize the amount of internet traffic, which users
+         * might request because they are on a metered network or a limited data plan.
+         * <p>
+         * If the platform does not report this preference, this property defaults to {@code false}.
+         *
+         * @return the {@code reducedData} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty reducedDataProperty();
+
+        boolean isReducedData();
 
         /**
          * The platform color scheme, which specifies whether applications should prefer light text on
