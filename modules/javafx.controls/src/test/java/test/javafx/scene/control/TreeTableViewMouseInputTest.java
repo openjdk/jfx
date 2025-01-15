@@ -249,7 +249,7 @@ public class TreeTableViewMouseInputTest {
     }
 
     private int rt30394_count = 0;
-//    @Ignore("Ignoring due to RT-37166")
+//    @Ignore("Ignoring due to JDK-8093802")
     @Test public void test_rt30394() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);

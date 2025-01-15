@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,7 @@ import test.robot.testharness.VisualTestBase;
  * Tests that a JPopupMenu shown from inside of SwingNode second and
  * all subsequent times is repainted.
  *
- * https://javafx-jira.kenai.com/browse/RT-32570
+ * JDK-8088697
  */
 @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class RT32570Test extends VisualTestBase {
@@ -118,4 +118,3 @@ public class RT32570Test extends VisualTestBase {
         });
     }
 }
-

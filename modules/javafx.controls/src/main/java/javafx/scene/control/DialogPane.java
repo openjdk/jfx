@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -354,7 +354,7 @@ public class DialogPane extends Pane {
                     if (url == null) {
                         ((StyleableProperty<Node>)(WritableValue<Node>)graphicProperty()).applyStyle(origin, null);
                     } else {
-                        // RT-34466 - if graphic's url is the same as this property's value, then don't overwrite.
+                        // JDK-8095575 - if graphic's url is the same as this property's value, then don't overwrite.
                         final Node graphicNode = DialogPane.this.getGraphic();
                         if (graphicNode instanceof ImageView) {
                             final ImageView imageView = (ImageView)graphicNode;
@@ -839,7 +839,7 @@ public class DialogPane extends Pane {
     @Override protected void layoutChildren() {
         final boolean hasHeader = hasHeader();
 
-        // snapped insets code commented out to resolve RT-39738
+        // snapped insets code commented out to resolve JDK-8095678
         final double w = Math.max(minWidth(-1), getWidth());// - (snappedLeftInset() + snappedRightInset());
 
         final double minHeight = minHeight(w);

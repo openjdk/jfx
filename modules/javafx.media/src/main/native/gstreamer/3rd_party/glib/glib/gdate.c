@@ -2258,6 +2258,7 @@ win32_strftime_helper (const GDate     *d,
   gchar *convbuf;
   glong convlen = 0;
   gsize retval;
+  size_t format_len = strlen (format);
 
   systemtime.wYear = tm->tm_year + 1900;
   systemtime.wMonth = tm->tm_mon + 1;
@@ -2269,7 +2270,8 @@ win32_strftime_helper (const GDate     *d,
   systemtime.wMilliseconds = 0;
 
   lcid = GetThreadLocale ();
-  result = g_array_sized_new (FALSE, FALSE, sizeof (wchar_t), MAX (128, strlen (format) * 2));
+  result = g_array_sized_new (FALSE, FALSE, sizeof (wchar_t),
+                              (format_len <= 64) ? (guint) format_len * 2 : 128);
 
   p = format;
   while (*p)

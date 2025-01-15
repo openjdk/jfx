@@ -362,7 +362,7 @@ public abstract class Labeled extends Control {
                 public void applyStyle(StyleOrigin newOrigin, Font value) {
 
                     //
-                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
+                    // JDK-8127428 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
                     //
                     try {
                         // super.applyStyle calls set which might throw if value is bound.
@@ -389,7 +389,7 @@ public abstract class Labeled extends Control {
 
                 @Override
                 protected void invalidated() {
-                    // RT-20727 - if font is changed by calling setFont, then
+                    // JDK-8127428 - if font is changed by calling setFont, then
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
                     if(fontSetByCss == false) {
@@ -506,7 +506,7 @@ public abstract class Labeled extends Control {
                     if (url == null) {
                         ((StyleableProperty<Node>)(WritableValue<Node>)graphicProperty()).applyStyle(origin, null);
                     } else {
-                        // RT-34466 - if graphic's url is the same as this property's value, then don't overwrite.
+                        // JDK-8095575 - if graphic's url is the same as this property's value, then don't overwrite.
                         final Node graphicNode = Labeled.this.getGraphic();
                         if (graphicNode instanceof ImageView) {
                             final ImageView imageView = (ImageView)graphicNode;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,6 @@
  */
 
 package javafx.scene.robot;
-
-import static com.sun.javafx.FXPermissions.CREATE_ROBOT_PERMISSION;
 
 import java.util.Objects;
 
@@ -63,13 +61,6 @@ public final class Robot {
      */
     public Robot() {
         Application.checkEventThread();
-
-        // Ensure we have proper permission for creating a robot.
-        @SuppressWarnings("removal")
-        final SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            sm.checkPermission(CREATE_ROBOT_PERMISSION);
-        }
 
         peer = Toolkit.getToolkit().createRobot();
         peer.create();

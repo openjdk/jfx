@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -296,7 +296,7 @@ class PaintHelper {
 
         stopVals.clear();
         for (int i = 0; i < MULTI_MAX_FRACTIONS; i++) {
-            // TODO: optimize this... (RT-27377)
+            // TODO: optimize this... (JDK-8090612)
             stopVals.put((i < numStops)   ?
                          stops.get(i).getOffset() : 0f);
             stopVals.put((i < numStops-1) ?

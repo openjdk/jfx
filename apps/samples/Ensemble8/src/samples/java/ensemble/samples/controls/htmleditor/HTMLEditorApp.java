@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -78,7 +78,7 @@ public class HTMLEditorApp extends Application {
 
         ScrollPane htmlSP = new ScrollPane();
         htmlSP.setFitToWidth(true);
-        htmlSP.setPrefWidth(htmlEditor.prefWidth(-1)); // Workaround of RT-21495
+        htmlSP.setPrefWidth(htmlEditor.prefWidth(-1)); // Workaround of JDK-8096877
         htmlSP.setPrefHeight(245);
         htmlSP.setVbarPolicy(ScrollBarPolicy.NEVER);
         htmlSP.setContent(htmlEditor);

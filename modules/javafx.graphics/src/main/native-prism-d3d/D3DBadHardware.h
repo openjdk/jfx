@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ typedef struct ADAPTER_INFO {
 static const ADAPTER_INFO badHardware[] = {
 
     // Intel HD
-    // Reason: workaround for RT-11540
+    // Reason: workaround for JDK-8112602
     // Clarkdale (Desktop) GMA HD Lines
     { 0x8086, 0x0042, D_VERSION(6,14,10,5337), OS_WINXP },
     { 0x8086, 0x0042, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
@@ -76,7 +76,7 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x8086, 0x010A, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
 
     // Mobile Intel 4 Series Express Chipset Family
-    // Reason: workaround for RT-11540
+    // Reason: workaround for JDK-8112602
     // Eaglelake (Desktop) GMA 4500 Lines
     { 0x8086, 0x2E42, D_VERSION(6,14,10,5303), OS_WINXP },
     { 0x8086, 0x2E42, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
@@ -107,7 +107,7 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x8086, 0x2A43, D_VERSION(8,15,10,2302), OS_VISTA_OR_NEWER },
 
     // Intel Graphics Media Accelerators
-    // Reason: RT-31537, RT-35153
+    // Reason: JDK-8122978, JDK-8094193
     // GMA lower than GMA 4500 are unusable for JavaFX
     { 0x8086, 0x2772, NO_VERSION, OS_ALL},
     { 0x8086, 0x2776, NO_VERSION, OS_ALL},
@@ -146,7 +146,7 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x8086, 0x0BE3, NO_VERSION, OS_ALL},
 
     // ATI Radeon X1xxx series
-    // Reason: RT-33212, RT-35993 - All of the X1xxx series cards
+    // Reason: JDK-8123481, JDK-8095851 - All of the X1xxx series cards
     //         are too old to be usable for JavaFX
     { 0x1002, 0x7100, NO_VERSION, OS_ALL},
     { 0x1002, 0x7101, NO_VERSION, OS_ALL},
@@ -269,7 +269,7 @@ static const ADAPTER_INFO badHardware[] = {
     //  ATI MOBILITY FireGL V5250
     // Though this card supports PS 3.0,
     //        it is a relatively old GPU (introduced in 2007)
-    // Reason: workaround for RT-14870, 15045
+    // Reason: workaround for JDK-8114416, 15045
     { 0x1002, 0x71D4, NO_VERSION, OS_ALL},
 
     // Nvidia Quadro NVS 110M
@@ -404,7 +404,7 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x10DE, 0x05FE, D_VERSION(6,14,10,9381), OS_WINXP },
 
     // Old low-end Nvidia GeForce 7300 seriers cards
-    // Reason: workaround for RT-15381
+    // Reason: workaround for JDK-8114494
     // Nvidia GeForce 7300 LE
     { 0x10DE, 0x01D1, NO_VERSION, OS_ALL},
     // Nvidia GeForce 7300 SE/7200 GS

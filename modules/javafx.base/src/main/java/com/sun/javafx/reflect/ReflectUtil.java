@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,15 @@
 
 package com.sun.javafx.reflect;
 
+import com.sun.javafx.SecurityUtil;
 import java.lang.reflect.Proxy;
 
 public final class ReflectUtil {
+
+    static {
+        // Check for security manager (throws exception if enabled)
+        SecurityUtil.checkSecurityManager();
+    }
 
     private ReflectUtil() {
     }
@@ -41,29 +47,6 @@ public final class ReflectUtil {
      * also check the package access on the proxy interfaces.
      */
     public static void checkPackageAccess(Class<?> clazz) {
-        @SuppressWarnings("removal")
-        SecurityManager s = System.getSecurityManager();
-        if (s != null) {
-            privateCheckPackageAccess(s, clazz);
-        }
-    }
-
-    /**
-     * NOTE: should only be called if a SecurityManager is installed
-     */
-    private static void privateCheckPackageAccess(@SuppressWarnings("removal") SecurityManager s, Class<?> clazz) {
-        while (clazz.isArray()) {
-            clazz = clazz.getComponentType();
-        }
-
-        String pkg = clazz.getPackageName();
-        if (pkg != null && !pkg.isEmpty()) {
-            s.checkPackageAccess(pkg);
-        }
-
-        if (isNonPublicProxyClass(clazz)) {
-            privateCheckProxyPackageAccess(s, clazz);
-        }
     }
 
     /**
@@ -73,58 +56,9 @@ public final class ReflectUtil {
      * the true caller (application).
      */
     public static void checkPackageAccess(String name) {
-        @SuppressWarnings("removal")
-        SecurityManager s = System.getSecurityManager();
-        if (s != null) {
-            String cname = name.replace('/', '.');
-            if (cname.startsWith("[")) {
-                int b = cname.lastIndexOf('[') + 2;
-                if (b > 1 && b < cname.length()) {
-                    cname = cname.substring(b);
-                }
-            }
-            int i = cname.lastIndexOf('.');
-            if (i != -1) {
-                s.checkPackageAccess(cname.substring(0, i));
-            }
-        }
     }
 
     public static boolean isPackageAccessible(Class<?> clazz) {
-        try {
-            checkPackageAccess(clazz);
-        } catch (SecurityException e) {
-            return false;
-        }
         return true;
-    }
-
-    /**
-     * NOTE: should only be called if a SecurityManager is installed
-     */
-    private static void privateCheckProxyPackageAccess(@SuppressWarnings("removal") SecurityManager s, Class<?> clazz) {
-        // check proxy interfaces if the given class is a proxy class
-        if (Proxy.isProxyClass(clazz)) {
-            for (Class<?> intf : clazz.getInterfaces()) {
-                privateCheckPackageAccess(s, intf);
-            }
-        }
-    }
-
-    // Note that bytecode instrumentation tools may exclude 'sun.*'
-    // classes but not generated proxy classes and so keep it in com.sun.*
-    public static final String PROXY_PACKAGE = "com.sun.proxy";
-
-    /**
-     * Test if the given class is a proxy class that implements
-     * non-public interface.  Such proxy class may be in a non-restricted
-     * package that bypasses checkPackageAccess.
-     */
-    public static boolean isNonPublicProxyClass(Class<?> cls) {
-        if (!Proxy.isProxyClass(cls)) {
-            return false;
-        }
-        String pkg = cls.getPackageName();
-        return pkg == null || !pkg.startsWith(PROXY_PACKAGE);
     }
 }

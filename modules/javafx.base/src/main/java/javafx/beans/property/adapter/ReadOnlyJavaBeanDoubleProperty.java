@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,10 +32,6 @@ import javafx.beans.property.ReadOnlyDoublePropertyBase;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
-
-import java.security.AccessController;
-import java.security.AccessControlContext;
-import java.security.PrivilegedAction;
 
 /**
  * A {@code ReadOnlyJavaBeanDoubleProperty} provides an adapter between a regular
@@ -85,9 +81,6 @@ public final class ReadOnlyJavaBeanDoubleProperty extends ReadOnlyDoubleProperty
     private final ReadOnlyPropertyDescriptor<Number> descriptor;
     private final ReadOnlyPropertyDescriptor<Number>.ReadOnlyListener listener;
 
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
-
     ReadOnlyJavaBeanDoubleProperty(ReadOnlyPropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener(bean, this);
@@ -102,19 +95,16 @@ public final class ReadOnlyJavaBeanDoubleProperty extends ReadOnlyDoubleProperty
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public double get() {
-        return AccessController.doPrivileged((PrivilegedAction<Double>) () -> {
-            try {
-                return ((Number)MethodHelper.invoke(
-                    descriptor.getGetter(), getBean(), (Object[])null)).doubleValue();
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }, acc);
+        try {
+            return ((Number)MethodHelper.invoke(
+                descriptor.getGetter(), getBean(), (Object[])null)).doubleValue();
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**

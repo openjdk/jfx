@@ -689,12 +689,14 @@ g_ascii_strtod (const gchar *nptr,
                 gchar      **endptr)
 {
 #if defined(USE_XLOCALE) && defined(HAVE_STRTOD_L)
+  locale_t c_locale;
 
   g_return_val_if_fail (nptr != NULL, 0);
 
+  c_locale = get_C_locale ();
   errno = 0;
 
-  return strtod_l (nptr, endptr, get_C_locale ());
+  return strtod_l (nptr, endptr, c_locale);
 
 #else
 
@@ -945,7 +947,7 @@ g_ascii_formatd (gchar       *buffer,
   const char *decimal_point;
   gsize decimal_point_len;
   gchar *p;
-  int rest_len;
+  size_t rest_len;
   gchar format_char;
 
   g_return_val_if_fail (buffer != NULL, NULL);
@@ -1198,7 +1200,10 @@ g_ascii_strtoull (const gchar *nptr,
                   guint        base)
 {
 #if defined(USE_XLOCALE) && defined(HAVE_STRTOULL_L)
-  return strtoull_l (nptr, endptr, base, get_C_locale ());
+  locale_t c_locale = get_C_locale ();
+
+  errno = 0;
+  return strtoull_l (nptr, endptr, base, c_locale);
 #else
   gboolean negative;
   guint64 result;
@@ -1246,7 +1251,10 @@ g_ascii_strtoll (const gchar *nptr,
                  guint        base)
 {
 #if defined(USE_XLOCALE) && defined(HAVE_STRTOLL_L)
-  return strtoll_l (nptr, endptr, base, get_C_locale ());
+  locale_t c_locale = get_C_locale ();
+
+  errno = 0;
+  return strtoll_l (nptr, endptr, base, c_locale);
 #else
   gboolean negative;
   guint64 result;
@@ -2131,9 +2139,20 @@ g_strcanon (gchar       *string,
  * g_strcompress:
  * @source: a string to compress
  *
- * Replaces all escaped characters with their one byte equivalent.
+ * Makes a copy of a string replacing C string-style escape
+ * sequences with their one byte equivalent:
  *
- * This function does the reverse conversion of [func@GLib.strescape].
+ * - `\b` → [U+0008 Backspace](https://en.wikipedia.org/wiki/Backspace)
+ * - `\f` → [U+000C Form Feed](https://en.wikipedia.org/wiki/Form_feed)
+ * - `\n` → [U+000A Line Feed](https://en.wikipedia.org/wiki/Newline)
+ * - `\r` → [U+000D Carriage Return](https://en.wikipedia.org/wiki/Carriage_return)
+ * - `\t` → [U+0009 Horizontal Tabulation](https://en.wikipedia.org/wiki/Tab_character)
+ * - `\v` → [U+000B Vertical Tabulation](https://en.wikipedia.org/wiki/Vertical_Tab)
+ * - `\` followed by one to three octal digits → the numeric value (mod 255)
+ * - `\` followed by any other character → the character as is.
+ *   For example, `\\` will turn into a backslash (`\`) and `\"` into a double quote (`"`).
+ *
+ * [func@GLib.strescape] does the reverse conversion.
  *
  * Returns: a newly-allocated copy of @source with all escaped
  *   character compressed
@@ -2210,11 +2229,22 @@ out:
  * @source: a string to escape
  * @exceptions: (nullable): a string of characters not to escape in @source
  *
- * Escapes the special characters '\b', '\f', '\n', '\r', '\t', '\v', '\'
- * and '"' in the string @source by inserting a '\' before
- * them. Additionally all characters in the range 0x01-0x1F (everything
+ * It replaces the following special characters in the string @source
+ * with their corresponding C escape sequence:
+ *
+ *  Symbol | Escape
+ * ---|---
+ *  [U+0008 Backspace](https://en.wikipedia.org/wiki/Backspace) | `\b`
+ *  [U+000C Form Feed](https://en.wikipedia.org/wiki/Form_feed) | `\f`
+ *  [U+000A Line Feed](https://en.wikipedia.org/wiki/Newline) | `\n`
+ *  [U+000D Carriage Return](https://en.wikipedia.org/wiki/Carriage_return) | `\r`
+ *  [U+0009 Horizontal Tabulation](https://en.wikipedia.org/wiki/Tab_character) | `\t`
+ *  [U+000B Vertical Tabulation](https://en.wikipedia.org/wiki/Vertical_Tab) | `\v`
+ *
+ * It also inserts a backslash (`\`) before any backslash or a double quote (`"`).
+ * Additionally all characters in the range 0x01-0x1F (everything
  * below SPACE) and in the range 0x7F-0xFF (all non-ASCII chars) are
- * replaced with a '\' followed by their octal representation.
+ * replaced with a backslash followed by their octal representation.
  * Characters supplied in @exceptions are not escaped.
  *
  * [func@GLib.strcompress] does the reverse conversion.
@@ -2754,7 +2784,11 @@ g_strjoin (const gchar *separator,
  * A length of `-1` can be used to mean “search the entire string”, like
  * `strstr()`.
  *
- * Returns: a pointer to the found occurrence, or `NULL` if not found
+ * The fact that this function returns `gchar *` rather than `const gchar *` is
+ * a historical artifact.
+ *
+ * Returns: (transfer none) (nullable): a pointer to the found occurrence, or
+ *    `NULL` if not found
  */
 gchar *
 g_strstr_len (const gchar *haystack,
@@ -2806,7 +2840,11 @@ g_strstr_len (const gchar *haystack,
  * Searches the string @haystack for the last occurrence
  * of the string @needle.
  *
- * Returns: a pointer to the found occurrence, or `NULL` if not found
+ * The fact that this function returns `gchar *` rather than `const gchar *` is
+ * a historical artifact.
+ *
+ * Returns: (transfer none) (nullable): a pointer to the found occurrence, or
+ *    `NULL` if not found
  */
 gchar *
 g_strrstr (const gchar *haystack,
@@ -2857,7 +2895,11 @@ g_strrstr (const gchar *haystack,
  * of the string @needle, limiting the length of the search
  * to @haystack_len.
  *
- * Returns: a pointer to the found occurrence, or `NULL` if not found
+ * The fact that this function returns `gchar *` rather than `const gchar *` is
+ * a historical artifact.
+ *
+ * Returns: (transfer none) (nullable): a pointer to the found occurrence, or
+ *    `NULL` if not found
  */
 gchar *
 g_strrstr_len (const gchar *haystack,

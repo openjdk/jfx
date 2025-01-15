@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ typedef enum _Encoding Encoding;
 @interface EventDispatcher : NSObject {
 
     // TODO: these fields should be static global variables, no need to initialize them for every instance
-    // http://javafx-jira.kenai.com/browse/RT-27005
+    // JDK-8096014
     jmethodID midSendPlayerStateEvent;
     jmethodID midSendPlayerMediaErrorEvent;
     jmethodID midSendPlayerHaltEvent;

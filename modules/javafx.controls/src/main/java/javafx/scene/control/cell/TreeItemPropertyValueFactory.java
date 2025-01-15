@@ -171,7 +171,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
         try {
             // we attempt to cache the property reference here, as otherwise
             // performance suffers when working in large data models. For
-            // a bit of reference, refer to RT-13937.
+            // a bit of reference, refer to JDK-8112885.
             if (columnClass == null || previousProperty == null ||
                     ! columnClass.equals(rowData.getClass()) ||
                     ! previousProperty.equals(getProperty())) {

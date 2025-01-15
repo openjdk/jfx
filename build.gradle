@@ -73,6 +73,7 @@ import java.util.concurrent.Future
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import java.lang.Runtime.Version
 
 /******************************************************************************
  *                              Utility methods                               *
@@ -234,29 +235,6 @@ void setupTools(String name, Closure loader, Closure processor) {
     }
 }
 
-String[] parseJavaVersion(String jRuntimeVersion) {
-    def jVersion = jRuntimeVersion.split("[-\\+]")[0]
-    def tmpBuildNumber = "0"
-    if (jVersion.startsWith("1.")) {
-        // This is a pre-JEP-223 version string
-        def dashbIdx = jRuntimeVersion.lastIndexOf("-b")
-        if (dashbIdx != -1) {
-            tmpBuildNumber = jRuntimeVersion.substring(dashbIdx + 2)
-        }
-    } else {
-        // This is a post-JEP-223 version string
-        def plusIdx = jRuntimeVersion.indexOf("+")
-        if (plusIdx != -1) {
-            tmpBuildNumber = jRuntimeVersion.substring(plusIdx + 1)
-        }
-    }
-    def jBuildNumber = tmpBuildNumber.split("[-\\+]")[0]
-    def versionInfo = new String[2];
-    versionInfo[0] = jVersion
-    versionInfo[1] = jBuildNumber
-    return versionInfo
-}
-
 /**
  * Fails the build with the specified error message
  *
@@ -325,6 +303,8 @@ void setFileTimestamps(Provider<RegularFile> archive, Instant instant) {
  *                                                                            *
  *****************************************************************************/
 
+loadProperties("$projectDir/build.properties")
+
 // If the ../rt-closed directory exists, then we are doing a closed build.
 // In this case, build and property files will be read from
 // ../rt-closed/closed-build.gradle and ../rt-closed/closed-properties.gradle
@@ -363,6 +343,9 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 // Enable native access from modules with native code
 ext.enableNativeGraphics='--enable-native-access=javafx.graphics'
 ext.enableNativeAll='--enable-native-access=javafx.graphics,javafx.media,javafx.web'
+
+// FIXME: Remove this when JDK-8334137 is fixed
+ext.allowSunMiscUnsafe = '--sun-misc-unsafe-memory-access=allow'
 
 // Verify that the architecture & OS are supported configurations. Note that
 // at present building on PI is not supported, but we would only need to make
@@ -415,21 +398,12 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/21/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/${jdkDocsVersion}/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
-
-defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
-def javaVersionInfo = parseJavaVersion(javaRuntimeVersion)
-defineProperty("javaVersion", javaVersionInfo[0])
-defineProperty("javaBuildNumber", javaVersionInfo[1])
 
 defineProperty("libAVRepositoryURL", "https://github.com/libav/libav/archive")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
-
-defineProperty("icuVersion", "74.2")
-
-loadProperties("$projectDir/build.properties")
 
 def supplementalPreBuildFile = file("$closedDir/closed-pre-build.gradle");
 def supplementalBuildFile = file("$closedDir/closed-build.gradle");
@@ -500,11 +474,11 @@ defineProperty("BUILD_TOOLS_DOWNLOAD_SCRIPT", "")
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
 ext.SWT_FILE_NAME =
-    IS_MAC && IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.aarch64_3.124.200.v20231113-1355" :
-    IS_MAC && !IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.x86_64_3.124.200.v20231113-1355" :
-    IS_WINDOWS ? "org.eclipse.swt.win32.win32.x86_64_3.124.200.v20231113-1355" :
-    IS_LINUX && IS_AARCH64 ? "org.eclipse.swt.gtk.linux.aarch64_3.124.200.v20231113-1355" :
-    IS_LINUX && !IS_AARCH64 ? "org.eclipse.swt.gtk.linux.x86_64_3.124.200.v20231113-1355" : ""
+    IS_MAC && IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.aarch64_${swtVersion}" :
+    IS_MAC && !IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.x86_64_${swtVersion}" :
+    IS_WINDOWS ? "org.eclipse.swt.win32.win32.x86_64_${swtVersion}" :
+    IS_LINUX && IS_AARCH64 ? "org.eclipse.swt.gtk.linux.aarch64_${swtVersion}" :
+    IS_LINUX && !IS_AARCH64 ? "org.eclipse.swt.gtk.linux.x86_64_${swtVersion}" : ""
 
 // Specifies whether to run full tests (true) or smoke tests (false)
 defineProperty("FULL_TEST", "false")
@@ -695,7 +669,19 @@ if (HUDSON_JOB_NAME == "not_hudson") {
     relSuffix = "-internal"
     relOpt = "-${buildTimestamp}"
 } else {
-    relSuffix = IS_MILESTONE_FCS ? "" : jfxReleaseSuffix
+    if (IS_MILESTONE_FCS) {
+        if (jfxExperimentalFeatureName != "") {
+            fail("An experimental feature branch should not be used for FCS build")
+        }
+        relSuffix = ""
+    } else {
+        if (jfxExperimentalFeatureName != "") {
+            relSuffix = "-${jfxExperimentalFeatureName}"
+            relOpt = "-${buildTimestamp}"
+        } else {
+            relSuffix = jfxReleaseSuffix
+        }
+    }
 }
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
@@ -763,36 +749,29 @@ if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to '
 // Java HotSpot(TM) 64-Bit Server VM (build 24.45-b08, mixed mode)
 //
 // We need to parse the second line
-def inStream = new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.ProcessBuilder(JAVA, "-fullversion").start().getErrorStream()));
-try {
+Version jdkVersionInfo;
+try (BufferedReader inStream = new java.io.BufferedReader(new java.io.InputStreamReader(
+        new java.lang.ProcessBuilder(JAVA, "-fullversion").start().getErrorStream()))) {
     String v = inStream.readLine().trim();
     if (v != null) {
         int ib = v.indexOf("full version \"");
         if (ib != -1) {
             String str = v.substring(ib);
             String ver = str.substring(str.indexOf("\"") + 1, str.size() - 1);
-
-            defineProperty("jdkRuntimeVersion", ver)
-            def jdkVersionInfo = parseJavaVersion(ver)
-            defineProperty("jdkVersion", jdkVersionInfo[0])
-            defineProperty("jdkBuildNumber", jdkVersionInfo[1])
+            jdkVersionInfo = Version.parse(ver);
 
             // Define global properties based on the version of Java
             // For example, we could define a "jdk18OrLater" property as
             // follows that could then be used to implement conditional build
             // logic based on whether we were running on JDK 18 or later,
             // should the need arise.
-//            def status = compareJdkVersion(jdkVersion, "18")
-//            ext.jdk18OrLater = (status >= 0)
+//            ext.jdk18OrLater = jdkVersionInfo.feature() >= 18
 
-            def status = compareJdkVersion(jdkVersion, "24")
-            ext.jdk24OrLater = (status >= 0)
+            ext.jdk24OrLater = jdkVersionInfo.feature() >= 24
         }
     }
-} finally {
-    inStream.close();
 }
-if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
+if (jdkVersionInfo == null) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
 
 // Use --upgrade-module-path instead of --module-path when compiling and
 // running tests if we are using a JDK that includes an upgradable
@@ -1207,6 +1186,11 @@ void writeArgsFile(boolean isCompile, File dest, List<String> libpath, List<Stri
         if (!isCompile) {
             dest << enableNativeAll
             dest << "\n"
+            // FIXME: Remove this when JDK-8334137 is fixed
+            if (jdk24OrLater) {
+                dest << allowSunMiscUnsafe
+                dest << "\n"
+            }
         }
     }
 }
@@ -1511,12 +1495,15 @@ logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
 logger.quiet("JDK_HOME: $JDK_HOME")
-logger.quiet("java.runtime.version: ${javaRuntimeVersion}")
-logger.quiet("java version: ${javaVersion}")
-logger.quiet("java build number: ${javaBuildNumber}")
-logger.quiet("jdk.runtime.version: ${jdkRuntimeVersion}")
-logger.quiet("jdk version: ${jdkVersion}")
-logger.quiet("jdk build number: ${jdkBuildNumber}")
+
+Version javaVersionInfo = Runtime.version()
+logger.quiet("java.runtime.version: " + javaVersionInfo)
+logger.quiet("java version: " + javaVersionInfo.feature())
+logger.quiet("java build number: " + javaVersionInfo.build().orElse(0))
+
+logger.quiet("jdk.runtime.version: " + jdkVersionInfo)
+logger.quiet("jdk version: " + jdkVersionInfo.feature())
+logger.quiet("jdk build: " + javaVersionInfo.build().orElse(0))
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("Java target version: ${JAVA_TARGET_VERSION}")
@@ -1950,41 +1937,6 @@ void addValidateSourceSets(Project project, Collection<SourceSet> sourceSets) {
     addValidateSourceSets(project, sourceSets, []);
 }
 
-
-/**
- * Parses a JDK version string. The string must be in one of the following
- * two formats:
- *
- *     major.minor.subminor
- * or
- *     major.minor.subminor_update
- *
- * In both cases a list of 4 integers is returned, with element 3 set to
- * 0 in the former case.
- */
-List parseJdkVersion(String version) {
-    def arr = version.split("[_\\.]");
-    def intArr = [];
-    arr.each { s -> intArr += Integer.parseInt(s); }
-    while (intArr.size() < 4) intArr += 0;
-    return intArr;
-}
-
-/**
- * Returns -1, 0, or 1 depending on whether JDK version "a" is less than,
- * equal to, or grater than version "b".
- */
-int compareJdkVersion(String a, String b) {
-    def aIntArr = parseJdkVersion(a);
-    def bIntArr = parseJdkVersion(b);
-
-    for (int i = 0; i < 4; i++) {
-        if (aIntArr[i] < bIntArr[i]) return -1;
-        if (aIntArr[i] > bIntArr[i]) return  1;
-    }
-    return 0;
-}
-
 /**
  * Returns true if the name of task or name of task's project contains word test/Test.
  */
@@ -1996,15 +1948,9 @@ boolean isTestTask(Task task) {
 // Task to verify the minimum level of Java needed to build JavaFX
 task verifyJava() {
     doLast {
-        def status = compareJdkVersion(jdkVersion, jfxBuildJdkVersionMin);
-        if (status < 0) {
-            fail("java version mismatch: JDK version (${jdkVersion}) < minimum version (${jfxBuildJdkVersionMin})")
-        } else if (status == 0) {
-            def buildNum = Integer.parseInt(jdkBuildNumber)
-            def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
-            if (buildNum != 0 && buildNum < minBuildNum) {
-                fail("JDK build number ($buildNum) < minimum build number ($minBuildNum)")
-            }
+        Version minVersionInfo = Version.parse("${jfxBuildJdkVersionMin}+${jfxBuildJdkBuildnumMin}") // from build.properties
+        if (jdkVersionInfo.compareTo(minVersionInfo) < 0) {
+            fail("java version mismatch: JDK version (${jdkVersionInfo}) < minimum version (${minVersionInfo})")
         }
     }
 }
@@ -2096,7 +2042,7 @@ allprojects {
         repositories {
             mavenCentral()
             ivy {
-                url "https://download.eclipse.org/eclipse/updates/4.30/R-4.30-202312010110/plugins/"
+                url "https://download.eclipse.org/eclipse/updates/${eclipseUpdatesiteVersion}/plugins/"
                 metadataSources {
                     artifact()
                 }
@@ -2131,7 +2077,7 @@ allprojects {
     }
 
     if (JFX_DEPS_URL == "" && IS_COMPILE_WEBKIT) {
-        def icuReleaseVersion = icuVersion.replaceAll('\\.', '-')
+        def icuReleaseVersion = "${icuVersion}".replaceAll('\\.', '-')
         repositories {
             ivy {
                 url icuRepositoryURL
@@ -2170,18 +2116,18 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testImplementation group: "junit", name: "junit", version: "4.13.2"
-        testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "1.3"
-        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1"
-        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "5.8.1"
-        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "5.8.1"
-        testImplementation group: "org.opentest4j", name: "opentest4j", version: "1.2.0"
-        testImplementation group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
-        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "5.8.1"
-        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "1.8.1"
-        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "1.8.1"
-        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "1.8.1"
-        testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
+        testImplementation group: "junit", name: "junit", version: "${junitVersion}"
+        testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "${hamcrestVersion}"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "${junitJupiterVersion}"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "${junitJupiterVersion}"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "${junitJupiterVersion}"
+        testImplementation group: "org.opentest4j", name: "opentest4j", version: "${opentest4jVersion}"
+        testImplementation group: "org.apiguardian", name: "apiguardian-api", version: "${apiguardianVersion}"
+        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "${junitJupiterVersion}"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "${junitPlatformVersion}"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "${junitPlatformVersion}"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "${junitPlatformVersion}"
+        testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "${junitJupiterVersion}"
 
         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
@@ -2368,7 +2314,7 @@ project(":graphics") {
     }
 
     dependencies {
-        antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
+        antlr group: "org.antlr", name: "antlr4", version: "${antlr4Version}", classifier: "complete"
         testImplementation project(":base").sourceSets.test.output
         implementation project(':base')
     }
@@ -2742,6 +2688,10 @@ project(":graphics") {
     test {
         def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
@@ -2771,7 +2721,7 @@ project(":graphics") {
             libsDir.mkdirs();
 
             def allLibsPresent = true
-            def libNames = [ "antlr4-4.7.2-complete.jar" ]
+            def libNames = [ "antlr4-${antlr4Version}-complete.jar" ]
             libNames.each { name ->
                 File f = new File(libsDir, name)
                 if (!f.exists()) allLibsPresent = false
@@ -2782,7 +2732,7 @@ project(":graphics") {
                 copy {
                     into libsDir
                     from f.getParentFile()
-                    include "**/antlr4-4.7.2-complete.jar"
+                    include "**/antlr4-${antlr4Version}-complete.jar"
                     includeEmptyDirs = false
                 }
             }
@@ -2831,6 +2781,10 @@ project(":controls") {
     test {
         def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
@@ -2868,6 +2822,135 @@ project(":controls") {
     processShimsResources.dependsOn(copyShimBssTask)
 
     addMavenPublication(project, [ 'graphics' ])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
+// Add a project declaration for each incubator module here, leaving the
+// incubator placeholder lines as an example.
+// See CSR JDK-8344644 for more information.
+// BEGIN: incubator placeholder
+//project(":incubator.mymod") {
+//    project.ext.buildModule = true
+//    project.ext.includeSources = true
+//    project.ext.moduleRuntime = true
+//    project.ext.moduleName = "jfx.incubator.mymod"
+//    project.ext.incubating = true
+//    ...
+//}
+// END: incubator placeholder
+
+project(":incubator.input") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jfx.incubator.input"
+    project.ext.incubating = true
+
+    sourceSets {
+        main
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [
+        'base',
+        'graphics',
+        'controls',
+        'incubator.input'
+    ])
+
+    dependencies {
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+    }
+
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
+    addMavenPublication(project, [ 'graphics' , 'controls'])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
+project(":incubator.richtext") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jfx.incubator.richtext"
+    project.ext.incubating = true
+
+    sourceSets {
+        main
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [
+        'base',
+        'graphics',
+        'controls',
+        'incubator.input',
+        'incubator.richtext'
+    ])
+
+    dependencies {
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        testImplementation project(":incubator.input").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+        implementation project(':incubator.input')
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+    }
+
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
+    addMavenPublication(project, [ 'graphics' , 'controls'])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -2924,6 +3007,11 @@ project(":swing") {
         enabled = IS_FULL_TEST && IS_AWT_TEST
 
         jvmArgs enableNativeGraphics
+
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
     }
 
     if (COMPILE_SWING) {
@@ -2991,6 +3079,11 @@ project(":swt") {
 
         jvmArgs enableNativeGraphics
 
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
+
         if (IS_MAC) {
             enabled = false
             logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
@@ -3040,6 +3133,10 @@ project(":fxml") {
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
         jvmArgs enableNativeGraphics
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
@@ -3716,7 +3813,7 @@ project(":web") {
 
     dependencies {
         if (IS_COMPILE_WEBKIT) {
-            def icuFileVersion = icuVersion.replaceAll('\\.', '_')
+            def icuFileVersion = "${icuVersion}".replaceAll('\\.', '_')
             icu name: "icu4c-${icuFileVersion}-data-bin-l", ext: "zip"
         }
         implementation project(":base")
@@ -3781,6 +3878,11 @@ project(":web") {
 
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
+
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
 
         // Run web tests in headless mode
         systemProperty 'glass.platform', 'Monocle'
@@ -4027,7 +4129,23 @@ project(":systemTests") {
         testImplementation project(":swing").sourceSets.test.output
     }
 
-    def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web', 'swing', 'fxml' ]
+    def dependentProjects = [
+        'base',
+        'graphics',
+        'controls',
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //'incubator.mymod',
+        // END: incubator placeholder
+        'incubator.input',
+        'incubator.richtext',
+        'media',
+        'jsobject',
+        'web',
+        'swing',
+        'fxml'
+    ]
     commonModuleSetup(project, dependentProjects)
 
     File testRunArgsFile = new File(rootProject.buildDir,TESTRUNARGSFILE);
@@ -4154,6 +4272,11 @@ project(":systemTests") {
 
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
+
+        // FIXME: Remove this when JDK-8334137 is fixed
+        if (jdk24OrLater) {
+            jvmArgs allowSunMiscUnsafe
+        }
 
         // Parse testPatchModuleArgs looking for "*module-path".
         // Save path if found so we can pass it to the module launcher tests
@@ -4469,8 +4592,23 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
     def projectsToDocument = [
-            project(":base"), project(":graphics"), project(":controls"), project(":media"),
-            project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":jsobject"), project(":web")]
+        project(":base"),
+        project(":graphics"),
+        project(":controls"),
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //project(":incubator.mymod"),
+        // END: incubator placeholder
+        project(":incubator.input"),
+        project(":incubator.richtext"),
+        project(":media"),
+        project(":swing"),
+        /*project(":swt"),*/
+        project(":fxml"),
+        project(":jsobject"),
+        project(":web")
+    ]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
     }));
@@ -4701,12 +4839,11 @@ project(":apps") {
     // The apps build is Ant based, we will exec ant from gradle.
 
     // Download the Lucene libraries needed for the Ensemble8 app
-    def luceneVersion = "7.7.3"
     getConfigurations().create("lucene");
     dependencies {
-        lucene group: "org.apache.lucene", name: "lucene-core", version: luceneVersion
-        lucene group: "org.apache.lucene", name: "lucene-grouping", version: luceneVersion
-        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: luceneVersion
+        lucene group: "org.apache.lucene", name: "lucene-core", version: "${luceneVersion}"
+        lucene group: "org.apache.lucene", name: "lucene-grouping", version: "${luceneVersion}"
+        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: "${luceneVersion}"
     }
 
     // Copy Lucene libraries into the Ensemble8/lib directory
@@ -5850,6 +5987,8 @@ compileTargets { t ->
             def jmodName = "${moduleName}.jmod"
             def jmodFile = "${jmodsDir}/${jmodName}"
 
+            def incubating = project.hasProperty("incubating") && project.ext.incubating
+
             // On Windows, copy the native libraries in the jmod image
             // to a "javafx" subdir to avoid conflicting with the Microsoft
             // DLLs that are shipped with the JDK
@@ -5890,6 +6029,10 @@ compileTargets { t ->
                         args(srcLegalDir)
                         if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
+                        }
+                        if (incubating) {
+                            args("--do-not-resolve-by-default")
+                            args("--warn-if-resolved=incubating")
                         }
                         args(jmodFile)
                     }

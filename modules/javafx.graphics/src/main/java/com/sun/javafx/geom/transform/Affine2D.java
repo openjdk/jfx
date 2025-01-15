@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1996, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -785,7 +785,7 @@ public class Affine2D extends AffineBase {
                     System.out.print(", "+Tx.getMzt());
                     System.out.println();
                     // TODO: Should this be thrown before we modify anything?
-                    // (RT-26801)
+                    // (JDK-8091010)
                     degreeError(Degree.AFFINE_2D);
                 }
                 /* No Break */
@@ -1389,7 +1389,7 @@ public class Affine2D extends AffineBase {
                                                  double mxy, double myy,
                                                  double mxt, double myt)
     {
-        // TODO: Simplify this (RT-26801)
+        // TODO: Simplify this (JDK-8091010)
         BaseTransform tmpTx = getInstance(mxx, myx,
                                           mxy, myy,
                                           mxt, myt);

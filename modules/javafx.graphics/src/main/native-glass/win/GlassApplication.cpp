@@ -99,7 +99,7 @@ jclass GlassApplication::ClassForName(JNIEnv *env, char *className)
     return foundClass;
 }
 
-GlassApplication::GlassApplication(jobject jrefThis) : BaseWnd(), m_platformSupport(GetEnv())
+GlassApplication::GlassApplication(jobject jrefThis) : BaseWnd(), m_platformSupport(GetEnv(), jrefThis)
 {
     m_grefThis = GetEnv()->NewGlobalRef(jrefThis);
     m_clipboard = NULL;
@@ -168,7 +168,7 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_SETTINGCHANGE:
-            if (m_platformSupport.onSettingChanged(m_grefThis, wParam, lParam)) {
+            if (m_platformSupport.onSettingChanged(wParam, lParam)) {
                 return 0;
             }
 
@@ -182,7 +182,7 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_THEMECHANGED:
         case WM_SYSCOLORCHANGE:
         case WM_DWMCOLORIZATIONCOLORCHANGED:
-            if (m_platformSupport.updatePreferences(m_grefThis)) {
+            if (m_platformSupport.updatePreferences(PlatformSupport::PT_SYSTEM_COLORS)) {
                 return 0;
             }
             break;
@@ -304,9 +304,6 @@ BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
     if (dwReason == DLL_PROCESS_ATTACH) {
         GlassApplication::SetHInstance((HINSTANCE)hinstDLL);
-        tryInitializeRoActivationSupport();
-    } else if (dwReason == DLL_PROCESS_DETACH) {
-        uninitializeRoActivationSupport();
     }
     return TRUE;
 }

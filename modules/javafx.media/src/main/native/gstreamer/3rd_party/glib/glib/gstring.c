@@ -139,7 +139,7 @@ g_string_new (const gchar *init)
     string = g_string_sized_new (2);
   else
     {
-      gint len;
+      size_t len;
 
       len = strlen (init);
       string = g_string_sized_new (len + 2);

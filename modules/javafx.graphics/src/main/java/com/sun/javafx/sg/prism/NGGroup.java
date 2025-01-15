@@ -275,7 +275,7 @@ public class NGGroup extends NGNode {
         ImageData bot = null;
         boolean idValid = true;
         do {
-            // TODO: probably don't need to wrap the transform here... (RT-26981)
+            // TODO: probably don't need to wrap the transform here... (JDK-8092196)
             BaseTransform transform = g.getTransformNoClone().copy();
             if (bot != null) {
                 bot.unref();
@@ -338,7 +338,7 @@ public class NGGroup extends NGNode {
     protected boolean needsBlending() {
         Blend.Mode mode = getNodeBlendMode();
         // TODO: If children are all SRC_OVER then we can pass on SRC_OVER too
-        // (RT-26981)
+        // (JDK-8092196)
         return (mode != null);
     }
 

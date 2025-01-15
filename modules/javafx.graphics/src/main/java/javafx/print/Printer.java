@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,22 +68,12 @@ public final class Printer {
      * @return may be null if there are no printers.
      */
     public static ObservableSet<Printer> getAllPrinters() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPrintJobAccess();
-        }
         return PrintPipeline.getPrintPipeline().getAllPrinters();
     }
 
     private static ReadOnlyObjectWrapper<Printer> defaultPrinter;
 
     private static ReadOnlyObjectWrapper<Printer> defaultPrinterImpl() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPrintJobAccess();
-        }
         Printer p = PrintPipeline.getPrintPipeline().getDefaultPrinter();
         if (defaultPrinter == null) {
             defaultPrinter =

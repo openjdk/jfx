@@ -25,37 +25,55 @@
 
 #pragma once
 
-#include <common.h>
+/*
+ * This flag gives us function prototypes without the __declspec(dllimport) storage class specifier.
+ * RoActivationSupport defines symbols locally, and having the dllimport specifier would trigger LNK4217.
+ */
+#define _ROAPI_
 
-namespace ABI { namespace Windows { namespace UI { struct Color; } } }
+#include <common.h>
+#include <wrl.h>
+#include <windows.ui.viewmanagement.h>
+#include <windows.networking.connectivity.h>
 
 class PlatformSupport final
 {
 public:
-    PlatformSupport(JNIEnv*);
-    ~PlatformSupport() = default;
+    enum PreferenceType {
+        PT_SYSTEM_COLORS = 1,
+        PT_SYSTEM_PARAMS = 2,
+        PT_UI_SETTINGS = 4,
+        PT_NETWORK_INFORMATION = 8,
+        PT_ALL = PT_SYSTEM_COLORS | PT_SYSTEM_PARAMS | PT_UI_SETTINGS | PT_NETWORK_INFORMATION
+    };
+
+    PlatformSupport(JNIEnv*, jobject application);
+    ~PlatformSupport();
     PlatformSupport(PlatformSupport const&) = delete;
     PlatformSupport& operator=(PlatformSupport const&) = delete;
 
     /**
-     * Collect all platform preferences and return them as a new java/util/Map.
+     * Collect the specified platform preferences and return them as a new java/util/Map.
      */
-    jobject collectPreferences() const;
+    jobject collectPreferences(PreferenceType) const;
 
     /**
-     * Collect all platform preferences and notify the JavaFX application when a preference has changed.
-     * The change notification includes all preferences, not only the changed preferences.
+     * Collect the specified platform preferences and notify the JavaFX application when a preference has changed.
+     * The change notification includes all specified preferences, not only the changed preferences.
      */
-    bool updatePreferences(jobject application) const;
+    bool updatePreferences(PreferenceType) const;
 
     /**
      * Handles the WM_SETTINGCHANGE message.
     */
-    bool onSettingChanged(jobject application, WPARAM, LPARAM) const;
+    bool onSettingChanged(WPARAM, LPARAM) const;
 
 private:
     JNIEnv* env;
+    jobject application;
     bool initialized;
+    Microsoft::WRL::ComPtr<ABI::Windows::UI::ViewManagement::IUISettings> settings;
+    ABI::Windows::Networking::Connectivity::INetworkInformationStatics* networkInformation;
     mutable JGlobalRef<jobject> preferences;
 
     struct {
@@ -70,6 +88,7 @@ private:
     void querySystemColors(jobject properties) const;
     void querySystemParameters(jobject properties) const;
     void queryUISettings(jobject properties) const;
+    void queryNetworkInformation(jobject properties) const;
 
     void putString(jobject properties, const char* key, const char* value) const;
     void putString(jobject properties, const char* key, const wchar_t* value) const;

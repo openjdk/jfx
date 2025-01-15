@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -426,7 +426,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
             arrow.getStyleClass().setAll("arrow");
             arrowRegion.getChildren().setAll(arrow);
 
-            // RT-13294: TitledPane : add animation to the title arrow
+            // JDK-8101303: TitledPane : add animation to the title arrow
             arrow.rotateProperty().bind(new DoubleBinding() {
                 { bind(transitionProperty()); }
 

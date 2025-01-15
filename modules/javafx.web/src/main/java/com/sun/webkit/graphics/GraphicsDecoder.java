@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -406,7 +406,7 @@ public final class GraphicsDecoder  {
     {
         WCImage img = WCImage.getImage(imgFrame);
         if (img != null) {
-            // RT-10059: drawImage() may have to create the texture
+            // JDK-8111480: drawImage() may have to create the texture
             // lazily, and may fail with an OutOfMemory error
             // if the texture is too large. This is a legitimate
             // situation that should be handled gracefully. It should
@@ -432,7 +432,7 @@ public final class GraphicsDecoder  {
     {
         WCImage img = WCImage.getImage(imgFrame);
         if (img != null) {
-            // RT-10059: drawImage() may have to create the texture
+            // JDK-8111480: drawImage() may have to create the texture
             // lazily, and may fail with an OutOfMemory error
             // if the texture is too large. This is a legitimate
             // situation that should be handled gracefully. It should

@@ -58,7 +58,7 @@ jobs:
     name: "Gradle Wrapper Validation"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: gradle/wrapper-validation-action@v1
 
 
@@ -76,13 +76,13 @@ jobs:
       BOOT_JDK_VERSION: "23"
       BOOT_JDK_FILENAME: "jdk-23_linux-x64_bin.tar.gz"
       BOOT_JDK_URL: "https://download.oracle.com/java/23/archive/jdk-23_linux-x64_bin.tar.gz"
-      ANT_DIR: "apache-ant-1.10.5"
-      ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
-      ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
+      # ANT_DIR: "apache-ant-1.10.5"
+      # ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
+      # ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
 
     steps:
       - name: Checkout the source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: jfx
 
@@ -90,16 +90,16 @@ jobs:
         run: |
           set -x
           sudo apt-get update
-          sudo apt-get install libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-13 g++-13
+          sudo apt-get install ant libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-13 g++-13
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
           mkdir -p "${HOME}/build-tools"
-          wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
-          tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
+          # wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
+          # tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
 
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -118,9 +118,10 @@ jobs:
           set -x
           export JAVA_HOME="${HOME}/bootjdk/jdk-${BOOT_JDK_VERSION}"
           echo "JAVA_HOME=${JAVA_HOME}" >> "${GITHUB_ENV}"
-          export ANT_HOME="${HOME}/build-tools/${ANT_DIR}"
-          echo "ANT_HOME=${ANT_HOME}" >> "${GITHUB_ENV}"
-          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          # export ANT_HOME="${HOME}/build-tools/${ANT_DIR}"
+          # echo "ANT_HOME=${ANT_HOME}" >> "${GITHUB_ENV}"
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
           env | sort
           which java
           java -version
@@ -132,7 +133,8 @@ jobs:
         working-directory: jfx
         run: |
           set -x
-          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
           bash gradlew -version
           bash gradlew --info all
 
@@ -140,7 +142,8 @@ jobs:
         working-directory: jfx
         run: |
           set -x
-          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
           bash gradlew --info --continue -PTEST_ONLY=true test -x :web:test
 
 
@@ -165,7 +168,7 @@ jobs:
 
     steps:
       - name: Checkout the source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: jfx
 
@@ -181,7 +184,7 @@ jobs:
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -251,7 +254,7 @@ jobs:
 
     steps:
       - name: Checkout the source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: jfx
 
@@ -267,7 +270,7 @@ jobs:
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -295,7 +298,8 @@ jobs:
           java -version
           which ant
           ant -version
-          sudo xcode-select --switch /Applications/Xcode_14.3.1.app/Contents/Developer
+          # We want to use Xcode 14, but GHA removed it from the macOS 14 runners
+          # sudo xcode-select --switch /Applications/Xcode_14.3.1.app/Contents/Developer
           xcodebuild -version
 
       - name: Build JavaFX artifacts
@@ -336,14 +340,14 @@ jobs:
 
     steps:
       - name: Checkout the source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: jfx
 
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -358,7 +362,7 @@ jobs:
 
       - name: Restore cygwin packages from cache
         id: cygwin
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/cygwin/packages
           key: cygwin-packages-${{ runner.os }}-v1

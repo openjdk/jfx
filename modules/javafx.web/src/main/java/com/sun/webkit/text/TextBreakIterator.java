@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -135,7 +135,7 @@ final class TextBreakIterator {
         CharacterIterator text = iterator.getText();
         int length = text.getEndIndex() - text.getBeginIndex();
         if (method == TEXT_BREAK_PRECEDING && pos > length) {
-            // RT-15138
+            // JDK-8113893
             return length;
         }
         if ((pos < 0) || (pos > length)) {

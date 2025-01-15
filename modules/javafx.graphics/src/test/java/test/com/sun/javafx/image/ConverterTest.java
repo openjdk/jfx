@@ -38,6 +38,7 @@ import com.sun.javafx.image.PixelConverter;
 import com.sun.javafx.image.PixelGetter;
 import com.sun.javafx.image.PixelSetter;
 import com.sun.javafx.image.PixelUtils;
+import com.sun.javafx.image.impl.ByteAbgr;
 import com.sun.javafx.image.impl.ByteArgb;
 import com.sun.javafx.image.impl.ByteBgr;
 import com.sun.javafx.image.impl.ByteBgra;
@@ -49,6 +50,8 @@ import com.sun.javafx.image.impl.ByteRgb;
 import com.sun.javafx.image.impl.ByteRgba;
 import com.sun.javafx.image.impl.IntArgb;
 import com.sun.javafx.image.impl.IntArgbPre;
+import com.sun.javafx.image.impl.IntBgr;
+import com.sun.javafx.image.impl.IntRgb;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -340,6 +343,7 @@ public class ConverterTest {
         private final IntPixelGetter getter;
         private final IntPixelSetter setter;
         private final int ashift, rshift, gshift, bshift;
+        private final int ncomp;
 
         public IntFormat(IntPixelGetter getter, IntPixelSetter setter,
                          int ashift, int rshift, int gshift, int bshift)
@@ -353,6 +357,7 @@ public class ConverterTest {
             this.rshift = rshift;
             this.gshift = gshift;
             this.bshift = bshift;
+            this.ncomp = (ashift < 0) ? 3 : 4;
         }
 
         private int convertPixel(int pixel) {
@@ -422,6 +427,10 @@ public class ConverterTest {
             return bshift;
         }
 
+        public int getNcomp() {
+            return ncomp;
+        }
+
         @Override
         public String toString() {
             if (getter == null) {
@@ -436,13 +445,13 @@ public class ConverterTest {
         }
     }
 
-
     static ByteFormat ByteFormats[] = {
+        new ByteFormat(ByteAbgr.getter,    ByteAbgr.setter,     0, 3, 2, 1),
         new ByteFormat(ByteArgb.getter,    ByteArgb.setter,     0, 1, 2, 3),
         new ByteFormat(ByteBgra.getter,    ByteBgra.setter,     3, 2, 1, 0),
         new ByteFormat(ByteBgraPre.getter, ByteBgraPre.setter,  3, 2, 1, 0),
         new ByteFormat(ByteRgba.getter,    ByteRgba.setter,     3, 0, 1, 2),
-        new ByteFormat(ByteRgb.getter,                         -1, 0, 1, 2),
+        new ByteFormat(ByteRgb.getter,     ByteRgb.setter,     -1, 0, 1, 2),
         new ByteFormat(ByteBgr.getter,     ByteBgr.setter,     -1, 2, 1, 0),
 
         new ByteFormat(ByteGray.getter,         ByteGray.setter,        -1, 0),
@@ -451,6 +460,8 @@ public class ConverterTest {
     };
 
     static IntFormat IntFormats[] = {
+        new IntFormat(IntBgr.getter,     IntBgr.setter,     -1,  0, 8,16),
+        new IntFormat(IntRgb.getter,     IntRgb.setter,     -1, 16, 8, 0),
         new IntFormat(IntArgb.getter,    IntArgb.setter,    24, 16, 8, 0),
         new IntFormat(IntArgbPre.getter, IntArgbPre.setter, 24, 16, 8, 0),
     };
@@ -814,7 +825,7 @@ public class ConverterTest {
                 if (ips == null) continue;
                 ByteToIntPixelConverter b2ipc =
                     PixelUtils.getB2IConverter(bpg, ips);
-                // Should not be null - so far all int formats are full color+alpha
+                if (ifmtsetter.getNcomp() < 4 && b2ipc == null) continue;
                 if (!isGeneral(b2ipc)) {
                     PixelConverter pc = PixelUtils.getConverter(bpg, ips);
                     assertEquals(b2ipc, pc);
@@ -972,7 +983,7 @@ public class ConverterTest {
                 if (ips == null) continue;
                 IntToIntPixelConverter i2ipc =
                     PixelUtils.getI2IConverter(ipg, ips);
-                // Should not be null - so far all int formats are full color+alpha
+                if (ifmtsetter.getNcomp() < 4 && i2ipc == null) continue;
                 if (!isGeneral(i2ipc)) {
                     PixelConverter pc = PixelUtils.getConverter(ipg, ips);
                     assertEquals(i2ipc, pc);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -452,7 +452,7 @@ public class AbstractNumberExpressionTest {
         assertEquals("42", s.get());
     }
 
-    @Disabled("RT-33413")
+    @Disabled("JDK-8089771")
     @Test
     public void testAsString_Format() {
         final Locale defaultLocale = Locale.getDefault();
@@ -477,7 +477,7 @@ public class AbstractNumberExpressionTest {
         }
     }
 
-    @Disabled("RT-33413")
+    @Disabled("JDK-8089771")
     @Test
     public void testAsString_LocaleFormat() {
         // checking German default

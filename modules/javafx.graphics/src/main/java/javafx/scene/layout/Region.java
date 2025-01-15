@@ -3305,9 +3305,9 @@ public class Region extends Parent {
         // since Parent's computeGeomBounds does handle 3D correctly.
         BaseBounds cb = RegionHelper.superComputeGeomBounds(this, bounds, tx);
         /*
-         * This is a work around for RT-7680. Parent returns invalid bounds from
+         * This is a work around for JDK-8109407. Parent returns invalid bounds from
          * computeGeomBoundsImpl when it has no children or if all its children
-         * have invalid bounds. If RT-7680 were fixed, then we could omit this
+         * have invalid bounds. If JDK-8109407 were fixed, then we could omit this
          * first branch of the if and only use the else since the correct value
          * would be computed.
          */

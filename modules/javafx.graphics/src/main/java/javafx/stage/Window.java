@@ -25,8 +25,6 @@
 
 package javafx.stage;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.util.HashMap;
 
 import javafx.application.Platform;
@@ -67,7 +65,6 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
-import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 
@@ -208,12 +205,6 @@ public class Window implements EventTarget {
                     public ReadOnlyObjectProperty<Screen> screenProperty(Window window) {
                         return window.screenProperty();
                     }
-
-                    @SuppressWarnings("removal")
-                    @Override
-                    public AccessControlContext getAccessControlContext(Window window) {
-                        return window.acc;
-                    }
                 });
     }
 
@@ -225,17 +216,8 @@ public class Window implements EventTarget {
      * @since 9
      */
     public static ObservableList<Window> getWindows() {
-        @SuppressWarnings("removal")
-        final SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(ACCESS_WINDOW_LIST_PERMISSION);
-        }
-
         return unmodifiableWindows;
     }
-
-    @SuppressWarnings("removal")
-    final AccessControlContext acc = AccessController.getContext();
 
     /**
      * Constructor for subclasses to call.
@@ -871,7 +853,7 @@ public class Window implements EventTarget {
                 // Set scene impl on stage impl
                 updatePeerScene(SceneHelper.getPeer(newScene));
 
-                // Fix for RT-15432: we should update new Scene's stylesheets, if the
+                // Fix for JDK-8113774: we should update new Scene's stylesheets, if the
                 // window is already showing. For not yet shown windows, the update is
                 // performed in doVisibleChanging()
                 if (isShowing()) {
