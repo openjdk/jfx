@@ -58,12 +58,12 @@ public class CodeAreaTest {
     // constructors
 
     @Test
-    void defaultModelIsCodeTextModel() {
+    public void defaultModelIsCodeTextModel() {
         assertTrue(control.getModel() instanceof CodeTextModel);
     }
 
     @Test
-    void nullModelInConstructor() {
+    public void nullModelInConstructor() {
         control = new CodeArea(null);
         assertTrue(control.getModel() == null);
 
@@ -75,7 +75,7 @@ public class CodeAreaTest {
     // properties
 
     @Test
-    void propertiesSettersAndGetters() {
+    public void propertiesSettersAndGetters() {
         TUtil.testProperty(control.fontProperty(), control::getFont, control::setFont, new Font("Bogus", 22));
         TUtil.testBooleanProperty(control.lineNumbersEnabledProperty(), control::isLineNumbersEnabled, control::setLineNumbersEnabled);
         TUtil.testProperty(control.lineSpacingProperty(), control::getLineSpacing, (n) -> control.setLineSpacing(n.doubleValue()), 10.0, 22.0);
@@ -85,7 +85,7 @@ public class CodeAreaTest {
     // default values
 
     @Test
-    void defaultPropertyValues() {
+    public void defaultPropertyValues() {
         TUtil.checkDefaultValue(control.fontProperty(), control::getFont, (f) -> {
             Font expected = new Font("Monospace", -1);
             assertEquals(f.getFamily(), expected.getFamily());
@@ -100,7 +100,7 @@ public class CodeAreaTest {
     // css
 
     @Test
-    void testFontCSS() {
+    public void testFontCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-font: 24 Amble");
         control.applyCss();
@@ -108,7 +108,7 @@ public class CodeAreaTest {
     }
 
     @Test
-    void testLineSpacingCSS() {
+    public void testLineSpacingCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-line-spacing: 5.55");
         control.applyCss();
@@ -116,7 +116,7 @@ public class CodeAreaTest {
     }
 
     @Test
-    void testTabSizeCSS() {
+    public void testTabSizeCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-tab-size: 17");
         control.applyCss();
@@ -126,14 +126,14 @@ public class CodeAreaTest {
     // property binding
 
     @Test
-    void testPropertyBinding() {
+    public void testPropertyBinding() {
         TUtil.testBinding(control.fontProperty(), control::getFont, new Font("Bogus", 22));
         TUtil.testBinding(control.lineNumbersEnabledProperty(), control::isLineNumbersEnabled);
         TUtil.testBinding(control.lineSpacingProperty(), control::getLineSpacing, 10.0, 22.0);
         TUtil.testBinding(control.tabSizeProperty(), control::getTabSize, 1, 2, 5, 17);
     }
 
-    // other API tests
+    // functional API tests
 
     /** can set a null and non-null CodeTextModel */
     @Test
@@ -145,16 +145,18 @@ public class CodeAreaTest {
     /** disallows setting model other than CodeTextModel */
     @Test
     public void wrongModel() {
+        var m = control.getModel();
         assertThrows(IllegalArgumentException.class, () -> {
             control.setModel(new RichTextModel());
         });
-        assertTrue(control.getModel() instanceof CodeTextModel);
+        assertTrue(control.getModel() == m);
     }
 
     /** acceptable custom model */
     @Test
     public void acceptableModel() {
-        control.setModel(new CustomCodeTextModel());
-        assertTrue(control.getModel() instanceof CustomCodeTextModel);
+        CustomCodeTextModel m = new CustomCodeTextModel();
+        control.setModel(m);
+        assertTrue(control.getModel() == m);
     }
 }

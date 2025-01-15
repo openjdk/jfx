@@ -37,8 +37,11 @@ import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.RichTextAreaShim;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 import test.jfx.incubator.scene.util.TUtil;
 
 /**
@@ -50,7 +53,9 @@ public class RichTextAreaTest {
     @BeforeEach
     public void beforeEach() {
         TUtil.setUncaughtExceptionHandler();
+
         control = new RichTextArea();
+        control.setSkin(new RichTextAreaSkin(control));
     }
 
     @AfterEach
@@ -61,12 +66,12 @@ public class RichTextAreaTest {
     // constructors
 
     @Test
-    void defaultModelIsRichTextModel() {
+    public void defaultModelIsRichTextModel() {
         assertTrue(control.getModel() instanceof RichTextModel);
     }
 
     @Test
-    void nullModelInConstructor() {
+    public void nullModelInConstructor() {
         control = new RichTextArea(null);
         assertTrue(control.getModel() == null);
 
@@ -77,7 +82,7 @@ public class RichTextAreaTest {
     // properties
 
     @Test
-    void propertiesSettersAndGetters() {
+    public void propertiesSettersAndGetters() {
         TUtil.testProperty(control.caretBlinkPeriodProperty(), control::getCaretBlinkPeriod, control::setCaretBlinkPeriod, Duration.millis(10));
         TUtil.testProperty(control.contentPaddingProperty(), control::getContentPadding, control::setContentPadding, null, new Insets(40));
         TUtil.testBooleanProperty(control.displayCaretProperty(), control::isDisplayCaret, control::setDisplayCaret);
@@ -92,14 +97,14 @@ public class RichTextAreaTest {
     }
 
     @Test
-    void nonNullableProperties() {
+    public void nonNullableProperties() {
         TUtil.testNonNullable(control.caretBlinkPeriodProperty(), control::setCaretBlinkPeriod);
     }
 
     // default values
 
     @Test
-    void defaultPropertyValues() {
+    public void defaultPropertyValues() {
         TUtil.testDefaultValue(control.caretBlinkPeriodProperty(), control::getCaretBlinkPeriod, Duration.millis(1000));
         TUtil.testDefaultValue(control.contentPaddingProperty(), control::getContentPadding, null);
         TUtil.testDefaultValue(control.displayCaretProperty(), control::isDisplayCaret, true);
@@ -116,7 +121,7 @@ public class RichTextAreaTest {
     // css
 
     @Test
-    void testCaretBlinkPeriodCSS() {
+    public void testCaretBlinkPeriodCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-caret-blink-period: 1ms");
         control.applyCss();
@@ -128,7 +133,7 @@ public class RichTextAreaTest {
     }
 
     @Test
-    void testContentPaddingCSS() {
+    public void testContentPaddingCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-content-padding: 99");
         control.applyCss();
@@ -140,7 +145,7 @@ public class RichTextAreaTest {
     }
 
     @Test
-    void testDisplayCaretCSS() {
+    public void testDisplayCaretCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-display-caret: false");
         control.applyCss();
@@ -152,7 +157,7 @@ public class RichTextAreaTest {
     }
 
     @Test
-    void testHighlightCurrentParagraphCSS() {
+    public void testHighlightCurrentParagraphCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-highlight-current-paragraph: false");
         control.applyCss();
@@ -164,7 +169,7 @@ public class RichTextAreaTest {
     }
 
     @Test
-    void testUseContentHeightCSS() {
+    public void testUseContentHeightCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-use-content-height: false");
         control.applyCss();
@@ -176,7 +181,7 @@ public class RichTextAreaTest {
     }
 
     @Test
-    void testUseContentWidthCSS() {
+    public void testUseContentWidthCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-use-content-width: false");
         control.applyCss();
@@ -188,7 +193,7 @@ public class RichTextAreaTest {
     }
 
     @Test
-    void testWrapTextCSS() {
+    public void testWrapTextCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-wrap-text: false");
         control.applyCss();
@@ -202,7 +207,7 @@ public class RichTextAreaTest {
     // property binding
 
     @Test
-    void testPropertyBinding() {
+    public void testPropertyBinding() {
         // caret blink period property is internally constrained and cannot be bound
         //TUtil.testBinding(control.caretBlinkPeriodProperty(), control::getCaretBlinkPeriod, Duration.millis(10));
         TUtil.testBinding(control.contentPaddingProperty(), control::getContentPadding, null, new Insets(40));
@@ -217,9 +222,18 @@ public class RichTextAreaTest {
         TUtil.testBinding(control.wrapTextProperty(), control::isWrapText);
     }
 
-    // other API tests
-    
-    // misc tests: certain steps on changing properties (clears selection on model change etc)
+    // functional API tests
+
+    @Test
+    public void modelChangeClearsSelection() {
+        control.insertText(TextPos.ZERO, "1234", null);
+        control.selectAll();
+        SelectionSegment sel = control.getSelection();
+        assertFalse(sel.isCollapsed());
+        control.setModel(new RichTextModel());
+        sel = control.getSelection();
+        assertEquals(null, sel);
+    }
 
     /**
      * Tests the shim.

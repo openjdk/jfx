@@ -279,7 +279,7 @@ public class TUtil {
             SimpleBooleanProperty p = new SimpleBooleanProperty();
             prop.bind(p);
 
-            // this code does not check for the initial value of the bound property 
+            // this code does not check for the initial value of the bound property
             for (Boolean value : BOOLEAN_VALUES) {
                 p.setValue(value);
                 Boolean v = getter.get();
