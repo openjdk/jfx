@@ -48,8 +48,6 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
-import javafx.scene.shape.Shape;
-import javafx.scene.shape.Shape3D;
 import javafx.scene.text.Font;
 
 /**
@@ -66,23 +64,7 @@ public abstract class NodeHelper {
     }
 
     protected static NodeHelper getHelper(Node node) {
-
-        NodeHelper helper = nodeAccessor.getHelper(node);
-        if (helper == null) {
-            String nodeType;
-            if (node instanceof Shape) {
-                nodeType = "Shape";
-            } else if (node instanceof Shape3D) {
-                nodeType = "Shape3D";
-            } else {
-                nodeType = "Node";
-            }
-
-            throw new UnsupportedOperationException(
-                    "Applications should not extend the "
-                    + nodeType + " class directly.");
-        }
-        return helper;
+        return nodeAccessor.getHelper(node);
     }
 
     protected static void setHelper(Node node, NodeHelper nodeHelper) {
@@ -295,6 +277,10 @@ public abstract class NodeHelper {
         nodeAccessor.reapplyCSS(node);
     }
 
+    public static boolean isInitialCssState(Node node) {
+        return nodeAccessor.isInitialCssState(node);
+    }
+
     public static void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
         nodeAccessor.recalculateRelativeSizeProperties(node, fontForRelativeSizes);
     }
@@ -402,6 +388,7 @@ public abstract class NodeHelper {
         void setLabeledBy(Node node, Node labeledBy);
         Accessible getAccessible(Node node);
         void reapplyCSS(Node node);
+        boolean isInitialCssState(Node node);
         void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes);
         boolean isTreeVisible(Node node);
         BooleanExpression treeVisibleProperty(Node node);

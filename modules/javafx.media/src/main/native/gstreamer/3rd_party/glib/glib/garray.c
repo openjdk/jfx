@@ -930,11 +930,11 @@ g_array_sort (GArray       *farray,
 
   /* Don't use qsort as we want a guaranteed stable sort */
   if (array->len > 0)
-    g_qsort_with_data (array->data,
-                       array->len,
-                       array->elt_size,
-                       (GCompareDataFunc)compare_func,
-                       NULL);
+    g_sort_array (array->data,
+                  array->len,
+                  array->elt_size,
+                  (GCompareDataFunc) compare_func,
+                  NULL);
 }
 
 /**
@@ -962,11 +962,11 @@ g_array_sort_with_data (GArray           *farray,
   g_return_if_fail (array != NULL);
 
   if (array->len > 0)
-    g_qsort_with_data (array->data,
-                       array->len,
-                       array->elt_size,
-                       compare_func,
-                       user_data);
+    g_sort_array (array->data,
+                  array->len,
+                  array->elt_size,
+                  compare_func,
+                  user_data);
 }
 
 /**
@@ -2352,23 +2352,23 @@ g_ptr_array_insert (GPtrArray *array,
                     gpointer   data)
 {
   GRealPtrArray *rarray = (GRealPtrArray *)array;
+  guint real_index;
 
   g_return_if_fail (rarray);
   g_return_if_fail (index_ >= -1);
-  g_return_if_fail (index_ <= (gint)rarray->len);
+  g_return_if_fail (index_ < 0 || (guint) index_ <= rarray->len);
 
   g_ptr_array_maybe_expand (rarray, 1u + rarray->null_terminated);
 
-  if (index_ < 0)
-    index_ = rarray->len;
+  real_index = (index_ >= 0) ? (guint) index_ : rarray->len;
 
-  if ((guint) index_ < rarray->len)
-    memmove (&(rarray->pdata[index_ + 1]),
-             &(rarray->pdata[index_]),
-             (rarray->len - index_) * sizeof (gpointer));
+  if (real_index < rarray->len)
+    memmove (&(rarray->pdata[real_index + 1]),
+             &(rarray->pdata[real_index]),
+             (rarray->len - real_index) * sizeof (gpointer));
 
   rarray->len++;
-  rarray->pdata[index_] = data;
+  rarray->pdata[real_index] = data;
 
   ptr_array_maybe_null_terminate (rarray);
 }
@@ -2427,11 +2427,11 @@ g_ptr_array_sort (GPtrArray    *array,
 
   /* Don't use qsort as we want a guaranteed stable sort */
   if (array->len > 0)
-    g_qsort_with_data (array->pdata,
-                       array->len,
-                       sizeof (gpointer),
-                       (GCompareDataFunc)compare_func,
-                       NULL);
+    g_sort_array (array->pdata,
+                  array->len,
+                  sizeof (gpointer),
+                  (GCompareDataFunc) compare_func,
+                  NULL);
 }
 
 /* Please keep this doc-comment in sync with
@@ -2507,11 +2507,11 @@ g_ptr_array_sort_with_data (GPtrArray        *array,
   g_return_if_fail (array != NULL);
 
   if (array->len > 0)
-    g_qsort_with_data (array->pdata,
-                       array->len,
-                       sizeof (gpointer),
-                       compare_func,
-                       user_data);
+    g_sort_array (array->pdata,
+                  array->len,
+                  sizeof (gpointer),
+                  compare_func,
+                  user_data);
 }
 
 static inline gint

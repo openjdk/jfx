@@ -431,7 +431,7 @@ import javafx.scene.shape.TriangleMesh;
  * @see Shape3D
  * @since JavaFX 8.0
  */
-public class PhongMaterial extends Material {
+public non-sealed class PhongMaterial extends Material {
 
     private boolean diffuseColorDirty = true;
     private boolean specularColorDirty = true;
