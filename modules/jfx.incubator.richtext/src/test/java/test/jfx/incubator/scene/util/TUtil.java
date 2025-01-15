@@ -253,7 +253,7 @@ public class TUtil {
             Property<T> p = new SimpleObjectProperty<T>();
             prop.bind(p);
 
-            // this code does not check for the initial value of the bound property 
+            // this code does not check for the initial value of the bound property
             for (T value : values) {
                 p.setValue(value);
                 T v = getter.get();
