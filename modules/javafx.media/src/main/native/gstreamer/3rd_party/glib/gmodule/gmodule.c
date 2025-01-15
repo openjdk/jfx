@@ -383,7 +383,7 @@ parse_libtool_archive (const gchar* libtool_name)
       g_free (dir);
     }
 
-g_clear_pointer (&scanner, g_scanner_destroy);
+  g_clear_pointer (&scanner, g_scanner_destroy);
   close (g_steal_fd (&fd));
 
   if (lt_libdir == NULL || lt_dlname == NULL)
@@ -493,7 +493,7 @@ g_module_open_full (const gchar   *file_name,
     handle = _g_module_self ();
 /* On Android 64 bit, RTLD_DEFAULT is (void *)0x0
  * so it always fails to create main_module if file_name is NULL */
-#if !defined(__BIONIC__) || !defined(__LP64__)
+#if !defined(__ANDROID__) || !defined(__LP64__)
     if (handle)
 #endif
       {
@@ -640,7 +640,7 @@ g_module_open_full (const gchar   *file_name,
       module = g_module_find_by_handle (handle);
       if (module)
         {
-      _g_module_close (module->handle);
+          _g_module_close (module->handle);
           module->ref_count++;
           g_module_set_error (NULL);
 

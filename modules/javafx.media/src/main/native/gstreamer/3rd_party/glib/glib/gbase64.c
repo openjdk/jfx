@@ -436,7 +436,8 @@ guchar *
 g_base64_decode_inplace (gchar *text,
                          gsize *out_len)
 {
-  gint input_length, state = 0;
+  gint state = 0;
+  size_t input_length;
   guint save = 0;
 
   g_return_val_if_fail (text != NULL, NULL);

@@ -1264,7 +1264,7 @@ gst_audio_visualizer_src_event (GstPad * pad, GstObject * parent,
       if (diff >= 0)
         /* we're late, this is a good estimate for next displayable
          * frame (see part-qos.txt) */
-        scope->priv->earliest_time = timestamp + 2 * diff +
+        scope->priv->earliest_time = timestamp + MIN (2 * diff, GST_SECOND) +
             scope->priv->frame_duration;
       else
         scope->priv->earliest_time = timestamp + diff;

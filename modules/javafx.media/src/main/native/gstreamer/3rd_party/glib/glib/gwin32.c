@@ -397,7 +397,7 @@ get_package_directory_from_module (const gchar *module_name)
  *
  * It is strongly recommended that packagers of GLib-using libraries
  * for Windows do not store installation paths in the Registry to be
- * used by this function as that interfers with having several
+ * used by this function as that interferes with having several
  * parallel installations of the library. Enabling multiple
  * installations of different versions of some GLib-using library, or
  * GLib itself, is desirable for various reasons.

@@ -1218,7 +1218,8 @@ gst_element_get_compatible_pad (GstElement * element, GstPad * pad,
           }
         } else {
           GST_CAT_DEBUG (GST_CAT_ELEMENT_PADS,
-              "already linked or cannot be linked (peer = %p)", peer);
+              "already linked or cannot be linked (peer = %" GST_PTR_FORMAT ")",
+              peer);
         }
         GST_CAT_DEBUG (GST_CAT_ELEMENT_PADS, "unreffing pads");
 
@@ -4471,10 +4472,15 @@ gst_util_group_id_next (void)
   return ret;
 }
 
-/* Compute log2 of the passed 64-bit number by finding the highest set bit */
+/* Compute the number of bits needed at least to store `in` */
 static guint
-gst_log2 (GstClockTime in)
+gst_bit_storage_uint64 (guint64 in)
 {
+#if defined(__GNUC__) && __GNUC__ >= 4
+  return in ? 64 - __builtin_clzll (in) : 1;
+#else
+  /* integer log2(v) from:
+     <http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog> */
   const guint64 b[] =
       { 0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000, 0xFFFFFFFF00000000LL };
   const guint64 S[] = { 1, 2, 4, 8, 16, 32 };
@@ -4488,7 +4494,8 @@ gst_log2 (GstClockTime in)
     }
   }
 
-  return count;
+  return count + 1;             // + 1 to get the number of storage bits needed
+#endif
 }
 
 #ifndef GSTREAMER_LITE
@@ -4496,7 +4503,7 @@ gst_log2 (GstClockTime in)
  * gst_util_ceil_log2:
  * @v: a #guint32 value.
  *
- * Return a max num of log2.
+ * Returns smallest integral value not less than log2(v).
  *
  * Returns: a computed #guint val.
  *
@@ -4505,25 +4512,29 @@ gst_log2 (GstClockTime in)
 guint
 gst_util_ceil_log2 (guint32 v)
 {
-  /* Compute Ceil(Log2(v)) */
-  /* Derived from branchless code for integer log2(v) from:
-     <http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog> */
-  guint r, shift;
+  static const unsigned int t[6] = {
+    0x00000000ull,
+    0xFFFF0000ull,
+    0x0000FF00ull,
+    0x000000F0ull,
+    0x0000000Cull,
+    0x000000002ull
+  };
 
-  v--;
-  r = (v > 0xFFFF) << 4;
-  v >>= r;
-  shift = (v > 0xFF) << 3;
-  v >>= shift;
-  r |= shift;
-  shift = (v > 0xF) << 2;
-  v >>= shift;
-  r |= shift;
-  shift = (v > 0x3) << 1;
-  v >>= shift;
-  r |= shift;
-  r |= (v >> 1);
-  return r + 1;
+  g_return_val_if_fail (v != 0, -1);
+
+  int y = (((v & (v - 1)) == 0) ? 0 : 1);
+  int j = 32;
+  int i;
+
+  for (i = 0; i < 6; i++) {
+    int k = (((v & t[i]) == 0) ? 0 : j);
+    y += k;
+    v >>= k;
+    j >>= 1;
+  }
+
+  return y;
 }
 #endif // GSTREAMER_LITE
 
@@ -4657,10 +4668,20 @@ gst_calculate_linear_regression (const GstClockTime * xy,
    */
 
   /* Guess how many bits we might need for the usual distribution of input,
-   * with a fallback loop that drops precision if things go pear-shaped */
-  max_bits = gst_log2 (MAX (xmax - xmin, ymax - ymin)) * 7 / 8 + gst_log2 (n);
-  if (max_bits > 64)
-    pshift = max_bits - 64;
+   * with a fallback loop that drops precision if things go pear-shaped.
+   *
+   * Each calculation of tmp during the iteration is multiplying two numbers and
+   * then adding them together, or adding them together and then multiplying
+   * them. The second case is worse and means we need at least twice
+   * (multiplication) as many bits as the biggest number needs, plus another bit
+   * (addition). At most 63 bits (signed 64 bit integer) are available.
+   *
+   * That means that each number must require at most (63 - 1) / 2 bits = 31
+   * bits of storage.
+   */
+  max_bits = gst_bit_storage_uint64 (MAX (1, MAX (xmax - xmin, ymax - ymin)));
+  if (max_bits > 31)
+    pshift = max_bits - 31;
 
   i = 0;
   do {
