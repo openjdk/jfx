@@ -25,6 +25,7 @@
 
 package com.sun.javafx.text;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
@@ -78,6 +79,7 @@ public class TextRun implements GlyphList {
         if (canonical) flags |= FLAGS_CANONICAL;
     }
 
+    @Override
     public int getStart() {
         return start;
     }
@@ -114,6 +116,7 @@ public class TextRun implements GlyphList {
         return slot;
     }
 
+    @Override
     public boolean isLinebreak() {
         return (flags & FLAGS_LINEBREAK) != 0;
     }
@@ -401,39 +404,36 @@ public class TextRun implements GlyphList {
         return 0; //line break
     }
 
-    public int getGlyphAtX(float x, int[] trailing) {
+    public int getGlyphAtX(float x, AtomicBoolean trailing) {
         boolean ltr = isLeftToRight();
         float runX = 0;
         for (int i = 0; i < glyphCount; i++) {
             float advance = getAdvance(i);
             if (runX + advance >= x) {
-                if (trailing != null) {
-                    //TODO handle clusters
-                    if (x - runX > advance / 2) {
-                        trailing[0] = ltr ? 1 : 0;
-                    } else {
-                        trailing[0] = ltr ? 0 : 1;
-                    }
+                //TODO handle clusters
+                if (x - runX > advance / 2) {
+                    trailing.set(ltr ? true : false);
+                } else {
+                    trailing.set(ltr ? false : true);
                 }
                 return i;
             }
             runX += advance;
         }
-        if (trailing != null) trailing[0] = ltr ? 1 : 0;
+        trailing.set(ltr ? true : false);
         return Math.max(0, glyphCount - 1);
     }
 
-    public int getOffsetAtX(float x, int[] trailing) {
+    @Override
+    public int getOffsetAtX(float x, AtomicBoolean trailing) {
         if (glyphCount > 0) {
             int glyphIndex = getGlyphAtX(x, trailing);
             return getCharOffset(glyphIndex);
         }
         /* tab */
         if (width != -1 && length > 0) {
-            if (trailing != null) {
-                if (x > width / 2) {
-                    trailing[0] = 1;
-                }
+            if (x > width / 2) {
+                trailing.set(true);
             }
         }
         return 0;

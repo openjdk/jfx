@@ -30,6 +30,7 @@ import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
@@ -448,9 +449,9 @@ public class PrismTextLayout implements TextLayout {
                 }
             }
             if (run != null) {
-                int[] trailing = new int[1];
+                AtomicBoolean trailing = new AtomicBoolean();
                 charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
-                leading = (trailing[0] == 0);
+                leading = !trailing.get();
 
                 insertionIndex = charIndex;
                 if (getText() != null && insertionIndex < getText().length) {
