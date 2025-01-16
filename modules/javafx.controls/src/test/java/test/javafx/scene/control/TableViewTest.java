@@ -2196,9 +2196,8 @@ public class TableViewTest {
         table.getColumns().addAll(first);
 
         // get the cell at (0,0)
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
+        stageLoader = new StageLoader(table);
         TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof TableCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());
