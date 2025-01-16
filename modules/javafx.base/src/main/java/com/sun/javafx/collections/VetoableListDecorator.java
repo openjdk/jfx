@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
@@ -39,7 +40,7 @@ import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
-public abstract class VetoableListDecorator<E> implements ObservableList<E> {
+public abstract class VetoableListDecorator<E> implements ObservableList<E>, SortableList<E> {
 
     private final ObservableList<E> list;
     private int modCount;
@@ -98,6 +99,20 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
     @Override
     public void removeListener(InvalidationListener listener) {
         helper = ListListenerHelper.removeListener(helper, listener);
+    }
+
+    @Override
+    public final void doSort(Comparator<? super E> comparator) {
+        var sortedList = new ArrayList<>(list);
+        sortedList.sort(comparator);
+        onProposedChange(Collections.unmodifiableList(sortedList), 0, size());
+        try {
+            modCount++;
+            list.setAll(sortedList);
+        } catch(Exception e) {
+            modCount--;
+            throw e;
+        }
     }
 
     @Override

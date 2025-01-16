@@ -28,6 +28,7 @@ import com.sun.javafx.collections.VetoableListDecorator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
@@ -569,7 +570,14 @@ public class VetoableObservableListTest {
         assertEquals(1, subLists.size());
         subLists.get(0).size(); // Assert not throwing Exception
         subLists.clear();
-
     }
 
+    @Test
+    public void testSort() {
+        list.setAll("d", "b", "a", "c");
+        calls.clear();
+        list.sort(Comparator.naturalOrder());
+        assertEquals(List.of("a", "b", "c", "d"), list);
+        assertSingleCall(new String[] {"a", "b", "c", "d"}, new int[] {0, 4});
+    }
 }
