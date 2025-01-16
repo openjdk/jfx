@@ -26,6 +26,7 @@
 #include "gunicode.h"
 #include "gunidecomp.h"
 #include "gmem.h"
+#include "gtestutils.h"
 #include "gunicomp.h"
 #include "gunicodeprivate.h"
 
@@ -432,16 +433,16 @@ _g_utf8_normalize_wc (const gchar    *str,
             wc_buffer[n_wc++] = wc;
         }
 
-      if (n_wc > 0)
-  {
-    cc = COMBINING_CLASS (wc_buffer[old_n_wc]);
+      /* Each code path above *must* have appended at least gunichar to wc_buffer. */
+      g_assert (n_wc > old_n_wc);
 
-    if (cc == 0)
-      {
-        g_unicode_canonical_ordering (wc_buffer + last_start, n_wc - last_start);
-        last_start = old_n_wc;
-      }
-  }
+      cc = COMBINING_CLASS (wc_buffer[old_n_wc]);
+
+      if (cc == 0)
+        {
+          g_unicode_canonical_ordering (wc_buffer + last_start, n_wc - last_start);
+          last_start = old_n_wc;
+        }
 
       p = g_utf8_next_char (p);
     }

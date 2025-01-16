@@ -861,9 +861,10 @@
 #define G_STRINGIFY(macro_or_string)    G_STRINGIFY_ARG (macro_or_string)
 #define G_STRINGIFY_ARG(contents)       #contents
 
-#ifndef __GI_SCANNER__ /* The static assert macro really confuses the introspection parser */
 #define G_PASTE_ARGS(identifier1,identifier2) identifier1 ## identifier2
 #define G_PASTE(identifier1,identifier2)      G_PASTE_ARGS (identifier1, identifier2)
+
+#ifndef __GI_SCANNER__ /* The static assert macro really confuses the introspection parser */
 #if G_CXX_STD_CHECK_VERSION (11)
 #define G_STATIC_ASSERT(expr) static_assert (expr, "Expression evaluates to false")
 #elif (G_C_STD_CHECK_VERSION (11) || \
@@ -877,7 +878,10 @@
 #endif
 #endif /* G_CXX_STD_CHECK_VERSION (11) */
 #define G_STATIC_ASSERT_EXPR(expr) ((void) sizeof (char[(expr) ? 1 : -1]))
-#endif /* !__GI_SCANNER__ */
+#else /* __GI_SCANNER__ */
+#define G_STATIC_ASSERT(expr) static int G_PASTE (_GStaticAssertGiScannerNoop, __LINE__) G_GNUC_UNUSED
+#define G_STATIC_ASSERT_EXPR(expr) static int G_PASTE (_GStaticAssertGiScannerNoop, __LINE__) G_GNUC_UNUSED
+#endif /* __GI_SCANNER__ */
 
 /* Provide a string identifying the current code position */
 #if defined (__GNUC__) && (__GNUC__ < 3) && !defined (G_CXX_STD_VERSION)
@@ -1337,6 +1341,7 @@
 /* these macros are private; note that gstdio.h also uses _GLIB_CLEANUP */
 #define _GLIB_AUTOPTR_FUNC_NAME(TypeName) glib_autoptr_cleanup_##TypeName
 #define _GLIB_AUTOPTR_CLEAR_FUNC_NAME(TypeName) glib_autoptr_clear_##TypeName
+#define _GLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName) glib_autoptr_destroy_##TypeName
 #define _GLIB_AUTOPTR_TYPENAME(TypeName)  TypeName##_autoptr
 #define _GLIB_AUTOPTR_LIST_FUNC_NAME(TypeName) glib_listautoptr_cleanup_##TypeName
 #define _GLIB_AUTOPTR_LIST_TYPENAME(TypeName)  TypeName##_listautoptr
@@ -1356,12 +1361,14 @@
     { if (_ptr) (cleanup) ((ParentName *) _ptr); }                                                              \
   static G_GNUC_UNUSED inline void _GLIB_AUTOPTR_FUNC_NAME(TypeName) (TypeName **_ptr)                          \
     { _GLIB_AUTOPTR_CLEAR_FUNC_NAME(TypeName) (*_ptr); }                                                        \
+  static G_GNUC_UNUSED inline void _GLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName) (void *_ptr)                       \
+    { (cleanup) ((ParentName *) _ptr); }                                                                        \
   static G_GNUC_UNUSED inline void _GLIB_AUTOPTR_LIST_FUNC_NAME(TypeName) (GList **_l)                          \
-    { g_list_free_full (*_l, (GDestroyNotify) (void(*)(void)) cleanup); }                                       \
+    { g_list_free_full (*_l, _GLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName)); }                                      \
   static G_GNUC_UNUSED inline void _GLIB_AUTOPTR_SLIST_FUNC_NAME(TypeName) (GSList **_l)                        \
-    { g_slist_free_full (*_l, (GDestroyNotify) (void(*)(void)) cleanup); }                                      \
+    { g_slist_free_full (*_l, _GLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName)); }                                     \
   static G_GNUC_UNUSED inline void _GLIB_AUTOPTR_QUEUE_FUNC_NAME(TypeName) (GQueue **_q)                        \
-    { if (*_q) g_queue_free_full (*_q, (GDestroyNotify) (void(*)(void)) cleanup); }                             \
+    { if (*_q) g_queue_free_full (*_q, _GLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName)); }                            \
   G_GNUC_END_IGNORE_DEPRECATIONS
 #define _GLIB_DEFINE_AUTOPTR_CHAINUP(ModuleObjName, ParentName) \
   _GLIB_DEFINE_AUTOPTR_CLEANUP_FUNCS(ModuleObjName, ParentName, _GLIB_AUTOPTR_CLEAR_FUNC_NAME(ParentName))

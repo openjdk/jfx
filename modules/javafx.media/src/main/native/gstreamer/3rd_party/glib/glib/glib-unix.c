@@ -38,6 +38,7 @@
 
 #include "config.h"
 
+#include "glib-private.h"
 #include "glib-unix.h"
 #include "glib-unixprivate.h"
 #include "gmain-internal.h"
@@ -66,9 +67,11 @@
 
 G_STATIC_ASSERT (sizeof (ssize_t) == GLIB_SIZEOF_SSIZE_T);
 G_STATIC_ASSERT (G_ALIGNOF (gssize) == G_ALIGNOF (ssize_t));
+G_STATIC_ASSERT (G_SIGNEDNESS_OF (ssize_t) == 1);
 
 G_STATIC_ASSERT (sizeof (GPid) == sizeof (pid_t));
 G_STATIC_ASSERT (G_ALIGNOF (GPid) == G_ALIGNOF (pid_t));
+/* It's platform-dependent whether pid_t is signed, so no assertion */
 
 /* If this assertion fails, then the ABI of g_unix_open_pipe() would be
  * ambiguous on this platform.

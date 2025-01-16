@@ -71,7 +71,7 @@
  * @value_array: #GValueArray to get a value from
  * @index_: index of the value of interest
  *
- * Return a pointer to the value at @index_ containd in @value_array.
+ * Return a pointer to the value at @index_ contained in @value_array.
  *
  * Returns: (transfer none): pointer to a value at @index_ in @value_array
  *
@@ -374,7 +374,7 @@ g_value_array_sort_with_data (GValueArray     *value_array,
   g_return_val_if_fail (compare_func != NULL, NULL);
 
   if (value_array->n_values)
-    g_qsort_with_data (value_array->values,
+    g_sort_array (value_array->values,
            value_array->n_values,
            sizeof (value_array->values[0]),
            compare_func, user_data);

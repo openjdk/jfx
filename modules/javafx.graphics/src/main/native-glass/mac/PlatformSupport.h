@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,19 +28,26 @@
 #import <Cocoa/Cocoa.h>
 #import <jni.h>
 
-@interface PlatformSupport : NSObject
+@interface PlatformSupport : NSObject {
+    JNIEnv* env;
+    jobject application;
+}
 
 + (void)initIDs:(JNIEnv*)env;
 
 /**
- * Collect all platform preferences and return them as a new java/util/Map.
+ * Initializes a new PlatformSupport instance.
  */
-+ (jobject)collectPreferences;
+- (id)initWithEnv:(JNIEnv*)env application:(jobject)app;
 
 /**
- * Collect all platform preferences and notify the JavaFX application when a preference has changed.
- * The change notification includes all preferences, not only the changed preferences.
+ * Stops event processing, which must be done prior to releasing this PlatformSupport instance.
  */
-+ (void)updatePreferences:(jobject)application;
+- (void)stopEventProcessing;
+
+/**
+ * Collect all platform preferences and return them as a new java/util/Map.
+ */
+- (jobject)collectPreferences;
 
 @end

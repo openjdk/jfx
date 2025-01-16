@@ -75,7 +75,7 @@ int g_win32_fstat         (int                fd,
  * call to close() may indicate the wrong FD, so the error must be
  * ignored.
  *
- * However, since Mac OS X 10.5 (Leopard) Apple provdes a hidden
+ * However, since Mac OS X 10.5 (Leopard) Apple provides a hidden
  * implementation of close that doesn't allow another thread
  * to cancel the close so it never fails with EINTR.
  *
