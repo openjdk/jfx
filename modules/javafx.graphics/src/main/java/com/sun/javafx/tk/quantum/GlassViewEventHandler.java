@@ -48,6 +48,7 @@ import javafx.collections.ObservableList;
 
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
+import javafx.scene.Node;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
@@ -386,16 +387,16 @@ class GlassViewEventHandler extends View.EventHandler {
         QuantumToolkit.runWithoutRenderLock(mouseNotification);
     }
 
-    @Override public void handleMenuEvent(final View view,
-                                          final int x, final int y, final int xAbs, final int yAbs,
-                                          final boolean isKeyboardTrigger)
+    @Override public boolean handleMenuEvent(final View view,
+                                             final int x, final int y, final int xAbs, final int yAbs,
+                                             final boolean isKeyboardTrigger)
     {
         if (PULSE_LOGGING_ENABLED) {
             PulseLogger.newInput("MENU_EVENT");
         }
         WindowStage stage = scene.getWindowStage();
         try {
-            QuantumToolkit.runWithoutRenderLock(() -> {
+            return QuantumToolkit.runWithoutRenderLock(() -> {
                 if (scene.sceneListener != null) {
                     double pScaleX, pScaleY, spx, spy, sx, sy;
                     final Window w = view.getWindow();
@@ -415,12 +416,12 @@ class GlassViewEventHandler extends View.EventHandler {
                         pScaleX = pScaleY = 1.0;
                         spx = spy = sx = sy = 0.0;
                     }
-                    scene.sceneListener.menuEvent(x / pScaleX, y / pScaleY,
-                                                  sx + (xAbs - spx) / pScaleX,
-                                                  sy + (yAbs - spy) / pScaleY,
-                                                  isKeyboardTrigger);
+                    return scene.sceneListener.menuEvent(x / pScaleX, y / pScaleY,
+                                                         sx + (xAbs - spx) / pScaleX,
+                                                         sy + (yAbs - spy) / pScaleY,
+                                                         isKeyboardTrigger);
                 }
-                return null;
+                return false;
             });
         } finally {
             if (PULSE_LOGGING_ENABLED) {
@@ -797,8 +798,7 @@ class GlassViewEventHandler extends View.EventHandler {
                     final Window w = view.getWindow();
                     float pScaleX = (w == null) ? 1.0f : w.getPlatformScaleX();
                     float pScaleY = (w == null) ? 1.0f : w.getPlatformScaleY();
-                    scene.sceneListener.changedSize(view.getWidth()  / pScaleX,
-                                                    view.getHeight() / pScaleY);
+                    scene.setViewSize(view.getWidth() / pScaleX, view.getHeight() / pScaleY);
                     scene.entireSceneNeedsRepaint();
                     QuantumToolkit.runWithRenderLock(() -> {
                         scene.updateSceneState();
@@ -1245,5 +1245,16 @@ class GlassViewEventHandler extends View.EventHandler {
             return scene.sceneListener.getSceneAccessible();
         }
         return null;
+    }
+
+    @Override
+    public Node pickDragAreaNode(double x, double y) {
+        return QuantumToolkit.runWithoutRenderLock(() -> {
+            if (scene.sceneListener != null) {
+                return scene.sceneListener.pickDragAreaNode(x, y);
+            }
+
+            return null;
+        });
     }
 }

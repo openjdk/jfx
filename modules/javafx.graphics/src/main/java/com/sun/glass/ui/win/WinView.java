@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,6 +94,28 @@ final class WinView extends View {
         // When moving to a screen with different DPI settings, its location needs
         // to be recalculated.
         updateLocation();
+    }
+
+    @Override
+    protected void notifyMenu(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
+        // If all of the following conditions are satisfied, we open a system menu at the specified coordinates:
+        // 1. The application didn't consume the menu event.
+        // 2. The window is an EXTENDED window.
+        // 3. The menu event occurred on a draggable area.
+        if (!handleMenuEvent(x, y, xAbs, yAbs, isKeyboardTrigger)) {
+            var window = (WinWindow)getWindow();
+            if (!window.isExtendedWindow()) {
+                return;
+            }
+
+            double wx = x / window.getPlatformScaleX();
+            double wy = y / window.getPlatformScaleY();
+
+            EventHandler eventHandler = getEventHandler();
+            if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
+                window.showSystemMenu(x, y);
+            }
+        }
     }
 }
 

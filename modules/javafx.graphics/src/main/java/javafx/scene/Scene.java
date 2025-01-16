@@ -78,6 +78,7 @@ import javafx.event.*;
 import javafx.geometry.*;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
+import javafx.scene.layout.HeaderBarBase;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.PopupWindow;
@@ -587,6 +588,10 @@ public class Scene implements EventTarget {
     }
 
     private void doCSSPass() {
+        if (peer != null) {
+            peer.processOverlayCSS();
+        }
+
         final Parent sceneRoot = getRoot();
         //
         // JDK-8120624: when the tree is synchronized, the dirty bits are
@@ -636,6 +641,10 @@ public class Scene implements EventTarget {
     }
 
     void doLayoutPass() {
+        if (peer != null) {
+            peer.layoutOverlay();
+        }
+
         final Parent r = getRoot();
         if (r != null) {
             r.layout();
@@ -1934,7 +1943,7 @@ public class Scene implements EventTarget {
         mouseHandler.process(e, false);
     }
 
-    private void processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
+    private boolean processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
         EventTarget eventTarget = null;
         Scene.inMousePick = true;
         if (isKeyboardTrigger) {
@@ -1968,12 +1977,16 @@ public class Scene implements EventTarget {
             }
         }
 
+        boolean handled = false;
+
         if (eventTarget != null) {
             ContextMenuEvent context = new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
                     x2, y2, xAbs, yAbs, isKeyboardTrigger, res);
-            Event.fireEvent(eventTarget, context);
+            handled = EventUtil.fireEvent(eventTarget, context) == null;
         }
         Scene.inMousePick = false;
+
+        return handled;
     }
 
     private void processGestureEvent(GestureEvent e, TouchGesture gesture) {
@@ -2521,6 +2534,10 @@ public class Scene implements EventTarget {
 
             Scene.inSynchronizer = true;
 
+            if (peer != null) {
+                peer.synchronizeOverlay();
+            }
+
             // if dirtyNodes is null then that means this Scene has not yet been
             // synchronized, and so we will simply synchronize every node in the
             // scene and then create the dirty nodes array list
@@ -2781,9 +2798,9 @@ public class Scene implements EventTarget {
         }
 
         @Override
-        public void menuEvent(double x, double y, double xAbs, double yAbs,
+        public boolean menuEvent(double x, double y, double xAbs, double yAbs,
                 boolean isKeyboardTrigger) {
-            Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
+            return Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
         }
 
         @Override
@@ -3036,6 +3053,36 @@ public class Scene implements EventTarget {
                 // gesture finished
                 touchEventSetId = 0;
             }
+        }
+
+        private final PickRay pickRay = new PickRay();
+
+        @Override
+        public Node pickDragAreaNode(double x, double y) {
+            Node root = Scene.this.getRoot();
+            if (root == null) {
+                return null;
+            }
+
+            pickRay.set(x, y, 1, 0, Double.POSITIVE_INFINITY);
+            var pickResultChooser = new PickResultChooser();
+            root.pickNode(pickRay, pickResultChooser);
+            Node intersectedNode = pickResultChooser.getIntersectedNode();
+            Boolean draggable = intersectedNode instanceof HeaderBarBase ? true : null;
+
+            while (intersectedNode != null) {
+                if (intersectedNode instanceof HeaderBarBase) {
+                    return draggable == Boolean.TRUE ? intersectedNode : null;
+                }
+
+                if (draggable == null && HeaderBarBase.isDraggable(intersectedNode) instanceof Boolean value) {
+                    draggable = value;
+                }
+
+                intersectedNode = intersectedNode.getParent();
+            }
+
+            return null;
         }
 
         @Override

@@ -222,6 +222,11 @@ public final class IosApplication extends Application {
         return false;
     }
 
+    @Override
+    protected boolean _supportsExtendedWindows() {
+        return false;
+    }
+
     /**
      * Hides / Shows iOS status bar.
      * @param hidden

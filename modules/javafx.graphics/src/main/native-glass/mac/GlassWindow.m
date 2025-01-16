@@ -400,6 +400,10 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
                 styleMask = styleMask|NSWindowStyleMaskMiniaturizable;
             }
 
+            if ((jStyleMask&com_sun_glass_ui_Window_EXTENDED) != 0) {
+                styleMask = styleMask | NSWindowStyleMaskTitled | NSWindowStyleMaskFullSizeContentView;
+            }
+
             if ((jStyleMask&com_sun_glass_ui_Window_UNIFIED) != 0) {
                 styleMask = styleMask|NSWindowStyleMaskTexturedBackground;
             }
@@ -425,6 +429,13 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         NSScreen *screen = (NSScreen*)jlong_to_ptr(jScreenPtr);
         window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow];
 
+        if ((jStyleMask & com_sun_glass_ui_Window_EXTENDED) != 0) {
+            [window->nsWindow setTitleVisibility:NSWindowTitleHidden];
+            [window->nsWindow setTitlebarAppearsTransparent:YES];
+            [window->nsWindow setToolbar:[NSToolbar new]];
+            [window->nsWindow setToolbarStyle:NSWindowToolbarStyleUnifiedCompact];
+        }
+
         if ((jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0) {
             //Prevent the textured effect from disappearing on border thickness recalculation
             [window->nsWindow setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
@@ -443,7 +454,8 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             window->owner = getGlassWindow(env, jOwnerPtr)->nsWindow; // not retained (use weak reference?)
         }
         window->isResizable = NO;
-        window->isDecorated = (jStyleMask&com_sun_glass_ui_Window_TITLED) != 0;
+        window->isDecorated = (jStyleMask&com_sun_glass_ui_Window_TITLED) != 0 ||
+                              (jStyleMask&com_sun_glass_ui_Window_EXTENDED) != 0;
         /* 10.7 full screen window support */
         if ([NSWindow instancesRespondToSelector:@selector(toggleFullScreen:)]) {
             NSWindowCollectionBehavior behavior = [window->nsWindow collectionBehavior];
@@ -1436,4 +1448,100 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1exitModal
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _performWindowDrag
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1performWindowDrag
+(JNIEnv *env, jobject jWindow, jlong jPtr)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1performWindowDrag");
+    if (!jPtr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        [[window->view delegate] performWindowDrag];
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _performTitleBarDoubleClickAction
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1performTitleBarDoubleClickAction
+(JNIEnv *env, jobject jWindow, jlong jPtr)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1performTitleBarDoubleClickAction");
+    if (!jPtr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        NSString* action = [NSUserDefaults.standardUserDefaults stringForKey:@"AppleActionOnDoubleClick"];
+
+        if ([action isEqualToString:@"Minimize"]) {
+            [window->nsWindow performMiniaturize:nil];
+        } else if ([action isEqualToString:@"Maximize"]) {
+            [window->nsWindow performZoom:nil];
+        }
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setToolbarStyle
+ * Signature: (JI)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setToolbarStyle
+(JNIEnv *env, jobject jWindow, jlong jPtr, jint style)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setToolbarStyle");
+    if (!jPtr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        if (window && window->nsWindow) {
+            [window->nsWindow setToolbarStyle:style];
+        }
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _isRightToLeftLayoutDirection
+ * Signature: ()Z;
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1isRightToLeftLayoutDirection
+(JNIEnv *env, jobject self)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1isRightToLeftLayoutDirection");
+    jboolean result = false;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        NSString* preferredLanguage = [[NSLocale preferredLanguages] objectAtIndex:0];
+        NSLocale* locale = [NSLocale localeWithLocaleIdentifier:preferredLanguage];
+        NSString* languageCode = [locale objectForKey:NSLocaleLanguageCode];
+        result = [NSLocale characterDirectionForLanguage:languageCode] == NSLocaleLanguageDirectionRightToLeft;
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+
+    return result;
 }

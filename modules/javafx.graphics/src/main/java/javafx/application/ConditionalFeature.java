@@ -25,6 +25,8 @@
 
 package javafx.application;
 
+import javafx.stage.StageStyle;
+
 /**
  * Defines a set of conditional (optional) features. These features
  * may not be available on all platforms. An application that wants to
@@ -139,7 +141,7 @@ public enum ConditionalFeature {
     TRANSPARENT_WINDOW,
 
     /**
-     *  Indicates that a system supports {@link javafx.stage.StageStyle#UNIFIED}
+     *  Indicates that a system supports {@link StageStyle#UNIFIED}
      *  <p>
      *  NOTE: Currently, supported on:
      *  <ul>
@@ -149,6 +151,15 @@ public enum ConditionalFeature {
      * @since JavaFX 8.0
      */
     UNIFIED_WINDOW,
+
+    /**
+     * Indicates that a system supports {@link StageStyle#EXTENDED} and {@link StageStyle#EXTENDED_UTILITY}.
+     * <p>
+     * This feature is currently supported on Windows, Linux, and macOS.
+     *
+     * @since 24
+     */
+    EXTENDED_WINDOW,
 
     /**
      * Indicates whether or not controls should use two-level focus. Two-level

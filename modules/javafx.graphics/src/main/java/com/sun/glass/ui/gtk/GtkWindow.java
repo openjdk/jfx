@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,12 +24,15 @@
  */
 package com.sun.glass.ui.gtk;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.events.WindowEvent;
+import com.sun.glass.ui.NonClientHandler;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.glass.ui.WindowControlsOverlay;
 
 class GtkWindow extends Window {
 
@@ -91,6 +94,8 @@ class GtkWindow extends Window {
     @Override
     protected native void _setEnabled(long ptr, boolean enabled);
 
+    private native boolean _setSystemMinimumSize(long ptr, int width, int height);
+
     @Override
     protected native boolean _setMinimumSize(long ptr, int width, int height);
 
@@ -116,6 +121,8 @@ class GtkWindow extends Window {
     protected native void _exitModal(long ptr);
 
     protected native long _getNativeWindowImpl(long ptr);
+
+    private native void _showSystemMenu(long ptr, int x, int y);
 
     private native boolean isVisible(long ptr);
 
@@ -197,5 +204,82 @@ class GtkWindow extends Window {
     public long getRawHandle() {
         long ptr = super.getRawHandle();
         return ptr == 0L ? 0L : _getNativeWindowImpl(ptr);
+    }
+
+    private WindowControlsOverlay windowControlsOverlay;
+
+    @Override
+    public WindowControlsOverlay getWindowOverlay() {
+        if (windowControlsOverlay == null && isExtendedWindow()) {
+            windowControlsOverlay = new WindowControlsOverlay(
+                PlatformThemeObserver.getInstance().stylesheetProperty(), isUtilityWindow());
+
+            // Set the system-defined absolute minimum size to the size of the window buttons area,
+            // regardless of whether the application has specified a smaller minimum size.
+            windowControlsOverlay.metricsProperty().addListener((_, _, metrics) -> {
+                int width = (int)(metrics.size().getWidth() * platformScaleX);
+                int height = (int)(metrics.size().getHeight() * platformScaleY);
+                _setSystemMinimumSize(super.getRawHandle(), width, height);
+            });
+
+            windowOverlayMetrics.bind(windowControlsOverlay.metricsProperty());
+        }
+
+        return windowControlsOverlay;
+    }
+
+    @Override
+    public NonClientHandler getNonClientHandler() {
+        var overlay = getWindowOverlay();
+        if (overlay == null) {
+            return null;
+        }
+
+        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
+            // In contrast to Windows, GTK doesn't produce non-client events. We convert regular
+            // mouse events to non-client events since that's what WindowControlsOverlay expects.
+            return overlay.handleMouseEvent(
+                MouseEvent.toNonClientEvent(type), button, x / platformScaleX, y / platformScaleY);
+        };
+    }
+
+    /**
+     * Opens a system menu at the specified coordinates.
+     *
+     * @param x the X coordinate in physical pixels
+     * @param y the Y coordinate in physical pixels
+     */
+    public void showSystemMenu(int x, int y) {
+        _showSystemMenu(super.getRawHandle(), x, y);
+    }
+
+    /**
+     * Returns whether the window is draggable at the specified coordinate.
+     * <p>
+     * This method is called from native code.
+     *
+     * @param x the X coordinate in physical pixels
+     * @param y the Y coordinate in physical pixels
+     */
+    @SuppressWarnings("unused")
+    private boolean dragAreaHitTest(int x, int y) {
+        // A full-screen window has no draggable area.
+        if (view == null || view.isInFullscreen() || !isExtendedWindow()) {
+            return false;
+        }
+
+        double wx = x / platformScaleX;
+        double wy = y / platformScaleY;
+
+        if (windowControlsOverlay != null && windowControlsOverlay.buttonAt(wx, wy) != null) {
+            return false;
+        }
+
+        View.EventHandler eventHandler = view.getEventHandler();
+        if (eventHandler == null) {
+            return false;
+        }
+
+        return eventHandler.pickDragAreaNode(wx, wy) != null;
     }
 }

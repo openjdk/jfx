@@ -337,6 +337,11 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     @Override native protected boolean _supportsUnifiedWindows();
 
     @Override
+    protected boolean _supportsExtendedWindows() {
+        return true;
+    }
+
+    @Override
     public String getDataDirectory() {
         checkEventThread();
         String baseDirectory = System.getenv("APPDATA");

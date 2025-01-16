@@ -99,6 +99,8 @@ typedef enum GestureMaskType {
 
 - (BOOL)suppressMouseEnterExitOnMouseDown;
 
+- (void)performWindowDrag;
+
 - (void)enterFullscreenWithAnimate:(BOOL)animate withKeepRatio:(BOOL)keepRatio withHideCursor:(BOOL)hideCursor;
 - (void)exitFullscreenWithAnimate:(BOOL)animate;
 - (void)sendJavaFullScreenEvent:(BOOL)entered withNativeWidget:(BOOL)isNative;

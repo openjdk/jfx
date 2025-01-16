@@ -129,7 +129,7 @@ public class WindowStage extends GlassStage {
             if (owner instanceof WindowStage) {
                 ownerWindow = ((WindowStage)owner).platformWindow;
             }
-            boolean resizable = false;
+            boolean resizable = fxStage != null && fxStage.isResizable();
             boolean focusable = true;
             int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
             if (isPopupStage) { // TODO: make it a stage style?
@@ -138,37 +138,46 @@ public class WindowStage extends GlassStage {
                     windowMask |= Window.TRANSPARENT;
                 }
                 focusable = false;
+                resizable = false;
             } else {
+                // Downgrade conditional stage styles if not supported
+                if (style == StageStyle.UNIFIED && !app.supportsUnifiedWindows()) {
+                    style = StageStyle.DECORATED;
+                } else if (style == StageStyle.EXTENDED && !app.supportsExtendedWindows()) {
+                    style = StageStyle.DECORATED;
+                } else if (style == StageStyle.EXTENDED_UTILITY && !app.supportsExtendedWindows()) {
+                    style = StageStyle.UTILITY;
+                }
+
                 switch (style) {
                     case UNIFIED:
-                        if (app.supportsUnifiedWindows()) {
-                            windowMask |= Window.UNIFIED;
-                        }
+                        windowMask |= Window.UNIFIED;
                         // fall through
                     case DECORATED:
-                        windowMask |=
-                            Window.TITLED | Window.CLOSABLE |
-                            Window.MINIMIZABLE | Window.MAXIMIZABLE;
-                        if (ownerWindow != null || modality != Modality.NONE) {
-                            windowMask &=
-                                ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
-                        }
-                        resizable = true;
+                        windowMask |= Window.TITLED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
+                        break;
+                    case EXTENDED:
+                        windowMask |= Window.EXTENDED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
+                        break;
+                    case EXTENDED_UTILITY:
+                        windowMask |= Window.EXTENDED | Window.CLOSABLE | Window.UTILITY;
                         break;
                     case UTILITY:
                         windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
                         break;
                     default:
-                        windowMask |=
-                                (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
+                        windowMask |= (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
                         break;
+                }
+
+                if (ownerWindow != null || modality != Modality.NONE) {
+                    windowMask &= ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
                 }
             }
             if (modality != Modality.NONE) {
                 windowMask |= Window.MODAL;
             }
-            platformWindow =
-                    app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+            platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
             platformWindow.setResizable(resizable);
             platformWindow.setFocusable(focusable);
             if (fxStage != null && fxStage.getScene() != null) {
@@ -226,7 +235,13 @@ public class WindowStage extends GlassStage {
     }
 
     @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa) {
-        ViewScene scene = new ViewScene(depthBuffer, msaa);
+        ViewScene scene = new ViewScene(fxStage != null ? fxStage.getScene() : null, depthBuffer, msaa);
+
+        // The window-provided overlay is not visible in full-screen mode.
+        if (!isInFullScreen) {
+            scene.setOverlay(platformWindow.getWindowOverlay());
+        }
+
         return scene;
     }
 
@@ -635,8 +650,9 @@ public class WindowStage extends GlassStage {
             } else {
                 if (warning != null) {
                     warning.cancel();
-                    setWarning(null);
                 }
+
+                setWarning(null);
                 v.exitFullscreen(false);
             }
         } else if (!isVisible() && warning != null) {
@@ -648,11 +664,11 @@ public class WindowStage extends GlassStage {
 
     void setWarning(OverlayWarning newWarning) {
         this.warning = newWarning;
-        getViewScene().synchroniseOverlayWarning();
-    }
-
-    OverlayWarning getWarning() {
-        return warning;
+        if (newWarning != null) {
+            getViewScene().setOverlay(newWarning);
+        } else if (!isInFullScreen) {
+            getViewScene().setOverlay(platformWindow.getWindowOverlay());
+        }
     }
 
     @Override public void setFullScreen(boolean fullScreen) {

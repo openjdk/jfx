@@ -85,4 +85,10 @@ public interface TKScene {
     public void entireSceneNeedsRepaint();
 
     public TKClipboard createDragboard(boolean isDragSource);
+
+    default void processOverlayCSS() {}
+
+    default void layoutOverlay() {}
+
+    default void synchronizeOverlay() {}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,12 +24,17 @@
  */
 package com.sun.glass.ui.mac;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Cursor;
+import com.sun.glass.ui.NonClientHandler;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.glass.ui.WindowOverlayMetrics;
+import javafx.geometry.Dimension2D;
+import javafx.geometry.HorizontalDirection;
 import java.nio.ByteBuffer;
 
 /**
@@ -44,6 +49,11 @@ final class MacWindow extends Window {
 
     protected MacWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
+
+        if (isExtendedWindow()) {
+            // The default window metrics correspond to a small toolbar style.
+            updateWindowOverlayMetrics(NSWindowToolbarStyle.SMALL);
+        }
     }
 
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
@@ -149,6 +159,71 @@ final class MacWindow extends Window {
     @Override
     protected void _releaseInput(long ptr) {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    private native void _performWindowDrag(long ptr);
+
+    private native void _performTitleBarDoubleClickAction(long ptr);
+
+    @Override
+    public NonClientHandler getNonClientHandler() {
+        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
+            if (type == MouseEvent.DOWN) {
+                double wx = x / platformScaleX;
+                double wy = y / platformScaleY;
+
+                View.EventHandler eventHandler = view != null ? view.getEventHandler() : null;
+                if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
+                    if (clickCount == 2) {
+                        _performTitleBarDoubleClickAction(getRawHandle());
+                    } else if (clickCount == 1) {
+                        _performWindowDrag(getRawHandle());
+                    }
+                }
+            }
+
+            return false;
+        };
+    }
+
+    private native boolean _isRightToLeftLayoutDirection();
+
+    private native void _setToolbarStyle(long ptr, int style);
+
+    @Override
+    protected void onHeaderBarHeightChanged(double height) {
+        var toolbarStyle = NSWindowToolbarStyle.ofHeight(height);
+        _setToolbarStyle(getRawHandle(), toolbarStyle.style);
+        updateWindowOverlayMetrics(toolbarStyle);
+    }
+
+    private void updateWindowOverlayMetrics(NSWindowToolbarStyle toolbarStyle) {
+        windowOverlayMetrics.set(new WindowOverlayMetrics(
+            _isRightToLeftLayoutDirection()
+                ? HorizontalDirection.RIGHT
+                : HorizontalDirection.LEFT,
+            toolbarStyle.size,
+            NSWindowToolbarStyle.SMALL.size.getHeight()));
+    }
+
+    private enum NSWindowToolbarStyle {
+        SMALL(68, 28, 1), // NSWindowToolbarStyleExpanded
+        MEDIUM(78, 38, 4), // NSWindowToolbarStyleUnifiedCompact
+        LARGE(90, 52, 3); // NSWindowToolbarStyleUnified
+
+        NSWindowToolbarStyle(double width, double height, int style) {
+            this.size = new Dimension2D(width, height);
+            this.style = style;
+        }
+
+        final Dimension2D size;
+        final int style;
+
+        static NSWindowToolbarStyle ofHeight(double height) {
+            if (height >= LARGE.size.getHeight()) return LARGE;
+            if (height >= MEDIUM.size.getHeight()) return MEDIUM;
+            return SMALL;
+        }
     }
 }
 
