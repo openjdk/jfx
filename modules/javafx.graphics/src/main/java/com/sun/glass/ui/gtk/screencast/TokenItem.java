@@ -25,15 +25,16 @@
 
 package com.sun.glass.ui.gtk.screencast;
 
-import com.sun.javafx.geom.Dimension;
-import com.sun.javafx.geom.Rectangle;
+import static com.sun.glass.ui.gtk.screencast.ScreencastHelper.SCREENCAST_DEBUG;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.sun.glass.ui.gtk.screencast.ScreencastHelper.SCREENCAST_DEBUG;
+import com.sun.javafx.geom.Dimension2D;
+import com.sun.javafx.geom.Rectangle;
 
 
 /**
@@ -76,15 +77,15 @@ final class TokenItem {
         return allowedScreensBounds.containsAll(bounds);
     }
 
-    public boolean hasAllScreensOfSameSize(List<Dimension> screenSizes) {
+    public boolean hasAllScreensOfSameSize(List<Dimension2D> screenSizes) {
         // We also need to consider duplicates, since there may be
         // multiple screens of the same size.
         // The token item must also have at least the same number
         // of screens with that size.
 
-        List<Dimension> tokenSizes = allowedScreensBounds
+        List<Dimension2D> tokenSizes = allowedScreensBounds
                 .stream()
-                .map(bounds -> new Dimension(bounds.width, bounds.height))
+                .map(bounds -> new Dimension2D(bounds.width, bounds.height))
                 .collect(Collectors.toCollection(ArrayList::new));
 
         return screenSizes.size() == screenSizes

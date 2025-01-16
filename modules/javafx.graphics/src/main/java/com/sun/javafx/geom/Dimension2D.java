@@ -26,18 +26,6 @@
 package com.sun.javafx.geom;
 
 /**
- * The <code>Dimension2D</code> class is to encapsulate a width
- * and a height dimension.
- * <p>
+ * A 2D dimension object that contains a width and a height.
  */
-public class Dimension2D {
-    public float width;
-    public float height;
-
-    public Dimension2D() { }
-
-    public Dimension2D(float w, float h) {
-        width = w;
-        height = h;
-    }
-}
+public record Dimension2D(float width, float height) {}
