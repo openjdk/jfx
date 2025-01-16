@@ -39,7 +39,7 @@ public enum PrintSides {
     /**
      * Two sided printing where the vertical edge of the paper is to be used
      * for binding such as in a book. In PORTAIT mode printing, the
-     * vertical edge is usally the long edge but this is reversed if
+     * vertical edge is usually the long edge but this is reversed if
      * LANDSCAPE printing is requested
      */
     DUPLEX,
@@ -47,7 +47,7 @@ public enum PrintSides {
     /**
      * Two sided printing where the horizontal edge of the paper is to be used
      * for binding such as in a notepad. In PORTAIT mode printing, the
-     * horizontal edge is usally the short edge but this is reversed if
+     * horizontal edge is usually the short edge but this is reversed if
      * LANDSCAPE printing is requested
      */
     TUMBLE

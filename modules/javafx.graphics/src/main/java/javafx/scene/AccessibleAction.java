@@ -96,7 +96,7 @@ public enum AccessibleAction {
     /**
      * Request that the node take focus.  By default, a node will
      * request focus using  {@link javafx.scene.Node#requestFocus()}.
-     * Both JavaFX and the assisteve technology have the concept of
+     * Both JavaFX and the assistive technology have the concept of
      * a focus node and most of the time, they are the same.
      * In some cases, a control might want the JavaFX focus to remain
      * on the parent, while the assistive technology focus is on the child.

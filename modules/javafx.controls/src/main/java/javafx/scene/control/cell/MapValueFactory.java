@@ -59,7 +59,7 @@ import javafx.util.Callback;
  * </code></pre>
  *
  * <p>In this example, there is a list of Map instances, where each Map instance
- * representsa single row in the TableView. The "firstName" string is used as a
+ * represents a single row in the TableView. The "firstName" string is used as a
  * key into this map, and the value corresponding to this key is returned, if
  * one exists. If the value is an {@link ObservableValue}, then this is returned
  * directly, otherwise the value is wrapped in a {@link ReadOnlyObjectWrapper}.

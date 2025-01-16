@@ -333,7 +333,7 @@ public class Window implements EventTarget {
 
     /**
      * Sets x and y properties on this Window so that it is centered on the
-     * curent screen.
+     * current screen.
      * The current screen is determined from the intersection of current window bounds and
      * visual bounds of all screens.
      */

@@ -46,7 +46,7 @@ import com.sun.javafx.tk.PrintPipeline;
  * <li>Job creation
  * <li>Job configuration based on supported printer capabilities
  * <li>Page setup
- * <li>Rendering of a node hierachy to a page.
+ * <li>Rendering of a node hierarchy to a page.
  * </ul>
  * <p>
  * Here ia a very simple example, which prints a single node.

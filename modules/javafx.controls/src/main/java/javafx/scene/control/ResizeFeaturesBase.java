@@ -57,7 +57,7 @@ public abstract class ResizeFeaturesBase<S> {
   /**
    * Returns the width of the area available for columns.
    *
-   * @return the width availabe for columns
+   * @return the width available for columns
    *
    * @since 20
    */

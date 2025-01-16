@@ -26,7 +26,7 @@
 package javafx.print;
 
 /**
- * Class to decribe printing quality setting.
+ * Class to describe printing quality setting.
  * @since JavaFX 8.0
  */
 

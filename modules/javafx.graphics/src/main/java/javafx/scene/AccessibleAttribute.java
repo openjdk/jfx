@@ -328,7 +328,7 @@ public enum AccessibleAttribute {
     HORIZONTAL_SCROLLBAR(Node.class),
 
     /**
-     * Returns true of the node is indeterminaite, otherwise false.
+     * Returns true of the node is indeterminate, otherwise false.
      * <ul>
      * <li>Used by: CheckBox and ProgressIndicator </li>
      * <li>Needs notify: yes </li>

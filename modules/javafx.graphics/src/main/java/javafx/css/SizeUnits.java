@@ -366,8 +366,8 @@ public enum SizeUnits {
     private final boolean absolute;
 
     /**
-     * Gets wehther this {@code SizeUnits} value is absolute.
-     * @return whether value is absoulute
+     * Gets whether this {@code SizeUnits} value is absolute.
+     * @return whether value is absolute
      */
     public boolean isAbsolute() {
         return absolute;

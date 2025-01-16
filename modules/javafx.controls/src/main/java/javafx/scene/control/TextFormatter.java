@@ -117,8 +117,8 @@ public class TextFormatter<V> {
     /**
      * The converter between the values and text.
      * It maintains a "binding" between the {@link javafx.scene.control.TextInputControl#textProperty()} }
-     * and {@link #valueProperty()} }. The value is updated when the control loses it's focus or it is commited (TextField only).
-     * Setting the value will update the text of the control, usin the provided converter.
+     * and {@link #valueProperty()} }. The value is updated when the control loses it's focus or it is committed (TextField only).
+     * Setting the value will update the text of the control, using the provided converter.
      *
      * If it's impossible to convert text to value, an exception should be thrown.
      * @return StringConverter for values or null if none provided
@@ -143,7 +143,7 @@ public class TextFormatter<V> {
 
     /**
      * The current value for this formatter. When the formatter is set on a {@code TextInputControl} and has a
-     * {@code valueConverter}, the value is set by the control, when the text is commited.
+     * {@code valueConverter}, the value is set by the control, when the text is committed.
      */
     private final ObjectProperty<V> value = new ObjectPropertyBase<>() {
 
@@ -231,7 +231,7 @@ public class TextFormatter<V> {
      *         an empty {@code text}. Similarly, if you want to delete some different or additional text, just set the {@code range}.
      *         If you want to remove first word instead of the second, just call {@code setRange(0,5)}</li>
      *         <li><b>Some text was added:</b> Now the {@code range} is empty (means nothing was deleted), but it's value is still important.
-     *         Both the start and end of the {@code range} point to the index wheret the new text was added. E.g. adding "ipsum " to "Lorem dolor sit amet"
+     *         Both the start and end of the {@code range} point to the index where the new text was added. E.g. adding "ipsum " to "Lorem dolor sit amet"
      *         would result in a change with {@code range} of (6,6) and {@code text} containing the String "ipsum ".</li>
      *         <li><b>Some text was replaced:</b> The combination of the 2 cases above. Both {@code text} and {@code range} are not empty. The text in {@code range} is deleted
      *         and replaced by {@code text} in the Change. The new text is added instead of the old text, which is at the beginning of the {@code range}.

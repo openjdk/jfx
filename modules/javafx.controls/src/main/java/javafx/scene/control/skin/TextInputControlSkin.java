@@ -659,7 +659,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      *
      * @param unit the unit of text to move by.
      * @param dir the direction of movement.
-     * @param select whether to extends the selection to the new posititon.
+     * @param select whether to extends the selection to the new position.
      */
     public abstract void moveCaret(TextUnit unit, Direction dir, boolean select);
 

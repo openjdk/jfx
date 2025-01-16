@@ -118,7 +118,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      * Create the virtualized container that handles the layout and scrolling of
      * all the cells. This enables skin subclasses to provide
      * a custom {@link VirtualFlow} implementation.
-     * If not overridden, this method intantiates a default VirtualFlow instance.
+     * If not overridden, this method instantiates a default VirtualFlow instance.
      * @return newly created VirtualFlow instance
      * @since 10
      */

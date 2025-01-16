@@ -31,7 +31,7 @@ package javafx.print;
  * When printing in a portrait orientation
  * cross feed direction is usually x/horizontal resolution, and
  * feed direction is usually y/horizontal resolution.
- * On most printers these are the same value, but it is possuble
+ * On most printers these are the same value, but it is possible
  * for them to be different.
  * @since JavaFX 8.0
  */

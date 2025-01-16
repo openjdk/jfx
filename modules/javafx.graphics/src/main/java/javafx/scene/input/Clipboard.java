@@ -207,7 +207,7 @@ public class Clipboard {
     /**
      * Gets the set of DataFormat types on this Clipboard instance which have
      * associated data registered on the clipboard. This set will always
-     * be non-null and immutable. If the Clipboard is subsequently modifed,
+     * be non-null and immutable. If the Clipboard is subsequently modified,
      * this returned set is not updated.
      *
      * @return A non-null immutable set of content types.
