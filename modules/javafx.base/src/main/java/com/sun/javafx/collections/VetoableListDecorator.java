@@ -134,8 +134,8 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
                     toBeRemoved[pointer + 2] = offset + i + 1;
                     pointer += 2;
                 } else {
-                    if (toBeRemoved[pointer - 1] == offset + i) {
-                        toBeRemoved[pointer - 1] = offset + i + 1;
+                    if (toBeRemoved[pointer] == offset + i) {
+                        toBeRemoved[pointer] = offset + i + 1;
                     } else {
                         int[] tmp = new int[toBeRemoved.length + 2];
                         System.arraycopy(toBeRemoved, 0, tmp, 0, toBeRemoved.length);
