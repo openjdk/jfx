@@ -103,8 +103,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private Menu appleMenu;
 
-    native void _runLoop(ClassLoader classLoader, Runnable launchable,
-                         boolean isTaskbarApplication);
+    private long delegateHandle;
+
+    native long _initDelegate(ClassLoader classLoader, Runnable launchable, boolean isTaskbarApplication);
+
+    native void _runLoop(long delegate);
+
     @Override
     protected void runLoop(final Runnable launchable) {
         // For normal (not embedded) taskbar applications the masOS activation
@@ -128,7 +132,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         startKeepAliveThread();
 
         ClassLoader classLoader = MacApplication.class.getClassLoader();
-        _runLoop(classLoader, wrappedRunnable, isTaskbarApplication);
+        delegateHandle = _initDelegate(classLoader, wrappedRunnable, isTaskbarApplication);
+        _runLoop(delegateHandle);
     }
 
     private final CountDownLatch reactivationLatch = new CountDownLatch(1);
@@ -154,10 +159,10 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         eventLoop.enter();
     }
 
-    native private void _finishTerminating();
+    native private void _finishTerminating(long delegateHandle);
     @Override
     protected void finishTerminating() {
-        _finishTerminating();
+        _finishTerminating(delegateHandle);
         finishKeepAliveThread();
 
         super.finishTerminating();
@@ -420,8 +425,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private native String _getApplicationClassName();
 
+    private native Map<String, Object> _getPlatformPreferences(long delegateHandle);
+
     @Override
-    public native Map<String, Object> getPlatformPreferences();
+    public Map<String, Object> getPlatformPreferences() {
+        return _getPlatformPreferences(delegateHandle);
+    }
 
     @Override
     public Map<String, PreferenceMapping<?, ?>> getPlatformKeyMappings() {
@@ -431,7 +440,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             "macOS.NSColor.controlAccentColor", new PreferenceMapping<>("accentColor", Color.class),
             "macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", new PreferenceMapping<>("reducedMotion", Boolean.class),
             "macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class),
-            "macOS.NSScroller.preferredScrollerStyle", new PreferenceMapping<>("persistentScrollBars", String.class, "NSScrollerStyleLegacy"::equals)
+            "macOS.NSScroller.preferredScrollerStyle", new PreferenceMapping<>("persistentScrollBars", String.class, "NSScrollerStyleLegacy"::equals),
+            "macOS.NWPathMonitor.currentPathConstrained", new PreferenceMapping<>("reducedData", Boolean.class)
         );
     }
 
@@ -487,7 +497,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("macOS.NSColor.systemYellowColor", Color.class),
             Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", Boolean.class),
             Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", Boolean.class),
-            Map.entry("macOS.NSScroller.preferredScrollerStyle", String.class)
+            Map.entry("macOS.NSScroller.preferredScrollerStyle", String.class),
+            Map.entry("macOS.NWPathMonitor.currentPathConstrained", Boolean.class),
+            Map.entry("macOS.NWPathMonitor.currentPathExpensive", Boolean.class)
         );
     }
 

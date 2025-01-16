@@ -32,6 +32,7 @@
 
 #include "garray.h"
 #include "gmem.h"
+#include "gmessages.h"
 #include "gstring.h"
 #include "gstrfuncs.h"
 #include "glibintl.h"
@@ -702,6 +703,8 @@ g_hostname_to_unicode (const gchar *hostname)
   GString *out;
   gssize llen;
   gsize hostname_max_length_bytes = get_hostname_max_length_bytes ();
+
+  g_return_val_if_fail (hostname != NULL, NULL);
 
   /* See the comment at the top of g_hostname_to_ascii(). */
   if (hostname_max_length_bytes <= G_MAXSIZE / 4 &&

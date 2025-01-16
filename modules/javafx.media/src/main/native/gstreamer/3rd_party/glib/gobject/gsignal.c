@@ -283,9 +283,8 @@ is_canonical (const gchar *key)
  * Validate a signal name. This can be useful for dynamically-generated signals
  * which need to be validated at run-time before actually trying to create them.
  *
- * See [canonical parameter names][canonical-parameter-names] for details of
- * the rules for valid names. The rules for signal names are the same as those
- * for property names.
+ * See [func@GObject.signal_new] for details of the rules for valid names.
+ * The rules for signal names are the same as those for property names.
  *
  * Returns: %TRUE if @name is a valid signal name, %FALSE otherwise.
  * Since: 2.66

@@ -61,6 +61,7 @@
 
 - (void)runLoop:(id)selector;
 - (BOOL)started;
+- (jobject)getPlatformPreferences;
 
 + (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env;
 + (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env retValue:(jobject)retValue;

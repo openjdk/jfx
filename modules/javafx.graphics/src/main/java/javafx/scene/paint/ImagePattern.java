@@ -383,7 +383,6 @@ public final class ImagePattern extends Paint {
     @Override Object acc_getPlatformPaint() {
         if (acc_isMutable() || platformPaint == null) {
             platformPaint = Toolkit.getToolkit().getPaint(this);
-            assert platformPaint != null;
         }
         return platformPaint;
     }

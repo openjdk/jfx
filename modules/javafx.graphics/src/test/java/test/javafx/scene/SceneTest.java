@@ -31,6 +31,7 @@ import com.sun.javafx.scene.SceneEventDispatcher;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.css.PseudoClass;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
@@ -235,6 +236,18 @@ public class SceneTest {
         assertTrue(g.getStyleClass().contains("root"));
         scene.setRoot(new Group());
         assertFalse(g.getStyleClass().contains("root"));
+    }
+
+    @Test
+    public void testRootPseudoClassIsSetOnRootNode() {
+        var root = PseudoClass.getPseudoClass("root");
+        Scene scene = new Scene(new Group());
+        Group g = new Group();
+        assertFalse(g.getPseudoClassStates().contains(root));
+        scene.setRoot(g);
+        assertTrue(g.getPseudoClassStates().contains(root));
+        scene.setRoot(new Group());
+        assertFalse(g.getPseudoClassStates().contains(root));
     }
 
     @Test

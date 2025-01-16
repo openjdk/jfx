@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -102,6 +102,8 @@ module javafx.graphics {
         javafx.controls;
     exports com.sun.javafx.scene to
         javafx.controls,
+        jfx.incubator.input,
+        jfx.incubator.richtext,
         javafx.media,
         javafx.swing,
         javafx.web;
@@ -114,9 +116,14 @@ module javafx.graphics {
         javafx.web;
     exports com.sun.javafx.scene.text to
         javafx.controls,
+        jfx.incubator.richtext,
         javafx.web;
+    exports com.sun.javafx.scene.shape to
+        javafx.controls;
     exports com.sun.javafx.scene.traversal to
         javafx.controls,
+        jfx.incubator.input,
+        jfx.incubator.richtext,
         javafx.web;
     exports com.sun.javafx.sg.prism to
         javafx.media,
@@ -135,6 +142,8 @@ module javafx.graphics {
     exports com.sun.javafx.util to
         javafx.controls,
         javafx.fxml,
+        jfx.incubator.input,
+        jfx.incubator.richtext,
         javafx.media,
         javafx.swing,
         javafx.web;

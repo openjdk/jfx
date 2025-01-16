@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
@@ -159,6 +160,7 @@ public class TextFlow extends Pane {
     private TextLayout layout;
     private boolean needsContent;
     private boolean inLayout;
+    static { initAccessor(); }
 
     /**
      * Creates an empty TextFlow layout.
@@ -702,6 +704,15 @@ public class TextFlow extends Pane {
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
+    }
+
+    private static void initAccessor() {
+        TextFlowHelper.setAccessor(new TextFlowHelper.Accessor() {
+            @Override
+            public TextLayout getTextLayout(TextFlow f) {
+                return f.getTextLayout();
+            }
+        });
     }
 
     /**
