@@ -1020,7 +1020,7 @@ g_object_do_class_init (GObjectClass *class)
    * ]|
    *
    * It is important to note that you must use
-   * [canonical parameter names][canonical-parameter-names] as
+   * [canonical parameter names][class@GObject.ParamSpec#parameter-names] as
    * detail strings for the notify signal.
    */
   gobject_signals[NOTIFY] =
@@ -2992,7 +2992,7 @@ g_object_constructor (GType                  type,
     GParamSpec *pspec = construct_params->pspec;
 
     construct_params++;
-    object_set_property (object, pspec, value, nqueue, TRUE);
+    object_set_property (object, pspec, value, nqueue, FALSE);
   }
       g_object_notify_queue_thaw (object, nqueue, FALSE);
       /* the notification queue is still frozen from g_object_init(), so
@@ -3466,35 +3466,37 @@ g_object_get_property (GObject     *object,
  * g_object_connect: (skip)
  * @object: (type GObject.Object): a #GObject
  * @signal_spec: the spec for the first signal
- * @...: #GCallback for the first signal, followed by data for the
- *       first signal, followed optionally by more signal
- *       spec/callback/data triples, followed by %NULL
+ * @...: [type@GObject.Callback] for the first signal, followed by data for the
+ *   first signal, followed optionally by more signal
+ *   spec/callback/data triples, followed by `NULL`
  *
  * A convenience function to connect multiple signals at once.
  *
  * The signal specs expected by this function have the form
- * "modifier::signal_name", where modifier can be one of the following:
- * - signal: equivalent to g_signal_connect_data (..., NULL, G_CONNECT_DEFAULT)
- * - object-signal, object_signal: equivalent to g_signal_connect_object (..., G_CONNECT_DEFAULT)
- * - swapped-signal, swapped_signal: equivalent to g_signal_connect_data (..., NULL, G_CONNECT_SWAPPED)
- * - swapped_object_signal, swapped-object-signal: equivalent to g_signal_connect_object (..., G_CONNECT_SWAPPED)
- * - signal_after, signal-after: equivalent to g_signal_connect_data (..., NULL, G_CONNECT_AFTER)
- * - object_signal_after, object-signal-after: equivalent to g_signal_connect_object (..., G_CONNECT_AFTER)
- * - swapped_signal_after, swapped-signal-after: equivalent to g_signal_connect_data (..., NULL, G_CONNECT_SWAPPED | G_CONNECT_AFTER)
- * - swapped_object_signal_after, swapped-object-signal-after: equivalent to g_signal_connect_object (..., G_CONNECT_SWAPPED | G_CONNECT_AFTER)
+ * `modifier::signal_name`, where `modifier` can be one of the
+ * following:
  *
- * |[<!-- language="C" -->
- *   menu->toplevel = g_object_connect (g_object_new (GTK_TYPE_WINDOW,
- *                                                 "type", GTK_WINDOW_POPUP,
- *                                                 "child", menu,
- *                                                 NULL),
- *                                   "signal::event", gtk_menu_window_event, menu,
- *                                   "signal::size_request", gtk_menu_window_size_request, menu,
- *                                   "signal::destroy", gtk_widget_destroyed, &menu->toplevel,
- *                                   NULL);
- * ]|
+ * - `signal`: equivalent to `g_signal_connect_data (..., NULL, G_CONNECT_DEFAULT)`
+ * - `object-signal`, `object_signal`: equivalent to `g_signal_connect_object (..., G_CONNECT_DEFAULT)`
+ * - `swapped-signal`, `swapped_signal`: equivalent to `g_signal_connect_data (..., NULL, G_CONNECT_SWAPPED)`
+ * - `swapped_object_signal`, `swapped-object-signal`: equivalent to `g_signal_connect_object (..., G_CONNECT_SWAPPED)`
+ * - `signal_after`, `signal-after`: equivalent to `g_signal_connect_data (..., NULL, G_CONNECT_AFTER)`
+ * - `object_signal_after`, `object-signal-after`: equivalent to `g_signal_connect_object (..., G_CONNECT_AFTER)`
+ * - `swapped_signal_after`, `swapped-signal-after`: equivalent to `g_signal_connect_data (..., NULL, G_CONNECT_SWAPPED | G_CONNECT_AFTER)`
+ * - `swapped_object_signal_after`, `swapped-object-signal-after`: equivalent to `g_signal_connect_object (..., G_CONNECT_SWAPPED | G_CONNECT_AFTER)`
  *
- * Returns: (transfer none) (type GObject.Object): @object
+ * ```c
+ * menu->toplevel = g_object_connect (g_object_new (GTK_TYPE_WINDOW,
+ *                                                  "type", GTK_WINDOW_POPUP,
+ *                                                  "child", menu,
+ *                                                  NULL),
+ *                                    "signal::event", gtk_menu_window_event, menu,
+ *                                    "signal::size_request", gtk_menu_window_size_request, menu,
+ *                                    "signal::destroy", gtk_widget_destroyed, &menu->toplevel,
+ *                                    NULL);
+ * ```
+ *
+ * Returns: (transfer none) (type GObject.Object): the object
  */
 gpointer
 g_object_connect (gpointer     _object,
@@ -3895,7 +3897,7 @@ gpointer
  *
  * Using this function on the return value of the user's callback allows
  * the user to do whichever is more convenient for them. The caller will
- * alway receives exactly one full reference to the value: either the
+ * always receives exactly one full reference to the value: either the
  * one that was returned in the first place, or a floating reference
  * that has been converted to a full reference.
  *
@@ -4629,7 +4631,7 @@ g_object_dup_qdata (GObject        *object,
  * If the previous value was replaced then ownership of the
  * old value (@oldval) is passed to the caller, including
  * the registered destroy notify for it (passed out in @old_destroy).
- * It's up to the caller to free this as needed, which may
+ * It’s up to the caller to free this as needed, which may
  * or may not include using @old_destroy as sometimes replacement
  * should not destroy the object in the normal way.
  *
@@ -4844,7 +4846,7 @@ g_object_dup_data (GObject        *object,
  * If the previous value was replaced then ownership of the
  * old value (@oldval) is passed to the caller, including
  * the registered destroy notify for it (passed out in @old_destroy).
- * It's up to the caller to free this as needed, which may
+ * It’s up to the caller to free this as needed, which may
  * or may not include using @old_destroy as sometimes replacement
  * should not destroy the object in the normal way.
  *
@@ -5604,6 +5606,7 @@ _weak_ref_set (GWeakRef *weak_ref,
   if (new_object)
     {
 #if G_ENABLE_DEBUG
+      g_assert (new_wrdata != NULL);
       g_assert (weak_ref_data_list_find (new_wrdata, weak_ref) < 0);
 #endif
       if (g_atomic_int_get (&new_object->ref_count) < 1)

@@ -454,7 +454,8 @@ final class GtkApplication extends Application implements
             "GTK.theme_bg_color", new PreferenceMapping<>("backgroundColor", Color.class),
             "GTK.theme_selected_bg_color", new PreferenceMapping<>("accentColor", Color.class),
             "GTK.enable_animations", new PreferenceMapping<>("reducedMotion", Boolean.class, b -> !b),
-            "GTK.overlay_scrolling", new PreferenceMapping<>("persistentScrollBars", Boolean.class, b -> !b)
+            "GTK.overlay_scrolling", new PreferenceMapping<>("persistentScrollBars", Boolean.class, b -> !b),
+            "GTK.network_metered", new PreferenceMapping<>("reducedData", Boolean.class)
         );
     }
 
@@ -482,7 +483,8 @@ final class GtkApplication extends Application implements
             Map.entry("GTK.error_color", Color.class),
             Map.entry("GTK.success_color", Color.class),
             Map.entry("GTK.enable_animations", Boolean.class),
-            Map.entry("GTK.overlay_scrolling", Boolean.class)
+            Map.entry("GTK.overlay_scrolling", Boolean.class),
+            Map.entry("GTK.network_metered", Boolean.class)
         );
     }
 }

@@ -1074,6 +1074,8 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
         geometry.final_width.type = BOUNDSTYPE_CONTENT;
         geometry.final_width.value = cw;
         newW = cw;
+    } else {
+        newW = geometry_get_content_width(&geometry);
     }
 
     if (h > 0) {
@@ -1084,7 +1086,10 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
         geometry.final_height.type = BOUNDSTYPE_CONTENT;
         geometry.final_height.value = ch;
         newH = ch;
+    } else {
+        newH = geometry_get_content_height(&geometry);
     }
+
 
     if (newW > 0 || newH > 0) {
         // call update_window_constraints() to let gtk_window_resize succeed, because it's bound to geometry constraints
