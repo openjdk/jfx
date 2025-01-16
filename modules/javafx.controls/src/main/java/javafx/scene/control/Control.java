@@ -31,34 +31,36 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
 import javafx.css.CssParser;
+import javafx.css.Styleable;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
+import javafx.css.converter.StringConverter;
 import javafx.event.EventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.input.InputMap;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.ControlHelper;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableStringProperty;
-import javafx.css.converter.StringConverter;
-import com.sun.javafx.scene.control.Logging;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
+import com.sun.javafx.scene.control.ControlHelper;
+import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.control.input.InputMapHelper;
 
 
 /**
@@ -201,6 +203,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     };
 
+    private InputMap inputMap;
 
 
     /* *************************************************************************
@@ -451,11 +454,6 @@ public abstract class Control extends Region implements Skinnable {
         // we add a listener for menu request events to show the context menu
         // that may be set on the Control
         this.addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
-
-        // TODO re-enable when InputMap moves back to Node / Control
-//        // Most controls need an input map, so we set this to be non-null in
-//        // Control to save people from running into NPEs.
-//        setInputMap(new InputMap(this));
     }
 
 
@@ -466,15 +464,40 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
-    // Proposed dispose() API.
-    // Note that there is impl code for a dispose method in TableRowSkinBase
-    // and TableCell (just search for dispose())
-//    public void dispose() {
-//        Skin skin = getSkin();
-//        if (skin != null) {
-//            skin.dispose();
-//        }
-//    }
+    /**
+     * Returns the {@link InputMap} for this {@code Control}.
+     *
+     * @since 999 TODO
+     * @return the input map
+     */
+    public final InputMap getInputMap() {
+        if (inputMap == null) {
+            inputMap = new InputMap(this);
+        }
+        return inputMap;
+    }
+
+    /**
+     * Executes function mapped to the {@link FunctionTag}.
+     * This method does nothing if no mapping is found.
+     *
+     * @since 999 TODO
+     * @param tag the function tag
+     */
+    protected final void execute(FunctionTag tag) {
+        InputMapHelper.execute(this, getInputMap(), tag);
+    }
+
+    /**
+     * Executes the default function mapped to the specified tag.
+     * This method does nothing if no default mapping exists.
+     *
+     * @since 999 TODO
+     * @param tag the function tag
+     */
+    public final void executeDefault(FunctionTag tag) {
+        InputMapHelper.executeDefault(this, getInputMap(), tag);
+    }
 
     /**
      * Returns <code>true</code> since all Controls are resizable.

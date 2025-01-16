@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,31 +22,44 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.javafx.scene.control.input;
+
+import javafx.event.EventType;
+import javafx.scene.control.input.KeyBinding;
+import javafx.scene.input.KeyEvent;
 
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
+ * Contains logic for mapping KeyBinding to a specific KeyEvent.
  */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
+public class KeyEventMapper {
+    private static final int PRESSED = 0x01;
+    private static final int RELEASED = 0x02;
+    private static final int TYPED = 0x04;
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.input;
-    exports javafx.scene.control.skin;
+    private int types;
 
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+    public EventType<KeyEvent> addType(KeyBinding k) {
+        if (k.isKeyPressed()) {
+            types |= PRESSED;
+            return KeyEvent.KEY_PRESSED;
+        } else if (k.isKeyReleased()) {
+            types |= RELEASED;
+            return KeyEvent.KEY_RELEASED;
+        } else {
+            types |= TYPED;
+            return KeyEvent.KEY_TYPED;
+        }
+    }
+
+    public boolean hasKeyPressed() {
+        return (types & PRESSED) != 0;
+    }
+
+    public boolean hasKeyReleased() {
+        return (types & RELEASED) != 0;
+    }
+
+    public boolean hasKeyTyped() {
+        return (types & TYPED) != 0;
+    }
 }
