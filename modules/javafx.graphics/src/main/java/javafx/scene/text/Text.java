@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,9 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.text.PrismLayoutInfo;
 import com.sun.javafx.text.TextRun;
+import com.sun.javafx.text.TextUtils;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -88,6 +90,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
@@ -859,7 +862,8 @@ public non-sealed class Text extends Shape {
     }
 
     /**
-     * The shape of the selection in local coordinates.
+     * The shape of the selection in coordinates
+     * relative to the font base line.
      *
      * @return the {@code selectionShape} property
      *
@@ -1059,9 +1063,9 @@ public non-sealed class Text extends Shape {
         int length = getTextInternal().length();
         if (0 <= start && start < end  && end <= length) {
             TextLayout layout = getTextLayout();
-            float x = (float)getX();
-            float y = (float)getY() - getYRendering();
-            return layout.getRange(start, end, type, x, y);
+            double dx = getX();
+            double dy = getY() - getYRendering();
+            return TextUtils.getRange(layout, start, end, type, dx, dy);
         }
         return EMPTY_PATH_ELEMENT_ARRAY;
     }
@@ -1076,16 +1080,18 @@ public non-sealed class Text extends Shape {
      */
     public final PathElement[] caretShape(int charIndex, boolean caretBias) {
         if (0 <= charIndex && charIndex <= getTextInternal().length()) {
-            float x = (float)getX();
-            float y = (float)getY() - getYRendering();
-            return getTextLayout().getCaretShape(charIndex, caretBias, x, y);
+            double dx = getX();
+            double dy = getY() - getYRendering();
+            float[] c = getTextLayout().getCaretInf(charIndex, caretBias);
+            return TextUtils.getCaretShape(c, dx, dy);
         } else {
             return null;
         }
     }
 
     /**
-     * Returns the shape for the range of the text in local coordinates.
+     * Returns the shape for the range of the text in coordinates
+     * relative to the font base line.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
@@ -1097,7 +1103,8 @@ public non-sealed class Text extends Shape {
     }
 
     /**
-     * Returns the shape for the underline in local coordinates.
+     * Returns the shape for the underline in coordinates
+     * relative to the font base line.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
@@ -1106,6 +1113,19 @@ public non-sealed class Text extends Shape {
      */
     public final PathElement[] underlineShape(int start, int end) {
         return getRange(start, end, TextLayout.TYPE_UNDERLINE);
+    }
+
+    /**
+     * Returns the shape for the strike-through in coordinates
+     * relative to the font base line.
+     *
+     * @param start the beginning character index for the range
+     * @param end the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 25
+     */
+    public final PathElement[] strikeThroughShape(int start, int end) {
+        return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH);
     }
 
     private float getYAdjustment(BaseBounds bounds) {
@@ -1840,18 +1860,18 @@ public non-sealed class Text extends Shape {
         final ReadOnlyObjectProperty<PathElement[]> caretShapeProperty() {
             if (caretShape == null) {
                 caretBinding = new ObjectBinding<>() {
-                    {bind(caretPositionProperty(), caretBiasProperty());}
-                    @Override protected PathElement[] computeValue() {
+                    {
+                        bind(caretPositionProperty(), caretBiasProperty());
+                    }
+
+                    @Override
+                    protected PathElement[] computeValue() {
                         int pos = getCaretPosition();
-                        int length = getTextInternal().length();
-                        if (0 <= pos && pos <= length) {
-                            boolean bias = isCaretBias();
-                            float x = (float)getX();
-                            float y = (float)getY() - getYRendering();
-                            TextLayout layout = getTextLayout();
-                            return layout.getCaretShape(pos, bias, x, y);
+                        PathElement[] pe = caretShape(pos, isCaretBias());
+                        if (pe == null) {
+                            return EMPTY_PATH_ELEMENT_ARRAY;
                         }
-                        return EMPTY_PATH_ELEMENT_ARRAY;
+                        return pe;
                     }
                 };
                 caretShape = new SimpleObjectProperty<>(Text.this, "caretShape");
@@ -2069,5 +2089,34 @@ public non-sealed class Text extends Shape {
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
+    }
+
+    /**
+     * Returns the object which provides a view into the text layout for this node, which allows for querying
+     * the details of the layout.
+     * <p>
+     * While there is no general guarantee that successive invocations of this method return the same instance,
+     * it is safe to either cache this object or call this method each time, since the information obtained from
+     * this lightweight object remains valid until the next layout cycle.
+     * <p>
+     * The information obtained after the next layout cycle might be different as a result
+     * of actions such as resizing of the container, or modification of certain properties.
+     * For example updating the text or the font might change the layout, but a change of color would not.
+     *
+     * @return the layout information
+     * @since 25
+     */
+    public final LayoutInfo getLayoutInfo() {
+        return new PrismLayoutInfo(getTextLayout()) {
+            @Override
+            public double lineSpacing() {
+                return getLineSpacing();
+            }
+
+            @Override
+            public Insets insets() {
+                return Insets.EMPTY;
+            }
+        };
     }
 }
