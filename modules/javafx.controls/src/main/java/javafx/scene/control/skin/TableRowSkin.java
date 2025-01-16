@@ -32,7 +32,6 @@ import java.util.List;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TableRowBehavior;
 
-import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.AccessibleAttribute;
@@ -93,16 +92,16 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
             }
         });
 
-        setupTreeTableViewListeners();
+        setupTableViewListeners();
     }
 
     // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
-    private void setupTreeTableViewListeners() {
+    private void setupTableViewListeners() {
         TableView<T> tableView = getSkinnable().getTableView();
         if (tableView == null) {
             registerInvalidationListener(getSkinnable().tableViewProperty(), e -> {
                 unregisterInvalidationListeners(getSkinnable().tableViewProperty());
-                setupTreeTableViewListeners();
+                setupTableViewListeners();
             });
         } else {
             registerChangeListener(tableView.fixedCellSizeProperty(), e -> {
