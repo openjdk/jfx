@@ -254,7 +254,7 @@ public class TextFlow extends Pane {
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
-     * @since 24
+     * @since 25
      */
     public final PathElement[] strikeThroughShape(int start, int end) {
         return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH);
@@ -728,7 +728,7 @@ public class TextFlow extends Pane {
      * For example updating the text or the font might change the layout, but a change of color would not.
      *
      * @return the layout information
-     * @since 24
+     * @since 25
      */
     public final LayoutInfo getLayoutInfo() {
         return new PrismLayoutInfo(getTextLayout()) {

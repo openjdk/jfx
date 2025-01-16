@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ import javafx.geometry.Rectangle2D;
  * of actions such as resizing of the container, or modification of certain properties.
  * For example updating the text or the font might change the layout, but a change of color would not.
  *
- * @since 24
+ * @since 25
  */
 public abstract class LayoutInfo {
     /**

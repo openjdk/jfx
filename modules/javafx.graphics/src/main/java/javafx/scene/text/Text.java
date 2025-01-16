@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1122,7 +1122,7 @@ public non-sealed class Text extends Shape {
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
-     * @since 24
+     * @since 25
      */
     public final PathElement[] strikeThroughShape(int start, int end) {
         return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH);
@@ -2104,7 +2104,7 @@ public non-sealed class Text extends Shape {
      * For example updating the text or the font might change the layout, but a change of color would not.
      *
      * @return the layout information
-     * @since 24
+     * @since 25
      */
     public final LayoutInfo getLayoutInfo() {
         return new PrismLayoutInfo(getTextLayout()) {

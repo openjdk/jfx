@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,7 @@ import com.sun.javafx.text.PrismCaretInfo;
  * right-to-left text, two line segments will be shown, indicating the insertion position for both left-to-right
  * and right-to-left character.
  *
- * @since 24
+ * @since 25
  */
 public sealed abstract class CaretInfo permits PrismCaretInfo {
     /**
