@@ -121,7 +121,6 @@ public class SkinCleanupTest {
     /**
      * Test access to fixedCellSize via lookup (not listener)
      */
-    @Disabled("JDK-8277000")
     @Test
     public void testTreeTableRowFixedCellSizeListener() {
         TreeTableView<Person> tableView = createPersonTreeTable(false);
@@ -269,6 +268,37 @@ public class SkinCleanupTest {
         double fixed = 200;
         tableView.setFixedCellSize(fixed);
         assertTrue(isFixedCellSizeEnabled(tableRow), "fixed cell size enabled");
+    }
+
+    @Test
+    public void testTreeTableRowVirtualFlowWidthListenerReplaceSkin() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        tableView.setFixedCellSize(24);
+        showControl(tableView, true);
+        VirtualFlow<?> flow = getVirtualFlow(tableView);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        Toolkit.getToolkit().firePulse();
+        TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
+        assertNotNull(
+                unregisterChangeListeners(rowSkin, flow.widthProperty()),
+                "row skin must have listener to virtualFlow width");
+    }
+
+    /**
+     * Sanity test: listener to flow's width is registered.
+     */
+    @Test
+    public void testTreeTableRowVirtualFlowWidthListener() {
+        TreeTableView<Person> tableView = createPersonTreeTable(false);
+        tableView.setFixedCellSize(24);
+        showControl(tableView, true);
+        VirtualFlow<?> flow = getVirtualFlow(tableView);
+        TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
+        TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
+        assertNotNull(
+                unregisterChangeListeners(rowSkin, flow.widthProperty()),
+                "row skin must have listener to virtualFlow width");
     }
 
     @Test
@@ -550,7 +580,6 @@ public class SkinCleanupTest {
     /**
      * Test access to fixedCellSize via lookup (not listener)
      */
-    @Disabled("JDK-8277000")
     @Test
     public void testTableRowFixedCellSizeListener() {
         TableView<Person> tableView = createPersonTable(false);
@@ -644,6 +673,7 @@ public class SkinCleanupTest {
     @Test
     public void testTableRowVirtualFlowWidthListenerReplaceSkin() {
         TableView<Person> tableView = createPersonTable(false);
+        tableView.setFixedCellSize(24);
         showControl(tableView, true);
         VirtualFlow<?> flow = getVirtualFlow(tableView);
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
@@ -661,6 +691,7 @@ public class SkinCleanupTest {
     @Test
     public void testTableRowVirtualFlowWidthListener() {
         TableView<Person> tableView = createPersonTable(false);
+        tableView.setFixedCellSize(24);
         showControl(tableView, true);
         VirtualFlow<?> flow = getVirtualFlow(tableView);
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
@@ -668,6 +699,31 @@ public class SkinCleanupTest {
         assertNotNull(
                 unregisterChangeListeners(rowSkin, flow.widthProperty()),
                 "row skin must have listener to virtualFlow width");
+    }
+
+    @Test
+    public void testTableRowTracksVirtualFlowReplaceSkin() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        VirtualFlow<?> flow = getVirtualFlow(tableView);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        replaceSkin(tableRow);
+        Toolkit.getToolkit().firePulse();
+        TableRowSkin<?> rowSkin = (TableRowSkin<?>) tableRow.getSkin();
+        checkFollowsWidth(flow, (Region) rowSkin.getNode());
+    }
+
+    /**
+     * Sanity test checks that tree table row skin tracks the virtual flow width.
+     */
+    @Test
+    public void testTableRowTracksVirtualFlowWidth() {
+        TableView<Person> tableView = createPersonTable(false);
+        showControl(tableView, true);
+        VirtualFlow<?> flow = getVirtualFlow(tableView);
+        TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
+        TableRowSkin<?> rowSkin = (TableRowSkin<?>) tableRow.getSkin();
+        checkFollowsWidth(flow, (Region) rowSkin.getNode());
     }
 
     /**
