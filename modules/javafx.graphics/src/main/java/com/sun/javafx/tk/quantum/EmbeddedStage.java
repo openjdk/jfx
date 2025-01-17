@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.security.AccessControlContext;
 import java.util.List;
 
 import com.sun.javafx.embed.AbstractEvents;
@@ -46,10 +45,8 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     // TKStage methods
 
     @Override
-    public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc) {
-        EmbeddedScene scene = new EmbeddedScene(host, depthBuffer, msaa);
-        scene.setSecurityContext(acc);
-        return scene;
+    public TKScene createTKScene(boolean depthBuffer, boolean msaa) {
+        return new EmbeddedScene(host, depthBuffer, msaa);
     }
 
     @Override

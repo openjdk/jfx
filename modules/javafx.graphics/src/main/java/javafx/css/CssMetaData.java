@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -127,7 +127,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
         final StyleOrigin currentOrigin = styleableProperty.getStyleOrigin();
         final V currentValue = styleableProperty.getValue();
 
-        // RT-21185: Only apply the style if something has changed.
+        // JDK-8102176: Only apply the style if something has changed.
         if ((currentOrigin != origin)
             || (currentValue != null
                 ? currentValue.equals(value) == false

@@ -1095,7 +1095,7 @@ typedef enum    /*< skip >*/
  * @base_finalize: Location of the base finalization function (optional)
  * @class_init: Location of the class initialization function for
  *  classed and instantiatable types. Location of the default vtable
- *  inititalization function for interface types. (optional) This function
+ *  initialization function for interface types. (optional) This function
  *  is used both to fill in virtual functions in the class or default vtable,
  *  and to do type-specific setup such as registering signals and object
  *  properties.
@@ -2278,7 +2278,7 @@ static void     type_name##_class_intern_init (gpointer klass) \
 #endif  /* GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_80 */
 
 /* Added for _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE */
-#define _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name, TYPE_PARENT) \
+#define _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name) \
 \
 static void     type_name##_init              (TypeName        *self); \
 static void     type_name##_class_init        (TypeName##Class *klass); \
@@ -2330,12 +2330,12 @@ type_name##_get_type_once (void) \
   return g_define_type_id; \
 } /* closes type_name##_get_type_once() */
 
-/* This was defined before we had G_DEFINE_TYPE_WITH_CODE_AND_PRELUDE, it's simplest
- * to keep it.
+/* This was defined before we had _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE in
+ * gtype-private.h, it's simplest to keep it.
  */
 #define _G_DEFINE_TYPE_EXTENDED_BEGIN(TypeName, type_name, TYPE_PARENT, flags) \
-  _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name, TYPE_PARENT) \
-  _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER(TypeName, type_name, TYPE_PARENT, flags) \
+  _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE (TypeName, type_name)                      \
+  _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER (TypeName, type_name, TYPE_PARENT, flags)
 
 /* Intentionally using (GTypeFlags) 0 instead of G_TYPE_FLAG_NONE here,
  * to avoid deprecation warnings with older GLIB_VERSION_MAX_ALLOWED */

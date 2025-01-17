@@ -836,6 +836,11 @@ qtdemux_dump_trun (GstQTDemux * qtdemux, GstByteReader * data, int depth)
     GST_LOG ("%*s    first-sample-flags: %u", depth, "", first_sample_flags);
   }
 
+  /* Nothing to print below */
+  if ((flags & (TR_SAMPLE_DURATION | TR_SAMPLE_SIZE | TR_SAMPLE_FLAGS |
+              TR_COMPOSITION_TIME_OFFSETS)) == 0)
+    return TRUE;
+
   for (i = 0; i < samples_count; i++) {
     if (flags & TR_SAMPLE_DURATION) {
       if (!gst_byte_reader_get_uint32_be (data, &sample_duration))

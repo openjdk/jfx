@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     protected static final Line2D scratchLine = new Line2D();
     protected static final BaseTransform IDENT = BaseTransform.IDENTITY_TRANSFORM;
 
-    // TODO: initialize transform lazily to avoid creating garbage... (RT-27422)
+    // TODO: initialize transform lazily to avoid creating garbage... (JDK-8091727)
     private final Affine3D transform3D = new Affine3D();
     private NGCamera camera = NGCamera.INSTANCE;
     private RectBounds devClipRect;
@@ -94,7 +94,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         finalClipRect = new RectBounds(devClipRect);
         compMode = CompositeMode.SRC_OVER;
         if (context != null) {
-            // RT-27422
+            // JDK-8091727
             // TODO: Ideally we wouldn't need this step here and would
             // instead call some method prior to making any OpenGL calls
             // to ensure that there is a current context.  We're getting
@@ -249,7 +249,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         if (transform3D.isTranslateOrIdentity() &&
             paint.getType() == Paint.Type.COLOR)
         {
-            // RT-27422
+            // JDK-8091727
             // TODO: we could probably extend this to include
             // proportional paints in addition to simple colors...
             isSimpleTranslate = true;

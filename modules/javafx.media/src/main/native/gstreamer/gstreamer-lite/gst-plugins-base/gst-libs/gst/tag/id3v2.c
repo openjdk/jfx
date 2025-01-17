@@ -29,7 +29,7 @@
 
 #define HANDLE_INVALID_SYNCSAFE
 
-static gboolean id3v2_frames_to_tag_list (ID3TagsWorking * work, guint size);
+static gboolean id3v2_frames_to_tag_list (ID3TagsWorking * work);
 
 #ifndef GST_DISABLE_GST_DEBUG
 
@@ -258,7 +258,7 @@ gst_tag_list_from_id3v2_tag (GstBuffer * buffer)
     GST_MEMDUMP ("ID3v2 tag (un-unsyced)", uu_data, work.hdr.frame_data_size);
   }
 
-  id3v2_frames_to_tag_list (&work, work.hdr.frame_data_size);
+  id3v2_frames_to_tag_list (&work);
 
   g_free (uu_data);
 
@@ -440,12 +440,17 @@ id3v2_add_id3v2_frame_blob_to_taglist (ID3TagsWorking * work,
 }
 
 static gboolean
-id3v2_frames_to_tag_list (ID3TagsWorking * work, guint size)
+id3v2_frames_to_tag_list (ID3TagsWorking * work)
 {
   guint frame_hdr_size;
 
   /* Extended header if present */
   if (work->hdr.flags & ID3V2_HDR_FLAG_EXTHDR) {
+    if (work->hdr.frame_data_size < 4) {
+      GST_DEBUG ("Tag has no extended header data. Broken tag");
+      return FALSE;
+    }
+
     work->hdr.ext_hdr_size = id3v2_read_synch_uint (work->hdr.frame_data, 4);
 
     /* In id3v2.4.x the header size is the size of the *whole*

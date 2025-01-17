@@ -1250,7 +1250,7 @@ g_utf16_to_ucs4 (const gunichar2  *str,
   const gunichar2 *in;
   gchar *out;
   gchar *result = NULL;
-  gint n_bytes;
+  size_t n_bytes;
   gunichar high_surrogate;
 
   g_return_val_if_fail (str != NULL, NULL);

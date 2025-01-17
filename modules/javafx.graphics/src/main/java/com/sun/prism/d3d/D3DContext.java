@@ -239,7 +239,7 @@ class D3DContext extends BaseShaderContext {
 
     /**
      * OpenGL projection transform use z-range of [-1, 1] while D3D expects it
-     * to be [0, 1], so we need to adjust the matrix, see RT-32880.
+     * to be [0, 1], so we need to adjust the matrix, see JDK-8123305.
      */
     private GeneralTransform3D adjustClipSpace(GeneralTransform3D projViewTx) {
         double[] m = projViewTx.get(tempAdjustClipSpaceMat);

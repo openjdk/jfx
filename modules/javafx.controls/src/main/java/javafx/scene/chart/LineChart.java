@@ -206,7 +206,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                     if(yData != null) yData.add(data.getYValue());
                 }
             }
-            // RT-32838 No need to invalidate range if there is one data item - whose value is zero.
+            // JDK-8118969 No need to invalidate range if there is one data item - whose value is zero.
             if(xData != null && !(xData.size() == 1 && getXAxis().toNumericValue(xData.get(0)) == 0)) {
                 xa.invalidateRange(xData);
             }

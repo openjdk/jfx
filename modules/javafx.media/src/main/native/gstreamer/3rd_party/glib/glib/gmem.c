@@ -244,7 +244,7 @@ g_free_sized (void   *mem,
  * g_clear_pointer: (skip)
  * @pp: (nullable) (not optional) (inout) (transfer full): a pointer to a
  *   variable, struct member etc. holding a pointer
- * @destroy: a function to which a gpointer can be passed, to destroy *@pp
+ * @destroy: a function to which a gpointer can be passed, to destroy `*pp`
  *
  * Clears a reference to a variable.
  *
@@ -257,9 +257,32 @@ g_free_sized (void   *mem,
  * A macro is also included that allows this function to be used without
  * pointer casts. This will mask any warnings about incompatible function types
  * or calling conventions, so you must ensure that your @destroy function is
- * compatible with being called as `GDestroyNotify` using the standard calling
- * convention for the platform that GLib was compiled for; otherwise the program
- * will experience undefined behaviour.
+ * compatible with being called as [callback@GLib.DestroyNotify] using the
+ * standard calling convention for the platform that GLib was compiled for;
+ * otherwise the program will experience undefined behaviour.
+ *
+ * Examples of this kind of undefined behaviour include using many Windows Win32
+ * APIs, as well as many if not all OpenGL and Vulkan calls on 32-bit Windows,
+ * which typically use the `__stdcall` calling convention rather than the
+ * `__cdecl` calling convention.
+ *
+ * The affected functions can be used by wrapping them in a
+ * [callback@GLib.DestroyNotify] that is declared with the standard calling
+ * convention:
+ *
+ * ```c
+ * // Wrapper needed to avoid mismatched calling conventions on Windows
+ * static void
+ * destroy_sync (void *sync)
+ * {
+ *   glDeleteSync (sync);
+ * }
+ *
+ * // …
+ *
+ * g_clear_pointer (&sync, destroy_sync);
+ * ```
+
  *
  * Since: 2.34
  **/

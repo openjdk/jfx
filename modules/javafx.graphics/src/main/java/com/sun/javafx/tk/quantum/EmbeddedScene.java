@@ -284,7 +284,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                 EventType<MouseEvent> eventType = AbstractEvents.mouseIDToFXEventID(type);
                 sceneListener.mouseEvent(eventType, x, y, xAbs, yAbs,
                             AbstractEvents.mouseButtonToFXMouseButton(button),
-                            popupTrigger, false, // do we know if it's synthesized? RT-20142
+                            popupTrigger, false, // do we know if it's synthesized? JDK-8091490
                             shift, ctrl, alt, meta,
                             primaryBtnDown, middleBtnDown, secondaryBtnDown,
                             backBtnDown, forwardBtnDown

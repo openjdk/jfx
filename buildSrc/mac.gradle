@@ -156,6 +156,7 @@ def dynamicLinkFlags = [
         "-framework", "OpenGL",
         "-framework", "QuartzCore",
         "-framework", "Security",
+        "-framework", "Network",
         "-dynamiclib", "-lobjc"].flatten();
 def dynamicLinkFlagsAlt = ["-dynamiclib", commonParams].flatten()
 

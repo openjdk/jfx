@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -107,7 +107,7 @@ public class SimpleViewerApp extends Application {
         stage.show();
 
         // MEASURE FPS
-        //TODO: RT-40270 - Public PerformanceTracker support should be added
+        //TODO: JDK-8091546 - Public PerformanceTracker support should be added
 //        Timeline fpsTimeline = new Timeline(new KeyFrame(Duration.seconds(2), t ->
 //                System.out.println("fps = " + PerformanceTracker.getSceneTracker(scene).getInstantFPS())));
 //        fpsTimeline.setCycleCount(Timeline.INDEFINITE);

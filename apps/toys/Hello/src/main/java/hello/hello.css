@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@
     -fx-scale-shape: true;
 }
 
- /* for HelloFontSize as regards RT-28635 */
+ /* for HelloFontSize as regards JDK-8120561 */
 .special-button:mouse_pressed {-fx-font-size : 20;}
 
 /* For HelloControls */

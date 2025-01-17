@@ -212,7 +212,7 @@ public final class SwipeTest extends ParameterizedTestBase {
         return latch;
     }
 
-    @Disabled("RT-37709")
+    @Disabled("JDK-8093869")
     @ParameterizedTest
     @MethodSource("parameters")
     public void testSwipe(TestTouchDevice device, SwipeTestCase testCase) throws Exception {

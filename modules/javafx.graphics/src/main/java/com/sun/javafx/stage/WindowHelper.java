@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,6 @@ import com.sun.javafx.util.Utils;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.stage.Screen;
 import javafx.stage.Window;
-
-import java.security.AccessControlContext;
 
 /**
  * Used to access internal window methods.
@@ -130,11 +128,6 @@ public class WindowHelper {
         windowAccessor.notifyScaleChanged(window, newOutputScaleX, newOutputScaleY);
     }
 
-    @SuppressWarnings("removal")
-    static AccessControlContext getAccessControlContext(Window window) {
-        return windowAccessor.getAccessControlContext(window);
-    }
-
     public static void setWindowAccessor(final WindowAccessor newAccessor) {
         if (windowAccessor != null) {
             throw new IllegalStateException();
@@ -169,8 +162,5 @@ public class WindowHelper {
         void notifyScaleChanged(Window window, double newOutputScaleX, double newOutputScaleY);
 
         ReadOnlyObjectProperty<Screen> screenProperty(Window window);
-
-        @SuppressWarnings("removal")
-        AccessControlContext getAccessControlContext(Window window);
     }
 }

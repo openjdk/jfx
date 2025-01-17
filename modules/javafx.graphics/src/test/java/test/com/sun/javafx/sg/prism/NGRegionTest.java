@@ -63,7 +63,7 @@ public class NGRegionTest {
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(r));
     }
 
-    // RT-13820: We change the shape internally and call this same method, so it
+    // JDK-8112908: We change the shape internally and call this same method, so it
     // needs to invalidate the opaque region.
     @Test
     public void updateShapeToSameInstanceInvalidatesOpaqueRegion() {

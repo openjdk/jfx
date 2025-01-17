@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -309,7 +309,7 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(0), "Selection should not change");
     }
 
-    // Tests for discontinuous multiple cell selection (RT-18951)
+    // Tests for discontinuous multiple cell selection (JDK-8120523)
     @ParameterizedTest
     @MethodSource("parameters")
     public void test_rt18591_select_forward_then_backward(NodeOrientation orientation) {

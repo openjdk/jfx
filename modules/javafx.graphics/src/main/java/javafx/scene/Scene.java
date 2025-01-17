@@ -44,6 +44,7 @@ import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.SceneEventDispatcher;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.InputMethodStateManager;
 import com.sun.javafx.scene.input.DragboardHelper;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.input.InputEventUtils;
@@ -70,6 +71,7 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.Stylesheet;
 import javafx.event.*;
@@ -88,8 +90,6 @@ import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
 import java.io.File;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
@@ -183,9 +183,6 @@ public class Scene implements EventTarget {
     private final SceneAntialiasing antiAliasing;
 
     private EnumSet<DirtyBits> dirtyBits = EnumSet.noneOf(DirtyBits.class);
-
-    @SuppressWarnings("removal")
-    final AccessControlContext acc = AccessController.getContext();
 
     private Camera defaultCamera;
 
@@ -399,6 +396,19 @@ public class Scene implements EventTarget {
                         }
 
                         @Override
+                        public InputMethodStateManager getInputMethodStateManager(Scene scene) {
+                            return scene.getInputMethodStateManager();
+                        }
+
+                        @Override
+                        public void finishInputMethodComposition(Scene scene) {
+                            final TKScene peer = scene.getPeer();
+                            if (peer != null) {
+                                peer.finishInputMethodComposition();
+                            }
+                        }
+
+                        @Override
                         public boolean processKeyEvent(Scene scene, KeyEvent e) {
                             return scene.processKeyEvent(e);
                         }
@@ -463,6 +473,18 @@ public class Scene implements EventTarget {
                                                double newWidth,
                                                double newHeight) {
                                            // don't resize
+                                       }
+
+                                       @Override
+                                       protected InputMethodStateManager getInputMethodStateManager() {
+                                            Window rootWindow = getWindow();
+                                            while ((rootWindow != null) && (rootWindow instanceof PopupWindow)) {
+                                                rootWindow = ((PopupWindow)rootWindow).getOwnerWindow();
+                                            }
+                                            if (rootWindow != null) {
+                                                return rootWindow.getScene().getInputMethodStateManager();
+                                            }
+                                            return null;
                                        }
                                    };
                         }
@@ -567,11 +589,11 @@ public class Scene implements EventTarget {
     private void doCSSPass() {
         final Parent sceneRoot = getRoot();
         //
-        // RT-17547: when the tree is synchronized, the dirty bits are
+        // JDK-8120624: when the tree is synchronized, the dirty bits are
         // are cleared but the cssFlag might still be something other than
         // clean.
         //
-        // Before RT-17547, the code checked the dirty bit. But this is
+        // Before JDK-8120624, the code checked the dirty bit. But this is
         // superfluous since the dirty bit will be set if the flag is not clean,
         // but the flag will never be anything other than clean if the dirty
         // bit is not set. The dirty bit is still needed, however, since setting
@@ -588,6 +610,29 @@ public class Scene implements EventTarget {
             sceneRoot.clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
             sceneRoot.processCSS();
         }
+
+        if (!clearInitialCssStateNodes.isEmpty()) {
+            for (var node : clearInitialCssStateNodes) {
+                node.clearInitialCssStateFlag();
+            }
+
+            clearInitialCssStateNodes.clear();
+        }
+    }
+
+    /**
+     * A list of nodes that have expressed their interest to be notified when the next CSS pass
+     * is completed. Nodes will use this event to determine whether they are in their initial
+     * CSS state (see {@link Node#initialCssState}.
+     */
+    private final Set<Node> clearInitialCssStateNodes = new HashSet<>();
+
+    void registerClearInitialCssStateFlag(Node node) {
+        clearInitialCssStateNodes.add(node);
+    }
+
+    void unregisterClearInitialCssStageFlag(Node node) {
+        clearInitialCssStateNodes.remove(node);
     }
 
     void doLayoutPass() {
@@ -831,7 +876,7 @@ public class Scene implements EventTarget {
         setAllowPGAccess(true);
 
         Toolkit tk = Toolkit.getToolkit();
-        peer = windowPeer.createTKScene(isDepthBufferInternal(), getAntiAliasingInternal(), acc);
+        peer = windowPeer.createTKScene(isDepthBufferInternal(), getAntiAliasingInternal());
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
         peer.setTKSceneListener(new ScenePeerListener());
         peer.setTKScenePaintListener(new ScenePeerPaintListener());
@@ -1188,7 +1233,9 @@ public class Scene implements EventTarget {
      * layout of the scene graph.    If a resizable node (layout {@code Region} or
      * {@code Control}) is set as the root, then the root's size will track the
      * scene's size, causing the contents to be relayed out as necessary.
-     *
+     * <p>
+     * The {@code :root} pseudo-class matches the root node.
+     * <p>
      * Scene doesn't accept null root.
      *
      */
@@ -1206,7 +1253,6 @@ public class Scene implements EventTarget {
     public final ObjectProperty<Parent> rootProperty() {
         if (root == null) {
             root = new ObjectPropertyBase<>() {
-
                 private void forceUnbind() {
                     System.err.println("Unbinding illegal root.");
                     unbind();
@@ -1240,9 +1286,11 @@ public class Scene implements EventTarget {
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
                         oldRoot.getStyleClass().remove("root");
+                        oldRoot.pseudoClassStateChanged(PseudoClass.getPseudoClass("root"), false);
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
+                    _value.pseudoClassStateChanged(PseudoClass.getPseudoClass("root"), true);
                     _value.setScenes(Scene.this, null);
                     markDirty(DirtyBits.ROOT_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
@@ -1613,7 +1661,7 @@ public class Scene implements EventTarget {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().stylesheetsChanged(Scene.this, c);
-            // RT-9784 - if stylesheet is removed, reset styled properties to
+            // JDK-8110059 - if stylesheet is removed, reset styled properties to
             // their initial value.
             c.reset();
             while(c.next()) {
@@ -2201,6 +2249,20 @@ public class Scene implements EventTarget {
     }
 
     /**
+     * A non-popup scene creates a state manager to coordinate input method
+     * handling with popups. Popups do not create their own state manager
+     * but use the root scene's manager.
+     */
+    private InputMethodStateManager inputMethodStateManager = null;
+
+    InputMethodStateManager getInputMethodStateManager() {
+        if (inputMethodStateManager == null) {
+            inputMethodStateManager = new InputMethodStateManager(this);
+        }
+        return inputMethodStateManager;
+    }
+
+    /**
       * The scene's current focus owner node. This node's "focused"
       * variable might be false if this scene has no window, or if the
       * window is inactive (window.focused == false).
@@ -2237,9 +2299,10 @@ public class Scene implements EventTarget {
             if (value != null) {
                 value.setFocusQuietly(windowFocused, focusVisible);
                 if (value != oldFocusOwner) {
-                    value.getScene().enableInputMethodEvents(
-                            value.getInputMethodRequests() != null
-                            && value.getOnInputMethodTextChanged() != null);
+                    InputMethodStateManager manager = value.getScene().getInputMethodStateManager();
+                    if (manager != null) {
+                        manager.focusOwnerChanged(oldFocusOwner, value);
+                    }
                 }
             }
             // for the rest of the method we need to update the oldFocusOwner
@@ -2283,13 +2346,7 @@ public class Scene implements EventTarget {
         // This needs to be done before the focus owner is switched as it
         // generates event that needs to be delivered to the old focus owner.
         if (focusOwner.oldFocusOwner != null) {
-            final Scene s = focusOwner.oldFocusOwner.getScene();
-            if (s != null) {
-                final TKScene peer = s.getPeer();
-                if (peer != null) {
-                    peer.finishInputMethodComposition();
-                }
-            }
+            getInputMethodStateManager().focusOwnerWillChangeForScene(this);
         }
 
         // Store the current focusVisible state of the focus owner in case it needs to be
@@ -3078,16 +3135,8 @@ public class Scene implements EventTarget {
                 DragEvent dragEvent =
                         new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                                 transferMode, null, null, pick(x, y));
-                // Data dropped to the app can be accessed without restriction
-                DragboardHelper.setDataAccessRestriction(dndGesture.dragboard, false);
 
-                TransferMode tm;
-                try {
-                    tm = dndGesture.processTargetDrop(dragEvent);
-                } finally {
-                    DragboardHelper.setDataAccessRestriction(
-                            dndGesture.dragboard, true);
-                }
+                TransferMode tm = dndGesture.processTargetDrop(dragEvent);
 
                 if (dndGesture.source == null) {
                     dndGesture.dragboard = null;
@@ -3221,15 +3270,7 @@ public class Scene implements EventTarget {
                                 mouseEvent.getSource(), target,
                                 MouseEvent.DRAG_DETECTED);
 
-                        try {
-                            fireEvent(target, detectedEvent);
-                        } finally {
-                            // Putting data to dragboard finished, restrict access to them
-                            if (dragboard != null) {
-                                DragboardHelper.setDataAccessRestriction(
-                                        dragboard, true);
-                            }
-                        }
+                        fireEvent(target, detectedEvent);
                     }
 
                     dragDetectedProcessed();
@@ -3257,15 +3298,7 @@ public class Scene implements EventTarget {
             processingDragDetected();
 
             final EventTarget target = de.getPickResult().getIntersectedNode();
-            try {
-                fireEvent(target != null ? target : Scene.this, me);
-            } finally {
-                // Putting data to dragboard finished, restrict access to them
-                if (dragboard != null) {
-                    DragboardHelper.setDataAccessRestriction(
-                            dragboard, true);
-                }
-            }
+            fireEvent(target != null ? target : Scene.this, me);
 
             dragDetectedProcessed();
 
@@ -3474,9 +3507,6 @@ public class Scene implements EventTarget {
                 dragboard = createDragboard(null, true);
             }
 
-            // The app can see what it puts to dragboard without restriction
-            DragboardHelper.setDataAccessRestriction(dragboard, false);
-
             this.source = source;
             potentialTarget = source;
             sourceTransferModes = t;
@@ -3526,14 +3556,7 @@ public class Scene implements EventTarget {
                         new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                         transferMode, null, null, null);
 
-                // DRAG_DONE event is delivered to gesture source, it can access
-                // its own data without restriction
-                DragboardHelper.setDataAccessRestriction(dndGesture.dragboard, false);
-                try {
-                    dndGesture.processDropEnd(dragEvent);
-                } finally {
-                    DragboardHelper.setDataAccessRestriction(dndGesture.dragboard, true);
-                }
+                dndGesture.processDropEnd(dragEvent);
                 dndGesture = null;
             }
         }
@@ -4225,11 +4248,7 @@ public class Scene implements EventTarget {
         }
 
         private InputMethodRequests getClientRequests() {
-            Node focusOwner = getFocusOwner();
-            if (focusOwner != null) {
-                return focusOwner.getInputMethodRequests();
-            }
-            return null;
+            return getInputMethodStateManager().getInputMethodRequests();
         }
     }
 
@@ -6436,11 +6455,6 @@ public class Scene implements EventTarget {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
-                @SuppressWarnings("removal")
-                @Override public AccessControlContext getAccessControlContext() {
-                    return getPeer().getAccessControlContext();
-                }
-
                 @Override public Object getAttribute(AccessibleAttribute attribute,
                                                      Object... parameters) {
                     switch (attribute) {
