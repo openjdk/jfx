@@ -190,6 +190,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
     gdk_window_set_events(root, static_cast<GdkEventMask>(gdk_window_get_events(root) | GDK_PROPERTY_CHANGE_MASK));
 
     platformSupport = new PlatformSupport(env, obj);
+
+    // Set ibus to sync mode
+    setenv("IBUS_ENABLE_SYNC_MODE", "1", 1);
 }
 
 /*
@@ -469,7 +472,7 @@ static void process_events(GdkEvent* event, gpointer data)
 
     EventsCounterHelper helper(ctx);
 
-    if (ctx != NULL && ctx->hasIME() && ctx->filterIME(event)) {
+    if ((event->type == GDK_KEY_PRESS || event->type == GDK_KEY_RELEASE) && ctx != NULL && ctx->filterIME(event)) {
         return;
     }
 
