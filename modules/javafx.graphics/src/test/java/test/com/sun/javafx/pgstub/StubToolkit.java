@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -379,11 +379,20 @@ public class StubToolkit extends Toolkit {
             return map.keySet();
         }
 
-        @Override public boolean putContent(Pair<DataFormat, Object>... content) {
-            boolean good;
+        // can someone explain what this code was supposed to be doing??
+//        @Override public boolean putContent(Pair<DataFormat, Object>... content) {
+//            boolean good;
+//            for (Pair<DataFormat,Object> pair : content) {
+//                good = map.put(pair.getKey(), pair.getValue()) == pair.getValue();
+//                if (!good) return false;
+//            }
+//            return true;
+//        }
+        @Override
+        public boolean putContent(Pair<DataFormat, Object>... content) {
+            map.clear();
             for (Pair<DataFormat,Object> pair : content) {
-                good = map.put(pair.getKey(), pair.getValue()) == pair.getValue();
-                if (!good) return false;
+                map.put(pair.getKey(), pair.getValue());
             }
             return true;
         }

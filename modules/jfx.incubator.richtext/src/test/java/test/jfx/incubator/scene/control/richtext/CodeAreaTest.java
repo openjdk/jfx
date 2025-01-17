@@ -28,7 +28,11 @@ package test.jfx.incubator.scene.control.richtext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
 import javafx.scene.Scene;
+import javafx.scene.control.Control;
 import javafx.scene.text.Font;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -98,6 +102,14 @@ public class CodeAreaTest {
     }
 
     // css
+
+    @Test
+    public void cssMetadata() {
+        List<CssMetaData<? extends Styleable, ?>> md = control.getControlCssMetaData();
+        // CodeArea:395
+        int styleablesCount = 3;
+        assertEquals(md.size(), Control.getClassCssMetaData().size() + styleablesCount);
+    }
 
     @Test
     public void testFontCSS() {
