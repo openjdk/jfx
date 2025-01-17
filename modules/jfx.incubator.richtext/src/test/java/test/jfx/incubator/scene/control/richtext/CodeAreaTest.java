@@ -32,14 +32,16 @@ import java.util.List;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.scene.Scene;
-import javafx.scene.control.Control;
 import javafx.scene.text.Font;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import jfx.incubator.scene.control.richtext.CodeArea;
+import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.skin.CodeAreaSkin;
+import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 import test.jfx.incubator.scene.util.TUtil;
 
 /**
@@ -52,6 +54,7 @@ public class CodeAreaTest {
     public void beforeEach() {
         TUtil.setUncaughtExceptionHandler();
         control = new CodeArea();
+        control.setSkin(new CodeAreaSkin(control));
     }
 
     @AfterEach
@@ -104,14 +107,6 @@ public class CodeAreaTest {
     // css
 
     @Test
-    public void cssMetadata() {
-        List<CssMetaData<? extends Styleable, ?>> md = control.getControlCssMetaData();
-        // CodeArea:395
-        int styleablesCount = 3;
-        assertEquals(md.size(), Control.getClassCssMetaData().size() + styleablesCount);
-    }
-
-    @Test
     public void testFontCSS() {
         Scene s = new Scene(control);
         control.setStyle("-fx-font: 24 Amble");
@@ -147,16 +142,35 @@ public class CodeAreaTest {
 
     // functional API tests
 
+    @Test
+    public void getControlCssMetaData() {
+        List<CssMetaData<? extends Styleable, ?>> md = control.getControlCssMetaData();
+        // CodeArea:395
+        int styleablesCount = 3;
+        assertEquals(md.size(), RichTextArea.getClassCssMetaData().size() + styleablesCount);
+    }
+
+    @Test
+    public void getText() {
+        control.setText("123");
+        String s = control.getText();
+        // TODO looks like a bug
+        assertEquals("123\n", s);
+        // this is correct implementation
+        String s2 = RTUtil.getText(control);
+        assertEquals("123", s2);
+    }
+
     /** can set a null and non-null CodeTextModel */
     @Test
-    public void nullModel() {
+    public void modelNull() {
         control.setModel(null);
         control.setModel(new CodeTextModel());
     }
 
     /** disallows setting model other than CodeTextModel */
     @Test
-    public void wrongModel() {
+    public void modelWrong() {
         var m = control.getModel();
         assertThrows(IllegalArgumentException.class, () -> {
             control.setModel(new RichTextModel());
@@ -166,7 +180,7 @@ public class CodeAreaTest {
 
     /** acceptable custom model */
     @Test
-    public void acceptableModel() {
+    public void modelAcceptable() {
         CustomCodeTextModel m = new CustomCodeTextModel();
         control.setModel(m);
         assertTrue(control.getModel() == m);
