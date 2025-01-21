@@ -44,6 +44,7 @@ import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.SceneEventDispatcher;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.InputMethodStateManager;
 import com.sun.javafx.scene.input.DragboardHelper;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.input.InputEventUtils;
@@ -70,6 +71,7 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.Stylesheet;
 import javafx.event.*;
@@ -394,6 +396,19 @@ public class Scene implements EventTarget {
                         }
 
                         @Override
+                        public InputMethodStateManager getInputMethodStateManager(Scene scene) {
+                            return scene.getInputMethodStateManager();
+                        }
+
+                        @Override
+                        public void finishInputMethodComposition(Scene scene) {
+                            final TKScene peer = scene.getPeer();
+                            if (peer != null) {
+                                peer.finishInputMethodComposition();
+                            }
+                        }
+
+                        @Override
                         public boolean processKeyEvent(Scene scene, KeyEvent e) {
                             return scene.processKeyEvent(e);
                         }
@@ -458,6 +473,18 @@ public class Scene implements EventTarget {
                                                double newWidth,
                                                double newHeight) {
                                            // don't resize
+                                       }
+
+                                       @Override
+                                       protected InputMethodStateManager getInputMethodStateManager() {
+                                            Window rootWindow = getWindow();
+                                            while ((rootWindow != null) && (rootWindow instanceof PopupWindow)) {
+                                                rootWindow = ((PopupWindow)rootWindow).getOwnerWindow();
+                                            }
+                                            if (rootWindow != null) {
+                                                return rootWindow.getScene().getInputMethodStateManager();
+                                            }
+                                            return null;
                                        }
                                    };
                         }
@@ -1206,7 +1233,9 @@ public class Scene implements EventTarget {
      * layout of the scene graph.    If a resizable node (layout {@code Region} or
      * {@code Control}) is set as the root, then the root's size will track the
      * scene's size, causing the contents to be relayed out as necessary.
-     *
+     * <p>
+     * The {@code :root} pseudo-class matches the root node.
+     * <p>
      * Scene doesn't accept null root.
      *
      */
@@ -1224,7 +1253,6 @@ public class Scene implements EventTarget {
     public final ObjectProperty<Parent> rootProperty() {
         if (root == null) {
             root = new ObjectPropertyBase<>() {
-
                 private void forceUnbind() {
                     System.err.println("Unbinding illegal root.");
                     unbind();
@@ -1258,9 +1286,11 @@ public class Scene implements EventTarget {
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
                         oldRoot.getStyleClass().remove("root");
+                        oldRoot.pseudoClassStateChanged(PseudoClass.getPseudoClass("root"), false);
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
+                    _value.pseudoClassStateChanged(PseudoClass.getPseudoClass("root"), true);
                     _value.setScenes(Scene.this, null);
                     markDirty(DirtyBits.ROOT_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
@@ -2219,6 +2249,20 @@ public class Scene implements EventTarget {
     }
 
     /**
+     * A non-popup scene creates a state manager to coordinate input method
+     * handling with popups. Popups do not create their own state manager
+     * but use the root scene's manager.
+     */
+    private InputMethodStateManager inputMethodStateManager = null;
+
+    InputMethodStateManager getInputMethodStateManager() {
+        if (inputMethodStateManager == null) {
+            inputMethodStateManager = new InputMethodStateManager(this);
+        }
+        return inputMethodStateManager;
+    }
+
+    /**
       * The scene's current focus owner node. This node's "focused"
       * variable might be false if this scene has no window, or if the
       * window is inactive (window.focused == false).
@@ -2255,9 +2299,10 @@ public class Scene implements EventTarget {
             if (value != null) {
                 value.setFocusQuietly(windowFocused, focusVisible);
                 if (value != oldFocusOwner) {
-                    value.getScene().enableInputMethodEvents(
-                            value.getInputMethodRequests() != null
-                            && value.getOnInputMethodTextChanged() != null);
+                    InputMethodStateManager manager = value.getScene().getInputMethodStateManager();
+                    if (manager != null) {
+                        manager.focusOwnerChanged(oldFocusOwner, value);
+                    }
                 }
             }
             // for the rest of the method we need to update the oldFocusOwner
@@ -2301,13 +2346,7 @@ public class Scene implements EventTarget {
         // This needs to be done before the focus owner is switched as it
         // generates event that needs to be delivered to the old focus owner.
         if (focusOwner.oldFocusOwner != null) {
-            final Scene s = focusOwner.oldFocusOwner.getScene();
-            if (s != null) {
-                final TKScene peer = s.getPeer();
-                if (peer != null) {
-                    peer.finishInputMethodComposition();
-                }
-            }
+            getInputMethodStateManager().focusOwnerWillChangeForScene(this);
         }
 
         // Store the current focusVisible state of the focus owner in case it needs to be
@@ -4209,11 +4248,7 @@ public class Scene implements EventTarget {
         }
 
         private InputMethodRequests getClientRequests() {
-            Node focusOwner = getFocusOwner();
-            if (focusOwner != null) {
-                return focusOwner.getInputMethodRequests();
-            }
-            return null;
+            return getInputMethodStateManager().getInputMethodRequests();
         }
     }
 

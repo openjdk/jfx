@@ -327,21 +327,9 @@ g_strdup_inline (const char *str)
 #endif /* !defined (__GTK_DOC_IGNORE__) */
 #endif /* G_GNUC_CHECK_VERSION (2, 0) */
 
-/* Make a copy of a string interpreting C string -style escape
- * sequences. Inverse of g_strescape. The recognized sequences are \b
- * \f \n \r \t \\ \" and the octal format.
- */
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strcompress    (const gchar *source) G_GNUC_MALLOC;
 
-/* Copy a string escaping nonprintable characters like in C strings.
- * Inverse of g_strcompress. The exceptions parameter, if non-NULL, points
- * to a string containing characters that are not to be escaped.
- *
- * Deprecated API: gchar* g_strescape (const gchar *source);
- * Luckily this function wasn't used much, using NULL as second parameter
- * provides mostly identical semantics.
- */
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strescape      (const gchar *source,
           const gchar *exceptions) G_GNUC_MALLOC;

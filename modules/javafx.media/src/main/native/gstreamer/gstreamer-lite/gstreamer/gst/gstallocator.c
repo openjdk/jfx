@@ -433,8 +433,20 @@ _sysmem_new_block (GstMemoryFlags flags,
   /* ensure configured alignment */
   align |= gst_memory_alignment;
   /* allocate more to compensate for alignment */
+  if (align > G_MAXSIZE || maxsize > G_MAXSIZE - align) {
+    GST_CAT_WARNING (GST_CAT_MEMORY,
+        "Allocating %" G_GSIZE_FORMAT " bytes with alignment %" G_GSIZE_FORMAT
+        "x overflows", maxsize, align);
+    return NULL;
+  }
   maxsize += align;
   /* alloc header and data in one block */
+  if (maxsize > G_MAXSIZE - sizeof (GstMemorySystem)) {
+    GST_CAT_WARNING (GST_CAT_MEMORY,
+        "Allocating %" G_GSIZE_FORMAT " bytes with alignment %" G_GSIZE_FORMAT
+        "x overflows", maxsize, align);
+    return NULL;
+  }
   slice_size = sizeof (GstMemorySystem) + maxsize;
 
   mem = g_malloc (slice_size);
@@ -484,10 +496,8 @@ _sysmem_copy (GstMemorySystem * mem, gssize offset, gsize size)
     size = mem->mem.size > offset ? mem->mem.size - offset : 0;
 
   copy = _sysmem_new_block (0, size, mem->mem.align, 0, size);
-#ifdef GSTREAMER_LITE
-  if (copy == NULL)
+  if (!copy)
     return NULL;
-#endif // GSTREAMER_LITE
   GST_CAT_DEBUG (GST_CAT_PERFORMANCE,
       "memcpy %" G_GSIZE_FORMAT " memory %p -> %p", size, mem, copy);
   memcpy (copy->data, mem->data + mem->mem.offset + offset, size);

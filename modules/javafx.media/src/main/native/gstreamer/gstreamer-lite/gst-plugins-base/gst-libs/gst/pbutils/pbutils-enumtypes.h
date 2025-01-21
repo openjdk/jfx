@@ -13,6 +13,7 @@ GST_PBUTILS_API
 GType gst_audio_visualizer_shader_get_type (void);
 #define GST_TYPE_AUDIO_VISUALIZER_SHADER (gst_audio_visualizer_shader_get_type())
 
+#ifndef GSTREAMER_LITE
 /* enumerations from "gstdiscoverer.h" */
 GST_PBUTILS_API
 GType gst_discoverer_result_get_type (void);
@@ -20,6 +21,7 @@ GType gst_discoverer_result_get_type (void);
 GST_PBUTILS_API
 GType gst_discoverer_serialize_flags_get_type (void);
 #define GST_TYPE_DISCOVERER_SERIALIZE_FLAGS (gst_discoverer_serialize_flags_get_type())
+#endif // GSTREAMER_LITE
 
 /* enumerations from "install-plugins.h" */
 GST_PBUTILS_API
