@@ -436,7 +436,7 @@ public class StubTextLayout implements TextLayout {
     }
 
     /** Glyph List */
-    private static class StubGlyphList implements GlyphList {
+    private static class GlyphRun implements GlyphList {
         private final TextSpan span;
         private final int start;
         private final int length;
@@ -446,7 +446,7 @@ public class StubTextLayout implements TextLayout {
         private final double charHeight;
         private final boolean linebreak;
 
-        public StubGlyphList(
+        public GlyphRun(
             TextSpan span,
             int start,
             int length,
@@ -556,7 +556,7 @@ public class StubTextLayout implements TextLayout {
      */
     private static class LayoutBuilder {
         private final ArrayList<StubTextLine> lines = new ArrayList<>();
-        private final ArrayList<StubGlyphList> runs = new ArrayList<>();
+        private final ArrayList<GlyphRun> runs = new ArrayList<>();
         private final int tabSize;
         private final double wrapWidth;
         private final double lineSpacing;
@@ -586,7 +586,7 @@ public class StubTextLayout implements TextLayout {
 
         private void addRun(int offset) {
             if (offset > 0) {
-                StubGlyphList r = new StubGlyphList(span, runStart, offset, runStartX, y, charWidth, charHeight, lineBreak);
+                GlyphRun r = new GlyphRun(span, runStart, offset, runStartX, y, charWidth, charHeight, lineBreak);
                 runs.add(r);
                 runStart = offset;
                 runStartX = x;
@@ -596,11 +596,11 @@ public class StubTextLayout implements TextLayout {
 
         private void addLine() {
             int len = runStart - lineStart;
-            StubGlyphList[] rs = runs.toArray(StubGlyphList[]::new);
+            GlyphRun[] rs = runs.toArray(GlyphRun[]::new);
             runs.clear();
-            //float baseline = (float)(charHeight * BASELINE);
-            //RectBounds bounds = new RectBounds(0, -baseline, (float)x, (float)(charHeight) - baseline);
-            RectBounds bounds = new RectBounds(0, 0, (float)x, (float)(charHeight));
+
+            float baseline = (float)(charHeight * BASELINE);
+            RectBounds bounds = new RectBounds(0, -baseline, (float)x, (float)(charHeight) - baseline);
             lines.add(new StubTextLine(rs, bounds, lineStart, len));
 
             column = 0;
