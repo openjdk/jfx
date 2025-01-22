@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package test.com.sun.javafx.pgstub;
 
 import java.text.BreakIterator;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Font;
@@ -51,7 +52,9 @@ import com.sun.javafx.scene.text.TextSpan;
  * This implementation ignores: alignment, bounds type, and direction.
  */
 public class StubTextLayout implements TextLayout {
+    private static final boolean DEBUG = false;
     private static final double DEFAULT_FONT_SIZE = 10;
+    private static final float BASELINE = 0.8f;
     private TextSpan[] spans;
     private String text;
     private Font font;
@@ -130,7 +133,7 @@ public class StubTextLayout implements TextLayout {
     @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
         ensureLayout();
-        // copied from PrismTextLayout
+        // copied from PrismTextLayout:
         float left = Float.POSITIVE_INFINITY;
         float top = Float.POSITIVE_INFINITY;
         float right = Float.NEGATIVE_INFINITY;
@@ -347,6 +350,9 @@ public class StubTextLayout implements TextLayout {
     private void ensureLayout() {
         if (lines == null) {
             lines = layout();
+            if(DEBUG) {
+                System.out.println(List.of(lines));
+            }
         }
     }
 
@@ -412,6 +418,21 @@ public class StubTextLayout implements TextLayout {
         public int getLength() {
             return length;
         }
+
+        @Override
+        public String toString() {
+            return "StubTextLine{" +
+                "start=" + start +
+                ", length=" + length +
+                ", bounds={" +
+                    bounds.getMinX() +
+                    "," + bounds.getMinY() +
+                    " " + bounds.getMaxX() +
+                    "," + bounds.getMaxY() +
+                    "}" +
+                ", runs=" + List.of(runs) +
+                "}";
+        }
     }
 
     /** Glyph List */
@@ -443,6 +464,16 @@ public class StubTextLayout implements TextLayout {
             this.charWidth = charWidth;
             this.charHeight = charHeight;
             this.linebreak = linebreak;
+        }
+
+        @Override
+        public String toString() {
+            return "StubGlyphList{" +
+                "start=" + start +
+                ", length=" + length +
+                ", x=" + x +
+                ", y=" + y +
+                "}";
         }
 
         @Override
@@ -553,11 +584,11 @@ public class StubTextLayout implements TextLayout {
             return lines.toArray(StubTextLine[]::new);
         }
 
-        private void addRun(int ix) {
-            if (ix > 0) {
-                StubGlyphList r = new StubGlyphList(span, runStart + ix, ix, runStartX, y, charWidth, charHeight, lineBreak);
+        private void addRun(int offset) {
+            if (offset > 0) {
+                StubGlyphList r = new StubGlyphList(span, runStart, offset, runStartX, y, charWidth, charHeight, lineBreak);
                 runs.add(r);
-                runStart += ix;
+                runStart = offset;
                 runStartX = x;
             }
             lineBreak = false;
@@ -566,6 +597,9 @@ public class StubTextLayout implements TextLayout {
         private void addLine() {
             int len = runStart - lineStart;
             StubGlyphList[] rs = runs.toArray(StubGlyphList[]::new);
+            runs.clear();
+            //float baseline = (float)(charHeight * BASELINE);
+            //RectBounds bounds = new RectBounds(0, -baseline, (float)x, (float)(charHeight) - baseline);
             RectBounds bounds = new RectBounds(0, 0, (float)x, (float)(charHeight));
             lines.add(new StubTextLine(rs, bounds, lineStart, len));
 
@@ -588,9 +622,10 @@ public class StubTextLayout implements TextLayout {
             }
 
             int len = text.length();
-            for (int i = 0; i < len; i++) {
-                if(wrapWidth > 0) {
-                    if(x > wrapWidth) {
+            int i = 0;
+            for ( ; i < len; i++) {
+                if (wrapWidth > 0) {
+                    if (x >= wrapWidth) {// FIX >=
                         addRun(i);
                         addLine();
                     }
@@ -600,7 +635,7 @@ public class StubTextLayout implements TextLayout {
                 switch (c) {
                 case '\t':
                     addRun(i);
-                    if(tabSize > 0) {
+                    if (tabSize > 0) {
                         double dw = (tabSize - (column % tabSize)) * charWidth;
                         x += dw;
                     } else {
@@ -620,6 +655,10 @@ public class StubTextLayout implements TextLayout {
                     column++;
                     break;
                 }
+            }
+
+            if (i > runStart) {
+                addRun(i);
             }
         }
     }
