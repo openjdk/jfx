@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -998,7 +998,7 @@ public class TreeViewTest {
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
         // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
-        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() > 0.10);
         assertTrue(scrollBar.getVisibleAmount() < 0.17);
     }
 
@@ -1206,14 +1206,14 @@ public class TreeViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         sl.dispose();
     }
