@@ -31,6 +31,7 @@ import com.sun.javafx.font.Metrics;
  */
 public class StubFontMetrics implements Metrics {
     public static final float BASELINE = 0.8f;
+    public static final float BOLD_FONT_EXTRA_WIDTH = 1.0f;
     private final float size;
 
     public StubFontMetrics(float size) {

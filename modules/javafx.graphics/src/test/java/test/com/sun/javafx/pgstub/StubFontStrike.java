@@ -69,6 +69,7 @@ public class StubFontStrike implements FontStrike {
 
     @Override
     public int getQuantizedPosition(Point2D point) {
+        point.x = Math.round(point.x);
         point.y = Math.round(point.y);
         return 0;
     }
@@ -92,7 +93,6 @@ public class StubFontStrike implements FontStrike {
 
     @Override
     public void clearDesc() {
-        StubTextLayout.p("");
     }
 
     @Override
@@ -102,8 +102,8 @@ public class StubFontStrike implements FontStrike {
 
     @Override
     public float getCharAdvance(char ch) {
-        StubTextLayout.p("");
-        return 0;
+        int glyphCode = fontResource.getGlyphMapper().charToGlyph((int)ch);
+        return fontResource.getAdvance(glyphCode, size);
     }
 
     @Override

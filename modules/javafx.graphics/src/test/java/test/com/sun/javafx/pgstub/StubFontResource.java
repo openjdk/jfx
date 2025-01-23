@@ -25,6 +25,7 @@
 package test.com.sun.javafx.pgstub;
 
 import java.lang.ref.WeakReference;
+import java.util.Locale;
 import java.util.Map;
 import javafx.scene.text.Font;
 import com.sun.javafx.font.CharToGlyphMapper;
@@ -38,6 +39,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
  */
 public class StubFontResource implements FontResource {
     private final Font font;
+    private Boolean bold;
     private static final CharToGlyphMapper glyphMapper = initCharToGlyphMapper();
 
     public StubFontResource(Font font) {
@@ -87,15 +89,16 @@ public class StubFontResource implements FontResource {
     // see com.sun.javafx.scene.text.TextLayout flags
     @Override
     public int getFeatures() {
-        //StubTextLayout.p("");
         return 0;
     }
 
     @Override
     public boolean isBold() {
-        StubTextLayout.p("");
-        // TODO check the name
-        return false;
+        if (bold == null) {
+            String name = font.getStyle();
+            bold = name.toLowerCase(Locale.US).contains("bold");
+        }
+        return bold.booleanValue();
     }
 
     @Override
@@ -106,8 +109,9 @@ public class StubFontResource implements FontResource {
     // returns glyph width
     @Override
     public float getAdvance(int gc, float size) {
+        // +1 for bold fonts
+        return isBold() ? size + StubFontMetrics.BOLD_FONT_EXTRA_WIDTH : size;
         //StubTextLayout.p("gx=0x%04X size=%f", gc, size);
-        return size;
     }
 
     // returns [xmin, ymin, xmax, ymax]
@@ -116,14 +120,14 @@ public class StubFontResource implements FontResource {
         if (b == null || b.length < 4) {
             b = new float[4];
         }
-        // TODO for non-printable return all 0's
+        // TODO for non-printable return all 0's?
         if (gc < 0x20) {
             StubTextLayout.p("gc=%04X", gc);
         }
 
         float xmin = 0.0f;
         float ymin = 0.0f;
-        float xmax = size;
+        float xmax = getAdvance(gc, size);
         float ymax = StubFontMetrics.BASELINE * size;
 
         // PrismTextLayoutBase:
