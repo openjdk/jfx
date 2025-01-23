@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ public class TextRun implements GlyphList {
     byte level;
     int script;
     TextSpan span;
-    TextLine line;
+    com.sun.javafx.scene.text.TextLine line;
     Point2D location;
     private float ascent, descent, leading;
     int flags = 0;
@@ -100,7 +100,7 @@ public class TextRun implements GlyphList {
         return line.getBounds();
     }
 
-    public void setLine(TextLine line) {
+    public void setLine(com.sun.javafx.scene.text.TextLine line) {
         this.line = line;
     }
 

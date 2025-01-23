@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,28 +22,27 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package test.com.sun.javafx.pgstub;
 
-import com.sun.javafx.text.PrismTextLayoutBase;
+import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.font.PGFont;
+import com.sun.javafx.text.GlyphLayout;
+import com.sun.javafx.text.TextRun;
 
 /**
- * Same as PrismTextLayout but with stubbed out fonts.
+ *
  */
-public class StubTextLayout extends PrismTextLayoutBase {
-    public static final boolean DEBUG = true;
-
-    public StubTextLayout() {
-        super(256, StubGlyphLayout::new);
+public class StubGlyphLayout extends GlyphLayout {
+    public StubGlyphLayout() {
     }
 
-    public static void p(String fmt, Object... args) {
-        if (DEBUG) {
-            StackTraceElement s = new Throwable().getStackTrace()[1];
-            String name = s.getClassName();
-            int ix = name.lastIndexOf('.');
-            name = (ix < 0) ? name : name.substring(ix + 1);
-            System.out.println(name + "." + s.getMethodName() + " " + String.format(fmt, args));
-        }
+    @Override
+    public void dispose() {
+    }
+
+    @Override
+    public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
+        // TODO
+        StubTextLayout.p("");
     }
 }

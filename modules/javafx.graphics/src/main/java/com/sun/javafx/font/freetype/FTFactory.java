@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.javafx.font.freetype;
 
 import java.util.ArrayList;
-
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.font.FontConfigManager;
 import com.sun.javafx.font.FontFallbackInfo;
@@ -36,6 +35,7 @@ import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.font.PrismFontFile;
 import com.sun.javafx.text.GlyphLayout;
+import com.sun.javafx.text.GlyphLayoutManager;
 import com.sun.javafx.text.TextRun;
 
 public class FTFactory extends PrismFontFactory {
@@ -126,6 +126,11 @@ public class FTFactory extends PrismFontFactory {
 
         @Override
         public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
+        }
+
+        @Override
+        public void dispose() {
+            GlyphLayoutManager.dispose(this);
         }
     }
 
