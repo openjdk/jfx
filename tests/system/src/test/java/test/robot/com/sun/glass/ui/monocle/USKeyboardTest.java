@@ -114,7 +114,7 @@ public class USKeyboardTest {
             ui.processLine("EV_SYN");
             TestLogShim.waitForLog("Key released: SHIFT");
         }
-        TestLogShim.waitForLog("Key typed: %0$c", new Object[] { c });
+        TestLogShim.waitForLog("Key typed: %1$c", new Object[] { c });
     }
 
     /**
