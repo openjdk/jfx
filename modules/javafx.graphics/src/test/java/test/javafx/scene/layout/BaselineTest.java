@@ -51,7 +51,6 @@ public class BaselineTest {
     public void testTextBaseline() {
         Text text = new Text("Graphically");
         float size = (float) text.getFont().getSize();
-        //assertEquals(size, text.getBaselineOffset(),1e-100);
         assertTrue(text.getBaselineOffset() > (size / 2.0f));
     }
 

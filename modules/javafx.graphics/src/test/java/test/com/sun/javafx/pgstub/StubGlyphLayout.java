@@ -48,7 +48,7 @@ public class StubGlyphLayout extends GlyphLayout {
         int start = run.getStart();
         int length = run.getLength();
 
-        // simple case taken from PrismTextLayout.shape()
+        // simplified code from PrismTextLayout.shape()
         float fontSize = strike.getSize();
         CharToGlyphMapper mapper = fr.getGlyphMapper();
 

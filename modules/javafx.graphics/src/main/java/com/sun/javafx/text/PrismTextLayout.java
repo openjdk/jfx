@@ -65,8 +65,8 @@ public abstract class PrismTextLayout implements TextLayout {
     private static final Object  CACHE_SIZE_LOCK = new Object();
     private static int cacheSize = 0;
     private static final int MAX_STRING_SIZE = 256;
-    private final int MAX_CACHE_SIZE;
 
+    private final int maxCacheSize;
     private char[] text;
     private TextSpan[] spans;   /* Rich text  (null for single font text) */
     private PGFont font;        /* Single font text (null for rich text) */
@@ -85,7 +85,7 @@ public abstract class PrismTextLayout implements TextLayout {
     private int tabSize = DEFAULT_TAB_SIZE;
 
     public PrismTextLayout(int maxCacheSize) {
-        MAX_CACHE_SIZE = maxCacheSize;
+        this.maxCacheSize = maxCacheSize;
         logicalBounds = new RectBounds();
         flags = ALIGN_LEFT;
     }
@@ -142,7 +142,7 @@ public abstract class PrismTextLayout implements TextLayout {
         this.font = (PGFont)font;
         this.strike = ((PGFont)font).getStrike(IDENTITY);
         this.text = text.toCharArray();
-        if (MAX_CACHE_SIZE > 0) {
+        if (maxCacheSize > 0) {
             int length = text.length();
             if (0 < length && length <= MAX_STRING_SIZE) {
                 cacheKey = text.hashCode() * strike.hashCode();
@@ -1481,7 +1481,7 @@ public abstract class PrismTextLayout implements TextLayout {
                 layoutCache.analysis = flags & ANALYSIS_MASK;
                 synchronized (CACHE_SIZE_LOCK) {
                     int charCount = chars.length;
-                    if (cacheSize + charCount > MAX_CACHE_SIZE) {
+                    if (cacheSize + charCount > maxCacheSize) {
                         stringCache.clear();
                         cacheSize = 0;
                     }

@@ -32,10 +32,9 @@ import com.sun.javafx.text.PrismTextLayout;
  * Same as PrismTextLayout but with stubbed out fonts.
  */
 public class StubTextLayout extends PrismTextLayout {
-    public static final boolean DEBUG = true;
 
     public StubTextLayout() {
-        super(256);
+        super(0);
     }
 
     @Override
