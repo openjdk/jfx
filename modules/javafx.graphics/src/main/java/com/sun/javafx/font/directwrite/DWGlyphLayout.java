@@ -34,7 +34,7 @@ import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.GlyphLayout;
 import com.sun.javafx.text.GlyphLayoutManager;
-import com.sun.javafx.text.PrismTextLayoutBase;
+import com.sun.javafx.text.PrismTextLayout;
 import com.sun.javafx.text.TextRun;
 
 public class DWGlyphLayout extends GlyphLayout {
@@ -42,7 +42,7 @@ public class DWGlyphLayout extends GlyphLayout {
     private static final String LOCALE = "en-us";
 
     @Override
-    protected TextRun addTextRun(PrismTextLayoutBase layout, char[] chars, int start,
+    protected TextRun addTextRun(PrismTextLayout layout, char[] chars, int start,
                                  int length, PGFont font, TextSpan span, byte level) {
 
         IDWriteFactory factory = DWFactory.getDWriteFactory();

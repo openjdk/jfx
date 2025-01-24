@@ -113,7 +113,7 @@ public abstract class GlyphLayout {
         }
     }
 
-    protected TextRun addTextRun(PrismTextLayoutBase layout, char[] chars,
+    protected TextRun addTextRun(PrismTextLayout layout, char[] chars,
                                  int start, int length,
                                  PGFont font, TextSpan span, byte level) {
         /* subclass can overwrite this method in order to handle complex text */
@@ -122,7 +122,7 @@ public abstract class GlyphLayout {
         return run;
     }
 
-    private TextRun addTextRun(PrismTextLayoutBase layout, char[] chars,
+    private TextRun addTextRun(PrismTextLayout layout, char[] chars,
                                int start, int length, PGFont font,
                                TextSpan span, byte level, boolean complex) {
 
@@ -139,7 +139,7 @@ public abstract class GlyphLayout {
         return run;
     }
 
-    public int breakRuns(PrismTextLayoutBase layout, char[] chars, int flags) {
+    public int breakRuns(PrismTextLayout layout, char[] chars, int flags) {
         int length = chars.length;
         boolean complex = false;
         boolean feature = false;

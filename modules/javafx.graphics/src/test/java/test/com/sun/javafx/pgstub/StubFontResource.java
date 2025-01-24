@@ -111,7 +111,6 @@ public class StubFontResource implements FontResource {
     public float getAdvance(int gc, float size) {
         // +1 for bold fonts
         return isBold() ? size + StubFontMetrics.BOLD_FONT_EXTRA_WIDTH : size;
-        //StubTextLayout.p("gx=0x%04X size=%f", gc, size);
     }
 
     // returns [xmin, ymin, xmax, ymax]
@@ -119,10 +118,6 @@ public class StubFontResource implements FontResource {
     public float[] getGlyphBoundingBox(int gc, float size, float[] b) {
         if (b == null || b.length < 4) {
             b = new float[4];
-        }
-        // TODO for non-printable return all 0's?
-        if (gc < 0x20) {
-            StubTextLayout.p("gc=%04X", gc);
         }
 
         float xmin = 0.0f;
@@ -154,7 +149,6 @@ public class StubFontResource implements FontResource {
 
     @Override
     public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
-        StubTextLayout.p("");
         return null;
     }
 
@@ -170,13 +164,11 @@ public class StubFontResource implements FontResource {
 
     @Override
     public Object getPeer() {
-        StubTextLayout.p("");
         return null;
     }
 
     @Override
     public void setPeer(Object peer) {
-        StubTextLayout.p("");
     }
 
     @Override

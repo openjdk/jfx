@@ -91,7 +91,7 @@ public class FTFactory extends PrismFontFactory {
         if (OSFreetype.isHarfbuzzEnabled()) {
             return new HBGlyphLayout();
         }
-        return new StubGlyphLayout();
+        return new FTStubGlyphLayout();
     }
 
     @Override
@@ -119,9 +119,9 @@ public class FTFactory extends PrismFontFactory {
         return true;
     }
 
-    private static class StubGlyphLayout extends GlyphLayout {
+    private static class FTStubGlyphLayout extends GlyphLayout {
 
-        public StubGlyphLayout() {
+        public FTStubGlyphLayout() {
         }
 
         @Override

@@ -81,13 +81,11 @@ public class StubFontStrike implements FontStrike {
 
     @Override
     public Glyph getGlyph(char symbol) {
-        StubTextLayout.p("");
         return null;
     }
 
     @Override
     public Glyph getGlyph(int glyphCode) {
-        StubTextLayout.p("");
         return null;
     }
 
@@ -108,7 +106,6 @@ public class StubFontStrike implements FontStrike {
 
     @Override
     public Shape getOutline(GlyphList gl, BaseTransform transform) {
-        StubTextLayout.p("");
         return null;
     }
 }

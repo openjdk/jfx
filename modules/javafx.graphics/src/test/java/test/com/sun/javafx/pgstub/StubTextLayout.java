@@ -25,25 +25,21 @@
 
 package test.com.sun.javafx.pgstub;
 
-import com.sun.javafx.text.PrismTextLayoutBase;
+import com.sun.javafx.text.GlyphLayout;
+import com.sun.javafx.text.PrismTextLayout;
 
 /**
  * Same as PrismTextLayout but with stubbed out fonts.
  */
-public class StubTextLayout extends PrismTextLayoutBase {
+public class StubTextLayout extends PrismTextLayout {
     public static final boolean DEBUG = true;
 
     public StubTextLayout() {
-        super(256, StubGlyphLayout::new);
+        super(256);
     }
 
-    public static void p(String fmt, Object... args) {
-        if (DEBUG) {
-            StackTraceElement s = new Throwable().getStackTrace()[1];
-            String name = s.getClassName();
-            int ix = name.lastIndexOf('.');
-            name = (ix < 0) ? name : name.substring(ix + 1);
-            System.out.println("🐞 " + name + "." + s.getMethodName() + " " + String.format(fmt, args));
-        }
+    @Override
+    protected GlyphLayout glyphLayout() {
+        return new StubGlyphLayout();
     }
 }

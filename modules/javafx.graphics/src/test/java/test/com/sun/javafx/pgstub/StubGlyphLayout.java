@@ -24,6 +24,8 @@
  */
 package test.com.sun.javafx.pgstub;
 
+import com.sun.javafx.font.CharToGlyphMapper;
+import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.text.GlyphLayout;
@@ -41,8 +43,27 @@ public class StubGlyphLayout extends GlyphLayout {
     }
 
     @Override
-    public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
-        // TODO
-        StubTextLayout.p("");
+    public void layout(TextRun run, PGFont font, FontStrike strike, char[] chars) {
+        FontResource fr = strike.getFontResource();
+        int start = run.getStart();
+        int length = run.getLength();
+
+        // simple case taken from PrismTextLayout.shape()
+        float fontSize = strike.getSize();
+        CharToGlyphMapper mapper = fr.getGlyphMapper();
+
+        /* The text contains complex and non-complex runs */
+        int[] glyphs = new int[length];
+        mapper.charsToGlyphs(start, length, chars, glyphs);
+        float[] positions = new float[(length + 1) << 1];
+        float xadvance = 0;
+        for (int i = 0; i < length; i++) {
+            float width = fr.getAdvance(glyphs[i], fontSize);
+            positions[i << 1] = xadvance;
+            //yadvance always zero
+            xadvance += width;
+        }
+        positions[length << 1] = xadvance;
+        run.shape(length, glyphs, positions, null);
     }
 }

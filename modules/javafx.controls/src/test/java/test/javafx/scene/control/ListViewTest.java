@@ -76,6 +76,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
 import javafx.util.Callback;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -1173,6 +1174,8 @@ public class ListViewTest {
         });
 
         StageLoader sl = new StageLoader(listView);
+        listView.setPrefHeight(400 / 10.0 * Font.getDefault().getSize());
+        Toolkit.getToolkit().firePulse();
 
         Platform.runLater(() -> {
             rt_35395_counter = 0;
@@ -1189,12 +1192,12 @@ public class ListViewTest {
                     items.remove(12);
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
-                        assertEquals(useFixedCellSize ? 11 : 7, rt_35395_counter);
+                        assertEquals(useFixedCellSize ? 15 : 10, rt_35395_counter);
                         rt_35395_counter = 0;
                         items.add(12, "yellow");
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
-                            assertEquals(useFixedCellSize ? 11 : 7, rt_35395_counter);
+                            assertEquals(useFixedCellSize ? 15 : 10, rt_35395_counter);
                             rt_35395_counter = 0;
                             listView.scrollTo(5);
                             Platform.runLater(() -> {
@@ -1204,7 +1207,7 @@ public class ListViewTest {
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 23 : 93, rt_35395_counter);
+                                    assertEquals(useFixedCellSize ? 27 : 108, rt_35395_counter);
                                     sl.dispose();
                                 });
                             });
