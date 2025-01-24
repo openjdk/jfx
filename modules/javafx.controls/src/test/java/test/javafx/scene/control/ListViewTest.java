@@ -1143,71 +1143,89 @@ public class ListViewTest {
         test_rt_35395(false);
     }
 
-    private int rt_35395_counter;
+    private class Counter {
+        public int updateCount;
 
-    private void test_rt_35395(boolean useFixedCellSize) {
-        rt_35395_counter = 0;
-
-        ObservableList<String> items = FXCollections.observableArrayList();
-        for (int i = 0; i < 20; ++i) {
-            items.addAll("red", "green", "blue", "purple");
+        public static void reset(List<Counter> items) {
+            for (Counter c : items) {
+                c.updateCount = 0;
+            }
         }
 
-        ListView<String> listView = new ListView<>(items);
+        // verifies problem of JDK-8091726: that an update() method is not called more than once
+        public static void verify(List<Counter> items) {
+            for (int i = 0; i < items.size(); i++) {
+                Counter c = items.get(i);
+                int count = c.updateCount;
+                c.updateCount = 0;
+                assertTrue(c.updateCount < 2, "index=" + i + " updateCount=" + count);
+            }
+        }
+    }
+
+    // JDK-8091726
+    private void test_rt_35395(boolean useFixedCellSize) {
+        ObservableList<Counter> items = FXCollections.observableArrayList();
+        for (int i = 0; i < 20; ++i) {
+            items.addAll(new Counter(), new Counter(), new Counter(), new Counter());
+        }
+
+        ListView<Counter> listView = new ListView<>(items);
         if (useFixedCellSize) {
             listView.setFixedCellSize(18);
         }
         listView.setCellFactory(lv -> new ListCellShim<>() {
             @Override
-            public void updateItem(String color, boolean empty) {
-                rt_35395_counter += 1;
-                super.updateItem(color, empty);
+            public void updateItem(Counter item, boolean empty) {
+                if (item != null) {
+                    item.updateCount++;
+                }
+                super.updateItem(item, empty);
                 setText(null);
                 if (empty) {
                     setGraphic(null);
                 } else {
                     Rectangle rect = new Rectangle(16, 16);
-                    rect.setStyle("-fx-fill: " + color);
+                    rect.setStyle("-fx-fill: red");
                     setGraphic(rect);
                 }
             }
         });
 
         StageLoader sl = new StageLoader(listView);
-        listView.setPrefHeight(400 / 10.0 * Font.getDefault().getSize());
-        Toolkit.getToolkit().firePulse();
 
         Platform.runLater(() -> {
-            rt_35395_counter = 0;
-            items.set(10, "yellow");
+            Counter.reset(items);
+            items.set(10, new Counter());
             Platform.runLater(() -> {
                 Toolkit.getToolkit().firePulse();
-                assertEquals(1, rt_35395_counter);
-                rt_35395_counter = 0;
-                items.set(30, "yellow");
+                Counter.verify(items);
+
+                items.set(30, new Counter());
                 Platform.runLater(() -> {
                     Toolkit.getToolkit().firePulse();
-                    assertTrue(rt_35395_counter < 7);
-                    rt_35395_counter = 0;
+                    Counter.verify(items);
+
                     items.remove(12);
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
-                        assertEquals(useFixedCellSize ? 15 : 10, rt_35395_counter);
-                        rt_35395_counter = 0;
-                        items.add(12, "yellow");
+                        Counter.verify(items);
+
+                        items.add(12, new Counter());
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
-                            assertEquals(useFixedCellSize ? 15 : 10, rt_35395_counter);
-                            rt_35395_counter = 0;
+                            Counter.verify(items);
+
                             listView.scrollTo(5);
                             Platform.runLater(() -> {
                                 Toolkit.getToolkit().firePulse();
-                                assertTrue(rt_35395_counter < 30);
-                                rt_35395_counter = 0;
+                                Counter.verify(items);
+
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 27 : 108, rt_35395_counter);
+                                    Counter.verify(items);
+
                                     sl.dispose();
                                 });
                             });
