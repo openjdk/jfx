@@ -96,6 +96,12 @@ import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 import test.com.sun.javafx.scene.control.test.RT_22463_Person;
 
+/**
+ * NOTE: these tests contain magic numbers which depend on the default font size,
+ * meaning they are guaranteed to break when/if the default size changes.
+ * A possible improvement might be to get the default font size and derive the expected
+ * numbers and preferred sizes.
+ */
 public class ListViewTest {
     private ListView<String> listView;
     private MultipleSelectionModel<String> sm;
@@ -1148,7 +1154,7 @@ public class ListViewTest {
 
         ListView<String> listView = new ListView<>(items);
         if (useFixedCellSize) {
-            listView.setFixedCellSize(24);
+            listView.setFixedCellSize(18);
         }
         listView.setCellFactory(lv -> new ListCellShim<>() {
             @Override
@@ -1183,12 +1189,12 @@ public class ListViewTest {
                     items.remove(12);
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
-                        assertEquals(useFixedCellSize ? 5 : 7, rt_35395_counter);
+                        assertEquals(useFixedCellSize ? 11 : 7, rt_35395_counter);
                         rt_35395_counter = 0;
                         items.add(12, "yellow");
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
-                            assertEquals(useFixedCellSize ? 5 : 7, rt_35395_counter);
+                            assertEquals(useFixedCellSize ? 11 : 7, rt_35395_counter);
                             rt_35395_counter = 0;
                             listView.scrollTo(5);
                             Platform.runLater(() -> {
@@ -1198,7 +1204,7 @@ public class ListViewTest {
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 17 : 93, rt_35395_counter);
+                                    assertEquals(useFixedCellSize ? 23 : 93, rt_35395_counter);
                                     sl.dispose();
                                 });
                             });
