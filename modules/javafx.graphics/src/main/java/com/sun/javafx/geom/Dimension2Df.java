@@ -26,6 +26,9 @@
 package com.sun.javafx.geom;
 
 /**
- * A 2D dimension object that contains a width and a height.
+ * A 2D dimension object that contains a width and a height as floats.
+ *
+ * @see com.sun.javafx.geom.Rectangle.Dimension2Di Dimension2Di - ints
+ * @see javafx.geometry.Dimension2D Dimension2D - doubles
  */
-public record Dimension2D(float width, float height) {}
+public record Dimension2Df(float width, float height) {}

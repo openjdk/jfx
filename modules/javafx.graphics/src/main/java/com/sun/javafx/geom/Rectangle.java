@@ -685,4 +685,20 @@ public class Rectangle {
     public String toString() {
         return getClass().getName() + "[x=" + x + ",y=" + y + ",width=" + width + ",height=" + height + "]";
     }
+
+    /**
+     * A 2D dimension object that contains a width and a height as integers.
+     *
+     * @see com.sun.javafx.geom.Dimension2Df Dimension2Df - floats
+     * @see javafx.geometry.Dimension2D Dimension2D - doubles
+     */
+    public static record Dimension2Di(int width, int height) {
+
+        /**
+         * Captures the width and height of a {@code Rectangle}.
+         */
+        public Dimension2Di(Rectangle rect) {
+            this(rect.width, rect.height);
+        }
+    }
 }

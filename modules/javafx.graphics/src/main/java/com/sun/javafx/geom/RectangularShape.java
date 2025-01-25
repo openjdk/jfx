@@ -180,7 +180,7 @@ public abstract class RectangularShape extends Shape {
      * @param size the specified <code>Dimension2D</code>
      * @see #getFrame
      */
-    public void setFrame(Point2D loc, Dimension2D size) {
+    public void setFrame(Point2D loc, Dimension2Df size) {
         setFrame(loc.x, loc.y, size.width(), size.height());
     }
 

@@ -268,7 +268,7 @@ public class Arc2D extends RectangularShape {
      * @param closure The closure type for the arc:
      * {@link #OPEN}, {@link #CHORD}, or {@link #PIE}.
      */
-    public void setArc(Point2D loc, Dimension2D size,
+    public void setArc(Point2D loc, Dimension2Df size,
                float angSt, float angExt, int closure) {
         setArc(loc.x, loc.y, size.width(), size.height(), angSt, angExt, closure);
     }

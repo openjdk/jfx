@@ -33,8 +33,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.sun.javafx.geom.Dimension2D;
 import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.Rectangle.Dimension2Di;
 
 
 /**
@@ -77,15 +77,15 @@ final class TokenItem {
         return allowedScreensBounds.containsAll(bounds);
     }
 
-    public boolean hasAllScreensOfSameSize(List<Dimension2D> screenSizes) {
+    public boolean hasAllScreensOfSameSize(List<Dimension2Di> screenSizes) {
         // We also need to consider duplicates, since there may be
         // multiple screens of the same size.
         // The token item must also have at least the same number
         // of screens with that size.
 
-        List<Dimension2D> tokenSizes = allowedScreensBounds
+        List<Dimension2Di> tokenSizes = allowedScreensBounds
                 .stream()
-                .map(bounds -> new Dimension2D(bounds.width, bounds.height))
+                .map(Dimension2Di::new)
                 .collect(Collectors.toCollection(ArrayList::new));
 
         return screenSizes.size() == screenSizes
