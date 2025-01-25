@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.mac;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
@@ -181,6 +182,28 @@ final class MacView extends View {
                 notifyInputMethod(str, null, attBounds, atts, 0, cursor, 0);
             }
         }
+    }
+
+    @Override
+    protected NonClientEventHandler createNonClientEventHandler() {
+        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
+            if (type == MouseEvent.DOWN) {
+                var window = (MacWindow)getWindow();
+                double wx = x / window.getPlatformScaleX();
+                double wy = y / window.getPlatformScaleY();
+
+                View.EventHandler eventHandler = getEventHandler();
+                if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
+                    if (clickCount == 2) {
+                        window.performTitleBarDoubleClickAction();
+                    } else if (clickCount == 1) {
+                        window.performWindowDrag();
+                    }
+                }
+            }
+
+            return false;
+        };
     }
 }
 

@@ -117,5 +117,25 @@ final class WinView extends View {
             }
         }
     }
-}
 
+    @Override
+    protected NonClientEventHandler createNonClientEventHandler() {
+        var window = (WinWindow)getWindow();
+        if (!window.isExtendedWindow()) {
+            return null;
+        }
+
+        var overlay = window.getNonClientOverlay();
+        if (overlay == null) {
+            return null;
+        }
+
+        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
+            double wx = x / window.getPlatformScaleX();
+            double wy = y / window.getPlatformScaleY();
+
+            // Give the window button overlay the first chance to handle the event.
+            return overlay.handleMouseEvent(type, button, wx, wy);
+        };
+    }
+}

@@ -27,13 +27,15 @@ package com.sun.glass.ui;
 import com.sun.glass.events.WindowEvent;
 import com.sun.prism.impl.PrismSettings;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Parent;
 import javafx.scene.layout.Region;
 import javafx.util.Subscription;
 import java.lang.annotation.Native;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -236,10 +238,11 @@ public abstract class Window {
     private int maximumWidth = Integer.MAX_VALUE, maximumHeight = Integer.MAX_VALUE;
 
     private EventHandler eventHandler;
-    private Region headerBar;
 
-    protected final ObjectProperty<WindowOverlayMetrics> windowOverlayMetrics =
-            new SimpleObjectProperty<>(this, "windowOverlayMetrics");
+    private final List<Region> headerBars = new ArrayList<>();
+
+    protected final ObjectProperty<WindowControlsMetrics> windowControlsMetrics =
+            new SimpleObjectProperty<>(this, "windowControlsMetrics");
 
     protected abstract long _createWindow(long ownerPtr, long screenPtr, int mask);
     protected Window(Window owner, Screen screen, int styleMask) {
@@ -435,59 +438,57 @@ public abstract class Window {
      *
      * @return the overlay metrics
      */
-    public ObservableValue<WindowOverlayMetrics> getWindowOverlayMetrics() {
-        return windowOverlayMetrics;
+    public final ReadOnlyObjectProperty<WindowControlsMetrics> windowControlsMetricsProperty() {
+        return windowControlsMetrics;
     }
 
     /**
-     * Returns the window-provided overlay controls, which are rendered above all application content.
+     * Returns the window-provided non-client overlay, which is rendered above all application content.
      *
      * @return the overlay, or {@code null} if the window does not provide an overlay
      */
-    public Parent getWindowOverlay() {
-        return null;
-    }
-
-    /**
-     * Returns the window-provided non-client event handler.
-     *
-     * @return the non-client event handler, or {@code null}
-     */
-    public NonClientHandler getNonClientHandler() {
+    public Parent getNonClientOverlay() {
         return null;
     }
 
     /**
      * Registers a user-provided header bar with this window.
-     * <p>
-     * The registration will be accepted, but ignored if the window is not an extended
-     * window, or if another header bar is already registered.
      *
      * @param headerBar the header bar
-     * @return a {@code Subscription} to unregister
+     * @return a {@code Subscription} to unregister, or an empty subscription if this window
+     *         is not an {@link #isExtendedWindow()}
      */
     public final Subscription registerHeaderBar(Region headerBar) {
         Objects.requireNonNull(headerBar);
 
-        if (!isExtendedWindow() || this.headerBar != null) {
+        if (!isExtendedWindow()) {
             return Subscription.EMPTY;
         }
 
-        this.headerBar = headerBar;
+        headerBars.add(headerBar);
 
-        Subscription subscription = headerBar.heightProperty().subscribe(
-            value -> onHeaderBarHeightChanged(value.doubleValue()));
+        Subscription subscription = headerBar.heightProperty().subscribe(this::updateHeaderBarHeight);
 
         return () -> {
-            this.headerBar = null;
+            headerBars.remove(headerBar);
             subscription.unsubscribe();
+            updateHeaderBarHeight();
         };
+    }
+
+    private void updateHeaderBarHeight() {
+        double maxHeight = headerBars.stream()
+            .max(Comparator.comparingDouble(Region::getHeight))
+            .map(Region::getHeight)
+            .orElse(0.0);
+
+        onHeaderBarHeightChanged(maxHeight);
     }
 
     /**
      * Called when the height of a registered user-provided header bar has changed.
      *
-     * @param height the height of the header bar
+     * @param height the maximum height of all registered header bars
      */
     protected void onHeaderBarHeightChanged(double height) {}
 

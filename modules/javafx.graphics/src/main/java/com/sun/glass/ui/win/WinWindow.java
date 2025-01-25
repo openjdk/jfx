@@ -26,7 +26,6 @@ package com.sun.glass.ui.win;
 
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.WindowControlsOverlay;
-import com.sun.glass.ui.NonClientHandler;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
@@ -339,7 +338,7 @@ class WinWindow extends Window {
     private WindowControlsOverlay windowControlsOverlay;
 
     @Override
-    public WindowControlsOverlay getWindowOverlay() {
+    public WindowControlsOverlay getNonClientOverlay() {
         if (windowControlsOverlay == null && isExtendedWindow()) {
             var url = getClass().getResource(WINDOW_DECORATION_STYLESHEET);
             if (url == null) {
@@ -347,28 +346,14 @@ class WinWindow extends Window {
             }
 
             windowControlsOverlay = new WindowControlsOverlay(
-                StringConstant.valueOf(url.toExternalForm()), isUtilityWindow());
+                StringConstant.valueOf(url.toExternalForm()),
+                isUtilityWindow(),
+                (getStyleMask() & RIGHT_TO_LEFT) != 0);
 
-            windowOverlayMetrics.bind(windowControlsOverlay.metricsProperty());
+            windowControlsMetrics.bind(windowControlsOverlay.metricsProperty());
         }
 
         return windowControlsOverlay;
-    }
-
-    @Override
-    public NonClientHandler getNonClientHandler() {
-        var overlay = getWindowOverlay();
-        if (overlay == null) {
-            return null;
-        }
-
-        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
-            double wx = x / platformScaleX;
-            double wy = y / platformScaleY;
-
-            // Give the window button overlay the first chance to handle the event.
-            return overlay.handleMouseEvent(type, button, wx, wy);
-        };
     }
 
     /**

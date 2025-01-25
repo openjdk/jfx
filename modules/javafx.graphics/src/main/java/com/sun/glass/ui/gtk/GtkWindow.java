@@ -24,10 +24,8 @@
  */
 package com.sun.glass.ui.gtk;
 
-import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.events.WindowEvent;
-import com.sun.glass.ui.NonClientHandler;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
@@ -209,38 +207,25 @@ class GtkWindow extends Window {
     private WindowControlsOverlay windowControlsOverlay;
 
     @Override
-    public WindowControlsOverlay getWindowOverlay() {
+    public WindowControlsOverlay getNonClientOverlay() {
         if (windowControlsOverlay == null && isExtendedWindow()) {
             windowControlsOverlay = new WindowControlsOverlay(
-                PlatformThemeObserver.getInstance().stylesheetProperty(), isUtilityWindow());
+                PlatformThemeObserver.getInstance().stylesheetProperty(),
+                isUtilityWindow(),
+                (getStyleMask() & RIGHT_TO_LEFT) != 0);
 
             // Set the system-defined absolute minimum size to the size of the window buttons area,
             // regardless of whether the application has specified a smaller minimum size.
-            windowControlsOverlay.metricsProperty().addListener((_, _, metrics) -> {
-                int width = (int)(metrics.size().getWidth() * platformScaleX);
-                int height = (int)(metrics.size().getHeight() * platformScaleY);
+            windowControlsOverlay.metricsProperty().subscribe(metrics -> {
+                int width = (int)(metrics.totalInsetWidth() * platformScaleX);
+                int height = (int)(metrics.maxInsetHeight() * platformScaleY);
                 _setSystemMinimumSize(super.getRawHandle(), width, height);
             });
 
-            windowOverlayMetrics.bind(windowControlsOverlay.metricsProperty());
+            windowControlsMetrics.bind(windowControlsOverlay.metricsProperty());
         }
 
         return windowControlsOverlay;
-    }
-
-    @Override
-    public NonClientHandler getNonClientHandler() {
-        var overlay = getWindowOverlay();
-        if (overlay == null) {
-            return null;
-        }
-
-        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
-            // In contrast to Windows, GTK doesn't produce non-client events. We convert regular
-            // mouse events to non-client events since that's what WindowControlsOverlay expects.
-            return overlay.handleMouseEvent(
-                MouseEvent.toNonClientEvent(type), button, x / platformScaleX, y / platformScaleY);
-        };
     }
 
     /**

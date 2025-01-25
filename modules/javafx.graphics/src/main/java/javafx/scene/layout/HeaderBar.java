@@ -27,12 +27,9 @@ package javafx.scene.layout;
 
 import com.sun.javafx.geom.Vec2d;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.css.CssMetaData;
-import javafx.css.StyleConverter;
-import javafx.css.Styleable;
-import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -43,8 +40,6 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.stage.StageStyle;
-import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * A client-area header bar that is used as a replacement for the system-provided header bar in stages
@@ -53,28 +48,44 @@ import java.util.stream.Stream;
  * The entire {@code HeaderBar} background is draggable by default, but its content is not. Applications
  * can specify draggable content nodes of the {@code HeaderBar} with the {@link #setDraggable} method.
  * <p>
+ * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes in three areas:
+ * {@link #leadingProperty() leading}, {@link #centerProperty() center}, and {@link #trailingProperty() trailing}.
+ * All areas can be {@code null}.
+ * If a child is configured to be centered in the {@code center} area, it is laid out with respect to the
+ * entire header bar, and not with respect to the {@code center} area. This ensures that the child will appear
+ * centered in the header bar regardless of leading or trailing children or the platform-specific placement of
+ * default window buttons.
+ * <p>
+ * The default {@link #minHeightProperty() minHeight} of the {@code HeaderBar} is set to match the height of the
+ * platform-specific default window buttons.
+ *
+ * <h2>Single header bar</h2>
+ * Most applications should only add a single {@code HeaderBar} to the scene graph, placed at the top of the
+ * scene and extending its entire width. This ensures that the reported values for
+ * {@link #leftSystemInsetProperty() leftSystemInset} and {@link #rightSystemInsetProperty() rightSystemInset},
+ * which describe the area reserved for the system-provided window buttons, correctly align with the location
+ * of the {@code HeaderBar} and are taken into account when the contents of the {@code HeaderBar} are laid out.
+ *
+ * <h2>Multiple header bars</h2>
+ * Applications that use multiple header bars might need to configure the additional padding inserted into the
+ * layout to account for the system-reserved areas. For example, when two header bars are placed next to each
+ * other in the horizontal direction, the default configuration incorrectly adds additional padding between the
+ * two header bars. In this case, the {@link #leadingSystemPaddingProperty() leadingSystemPadding} and
+ * {@link #trailingSystemPaddingProperty() trailingSystemPadding} properties can be used to remove the padding
+ * that is not needed.
+ *
+ * <h2>System menu</h2>
  * Some platforms support a system menu that can be summoned by right-clicking the draggable area.
  * This platform-provided menu will only be shown if the {@link ContextMenuEvent#CONTEXT_MENU_REQUESTED}
  * event that is targeted at the header bar is not consumed by the application.
- * <p>
- * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes in three areas:
- * {@link #leadingProperty() leading}, {@link #centerProperty() center}, and {@link #trailingProperty() trailing}.
- * All areas can be {@code null}. The {@link #overlappingSystemInsetProperty() overlappingSystemInset} property
- * controls whether the leading and trailing areas account for the default window buttons (minimize, maximize,
- * close). If a child is configured to be centered in the {@code center} area, it is laid out with respect to the
- * stage, and not with respect to the {@code center} area. This ensures that the child will appear centered in the
- * stage regardless of leading or trailing children or the platform-specific placement of default window buttons.
- * <p>
+ *
+ * <h2>Layout constraints</h2>
  * All children will be resized to their preferred widths and extend the height of the {@code HeaderBar}.
  * {@code HeaderBar} honors the minimum, preferred, and maximum sizes of its children. As a consequence, its
  * computed minimum size is sufficient to accommodate all of its children. If a child's resizable range prevents
  * it from be resized to fit within its position, it will be vertically centered relative to the available space;
  * this alignment can be customized with a layout constraint.
  * <p>
- * The default {@link #minHeightProperty() minHeight} of the {@code HeaderBar} is set to match the height of the
- * platform-specific default window buttons.
- *
- * <h2>Layout constraints</h2>
  * An application may set constraints on individual children to customize their layout.
  * For each constraint, {@code HeaderBar} provides static getter and setter methods.
  * <table style="white-space: nowrap">
@@ -116,14 +127,8 @@ import java.util.stream.Stream;
  * }
  * }</pre>
  *
- * @apiNote An application should only add a single {@code HeaderBar} to the scene graph, and it should
- *          be located at the top of the scene. While it is technically possible to add multiple header
- *          bars to the scene graph, or place a header bar in another area of the scene, the resulting
- *          user experience is not what users typically expect from JavaFX applications and should
- *          therefore be avoided.
- *
  * @see HeaderBarBase
- * @since 24
+ * @since 25
  */
 public class HeaderBar extends HeaderBarBase {
 
@@ -201,8 +206,10 @@ public class HeaderBar extends HeaderBarBase {
     /**
      * The leading area of the {@code HeaderBar}.
      * <p>
-     * Usually, this corresponds to the left side of the header bar; with right-to-left orientation,
-     * this corresponds to the right side of the header bar.
+     * The leading area corresponds to the left area in a left-to-right layout, and to the right area
+     * in a right-to-left layout.
+     *
+     * @defaultValue {@code null}
      */
     private final ObjectProperty<Node> leading = new NodeProperty("leading");
 
@@ -220,6 +227,8 @@ public class HeaderBar extends HeaderBarBase {
 
     /**
      * The center area of the {@code HeaderBar}.
+     *
+     * @defaultValue {@code null}
      */
     private final ObjectProperty<Node> center = new NodeProperty("center");
 
@@ -238,8 +247,10 @@ public class HeaderBar extends HeaderBarBase {
     /**
      * The trailing area of the {@code HeaderBar}.
      * <p>
-     * Usually, this corresponds to the right side of the header bar; with right-to-left orientation,
-     * this corresponds to the left side of the header bar.
+     * The trailing area corresponds to the right area in a left-to-right layout, and to the left area
+     * in a right-to-left layout.
+     *
+     * @defaultValue {@code null}
      */
     private final ObjectProperty<Node> trailing = new NodeProperty("trailing");
 
@@ -256,10 +267,19 @@ public class HeaderBar extends HeaderBarBase {
     }
 
     /**
-     * Specifies whether the system-provided window buttons overlap the content of this {@code HeaderBar},
-     * or whether they are laid out next to the content of the header bar, taking up space in its layout.
+     * Specifies whether additional padding should be added to the leading side of the {@code HeaderBar}.
+     * The size of the additional padding corresponds to the size of the system-reserved area that contains
+     * the default window buttons (minimize, maximize, and close). If the system-reserved area contains no
+     * window buttons, no additional padding is added to the leading side of the {@code HeaderBar}.
+     * <p>
+     * Applications that use a single {@code HeaderBar} extending the entire width of the window should
+     * set this property to {@code true} to prevent the window buttons from overlapping the content of the
+     * {@code HeaderBar}.
+     *
+     * @defaultValue {@code true}
+     * @see #trailingSystemPaddingProperty() trailingSystemPadding
      */
-    private final StyleableBooleanProperty overlappingSystemInset = new StyleableBooleanProperty() {
+    private final BooleanProperty leadingSystemPadding = new BooleanPropertyBase(true) {
         @Override
         public Object getBean() {
             return HeaderBar.this;
@@ -267,30 +287,77 @@ public class HeaderBar extends HeaderBarBase {
 
         @Override
         public String getName() {
-            return "systemInset";
+            return "leadingSystemPadding";
         }
 
         @Override
         protected void invalidated() {
             requestLayout();
         }
+    };
+
+    public final BooleanProperty leadingSystemPaddingProperty() {
+        return leadingSystemPadding;
+    }
+
+    public final boolean getLeadingSystemPadding() {
+        return leadingSystemPadding.get();
+    }
+
+    public final void setLeadingSystemPadding(boolean value) {
+        leadingSystemPadding.set(value);
+    }
+
+    /**
+     * Specifies whether additional padding should be added to the trailing side of the {@code HeaderBar}.
+     * The size of the additional padding corresponds to the size of the system-reserved area that contains
+     * the default window buttons (minimize, maximize, and close). If the system-reserved area contains no
+     * window buttons, no additional padding is added to the trailing side of the {@code HeaderBar}.
+     * <p>
+     * Applications that use a single {@code HeaderBar} extending the entire width of the window should
+     * set this property to {@code true} to prevent the window buttons from overlapping the content of the
+     * {@code HeaderBar}.
+     *
+     * @defaultValue {@code true}
+     * @see #leadingSystemPaddingProperty() leadingSystemPadding
+     */
+    private final BooleanProperty trailingSystemPadding = new BooleanPropertyBase(true) {
+        @Override
+        public Object getBean() {
+            return HeaderBar.this;
+        }
 
         @Override
-        public CssMetaData<? extends Styleable, Boolean> getCssMetaData() {
-            return OVERLAPPING_SYSTEM_INSET;
+        public String getName() {
+            return "trailingSystemPadding";
+        }
+
+        @Override
+        protected void invalidated() {
+            requestLayout();
         }
     };
 
-    public final BooleanProperty overlappingSystemInsetProperty() {
-        return overlappingSystemInset;
+    public final BooleanProperty trailingSystemPaddingProperty() {
+        return trailingSystemPadding;
     }
 
-    public final boolean isOverlappingSystemInset() {
-        return overlappingSystemInset.get();
+    public final boolean getTrailingSystemPadding() {
+        return trailingSystemPadding.get();
     }
 
-    public final void setOverlappingSystemInset(boolean value) {
-        overlappingSystemInset.set(value);
+    public final void setTrailingSystemPadding(boolean value) {
+        trailingSystemPadding.set(value);
+    }
+
+    private boolean isLeftSystemPadding(NodeOrientation nodeOrientation) {
+        return nodeOrientation == NodeOrientation.LEFT_TO_RIGHT && getLeadingSystemPadding()
+            || nodeOrientation == NodeOrientation.RIGHT_TO_LEFT && getTrailingSystemPadding();
+    }
+
+    private boolean isRightSystemPadding(NodeOrientation nodeOrientation) {
+        return nodeOrientation == NodeOrientation.LEFT_TO_RIGHT && getTrailingSystemPadding()
+            || nodeOrientation == NodeOrientation.RIGHT_TO_LEFT && getLeadingSystemPadding();
     }
 
     @Override
@@ -302,7 +369,7 @@ public class HeaderBar extends HeaderBarBase {
         double leftPrefWidth;
         double rightPrefWidth;
         double centerMinWidth;
-        double systemInsetWidth;
+        double systemPaddingWidth = 0;
 
         if (height != -1
                 && (childHasContentBias(leading, Orientation.VERTICAL) ||
@@ -318,10 +385,14 @@ public class HeaderBar extends HeaderBarBase {
             centerMinWidth = getAreaWidth(center, -1, true);
         }
 
-        if (isOverlappingSystemInset()) {
-            systemInsetWidth = 0;
-        } else {
-            systemInsetWidth = getLeftSystemInset().getWidth() + getRightSystemInset().getWidth();
+        NodeOrientation nodeOrientation = getEffectiveNodeOrientation();
+
+        if (isLeftSystemPadding(nodeOrientation)) {
+            systemPaddingWidth += getLeftSystemInset().getWidth();
+        }
+
+        if (isRightSystemPadding(nodeOrientation)) {
+            systemPaddingWidth += getRightSystemInset().getWidth();
         }
 
         return insets.getLeft()
@@ -329,7 +400,7 @@ public class HeaderBar extends HeaderBarBase {
              + centerMinWidth
              + rightPrefWidth
              + insets.getRight()
-             + systemInsetWidth;
+             + systemPaddingWidth;
     }
 
     @Override
@@ -388,7 +459,8 @@ public class HeaderBar extends HeaderBarBase {
         Node center = getCenter();
         Node left, right;
         Insets insets = getInsets();
-        boolean rtl = getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+        NodeOrientation nodeOrientation = getEffectiveNodeOrientation();
+        boolean rtl = nodeOrientation == NodeOrientation.RIGHT_TO_LEFT;
         double width = Math.max(getWidth(), minWidth(-1));
         double height = Math.max(getHeight(), minHeight(-1));
         double leftWidth = 0;
@@ -396,25 +468,19 @@ public class HeaderBar extends HeaderBarBase {
         double insideY = insets.getTop();
         double insideHeight = height - insideY - insets.getBottom();
         double insideX, insideWidth;
-        double leftSystemInsetWidth, rightSystemInsetWidth;
-
-        if (isOverlappingSystemInset()) {
-            leftSystemInsetWidth = rightSystemInsetWidth = 0;
-        } else {
-            leftSystemInsetWidth = getLeftSystemInset().getWidth();
-            rightSystemInsetWidth = getRightSystemInset().getWidth();
-        }
+        double leftSystemPaddingWidth = isLeftSystemPadding(nodeOrientation) ? getLeftSystemInset().getWidth() : 0;
+        double rightSystemPaddingWidth = isRightSystemPadding(nodeOrientation) ? getRightSystemInset().getWidth() : 0;
 
         if (rtl) {
             left = getTrailing();
             right = getLeading();
-            insideX = insets.getRight() + leftSystemInsetWidth;
-            insideWidth = width - insideX - insets.getLeft() - rightSystemInsetWidth;
+            insideX = insets.getRight() + leftSystemPaddingWidth;
+            insideWidth = width - insideX - insets.getLeft() - rightSystemPaddingWidth;
         } else {
             left = getLeading();
             right = getTrailing();
-            insideX = insets.getLeft() + leftSystemInsetWidth;
-            insideWidth = width - insideX - insets.getRight() - rightSystemInsetWidth;
+            insideX = insets.getLeft() + leftSystemPaddingWidth;
+            insideWidth = width - insideX - insets.getRight() - rightSystemPaddingWidth;
         }
 
         if (left != null && left.isManaged()) {
@@ -583,39 +649,5 @@ public class HeaderBar extends HeaderBarBase {
                 getChildren().add(value);
             }
         }
-    }
-
-    private static final CssMetaData<HeaderBar, Boolean> OVERLAPPING_SYSTEM_INSET = new CssMetaData<>(
-            "-fx-overlapping-system-inset", StyleConverter.getBooleanConverter(), false) {
-        @Override
-        public boolean isSettable(HeaderBar headerBar) {
-            return headerBar == null || !headerBar.overlappingSystemInset.isBound();
-        }
-
-        @Override
-        public StyleableBooleanProperty getStyleableProperty(HeaderBar headerBar) {
-            return headerBar.overlappingSystemInset;
-        }
-    };
-
-    private static final List<CssMetaData<? extends Styleable, ?>> METADATA =
-        Stream.concat(
-            Region.getClassCssMetaData().stream(),
-            Stream.of(OVERLAPPING_SYSTEM_INSET))
-        .toList();
-
-    @Override
-    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
-        return METADATA;
-    }
-
-    /**
-     * Gets the {@code CssMetaData} associated with this class, which includes the
-     * {@code CssMetaData} of its superclasses.
-     *
-     * @return the {@code CssMetaData}
-     */
-    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
-        return METADATA;
     }
 }

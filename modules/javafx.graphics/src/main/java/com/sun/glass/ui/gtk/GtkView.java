@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.gtk;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import java.nio.Buffer;
@@ -236,5 +237,24 @@ final class GtkView extends View {
                 window.showSystemMenu(x, y);
             }
         }
+    }
+
+    @Override
+    protected NonClientEventHandler createNonClientEventHandler() {
+        var window = (GtkWindow)getWindow();
+        var overlay = window.getNonClientOverlay();
+        if (overlay == null) {
+            return null;
+        }
+
+        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
+            // In contrast to Windows, GTK doesn't produce non-client events. We convert regular
+            // mouse events to non-client events since that's what WindowControlsOverlay expects.
+            return overlay.handleMouseEvent(
+                MouseEvent.toNonClientEvent(type),
+                button,
+                x / window.getPlatformScaleX(),
+                y / window.getPlatformScaleY());
+        };
     }
 }

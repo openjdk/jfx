@@ -26,21 +26,32 @@
 package com.sun.glass.ui;
 
 import javafx.geometry.Dimension2D;
-import javafx.geometry.HorizontalDirection;
 import javafx.stage.StageStyle;
 import java.util.Objects;
 
 /**
  * Provides metrics about the window buttons of {@link StageStyle#EXTENDED} windows.
  *
- * @param placement the placement of the window buttons
- * @param size the size of the window buttons
+ * @param leftInset the size of the left inset
+ * @param rightInset the size of the right inset
  * @param minHeight the minimum height of the window buttons
  */
-public record WindowOverlayMetrics(HorizontalDirection placement, Dimension2D size, double minHeight) {
+public record WindowControlsMetrics(Dimension2D leftInset, Dimension2D rightInset, double minHeight) {
 
-    public WindowOverlayMetrics {
-        Objects.requireNonNull(placement, "placement cannot be null");
-        Objects.requireNonNull(size, "size cannot be null");
+    public WindowControlsMetrics {
+        Objects.requireNonNull(leftInset);
+        Objects.requireNonNull(rightInset);
+
+        if (minHeight < 0) {
+            throw new IllegalArgumentException("minHeight cannot be negative");
+        }
+    }
+
+    public double totalInsetWidth() {
+        return leftInset.getWidth() + rightInset.getWidth();
+    }
+
+    public double maxInsetHeight() {
+        return Math.max(leftInset.getHeight(), rightInset.getHeight());
     }
 }

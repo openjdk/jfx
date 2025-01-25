@@ -80,11 +80,11 @@ public enum StageStyle {
      * bar area of the stage.
      * <p>
      * An extended window has the default window buttons (minimize, maximize, close), but no system-provided
-     * draggable header bar. Applications need to provide their own header bar by placing a single {@link HeaderBar}
+     * draggable header bar. Applications need to provide their own header bar by placing a {@link HeaderBar}
      * control in the scene graph. The {@code HeaderBar} control should be positioned at the top of the window
      * and its width should extend the entire width of the window, as otherwise the layout of the default window
-     * buttons and the header bar content might not be aligned. Usually, {@code HeaderBar} is combined with a
-     * {@link BorderPane} root container:
+     * buttons and the header bar content might not be aligned correctly. Usually, {@code HeaderBar} is combined
+     * with a {@link BorderPane} root container:
      * <pre>{@code
      * public class MyApp extends Application {
      *     @Override

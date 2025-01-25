@@ -381,6 +381,21 @@ public abstract class View {
         }
     }
 
+    /**
+     * A non-client event handler is used in some implementations of windows with the {@link Window#EXTENDED}
+     * style. It can inspect a mouse event before it is sent to FX, and decide to consume it if it affects a
+     * non-client part of the window (for example, minimize/maximize/close buttons).
+     */
+    public interface NonClientEventHandler {
+
+        /**
+         * Handles the event.
+         *
+         * @return {@code true} if the event was handled, {@code false} otherwise
+         */
+        boolean handleMouseEvent(int type, int button, int x, int y, int xAbs, int yAbs, int clickCount);
+    }
+
     public static long getMultiClickTime() {
         Application.checkEventThread();
         return Application.GetApplication().staticView_getMultiClickTime();
@@ -406,8 +421,8 @@ public abstract class View {
      */
     private volatile long ptr; // Native handle (NSView*, or internal structure pointer)
     private Window window; // parent window
-    private NonClientHandler nonClientHandler;
     private EventHandler eventHandler;
+    private NonClientEventHandler nonClientEventHandler;
 
     private int width = -1;     // not set
     private int height = -1;    // not set
@@ -497,6 +512,10 @@ public abstract class View {
         return this.height;
     }
 
+    protected NonClientEventHandler createNonClientEventHandler() {
+        return null;
+    }
+
     protected abstract void _setParent(long ptr, long parentPtr);
     // Window calls the method from Window.setView()
     // package private
@@ -508,9 +527,9 @@ public abstract class View {
         this.isValid = this.ptr != 0 && window != null;
 
         if (this.isValid && window.isExtendedWindow()) {
-            this.nonClientHandler = window.getNonClientHandler();
+            this.nonClientEventHandler = createNonClientEventHandler();
         } else {
-            this.nonClientHandler = null;
+            this.nonClientEventHandler = null;
         }
     }
 
@@ -955,16 +974,16 @@ public abstract class View {
             lastClickedTime = now;
         }
 
-        // If we have a non-client handler, we give it the first chance to handle the event.
-        // Note that a full-screen window has no non-client area, and thus the non-client handler
+        // If we have a non-client event handler, we give it the first chance to handle the event.
+        // Note that a full-screen window has no non-client area, and thus the non-client event handler
         // is not notified.
-        // Some implementations (like GTK) can fire synthesized events when they receive a mouse
-        // button event on the resize border. These events, even though happening on non-client
-        // regions, must not be processed by the non-client handler. For example, if a mouse click
-        // happens on the resize border that straddles the window close button, we don't want the
-        // close button to act on this click, because we just started a resize-drag operation.
-        boolean handled = !isSynthesized && !inFullscreen && nonClientHandler != null
-            && nonClientHandler.handleMouseEvent(type, button, x, y, xAbs, yAbs, clickCount);
+        // Some implementations (like GTK) can fire synthesized events when they receive a mouse button
+        // event on the resize border. These events, even though happening on non-client regions, must
+        // not be processed by the non-client event handler. For example, if a mouse click happens on
+        // the resize border that straddles the window close button, we don't want the close button to
+        // act on this click, because we just started a resize-drag operation.
+        boolean handled = !isSynthesized && !inFullscreen && nonClientEventHandler != null
+            && nonClientEventHandler.handleMouseEvent(type, button, x, y, xAbs, yAbs, clickCount);
 
         // We never send non-client events to the application.
         if (handled || MouseEvent.isNonClientEvent(type)) {

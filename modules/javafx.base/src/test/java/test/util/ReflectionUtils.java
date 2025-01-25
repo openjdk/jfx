@@ -38,7 +38,8 @@ public final class ReflectionUtils {
      * Returns the value of a potentially private field of the specified object.
      * The field can be declared on any of the object's inherited classes.
      */
-    public static Object getFieldValue(Object object, String fieldName) {
+    @SuppressWarnings("unchecked")
+    public static <T> T getFieldValue(Object object, String fieldName) {
         Function<Class<?>, Field> getField = cls -> {
             try {
                 var field = cls.getDeclaredField(fieldName);
@@ -54,7 +55,7 @@ public final class ReflectionUtils {
             Field field = getField.apply(cls);
             if (field != null) {
                 try {
-                    return field.get(object);
+                    return (T)field.get(object);
                 } catch (IllegalAccessException e) {
                     throw new AssertionError(e);
                 }

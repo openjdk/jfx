@@ -239,7 +239,7 @@ public class WindowStage extends GlassStage {
 
         // The window-provided overlay is not visible in full-screen mode.
         if (!isInFullScreen) {
-            scene.setOverlay(platformWindow.getWindowOverlay());
+            scene.setOverlay(platformWindow.getNonClientOverlay());
         }
 
         return scene;
@@ -667,7 +667,7 @@ public class WindowStage extends GlassStage {
         if (newWarning != null) {
             getViewScene().setOverlay(newWarning);
         } else if (!isInFullScreen) {
-            getViewScene().setOverlay(platformWindow.getWindowOverlay());
+            getViewScene().setOverlay(platformWindow.getNonClientOverlay());
         }
     }
 

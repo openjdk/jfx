@@ -24,17 +24,14 @@
  */
 package com.sun.glass.ui.mac;
 
-import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Cursor;
-import com.sun.glass.ui.NonClientHandler;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.WindowOverlayMetrics;
+import com.sun.glass.ui.WindowControlsMetrics;
 import javafx.geometry.Dimension2D;
-import javafx.geometry.HorizontalDirection;
 import java.nio.ByteBuffer;
 
 /**
@@ -161,30 +158,17 @@ final class MacWindow extends Window {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public void performWindowDrag() {
+        _performWindowDrag(getRawHandle());
+    }
+
+    public void performTitleBarDoubleClickAction() {
+        _performTitleBarDoubleClickAction(getRawHandle());
+    }
+
     private native void _performWindowDrag(long ptr);
 
     private native void _performTitleBarDoubleClickAction(long ptr);
-
-    @Override
-    public NonClientHandler getNonClientHandler() {
-        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
-            if (type == MouseEvent.DOWN) {
-                double wx = x / platformScaleX;
-                double wy = y / platformScaleY;
-
-                View.EventHandler eventHandler = view != null ? view.getEventHandler() : null;
-                if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
-                    if (clickCount == 2) {
-                        _performTitleBarDoubleClickAction(getRawHandle());
-                    } else if (clickCount == 1) {
-                        _performWindowDrag(getRawHandle());
-                    }
-                }
-            }
-
-            return false;
-        };
-    }
 
     private native boolean _isRightToLeftLayoutDirection();
 
@@ -198,12 +182,12 @@ final class MacWindow extends Window {
     }
 
     private void updateWindowOverlayMetrics(NSWindowToolbarStyle toolbarStyle) {
-        windowOverlayMetrics.set(new WindowOverlayMetrics(
-            _isRightToLeftLayoutDirection()
-                ? HorizontalDirection.RIGHT
-                : HorizontalDirection.LEFT,
-            toolbarStyle.size,
-            NSWindowToolbarStyle.SMALL.size.getHeight()));
+        double minHeight = NSWindowToolbarStyle.SMALL.size.getHeight();
+        WindowControlsMetrics metrics = _isRightToLeftLayoutDirection()
+            ? new WindowControlsMetrics(new Dimension2D(0, 0), toolbarStyle.size, minHeight)
+            : new WindowControlsMetrics(toolbarStyle.size, new Dimension2D(0, 0), minHeight);
+
+        windowControlsMetrics.set(metrics);
     }
 
     private enum NSWindowToolbarStyle {

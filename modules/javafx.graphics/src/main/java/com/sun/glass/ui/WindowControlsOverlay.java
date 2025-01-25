@@ -45,9 +45,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HPos;
-import javafx.geometry.HorizontalDirection;
 import javafx.geometry.Insets;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -131,17 +129,17 @@ import java.util.stream.Stream;
  */
 public final class WindowControlsOverlay extends Region {
 
-    private static final CssMetaData<WindowControlsOverlay, HorizontalDirection> BUTTON_PLACEMENT_METADATA =
+    private static final CssMetaData<WindowControlsOverlay, ButtonPlacement> BUTTON_PLACEMENT_METADATA =
         new CssMetaData<>("-fx-button-placement",
-                StyleConverter.getEnumConverter(HorizontalDirection.class),
-                HorizontalDirection.RIGHT) {
+                StyleConverter.getEnumConverter(ButtonPlacement.class),
+                ButtonPlacement.RIGHT) {
             @Override
             public boolean isSettable(WindowControlsOverlay overlay) {
                 return true;
             }
 
             @Override
-            public StyleableProperty<HorizontalDirection> getStyleableProperty(WindowControlsOverlay overlay) {
+            public StyleableProperty<ButtonPlacement> getStyleableProperty(WindowControlsOverlay overlay) {
                 return overlay.buttonPlacement;
             }
         };
@@ -173,17 +171,17 @@ public final class WindowControlsOverlay extends Region {
     /**
      * The metrics (placement and size) of the window buttons.
      */
-    private final ObjectProperty<WindowOverlayMetrics> metrics = new SimpleObjectProperty<>(
-        this, "metrics", new WindowOverlayMetrics(HorizontalDirection.RIGHT, new Dimension2D(0, 0), 0));
+    private final ObjectProperty<WindowControlsMetrics> metrics = new SimpleObjectProperty<>(
+        this, "metrics", new WindowControlsMetrics(new Dimension2D(0, 0), new Dimension2D(0, 0), 0));
 
     /**
      * Specifies the placement of the window buttons on the left or the right side of the window.
      * <p>
      * This property corresponds to the {@code -fx-button-placement} CSS property.
      */
-    private final StyleableObjectProperty<HorizontalDirection> buttonPlacement =
+    private final StyleableObjectProperty<ButtonPlacement> buttonPlacement =
         new SimpleStyleableObjectProperty<>(
-                BUTTON_PLACEMENT_METADATA, this, "buttonPlacement", HorizontalDirection.RIGHT) {
+                BUTTON_PLACEMENT_METADATA, this, "buttonPlacement", ButtonPlacement.RIGHT) {
             @Override
             protected void invalidated() {
                 requestLayout();
@@ -216,11 +214,13 @@ public final class WindowControlsOverlay extends Region {
     private final ButtonRegion closeButton = new ButtonRegion(ButtonType.CLOSE, "close-button", 2);
     private final Subscription subscriptions;
     private final boolean utility;
+    private final boolean rightToLeft;
 
     private Node buttonAtMouseDown;
 
-    public WindowControlsOverlay(ObservableValue<String> stylesheet, boolean utility) {
+    public WindowControlsOverlay(ObservableValue<String> stylesheet, boolean utility, boolean rightToLeft) {
         this.utility = utility;
+        this.rightToLeft = rightToLeft;
 
         var stage = sceneProperty()
             .flatMap(Scene::windowProperty)
@@ -245,7 +245,7 @@ public final class WindowControlsOverlay extends Region {
             .flatMap(Scene::fillProperty)
             .map(this::isDarkBackground)
             .orElse(false)
-            .subscribe(x -> updateStyleClass()); // use a value subscriber, not an invalidation subscriber
+            .subscribe(_ -> updateStyleClass()); // use a value subscriber, not an invalidation subscriber
 
         subscriptions = Subscription.combine(
             focusedSubscription,
@@ -270,7 +270,7 @@ public final class WindowControlsOverlay extends Region {
         subscriptions.unsubscribe();
     }
 
-    public ReadOnlyObjectProperty<WindowOverlayMetrics> metricsProperty() {
+    public ReadOnlyObjectProperty<WindowControlsMetrics> metricsProperty() {
         return metrics;
     }
 
@@ -416,16 +416,16 @@ public final class WindowControlsOverlay extends Region {
         boolean left;
         Node button1, button2, button3;
 
-        if (allowRtl.get() && getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+        if (allowRtl.get() && rightToLeft) {
             button1 = orderedButtons.get(2);
             button2 = orderedButtons.get(1);
             button3 = orderedButtons.get(0);
-            left = buttonPlacement.get() != HorizontalDirection.LEFT;
+            left = buttonPlacement.get() != ButtonPlacement.LEFT;
         } else {
             button1 = orderedButtons.get(0);
             button2 = orderedButtons.get(1);
             button3 = orderedButtons.get(2);
-            left = buttonPlacement.get() == HorizontalDirection.LEFT;
+            left = buttonPlacement.get() == ButtonPlacement.LEFT;
         }
 
         double width = getWidth();
@@ -440,14 +440,13 @@ public final class WindowControlsOverlay extends Region {
         double button3X = snapPositionX(left ? button1Width + button2Width : width - button3Width);
         double totalWidth = snapSizeX(button1Width + button2Width + button3Width);
         double totalHeight = snapSizeY(Math.max(button1Height, Math.max(button2Height, button3Height)));
-        Dimension2D currentSize = metrics.get().size();
+        Dimension2D currentSize = left ? metrics.get().leftInset() : metrics.get().rightInset();
 
         // Update the overlay metrics if they have changed.
         if (currentSize.getWidth() != totalWidth || currentSize.getHeight() != totalHeight) {
-            var newMetrics = new WindowOverlayMetrics(
-                left ? HorizontalDirection.LEFT : HorizontalDirection.RIGHT,
-                new Dimension2D(totalWidth, totalHeight), totalHeight);
-
+            WindowControlsMetrics newMetrics = left
+                ? new WindowControlsMetrics(new Dimension2D(totalWidth, totalHeight), new Dimension2D(0, 0), totalHeight)
+                : new WindowControlsMetrics(new Dimension2D(0, 0), new Dimension2D(totalWidth, totalHeight), totalHeight);
             metrics.set(newMetrics);
         }
 
@@ -553,5 +552,9 @@ public final class WindowControlsOverlay extends Region {
         public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
             return METADATA;
         }
+    }
+
+    private enum ButtonPlacement {
+        LEFT, RIGHT
     }
 }

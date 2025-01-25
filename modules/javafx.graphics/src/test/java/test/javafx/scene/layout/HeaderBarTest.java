@@ -263,8 +263,7 @@ public class HeaderBarTest {
         "BOTTOM_RIGHT, 740, 10, 100, 80"
     })
     void alignmentOfCenterChild_withLeftSystemInset(Pos pos, double x, double y, double width, double height) {
-        @SuppressWarnings("unchecked")
-        var leftSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
+        ObjectProperty<Dimension2D> leftSystemInset = ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
         leftSystemInset.set(new Dimension2D(100, 100));
         var leading = new MockResizable(50, 50);
         var center = new MockResizable(100, 50);
@@ -293,8 +292,7 @@ public class HeaderBarTest {
         "BOTTOM_RIGHT, 640, 10, 100, 80"
     })
     void alignmentOfCenterChild_withRightSystemInset(Pos pos, double x, double y, double width, double height) {
-        @SuppressWarnings("unchecked")
-        var rightSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
+        ObjectProperty<Dimension2D> rightSystemInset = ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
         rightSystemInset.set(new Dimension2D(100, 100));
         var leading = new MockResizable(50, 50);
         var center = new MockResizable(100, 50);
@@ -318,8 +316,7 @@ public class HeaderBarTest {
     })
     void alignmentOfCenterChild_withLeftSystemInset_andOffsetCausedByInsufficientHorizontalSpace(
             Pos pos, double x, double y, double width, double height) {
-        @SuppressWarnings("unchecked")
-        var leftSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
+        ObjectProperty<Dimension2D> leftSystemInset = ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
         leftSystemInset.set(new Dimension2D(200, 100));
         var leading = new MockResizable(50, 50);
         var center = new MockResizable(100, 50);
@@ -343,8 +340,7 @@ public class HeaderBarTest {
     })
     void alignmentOfCenterChild_withRightSystemInset_andOffsetCausedByInsufficientHorizontalSpace(
             Pos pos, double x, double y, double width, double height) {
-        @SuppressWarnings("unchecked")
-        var rightSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
+        ObjectProperty<Dimension2D> rightSystemInset = ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
         rightSystemInset.set(new Dimension2D(200, 100));
         var leading = new MockResizable(50, 50);
         var center = new MockResizable(100, 50);
@@ -366,15 +362,14 @@ public class HeaderBarTest {
         "CENTER, 10, 25, 50, 50",
         "BOTTOM_LEFT, 10, 40, 50, 50"
     })
-    void alignmentOfLeadingChild_notResizable_withOverlappingLeftSystemInset(
+    void alignmentOfLeadingChild_notResizable_withoutReservedArea(
             Pos pos, double x, double y, double width, double height) {
-        @SuppressWarnings("unchecked")
-        var leftSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
+        ObjectProperty<Dimension2D> leftSystemInset = ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
         leftSystemInset.set(new Dimension2D(100, 100));
         var leading = new Rectangle(50, 50);
         HeaderBar.setAlignment(leading, pos);
         HeaderBar.setMargin(leading, new Insets(10));
-        headerBar.setOverlappingSystemInset(true);
+        headerBar.setLeadingSystemPadding(false);
         headerBar.setLeading(leading);
         headerBar.resize(1000, 100);
         headerBar.layout();
@@ -388,15 +383,14 @@ public class HeaderBarTest {
         "CENTER, 940, 25, 50, 50",
         "BOTTOM_RIGHT, 940, 40, 50, 50"
     })
-    void alignmentOfTrailingChild_notResizable_withOverlappingRightSystemInset(
+    void alignmentOfTrailingChild_notResizable_withoutReservedArea(
             Pos pos, double x, double y, double width, double height) {
-        @SuppressWarnings("unchecked")
-        var rightSystemInset = (ObjectProperty<Dimension2D>)ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
+        ObjectProperty<Dimension2D> rightSystemInset = ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
         rightSystemInset.set(new Dimension2D(100, 100));
         var trailing = new Rectangle(50, 50);
         HeaderBar.setAlignment(trailing, pos);
         HeaderBar.setMargin(trailing, new Insets(10));
-        headerBar.setOverlappingSystemInset(true);
+        headerBar.setTrailingSystemPadding(false);
         headerBar.setTrailing(trailing);
         headerBar.resize(1000, 100);
         headerBar.layout();

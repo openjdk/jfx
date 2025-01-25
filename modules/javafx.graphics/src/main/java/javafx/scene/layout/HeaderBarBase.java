@@ -25,14 +25,14 @@
 
 package javafx.scene.layout;
 
-import com.sun.glass.ui.WindowOverlayMetrics;
+import com.sun.glass.ui.WindowControlsMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.quantum.WindowStage;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.geometry.Dimension2D;
-import javafx.geometry.HorizontalDirection;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.ContextMenuEvent;
@@ -56,7 +56,7 @@ import javafx.util.Subscription;
  * @apiNote Most application developers should use the {@link HeaderBar} implementation instead of
  *          creating a custom header bar.
  * @see HeaderBar
- * @since 24
+ * @since 25
  */
 public abstract class HeaderBarBase extends Region {
 
@@ -90,7 +90,7 @@ public abstract class HeaderBarBase extends Region {
     }
 
     private Subscription subscription;
-    private WindowOverlayMetrics currentMetrics;
+    private WindowControlsMetrics currentMetrics;
     private boolean currentFullScreen;
 
     /**
@@ -121,7 +121,7 @@ public abstract class HeaderBarBase extends Region {
             subscription = Subscription.combine(
                 windowStage
                     .getPlatformWindow()
-                    .getWindowOverlayMetrics()
+                    .windowControlsMetricsProperty()
                     .subscribe(this::onMetricsChanged),
                 windowStage
                     .getPlatformWindow()
@@ -129,7 +129,7 @@ public abstract class HeaderBarBase extends Region {
         }
     }
 
-    private void onMetricsChanged(WindowOverlayMetrics metrics) {
+    private void onMetricsChanged(WindowControlsMetrics metrics) {
         currentMetrics = metrics;
         updateInsets();
     }
@@ -144,41 +144,30 @@ public abstract class HeaderBarBase extends Region {
             leftSystemInset.set(EMPTY);
             rightSystemInset.set(EMPTY);
             minSystemHeight.set(0);
-            return;
-        }
-
-        if (currentMetrics.placement() == HorizontalDirection.LEFT) {
-            leftSystemInset.set(currentMetrics.size());
-            rightSystemInset.set(EMPTY);
-        } else if (currentMetrics.placement() == HorizontalDirection.RIGHT) {
-            leftSystemInset.set(EMPTY);
-            rightSystemInset.set(currentMetrics.size());
         } else {
-            leftSystemInset.set(EMPTY);
-            rightSystemInset.set(EMPTY);
+            leftSystemInset.set(currentMetrics.leftInset());
+            rightSystemInset.set(currentMetrics.rightInset());
+            minSystemHeight.set(currentMetrics.minHeight());
         }
-
-        minSystemHeight.set(currentMetrics.minHeight());
     }
 
     /**
-     * Describes the size of the left system inset, which is an area reserved for the
-     * minimize, maximize, and close window buttons. If there are no window buttons on
-     * the left side of the window, the returned area is an empty {@code Dimension2D}.
+     * Describes the size of the left system-reserved inset, which is an area reserved for the minimize, maximize,
+     * and close window buttons. If there are no window buttons on the left side of the window, the returned area
+     * is an empty {@code Dimension2D}.
      * <p>
-     * Note that the left system inset refers to the physical left side of the window,
-     * independent of layout orientation.
+     * Note that the left system inset refers to the left side of the window, independent of layout orientation.
      */
     private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset =
-        new ReadOnlyObjectWrapper<>(this, "leftInset", new Dimension2D(0, 0)) {
+        new ReadOnlyObjectWrapper<>(this, "leftSystemInset", EMPTY) {
             @Override
             protected void invalidated() {
                 requestLayout();
             }
         };
 
-    public final ReadOnlyObjectWrapper<Dimension2D> leftSystemInsetProperty() {
-        return leftSystemInset;
+    public final ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty() {
+        return leftSystemInset.getReadOnlyProperty();
     }
 
     public final Dimension2D getLeftSystemInset() {
@@ -186,23 +175,22 @@ public abstract class HeaderBarBase extends Region {
     }
 
     /**
-     * Describes the size of the right system inset, which is an area reserved for the
-     * minimize, maximize, and close window buttons. If there are no window buttons on
-     * the right side of the window, the returned area is an empty {@code Dimension2D}.
+     * Describes the size of the right system-reserved inset, which is an area reserved for the minimize, maximize,
+     * and close window buttons. If there are no window buttons on the right side of the window, the returned area
+     * is an empty {@code Dimension2D}.
      * <p>
-     * Note that the right system inset refers to the physical right side of the window,
-     * independent of layout orientation.
+     * Note that the right system inset refers to the right side of the window, independent of layout orientation.
      */
     private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset =
-        new ReadOnlyObjectWrapper<>(this, "rightInset", EMPTY) {
+        new ReadOnlyObjectWrapper<>(this, "rightSystemInset", EMPTY) {
             @Override
             protected void invalidated() {
                 requestLayout();
             }
         };
 
-    public final ReadOnlyObjectWrapper<Dimension2D> rightSystemInsetProperty() {
-        return rightSystemInset;
+    public final ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty() {
+        return rightSystemInset.getReadOnlyProperty();
     }
 
     public final Dimension2D getRightSystemInset() {
@@ -211,8 +199,8 @@ public abstract class HeaderBarBase extends Region {
 
     /**
      * The system-provided reasonable minimum height of {@link #leftSystemInsetProperty() leftSystemInset}
-     * {@link #rightSystemInsetProperty() rightSystemInset}. This is a platform-dependent value that a
-     * {@code HeaderBarBase} implementation can use to define a reasonable minimum height for the header
+     * and {@link #rightSystemInsetProperty() rightSystemInset}. This is a platform-dependent value that
+     * a {@code HeaderBarBase} implementation can use to choose a reasonable minimum height for the header
      * bar area.
      */
     private final ReadOnlyDoubleWrapper minSystemHeight =

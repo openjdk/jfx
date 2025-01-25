@@ -29,7 +29,6 @@ import com.sun.glass.ui.WindowControlsOverlay;
 import com.sun.javafx.binding.ObjectConstant;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Dimension2D;
-import javafx.geometry.HorizontalDirection;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -44,6 +43,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class WindowControlsOverlayTest {
 
+    private static final Dimension2D EMPTY = new Dimension2D(0, 0);
+
     /**
      * Asserts that the buttons are laid out on the right side of the control (left-to-right orientation).
      */
@@ -52,7 +53,7 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: right; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, false);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -64,8 +65,8 @@ public class WindowControlsOverlayTest {
         assertLayoutBounds(children.get(0), 140, 0, 20, 10);
         assertLayoutBounds(children.get(1), 160, 0, 20, 10);
         assertLayoutBounds(children.get(2), 180, 0, 20, 10);
-        assertEquals(HorizontalDirection.RIGHT, overlay.metricsProperty().get().placement());
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().size());
+        assertEquals(EMPTY, overlay.metricsProperty().get().leftInset());
+        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().rightInset());
     }
 
     /**
@@ -76,11 +77,10 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: right; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, true);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
-        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         overlay.resize(200, 100);
         overlay.applyCss();
         overlay.layout();
@@ -89,8 +89,8 @@ public class WindowControlsOverlayTest {
         assertLayoutBounds(children.get(0), 40, 0, 20, 10);
         assertLayoutBounds(children.get(1), 20, 0, 20, 10);
         assertLayoutBounds(children.get(2), 0, 0, 20, 10);
-        assertEquals(HorizontalDirection.LEFT, overlay.metricsProperty().get().placement());
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().size());
+        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().leftInset());
+        assertEquals(EMPTY, overlay.metricsProperty().get().rightInset());
     }
 
     /**
@@ -101,7 +101,7 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: left; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, false);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -113,8 +113,8 @@ public class WindowControlsOverlayTest {
         assertLayoutBounds(children.get(0), 0, 0, 20, 10);
         assertLayoutBounds(children.get(1), 20, 0, 20, 10);
         assertLayoutBounds(children.get(2), 40, 0, 20, 10);
-        assertEquals(HorizontalDirection.LEFT, overlay.metricsProperty().get().placement());
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().size());
+        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().leftInset());
+        assertEquals(EMPTY, overlay.metricsProperty().get().rightInset());
     }
 
     /**
@@ -125,7 +125,7 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: left; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, true);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -138,8 +138,8 @@ public class WindowControlsOverlayTest {
         assertLayoutBounds(children.get(0), 180, 0, 20, 10);
         assertLayoutBounds(children.get(1), 160, 0, 20, 10);
         assertLayoutBounds(children.get(2), 140, 0, 20, 10);
-        assertEquals(HorizontalDirection.RIGHT, overlay.metricsProperty().get().placement());
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().size());
+        assertEquals(EMPTY, overlay.metricsProperty().get().leftInset());
+        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().rightInset());
     }
 
     /**
@@ -152,7 +152,7 @@ public class WindowControlsOverlayTest {
                 .minimize-button { -fx-button-order: 5; }
                 .maximize-button { -fx-button-order: 1; }
                 .close-button { -fx-button-order: 3; }
-            """), false);
+            """), false, false);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -178,7 +178,7 @@ public class WindowControlsOverlayTest {
                 .minimize-button { -fx-button-order: 5; }
                 .maximize-button { -fx-button-order: 1; }
                 .close-button { -fx-button-order: 3; }
-            """), false);
+            """), false, true);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -199,7 +199,7 @@ public class WindowControlsOverlayTest {
     void utilityDecorationIsOnlyCloseButton() {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), true);
+            """), true, false);
 
         var children = overlay.getChildrenUnmodifiable();
         assertEquals(1, children.size());
@@ -214,11 +214,10 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: right; -fx-allow-rtl: false; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, true);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
-        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         overlay.resize(200, 100);
         overlay.applyCss();
         overlay.layout();
@@ -226,8 +225,8 @@ public class WindowControlsOverlayTest {
         assertLayoutBounds(children.get(0), 140, 0, 20, 10);
         assertLayoutBounds(children.get(1), 160, 0, 20, 10);
         assertLayoutBounds(children.get(2), 180, 0, 20, 10);
-        assertEquals(HorizontalDirection.RIGHT, overlay.metricsProperty().get().placement());
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().size());
+        assertEquals(EMPTY, overlay.metricsProperty().get().leftInset());
+        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().rightInset());
     }
 
     @Test
@@ -235,7 +234,7 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: right; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, false);
 
         var scene = new Scene(overlay);
         var stage = new Stage();
@@ -261,7 +260,7 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: right; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, false);
 
         var scene = new Scene(overlay);
         var stage = new Stage();
@@ -285,7 +284,7 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: right; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, false);
 
         var scene = new Scene(overlay);
         var stage = new Stage();
@@ -308,7 +307,7 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: right; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, false);
 
         var scene = new Scene(overlay);
 
@@ -327,7 +326,7 @@ public class WindowControlsOverlayTest {
         var overlay = new WindowControlsOverlay(getStylesheet("""
                 .window-button-container { -fx-button-placement: right; }
                 .window-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false);
+            """), false, false);
 
         var unused = new Scene(overlay);
         overlay.resize(200, 100);
