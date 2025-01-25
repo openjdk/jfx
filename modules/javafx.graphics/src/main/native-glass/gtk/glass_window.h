@@ -101,7 +101,11 @@ public:
     virtual bool hasIME() = 0;
     virtual bool filterIME(GdkEvent *) = 0;
     virtual void enableOrResetIME() = 0;
+    virtual void updateCaretPos() = 0;
     virtual void disableIME() = 0;
+    virtual void setOnPreEdit(bool) = 0;
+    virtual void commitIME(gchar *) = 0;
+
     virtual void paint(void* data, jint width, jint height) = 0;
     virtual WindowFrameExtents get_frame_extents() = 0;
 
@@ -173,11 +177,13 @@ public:
 
 class WindowContextBase: public WindowContext {
 
-    struct _XIM {
-        XIM im;
-        XIC ic;
+    struct ImContext {
+        GtkIMContext *ctx;
         bool enabled;
-    } xim;
+        bool on_preedit;
+        bool send_keypress;
+        bool on_key_event;
+    } im_ctx;
 
     size_t events_processing_cnt;
     bool can_be_deleted;
@@ -219,6 +225,9 @@ public:
     bool hasIME();
     bool filterIME(GdkEvent *);
     void enableOrResetIME();
+    void setOnPreEdit(bool);
+    void commitIME(gchar *);
+    void updateCaretPos();
     void disableIME();
     void paint(void*, jint, jint);
     GdkWindow *get_gdk_window();
@@ -262,8 +271,6 @@ public:
     ~WindowContextBase();
 protected:
     virtual void applyShapeMask(void*, uint width, uint height) = 0;
-private:
-    bool im_filter_keypress(GdkEventKey*);
 };
 
 class WindowContextTop: public WindowContextBase {
