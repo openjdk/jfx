@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -433,7 +433,12 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setTitleVisibility:NSWindowTitleHidden];
             [window->nsWindow setTitlebarAppearsTransparent:YES];
             [window->nsWindow setToolbar:[NSToolbar new]];
-            [window->nsWindow setToolbarStyle:NSWindowToolbarStyleUnifiedCompact];
+
+            if ((jStyleMask & com_sun_glass_ui_Window_NON_CLIENT_OVERLAY) == 0) {
+                [[window->nsWindow standardWindowButton:NSWindowCloseButton] setHidden:YES];
+                [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
+                [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:YES];
+            }
         }
 
         if ((jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0) {

@@ -961,7 +961,8 @@ public abstract class View {
         // not be processed by the non-client event handler. For example, if a mouse click happens on
         // the resize border that straddles the window close button, we don't want the close button to
         // act on this click, because we just started a resize-drag operation.
-        boolean handled = window.isExtendedWindow()
+        boolean handled = window != null
+            && window.isExtendedWindow()
             && !isSynthesized
             && !inFullscreen
             && shouldHandleEvent()

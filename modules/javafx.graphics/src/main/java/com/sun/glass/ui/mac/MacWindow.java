@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -183,9 +183,12 @@ final class MacWindow extends Window {
 
     private void updateWindowOverlayMetrics(NSWindowToolbarStyle toolbarStyle) {
         double minHeight = NSWindowToolbarStyle.SMALL.size.getHeight();
-        WindowControlsMetrics metrics = _isRightToLeftLayoutDirection()
-            ? new WindowControlsMetrics(new Dimension2D(0, 0), toolbarStyle.size, minHeight)
-            : new WindowControlsMetrics(toolbarStyle.size, new Dimension2D(0, 0), minHeight);
+        var empty = new Dimension2D(0, 0);
+        WindowControlsMetrics metrics = isUsingNonClientOverlay()
+            ? _isRightToLeftLayoutDirection()
+                ? new WindowControlsMetrics(empty, toolbarStyle.size, minHeight)
+                : new WindowControlsMetrics(toolbarStyle.size, empty, minHeight)
+            : new WindowControlsMetrics(empty, empty, minHeight);
 
         windowControlsMetrics.set(metrics);
     }
