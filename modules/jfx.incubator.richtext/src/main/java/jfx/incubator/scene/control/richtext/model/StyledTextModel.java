@@ -550,45 +550,32 @@ public abstract class StyledTextModel {
      */
     public final TextPos clamp(TextPos p) {
         Objects.nonNull(p);
+        int len;
         int ct = size();
         int ix = p.index();
         if (ix < 0) {
             return TextPos.ZERO;
         } else if (ix < ct) {
-            int len = getParagraphLength(ix);
+            len = getParagraphLength(ix);
             if (p.offset() < len) {
                 return p;
-            }
-            int cix = len - 1;
-            if (cix < 0) {
-                return TextPos.ofLeading(ix, len);
-            } else {
-                return new TextPos(ix, len, cix, false);
             }
         } else {
             if (ct == 0) {
                 return TextPos.ZERO;
             } else {
                 ix = ct - 1;
-                int len = getParagraphLength(ix);
-                int cix = len - 1;
-                if (cix < 0) {
-                    return TextPos.ofLeading(ix, len);
-                } else {
-                    return new TextPos(ix, len, cix, false);
-                }
+                len = getParagraphLength(ix);
             }
         }
+
+        int cix = len - 1;
+        if (cix < 0) {
+            return TextPos.ofLeading(ix, len);
+        } else {
+            return new TextPos(ix, len, cix, false);
+        }
     }
-//  public final TextPos getEndOfParagraphTextPos(int index) {
-//  int off = getParagraphLength(index);
-//  int cix = off - 1;
-//  if (cix < 0) {
-//      return TextPos.ofLeading(index, off);
-//  } else {
-//      return new TextPos(index, off, cix, false);
-//  }
-//}
 
     /**
      * Returns the text position corresponding to the end of the document.
