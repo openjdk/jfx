@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,13 +42,13 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.javafx.scene.input.KeyCodeMap;
+import com.sun.javafx.tk.HeaderAreaType;
 
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
-import javafx.scene.Node;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
@@ -1248,10 +1248,10 @@ class GlassViewEventHandler extends View.EventHandler {
     }
 
     @Override
-    public Node pickDragAreaNode(double x, double y) {
+    public HeaderAreaType pickHeaderArea(double x, double y) {
         return QuantumToolkit.runWithoutRenderLock(() -> {
             if (scene.sceneListener != null) {
-                return scene.sceneListener.pickDragAreaNode(x, y);
+                return scene.sceneListener.pickHeaderArea(x, y);
             }
 
             return null;

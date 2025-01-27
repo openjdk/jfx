@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.glass.ui.WindowControlsOverlay;
+import com.sun.javafx.tk.HeaderAreaType;
 
 class GtkWindow extends Window {
 
@@ -208,7 +209,7 @@ class GtkWindow extends Window {
 
     @Override
     public WindowControlsOverlay getNonClientOverlay() {
-        if (windowControlsOverlay == null && isExtendedWindow()) {
+        if (windowControlsOverlay == null && isUsingNonClientOverlay()) {
             windowControlsOverlay = new WindowControlsOverlay(
                 PlatformThemeObserver.getInstance().stylesheetProperty(),
                 isUtilityWindow(),
@@ -265,6 +266,6 @@ class GtkWindow extends Window {
             return false;
         }
 
-        return eventHandler.pickDragAreaNode(wx, wy) != null;
+        return eventHandler.pickHeaderArea(wx, wy) == HeaderAreaType.DRAGBAR;
     }
 }

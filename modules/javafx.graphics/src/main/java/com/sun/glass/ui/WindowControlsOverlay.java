@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -313,14 +313,18 @@ public final class WindowControlsOverlay extends Region {
             case CLOSE -> closeButton;
         } : null;
 
-        if (type == MouseEvent.NC_ENTER || type == MouseEvent.NC_MOVE || type == MouseEvent.NC_DRAG) {
+        if (type == MouseEvent.ENTER || type == MouseEvent.MOVE || type == MouseEvent.DRAG) {
             handleMouseOver(node);
-        } else if (type == MouseEvent.NC_EXIT) {
+        } else if (type == MouseEvent.EXIT) {
             handleMouseExit();
-        } else if (type == MouseEvent.NC_UP && button == MouseEvent.BUTTON_LEFT) {
+        } else if (type == MouseEvent.UP && button == MouseEvent.BUTTON_LEFT) {
             handleMouseUp(node, buttonType);
-        } else if (node != null && type == MouseEvent.NC_DOWN && button == MouseEvent.BUTTON_LEFT) {
+        } else if (node != null && type == MouseEvent.DOWN && button == MouseEvent.BUTTON_LEFT) {
             handleMouseDown(node);
+        }
+
+        if (type == MouseEvent.ENTER || type == MouseEvent.EXIT) {
+            return false;
         }
 
         return node != null || buttonAtMouseDown != null;

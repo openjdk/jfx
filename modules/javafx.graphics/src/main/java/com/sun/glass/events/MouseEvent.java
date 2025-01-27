@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,6 @@
  */
 package com.sun.glass.events;
 
-import com.sun.glass.ui.WindowControlsOverlay;
-import javafx.stage.StageStyle;
 import java.lang.annotation.Native;
 
 public class MouseEvent {
@@ -51,33 +49,4 @@ public class MouseEvent {
      * This identifier is required for internal purposes.
      */
     @Native final static public int WHEEL           = 228;
-
-    /**
-     * Non-client events are only natively produced on the Windows platform as a result of
-     * handling the {@code WM_NCHITTEST} message for an {@link StageStyle#EXTENDED} window.
-     * <p>
-     * They are never sent to applications, but are processed by {@link WindowControlsOverlay}.
-     */
-    @Native final static public int NC_DOWN         = 230;
-    @Native final static public int NC_UP           = 231;
-    @Native final static public int NC_DRAG         = 232;
-    @Native final static public int NC_MOVE         = 233;
-    @Native final static public int NC_ENTER        = 234;
-    @Native final static public int NC_EXIT         = 235;
-
-    public static boolean isNonClientEvent(int event) {
-        return event >= NC_DOWN && event <= NC_EXIT;
-    }
-
-    public static int toNonClientEvent(int event) {
-        return switch (event) {
-            case DOWN -> NC_DOWN;
-            case UP -> NC_UP;
-            case DRAG -> NC_DRAG;
-            case MOVE -> NC_MOVE;
-            case ENTER -> NC_ENTER;
-            case EXIT -> NC_EXIT;
-            default -> event;
-        };
-    }
 }

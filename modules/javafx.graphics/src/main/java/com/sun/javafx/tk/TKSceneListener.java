@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package com.sun.javafx.tk;
 import com.sun.glass.ui.Accessible;
 import javafx.collections.ObservableList;
 import javafx.event.EventType;
-import javafx.scene.Node;
 import javafx.scene.input.*;
 
 /**
@@ -123,12 +122,12 @@ public interface TKSceneListener {
     public Accessible getSceneAccessible();
 
     /**
-     * Returns the draggable area node at the specified coordinates, or {@code null}
-     * if the specified coordinates do not intersect with a draggable area.
+     * Returns the header area type at the specified coordinates, or {@code null}
+     * if the specified coordinates do not intersect with a header area.
      *
      * @param x the X coordinate relative to the scene
      * @param y the Y coordinate relative to the scene
-     * @return the draggable area node, or {@code null}
+     * @return the header area type, or {@code null}
      */
-    public Node pickDragAreaNode(double x, double y);
+    public HeaderAreaType pickHeaderArea(double x, double y);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -550,7 +550,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             if (m_isExtended) {
                 HandleNonClientMouseEvents(msg, wParam, lParam);
 
-                // We need to handle clicks on the min/max/close regions, as otherwise Windows will
+                // We need to return 0 for clicks on the min/max/close regions, as otherwise Windows will
                 // draw very ugly buttons on top of our window.
                 if (wParam == HTMINBUTTON || wParam == HTMAXBUTTON || wParam == HTCLOSE) {
                     return 0;
@@ -609,7 +609,7 @@ bool GlassWindow::HandleMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
         return true;
     }
 
-    BOOL handled = HandleViewMouseEvent(GetHWND(), msg, wParam, lParam);
+    BOOL handled = HandleViewMouseEvent(GetHWND(), msg, wParam, lParam, m_isExtended);
     if (handled && msg == WM_RBUTTONUP) {
         // By default, DefWindowProc() sends WM_CONTEXTMENU from WM_LBUTTONUP
         // Since DefWindowProc() is not called, call the mouse menu handler directly

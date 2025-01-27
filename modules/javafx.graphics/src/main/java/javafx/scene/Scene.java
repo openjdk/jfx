@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,6 +79,7 @@ import javafx.geometry.*;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
 import javafx.scene.layout.HeaderBarBase;
+import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.PopupWindow;
@@ -3058,7 +3059,7 @@ public class Scene implements EventTarget {
         private final PickRay pickRay = new PickRay();
 
         @Override
-        public Node pickDragAreaNode(double x, double y) {
+        public HeaderAreaType pickHeaderArea(double x, double y) {
             Node root = Scene.this.getRoot();
             if (root == null) {
                 return null;
@@ -3072,7 +3073,15 @@ public class Scene implements EventTarget {
 
             while (intersectedNode != null) {
                 if (intersectedNode instanceof HeaderBarBase) {
-                    return draggable == Boolean.TRUE ? intersectedNode : null;
+                    return draggable == Boolean.TRUE ? HeaderAreaType.DRAGBAR : null;
+                }
+
+                if (HeaderBarBase.getHeaderButtonType(intersectedNode) instanceof HeaderButtonType type) {
+                    return switch (type) {
+                        case MINIMIZE -> HeaderAreaType.MINIMIZE;
+                        case MAXIMIZE -> HeaderAreaType.MAXIMIZE;
+                        case CLOSE -> HeaderAreaType.CLOSE;
+                    };
                 }
 
                 if (draggable == null && HeaderBarBase.isDraggable(intersectedNode) instanceof Boolean value) {

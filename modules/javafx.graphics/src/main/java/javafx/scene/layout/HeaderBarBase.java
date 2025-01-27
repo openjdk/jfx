@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,7 @@ public abstract class HeaderBarBase extends Region {
 
     private static final Dimension2D EMPTY = new Dimension2D(0, 0);
     private static final String DRAGGABLE = "headerbar-draggable";
+    private static final String HEADER_BUTTON_TYPE = "header-button-type";
 
     /**
      * Specifies whether the child and its subtree is a draggable part of the {@code HeaderBar}.
@@ -87,6 +88,26 @@ public abstract class HeaderBarBase extends Region {
      */
     public static Boolean isDraggable(Node child) {
         return (Boolean)Pane.getConstraint(child, DRAGGABLE);
+    }
+
+    /**
+     * Specifies the {@code HeaderButtonType} of the child, indicating its semantic use in the header bar.
+     *
+     * @param child the child node
+     * @param value the {@code HeaderButtonType}, or {@code null}
+     */
+    public static void setHeaderButtonType(Node child, HeaderButtonType value) {
+        Pane.setConstraint(child, HEADER_BUTTON_TYPE, value);
+    }
+
+    /**
+     * Returns the {@code HeaderButtonType} of the specified child.
+     *
+     * @param child the child node
+     * @return the {@code HeaderButtonType}, or {@code null}
+     */
+    public static HeaderButtonType getHeaderButtonType(Node child) {
+        return (HeaderButtonType)Pane.getConstraint(child, HEADER_BUTTON_TYPE);
     }
 
     private Subscription subscription;

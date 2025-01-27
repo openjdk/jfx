@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.HeaderButtonType;
 
 /**
  * This enum defines the possible styles for a {@code Stage}.
@@ -79,7 +80,11 @@ public enum StageStyle {
      * the separation between the two areas and allowing applications to place scene graph nodes in the header
      * bar area of the stage.
      * <p>
-     * An extended window has the default window buttons (minimize, maximize, close), but no system-provided
+     * This is a conditional feature, to check if it is supported see {@link Platform#isSupported(ConditionalFeature)}.
+     * If the feature is not supported by the platform, this style downgrades to {@link StageStyle#DECORATED}.
+     *
+     * <h2>Usage</h2>
+     * An extended window has the default header buttons (minimize, maximize, close), but no system-provided
      * draggable header bar. Applications need to provide their own header bar by placing a {@link HeaderBar}
      * control in the scene graph. The {@code HeaderBar} control should be positioned at the top of the window
      * and its width should extend the entire width of the window, as otherwise the layout of the default window
@@ -99,21 +104,26 @@ public enum StageStyle {
      *     }
      * }
      * }</pre>
-     * <p>
-     * The color scheme of the default window buttons is adjusted to the {@link Scene#fillProperty() fill}
+     *
+     * <h2>Color scheme</h2>
+     * The color scheme of the default header buttons is adjusted to the {@link Scene#fillProperty() fill}
      * of the {@code Scene} to remain easily recognizable. Applications should set the scene fill to a color
      * that matches the brightness of the user interface, even if the scene fill is not visible because it
      * is obscured by other controls.
-     * <p>
+     *
+     * <h2>Custom header buttons</h2>
+     * If more control over the header buttons is desired, applications can opt out of the default header buttons
+     * by setting the {@link Stage#initDefaultHeaderButtons(boolean)} property to {@code false} and provide custom
+     * header buttons instead. Any JavaFX control can be used as a custom header button by setting its appropriate
+     * {@link HeaderButtonType}.
+     *
+     * <h2>Title text</h2>
      * An extended stage has no title text. Applications that require title text need to provide their own
      * implementation by placing a {@code Label} or a similar control in the custom header bar.
-     * Note that the value of {@link Stage#titleProperty()} may still be used by the platform, one example
-     * may be the title of miniaturized preview windows.
-     * <p>
-     * This is a conditional feature, to check if it is supported see {@link Platform#isSupported(ConditionalFeature)}.
-     * If the feature is not supported by the platform, this style downgrades to {@link StageStyle#DECORATED}.
+     * Note that the value of {@link Stage#titleProperty()} may still be used by the platform, for example
+     * in the title of miniaturized preview windows.
      *
-     * @since 24
+     * @since 25
      */
     EXTENDED,
 
@@ -123,7 +133,7 @@ public enum StageStyle {
      * This is a conditional feature, to check if it is supported see {@link Platform#isSupported(ConditionalFeature)}.
      * If the feature is not supported by the platform, this style downgrades to {@link StageStyle#UTILITY}.
      *
-     * @since 24
+     * @since 25
      */
     EXTENDED_UTILITY
 }

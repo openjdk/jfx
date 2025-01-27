@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
-import javafx.scene.Node;
+import com.sun.javafx.tk.HeaderAreaType;
 import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
 import java.util.Map;
@@ -365,35 +365,20 @@ public abstract class View {
         }
 
         /**
-         * Returns the draggable area node at the specified coordinates, or {@code null}
-         * if the specified coordinates do not intersect with a draggable area.
+         * Returns the header area type at the specified coordinates, or {@code null}
+         * if the specified coordinates do not intersect with a header area.
          *
          * @param x the X coordinate
          * @param y the Y coordinate
-         * @return the draggable area node, or {@code null}
+         * @return the header area type, or {@code null}
          */
-        public Node pickDragAreaNode(double x, double y) {
+        public HeaderAreaType pickHeaderArea(double x, double y) {
             return null;
         }
 
         public Accessible getSceneAccessible() {
             return null;
         }
-    }
-
-    /**
-     * A non-client event handler is used in some implementations of windows with the {@link Window#EXTENDED}
-     * style. It can inspect a mouse event before it is sent to FX, and decide to consume it if it affects a
-     * non-client part of the window (for example, minimize/maximize/close buttons).
-     */
-    public interface NonClientEventHandler {
-
-        /**
-         * Handles the event.
-         *
-         * @return {@code true} if the event was handled, {@code false} otherwise
-         */
-        boolean handleMouseEvent(int type, int button, int x, int y, int xAbs, int yAbs, int clickCount);
     }
 
     public static long getMultiClickTime() {
@@ -422,7 +407,6 @@ public abstract class View {
     private volatile long ptr; // Native handle (NSView*, or internal structure pointer)
     private Window window; // parent window
     private EventHandler eventHandler;
-    private NonClientEventHandler nonClientEventHandler;
 
     private int width = -1;     // not set
     private int height = -1;    // not set
@@ -512,10 +496,6 @@ public abstract class View {
         return this.height;
     }
 
-    protected NonClientEventHandler createNonClientEventHandler() {
-        return null;
-    }
-
     protected abstract void _setParent(long ptr, long parentPtr);
     // Window calls the method from Window.setView()
     // package private
@@ -525,12 +505,6 @@ public abstract class View {
         this.window = window;
         _setParent(this.ptr, window == null ? 0L : window.getNativeHandle());
         this.isValid = this.ptr != 0 && window != null;
-
-        if (this.isValid && window.isExtendedWindow()) {
-            this.nonClientEventHandler = createNonClientEventHandler();
-        } else {
-            this.nonClientEventHandler = null;
-        }
     }
 
     // package private
@@ -566,7 +540,7 @@ public abstract class View {
         this.eventHandler = eventHandler;
     }
 
-    private boolean shouldHandleEvent() {
+    protected boolean shouldHandleEvent() {
         // Don't send any more events if the application has shutdown
         if (Application.GetApplication() == null) {
             return false;
@@ -591,15 +565,20 @@ public abstract class View {
         return false;
     }
 
-    private void handleMouseEvent(long time, int type, int button, int x, int y,
-                                  int xAbs, int yAbs,
-                                  int modifiers, boolean isPopupTrigger,
-                                  boolean isSynthesized) {
+    protected void handleMouseEvent(long time, int type, int button, int x, int y,
+                                    int xAbs, int yAbs,
+                                    int modifiers, boolean isPopupTrigger,
+                                    boolean isSynthesized) {
         if (shouldHandleEvent()) {
             eventHandler.handleMouseEvent(this, time, type, button, x, y, xAbs,
                                           yAbs, modifiers,
                                           isPopupTrigger, isSynthesized);
         }
+    }
+
+    protected boolean handleNonClientMouseEvent(long time, int type, int button, int x, int y,
+                                                int xAbs, int yAbs, int modifiers, int clickCount) {
+        return false;
     }
 
     protected boolean handleMenuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
@@ -974,7 +953,7 @@ public abstract class View {
             lastClickedTime = now;
         }
 
-        // If we have a non-client event handler, we give it the first chance to handle the event.
+        // If this is an extended window, we give the non-client handler the first chance to handle the event.
         // Note that a full-screen window has no non-client area, and thus the non-client event handler
         // is not notified.
         // Some implementations (like GTK) can fire synthesized events when they receive a mouse button
@@ -982,11 +961,13 @@ public abstract class View {
         // not be processed by the non-client event handler. For example, if a mouse click happens on
         // the resize border that straddles the window close button, we don't want the close button to
         // act on this click, because we just started a resize-drag operation.
-        boolean handled = !isSynthesized && !inFullscreen && nonClientEventHandler != null
-            && nonClientEventHandler.handleMouseEvent(type, button, x, y, xAbs, yAbs, clickCount);
+        boolean handled = window.isExtendedWindow()
+            && !isSynthesized
+            && !inFullscreen
+            && shouldHandleEvent()
+            && handleNonClientMouseEvent(now, type, button, x, y, xAbs, yAbs, modifiers, clickCount);
 
-        // We never send non-client events to the application.
-        if (handled || MouseEvent.isNonClientEvent(type)) {
+        if (handled) {
             return;
         }
 

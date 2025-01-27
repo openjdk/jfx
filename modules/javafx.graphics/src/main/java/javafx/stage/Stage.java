@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,9 +36,12 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.HeaderBarBase;
+import javafx.scene.layout.HeaderButtonType;
 
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
@@ -494,6 +497,33 @@ public class Stage extends Window {
      */
     public final Modality getModality() {
         return modality;
+    }
+
+    private boolean defaultHeaderButtons = true;
+
+    /**
+     * Specifies whether a stage with a client-side header bar uses the default platform-provided header buttons.
+     * <p>
+     * If {@code false} is specified, an application must provide its own header buttons and mark them with
+     * {@link HeaderBarBase#setHeaderButtonType(Node, HeaderButtonType)} to enable integration with the platform
+     * window manager.
+     * <p>
+     * This property is only relevant for {@link StageStyle#EXTENDED} or {@link StageStyle#EXTENDED_UTILITY}
+     * stages, and is ignored otherwise.
+     *
+     * @param enabled {@code true} if the stage uses default header buttons, {@code false} otherwise
+     * @since 25
+     */
+    public final void initDefaultHeaderButtons(boolean enabled) {
+        if (hasBeenVisible) {
+            throw new IllegalStateException("Cannot set chrome once stage has been set visible");
+        }
+
+        this.defaultHeaderButtons = enabled;
+    }
+
+    public final boolean isDefaultHeaderButtons() {
+        return defaultHeaderButtons;
     }
 
     private Window owner = null;
@@ -1086,7 +1116,7 @@ public class Stage extends Window {
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
             StageStyle stageStyle = getStyle();
-            setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
+            setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(), isDefaultHeaderButtons(),
                     getModality(), tkStage, rtl));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));

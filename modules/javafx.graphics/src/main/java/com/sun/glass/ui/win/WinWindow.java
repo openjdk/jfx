@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -339,7 +339,7 @@ class WinWindow extends Window {
 
     @Override
     public WindowControlsOverlay getNonClientOverlay() {
-        if (windowControlsOverlay == null && isExtendedWindow()) {
+        if (windowControlsOverlay == null && isUsingNonClientOverlay()) {
             var url = getClass().getResource(WINDOW_DECORATION_STYLESHEET);
             if (url == null) {
                 throw new RuntimeException("Resource not found: " + WINDOW_DECORATION_STYLESHEET);
@@ -402,10 +402,12 @@ class WinWindow extends Window {
 
         // Otherwise, test if the cursor is over a draggable area and return HTCAPTION.
         View.EventHandler eventHandler = view.getEventHandler();
-        if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
-            return HT.CAPTION.value;
-        }
-
-        return HT.CLIENT.value;
+        return switch (eventHandler != null ? eventHandler.pickHeaderArea(wx, wy) : null) {
+            case DRAGBAR -> HT.CAPTION.value;
+            case MINIMIZE -> HT.MINBUTTON.value;
+            case MAXIMIZE -> HT.MAXBUTTON.value;
+            case CLOSE -> HT.CLOSE.value;
+            case null -> HT.CLIENT.value;
+        };
     }
 }

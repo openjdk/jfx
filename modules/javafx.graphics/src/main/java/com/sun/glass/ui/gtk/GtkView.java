@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,9 +24,9 @@
  */
 package com.sun.glass.ui.gtk;
 
-import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
+import com.sun.javafx.tk.HeaderAreaType;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -154,28 +154,21 @@ final class GtkView extends View {
             double wy = y / window.getPlatformScaleY();
 
             EventHandler eventHandler = getEventHandler();
-            if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
+            if (eventHandler != null && eventHandler.pickHeaderArea(wx, wy) == HeaderAreaType.DRAGBAR) {
                 window.showSystemMenu(x, y);
             }
         }
     }
 
     @Override
-    protected NonClientEventHandler createNonClientEventHandler() {
+    protected boolean handleNonClientMouseEvent(long time, int type, int button, int x, int y, int xAbs, int yAbs,
+                                                int modifiers, int clickCount) {
         var window = (GtkWindow)getWindow();
         var overlay = window.getNonClientOverlay();
         if (overlay == null) {
-            return null;
+            return false;
         }
 
-        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
-            // In contrast to Windows, GTK doesn't produce non-client events. We convert regular
-            // mouse events to non-client events since that's what WindowControlsOverlay expects.
-            return overlay.handleMouseEvent(
-                MouseEvent.toNonClientEvent(type),
-                button,
-                x / window.getPlatformScaleX(),
-                y / window.getPlatformScaleY());
-        };
+        return overlay.handleMouseEvent(type, button, x / window.getPlatformScaleX(), y / window.getPlatformScaleY());
     }
 }

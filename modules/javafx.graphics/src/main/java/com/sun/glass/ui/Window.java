@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -170,6 +170,11 @@ public abstract class Window {
      * Indicates that the window is modal which affects whether the window is minimizable.
      */
     @Native public static final int MODAL = 1 << 10;
+
+    /**
+     * Indicates that the window has non-client overlay controls.
+     */
+    public static final int NON_CLIENT_OVERLAY = 1 << 11;
 
     final static public class State {
         @Native public static final int NORMAL = 1;
@@ -751,6 +756,10 @@ public abstract class Window {
     public boolean isTransparentWindow() {
         //The TRANSPARENT flag is set only if it is supported
         return (this.styleMask & Window.TRANSPARENT) != 0;
+    }
+
+    public boolean isUsingNonClientOverlay() {
+        return isExtendedWindow() && (styleMask & Window.NON_CLIENT_OVERLAY) != 0;
     }
 
     public boolean isFocused() {

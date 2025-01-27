@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,7 @@ public class WindowStage extends GlassStage {
     private StageStyle style;
     private GlassStage owner = null;
     private Modality modality = Modality.NONE;
+    private boolean nonClientOverlay;
 
     private OverlayWarning warning = null;
     private boolean rtl = false;
@@ -83,10 +84,12 @@ public class WindowStage extends GlassStage {
                                  ".QuantumMessagesBundle", LOCALE);
 
 
-    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
+    public WindowStage(javafx.stage.Window peerWindow, StageStyle stageStyle, boolean nonClientOverlay,
+                       Modality modality, TKStage owner) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
+        this.nonClientOverlay = nonClientOverlay;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
@@ -174,12 +177,19 @@ public class WindowStage extends GlassStage {
                     windowMask &= ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
                 }
             }
+
             if (modality != Modality.NONE) {
                 windowMask |= Window.MODAL;
             }
+
+            if (nonClientOverlay) {
+                windowMask |= Window.NON_CLIENT_OVERLAY;
+            }
+
             platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
             platformWindow.setResizable(resizable);
             platformWindow.setFocusable(focusable);
+
             if (fxStage != null && fxStage.getScene() != null) {
                 javafx.scene.paint.Paint paint = fxStage.getScene().getFill();
                 if (paint instanceof javafx.scene.paint.Color) {

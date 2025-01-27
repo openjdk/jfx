@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.javafx.tk.HeaderAreaType;
+
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -185,25 +187,23 @@ final class MacView extends View {
     }
 
     @Override
-    protected NonClientEventHandler createNonClientEventHandler() {
-        return (type, button, x, y, xAbs, yAbs, clickCount) -> {
-            if (type == MouseEvent.DOWN) {
-                var window = (MacWindow)getWindow();
-                double wx = x / window.getPlatformScaleX();
-                double wy = y / window.getPlatformScaleY();
+    protected boolean handleNonClientMouseEvent(long time, int type, int button, int x, int y, int xAbs, int yAbs,
+                                                int modifiers, int clickCount) {
+        if (shouldHandleEvent() && type == MouseEvent.DOWN) {
+            var window = (MacWindow)getWindow();
+            double wx = x / window.getPlatformScaleX();
+            double wy = y / window.getPlatformScaleY();
 
-                View.EventHandler eventHandler = getEventHandler();
-                if (eventHandler != null && eventHandler.pickDragAreaNode(wx, wy) != null) {
-                    if (clickCount == 2) {
-                        window.performTitleBarDoubleClickAction();
-                    } else if (clickCount == 1) {
-                        window.performWindowDrag();
-                    }
+            View.EventHandler eventHandler = getEventHandler();
+            if (eventHandler != null && eventHandler.pickHeaderArea(wx, wy) == HeaderAreaType.DRAGBAR) {
+                if (clickCount == 2) {
+                    window.performTitleBarDoubleClickAction();
+                } else if (clickCount == 1) {
+                    window.performWindowDrag();
                 }
             }
+        }
 
-            return false;
-        };
+        return false;
     }
 }
-
