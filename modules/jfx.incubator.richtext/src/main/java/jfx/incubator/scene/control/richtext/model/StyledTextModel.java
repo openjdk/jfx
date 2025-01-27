@@ -559,17 +559,36 @@ public abstract class StyledTextModel {
             if (p.offset() < len) {
                 return p;
             }
-            return TextPos.ofLeading(ix, len);
+            int cix = len - 1;
+            if (cix < 0) {
+                return TextPos.ofLeading(ix, len);
+            } else {
+                return new TextPos(ix, len, cix, false);
+            }
         } else {
             if (ct == 0) {
                 return TextPos.ZERO;
             } else {
                 ix = ct - 1;
                 int len = getParagraphLength(ix);
-                return TextPos.ofLeading(ix, len);
+                int cix = len - 1;
+                if (cix < 0) {
+                    return TextPos.ofLeading(ix, len);
+                } else {
+                    return new TextPos(ix, len, cix, false);
+                }
             }
         }
     }
+//  public final TextPos getEndOfParagraphTextPos(int index) {
+//  int off = getParagraphLength(index);
+//  int cix = off - 1;
+//  if (cix < 0) {
+//      return TextPos.ofLeading(index, off);
+//  } else {
+//      return new TextPos(index, off, cix, false);
+//  }
+//}
 
     /**
      * Returns the text position corresponding to the end of the document.
