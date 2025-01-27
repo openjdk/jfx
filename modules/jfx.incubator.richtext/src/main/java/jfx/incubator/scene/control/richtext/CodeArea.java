@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,9 @@
  */
 package jfx.incubator.scene.control.richtext;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -43,6 +46,7 @@ import javafx.css.converter.SizeConverter;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Labeled;
+import javafx.scene.input.DataFormat;
 import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
@@ -417,16 +421,19 @@ public class CodeArea extends RichTextArea {
      * @return plain text
      */
     public final String getText() {
-        // TODO or use save(DataFormat, Writer) ?
-        StyledTextModel m = getModel();
-        StringBuilder sb = new StringBuilder(4096);
-        int sz = m.size();
-        for(int i=0; i<sz; i++) {
-            String s = m.getPlainText(i);
-            sb.append(s);
-            sb.append('\n');
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            try {
+                write(DataFormat.PLAIN_TEXT, out);
+                byte[] b = out.toByteArray();
+                return new String(b, StandardCharsets.UTF_8);
+            } finally {
+                out.close();
+            }
+        } catch (IOException e) {
+            // should not happen
+            throw new RuntimeException(e);
         }
-        return sb.toString();
     }
 
     /**
