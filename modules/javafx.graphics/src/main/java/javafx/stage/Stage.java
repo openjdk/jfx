@@ -522,6 +522,12 @@ public class Stage extends Window {
         this.defaultHeaderButtons = enabled;
     }
 
+    /**
+     * Returns whether a stage with a client-side header bar uses the default platform-provided header buttons.
+     *
+     * @return {@code true} if the stage uses default header buttons, {@code false} otherwise
+     * @since 25
+     */
     public final boolean isDefaultHeaderButtons() {
         return defaultHeaderButtons;
     }
