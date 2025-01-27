@@ -284,9 +284,9 @@ public class VetoableObservableListTest {
     }
 
     @Test
-    @Disabled("JDK-8170720")
     public void testRetainAll_subList() {
         list.retainAll(list.subList(0, 2));
+        assertEquals(List.of("foo", "bar"), list);
         assertSingleCall(new String[0], new int[] {2, 4});
     }
 
@@ -305,6 +305,7 @@ public class VetoableObservableListTest {
     @Test
     public void testSetAll_subList() {
         list.setAll(list.subList(0, 2));
+        assertEquals(List.of("foo", "bar"), list);
         assertSingleCall(new String[] {"foo", "bar"}, new int[] {0, 4});
     }
 
@@ -346,6 +347,7 @@ public class VetoableObservableListTest {
     public void testSubList_addAll_subList() {
         var subList = list.subList(0, 3);
         subList.addAll(subList.subList(0, 2));
+        assertEquals(List.of("foo", "bar", "ham", "foo", "bar"), subList);
         assertSingleCall(new String[] {"foo", "bar"}, new int[] {3, 3});
     }
 
@@ -353,6 +355,7 @@ public class VetoableObservableListTest {
     public void testSubList_addAll_indexed_subList() {
         var subList = list.subList(0, 3);
         subList.addAll(1, subList.subList(0, 2));
+        assertEquals(List.of("foo", "foo", "bar", "bar", "ham"), subList);
         assertSingleCall(new String[] {"foo", "bar"}, new int[] {1, 1});
     }
 
@@ -378,6 +381,7 @@ public class VetoableObservableListTest {
     public void testSubList_removeAll_subList() {
         var subList = list.subList(0, 3);
         subList.removeAll(subList.subList(0, 1));
+        assertEquals(List.of("bar", "ham"), subList);
         assertSingleCall(new String[0], new int[] {0, 1});
     }
 
@@ -388,10 +392,10 @@ public class VetoableObservableListTest {
     }
 
     @Test
-    @Disabled("JDK-8170720")
     public void testSubList_retainAll_subList() {
         var subList = list.subList(0, 3);
         subList.retainAll(subList.subList(0, 1));
+        assertEquals(List.of("foo"), subList);
         assertSingleCall(new String[0], new int[] {1, 3});
     }
 
