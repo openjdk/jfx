@@ -80,6 +80,10 @@ public class CodeAreaTest {
         control.setText("1\n2\n3\n4");
         s = control.getText();
         assertEquals("1\n2\n3\n4", s);
+
+        control.setText("1\r\n2\r\n3\r\n4");
+        s = control.getText();
+        assertEquals("1\n2\n3\n4", s);
     }
 
     /** can set a null and non-null CodeTextModel */

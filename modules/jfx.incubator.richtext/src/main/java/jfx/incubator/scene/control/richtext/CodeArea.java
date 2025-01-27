@@ -24,9 +24,7 @@
  */
 package jfx.incubator.scene.control.richtext;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -46,9 +44,9 @@ import javafx.css.converter.SizeConverter;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Labeled;
-import javafx.scene.input.DataFormat;
 import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
+import com.sun.jfx.incubator.scene.control.richtext.StringBuilderStyledOutput;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
@@ -421,15 +419,15 @@ public class CodeArea extends RichTextArea {
      * @return plain text
      */
     public final String getText() {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try {
-            try {
-                write(DataFormat.PLAIN_TEXT, out);
-                byte[] b = out.toByteArray();
-                return new String(b, StandardCharsets.UTF_8);
-            } finally {
-                out.close();
-            }
+        StyledTextModel m = getModel();
+        if (m == null) {
+            return null;
+        }
+        TextPos end = m.getDocumentEnd();
+        try (StringBuilderStyledOutput out = new StringBuilderStyledOutput()) {
+            out.setLineSeparator("\n");
+            m.export(TextPos.ZERO, end, out);
+            return out.toString();
         } catch (IOException e) {
             // should not happen
             throw new RuntimeException(e);
