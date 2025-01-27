@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 package javafx.scene.control;
 
 import javafx.beans.NamedArg;
-import com.sun.javafx.scene.layout.RegionHelper;
-
 
 /**
  * A wrapper class for use by the column resize policies offered by
@@ -101,7 +99,7 @@ public abstract class ResizeFeaturesBase<S> {
       Control c = getTableControl();
       if (c.isSnapToPixel()) {
           double min = c.snapSizeX(col.getMinWidth());
-          double max = RegionHelper.snapInnerSpaceX(c, col.getMaxWidth());
+          double max = c.snapSizeX(col.getMaxWidth());
           if (width < min) {
               width = min;
           } else if (width > max) {
@@ -113,8 +111,9 @@ public abstract class ResizeFeaturesBase<S> {
           } else {
               width = c.snapPositionX(width);
           }
+          col.setWidth(width);
+      } else {
+          col.doSetWidth(width);
       }
-      // can set width directly because all constraints have been checked
-      col.setWidth(width);
   }
 }

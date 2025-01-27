@@ -181,11 +181,6 @@ public class Region extends Parent {
                     PickResultChooser result) {
                 ((Region) node).doPickNodeLocal(localPickRay, result);
             }
-
-            @Override
-            public double snapInnerSpaceX(Node node, double x) {
-                return ((Region)node).snapPortionX(x);
-            }
         });
     }
 

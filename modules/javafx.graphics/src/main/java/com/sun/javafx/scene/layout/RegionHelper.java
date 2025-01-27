@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -104,10 +104,6 @@ public class RegionHelper extends ParentHelper {
         regionAccessor.doPickNodeLocal(node, localPickRay, result);
     }
 
-    public static double snapInnerSpaceX(Node node, double x) {
-        return regionAccessor.snapInnerSpaceX(node, x);
-    }
-
     public static void setRegionAccessor(final RegionAccessor newAccessor) {
         if (regionAccessor != null) {
             throw new IllegalStateException();
@@ -125,6 +121,6 @@ public class RegionHelper extends ParentHelper {
         void doNotifyLayoutBoundsChanged(Node node);
         void doPickNodeLocal(Node node, PickRay localPickRay,
                 PickResultChooser result);
-        double snapInnerSpaceX(Node node, double x);
     }
+
 }
