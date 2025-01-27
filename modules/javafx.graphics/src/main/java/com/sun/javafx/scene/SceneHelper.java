@@ -53,6 +53,14 @@ public final class SceneHelper {
         sceneAccessor.enableInputMethodEvents(scene, enable);
     }
 
+    public static InputMethodStateManager getInputMethodStateManager(Scene scene) {
+        return sceneAccessor.getInputMethodStateManager(scene);
+    }
+
+    public static void finishInputMethodComposition(Scene scene) {
+        sceneAccessor.finishInputMethodComposition(scene);
+    }
+
     public static boolean processKeyEvent(Scene scene, KeyEvent e) {
         return sceneAccessor.processKeyEvent(scene, e);
     }
@@ -117,6 +125,10 @@ public final class SceneHelper {
 
     public interface SceneAccessor {
         void enableInputMethodEvents(Scene scene, boolean enable);
+
+        InputMethodStateManager getInputMethodStateManager(Scene scene);
+
+        void finishInputMethodComposition(Scene scene);
 
         boolean processKeyEvent(Scene scene, KeyEvent e);
 

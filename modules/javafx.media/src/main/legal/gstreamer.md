@@ -1,11 +1,11 @@
-## GStreamer v1.24.6
+## GStreamer v1.24.10
 
 ### GStreamer Notice
 ```
 
-You are receiving a copy of GStreamer, Version: 1.24.6 in either source or
+You are receiving a copy of GStreamer, Version: 1.24.10 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GStreamer, Version: 1.24.6; it is
+Oracle license do NOT apply to the GStreamer, Version: 1.24.10; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:
@@ -59,8 +59,7 @@ Copyright (C) 2007-2011 Sebastian Dröge <sebastian.droege@collabora.co.uk>
 Copyright (C) 2010 Arun Raghavan <arun.raghavan@collabora.co.uk>
 Copyright (C) <2005-2011> Stefan Kost <ensonic@users.sf.net>
 Copyright (C) <2015> Luis de Bethencourt <luis@debethencourt.com>
-Copyright (C) 2010 Collabora Multimedia
-Copyright (C) 2009-2010 Edward Hervey <edward.hervey@collabora.co.uk>
+Copyright (C) 2010 Edward Hervey <edward.hervey@collabora.co.uk>
 Copyright (C) 2005-2007 Jan Schmidt <thaytan@mad.scientist.com>
 Copyright (C) 2010 Thiago Santos <thiago.sousa.santos@collabora.co.uk>
 Copyright (C) 2002-2003 Scott Wheeler <wheeler@kde.org> (portions from taglib)
