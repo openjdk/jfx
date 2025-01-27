@@ -208,6 +208,7 @@ public class VetoableObservableListTest {
     @Test
     public void testAddAll_subList() {
         list.addAll(list.subList(0, 2));
+        assertEquals(List.of("foo", "bar", "ham", "eggs", "foo", "bar"), list);
         assertSingleCall(new String[] {"foo", "bar"}, new int[] {4, 4});
     }
 
@@ -220,6 +221,7 @@ public class VetoableObservableListTest {
     @Test
     public void testAddAll_indexed_subList() {
         list.addAll(1, list.subList(0, 2));
+        assertEquals(List.of("foo", "foo", "bar", "bar", "ham", "eggs"), list);
         assertSingleCall(new String[] {"foo", "bar"}, new int[] {1, 1});
     }
 
