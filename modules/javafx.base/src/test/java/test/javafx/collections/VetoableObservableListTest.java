@@ -264,6 +264,7 @@ public class VetoableObservableListTest {
     @Test
     public void testRemoveAll_subList() {
         list.removeAll(list.subList(0, 1));
+        assertEquals(List.of("bar", "ham", "eggs"), list);
         assertSingleCall(new String[0], new int[] {0, 1});
     }
 
