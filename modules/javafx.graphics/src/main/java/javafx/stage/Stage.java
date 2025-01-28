@@ -516,7 +516,7 @@ public class Stage extends Window {
      */
     public final void initDefaultHeaderButtons(boolean enabled) {
         if (hasBeenVisible) {
-            throw new IllegalStateException("Cannot set chrome once stage has been set visible");
+            throw new IllegalStateException("Cannot set default header buttons once stage has been set visible");
         }
 
         this.defaultHeaderButtons = enabled;
