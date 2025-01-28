@@ -25,6 +25,7 @@
 package jfx.incubator.scene.control.richtext;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -415,13 +416,13 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * Returns plain text.
+     * Returns plain text.  This method returns an empty string when the model is {@code null}.
      * @return plain text
      */
     public final String getText() {
         StyledTextModel m = getModel();
         if (m == null) {
-            return null;
+            return "";
         }
         TextPos end = m.getDocumentEnd();
         try (StringBuilderStyledOutput out = new StringBuilderStyledOutput()) {
@@ -430,7 +431,7 @@ public class CodeArea extends RichTextArea {
             return out.toString();
         } catch (IOException e) {
             // should not happen
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
