@@ -41,7 +41,6 @@ import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.skin.CodeAreaSkin;
-import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 import test.jfx.incubator.scene.util.TUtil;
 
 /**
@@ -154,11 +153,19 @@ public class CodeAreaTest {
     public void getText() {
         control.setText("123");
         String s = control.getText();
-        // TODO looks like a bug
-        assertEquals("123\n", s);
-        // this is correct implementation
-        String s2 = RTUtil.getText(control);
-        assertEquals("123", s2);
+        assertEquals("123", s);
+
+        control.setText(null);
+        s = control.getText();
+        assertEquals("", s);
+
+        control.setText("1\n2\n3\n4");
+        s = control.getText();
+        assertEquals("1\n2\n3\n4", s);
+
+        control.setText("1\r\n2\r\n3\r\n4");
+        s = control.getText();
+        assertEquals("1\n2\n3\n4", s);
     }
 
     /** can set a null and non-null CodeTextModel */

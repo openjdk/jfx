@@ -345,13 +345,12 @@ public class RichTextAreaTest {
     public void execute() {
         control.appendText("a");
         control.execute(RichTextArea.Tag.SELECT_ALL);
-        //control.selectAll();
+
         SelectionSegment sel = control.getSelection();
         TextPos end = control.getDocumentEnd();
         assertNotNull(end);
         assertEquals(TextPos.ZERO, sel.getMin());
-        // FIX there is a bug in StyledTextModel::clamp L559
-        //assertEquals(end, sel.getMax());
+        assertEquals(end, sel.getMax());
     }
 
     @Test
@@ -596,12 +595,12 @@ public class RichTextAreaTest {
     public void selectAll() {
         control.appendText("a");
         control.selectAll();
+
         SelectionSegment sel = control.getSelection();
         TextPos end = control.getDocumentEnd();
         assertNotNull(end);
         assertEquals(TextPos.ZERO, sel.getMin());
-        // FIX there is a bug in StyledTextModel::clamp L559
-        //assertEquals(end, sel.getMax());
+        assertEquals(end, sel.getMax());
     }
 
     @Test
@@ -638,6 +637,7 @@ public class RichTextAreaTest {
     // TODO remove once a real test which needs the shim is added.
     @Test
     public void testShim() {
-        VFlow f = RichTextAreaShim.vflow(control);
+        RichTextArea t = new RichTextArea();
+        VFlow f = RichTextAreaShim.vflow(t);
     }
 }
