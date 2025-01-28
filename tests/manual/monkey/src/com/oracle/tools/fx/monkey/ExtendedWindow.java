@@ -45,10 +45,12 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
 
-public class ExtendedWindow extends Stage {
+public final class ExtendedWindow {
+
+    private ExtendedWindow() {}
 
     public static void showSimpleHeaderBar(StageStyle style, NodeOrientation orientation) {
-        var stage = new ExtendedWindow();
+        var stage = new Stage();
 
         var headerBar = new HeaderBar();
         headerBar.setBackground(Background.fill(Color.LIGHTSKYBLUE));
@@ -79,7 +81,7 @@ public class ExtendedWindow extends Stage {
     }
 
     public static void showSplitHeaderBar(StageStyle style, NodeOrientation orientation) {
-        var stage = new ExtendedWindow();
+        var stage = new Stage();
 
         var leftHeaderBar = new HeaderBar();
         leftHeaderBar.setBackground(Background.fill(Color.VIOLET));
@@ -120,7 +122,7 @@ public class ExtendedWindow extends Stage {
     }
 
     public static void showCustomHeaderButtons(StageStyle style, NodeOrientation orientation) {
-        var stage = new ExtendedWindow();
+        var stage = new Stage();
 
         var headerBar = new HeaderBar();
         headerBar.setBackground(Background.fill(Color.LIGHTSKYBLUE));
