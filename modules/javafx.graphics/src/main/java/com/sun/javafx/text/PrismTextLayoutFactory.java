@@ -25,6 +25,7 @@
 
 package com.sun.javafx.text;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
@@ -33,7 +34,7 @@ public class PrismTextLayoutFactory implements TextLayoutFactory {
     private static final PrismTextLayoutFactory factory = new PrismTextLayoutFactory();
     /* Same strategy as GlyphLayout */
     private static final TextLayout reusableTL = factory.createLayout();
-    private static boolean inUse;
+    private static final AtomicBoolean guard = new AtomicBoolean(false);
 
     private PrismTextLayoutFactory() {
     }
@@ -50,28 +51,21 @@ public class PrismTextLayoutFactory implements TextLayoutFactory {
 
     @Override
     public TextLayout getLayout() {
-        if (inUse) {
-            return createLayout();
+        if (guard.compareAndSet(false, true)) {
+            reusableTL.setAlignment(0);
+            reusableTL.setWrapWidth(0);
+            reusableTL.setDirection(0);
+            reusableTL.setContent(null);
+            return reusableTL;
         } else {
-            synchronized(PrismTextLayoutFactory.class) {
-                if (inUse) {
-                    return createLayout();
-                } else {
-                    inUse = true;
-                    reusableTL.setAlignment(0);
-                    reusableTL.setWrapWidth(0);
-                    reusableTL.setDirection(0);
-                    reusableTL.setContent(null);
-                    return reusableTL;
-                }
-            }
+            return createLayout();
         }
     }
 
     @Override
     public void disposeLayout(TextLayout layout) {
         if (layout == reusableTL) {
-            inUse = false;
+            guard.set(false);
         }
     }
 

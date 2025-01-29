@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.text;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.font.PrismFontFactory;
 
 /* This class creates a singleton GlyphLayout which is checked out
@@ -39,7 +40,7 @@ import com.sun.javafx.font.PrismFontFactory;
  */
 public class GlyphLayoutManager {
     private static GlyphLayout reusableGL = newInstance();
-    private static volatile boolean inUse;
+    private static final AtomicBoolean guard = new AtomicBoolean(false);
 
     private static GlyphLayout newInstance() {
         PrismFontFactory factory = PrismFontFactory.getFontFactory();
@@ -47,30 +48,16 @@ public class GlyphLayoutManager {
     }
 
     public static GlyphLayout getInstance() {
-        /* The following heuristic is that if the reusable instance is
-         * in use, it probably still will be in a micro-second, so avoid
-         * synchronising on the class and just allocate a new instance.
-         * The cost is one extra boolean test for the normal case, and some
-         * small number of cases where we allocate an extra object when
-         * in fact the reusable one would be freed very soon.
-         */
-        if (inUse) {
-            return newInstance();
+        if (guard.compareAndSet(false, true)) {
+            return reusableGL;
         } else {
-            synchronized(GlyphLayout.class) {
-                if (inUse) {
-                    return newInstance();
-                } else {
-                    inUse = true;
-                    return reusableGL;
-                }
-            }
+            return newInstance();
         }
     }
 
     public static void dispose(GlyphLayout la) {
         if (la == reusableGL) {
-            inUse = false;
+            guard.set(false);
         }
     }
 }
