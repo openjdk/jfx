@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.jfx.incubator.scene.control.richtext;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,18 +33,23 @@ import org.junit.jupiter.api.Test;
 import jfx.incubator.scene.control.richtext.CodeArea;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.skin.CodeAreaSkin;
 
 /**
  * Tests CodeArea.
  */
 public class CodeAreaTest {
+    private CodeArea control;
+
     @BeforeEach
     public void beforeEach() {
         setUncaughtExceptionHandler();
+        control = new CodeArea();
+        control.setSkin(new CodeAreaSkin(control));
     }
 
     @AfterEach
-    public void cleanup() {
+    public void afterEach() {
         removeUncaughtExceptionHandler();
     }
 
@@ -59,6 +65,29 @@ public class CodeAreaTest {
 
     private void removeUncaughtExceptionHandler() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
+
+    @Test
+    public void getText() {
+        control.setText("123");
+        String s = control.getText();
+        assertEquals("123", s);
+
+        control.setText(null);
+        s = control.getText();
+        assertEquals("", s);
+
+        control.setText("1\n2\n3\n4");
+        s = control.getText();
+        assertEquals("1\n2\n3\n4", s);
+
+        control.setText("1\r\n2\r\n3\r\n4");
+        s = control.getText();
+        assertEquals("1\n2\n3\n4", s);
+
+        control.setModel(null);
+        s = control.getText();
+        assertEquals("", s);
     }
 
     /** can set a null and non-null CodeTextModel */
