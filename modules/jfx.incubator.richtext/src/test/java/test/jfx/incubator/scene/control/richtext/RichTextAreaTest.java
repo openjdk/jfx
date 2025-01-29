@@ -23,17 +23,61 @@
  * questions.
  */
 
-package test.com.sun.jfx.incubator.scene.control.richtext;
+package test.jfx.incubator.scene.control.richtext;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.RichTextAreaShim;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 
 /**
  * Tests RichTextArea control.
  */
-public class TestRichTextArea {
+public class RichTextAreaTest {
+    private RichTextArea control;
+
+    @BeforeEach
+    public void beforeEach() {
+        control = new RichTextArea();
+        control.setSkin(new RichTextAreaSkin(control));
+    }
+
+    @AfterEach
+    public void afterEach() {
+    }
+
+    @Test
+    public void execute() {
+        control.appendText("a");
+        control.execute(RichTextArea.Tag.SELECT_ALL);
+
+        SelectionSegment sel = control.getSelection();
+        TextPos end = control.getDocumentEnd();
+        assertNotNull(end);
+        assertEquals(TextPos.ZERO, sel.getMin());
+        assertEquals(end, sel.getMax());
+    }
+
+    @Test
+    public void selectAll() {
+        control.appendText("a");
+        control.selectAll();
+
+        SelectionSegment sel = control.getSelection();
+        TextPos end = control.getDocumentEnd();
+        assertNotNull(end);
+        assertEquals(TextPos.ZERO, sel.getMin());
+        assertEquals(end, sel.getMax());
+    }
+
     /**
      * Tests the shim.
      */
