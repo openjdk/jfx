@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.jfx.incubator.scene.control.richtext.model;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -35,7 +36,6 @@ import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.RichParagraph;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.RichTextModelShim;
-import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
@@ -252,5 +252,24 @@ public class TestRichTextModel {
         }
 
         return null;
+    }
+
+    private RichTextModel createModel(String text) {
+        RichTextModel m = new RichTextModel();
+        m.replace(null, TextPos.ZERO, TextPos.ZERO, text, false);
+        return m;
+    }
+
+    @Test
+    public void clamp() {
+        RichTextModel m = createModel("1\n2222\n");
+        assertEquals(TextPos.ofLeading(0, 0), m.clamp(TextPos.ofLeading(0, 0)));
+        assertEquals(new TextPos(0, 1, 0, false), m.clamp(TextPos.ofLeading(0, 100)));
+
+        assertEquals(TextPos.ofLeading(1, 0), m.clamp(TextPos.ofLeading(1, 0)));
+        assertEquals(TextPos.ofLeading(1, 1), m.clamp(TextPos.ofLeading(1, 1)));
+        assertEquals(new TextPos(1, 4, 3, false), m.clamp(TextPos.ofLeading(1, 100)));
+
+        assertEquals(TextPos.ofLeading(2, 0), m.clamp(TextPos.ofLeading(2, 100)));
     }
 }
