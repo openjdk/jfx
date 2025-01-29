@@ -283,11 +283,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         // but it doesn't get activated, so this is needed:
         LOG("-> need to active application");
         dispatch_async(dispatch_get_main_queue(), ^{
-            [NSApp performSelector: @selector(activate)];
+            [NSApp activateIgnoringOtherApps:YES];
         });
-        // TODO: performSelector is used only to avoid a compiler
-        // warning with the 13.3 SDK. After updating to SDK 14
-        // this can be converted to a standard call.
     }
 }
 
