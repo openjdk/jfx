@@ -68,17 +68,37 @@ public class PointLightIlluminationTest extends VisualTestBase {
     private static final double COLOR_TOLERANCE    = 0.07;
     private static volatile Scene testScene = null;
 
-    // Used to skip failing tests until JDK-8318985 is fixed
+    // Used to skip failing tests on macOS 14 or later on aarch64 until JDK-8318985 is fixed
     private boolean isMacAarch64MacOS14;
+
+    private static int getFirstInt(String input) {
+        String str = input;
+        if (str == null) {
+            return -1;
+        }
+        str = str.trim();
+        if (str.isEmpty() || !Character.isDigit(str.charAt(0))) {
+            return -1;
+        }
+        str = str.split("\\D+")[0];
+        return Integer.parseInt(str);
+    }
 
     @BeforeEach
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+
         // JDK-8318985
-        isMacAarch64MacOS14 = PlatformUtil.isMac() &&
-                "aarch64".equals(System.getProperty("os.arch")) &&
-                System.getProperty("os.version") != null &&
-                System.getProperty("os.version").startsWith("14");
+        isMacAarch64MacOS14 = false;
+        if (PlatformUtil.isMac() &&
+                "aarch64".equals(System.getProperty("os.arch"))) {
+
+            int majorVer = getFirstInt(System.getProperty("os.version"));
+            if (majorVer >= 14) {
+                isMacAarch64MacOS14 = true;
+            }
+        }
+
         // Use the same test scene for all tests
         if (testScene == null) {
             runAndWait(() -> {
