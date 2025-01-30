@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,10 +73,10 @@ public class ResizeHelper {
 
             if (c.isResizable()) {
                 double cmin = snapCeil(c.getMinWidth()); // always honor min width!
-                double cmax = snapFloor(c.getMaxWidth());
+                double cmax = snapCeil(c.getMaxWidth());
                 min[i] = cmin;
                 max[i] = cmax;
-                pref[i] = clip(snapRound(c.getPrefWidth()), cmin, cmax);
+                pref[i] = clip(snapCeil(c.getPrefWidth()), cmin, cmax);
                 // skip fixed columns
                 if (cmin == cmax) {
                     skip.set(i, true);
@@ -581,16 +581,6 @@ public class ResizeHelper {
     private double snapRound(double x) {
         if (snap != null) {
             return snap.snapPositionX(x);
-        }
-        return x;
-    }
-
-    private double snapFloor(double x) {
-        if (snap != null) {
-            // there is no public equivalent, but we can copy implementation from Region
-            // let's try rounding for now
-            // TODO we can implement this since we have snapScale now
-            return snapRound(x);
         }
         return x;
     }

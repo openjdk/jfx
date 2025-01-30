@@ -105,7 +105,7 @@ public abstract class ResizeFeaturesBase<S> {
           } else if (width > max) {
               width = max;
               if (width < min) {
-                  // safety check in case floor(max) < ceil(min)
+                  // safety check in case max < min
                   width = min;
               }
           } else {
