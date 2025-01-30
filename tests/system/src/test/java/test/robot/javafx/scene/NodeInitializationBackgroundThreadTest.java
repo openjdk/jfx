@@ -143,6 +143,10 @@ import test.robot.testharness.RobotTestBase;
  * - MenuBar
  * - WebView
  *
+ * The test creates a visible node of a given type, and at the same time, starts a number of background threads
+ * which also create nodes of the same type.  Each such thread makes repeated accesses of its own node for the duration
+ * of test.  Also, the visible node gets accessed periodically just to shake things up.
+ *
  * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
  *
  * TODO add remaining Nodes to the test.
@@ -221,7 +225,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         test(() -> {
             return new Canvas(30, 30);
         }, (c) -> {
-            // could not get it to fail
             accessNode(c);
             GraphicsContext g = c.getGraphicsContext2D();
             g.setFill(Color.RED);
@@ -399,7 +402,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
             c.setSkin(new TextFieldSkin(c));
             return c;
         }, (c) -> {
-            // could not get it to fail
             accessTextInputControl(c);
             c.setAlignment(Pos.CENTER);
             c.getCharacters();
@@ -573,7 +575,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
             c.setSkin(new TextFieldSkin(c));
             return c;
         }, (c) -> {
-            // could not get it to fail
             accessTextInputControl(c);
             c.setAlignment(Pos.CENTER);
             c.getCharacters();
