@@ -144,10 +144,11 @@ import test.robot.testharness.RobotTestBase;
  * - WebView
  *
  * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
+ *
+ * TODO add remaining Nodes to the test.
  */
 public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
-    private static final int THREAD_COUNT = 100;
-    private static final int DURATION = 2000;
+    private static final int DURATION = 5000;
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
 
@@ -161,7 +162,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         }, this::accessControl);
     }
 
-    @Disabled("JDK-8349091")
+    @Disabled("JDK-8349091") // FIX
     @Test
     public void areaChart() {
         test(() -> {
@@ -174,7 +175,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091")
+    @Disabled("JDK-8349091") // FIX
     @Test
     public void barChart() {
         test(() -> {
@@ -187,7 +188,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091")
+    @Disabled("JDK-8349091") // FIX
     @Test
     public void bubbleChart() {
         test(() -> {
@@ -333,7 +334,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091")
+    @Disabled("JDK-8349091") // FIX
     @Test
     public void lineChart() {
         test(() -> {
@@ -430,6 +431,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
+    @Disabled("JDK-8349091") // FIX
     @Test
     public void scatterChart() {
         test(() -> {
@@ -482,7 +484,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091")
+    @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedAreaChart() {
         test(() -> {
@@ -495,7 +497,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091")
+    @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedBarChart() {
         test(() -> {
@@ -508,7 +510,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349098")
+    @Disabled("JDK-8349098") // FIX
     @Test
     public void tabPane() {
         test(() -> {
@@ -729,11 +731,12 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         setTitle(title);
         setContent(visibleNode);
 
+        int threadCount = 1 + Runtime.getRuntime().availableProcessors() * 2;
         AtomicBoolean running = new AtomicBoolean(true);
-        CountDownLatch counter = new CountDownLatch(THREAD_COUNT);
+        CountDownLatch counter = new CountDownLatch(threadCount);
 
         try {
-            for (int i = 0; i < THREAD_COUNT; i++) {
+            for (int i = 0; i < threadCount; i++) {
                 new Thread(title) {
                     @Override
                     public void run() {
@@ -762,7 +765,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
             running.set(false);
         }
 
-        // let them finish
+        // let all threads finish
         try {
             counter.await(500, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
