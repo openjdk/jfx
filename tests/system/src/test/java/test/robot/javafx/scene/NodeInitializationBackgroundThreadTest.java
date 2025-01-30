@@ -205,7 +205,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8347392") // FIX
     @Test
     public void button() {
         test(() -> {
@@ -233,7 +232,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8347392") // FIX
     @Test
     public void checkBox() {
         test(() -> {
@@ -247,7 +245,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8347392") // FIX
     @Test
     public void choiceBox() {
         test(() -> {
@@ -311,7 +308,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8347392") // FIX
     @Test
     public void hyperlink() {
         test(() -> {
@@ -324,7 +320,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8347392") // FIX
     @Test
     public void label() {
         test(() -> {
@@ -421,7 +416,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8347392") // FIX
     @Test
     public void radioButton() {
         test(() -> {
@@ -556,7 +550,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8347392") // FIX
     @Test
     public void textArea() {
         test(() -> {
@@ -593,7 +586,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8347392") // FIX
     @Test
     public void titledPane() {
         test(() -> {
@@ -608,7 +600,6 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8347392") // FIX
     @Test
     public void toggleButton() {
         test(() -> {
