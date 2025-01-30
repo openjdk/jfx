@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -78,11 +79,19 @@ import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableView;
+import javafx.scene.control.TreeView;
 import javafx.scene.control.skin.AccordionSkin;
 import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.control.skin.CheckBoxSkin;
@@ -100,11 +109,19 @@ import javafx.scene.control.skin.ScrollPaneSkin;
 import javafx.scene.control.skin.SpinnerSkin;
 import javafx.scene.control.skin.SplitMenuButtonSkin;
 import javafx.scene.control.skin.TabPaneSkin;
+import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.control.skin.TextAreaSkin;
 import javafx.scene.control.skin.TextFieldSkin;
+import javafx.scene.control.skin.TitledPaneSkin;
+import javafx.scene.control.skin.ToggleButtonSkin;
+import javafx.scene.control.skin.ToolBarSkin;
+import javafx.scene.control.skin.TreeTableViewSkin;
+import javafx.scene.control.skin.TreeViewSkin;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -125,6 +142,8 @@ import test.robot.testharness.RobotTestBase;
  * - HTMLEditor
  * - MenuBar
  * - WebView
+ *
+ * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
  */
 public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     private static final int THREAD_COUNT = 100;
@@ -132,7 +151,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
 
-//    @Test
+    @Test
     public void accordion() {
         test(() -> {
             Accordion c = new Accordion();
@@ -196,7 +215,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void canvas() {
         test(() -> {
             return new Canvas(30, 30);
@@ -238,7 +257,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void colorPicker() {
         test(() -> {
             ColorPicker c = new ColorPicker();
@@ -255,7 +274,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void comboBox() {
         test(() -> {
             ComboBox c = new ComboBox();
@@ -327,7 +346,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void listView() {
         test(() -> {
             ListView c = new ListView();
@@ -355,7 +374,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void pagination() {
         test(() -> {
             Pagination c = new Pagination();
@@ -371,7 +390,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void passwordField() {
         test(() -> {
             PasswordField c = new PasswordField();
@@ -411,7 +430,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void scatterChart() {
         test(() -> {
             ScatterChart c = new ScatterChart(createNumberAxis("x"), createNumberAxis("y"));
@@ -423,7 +442,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void scrollPane() {
         test(() -> {
             ScrollPane c = new ScrollPane(new Label("ScrollPane"));
@@ -435,7 +454,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void spinner() {
         test(() -> {
             Spinner c = new Spinner();
@@ -463,7 +482,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Disabled("JDK-8349091")
+    @Disabled("JDK-8349091")
     @Test
     public void stackedAreaChart() {
         test(() -> {
@@ -489,6 +508,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
+    @Disabled("JDK-8349098")
     @Test
     public void tabPane() {
         test(() -> {
@@ -499,6 +519,35 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         }, (c) -> {
             c.getTabs().setAll(createTabs());
             accessControl(c);
+        });
+    }
+
+    @Test
+    public void tableView() {
+        test(() -> {
+            TableView<String> c = new TableView<>();
+            c.setSkin(new TableViewSkin(c));
+            c.getItems().setAll(createTableItems());
+            TableColumn<String,String> col = new TableColumn<>("Table");
+            col.setCellValueFactory((cdf) -> {
+                Object v = cdf.getValue();
+                return new SimpleObjectProperty(v.toString());
+            });
+            c.getColumns().add(col);
+            return c;
+        }, (c) -> {
+            c.getItems().setAll(createTableItems());
+            accessControl(c);
+        });
+    }
+
+    @Test
+    public void text() {
+        test(() -> {
+            return new Text(nextString());
+        }, (c) -> {
+            c.setText(nextString());
+            accessNode(c);
         });
     }
 
@@ -514,7 +563,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void textField() {
         test(() -> {
             TextField c = new TextField();
@@ -525,6 +574,59 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
             accessTextInputControl(c);
             c.setAlignment(Pos.CENTER);
             c.getCharacters();
+        });
+    }
+
+    @Test
+    public void textFlow() {
+        test(() -> {
+            TextFlow c = new TextFlow();
+            c.getChildren().setAll(createTextItems());
+            return c;
+        }, (c) -> {
+            c.getChildren().setAll(createTextItems());
+            accessRegion(c);
+        });
+    }
+
+    @Disabled("JDK-8347392") // FIX
+    @Test
+    public void titledPane() {
+        test(() -> {
+            TitledPane c = new TitledPane("TitledPane", null);
+            c.setSkin(new TitledPaneSkin(c));
+            return c;
+        }, (c) -> {
+            c.setAnimated(nextBoolean());
+            c.setExpanded(nextBoolean());
+            c.setContent(new Label(nextString()));
+            accessControl(c);
+        });
+    }
+
+    @Disabled("JDK-8347392") // FIX
+    @Test
+    public void toggleButton() {
+        test(() -> {
+            ToggleButton c = new ToggleButton("ToggleButton");
+            c.setSkin(new ToggleButtonSkin(c));
+            return c;
+        }, (c) -> {
+            accessControl(c);
+            c.setSelected(nextBoolean());
+        });
+    }
+
+    @Test
+    public void toolBar() {
+        test(() -> {
+            ToolBar c = new ToolBar();
+            c.setSkin(new ToolBarSkin(c));
+            c.getItems().setAll(createButtons());
+            return c;
+        }, (c) -> {
+            c.getItems().setAll(createButtons());
+            accessControl(c);
         });
     }
 
@@ -547,6 +649,43 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
                 Point2D p = c.localToScreen(c.getWidth() / 2.0, c.getHeight() / 2.0);
                 robot.mouseMove(p);
             }
+        });
+    }
+
+    @Test
+    public void treeTableView() {
+        test(() -> {
+            TreeTableView<String> c = new TreeTableView<>();
+            c.setSkin(new TreeTableViewSkin(c));
+            c.setRoot(createRoot());
+            TreeTableColumn<String,String> col = new TreeTableColumn<>("TreeTable");
+            col.setCellValueFactory((cdf) -> {
+                Object v = cdf.getValue();
+                return new SimpleObjectProperty(v.toString());
+            });
+            c.getColumns().add(col);
+            return c;
+        }, (c) -> {
+            c.setRoot(createRoot());
+            accessControl(c);
+        });
+    }
+
+    @Test
+    public void treeView() {
+        Supplier<TreeItem<String>> gen = () -> {
+            TreeItem<String> root = new TreeItem<>(null);
+            return root;
+        };
+
+        test(() -> {
+            TreeView<String> c = new TreeView<>();
+            c.setSkin(new TreeViewSkin(c));
+            c.setRoot(createRoot());
+            return c;
+        }, (c) -> {
+            c.setRoot(createRoot());
+            accessControl(c);
         });
     }
 
@@ -648,6 +787,15 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         return "_a" + ix + "\nyo!";
     }
 
+    private static List<Node> createButtons() {
+        int sz = new Random().nextInt(5);
+        ArrayList<Node> a = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            a.add(new Button(nextString()));
+        }
+        return a;
+    }
+
     private static CategoryAxis createCategoryAxis(String text) {
         CategoryAxis a = new CategoryAxis();
         a.setLabel(text);
@@ -693,10 +841,38 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         return a;
     }
 
+    private static TreeItem<String> createRoot() {
+        TreeItem<String> root = new TreeItem<>(null);
+        int sz = new Random().nextInt(20);
+        for (int i = 0; i < sz; i++) {
+            root.getChildren().add(new TreeItem<>(nextString()));
+        }
+        root.setExpanded(nextBoolean());
+        return root;
+    }
+
     private static List<Tab> createTabs() {
         ArrayList<Tab> a = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             a.add(new Tab(nextString()));
+        }
+        return a;
+    }
+
+    private static List<String> createTableItems() {
+        int sz = new Random().nextInt(20);
+        ArrayList<String> a = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            a.add(nextString());
+        }
+        return a;
+    }
+
+    private static List<Text> createTextItems() {
+        int sz = new Random().nextInt(20);
+        ArrayList<Text> a = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            a.add(new Text(nextString()));
         }
         return a;
     }
