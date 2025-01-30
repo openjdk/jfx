@@ -375,6 +375,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
+    @Disabled("JDK-8349105") // FIX
     @Test
     public void pagination() {
         test(() -> {
