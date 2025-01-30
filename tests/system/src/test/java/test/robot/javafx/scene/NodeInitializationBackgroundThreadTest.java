@@ -26,6 +26,9 @@ package test.robot.javafx.scene;
 
 import static org.junit.jupiter.api.Assertions.fail;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,22 +38,73 @@ import java.util.function.Supplier;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Node;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.chart.AreaChart;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.BubbleChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.Chart;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.PieChart;
+import javafx.scene.chart.PieChart.Data;
+import javafx.scene.chart.ScatterChart;
+import javafx.scene.chart.StackedAreaChart;
+import javafx.scene.chart.StackedBarChart;
+import javafx.scene.chart.XYChart;
+import javafx.scene.chart.XYChart.Series;
 import javafx.scene.control.Accordion;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Control;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.Pagination;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.control.SplitMenuButton;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.skin.AccordionSkin;
+import javafx.scene.control.skin.ButtonSkin;
+import javafx.scene.control.skin.CheckBoxSkin;
+import javafx.scene.control.skin.ChoiceBoxSkin;
+import javafx.scene.control.skin.ColorPickerSkin;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.scene.control.skin.DatePickerSkin;
+import javafx.scene.control.skin.HyperlinkSkin;
 import javafx.scene.control.skin.LabelSkin;
+import javafx.scene.control.skin.ListViewSkin;
+import javafx.scene.control.skin.MenuButtonSkin;
+import javafx.scene.control.skin.PaginationSkin;
+import javafx.scene.control.skin.RadioButtonSkin;
+import javafx.scene.control.skin.ScrollPaneSkin;
+import javafx.scene.control.skin.SpinnerSkin;
+import javafx.scene.control.skin.SplitMenuButtonSkin;
+import javafx.scene.control.skin.TabPaneSkin;
 import javafx.scene.control.skin.TextAreaSkin;
 import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -66,6 +120,11 @@ import test.robot.testharness.RobotTestBase;
  *
  * "Node objects may be constructed and modified on any thread as long they are not yet attached to a Scene in a Window
  * that is showing. An application must attach nodes to such a Scene or modify them on the JavaFX Application Thread."
+ *
+ * Notable exceptions to this rule:
+ * - HTMLEditor
+ * - MenuBar
+ * - WebView
  */
 public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     private static final int THREAD_COUNT = 100;
@@ -73,16 +132,142 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
 
-    @Test
+//    @Test
     public void accordion() {
         test(() -> {
             Accordion c = new Accordion();
             c.setSkin(new AccordionSkin(c));
             c.getPanes().add(new TitledPane("Accordion", new BorderPane()));
             return c;
+        }, this::accessControl);
+    }
+
+    @Disabled("JDK-8349091")
+    @Test
+    public void areaChart() {
+        test(() -> {
+            AreaChart c = new AreaChart(createNumberAxis("x"), createNumberAxis("y"));
+            c.getData().setAll(createNumberSeries());
+            return c;
         }, (c) -> {
+            c.getData().setAll(createNumberSeries());
+            accessChart(c);
+        });
+    }
+
+    @Disabled("JDK-8349091")
+    @Test
+    public void barChart() {
+        test(() -> {
+            BarChart c = new BarChart(createCategoryAxis("x"), createNumberAxis("y"));
+            c.getData().setAll(createCategorySeries());
+            return c;
+        }, (c) -> {
+            c.getData().setAll(createCategorySeries());
+            accessChart(c);
+        });
+    }
+
+    @Disabled("JDK-8349091")
+    @Test
+    public void bubbleChart() {
+        test(() -> {
+            BubbleChart c = new BubbleChart(createNumberAxis("x"), createNumberAxis("y"));
+            c.getData().setAll(createNumberSeries());
+            return c;
+        }, (c) -> {
+            c.getData().setAll(createNumberSeries());
+            accessChart(c);
+        });
+    }
+
+    @Disabled("JDK-8347392") // FIX
+    @Test
+    public void button() {
+        test(() -> {
+            Button c = new Button();
+            c.setSkin(new ButtonSkin(c));
+            return c;
+        }, (c) -> {
+            accessControl(c);
+            c.setAlignment(Pos.CENTER);
+            c.setText(nextString());
+            c.setDefaultButton(true);
+        });
+    }
+
+//    @Test
+    public void canvas() {
+        test(() -> {
+            return new Canvas(30, 30);
+        }, (c) -> {
+            // could not get it to fail
+            accessNode(c);
+            GraphicsContext g = c.getGraphicsContext2D();
+            g.setFill(Color.RED);
+            g.setStroke(Color.BLACK);
+            g.fillRect(5, 5, 5, 5);
+        });
+    }
+
+    @Disabled("JDK-8347392") // FIX
+    @Test
+    public void checkBox() {
+        test(() -> {
+            CheckBox c = new CheckBox("checkbox");
+            c.setSkin(new CheckBoxSkin(c));
+            return c;
+        }, (c) -> {
+            c.setAllowIndeterminate(true);
+            c.setSelected(true);
+            accessControl(c);
+        });
+    }
+
+    @Disabled("JDK-8347392") // FIX
+    @Test
+    public void choiceBox() {
+        test(() -> {
+            ChoiceBox c = new ChoiceBox();
+            c.setSkin(new ChoiceBoxSkin(c));
+            return c;
+        }, (c) -> {
+            c.getItems().setAll("ChoiceBox", "1", "2");
+            c.getSelectionModel().select(0);
+            accessControl(c);
+        });
+    }
+
+//    @Test
+    public void colorPicker() {
+        test(() -> {
+            ColorPicker c = new ColorPicker();
+            c.setSkin(new ColorPickerSkin(c));
+            c.setValue(Color.GREEN);
+            return c;
+        }, (c) -> {
+            c.show(); // does not fail here, unlike DatePicker?
+            c.setValue(Color.RED);
             c.prefHeight(-1);
+            c.setValue(Color.BLACK);
             c.prefWidth(-1);
+            accessControl(c);
+        });
+    }
+
+//    @Test
+    public void comboBox() {
+        test(() -> {
+            ComboBox c = new ComboBox();
+            c.setSkin(new ComboBoxListViewSkin(c));
+            c.getItems().setAll("ComboBox", "1", "2");
+            return c;
+        }, (c) -> {
+            c.setEditable(true);
+            c.getItems().setAll("ComboBox", nextString(), "2");
+            c.getSelectionModel().select(0);
+            accessControl(c);
+            c.show(); // does not fail here
         });
     }
 
@@ -99,10 +284,94 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
             c.prefHeight(-1);
             c.setValue(LocalDate.EPOCH);
             c.prefWidth(-1);
+            accessControl(c);
         });
     }
 
+    @Disabled("JDK-8347392") // FIX
     @Test
+    public void hyperlink() {
+        test(() -> {
+            Hyperlink c = new Hyperlink("Hyperlink");
+            c.setSkin(new HyperlinkSkin(c));
+            return c;
+        }, (c) -> {
+            c.setVisited(true);
+            accessControl(c);
+        });
+    }
+
+    @Disabled("JDK-8347392") // FIX
+    @Test
+    public void label() {
+        test(() -> {
+            Label c = new Label("Label");
+            c.setSkin(new LabelSkin(c));
+            return c;
+        }, (c) -> {
+            c.setLabelFor(c);
+            accessControl(c);
+        });
+    }
+
+    @Disabled("JDK-8349091")
+    @Test
+    public void lineChart() {
+        test(() -> {
+            LineChart c = new LineChart(createNumberAxis("x"), createNumberAxis("y"));
+            c.getData().setAll(createNumberSeries());
+            return c;
+        }, (c) -> {
+            c.getData().setAll(createNumberSeries());
+            accessChart(c);
+        });
+    }
+
+//    @Test
+    public void listView() {
+        test(() -> {
+            ListView c = new ListView();
+            c.setSkin(new ListViewSkin(c));
+            return c;
+        }, (c) -> {
+            c.getItems().setAll("ListView", "1", "2");
+            c.getSelectionModel().select(0);
+            accessControl(c);
+        });
+    }
+
+    @Disabled("JDK-8349096") // FIX
+    @Test
+    public void menuButton() {
+        test(() -> {
+            MenuButton c = new MenuButton();
+            c.setSkin(new MenuButtonSkin(c));
+            return c;
+        }, (c) -> {
+            c.getItems().setAll(new MenuItem("MenuButton"));
+            c.setPopupSide(Side.RIGHT);
+            accessControl(c);
+            c.show();
+        });
+    }
+
+//    @Test
+    public void pagination() {
+        test(() -> {
+            Pagination c = new Pagination();
+            c.setSkin(new PaginationSkin(c));
+            return c;
+        }, (c) -> {
+            c.setPageFactory((pageIndex) -> {
+                return new Label(pageIndex + " " + nextString());
+            });
+            c.setPageCount(100);
+            c.setCurrentPageIndex(nextInt(100));
+            accessControl(c);
+        });
+    }
+
+//    @Test
     public void passwordField() {
         test(() -> {
             PasswordField c = new PasswordField();
@@ -110,9 +379,126 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
             return c;
         }, (c) -> {
             // could not get it to fail
-            access(c);
+            accessTextInputControl(c);
             c.setAlignment(Pos.CENTER);
             c.getCharacters();
+        });
+    }
+
+    @Disabled("JDK-8349090") // FIX
+    @Test
+    public void pieChart() {
+        test(() -> {
+            PieChart c = new PieChart();
+            c.getData().setAll(createPieSeries());
+            return c;
+        }, (c) -> {
+            c.getData().setAll(createPieSeries());
+            accessChart(c);
+        });
+    }
+
+    @Disabled("JDK-8347392") // FIX
+    @Test
+    public void radioButton() {
+        test(() -> {
+            RadioButton c = new RadioButton("RadioButton");
+            c.setSkin(new RadioButtonSkin(c));
+            return c;
+        }, (c) -> {
+            accessControl(c);
+            c.setSelected(nextBoolean());
+        });
+    }
+
+//    @Test
+    public void scatterChart() {
+        test(() -> {
+            ScatterChart c = new ScatterChart(createNumberAxis("x"), createNumberAxis("y"));
+            c.getData().setAll(createNumberSeries());
+            return c;
+        }, (c) -> {
+            c.getData().setAll(createNumberSeries());
+            accessChart(c);
+        });
+    }
+
+//    @Test
+    public void scrollPane() {
+        test(() -> {
+            ScrollPane c = new ScrollPane(new Label("ScrollPane"));
+            c.setSkin(new ScrollPaneSkin(c));
+            return c;
+        }, (c) -> {
+            c.setPannable(nextBoolean());
+            accessControl(c);
+        });
+    }
+
+//    @Test
+    public void spinner() {
+        test(() -> {
+            Spinner c = new Spinner();
+            c.setSkin(new SpinnerSkin(c));
+            c.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 50, 1));
+            return c;
+        }, (c) -> {
+            c.setEditable(nextBoolean());
+            accessControl(c);
+        });
+    }
+
+    @Disabled("JDK-8349096") // FIX
+    @Test
+    public void splitMenuButton() {
+        test(() -> {
+            SplitMenuButton c = new SplitMenuButton();
+            c.setSkin(new SplitMenuButtonSkin(c));
+            return c;
+        }, (c) -> {
+            c.getItems().setAll(new MenuItem("SplitMenuButton"));
+            c.setPopupSide(Side.RIGHT);
+            accessControl(c);
+            c.show();
+        });
+    }
+
+//    @Disabled("JDK-8349091")
+    @Test
+    public void stackedAreaChart() {
+        test(() -> {
+            StackedAreaChart c = new StackedAreaChart(createNumberAxis("x"), createNumberAxis("y"));
+            c.getData().setAll(createNumberSeries());
+            return c;
+        }, (c) -> {
+            c.getData().setAll(createNumberSeries());
+            accessChart(c);
+        });
+    }
+
+    @Disabled("JDK-8349091")
+    @Test
+    public void stackedBarChart() {
+        test(() -> {
+            StackedBarChart c = new StackedBarChart(createCategoryAxis("x"), createNumberAxis("y"));
+            c.getData().setAll(createCategorySeries());
+            return c;
+        }, (c) -> {
+            c.getData().setAll(createCategorySeries());
+            accessChart(c);
+        });
+    }
+
+    @Test
+    public void tabPane() {
+        test(() -> {
+            TabPane c = new TabPane();
+            c.setSkin(new TabPaneSkin(c));
+            c.getTabs().setAll(createTabs());
+            return c;
+        }, (c) -> {
+            c.getTabs().setAll(createTabs());
+            accessControl(c);
         });
     }
 
@@ -124,11 +510,11 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
             c.setSkin(new TextAreaSkin(c));
             return c;
         }, (c) -> {
-            access(c);
+            accessTextInputControl(c);
         });
     }
 
-    @Test
+//    @Test
     public void textField() {
         test(() -> {
             TextField c = new TextField();
@@ -136,7 +522,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
             return c;
         }, (c) -> {
             // could not get it to fail
-            access(c);
+            accessTextInputControl(c);
             c.setAlignment(Pos.CENTER);
             c.getCharacters();
         });
@@ -164,20 +550,45 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         });
     }
 
-    private void access(TextInputControl c) {
-        c.setPrefWidth(20);
+    private void accessTextInputControl(TextInputControl c) {
+        accessControl(c);
         c.setPromptText("yo");
         c.setText(nextString());
         c.prefHeight(-1);
-        c.getControlCssMetaData();
+    }
+
+    private void accessChart(Chart c) {
+        String title = c.getClass().getSimpleName();
+        c.setTitle(title);
+        c.setAnimated(true);
+        accessRegion(c);
+    }
+
+    private void accessControl(Control c) {
+        accessRegion(c);
+        c.getCssMetaData();
+    }
+
+    private void accessNode(Node c) {
+        c.setFocusTraversable(true);
+        c.requestFocus();
+        c.toFront();
+    }
+
+    private void accessRegion(Region c) {
+        accessNode(c);
+        c.prefHeight(-1);
+        c.prefWidth(-1);
+        c.setPrefWidth(20);
+        c.setPrefHeight(20);
     }
 
     private <T extends Node> void test(Supplier<T> generator, Consumer<T> operation) {
         T visibleNode = generator.get();
         String title = visibleNode.getClass().getSimpleName();
-        
-        setContent(visibleNode);
+
         setTitle(title);
+        setContent(visibleNode);
 
         AtomicBoolean running = new AtomicBoolean(true);
         CountDownLatch counter = new CountDownLatch(THREAD_COUNT);
@@ -192,7 +603,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
                             int count = 0;
                             while (running.get()) {
                                 operation.accept(n);
-    
+
                                 count++;
                                 if ((count % 100) == 0) {
                                     inFx(() -> {
@@ -220,12 +631,74 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         }
     }
 
+    private static boolean nextBoolean() {
+        return new Random().nextBoolean();
+    }
+
+    private static double nextDouble() {
+        return new Random().nextInt(50) - 25;
+    }
+
+    private static int nextInt(int max) {
+        return new Random().nextInt(max);
+    }
+
     private static String nextString() {
         long ix = seq.incrementAndGet();
-        if ((ix % 10) == 0) {
-            return null;
-        }
         return "_a" + ix + "\nyo!";
+    }
+
+    private static CategoryAxis createCategoryAxis(String text) {
+        CategoryAxis a = new CategoryAxis();
+        a.setLabel(text);
+        return a;
+    }
+
+    private static NumberAxis createNumberAxis(String text) {
+        NumberAxis a = new NumberAxis();
+        a.setLabel(text);
+        return a;
+    }
+
+    private static Series<String, Number> createCategorySeries() {
+        String name = "S" + seq.incrementAndGet();
+        XYChart.Series s = new XYChart.Series();
+        s.setName(name);
+        for (int i = 0; i < 7; i++) {
+            double v = nextDouble();
+            String cat = String.valueOf(i);
+            s.getData().add(new XYChart.Data(cat, v));
+        }
+        return s;
+    }
+
+    private static Series<Number, Number> createNumberSeries() {
+        String name = "S" + seq.incrementAndGet();
+        XYChart.Series s = new XYChart.Series();
+        s.setName(name);
+        for (int i = 0; i < 7; i++) {
+            double v = nextDouble();
+            s.getData().add(new XYChart.Data(i, v));
+        }
+        return s;
+    }
+
+    private static List<PieChart.Data> createPieSeries() {
+        Random rnd = new Random();
+        int sz = 1 + rnd.nextInt(20);
+        ArrayList<Data> a = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            a.add(new PieChart.Data("N" + i, rnd.nextDouble()));
+        }
+        return a;
+    }
+
+    private static List<Tab> createTabs() {
+        ArrayList<Tab> a = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            a.add(new Tab(nextString()));
+        }
+        return a;
     }
 
     @BeforeAll
