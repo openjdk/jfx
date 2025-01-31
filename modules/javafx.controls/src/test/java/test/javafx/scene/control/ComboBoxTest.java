@@ -659,6 +659,48 @@ public class ComboBoxTest {
         assertEquals("pineapple", comboBox.getValue());
     }
 
+    @Test public void ensureEditorValueDoesNotChangeWhenCurrentEditorValueIsAddedToItemsList() {
+        @SuppressWarnings("unchecked")
+        var listView = (ListView<String>)((ComboBoxListViewSkin<String>)comboBox.getSkin()).getPopupContent();
+        comboBox.setEditable(true);
+        comboBox.getItems().setAll("a", "b", "c");
+        comboBox.getSelectionModel().select(1);
+        assertEquals("b", comboBox.getEditor().getText());
+        assertEquals("b", comboBox.getValue());
+        assertEquals("b", listView.getSelectionModel().getSelectedItem());
+        assertEquals(1, listView.getSelectionModel().getSelectedIndex());
+
+        comboBox.getEditor().setText("d");
+        comboBox.getItems().add(0, comboBox.getEditor().getText());
+        assertEquals(List.of("d", "a", "b", "c"), comboBox.getItems());
+        assertEquals(0, comboBox.getSelectionModel().getSelectedIndex());
+        assertEquals(0, listView.getSelectionModel().getSelectedIndex());
+        assertEquals("d", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals("d", listView.getSelectionModel().getSelectedItem());
+        assertEquals("d", comboBox.getEditor().getText());
+        assertEquals("d", comboBox.getValue());
+
+        comboBox.getEditor().setText("e");
+        comboBox.getItems().addAll(0, List.of(comboBox.getEditor().getText(), "f"));
+        assertEquals(List.of("e", "f", "d", "a", "b", "c"), comboBox.getItems());
+        assertEquals(0, comboBox.getSelectionModel().getSelectedIndex());
+        assertEquals(0, listView.getSelectionModel().getSelectedIndex());
+        assertEquals("e", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals("e", listView.getSelectionModel().getSelectedItem());
+        assertEquals("e", comboBox.getEditor().getText());
+        assertEquals("e", comboBox.getValue());
+
+        comboBox.getEditor().setText("h");
+        comboBox.getItems().addAll(0, List.of("g", comboBox.getEditor().getText(), "i"));
+        assertEquals(List.of("g", "h", "i", "e", "f", "d", "a", "b", "c"), comboBox.getItems());
+        assertEquals(1, comboBox.getSelectionModel().getSelectedIndex());
+        assertEquals(1, listView.getSelectionModel().getSelectedIndex());
+        assertEquals("h", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals("h", listView.getSelectionModel().getSelectedItem());
+        assertEquals("h", comboBox.getEditor().getText());
+        assertEquals("h", comboBox.getValue());
+    }
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
