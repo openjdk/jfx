@@ -598,20 +598,35 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                     }
                 }
 
+                int index = -1;
                 int shift = 0;
+                T editorValue;
+
+                try {
+                    editorValue = comboBox.getConverter().fromString(comboBox.getEditor().getText());
+                } catch (RuntimeException ex) {
+                    editorValue = null;
+                }
+
                 while (c.next()) {
                     comboBox.wasSetAllCalled = comboBox.previousItemCount == c.getRemovedSize();
 
                     if (c.wasReplaced()) {
-                        // no-op
+                        index = -1;
+                    } else if (c.wasAdded() && editorValue != null && c.getAddedSubList().contains(editorValue)) {
+                        index = c.getFrom() + c.getAddedSubList().indexOf(editorValue);
                     } else if (c.wasAdded() || c.wasRemoved()) {
+                        index = -1;
+
                         if (c.getFrom() <= getSelectedIndex() && getSelectedIndex()!= -1) {
                             shift += c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                         }
                     }
                 }
 
-                if (shift != 0) {
+                if (index >= 0) {
+                    clearAndSelect(index);
+                } else if (shift != 0) {
                     clearAndSelect(getSelectedIndex() + shift);
                 } else if (comboBox.wasSetAllCalled && getSelectedIndex() >= 0 && getSelectedItem() != null) {
                     // try to find the previously selected item
