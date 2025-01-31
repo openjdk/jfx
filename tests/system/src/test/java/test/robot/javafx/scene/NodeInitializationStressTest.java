@@ -133,8 +133,7 @@ import org.junit.jupiter.api.Test;
 import test.robot.testharness.RobotTestBase;
 
 /**
- * Tests Node initialization from a background thread, per the {@link Node} specification.
- *
+ * Stress tests the Node initialization from a background thread, per the {@link Node} specification:
  * "Node objects may be constructed and modified on any thread as long they are not yet attached to a Scene in a Window
  * that is showing. An application must attach nodes to such a Scene or modify them on the JavaFX Application Thread."
  *
@@ -152,7 +151,7 @@ import test.robot.testharness.RobotTestBase;
  *
  * TODO add remaining Nodes to the test.
  */
-public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
+public class NodeInitializationStressTest extends RobotTestBase {
     private static final int DURATION = 5000;
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
