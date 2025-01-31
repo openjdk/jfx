@@ -119,8 +119,10 @@ import javafx.scene.control.skin.ToggleButtonSkin;
 import javafx.scene.control.skin.ToolBarSkin;
 import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.control.skin.TreeViewSkin;
+import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -157,7 +159,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private static final AtomicBoolean failed = new AtomicBoolean();
     // for debugging purposes: setting this to false will skip working tests
     // TODO remove once all the tests pass
-    private static final boolean SKIP_TEST = false;
+    private static final boolean SKIP_TEST = !false;
 
     @Test
     public void accordion() {
@@ -655,25 +657,42 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8348100") // FIX
     @Test
     public void tooltip() {
         test(() -> {
-            Tooltip t = new Tooltip("this is a tooltip");
+            Tooltip t = new Tooltip("tooltip");
             t.setShowDelay(Duration.ZERO);
             t.setHideDelay(Duration.ZERO);
-            Label c = new Label("testing tooltip");
+            Label c = new Label("Tooltip");
             c.setSkin(new LabelSkin(c));
             c.setTooltip(t);
-            c.setId("Tooltip");
-            return c;
+            c.setBorder(Border.stroke(Color.BLACK));
+            c.setPrefHeight(500);
+            c.setPrefWidth(500);
+            VBox b = new VBox();
+            b.getChildren().add(c);
+            b.setId("Tooltip");
+            return b;
         }, (c) -> {
-            Tooltip t = c.getTooltip();
-            t.isShowing();
-            t.setGraphic(new Label("yo!"));
+            Label label = (Label)c.getChildren().get(0);
+            Tooltip t = label.getTooltip();
+//            t.isShowing();
             if (Platform.isFxApplicationThread()) {
-                Point2D p = c.localToScreen(c.getWidth() / 2.0, c.getHeight() / 2.0);
+//                c.setText(nextString());
+                Point2D p;
+                if (nextBoolean()) {
+                    p = c.localToScreen(c.getWidth() / 2.0, c.getHeight() / 2.0);
+                } else {
+                    p = c.localToScreen(c.getWidth() + 2, c.getHeight() + 2);
+                }
                 robot.mouseMove(p);
+                double h = STAGE_HEIGHT;
+                if (nextBoolean()) {
+                    h += 10;
+                }
+                label.setMinHeight(h);
+                label.setMaxHeight(h);
+                stage.setHeight(h);
             }
         });
     }
