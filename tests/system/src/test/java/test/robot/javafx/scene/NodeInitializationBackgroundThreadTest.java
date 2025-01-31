@@ -33,6 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.application.Platform;
@@ -131,9 +132,7 @@ import org.junit.jupiter.api.Test;
 import test.robot.testharness.RobotTestBase;
 
 /**
- * Tests Node initialization from a background thread, per
- *
- * https://openjfx.io/javadoc/23/javafx.graphics/javafx/scene/Node.html
+ * Tests Node initialization from a background thread, per the {@link Node} specification.
  *
  * "Node objects may be constructed and modified on any thread as long they are not yet attached to a Scene in a Window
  * that is showing. An application must attach nodes to such a Scene or modify them on the JavaFX Application Thread."
@@ -143,8 +142,9 @@ import test.robot.testharness.RobotTestBase;
  * - MenuBar
  * - WebView
  *
- * The test creates a visible node of a given type, and at the same time, starts a number of background threads
- * which also create nodes of the same type.  Each such thread makes repeated accesses of its own node for the duration
+ * The test creates a visible node on the JavaFX application thread, and at the same time,
+ * starts a number of background threads which also create nodes of the same type.
+ * Each such thread makes repeated accesses of its own node for the duration
  * of test.  Also, the visible node gets accessed periodically just to shake things up.
  *
  * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
@@ -644,6 +644,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
             Label c = new Label("testing tooltip");
             c.setSkin(new LabelSkin(c));
             c.setTooltip(t);
+            c.setId("Tooltip");
             return c;
         }, (c) -> {
             Tooltip t = c.getTooltip();
@@ -727,8 +728,16 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     }
 
     private <T extends Node> void test(Supplier<T> generator, Consumer<T> operation) {
-        T visibleNode = generator.get();
-        String title = visibleNode.getClass().getSimpleName();
+        AtomicReference<T> ref = new AtomicReference();
+        runAndWait(() -> {
+            T n = generator.get();
+            ref.set(n);
+        });
+        T visibleNode = ref.get();
+        String title = visibleNode.getId();
+        if (title == null) {
+            title = visibleNode.getClass().getSimpleName();
+        }
 
         setTitle(title);
         setContent(visibleNode);
@@ -739,27 +748,24 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
         try {
             for (int i = 0; i < threadCount; i++) {
-                new Thread(title) {
-                    @Override
-                    public void run() {
-                        try {
-                            T n = generator.get();
-                            int count = 0;
-                            while (running.get()) {
-                                operation.accept(n);
+                new Thread(() -> {
+                    try {
+                        T n = generator.get();
+                        int count = 0;
+                        while (running.get()) {
+                            operation.accept(n);
 
-                                count++;
-                                if ((count % 100) == 0) {
-                                    inFx(() -> {
-                                        operation.accept(visibleNode);
-                                    });
-                                }
+                            count++;
+                            if ((count % 100) == 0) {
+                                runAndWait(() -> {
+                                    operation.accept(visibleNode);
+                                });
                             }
-                        } finally {
-                            counter.countDown();
                         }
+                    } finally {
+                        counter.countDown();
                     }
-                }.start();
+                }, title).start();
             }
 
             sleep(DURATION);

@@ -39,7 +39,8 @@ import org.junit.jupiter.api.BeforeAll;
 import test.util.Util;
 
 /**
- * Similar to VisualTestBase, but more convenient.
+ * Base class for robot-based tests which creates a stage with the the BorderPane content
+ * to be used by individual tests.
  */
 public class RobotTestBase {
     protected static final int STAGE_WIDTH = 400;
@@ -59,10 +60,10 @@ public class RobotTestBase {
             stage = primaryStage;
             robot = new Robot();
             content = new BorderPane();
+            content.setPrefWidth(STAGE_WIDTH);
+            content.setPrefHeight(STAGE_HEIGHT);
             scene = new Scene(content);
             stage.setScene(scene);
-            stage.setWidth(STAGE_WIDTH);
-            stage.setHeight(STAGE_HEIGHT);
             stage.setOnShown(l -> {
                 Platform.runLater(() -> startupLatch.countDown());
             });
@@ -150,7 +151,7 @@ public class RobotTestBase {
      * @param n the node
      */
     public void setContent(Node n) {
-        inFx(() -> {
+        runAndWait(() -> {
             content.setCenter(n);
         });
         waitForIdle();
@@ -161,7 +162,7 @@ public class RobotTestBase {
      * @param title the title
      */
     public void setTitle(String title) {
-        inFx(() -> {
+        runAndWait(() -> {
             stage.setTitle(title);
         });
     }
@@ -170,10 +171,8 @@ public class RobotTestBase {
      * Executes code in the FX Application thread.
      * @param r the code to execute
      */
-    public void inFx(Runnable r) {
-        Util.runAndWait(() -> {
-            r.run();
-        });
+    public void runAndWait(Runnable r) {
+        Util.runAndWait(r);
     }
 
     /**
