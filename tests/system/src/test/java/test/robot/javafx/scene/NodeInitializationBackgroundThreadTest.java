@@ -24,6 +24,7 @@
  */
 package test.robot.javafx.scene;
 
+import static org.junit.Assume.assumeFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -155,15 +156,24 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     private static final int DURATION = 5000;
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
+    // for debugging purposes: setting this to false will skip working tests
+    // TODO remove once all the tests pass
+    private static final boolean SKIP_TEST = false;
 
     @Test
     public void accordion() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Accordion c = new Accordion();
             c.setSkin(new AccordionSkin(c));
             c.getPanes().add(new TitledPane("Accordion", new BorderPane()));
+            c.getPanes().add(new TitledPane("Accordion", new BorderPane()));
             return c;
-        }, this::accessControl);
+        }, (c) -> {
+            accessControl(c);
+            TitledPane t = (TitledPane)c.getPanes().get(0);
+            t.setExpanded(nextBoolean());
+        });
     }
 
     @Disabled("JDK-8349091") // FIX
@@ -222,6 +232,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void canvas() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             return new Canvas(30, 30);
         }, (c) -> {
@@ -263,6 +274,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void colorPicker() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ColorPicker c = new ColorPicker();
             c.setSkin(new ColorPickerSkin(c));
@@ -280,6 +292,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void comboBox() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ComboBox c = new ComboBox();
             c.setSkin(new ComboBoxListViewSkin(c));
@@ -352,6 +365,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void listView() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ListView c = new ListView();
             c.setSkin(new ListViewSkin(c));
@@ -397,6 +411,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void passwordField() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             PasswordField c = new PasswordField();
             c.setSkin(new TextFieldSkin(c));
@@ -449,6 +464,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void scrollPane() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ScrollPane c = new ScrollPane(new Label("ScrollPane"));
             c.setSkin(new ScrollPaneSkin(c));
@@ -461,6 +477,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void spinner() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Spinner c = new Spinner();
             c.setSkin(new SpinnerSkin(c));
@@ -529,6 +546,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void tableView() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TableView<String> c = new TableView<>();
             c.setSkin(new TableViewSkin(c));
@@ -548,6 +566,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void text() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             return new Text(nextString());
         }, (c) -> {
@@ -570,6 +589,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void textField() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TextField c = new TextField();
             c.setSkin(new TextFieldSkin(c));
@@ -583,6 +603,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void textFlow() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TextFlow c = new TextFlow();
             c.getChildren().setAll(createTextItems());
@@ -623,6 +644,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void toolBar() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ToolBar c = new ToolBar();
             c.setSkin(new ToolBarSkin(c));
@@ -659,6 +681,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void treeTableView() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TreeTableView<String> c = new TreeTableView<>();
             c.setSkin(new TreeTableViewSkin(c));
@@ -678,6 +701,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void treeView() {
+        assumeFalse(SKIP_TEST);
         Supplier<TreeItem<String>> gen = () -> {
             TreeItem<String> root = new TreeItem<>(null);
             return root;
@@ -744,9 +768,21 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
         int threadCount = 1 + Runtime.getRuntime().availableProcessors() * 2;
         AtomicBoolean running = new AtomicBoolean(true);
-        CountDownLatch counter = new CountDownLatch(threadCount);
+        CountDownLatch counter = new CountDownLatch(threadCount + 1);
 
         try {
+            // construct nodes in a fast loop
+            new Thread(() -> {
+                try {
+                    while (running.get()) {
+                        T n = generator.get();
+                    }
+                } finally {
+                    counter.countDown();
+                }
+            }, "fast loop " + title).start();
+
+            // stress test from multiple background threads
             for (int i = 0; i < threadCount; i++) {
                 new Thread(() -> {
                     try {
