@@ -25,21 +25,21 @@
 
 package test.com.sun.javafx.binding;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import com.sun.javafx.binding.ListenerManager;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import org.junit.jupiter.api.Test;
-
-import com.sun.javafx.binding.OldValueCachingListenerManager;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
-public class OldValueCachingListenerManagerTest implements ObservableValue<String> {
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+public class ListenerManagerTest implements ObservableValue<String> {
     private final List<String> notifications = new ArrayList<>();
 
     private final ChangeListener<String> cl1 = (obs, o, n) -> notifications.add("CL1: " + o + " -> " + n);
@@ -48,15 +48,15 @@ public class OldValueCachingListenerManagerTest implements ObservableValue<Strin
     private Object data;
     private String value = "0";
 
-    private final OldValueCachingListenerManager<String, OldValueCachingListenerManagerTest> helper = new OldValueCachingListenerManager<>() {
+    private final ListenerManager<String, ListenerManagerTest> helper = new ListenerManager<>() {
         @Override
-        protected Object getData(OldValueCachingListenerManagerTest instance) {
+        protected Object getData(ListenerManagerTest instance) {
             return data;
         }
 
         @Override
-        protected void setData(OldValueCachingListenerManagerTest instance, Object data) {
-            OldValueCachingListenerManagerTest.this.data = data;
+        protected void setData(ListenerManagerTest instance, Object data) {
+            ListenerManagerTest.this.data = data;
         }
     };
 
@@ -64,7 +64,7 @@ public class OldValueCachingListenerManagerTest implements ObservableValue<Strin
     void shouldNotifyChangeListeners() {
         value = "A";
 
-        helper.fireValueChanged(this, data);  // checks if passing null data works fine
+        helper.fireValueChanged(this, "0", data);  // checks if passing null data works fine
 
         assertEquals(List.of(), notifications);  // expect nothing, as there are no listeners
 
@@ -74,7 +74,7 @@ public class OldValueCachingListenerManagerTest implements ObservableValue<Strin
 
         value = "B";
 
-        helper.fireValueChanged(this, data);
+        helper.fireValueChanged(this, "A", data);
 
         assertEquals(List.of("CL1: A -> B"), notifications);
 
@@ -83,7 +83,7 @@ public class OldValueCachingListenerManagerTest implements ObservableValue<Strin
         notifications.clear();
         value = "C";
 
-        helper.fireValueChanged(this, data);
+        helper.fireValueChanged(this, "B", data);
 
         assertEquals(List.of("CL1: B -> C", "CL2: B -> C"), notifications);
 
@@ -92,14 +92,14 @@ public class OldValueCachingListenerManagerTest implements ObservableValue<Strin
         notifications.clear();
         value = "D";
 
-        helper.fireValueChanged(this, data);
+        helper.fireValueChanged(this, "C", data);
 
         assertEquals(List.of("CL2: C -> D"), notifications);
 
         notifications.clear();
         value = "E";
 
-        helper.fireValueChanged(this, data);
+        helper.fireValueChanged(this, "D", data);
 
         assertEquals(List.of("CL2: D -> E"), notifications);
     }
