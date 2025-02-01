@@ -38,11 +38,10 @@ import javafx.beans.value.ObservableValue;
  * listeners.<p>
  *
  * When there are no listeners, the field will be {@code null}. When there is
- * only a single invalidation listener, the field will contain only that
- * listener (change listeners are wrapped to track old value). When there are more
- * than one listeners, the field will hold a {@link ListenerList}. It is recommended
- * to never inspect this field directly but always use this manager to
- * interact with it.
+ * only a single invalidation listener or change listener, the field will contain
+ * only that listener. When there is more than one listener, the field will hold
+ * a {@link ListenerList}. It is recommended to never inspect this field directly
+ * but always use this manager to interact with it.
  *
  * @param <T> the type of the values
  * @param <I> the type of the instance providing listener data

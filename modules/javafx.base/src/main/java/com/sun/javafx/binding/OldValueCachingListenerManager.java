@@ -39,15 +39,17 @@ import javafx.beans.value.ObservableValue;
  *
  * When there are no listeners, the field will be {@code null}. When there is
  * only a single invalidation listener, the field will contain only that
- * listener (change listeners are wrapped to track old value). When there are more
- * than one listeners, the field will hold a {@link OldValueCachingListenerList}. It
+ * listener (change listeners are wrapped to track old value). When there is more
+ * than one listener, the field will hold a {@link OldValueCachingListenerList}. It
  * is recommended to never inspect this field directly but always use this manager to
  * interact with it.<p>
  *
- * This is a variant of {@link ListenerManager} which caches the latest value. This
- * means that a single {@link ChangeListener} will require a wrapper and that
- * an extra field is needed within listener list. If possible use {@link ListenerManager},
- * as it has less storage requirements and is faster.
+ * This is a variant of {@link ListenerManager} which caches the latest value for
+ * cases where the latest value prior to the change (ie. the old value) cannot be
+ * provided by the caller itself. This means that a single {@link ChangeListener}
+ * will require a wrapper to track this value, and that an extra field is needed
+ * within listener list. If possible use {@link ListenerManager}, as it has less
+ * storage requirements and is faster.
  *
  * @param <T> the type of the values
  * @param <I> the type of the instance providing listener data
