@@ -37,14 +37,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.SplitPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import com.oracle.tools.fx.monkey.pages.DemoPage;
 import com.oracle.tools.fx.monkey.settings.FxSettings;
 import com.oracle.tools.fx.monkey.tools.ClipboardViewer;
@@ -156,33 +154,7 @@ public class MainWindow extends Stage {
         FX.menu(m, "_Window");
         FX.item(m, orientation);
         FX.separator(m);
-        FX.item(m, "Open Modal Window", this::openModalWindow);
-        var stageMenu = new Menu("Open Extended Window");
-        FX.item(stageMenu, "Single HeaderBar, EXTENDED",
-                () -> ExtendedWindow.showSimpleHeaderBar(StageStyle.EXTENDED, NodeOrientation.INHERIT));
-        FX.item(stageMenu, "Single HeaderBar, EXTENDED, RIGHT__TO__LEFT",
-                () -> ExtendedWindow.showSimpleHeaderBar(StageStyle.EXTENDED, NodeOrientation.RIGHT_TO_LEFT));
-        FX.item(stageMenu, "Single HeaderBar, EXTENDED__UTILITY",
-                () -> ExtendedWindow.showSimpleHeaderBar(StageStyle.EXTENDED_UTILITY, NodeOrientation.INHERIT));
-        FX.item(stageMenu, "Single HeaderBar, EXTENDED__UTILITY, RIGHT__TO__LEFT",
-                () -> ExtendedWindow.showSimpleHeaderBar(StageStyle.EXTENDED_UTILITY, NodeOrientation.RIGHT_TO_LEFT));
-        FX.item(stageMenu, "Split HeaderBar, EXTENDED",
-                () -> ExtendedWindow.showSplitHeaderBar(StageStyle.EXTENDED, NodeOrientation.INHERIT));
-        FX.item(stageMenu, "Split HeaderBar, EXTENDED, RIGHT__TO__LEFT",
-                () -> ExtendedWindow.showSplitHeaderBar(StageStyle.EXTENDED, NodeOrientation.RIGHT_TO_LEFT));
-        FX.item(stageMenu, "Split HeaderBar, EXTENDED__UTILITY",
-                () -> ExtendedWindow.showSplitHeaderBar(StageStyle.EXTENDED_UTILITY, NodeOrientation.INHERIT));
-        FX.item(stageMenu, "Split HeaderBar, EXTENDED__UTILITY, RIGHT__TO__LEFT",
-                () -> ExtendedWindow.showSplitHeaderBar(StageStyle.EXTENDED_UTILITY, NodeOrientation.RIGHT_TO_LEFT));
-        FX.item(stageMenu, "HeaderBar with custom buttons, EXTENDED",
-                () -> ExtendedWindow.showCustomHeaderButtons(StageStyle.EXTENDED, NodeOrientation.INHERIT));
-        FX.item(stageMenu, "HeaderBar with custom buttons, EXTENDED, RIGHT__TO__LEFT",
-                () -> ExtendedWindow.showCustomHeaderButtons(StageStyle.EXTENDED, NodeOrientation.RIGHT_TO_LEFT));
-        FX.item(stageMenu, "HeaderBar with custom buttons, EXTENDED__UTILITY",
-                () -> ExtendedWindow.showCustomHeaderButtons(StageStyle.EXTENDED_UTILITY, NodeOrientation.INHERIT));
-        FX.item(stageMenu, "HeaderBar with custom buttons, EXTENDED__UTILITY, RIGHT__TO__LEFT",
-                () -> ExtendedWindow.showCustomHeaderButtons(StageStyle.EXTENDED_UTILITY, NodeOrientation.RIGHT_TO_LEFT));
-        FX.item(m, stageMenu);
+        FX.item(m, "Stage Tester", this::openStageTesterWindow);
 
         return m;
     }
@@ -242,8 +214,8 @@ public class MainWindow extends Stage {
         return pages;
     }
 
-    private void openModalWindow() {
-        new ModalWindow(this).show();
+    private void openStageTesterWindow() {
+        new StageTesterWindow(this).show();
      }
 
     private void openNative2Ascii() {
