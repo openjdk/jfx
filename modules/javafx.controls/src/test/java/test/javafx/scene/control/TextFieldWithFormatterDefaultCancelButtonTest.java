@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,7 @@
 
 package test.javafx.scene.control;
 
-import org.junit.Ignore;
-
+import org.junit.jupiter.api.Disabled;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 
@@ -38,14 +37,9 @@ import javafx.scene.control.TextFormatter;
  *
  * Ignoring for now
  */
-@Ignore
+@Disabled
 public class TextFieldWithFormatterDefaultCancelButtonTest
-        extends TextFieldDefaultCancelButtonTest {
-
-    public TextFieldWithFormatterDefaultCancelButtonTest(ButtonType buttonType,
-            boolean consume, boolean registerAfterShowing) {
-        super(buttonType, consume, registerAfterShowing);
-    }
+    extends TextFieldDefaultCancelButtonTest {
 
     @Override
     protected TextField createControl() {
@@ -53,5 +47,4 @@ public class TextFieldWithFormatterDefaultCancelButtonTest
         input.setTextFormatter(new TextFormatter<>(TextFormatter.IDENTITY_STRING_CONVERTER));
         return input;
     }
-
 }

@@ -100,15 +100,10 @@ Vector<String> IntlCollator::sortLocaleData(const String& locale, RelevantExtens
         break;
     }
     case RelevantExtensionKey::Kf:
-        keyLocaleData.reserveInitialCapacity(3);
-        keyLocaleData.uncheckedAppend("false"_s);
-        keyLocaleData.uncheckedAppend("lower"_s);
-        keyLocaleData.uncheckedAppend("upper"_s);
+        keyLocaleData = Vector<String>::from("false"_str, "lower"_str, "upper"_str);
         break;
     case RelevantExtensionKey::Kn:
-        keyLocaleData.reserveInitialCapacity(2);
-        keyLocaleData.uncheckedAppend("false"_s);
-        keyLocaleData.uncheckedAppend("true"_s);
+        keyLocaleData = Vector<String>::from("false"_str, "true"_str);
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -127,15 +122,10 @@ Vector<String> IntlCollator::searchLocaleData(const String&, RelevantExtensionKe
         keyLocaleData.append({ });
         break;
     case RelevantExtensionKey::Kf:
-        keyLocaleData.reserveInitialCapacity(3);
-        keyLocaleData.uncheckedAppend("false"_s);
-        keyLocaleData.uncheckedAppend("lower"_s);
-        keyLocaleData.uncheckedAppend("upper"_s);
+        keyLocaleData = Vector<String>::from("false"_str, "lower"_str, "upper"_str);
         break;
     case RelevantExtensionKey::Kn:
-        keyLocaleData.reserveInitialCapacity(2);
-        keyLocaleData.uncheckedAppend("false"_s);
-        keyLocaleData.uncheckedAppend("true"_s);
+        keyLocaleData = Vector<String>::from("false"_str, "true"_str);
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -213,7 +203,6 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
 
     TriState ignorePunctuation = intlBooleanOption(globalObject, options, vm.propertyNames->ignorePunctuation);
     RETURN_IF_EXCEPTION(scope, void());
-    m_ignorePunctuation = (ignorePunctuation == TriState::True);
 
     // UCollator does not offer an option to configure "usage" via ucol_setAttribute. So we need to pass this option via locale.
     CString dataLocaleWithExtensions;
@@ -276,12 +265,19 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
 
     // FIXME: Setting UCOL_ALTERNATE_HANDLING to UCOL_SHIFTED causes punctuation and whitespace to be
     // ignored. There is currently no way to ignore only punctuation.
-    ucol_setAttribute(m_collator.get(), UCOL_ALTERNATE_HANDLING, m_ignorePunctuation ? UCOL_SHIFTED : UCOL_DEFAULT, &status);
+    if (ignorePunctuation != TriState::Indeterminate)
+        ucol_setAttribute(m_collator.get(), UCOL_ALTERNATE_HANDLING, ignorePunctuation == TriState::True ? UCOL_SHIFTED : UCOL_NON_IGNORABLE, &status);
 
     // "The method is required to return 0 when comparing Strings that are considered canonically
     // equivalent by the Unicode standard."
     ucol_setAttribute(m_collator.get(), UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
     ASSERT(U_SUCCESS(status));
+
+    {
+        auto result = ucol_getAttribute(m_collator.get(), UCOL_ALTERNATE_HANDLING, &status);
+        ASSERT(U_SUCCESS(status));
+        m_ignorePunctuation = (result == UCOL_SHIFTED);
+    }
 }
 
 // https://tc39.es/ecma402/#sec-collator-comparestrings

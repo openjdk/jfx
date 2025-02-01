@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package test.javafx.binding.expression;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.ObjectExpression;
@@ -36,8 +36,9 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableObjectValueStub;
 import test.javafx.binding.DependencyUtils;
 import javafx.collections.FXCollections;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ObjectExpressionTest {
 
@@ -46,7 +47,7 @@ public class ObjectExpressionTest {
     private ObjectProperty<Object> op1;
     private ObjectProperty<Object> op2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         data1 = new Object();
         data2 = new Object();
@@ -122,12 +123,15 @@ public class ObjectExpressionTest {
         assertEquals(op1, ObjectExpression.objectExpression(op1));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testFactory_Null() {
-        ObjectExpression.objectExpression(null);
+        assertThrows(NullPointerException.class, () -> {
+            ObjectExpression.objectExpression(null);
+        });
     }
 
-     @Test
+
+    @Test
     public void testAsString() {
         final StringBinding binding = op1.asString();
         DependencyUtils.checkDependencies(binding.getDependencies(), op1);

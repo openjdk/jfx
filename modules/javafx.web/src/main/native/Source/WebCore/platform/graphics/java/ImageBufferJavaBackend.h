@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,17 +46,16 @@ public:
 
     JLObject getWCImage() const;
     Vector<uint8_t> toDataJava(const String& mimeType, std::optional<double>) override;
-    void* getData() const;
+    void* getData();
     void update() const;
 
-    GraphicsContext& context() const override;
+    GraphicsContext& context() override;
     void flushContext() override;
 
-    IntSize backendSize() const override;
 
 
-    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) override;
-    RefPtr<NativeImage> copyNativeImageForDrawing(GraphicsContext& destination) override;
+    RefPtr<NativeImage> copyNativeImage() override;
+    RefPtr<NativeImage> createNativeImageReference() override;
 
 
     String debugDescription() const override;

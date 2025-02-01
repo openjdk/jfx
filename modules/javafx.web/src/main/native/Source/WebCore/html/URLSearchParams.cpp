@@ -47,7 +47,7 @@ ExceptionOr<Ref<URLSearchParams>> URLSearchParams::create(std::variant<Vector<Ve
         Vector<KeyValuePair<String, String>> pairs;
         for (const auto& pair : vector) {
             if (pair.size() != 2)
-                return Exception { TypeError };
+                return Exception { ExceptionCode::TypeError };
             pairs.append({pair[0], pair[1]});
         }
         return adoptRef(*new URLSearchParams(WTFMove(pairs)));
@@ -116,14 +116,11 @@ void URLSearchParams::append(const String& name, const String& value)
 
 Vector<String> URLSearchParams::getAll(const String& name) const
 {
-    Vector<String> values;
-    values.reserveInitialCapacity(m_pairs.size());
-    for (const auto& pair : m_pairs) {
+    return WTF::compactMap(m_pairs, [&](auto& pair) -> std::optional<String> {
         if (pair.key == name)
-            values.uncheckedAppend(pair.value);
-    }
-    values.shrinkToFit();
-    return values;
+            return pair.value;
+        return std::nullopt;
+    });
 }
 
 void URLSearchParams::remove(const String& name, const String& value)

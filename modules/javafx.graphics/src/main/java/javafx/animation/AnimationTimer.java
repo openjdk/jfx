@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,9 +29,6 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.TimerReceiver;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * The class {@code AnimationTimer} allows to create a timer, that is called in
@@ -50,26 +47,14 @@ import java.security.PrivilegedAction;
 public abstract class AnimationTimer {
 
     private class AnimationTimerReceiver implements TimerReceiver {
-        @SuppressWarnings("removal")
         @Override public void handle(final long now) {
-            if (accessCtrlCtx == null) {
-                throw new IllegalStateException("Error: AccessControlContext not captured");
-            }
-
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                AnimationTimer.this.handle(now);
-                return null;
-            }, accessCtrlCtx);
+            AnimationTimer.this.handle(now);
         }
     }
 
     private final AbstractPrimaryTimer timer;
     private final AnimationTimerReceiver timerReceiver = new AnimationTimerReceiver();
     private boolean active;
-
-    // Access control context, captured in start()
-    @SuppressWarnings("removal")
-    private AccessControlContext accessCtrlCtx = null;
 
     /**
      * Creates a new timer.
@@ -113,11 +98,8 @@ public abstract class AnimationTimer {
      *
      * @see #start()
      */
-    @SuppressWarnings("removal")
     private void startImpl() {
         if (!active) {
-            // Capture the Access Control Context to be used during the animation pulse
-            accessCtrlCtx = AccessController.getContext();
             timer.addAnimationTimer(timerReceiver);
             active = true;
         }

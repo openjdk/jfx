@@ -243,7 +243,7 @@ public class HelloListView extends Application implements InvalidationListener {
         tabPane.getTabs().add(cellEditingTab);
 
         // Cell Editing Tab
-        Tab disappearingNodesTab = new Tab("RT-12822");
+        Tab disappearingNodesTab = new Tab("JDK-8112018");
         buildDisappearingNodesTab(disappearingNodesTab);
         tabPane.getTabs().add(disappearingNodesTab);
 
@@ -391,23 +391,23 @@ public class HelloListView extends Application implements InvalidationListener {
                 System.out.println("SelectedIndex: " + listView.getSelectionModel().getSelectedIndex());
             }
         });
-////        listView.getSelectionModel().selectedItemProperty().addListener(new InvalidationListener() {
-////            public void invalidated(ObservableValue ov) {
-////                System.out.println("\tSelectedItem: " + listView.getSelectionModel().getSelectedItem());
-////            }
-////        });
-////        listView.getFocusModel().focusedIndexProperty().addListener(new InvalidationListener() {
-////            public void invalidated(ObservableValue ov) {
-////                System.out.println("\tFocusedIndex: " + listView.getFocusModel().getFocusedIndex());
-////            }
-////        });
-////        listView.getFocusModel().focusedItemProperty().addListener(new InvalidationListener() {
-////            public void invalidated(ObservableValue ov) {
-////                System.out.println("\tFocusedItem: " + listView.getFocusModel().getFocusedItem());
-////            }
-////        });
-//////        listView.getFocusModel().addInvalidationListener(FocusModel.FOCUSED_ITEM, this);
-////
+//--        listView.getSelectionModel().selectedItemProperty().addListener(new InvalidationListener() {
+//--            public void invalidated(ObservableValue ov) {
+//--                System.out.println("\tSelectedItem: " + listView.getSelectionModel().getSelectedItem());
+//--            }
+//--        });
+//--        listView.getFocusModel().focusedIndexProperty().addListener(new InvalidationListener() {
+//--            public void invalidated(ObservableValue ov) {
+//--                System.out.println("\tFocusedIndex: " + listView.getFocusModel().getFocusedIndex());
+//--            }
+//--        });
+//--        listView.getFocusModel().focusedItemProperty().addListener(new InvalidationListener() {
+//--            public void invalidated(ObservableValue ov) {
+//--                System.out.println("\tFocusedItem: " + listView.getFocusModel().getFocusedItem());
+//--            }
+//--        });
+//----        listView.getFocusModel().addInvalidationListener(FocusModel.FOCUSED_ITEM, this);
+//--
         listView.getSelectionModel().getSelectedIndices().addListener(new ListChangeListener<Integer>() {
             @Override
             public void onChanged(Change<? extends Integer> change) {
@@ -419,14 +419,14 @@ public class HelloListView extends Application implements InvalidationListener {
                 }
             }
         });
-////        ((MultipleSelectionModel)listView.getSelectionModel()).getSelectedItems().addListener(new ListChangeListener<String>() {
-////            public void onChanged(Change<? extends String> c) {
-////                System.out.println("SelectedIndices: " + c.getList() +
-////                        ", removed: " + c.getRemoved() +
-////                        ", addedFrom: " + c.getFrom() +
-////                        ", addedTo: " + c.getTo());
-////            }
-////        });
+//--        ((MultipleSelectionModel)listView.getSelectionModel()).getSelectedItems().addListener(new ListChangeListener<String>() {
+//--            public void onChanged(Change<? extends String> c) {
+//--                System.out.println("SelectedIndices: " + c.getList() +
+//--                        ", removed: " + c.getRemoved() +
+//--                        ", addedFrom: " + c.getFrom() +
+//--                        ", addedTo: " + c.getTo());
+//--            }
+//--        });
     }
 
     private void buildHorizontalTab(Tab tab) {
@@ -623,7 +623,7 @@ public class HelloListView extends Application implements InvalidationListener {
 //        // add another complex listview (using pre-built cell factory)
 //        final ListView<Map<String, String>> listView3 = new ListView<Map<String, String>>();
 //        listView3.setItems(mapData);
-////        listView3.setCellFactory(Cells.ListView.mapProperty(FIRST_NAME));
+//--        listView3.setCellFactory(Cells.ListView.mapProperty(FIRST_NAME));
 //        listView3.setCellFactory(MapValueCellFactory.listView("First Name: %1$s\r\nLast Name: %2$s", FIRST_NAME, LAST_NAME));
 //        grid.getChildren().add(listView3);
 //        GridPane.setVgrow(listView3, Priority.ALWAYS);

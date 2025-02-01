@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,18 +31,25 @@
 #include "CookieJar.h"
 #include "HTTPCookieAcceptPolicy.h"
 #include "NotImplemented.h"
+#include "ResourceRequest.h"
 #include "RuntimeApplicationChecks.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ProcessPrivilege.h>
+#include <wtf/RunLoop.h>
 
-#if ENABLE(TRACKING_PREVENTION)
-#include "ResourceRequest.h"
 #if ENABLE(PUBLIC_SUFFIX_LIST)
 #include "PublicSuffix.h"
 #endif
-#endif
 
 namespace WebCore {
+
+static HashSet<OrganizationStorageAccessPromptQuirk>& updatableStorageAccessPromptQuirks()
+{
+    ASSERT(RunLoop::isMain());
+    // FIXME: Move this isn't an instance of a class, probably as a member of NetworkStorageSession.
+    static MainThreadNeverDestroyed<HashSet<OrganizationStorageAccessPromptQuirk>> set;
+    return set.get();
+}
 
 bool NetworkStorageSession::m_processMayUseCookieAPI = false;
 
@@ -67,8 +74,6 @@ Vector<Cookie> NetworkStorageSession::domCookiesForHost(const String&)
     return { };
 }
 #endif // !PLATFORM(COCOA)
-
-#if ENABLE(TRACKING_PREVENTION)
 
 #if !USE(SOUP)
 void NetworkStorageSession::setTrackingPreventionEnabled(bool enabled)
@@ -205,18 +210,24 @@ void NetworkStorageSession::setPrevalentDomainsToBlockAndDeleteCookiesFor(const 
 {
     m_registrableDomainsToBlockAndDeleteCookiesFor.clear();
     m_registrableDomainsToBlockAndDeleteCookiesFor.add(domains.begin(), domains.end());
+    if (m_thirdPartyCookieBlockingMode == ThirdPartyCookieBlockingMode::OnlyAccordingToPerDomainPolicy)
+        cookieEnabledStateMayHaveChanged();
 }
 
 void NetworkStorageSession::setPrevalentDomainsToBlockButKeepCookiesFor(const Vector<RegistrableDomain>& domains)
 {
     m_registrableDomainsToBlockButKeepCookiesFor.clear();
     m_registrableDomainsToBlockButKeepCookiesFor.add(domains.begin(), domains.end());
+    if (m_thirdPartyCookieBlockingMode == ThirdPartyCookieBlockingMode::OnlyAccordingToPerDomainPolicy)
+        cookieEnabledStateMayHaveChanged();
 }
 
 void NetworkStorageSession::setDomainsWithUserInteractionAsFirstParty(const Vector<RegistrableDomain>& domains)
 {
     m_registrableDomainsWithUserInteractionAsFirstParty.clear();
     m_registrableDomainsWithUserInteractionAsFirstParty.add(domains.begin(), domains.end());
+    if (m_thirdPartyCookieBlockingMode == ThirdPartyCookieBlockingMode::AllOnSitesWithoutUserInteraction)
+        cookieEnabledStateMayHaveChanged();
 }
 
 void NetworkStorageSession::setDomainsWithCrossPageStorageAccess(const HashMap<TopFrameDomain, SubResourceDomain>& domains)
@@ -368,11 +379,15 @@ void NetworkStorageSession::setThirdPartyCookieBlockingMode(ThirdPartyCookieBloc
 void NetworkStorageSession::setAppBoundDomains(HashSet<RegistrableDomain>&& domains)
 {
     m_appBoundDomains = WTFMove(domains);
+    if (m_thirdPartyCookieBlockingMode == ThirdPartyCookieBlockingMode::AllExceptBetweenAppBoundDomains)
+        cookieEnabledStateMayHaveChanged();
 }
 
 void NetworkStorageSession::resetAppBoundDomains()
 {
     m_appBoundDomains.clear();
+    if (m_thirdPartyCookieBlockingMode == ThirdPartyCookieBlockingMode::AllExceptBetweenAppBoundDomains)
+        cookieEnabledStateMayHaveChanged();
 }
 #endif
 
@@ -380,11 +395,15 @@ void NetworkStorageSession::resetAppBoundDomains()
 void NetworkStorageSession::setManagedDomains(HashSet<RegistrableDomain>&& domains)
 {
     m_managedDomains = WTFMove(domains);
+    if (m_thirdPartyCookieBlockingMode == ThirdPartyCookieBlockingMode::AllExceptManagedDomains)
+        cookieEnabledStateMayHaveChanged();
 }
 
 void NetworkStorageSession::resetManagedDomains()
 {
     m_managedDomains.clear();
+    if (m_thirdPartyCookieBlockingMode == ThirdPartyCookieBlockingMode::AllExceptManagedDomains)
+        cookieEnabledStateMayHaveChanged();
 }
 #endif
 
@@ -434,14 +453,23 @@ const HashMap<RegistrableDomain, HashSet<RegistrableDomain>>& NetworkStorageSess
     return map.get();
 }
 
+void NetworkStorageSession::updateStorageAccessPromptQuirks(Vector<OrganizationStorageAccessPromptQuirk>&& organizationStorageAccessPromptQuirks)
+{
+    auto& quirks = updatableStorageAccessPromptQuirks();
+    quirks.clear();
+    for (auto&& quirk : organizationStorageAccessPromptQuirks)
+        quirks.add(quirk);
+}
+
 bool NetworkStorageSession::loginDomainMatchesRequestingDomain(const TopFrameDomain& topFrameDomain, const SubResourceDomain& resourceDomain)
 {
     auto loginDomains = WebCore::NetworkStorageSession::subResourceDomainsInNeedOfStorageAccessForFirstParty(topFrameDomain);
-    return loginDomains && loginDomains.value().contains(resourceDomain);
+    return (loginDomains && loginDomains.value().contains(resourceDomain)) || !!storageAccessQuirkForDomainPair(topFrameDomain, resourceDomain);
 }
 
 bool NetworkStorageSession::canRequestStorageAccessForLoginOrCompatibilityPurposesWithoutPriorUserInteraction(const SubResourceDomain& resourceDomain, const TopFrameDomain& topFrameDomain)
 {
+    ASSERT(RunLoop::isMain());
     return loginDomainMatchesRequestingDomain(topFrameDomain, resourceDomain);
 }
 
@@ -464,7 +492,31 @@ std::optional<RegistrableDomain> NetworkStorageSession::findAdditionalLoginDomai
     return std::nullopt;
 }
 
-#endif // ENABLE(TRACKING_PREVENTION)
+Vector<RegistrableDomain> NetworkStorageSession::storageAccessQuirkForTopFrameDomain(const TopFrameDomain& topDomain)
+{
+    for (auto&& quirk : updatableStorageAccessPromptQuirks()) {
+        auto& domainPairings = quirk.domainPairings;
+        auto entry = domainPairings.find(topDomain);
+        if (entry == domainPairings.end())
+            continue;
+        return entry->value;
+    }
+    return { };
+}
+
+std::optional<OrganizationStorageAccessPromptQuirk> NetworkStorageSession::storageAccessQuirkForDomainPair(const TopFrameDomain& topDomain, const SubResourceDomain& subDomain)
+{
+    for (auto&& quirk : updatableStorageAccessPromptQuirks()) {
+        auto& domainPairings = quirk.domainPairings;
+        auto entry = domainPairings.find(topDomain);
+        if (entry == domainPairings.end())
+            continue;
+        if (!WTF::anyOf(entry->value, [&subDomain](auto&& entry) { return entry == subDomain; }))
+            break;
+        return quirk;
+    }
+    return std::nullopt;
+}
 
 void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& cookieHostNames, CompletionHandler<void()>&& completionHandler)
 {
@@ -480,5 +532,26 @@ void NetworkStorageSession::deleteCookies(const ClientOrigin& origin, Completion
     deleteCookiesForHostnames(Vector { origin.clientOrigin.host() }, WTFMove(completionHandler));
 }
 #endif
+
+bool NetworkStorageSession::cookiesEnabled(const URL& firstParty, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
+{
+    return !shouldBlockCookies(firstParty, url, frameID, pageID, shouldRelaxThirdPartyCookieBlocking);
+}
+
+void NetworkStorageSession::addCookiesEnabledStateObserver(CookiesEnabledStateObserver& observer)
+{
+    m_cookiesEnabledStateObservers.add(observer);
+}
+
+void NetworkStorageSession::removeCookiesEnabledStateObserver(CookiesEnabledStateObserver& observer)
+{
+    m_cookiesEnabledStateObservers.remove(observer);
+}
+
+void NetworkStorageSession::cookieEnabledStateMayHaveChanged()
+{
+    for (auto& observer : m_cookiesEnabledStateObservers)
+        observer.cookieEnabledStateMayHaveChanged();
+}
 
 }

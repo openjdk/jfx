@@ -72,7 +72,7 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLModelElement);
 
 HTMLModelElement::HTMLModelElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document, CreateHTMLModelElement)
+    : HTMLElement(tagName, document, { TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument })
     , ActiveDOMObject(document)
     , m_readyPromise { makeUniqueRef<ReadyPromise>(*this, &HTMLModelElement::readyPromiseResolve) }
 {
@@ -153,7 +153,7 @@ void HTMLModelElement::setSourceURL(const URL& url)
         m_modelPlayer = nullptr;
 
     if (!m_readyPromise->isFulfilled())
-        m_readyPromise->reject(Exception { AbortError });
+        m_readyPromise->reject(Exception { ExceptionCode::AbortError });
 
     m_readyPromise = makeUniqueRef<ReadyPromise>(*this, &HTMLModelElement::readyPromiseResolve);
     m_shouldCreateModelPlayerUponRendererAttachment = false;
@@ -175,7 +175,7 @@ void HTMLModelElement::setSourceURL(const URL& url)
     if (!resource.has_value()) {
         ActiveDOMObject::queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
         if (!m_readyPromise->isFulfilled())
-            m_readyPromise->reject(Exception { NetworkError });
+            m_readyPromise->reject(Exception { ExceptionCode::NetworkError });
         return;
     }
 
@@ -240,7 +240,7 @@ void HTMLModelElement::notifyFinished(CachedResource& resource, const NetworkLoa
         invalidateResourceHandleAndUpdateRenderer();
 
         if (!m_readyPromise->isFulfilled())
-            m_readyPromise->reject(Exception { NetworkError });
+            m_readyPromise->reject(Exception { ExceptionCode::NetworkError });
         return;
     }
 
@@ -261,7 +261,7 @@ void HTMLModelElement::modelDidChange()
     auto* page = document().page();
     if (!page) {
         if (!m_readyPromise->isFulfilled())
-            m_readyPromise->reject(Exception { AbortError });
+            m_readyPromise->reject(Exception { ExceptionCode::AbortError });
         return;
     }
 
@@ -287,7 +287,7 @@ void HTMLModelElement::createModelPlayer()
     m_modelPlayer = document().page()->modelPlayerProvider().createModelPlayer(*this);
     if (!m_modelPlayer) {
         if (!m_readyPromise->isFulfilled())
-            m_readyPromise->reject(Exception { AbortError });
+            m_readyPromise->reject(Exception { ExceptionCode::AbortError });
         return;
     }
 
@@ -330,7 +330,7 @@ void HTMLModelElement::didFailLoading(ModelPlayer& modelPlayer, const ResourceEr
 {
     ASSERT_UNUSED(modelPlayer, &modelPlayer == m_modelPlayer);
     if (!m_readyPromise->isFulfilled())
-        m_readyPromise->reject(Exception { AbortError });
+        m_readyPromise->reject(Exception { ExceptionCode::AbortError });
 }
 
 PlatformLayerIdentifier HTMLModelElement::platformLayerID()
@@ -339,14 +339,14 @@ PlatformLayerIdentifier HTMLModelElement::platformLayerID()
     if (!page)
         return { };
 
-    if (!is<RenderLayerModelObject>(this->renderer()))
+    auto* renderLayerModelObject = dynamicDowncast<RenderLayerModelObject>(this->renderer());
+    if (!renderLayerModelObject)
         return { };
 
-    auto& renderLayerModelObject = downcast<RenderLayerModelObject>(*this->renderer());
-    if (!renderLayerModelObject.isComposited() || !renderLayerModelObject.layer() || !renderLayerModelObject.layer()->backing())
+    if (!renderLayerModelObject->isComposited() || !renderLayerModelObject->layer() || !renderLayerModelObject->layer()->backing())
         return { };
 
-    auto* graphicsLayer = renderLayerModelObject.layer()->backing()->graphicsLayer();
+    RefPtr graphicsLayer = renderLayerModelObject->layer()->backing()->graphicsLayer();
     if (!graphicsLayer)
         return { };
 
@@ -403,10 +403,9 @@ void HTMLModelElement::defaultEventHandler(Event& event)
     if (type != eventNames().mousedownEvent && type != eventNames().mousemoveEvent && type != eventNames().mouseupEvent)
         return;
 
-    ASSERT(is<MouseEvent>(event));
     auto& mouseEvent = downcast<MouseEvent>(event);
 
-    if (mouseEvent.button() != LeftButton)
+    if (mouseEvent.button() != MouseButton::Left)
         return;
 
     if (type == eventNames().mousedownEvent && !m_isDragging && !event.defaultPrevented() && isInteractive())
@@ -472,7 +471,7 @@ void HTMLModelElement::dragDidEnd(MouseEvent& event)
 void HTMLModelElement::getCamera(CameraPromise&& promise)
 {
     if (!m_modelPlayer) {
-        promise.reject(Exception { AbortError });
+        promise.reject(Exception { ExceptionCode::AbortError });
         return;
     }
 
@@ -487,7 +486,7 @@ void HTMLModelElement::getCamera(CameraPromise&& promise)
 void HTMLModelElement::setCamera(HTMLModelElementCamera camera, DOMPromiseDeferred<void>&& promise)
 {
     if (!m_modelPlayer) {
-        promise.reject(Exception { AbortError });
+        promise.reject(Exception { ExceptionCode::AbortError });
         return;
     }
 

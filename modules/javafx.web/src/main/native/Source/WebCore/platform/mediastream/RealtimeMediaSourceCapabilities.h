@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,118 +27,94 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "MeteringMode.h"
 #include "RealtimeMediaSourceSettings.h"
-#include <wtf/EnumTraits.h>
+#include <wtf/ArgumentCoder.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
-#include <wtf/text/AtomString.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class CapabilityValueOrRange {
+class CapabilityRange {
+private:
+    friend struct IPC::ArgumentCoder<CapabilityRange, void>;
 public:
+    struct LongRange {
+        LongRange(int max, int min)
+            : max(max)
+            , min(min)
+        {
+            RELEASE_ASSERT(min <= max);
+        }
+        int max;
+        int min;
+    };
 
-    enum Type {
+    struct DoubleRange {
+        DoubleRange(double max, double min)
+            : max(max)
+            , min(min)
+    {
+            RELEASE_ASSERT(min <= max);
+    }
+        double max;
+        double min;
+    };
+
+    enum class Type : uint8_t {
         Undefined,
-        Double,
-        ULong,
         DoubleRange,
-        ULongRange,
+        LongRange,
     };
-    Type type() const { return m_type; }
+    Type type() const
+    {
+        if (m_doubleRange)
+            return Type::DoubleRange;
+        if (m_longRange)
+            return Type::LongRange;
+        return Type::Undefined;
+    }
 
-    union ValueUnion {
-        double asDouble;
-        int asInt;
-    };
+    CapabilityRange() = default;
 
-    CapabilityValueOrRange()
-        : m_type(Undefined)
+    CapabilityRange(double value)
+        : m_doubleRange({ value, value })
     {
     }
 
-    CapabilityValueOrRange(double value)
-        : m_type(Double)
+    CapabilityRange(int value)
+        : m_longRange({ value, value })
     {
-        m_minOrValue.asDouble = value;
     }
 
-    CapabilityValueOrRange(int value)
-        : m_type(ULong)
+    CapabilityRange(double min, double max)
+        : m_doubleRange({ max, min })
     {
-        m_minOrValue.asInt = value;
     }
 
-    CapabilityValueOrRange(double min, double max)
-        : m_type(DoubleRange)
+    CapabilityRange(int min, int max)
+        : m_longRange({ max, min })
     {
-        m_minOrValue.asDouble = min;
-        m_max.asDouble = max;
     }
 
-    CapabilityValueOrRange(int min, int max)
-        : m_type(ULongRange)
+    const DoubleRange& doubleRange() const
     {
-        m_minOrValue.asInt = min;
-        m_max.asInt = max;
+        RELEASE_ASSERT(m_doubleRange);
+        return *m_doubleRange;
     }
 
-    const ValueUnion& rangeMin() const
+    const LongRange& longRange() const
     {
-        ASSERT(m_type == DoubleRange || m_type == ULongRange);
-        return m_minOrValue;
+        RELEASE_ASSERT(m_longRange);
+        return *m_longRange;
     }
-
-    const ValueUnion& rangeMax() const
-    {
-        ASSERT(m_type == DoubleRange || m_type == ULongRange);
-        return m_max;
-    }
-
-    const ValueUnion& value() const
-    {
-        ASSERT(m_type == Double || m_type == ULong);
-        return m_minOrValue;
-    }
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, CapabilityValueOrRange&);
 
 private:
-    ValueUnion m_minOrValue { };
-    ValueUnion m_max { };
-    Type m_type { Undefined };
+    std::optional<DoubleRange> m_doubleRange;
+    std::optional<LongRange> m_longRange;
 };
-
-template<class Encoder>
-void CapabilityValueOrRange::encode(Encoder& encoder) const
-{
-    encoder.encodeObject(m_minOrValue);
-    encoder.encodeObject(m_max);
-    encoder << m_type;
-}
-
-template<class Decoder>
-bool CapabilityValueOrRange::decode(Decoder& decoder, CapabilityValueOrRange& valueOrRange)
-{
-    auto minOrValue = decoder.template decodeObject<ValueUnion>();
-    if (!minOrValue)
-        return false;
-
-    auto max = decoder.template decodeObject<ValueUnion>();
-    if (!max)
-        return false;
-
-    auto type = decoder.template decode<Type>();
-    if (!type)
-        return false;
-
-    valueOrRange.m_minOrValue = *minOrValue;
-    valueOrRange.m_max = *max;
-    valueOrRange.m_type = *type;
-    return true;
-}
 
 class RealtimeMediaSourceCapabilities {
 public:
@@ -153,7 +129,7 @@ public:
         ReadWrite = 1,
     };
 
-    RealtimeMediaSourceCapabilities(CapabilityValueOrRange&& width, CapabilityValueOrRange&& height, CapabilityValueOrRange&& aspectRatio, CapabilityValueOrRange&& frameRate, Vector<VideoFacingMode>&& facingMode, CapabilityValueOrRange&& volume, CapabilityValueOrRange&& sampleRate, CapabilityValueOrRange&& sampleSize, EchoCancellation&& echoCancellation, AtomString&& deviceId, AtomString&& groupId, CapabilityValueOrRange&& focusDistance, CapabilityValueOrRange&& zoom, RealtimeMediaSourceSupportedConstraints&& supportedConstraints)
+    RealtimeMediaSourceCapabilities(CapabilityRange width, CapabilityRange height, CapabilityRange aspectRatio, CapabilityRange frameRate, Vector<VideoFacingMode>&& facingMode, CapabilityRange volume, CapabilityRange sampleRate, CapabilityRange sampleSize, EchoCancellation echoCancellation, String&& deviceId, String&& groupId, CapabilityRange focusDistance, Vector<MeteringMode>&& whiteBalanceModes, CapabilityRange zoom, bool torch, RealtimeMediaSourceSupportedConstraints&& supportedConstraints)
         : m_width(WTFMove(width))
         , m_height(WTFMove(height))
         , m_aspectRatio(WTFMove(aspectRatio))
@@ -166,7 +142,9 @@ public:
         , m_deviceId(WTFMove(deviceId))
         , m_groupId(WTFMove(groupId))
         , m_focusDistance(WTFMove(focusDistance))
+        , m_whiteBalanceModes(whiteBalanceModes)
         , m_zoom(WTFMove(zoom))
+        , m_torch(torch)
         , m_supportedConstraints(WTFMove(supportedConstraints))
     {
     }
@@ -180,93 +158,91 @@ public:
     }
 
     bool supportsWidth() const { return m_supportedConstraints.supportsWidth(); }
-    const CapabilityValueOrRange& width() const { return m_width; }
-    void setWidth(const CapabilityValueOrRange& width) { m_width = width; }
+    const CapabilityRange& width() const { return m_width; }
+    void setWidth(const CapabilityRange& width) { m_width = width; }
 
     bool supportsHeight() const { return m_supportedConstraints.supportsHeight(); }
-    const CapabilityValueOrRange& height() const { return m_height; }
-    void setHeight(const CapabilityValueOrRange& height) { m_height = height; }
+    const CapabilityRange& height() const { return m_height; }
+    void setHeight(const CapabilityRange& height) { m_height = height; }
 
     bool supportsFrameRate() const { return m_supportedConstraints.supportsFrameRate(); }
-    const CapabilityValueOrRange& frameRate() const { return m_frameRate; }
-    void setFrameRate(const CapabilityValueOrRange& frameRate) { m_frameRate = frameRate; }
+    const CapabilityRange& frameRate() const { return m_frameRate; }
+    void setFrameRate(const CapabilityRange& frameRate) { m_frameRate = frameRate; }
 
     bool supportsFacingMode() const { return m_supportedConstraints.supportsFacingMode(); }
     const Vector<VideoFacingMode>& facingMode() const { return m_facingMode; }
     void addFacingMode(VideoFacingMode mode) { m_facingMode.append(mode); }
 
     bool supportsAspectRatio() const { return m_supportedConstraints.supportsAspectRatio(); }
-    const CapabilityValueOrRange& aspectRatio() const { return m_aspectRatio; }
-    void setAspectRatio(const CapabilityValueOrRange& aspectRatio) { m_aspectRatio = aspectRatio; }
+    const CapabilityRange& aspectRatio() const { return m_aspectRatio; }
+    void setAspectRatio(const CapabilityRange& aspectRatio) { m_aspectRatio = aspectRatio; }
 
     bool supportsVolume() const { return m_supportedConstraints.supportsVolume(); }
-    const CapabilityValueOrRange& volume() const { return m_volume; }
-    void setVolume(const CapabilityValueOrRange& volume) { m_volume = volume; }
+    const CapabilityRange& volume() const { return m_volume; }
+    void setVolume(const CapabilityRange& volume) { m_volume = volume; }
 
     bool supportsSampleRate() const { return m_supportedConstraints.supportsSampleRate(); }
-    const CapabilityValueOrRange& sampleRate() const { return m_sampleRate; }
-    void setSampleRate(const CapabilityValueOrRange& sampleRate) { m_sampleRate = sampleRate; }
+    const CapabilityRange& sampleRate() const { return m_sampleRate; }
+    void setSampleRate(const CapabilityRange& sampleRate) { m_sampleRate = sampleRate; }
 
     bool supportsSampleSize() const { return m_supportedConstraints.supportsSampleSize(); }
-    const CapabilityValueOrRange& sampleSize() const { return m_sampleSize; }
-    void setSampleSize(const CapabilityValueOrRange& sampleSize) { m_sampleSize = sampleSize; }
+    const CapabilityRange& sampleSize() const { return m_sampleSize; }
+    void setSampleSize(const CapabilityRange& sampleSize) { m_sampleSize = sampleSize; }
 
     bool supportsEchoCancellation() const { return m_supportedConstraints.supportsEchoCancellation(); }
     EchoCancellation echoCancellation() const { return m_echoCancellation; }
     void setEchoCancellation(EchoCancellation echoCancellation) { m_echoCancellation = echoCancellation; }
 
     bool supportsDeviceId() const { return m_supportedConstraints.supportsDeviceId(); }
-    const AtomString& deviceId() const { return m_deviceId; }
-    void setDeviceId(const AtomString& id)  { m_deviceId = id; }
+    const String& deviceId() const { return m_deviceId; }
+    void setDeviceId(const String& id)  { m_deviceId = id; }
 
     bool supportsGroupId() const { return m_supportedConstraints.supportsGroupId(); }
-    const AtomString& groupId() const { return m_groupId; }
-    void setGroupId(const AtomString& id)  { m_groupId = id; }
+    const String& groupId() const { return m_groupId; }
+    void setGroupId(const String& id)  { m_groupId = id; }
 
     bool supportsFocusDistance() const { return m_supportedConstraints.supportsFocusDistance(); }
-    const CapabilityValueOrRange& focusDistance() const { return m_focusDistance; }
-    void setFocusDistance(const CapabilityValueOrRange& focusDistance) { m_focusDistance = focusDistance; }
+    const CapabilityRange& focusDistance() const { return m_focusDistance; }
+    void setFocusDistance(const CapabilityRange& focusDistance) { m_focusDistance = focusDistance; }
+
+    bool supportsWhiteBalanceMode() const { return m_supportedConstraints.supportsWhiteBalanceMode(); }
+    const Vector<MeteringMode>& whiteBalanceModes() const { return m_whiteBalanceModes; }
+    void setWhiteBalanceModes(Vector<MeteringMode>&& modes) { m_whiteBalanceModes = WTFMove(modes); }
 
     bool supportsZoom() const { return m_supportedConstraints.supportsZoom(); }
-    const CapabilityValueOrRange& zoom() const { return m_zoom; }
-    void setZoom(const CapabilityValueOrRange& zoom) { m_zoom = zoom; }
+    const CapabilityRange& zoom() const { return m_zoom; }
+    void setZoom(const CapabilityRange& zoom) { m_zoom = zoom; }
+
+    bool supportsTorch() const { return m_supportedConstraints.supportsTorch(); }
+    bool torch() const { return m_torch; }
+    void setTorch(bool torch) { m_torch = torch; }
 
     const RealtimeMediaSourceSupportedConstraints& supportedConstraints() const { return m_supportedConstraints; }
     void setSupportedConstraints(const RealtimeMediaSourceSupportedConstraints& constraints) { m_supportedConstraints = constraints; }
 
+    RealtimeMediaSourceCapabilities isolatedCopy() const { return { m_width, m_height, m_aspectRatio, m_frameRate, Vector<VideoFacingMode> { m_facingMode }, m_volume, m_sampleRate, m_sampleSize, m_echoCancellation, m_deviceId.isolatedCopy(), m_groupId.isolatedCopy(), m_focusDistance, Vector<MeteringMode> { m_whiteBalanceModes }, m_zoom, m_torch, RealtimeMediaSourceSupportedConstraints { m_supportedConstraints } }; }
+
 private:
-    CapabilityValueOrRange m_width;
-    CapabilityValueOrRange m_height;
-    CapabilityValueOrRange m_aspectRatio;
-    CapabilityValueOrRange m_frameRate;
+    CapabilityRange m_width;
+    CapabilityRange m_height;
+    CapabilityRange m_aspectRatio;
+    CapabilityRange m_frameRate;
     Vector<VideoFacingMode> m_facingMode;
-    CapabilityValueOrRange m_volume;
-    CapabilityValueOrRange m_sampleRate;
-    CapabilityValueOrRange m_sampleSize;
+    CapabilityRange m_volume;
+    CapabilityRange m_sampleRate;
+    CapabilityRange m_sampleSize;
     EchoCancellation m_echoCancellation { EchoCancellation::ReadOnly };
-    AtomString m_deviceId;
-    AtomString m_groupId;
-    CapabilityValueOrRange m_focusDistance;
-    CapabilityValueOrRange m_zoom;
+    String m_deviceId;
+    String m_groupId;
+    CapabilityRange m_focusDistance;
+
+    Vector<MeteringMode> m_whiteBalanceModes;
+    CapabilityRange m_zoom;
+    bool m_torch { false };
 
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::CapabilityValueOrRange::Type> {
-    using values = EnumValues<
-        WebCore::CapabilityValueOrRange::Type,
-        WebCore::CapabilityValueOrRange::Type::Undefined,
-        WebCore::CapabilityValueOrRange::Type::Double,
-        WebCore::CapabilityValueOrRange::Type::ULong,
-        WebCore::CapabilityValueOrRange::Type::DoubleRange,
-        WebCore::CapabilityValueOrRange::Type::ULongRange
-    >;
-};
-
-} // namespace WTF
 
 #endif // ENABLE(MEDIA_STREAM)

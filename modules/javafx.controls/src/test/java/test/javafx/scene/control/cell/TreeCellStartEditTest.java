@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,12 @@
 
 package test.javafx.scene.control.cell;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Supplier;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
@@ -33,50 +39,34 @@ import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.ChoiceBoxTreeCell;
 import javafx.scene.control.cell.ComboBoxTreeCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.function.Supplier;
-
-import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 
 /**
  * Parameterized tests for the {@link TreeCell#startEdit()} method of {@link TreeCell} and all sub implementations.
  * The {@link CheckBoxTreeCell} is special as in there the checkbox will be disabled based of the editability.
  */
-@RunWith(Parameterized.class)
 public class TreeCellStartEditTest {
 
     private static final boolean[] EDITABLE_STATES = { true, false };
 
-    private final Supplier<TreeCell<String>> treeCellSupplier;
-
     private TreeView<String> treeView;
     private TreeCell<String> treeCell;
 
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        return wrapAsObjectArray(List.of(TreeCell::new, ComboBoxTreeCell::new, TextFieldTreeCell::new,
-                ChoiceBoxTreeCell::new,() -> new CheckBoxTreeCell<>(obj -> new SimpleBooleanProperty())));
+    private static Collection<Supplier<TreeCell<String>>> parameters() {
+        return List.of(
+            TreeCell::new,
+            ComboBoxTreeCell::new,
+            TextFieldTreeCell::new,
+            ChoiceBoxTreeCell::new,
+            () -> new CheckBoxTreeCell<>(obj -> new SimpleBooleanProperty())
+        );
     }
 
-    private static Collection<Object[]> wrapAsObjectArray(List<Supplier<TreeCell<String>>> treeCells) {
-        return treeCells.stream().map(cell -> new Object[] { cell }).collect(toList());
-    }
-
-    public TreeCellStartEditTest(Supplier<TreeCell<String>> treeCellSupplier) {
-        this.treeCellSupplier = treeCellSupplier;
-    }
-
-    @Before
-    public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Supplier<TreeCell<String>> treeCellSupplier) {
         TreeItem<String> root = new TreeItem<>("1");
         root.getChildren().addAll(List.of(new TreeItem<>("2"), new TreeItem<>("3")));
         treeView = new TreeView<>(root);
@@ -84,14 +74,18 @@ public class TreeCellStartEditTest {
         treeCell = treeCellSupplier.get();
     }
 
-    @Test
-    public void testStartEditMustNotThrowNPE() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testStartEditMustNotThrowNPE(Supplier<TreeCell<String>> treeCellSupplier) {
+        setup(treeCellSupplier);
         // A tree cell without anything attached should not throw a NPE.
         treeCell.startEdit();
     }
 
-    @Test
-    public void testStartEditRespectsEditable() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testStartEditRespectsEditable(Supplier<TreeCell<String>> treeCellSupplier) {
+        setup(treeCellSupplier);
         treeCell.updateIndex(0);
 
         treeCell.updateTreeView(treeView);

@@ -49,8 +49,8 @@ public:
     void rendererWillBeDestroyed(RenderBoxModelObject& renderer) { removeObject(&renderer); }
 
 private:
-    typedef HashMap<const void*, LayoutSize> LayerSizeMap;
-    typedef HashMap<RenderBoxModelObject*, LayerSizeMap> ObjectLayerSizeMap;
+    using LayerSizeMap = HashMap<const void*, LayoutSize>;
+    using ObjectLayerSizeMap = HashMap<SingleThreadWeakRef<RenderBoxModelObject>, LayerSizeMap>;
 
     void removeLayer(RenderBoxModelObject*, LayerSizeMap* innerMap, const void* layer);
     void set(RenderBoxModelObject*, LayerSizeMap* innerMap, const void* layer, const LayoutSize&);
@@ -60,7 +60,7 @@ private:
 
     const RenderView& m_renderView;
     ObjectLayerSizeMap m_objectLayerSizeMap;
-    Timer m_timer;
+    DeferrableOneShotTimer m_timer;
     bool m_animatedResizeIsActive { false };
     bool m_liveResizeOptimizationIsActive { false };
 };

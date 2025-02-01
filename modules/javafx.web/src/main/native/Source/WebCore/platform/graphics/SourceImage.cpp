@@ -60,7 +60,7 @@ NativeImage* SourceImage::nativeImage() const
     if (!m_transformedImageVariant) {
         auto imageBuffer = std::get<Ref<ImageBuffer>>(m_imageVariant);
 
-        auto nativeImage = imageBuffer->copyNativeImage(DontCopyBackingStore);
+        auto nativeImage = imageBuffer->createNativeImageReference();
         if (!nativeImage)
             return nullptr;
 
@@ -96,7 +96,7 @@ ImageBuffer* SourceImage::imageBuffer() const
         if (!imageBuffer)
             return nullptr;
 
-        imageBuffer->context().drawNativeImage(nativeImage, rect.size(), rect, rect);
+        imageBuffer->context().drawNativeImage(nativeImage, rect, rect);
         m_transformedImageVariant = { imageBuffer.releaseNonNull() };
     }
 

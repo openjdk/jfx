@@ -30,23 +30,18 @@
 #include "IDBResultData.h"
 #include "Logging.h"
 #include "MemoryIDBBackingStore.h"
-#include "SQLiteDatabase.h"
-#include "SQLiteDatabaseTracker.h"
 #include "SQLiteFileSystem.h"
 #include "SQLiteIDBBackingStore.h"
-#include "SQLiteStatement.h"
 #include "SecurityOrigin.h"
-#include "StorageQuotaManager.h"
-#include <wtf/CrossThreadCopier.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Locker.h>
 #include <wtf/MainThread.h>
 
 namespace WebCore {
 namespace IDBServer {
 
-IDBServer::IDBServer(PAL::SessionID sessionID, const String& databaseDirectoryPath, StorageQuotaManagerSpaceRequester&& spaceRequester, Lock& lock)
-    : m_sessionID(sessionID)
-    , m_spaceRequester(WTFMove(spaceRequester))
+IDBServer::IDBServer(const String& databaseDirectoryPath, SpaceRequester&& spaceRequester, Lock& lock)
+    : m_spaceRequester(WTFMove(spaceRequester))
     , m_lock(lock)
 {
     ASSERT(!isMainThread());
@@ -130,7 +125,6 @@ std::unique_ptr<IDBBackingStore> IDBServer::createBackingStore(const IDBDatabase
     if (m_databaseDirectoryPath.isEmpty())
         return makeUnique<MemoryIDBBackingStore>(identifier);
 
-    ASSERT(!m_sessionID.isEphemeral());
     if (identifier.isTransient())
         return makeUnique<MemoryIDBBackingStore>(identifier);
 
@@ -745,14 +739,12 @@ void IDBServer::requestSpace(const ClientOrigin& origin, uint64_t taskSize, Comp
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    StorageQuotaManager::Decision result = StorageQuotaManager::Decision::Deny;
-
     // Release lock because space requesting could be blocked.
     m_lock.unlock();
-    result = m_spaceRequester(origin, taskSize);
+    bool result = m_spaceRequester(origin, taskSize);
     m_lock.lock();
 
-    completionHandler(result == StorageQuotaManager::Decision::Grant);
+    completionHandler(result);
 }
 
 uint64_t IDBServer::diskUsage(const String& rootDirectory, const ClientOrigin& origin)
@@ -790,38 +782,6 @@ String IDBServer::upgradedDatabaseDirectory(const WebCore::IDBDatabaseIdentifier
     }
 
     return newDatabaseDirectory;
-}
-
-bool IDBServer::hasDatabaseActivitiesOnMainThread() const
-{
-    ASSERT(isMainThread());
-    ASSERT(m_lock.isHeld());
-
-    if (m_sessionID.isEphemeral())
-        return false;
-
-    for (auto& database : m_uniqueIDBDatabaseMap.values()) {
-        if (!database->identifier().isTransient() && database->hasActiveTransactions())
-            return true;
-    }
-
-    return false;
-}
-
-void IDBServer::stopDatabaseActivitiesOnMainThread()
-{
-    ASSERT(isMainThread());
-    ASSERT(m_lock.isHeld());
-
-    // Only stop non-ephemeral IDBServer that can hold database file lock.
-    if (m_sessionID.isEphemeral())
-        return;
-
-    for (auto& database : m_uniqueIDBDatabaseMap.values()) {
-        // Only stop databases with non-ephemeral backing store that can hold database file lock.
-        if (!database->identifier().isTransient())
-            database->abortActiveTransactions();
-    }
 }
 
 } // namespace IDBServer

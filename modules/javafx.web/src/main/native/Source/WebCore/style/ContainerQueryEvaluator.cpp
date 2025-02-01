@@ -65,9 +65,13 @@ auto ContainerQueryEvaluator::featureEvaluationContextForQuery(const CQ::Contain
     // considered to just those with a matching query container name."
     // https://drafts.csswg.org/css-contain-3/#container-rule
 
+    // "If the <container-query> contains unknown or unsupported container features, no query container will be selected."
+    if (containerQuery.containsUnknownFeature == CQ::ContainsUnknownFeature::Yes)
+        return { };
+
     auto* cachedQueryContainers = m_selectorMatchingState ? &m_selectorMatchingState->queryContainers : nullptr;
 
-    auto* container = selectContainer(containerQuery.axisFilter, containerQuery.name, m_element.get(), m_selectionMode, m_scopeOrdinal, cachedQueryContainers);
+    auto* container = selectContainer(containerQuery.requiredAxes, containerQuery.name, m_element.get(), m_selectionMode, m_scopeOrdinal, cachedQueryContainers);
     if (!container)
         return { };
 
@@ -108,21 +112,36 @@ const Element* ContainerQueryEvaluator::selectContainer(OptionSet<CQ::Axis> axes
         RELEASE_ASSERT_NOT_REACHED();
     };
 
-    auto isContainerForQuery = [&](const Element& element) {
-        auto* style = element.existingComputedStyle();
+    auto isContainerForQuery = [&](const Element& candidateElement, const Element* originatingElement = nullptr) {
+        auto* style = candidateElement.existingComputedStyle();
         if (!style)
             return false;
-        if (!isValidContainerForRequiredAxes(style->containerType(), element.renderer()))
+        if (!isValidContainerForRequiredAxes(style->containerType(), candidateElement.renderer()))
             return false;
         if (name.isEmpty())
             return true;
-        return style->containerNames().contains(name);
+        return style->containerNames().containsIf([&](auto& scopedName) {
+            auto isNameFromAllowedScope = [&](auto& scopedName) {
+                // Names from :host rules are allowed when the candidate is the host element.
+                auto* host = originatingElement ? originatingElement->shadowHost() : element.shadowHost();
+                auto isHost = host == &candidateElement;
+                if (scopedName.scopeOrdinal == ScopeOrdinal::Shadow && isHost)
+                    return true;
+                // Otherwise names from the inner scopes are ignored.
+                return scopedName.scopeOrdinal <= ScopeOrdinal::Element;
+    };
+            return isNameFromAllowedScope(scopedName) && scopedName.name == name;
+        });
     };
 
     auto findOriginatingElement = [&]() -> const Element* {
         // ::part() selectors can query its originating host, but not internal query containers inside the shadow tree.
+        if (selectionMode == SelectionMode::PartPseudoElement) {
         if (scopeOrdinal <= ScopeOrdinal::ContainingHost)
             return hostForScopeOrdinal(element, scopeOrdinal);
+            ASSERT(scopeOrdinal == ScopeOrdinal::Element);
+            return element.shadowHost();
+        }
         // ::slotted() selectors can query containers inside the shadow tree, including the slot itself.
         if (scopeOrdinal >= ScopeOrdinal::FirstSlot && scopeOrdinal <= ScopeOrdinal::SlotLimit)
             return assignedSlotForScopeOrdinal(element, scopeOrdinal);
@@ -132,7 +151,7 @@ const Element* ContainerQueryEvaluator::selectContainer(OptionSet<CQ::Axis> axes
     if (auto* originatingElement = findOriginatingElement()) {
         // For selectors with pseudo elements, query containers can be established by the shadow-including inclusive ancestors of the ultimate originating element.
         for (auto* ancestor = originatingElement; ancestor; ancestor = ancestor->parentOrShadowHostElement()) {
-            if (isContainerForQuery(*ancestor))
+            if (isContainerForQuery(*ancestor, originatingElement))
                 return ancestor;
         }
         return nullptr;

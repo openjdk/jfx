@@ -38,15 +38,6 @@
 
 G_BEGIN_DECLS
 
-/* GDate
- *
- * Date calculations (not time for now, to be resolved). These are a
- * mutant combination of Steffen Beyer's DateCalc routines
- * (http://www.perl.com/CPAN/authors/id/STBEY/) and Jon Trowbridge's
- * date routines (written for in-house software).  Written by Havoc
- * Pennington <hp@pobox.com>
- */
-
 typedef gint32  GTime GLIB_DEPRECATED_TYPE_IN_2_62_FOR(GDateTime);
 typedef guint16 GDateYear;
 typedef guint8  GDateDay;   /* day of the month */

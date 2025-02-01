@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,17 +30,18 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableDoubleValueStub;
 import javafx.beans.value.ObservableObjectValueStub;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ReadOnlyDoubleWrapperTest {
 
@@ -57,7 +58,7 @@ public class ReadOnlyDoubleWrapperTest {
     private ChangeListenerMock<Number> internalChangeListener;
     private ChangeListenerMock<Number> publicChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new ReadOnlyDoubleWrapperMock();
         readOnlyProperty = property.getReadOnlyProperty();
@@ -320,12 +321,15 @@ public class ReadOnlyDoubleWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 2);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
-        final DoubleProperty v = new SimpleDoubleProperty(VALUE_1);
-        property.bind(v);
-        property.set(VALUE_1);
+        assertThrows(RuntimeException.class, () -> {
+            final DoubleProperty v = new SimpleDoubleProperty(VALUE_1);
+            property.bind(v);
+            property.set(VALUE_1);
+        });
     }
+
 
     @Test
     public void testLazyBind_primitive() {
@@ -551,10 +555,13 @@ public class ReadOnlyDoubleWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> {
+            property.bind(null);
+        });
     }
+
 
     @Test
     public void testRebind() {

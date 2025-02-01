@@ -157,7 +157,7 @@ void DeferredPromise::reject(Exception exception, RejectAsHandled rejectAsHandle
     JSC::JSLockHolder locker(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    if (exception.code() == ExistingExceptionError) {
+    if (exception.code() == ExceptionCode::ExistingExceptionError) {
         EXCEPTION_ASSERT(scope.exception());
         auto error = scope.exception()->value();
         bool isTerminating = handleTerminationExceptionIfNeeded(scope, lexicalGlobalObject);
@@ -192,7 +192,7 @@ void DeferredPromise::reject(ExceptionCode ec, const String& message, RejectAsHa
     JSC::JSLockHolder locker(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    if (ec == ExistingExceptionError) {
+    if (ec == ExceptionCode::ExistingExceptionError) {
         EXCEPTION_ASSERT(scope.exception());
         auto error = scope.exception()->value();
         bool isTerminating = handleTerminationExceptionIfNeeded(scope, lexicalGlobalObject);
@@ -273,7 +273,7 @@ void fulfillPromiseWithJSON(Ref<DeferredPromise>&& promise, const String& data)
 {
     JSC::JSValue value = parseAsJSON(promise->globalObject(), data);
     if (!value)
-        promise->reject(SyntaxError);
+        promise->reject(ExceptionCode::SyntaxError);
     else
         promise->resolve<IDLAny>(value);
 }
@@ -298,8 +298,8 @@ bool DeferredPromise::handleTerminationExceptionIfNeeded(CatchScope& scope, JSDO
     VM& vm = scope.vm();
 
     auto& scriptExecutionContext = *lexicalGlobalObject.scriptExecutionContext();
-    if (is<WorkerGlobalScope>(scriptExecutionContext)) {
-        auto* scriptController = downcast<WorkerGlobalScope>(scriptExecutionContext).script();
+    if (auto* globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext)) {
+        auto* scriptController = globalScope->script();
         bool terminatorCausedException = vm.isTerminationException(exception);
         if (terminatorCausedException || (scriptController && scriptController->isTerminatingExecution())) {
             scriptController->forbidExecution();

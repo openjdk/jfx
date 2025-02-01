@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "SecurityOriginData.h"
 #include <wtf/Hasher.h>
 #include <wtf/URL.h>
@@ -43,7 +41,7 @@ public:
 
     WEBCORE_EXPORT static ServiceWorkerRegistrationKey emptyKey();
 
-    WEBCORE_EXPORT bool operator==(const ServiceWorkerRegistrationKey&) const;
+    friend bool operator==(const ServiceWorkerRegistrationKey&, const ServiceWorkerRegistrationKey&) = default;
     bool isEmpty() const { return *this == emptyKey(); }
     WEBCORE_EXPORT bool isMatching(const SecurityOriginData& topOrigin, const URL& clientURL) const;
     bool originIsMatching(const SecurityOriginData& topOrigin, const URL& clientURL) const;
@@ -99,5 +97,3 @@ template<> struct HashTraits<WebCore::ServiceWorkerRegistrationKey> : GenericHas
 template<> struct DefaultHash<WebCore::ServiceWorkerRegistrationKey> : ServiceWorkerRegistrationKeyHash { };
 
 } // namespace WTF
-
-#endif // ENABLE(SERVICE_WORKER)

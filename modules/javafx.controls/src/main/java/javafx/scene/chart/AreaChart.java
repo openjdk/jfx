@@ -106,7 +106,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
         @Override
         public Object getBean() {
-            return this;
+            return AreaChart.this;
         }
 
         @Override

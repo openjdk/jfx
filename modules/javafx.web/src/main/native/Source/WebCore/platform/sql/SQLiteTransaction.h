@@ -28,6 +28,7 @@
 
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -47,10 +48,10 @@ public:
     bool inProgress() const { return m_inProgress; }
     WEBCORE_EXPORT bool wasRolledBackBySqlite() const;
 
-    SQLiteDatabase& database() const { return m_db; }
+    SQLiteDatabase& database() const { return m_db.get(); }
 
 private:
-    SQLiteDatabase& m_db;
+    WeakRef<SQLiteDatabase> m_db;
     bool m_inProgress;
     bool m_readOnly;
 };

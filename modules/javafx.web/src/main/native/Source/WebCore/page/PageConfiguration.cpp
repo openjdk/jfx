@@ -40,6 +40,7 @@
 #include "DiagnosticLoggingClient.h"
 #include "DragClient.h"
 #include "EditorClient.h"
+#include "HistoryItem.h"
 #include "InspectorClient.h"
 #include "LocalFrameLoaderClient.h"
 #include "MediaRecorderProvider.h"
@@ -59,9 +60,6 @@
 #include "ValidationMessageClient.h"
 #include "VisitedLinkStore.h"
 #include "WebRTCProvider.h"
-#if ENABLE(WEBGL)
-#include "WebGLStateTracker.h"
-#endif
 #if ENABLE(WEB_AUTHN)
 #include "AuthenticatorCoordinatorClient.h"
 #endif
@@ -94,6 +92,7 @@ PageConfiguration::PageConfiguration(
     UniqueRef<StorageProvider>&& storageProvider,
     UniqueRef<ModelPlayerProvider>&& modelPlayerProvider,
     Ref<BadgeClient>&& badgeClient,
+    Ref<HistoryItemClient>&& historyItemClient,
 #if ENABLE(CONTEXT_MENUS)
     UniqueRef<ContextMenuClient>&& contextMenuClient,
 #endif
@@ -126,6 +125,7 @@ PageConfiguration::PageConfiguration(
     , storageProvider(WTFMove(storageProvider))
     , modelPlayerProvider(WTFMove(modelPlayerProvider))
     , badgeClient(WTFMove(badgeClient))
+    , historyItemClient(WTFMove(historyItemClient))
 {
 }
 

@@ -33,8 +33,10 @@
 #include "IdleCallbackController.h"
 #include "Microtasks.h"
 #include "MutationObserver.h"
+#include "Page.h"
 #include "SecurityOrigin.h"
 #include "ThreadGlobalData.h"
+#include "ThreadTimers.h"
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RunLoop.h>
 
@@ -63,6 +65,8 @@ static String agentClusterKeyOrNullIfUnique(const SecurityOrigin& origin)
         return { };
     return key;
 }
+
+static constexpr auto IdleCallbackDurationExpectation = 4_ms;
 
 Ref<WindowEventLoop> WindowEventLoop::eventLoopForSecurityOrigin(const SecurityOrigin& origin)
 {
@@ -116,12 +120,25 @@ MicrotaskQueue& WindowEventLoop::microtaskQueue()
     return *m_microtaskQueue;
 }
 
+void WindowEventLoop::didScheduleRenderingUpdate(Page& page, MonotonicTime nextRenderingUpdate)
+{
+    m_pagesWithRenderingOpportunity.set(page, nextRenderingUpdate);
+}
+
+void WindowEventLoop::didStartRenderingUpdate(Page& page)
+{
+    m_pagesWithRenderingOpportunity.remove(page);
+}
+
 void WindowEventLoop::opportunisticallyRunIdleCallbacks()
 {
-    if (shouldEndIdlePeriod())
+    auto now = MonotonicTime::now();
+    if (shouldEndIdlePeriod(now))
         return;
 
-    forEachAssociatedContext([](ScriptExecutionContext& context) {
+    m_lastIdlePeriodStartTime = now;
+
+    forEachAssociatedContext([&](ScriptExecutionContext& context) {
         RefPtr document = dynamicDowncast<Document>(context);
         if (!document)
             return;
@@ -132,21 +149,73 @@ void WindowEventLoop::opportunisticallyRunIdleCallbacks()
     });
 }
 
-bool WindowEventLoop::shouldEndIdlePeriod()
+bool WindowEventLoop::shouldEndIdlePeriod(MonotonicTime now)
 {
     if (hasTasksForFullyActiveDocument())
         return true;
     if (!microtaskQueue().isEmpty())
         return true;
-    if (m_hasARenderingOpportunity)
+    auto renderingTime = nextRenderingTime();
+    if (renderingTime && *renderingTime < now + IdleCallbackDurationExpectation)
         return true;
     return false;
+}
+
+MonotonicTime WindowEventLoop::computeIdleDeadline()
+{
+    auto minTime = m_lastIdlePeriodStartTime + 50_ms;
+
+    auto timerTime = nextTimerFireTime();
+    if (timerTime && *timerTime < minTime)
+        minTime = *timerTime;
+
+    auto renderingTime = nextRenderingTime();
+    if (renderingTime && *renderingTime < minTime)
+        minTime = *renderingTime;
+
+    return minTime;
+}
+
+std::optional<MonotonicTime> WindowEventLoop::nextRenderingTime() const
+{
+    std::optional<MonotonicTime> result;
+    for (auto it : m_pagesWithRenderingOpportunity) {
+        if (!result || it.value < *result)
+            result = it.value;
+    }
+    return result;
 }
 
 void WindowEventLoop::didReachTimeToRun()
 {
     Ref protectedThis { *this }; // Executing tasks may remove the last reference to this WindowEventLoop.
-    run();
+    auto deadline = ApproximateTime::now() + ThreadTimers::maxDurationOfFiringTimers;
+    run(deadline);
+
+    if (hasTasksForFullyActiveDocument() || !microtaskQueue().isEmpty())
+        return;
+
+    auto hasIdleCallbacks = findMatchingAssociatedContext([&](ScriptExecutionContext& context) {
+        RefPtr document = dynamicDowncast<Document>(context);
+        if (!document || document->activeDOMObjectsAreSuspended() || document->activeDOMObjectsAreStopped())
+            return false;
+        auto* idleCallbackController = document->idleCallbackController();
+        if (!idleCallbackController)
+            return false;
+        return !idleCallbackController->isEmpty();
+    });
+    if (!hasIdleCallbacks)
+        return;
+
+    auto now = MonotonicTime::now();
+
+    auto timerTime = nextTimerFireTime();
+    if (timerTime && *timerTime < now + IdleCallbackDurationExpectation) {
+        scheduleToRunIfNeeded();
+        return;
+    }
+
+    opportunisticallyRunIdleCallbacks();
 }
 
 void WindowEventLoop::queueMutationObserverCompoundMicrotask()

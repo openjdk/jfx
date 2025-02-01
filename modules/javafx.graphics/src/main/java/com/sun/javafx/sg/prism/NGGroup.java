@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -152,7 +152,7 @@ public class NGGroup extends NGNode {
     }
 
     @Override
-    protected void clearDirty() {
+    public void clearDirty() {
         super.clearDirty();
         if (removed != null) removed.clear();
     }
@@ -246,10 +246,6 @@ public class NGGroup extends NGNode {
             if (renderRoot.hasNext()) {
                 renderRoot.next();
                 startPos = orderedChildren.indexOf(renderRoot.getCurrentNode());
-
-                for (int i = 0; i < startPos; ++i) {
-                    orderedChildren.get(i).clearDirtyTree();
-                }
             } else {
                 g.setRenderRoot(null);
             }
@@ -279,7 +275,7 @@ public class NGGroup extends NGNode {
         ImageData bot = null;
         boolean idValid = true;
         do {
-            // TODO: probably don't need to wrap the transform here... (RT-26981)
+            // TODO: probably don't need to wrap the transform here... (JDK-8092196)
             BaseTransform transform = g.getTransformNoClone().copy();
             if (bot != null) {
                 bot.unref();
@@ -342,7 +338,7 @@ public class NGGroup extends NGNode {
     protected boolean needsBlending() {
         Blend.Mode mode = getNodeBlendMode();
         // TODO: If children are all SRC_OVER then we can pass on SRC_OVER too
-        // (RT-26981)
+        // (JDK-8092196)
         return (mode != null);
     }
 

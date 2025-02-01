@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -439,13 +439,13 @@ public class NGRegion extends NGGroup {
     }
 
     /**
-     * When cleaning the dirty tree, we also have to keep in mind
+     * When cleaning the dirty flag, we also have to keep in mind
      * the NGShape used by the NGRegion
      */
-    @Override public void clearDirtyTree() {
-        super.clearDirtyTree();
+    @Override public void clearDirty() {
+        super.clearDirty();
         if (ngShape != null) {
-            ngShape.clearDirtyTree();
+            ngShape.clearDirty();
         }
     }
 
@@ -504,7 +504,7 @@ public class NGRegion extends NGGroup {
      * @return
      */
     @Override protected RectBounds computeOpaqueRegion(RectBounds opaqueRegion) {
-        // TODO what to do if the opaqueRegion has negative width or height due to excessive opaque insets? (RT-26979)
+        // TODO what to do if the opaqueRegion has negative width or height due to excessive opaque insets? (JDK-8090743)
         return (RectBounds) opaqueRegion.deriveWithNewBounds(opaqueLeft, opaqueTop, 0, width - opaqueRight, height - opaqueBottom, 0);
     }
 
@@ -611,7 +611,7 @@ public class NGRegion extends NGGroup {
 
             RTTexture cached = null;
             Rectangle rect = null;
-            // RT-25013: We need to make sure that we do not use a cached image in the case of a
+            // JDK-8125450: We need to make sure that we do not use a cached image in the case of a
             // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
             if (cacheMode != 0 && g.getTransformNoClone().isTranslateOrIdentity() && !(g instanceof PrinterGraphics)) {
                 final RegionImageCache imageCache = getImageCache(g);
@@ -799,9 +799,9 @@ public class NGRegion extends NGGroup {
         final int textureHeight = outsetsTop + cacheHeight + outsetsBottom;
 
         // See if we have a cached representation for this region background already.
-        // RT-25013: We need to make sure that we do not use a cached image in the case of a
+        // JDK-8125450: We need to make sure that we do not use a cached image in the case of a
         // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
-        // RT-25049: Need to only use the cache for pixel aligned regions or the result
+        // JDK-8125766: Need to only use the cache for pixel aligned regions or the result
         // will not look the same as though drawn by vector
         final boolean cache =
                 background.getFills().size() > 1 && // Not worth the overhead otherwise
@@ -867,7 +867,7 @@ public class NGRegion extends NGGroup {
             final int imgUnscaledHeight = (int)image.getImage().getHeight();
             final int imgWidth = prismImage.getWidth();
             final int imgHeight = prismImage.getHeight();
-            // TODO need to write tests where we use a writable image and draw to it a lot. (RT-26978)
+            // TODO need to write tests where we use a writable image and draw to it a lot. (JDK-8092105)
             if (imgWidth != 0 && imgHeight != 0) {
                 final BackgroundSize size = image.getSize();
                 if (size.isCover()) {
@@ -1093,13 +1093,13 @@ public class NGRegion extends NGGroup {
             float h = height - t - b;
             // Only setup and paint for those areas which have positive width and height. This means, if
             // the insets are such that the right edge is left of the left edge, then we have a negative
-            // width and will not paint it. TODO we need to document this fact (RT-26924)
+            // width and will not paint it. TODO we need to document this fact (JDK-8091593)
             if (w > 0 && h > 0) {
                 // Could optimize this such that if paint is transparent then we go no further.
                 final Paint paint = getPlatformPaint(fill.getFill());
                 g.setPaint(paint);
                 final CornerRadii radii = getNormalizedFillRadii(i);
-                // This is a workaround for RT-28435 so we use path rasterizer for small radius's We are
+                // This is a workaround for JDK-8087965 so we use path rasterizer for small radius's We are
                 // keeping old rendering. We do not apply workaround when using Caspian or Embedded
                 if (radii.isUniform() &&
                         !(!PlatformImpl.isCaspian() && !(PlatformUtil.isEmbedded() || PlatformUtil.isIOS()) && radii.getTopLeftHorizontalRadius() > 0 && radii.getTopLeftHorizontalRadius() <= 4)) {
@@ -1130,7 +1130,7 @@ public class NGRegion extends NGGroup {
                     // The edges are not uniform, so we have to render each edge independently
                     // TODO document the issue number which will give us a fast path for rendering
                     // non-uniform corners, and that we want to implement that instead of createPath2
-                    // below in such cases. (RT-26979)
+                    // below in such cases. (JDK-8090743)
                     g.fill(createPath(width, height, t, l, b, r, radii));
                 }
             }
@@ -1237,7 +1237,7 @@ public class NGRegion extends NGGroup {
                 // side. It is possible however to have a Color as the stroke which is effectively
                 // TRANSPARENT and a style that is effectively NONE, but we are not checking for those
                 // cases and will in those cases be doing more work than necessary.
-                // TODO make sure CSS uses TRANSPARENT and NONE when possible (RT-26943)
+                // TODO make sure CSS uses TRANSPARENT and NONE when possible (JDK-8091746)
                 if (!(topStroke instanceof Color && ((Color)topStroke).getOpacity() == 0f) && topStyle != BorderStrokeStyle.NONE) {
                     g.setPaint(getPlatformPaint(topStroke));
                     if (BorderStrokeStyle.SOLID == topStyle) {
@@ -1455,7 +1455,7 @@ public class NGRegion extends NGGroup {
     }
 
     private int widthSize(boolean isPercent, double sliceSize, float objSize) {
-        //Not strictly correct. See RT-34051
+        //Not strictly correct. See JDK-8090013
         return (int) Math.round(isPercent ? sliceSize * objSize : sliceSize);
     }
 
@@ -1510,7 +1510,7 @@ public class NGRegion extends NGGroup {
             // Note: this is just a workaround that allows us to avoid shape bounds computation with the given stroke.
             // By using inner stroke, we know the shape bounds and the shape will be scaled correctly, but the size of
             // the stroke after the scale will be slightly different, but this should be visible only with big stroke widths
-            // See https://javafx-jira.kenai.com/browse/RT-38384
+            // See JDK-8088335
             type = BasicStroke.TYPE_INNER;
         } else {
             switch (sb.getType()) {

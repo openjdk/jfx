@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,6 +56,7 @@ public class Native2AsciiPane extends BorderPane {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS);
         {
             TableColumn<Entry, Integer> c = new TableColumn<>();
+            // FIX there is no easy way to add a tooltip to table column!!!
             c.setText("Index");
             c.setCellValueFactory((d) -> new SimpleObjectProperty<Integer>(d.getValue().index));
             c.setPrefWidth(50);
@@ -71,7 +72,21 @@ public class Native2AsciiPane extends BorderPane {
         {
             TableColumn<Entry, String> c = new TableColumn<>();
             c.setText("U+Code");
-            c.setCellValueFactory((d) -> new SimpleStringProperty(d.getValue().code));
+            c.setCellValueFactory((d) -> new SimpleStringProperty(d.getValue().ucode));
+            c.setPrefWidth(100);
+            table.getColumns().add(c);
+        }
+        {
+            TableColumn<Entry, String> c = new TableColumn<>();
+            c.setText("Type");
+            c.setCellValueFactory((d) -> new SimpleStringProperty(d.getValue().type));
+            c.setPrefWidth(300);
+            table.getColumns().add(c);
+        }
+        {
+            TableColumn<Entry, String> c = new TableColumn<>();
+            c.setText("CodePoint");
+            c.setCellValueFactory((d) -> new SimpleStringProperty(d.getValue().codePoint));
             c.setPrefWidth(100);
             table.getColumns().add(c);
         }
@@ -213,25 +228,107 @@ public class Native2AsciiPane extends BorderPane {
         ArrayList<Entry> es = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
             char c = text.charAt(i);
-            String code = String.format("%04X", (int)c);
+            int codePoint = -1;
+            String cp = null;
+            if (Character.isHighSurrogate(c)) {
+                codePoint = text.codePointAt(i);
+                cp = Character.toString(codePoint);
+            }
+            String ucode = String.format("%04X", (int)c);
             String desc = Character.getName(c);
-            Entry en = new Entry(i, String.valueOf(c), code, desc);
+            if (cp != null) {
+                desc = String.format("%s (U+%06X %s)", desc, codePoint, Character.getName(codePoint));
+            }
+            String type = getType(c);
+            Entry en = new Entry(i, String.valueOf(c), ucode, desc, cp, type);
             es.add(en);
         }
         table.getItems().setAll(es);
     }
 
+    private String getType(char c) {
+        int t = Character.getType(c);
+        switch (t) {
+        case Character.COMBINING_SPACING_MARK:
+            return "COMBINING_SPACING_MARK";
+        case Character.CONNECTOR_PUNCTUATION:
+            return "CONNECTOR_PUNCTUATION";
+        case Character.CONTROL:
+            return "CONTROL";
+        case Character.CURRENCY_SYMBOL:
+            return "CURRENCY_SYMBOL";
+        case Character.DASH_PUNCTUATION:
+            return "DASH_PUNCTUATION";
+        case Character.DECIMAL_DIGIT_NUMBER:
+            return "DECIMAL_DIGIT_NUMBER";
+        case Character.ENCLOSING_MARK:
+            return "ENCLOSING_MARK";
+        case Character.END_PUNCTUATION:
+            return "END_PUNCTUATION";
+        case Character.FINAL_QUOTE_PUNCTUATION:
+            return "FINAL_QUOTE_PUNCTUATION";
+        case Character.FORMAT:
+            return "FORMAT";
+        case Character.INITIAL_QUOTE_PUNCTUATION:
+            return "INITIAL_QUOTE_PUNCTUATION";
+        case Character.LETTER_NUMBER:
+            return "LETTER_NUMBER";
+        case Character.LINE_SEPARATOR:
+            return "LINE_SEPARATOR";
+        case Character.LOWERCASE_LETTER:
+            return "LOWERCASE_LETTER";
+        case Character.MATH_SYMBOL:
+            return "MATH_SYMBOL";
+        case Character.MODIFIER_LETTER:
+            return "MODIFIER_LETTER";
+        case Character.MODIFIER_SYMBOL:
+            return "MODIFIER_SYMBOL";
+        case Character.NON_SPACING_MARK:
+            return "NON_SPACING_MARK";
+        case Character.OTHER_LETTER:
+            return "OTHER_LETTER";
+        case Character.OTHER_NUMBER:
+            return "OTHER_NUMBER";
+        case Character.OTHER_PUNCTUATION:
+            return "OTHER_PUNCTUATION";
+        case Character.OTHER_SYMBOL:
+            return "OTHER_SYMBOL";
+        case Character.PARAGRAPH_SEPARATOR:
+            return "PARAGRAPH_SEPARATOR";
+        case Character.PRIVATE_USE:
+            return "PRIVATE_USE";
+        case Character.SPACE_SEPARATOR:
+            return "SPACE_SEPARATOR";
+        case Character.START_PUNCTUATION:
+            return "START_PUNCTUATION";
+        case Character.SURROGATE:
+            return "SURROGATE";
+        case Character.TITLECASE_LETTER:
+            return "TITLECASE_LETTER";
+        case Character.UNASSIGNED:
+            return "UNASSIGNED";
+        case Character.UPPERCASE_LETTER:
+            return "UPPERCASE_LETTER";
+        default:
+            return String.valueOf(t);
+        }
+    }
+
     protected static class Entry {
         public final int index;
         public final String character;
-        public final String code;
+        public final String ucode;
         public final String description;
+        public final String codePoint;
+        public final String type;
 
-        public Entry(int index, String character, String code, String description) {
+        public Entry(int index, String character, String ucode, String description, String codePoint, String type) {
             this.index = index;
             this.character = character;
-            this.code = code;
+            this.ucode = ucode;
             this.description = description;
+            this.codePoint = codePoint;
+            this.type = type;
         }
     }
 }

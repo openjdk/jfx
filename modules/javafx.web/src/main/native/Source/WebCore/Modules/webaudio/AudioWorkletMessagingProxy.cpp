@@ -47,7 +47,7 @@ namespace WebCore {
 
 static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
 {
-    auto* document = worklet.document();
+    RefPtr document = worklet.document();
     auto jsRuntimeFlags = document->settings().javaScriptRuntimeFlags();
     RELEASE_ASSERT(document->sessionID());
 
@@ -60,6 +60,7 @@ static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
         document->settingsValues(),
         document->referrerPolicy(),
         worklet.audioContext() ? !worklet.audioContext()->isOfflineContext() : false,
+        document->advancedPrivacyProtections(),
         document->noiseInjectionHashSalt()
     };
 }

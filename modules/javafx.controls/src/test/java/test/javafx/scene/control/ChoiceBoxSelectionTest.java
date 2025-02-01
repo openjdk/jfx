@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,12 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -51,6 +49,9 @@ import javafx.scene.control.skin.ChoiceBoxSkinNodesShim;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Collection of tests around state related to selection.
@@ -262,9 +263,11 @@ public class ChoiceBoxSelectionTest {
             MenuItem item = popup.getItems().get(i);
             if (item instanceof RadioMenuItem) {
                 RadioMenuItem selectedToggle = (RadioMenuItem) popup.getItems().get(i);
-                assertEquals("toggle " + selectedToggle.getText() + " at index: " + i + " must be selected: " + shouldBeSelected,
-                        shouldBeSelected,
-                        selectedToggle.isSelected());
+                assertEquals(
+                    shouldBeSelected,
+                    selectedToggle.isSelected(),
+                    "toggle " + selectedToggle.getText() + " at index: " + i + " must be selected: " + shouldBeSelected
+                );
             }
         }
     }
@@ -291,7 +294,7 @@ public class ChoiceBoxSelectionTest {
     public void testSyncedSelectedIndexUncontained() {
         box.setValue(box.getItems().get(1));
         box.setValue(uncontained);
-        assertEquals("selectedIndex for uncontained value ", -1, box.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, box.getSelectionModel().getSelectedIndex(), "selectedIndex for uncontained value ");
     }
 
     /**
@@ -303,7 +306,7 @@ public class ChoiceBoxSelectionTest {
         box.setValue(box.getItems().get(1));
         box.setValue(uncontained);
         box.getSelectionModel().clearSelection();
-        assertEquals("uncontained value must be unchanged after clearSelection", uncontained, box.getValue());
+        assertEquals(uncontained, box.getValue(), "uncontained value must be unchanged after clearSelection");
     }
 
     /**
@@ -378,12 +381,12 @@ public class ChoiceBoxSelectionTest {
         assertSame(box, scene.getFocusOwner());
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         stage.hide();
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         uncontained = "uncontained";
         root = new VBox();
@@ -393,5 +396,4 @@ public class ChoiceBoxSelectionTest {
         box = new ChoiceBox<>(FXCollections.observableArrayList("Apple", "Banana", "Orange"));
         root.getChildren().addAll(box);
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,11 +22,13 @@
 
 #include <optional>
 #include <variant>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Int128.h>
+#include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
 #include <wtf/text/AtomString.h>
-#include <wtf/text/StringHasher.h>
+#include <wtf/text/SuperFastHash.h>
 
 namespace WTF {
 
@@ -67,7 +69,7 @@ public:
     }
 
 private:
-    StringHasher m_underlyingHasher;
+    SuperFastHash m_underlyingHasher;
 };
 
 template<typename UnsignedInteger> std::enable_if_t<std::is_unsigned<UnsignedInteger>::value && sizeof(UnsignedInteger) == sizeof(uint64_t), void> add(Hasher& hasher, UnsignedInteger integer)
@@ -200,6 +202,16 @@ template<typename T> void add(Hasher& hasher, std::initializer_list<T> values)
 {
     for (auto& value : values)
         add(hasher, value);
+}
+
+template<typename T, typename U, typename V> void add(Hasher& hasher, const RefPtr<T, U, V>& refPtr)
+{
+    add(hasher, refPtr.get());
+}
+
+template<typename T, typename U> void add(Hasher& hasher, const CheckedPtr<T, U>& checkedPtr)
+{
+    add(hasher, checkedPtr.get());
 }
 
 } // namespace WTF

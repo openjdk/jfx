@@ -221,13 +221,6 @@ void RunLoop::threadWillExit()
     }
 }
 
-#if ASSERT_ENABLED
-void RunLoop::assertIsCurrent() const
-{
-    ASSERT(this == &current());
-}
-#endif
-
 #if PLATFORM(JAVA)
 void RunLoop::dispatchFunctionsFromMainThread()
 {

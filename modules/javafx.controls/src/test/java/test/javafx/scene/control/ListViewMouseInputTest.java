@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,14 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import com.sun.javafx.tk.Toolkit;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
@@ -39,19 +41,16 @@ import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.layout.VBox;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
-import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewMouseInputTest {
     private ListView<String> listView;
     private MultipleSelectionModel<String> sm;
@@ -59,7 +58,8 @@ public class ListViewMouseInputTest {
 
     private StageLoader stageLoader;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
@@ -70,7 +70,8 @@ public class ListViewMouseInputTest {
         sm.clearAndSelect(0);
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         listView.getSkin().dispose();
 
         if (stageLoader != null) {
@@ -133,11 +134,11 @@ public class ListViewMouseInputTest {
 
         // select all from 9 - 7
         VirtualFlowTestUtils.clickOnRow(listView, 7, KeyModifier.SHIFT);
-        assertTrue(debug(), isSelected(7,8,9));
+        assertTrue(isSelected(7,8,9), debug());
 
         // select all from 9 - 7 - 5
         VirtualFlowTestUtils.clickOnRow(listView, 5, KeyModifier.SHIFT);
-        assertTrue(debug(),isSelected(5,6,7,8,9));
+        assertTrue(isSelected(5,6,7,8,9), debug());
     }
 
     @Test public void test_rt29833_mouse_select_downwards() {
@@ -147,11 +148,11 @@ public class ListViewMouseInputTest {
 
         // select all from 5 - 7
         VirtualFlowTestUtils.clickOnRow(listView, 7, KeyModifier.SHIFT);
-        assertTrue(debug(), isSelected(5,6,7));
+        assertTrue(isSelected(5,6,7), debug());
 
         // select all from 5 - 7 - 9
         VirtualFlowTestUtils.clickOnRow(listView, 9, KeyModifier.SHIFT);
-        assertTrue(debug(),isSelected(5,6,7,8,9));
+        assertTrue(isSelected(5,6,7,8,9), debug());
     }
 
     private int rt30394_count = 0;

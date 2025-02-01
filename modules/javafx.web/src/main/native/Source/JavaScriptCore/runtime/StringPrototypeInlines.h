@@ -33,6 +33,11 @@
 
 namespace JSC {
 
+inline Structure* StringPrototype::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    return Structure::create(vm, globalObject, prototype, TypeInfo(DerivedStringObjectType, StructureFlags), info());
+}
+
 ALWAYS_INLINE std::tuple<int32_t, int32_t> extractSliceOffsets(int32_t length, int32_t startValue, std::optional<int32_t> endValue)
 {
     int32_t from;
@@ -200,7 +205,7 @@ ALWAYS_INLINE JSString* stringReplaceStringString(JSGlobalObject* globalObject, 
         matchStart = table->find(string, search);
     else {
         UNUSED_PARAM(table);
-        matchStart = string.find(search);
+        matchStart = StringView(string).find(vm.adaptiveStringSearcherTables(), StringView(search));
     }
     if (matchStart == notFound)
         return stringCell;
@@ -258,7 +263,7 @@ inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, 
             RELEASE_AND_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::Yes, StringReplaceUseTable::No, BoyerMooreHorspoolTable<uint8_t>>(globalObject, jsString, WTFMove(string), WTFMove(searchString), WTFMove(replaceString), nullptr)));
     }
 
-    size_t matchStart = string.find(searchString);
+    size_t matchStart = StringView(string).find(vm.adaptiveStringSearcherTables(), StringView(searchString));
     if (matchStart == notFound)
         return jsString;
 
@@ -315,7 +320,7 @@ inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, 
         endOfLastMatch = matchEnd;
         if (mode == StringReplaceMode::Single)
             break;
-        matchStart = string.find(searchString, !searchStringLength ? endOfLastMatch + 1 : endOfLastMatch);
+        matchStart = StringView(string).find(vm.adaptiveStringSearcherTables(), StringView(searchString), !searchStringLength ? endOfLastMatch + 1 : endOfLastMatch);
     } while (matchStart != notFound);
 
     if (UNLIKELY(!sourceRanges.tryConstructAndAppend(endOfLastMatch, string.length()))) {

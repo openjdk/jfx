@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,6 @@ package com.sun.webkit.network;
 import static com.sun.webkit.network.URLs.newURL;
 
 import java.net.MalformedURLException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -40,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.WebPage;
-import java.security.Permission;
 
 final class NetworkContext {
 
@@ -92,14 +89,10 @@ final class NetworkContext {
                 new URLLoaderThreadFactory());
         threadPool.allowCoreThreadTimeOut(true);
 
-        @SuppressWarnings("removal")
-        boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            // Use HTTP2 by default on JDK 12 or later
-            final var version = Runtime.Version.parse(System.getProperty("java.version"));
-            final String defaultUseHTTP2 = version.feature() >= 12 ? "true" : "false";
-            return Boolean.valueOf(System.getProperty("com.sun.webkit.useHTTP2Loader", defaultUseHTTP2));
-        });
-        useHTTP2Loader = tmp;
+        // Use HTTP2 by default on JDK 12 or later
+        final var version = Runtime.Version.parse(System.getProperty("java.version"));
+        final String defaultUseHTTP2 = version.feature() >= 12 ? "true" : "false";
+        useHTTP2Loader = Boolean.valueOf(System.getProperty("com.sun.webkit.useHTTP2Loader", defaultUseHTTP2));
     }
 
     /**
@@ -218,9 +211,7 @@ final class NetworkContext {
         // Our implementation employs HttpURLConnection for all
         // HTTP exchanges, so return the value of the "http.maxConnections"
         // system property.
-        @SuppressWarnings("removal")
-        int propValue = AccessController.doPrivileged(
-                (PrivilegedAction<Integer>) () -> Integer.getInteger("http.maxConnections", -1));
+        int propValue = Integer.getInteger("http.maxConnections", -1);
 
         if (useHTTP2Loader) {
             return propValue >= 0 ? propValue : DEFAULT_HTTP2_MAX_CONNECTIONS;
@@ -235,36 +226,18 @@ final class NetworkContext {
         private final ThreadGroup group;
         private final AtomicInteger index = new AtomicInteger(1);
 
-        // Need to assert the modifyThread and modifyThreadGroup permission when
-        // creating the thread from the URLLoaderThreadFactory, so we can
-        // create the thread with the desired ThreadGroup.
-        // Note that this is needed when running with a security manager
-        private static final Permission modifyThreadGroupPerm = new RuntimePermission("modifyThreadGroup");
-        private static final Permission modifyThreadPerm = new RuntimePermission("modifyThread");
-
         private URLLoaderThreadFactory() {
-            @SuppressWarnings("removal")
-            SecurityManager sm = System.getSecurityManager();
-            group = (sm != null) ? sm.getThreadGroup()
-                    : Thread.currentThread().getThreadGroup();
+            group = Thread.currentThread().getThreadGroup();
         }
 
-        @SuppressWarnings("removal")
         @Override
         public Thread newThread(Runnable r) {
-            // Assert the modifyThread and modifyThreadGroup permissions
-            return
-                AccessController.doPrivileged((PrivilegedAction<Thread>) () -> {
-                    Thread t = new Thread(group, r,
-                            "URL-Loader-" + index.getAndIncrement());
-                    t.setDaemon(true);
-                    if (t.getPriority() != Thread.NORM_PRIORITY) {
-                        t.setPriority(Thread.NORM_PRIORITY);
-                    }
-                    return t;
-                },
-                null,
-                modifyThreadGroupPerm, modifyThreadPerm);
+            Thread t = new Thread(group, r, "URL-Loader-" + index.getAndIncrement());
+            t.setDaemon(true);
+            if (t.getPriority() != Thread.NORM_PRIORITY) {
+                t.setPriority(Thread.NORM_PRIORITY);
+            }
+            return t;
         }
     }
 }

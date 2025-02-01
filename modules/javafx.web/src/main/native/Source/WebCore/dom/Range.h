@@ -26,6 +26,7 @@
 
 #include "AbstractRange.h"
 #include "RangeBoundaryPoint.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -39,21 +40,24 @@ class Text;
 
 struct SimpleRange;
 
-class Range final : public AbstractRange, public CanMakeWeakPtr<Range> {
+class Range final : public AbstractRange, public CanMakeSingleThreadWeakPtr<Range> {
     WTF_MAKE_ISO_ALLOCATED(Range);
+    WTF_MAKE_NONCOPYABLE(Range);
 public:
     WEBCORE_EXPORT static Ref<Range> create(Document&);
     WEBCORE_EXPORT ~Range();
 
     Node& startContainer() const final { return m_start.container(); }
+    Ref<Node> protectedStartContainer() const;
     unsigned startOffset() const final { return m_start.offset(); }
     Node& endContainer() const final { return m_end.container(); }
+    Ref<Node> protectedEndContainer() const;
     unsigned endOffset() const final { return m_end.offset(); }
     bool collapsed() const final { return m_start == m_end; }
     WEBCORE_EXPORT Node* commonAncestorContainer() const;
 
-    void resetDidChangeHighlight() { m_didChangeHighlight = false; }
-    bool didChangeHighlight() const { return m_didChangeHighlight; }
+    void resetDidChangeForHighlight() { m_didChangeForHighlight = false; }
+    bool didChangeForHighlight() const { return m_didChangeForHighlight; }
 
     WEBCORE_EXPORT ExceptionOr<void> setStart(Ref<Node>&&, unsigned offset);
     WEBCORE_EXPORT ExceptionOr<void> setEnd(Ref<Node>&&, unsigned offset);
@@ -110,10 +114,16 @@ public:
     void didDisassociateFromSelection() { m_isAssociatedWithSelection = false; }
     void updateFromSelection(const SimpleRange&);
 
+    void didAssociateWithHighlight()
+    {
+        m_isAssociatedWithHighlight = true;
+        m_didChangeForHighlight = true;
+    }
+
     // For use by garbage collection. Returns nullptr for ranges not assocated with selection.
     LocalDOMWindow* window() const;
 
-    static ExceptionOr<Node*> checkNodeOffsetPair(Node&, unsigned offset);
+    static ExceptionOr<RefPtr<Node>> checkNodeOffsetPair(Node&, unsigned offset);
 
 #if ENABLE(TREE_DEBUGGING)
     String debugDescription() const;
@@ -130,13 +140,16 @@ private:
 
     void updateDocument();
     void updateAssociatedSelection();
+    void updateAssociatedHighlight();
     ExceptionOr<RefPtr<DocumentFragment>> processContents(ActionType);
+    Ref<Document> protectedOwnerDocument();
 
     Ref<Document> m_ownerDocument;
     RangeBoundaryPoint m_start;
     RangeBoundaryPoint m_end;
     bool m_isAssociatedWithSelection { false };
-    bool m_didChangeHighlight { false };
+    bool m_didChangeForHighlight { false };
+    bool m_isAssociatedWithHighlight { false };
 };
 
 WEBCORE_EXPORT SimpleRange makeSimpleRange(const Range&);

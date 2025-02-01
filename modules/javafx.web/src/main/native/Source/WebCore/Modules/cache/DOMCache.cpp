@@ -154,7 +154,7 @@ void DOMCache::matchAll(std::optional<RequestInfo>&& info, CacheQueryOptions&& o
 
     auto requestStart = MonotonicTime::now();
     queryCache(WTFMove(resourceRequest), options, ShouldRetrieveResponses::Yes, [this, promise = WTFMove(promise), requestStart](auto&& result) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, promise = WTFMove(promise), result = WTFMove(result), requestStart]() mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, promise = WTFMove(promise), result = std::forward<decltype(result)>(result), requestStart]() mutable {
             if (result.hasException()) {
                 promise.reject(result.releaseException());
                 return;
@@ -235,7 +235,7 @@ ExceptionOr<Ref<FetchRequest>> DOMCache::requestFromInfo(RequestInfo&& info, boo
         if (request->method() != "GET"_s && !ignoreMethod) {
             if (requestValidationFailed)
                 *requestValidationFailed = true;
-            return Exception { TypeError, "Request method is not GET"_s };
+            return Exception { ExceptionCode::TypeError, "Request method is not GET"_s };
         }
     } else {
         auto result = FetchRequest::create(*scriptExecutionContext(), WTFMove(info), { });
@@ -247,7 +247,7 @@ ExceptionOr<Ref<FetchRequest>> DOMCache::requestFromInfo(RequestInfo&& info, boo
     if (!request->url().protocolIsInHTTPFamily()) {
         if (requestValidationFailed)
             *requestValidationFailed = true;
-        return Exception { TypeError, "Request url is not HTTP/HTTPS"_s };
+        return Exception { ExceptionCode::TypeError, "Request url is not HTTP/HTTPS"_s };
     }
 
     return request.releaseNonNull();
@@ -267,7 +267,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
             promise.reject(requestOrException.releaseException());
             return;
         }
-        requests.uncheckedAppend(requestOrException.releaseReturnValue());
+        requests.append(requestOrException.releaseReturnValue());
     }
 
     auto taskHandler = FetchTasksHandler::create(*this, [this, protectedThis = Ref { *this }, promise = WTFMove(promise)](ExceptionOr<Vector<Record>>&& result) mutable {
@@ -287,7 +287,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
     for (auto& request : requests) {
         auto& requestReference = request.get();
         if (requestReference.signal().aborted()) {
-            taskHandler->error(Exception { AbortError, "Request signal is aborted"_s });
+            taskHandler->error(Exception { ExceptionCode::AbortError, "Request signal is aborted"_s });
             return;
         }
         FetchResponse::fetch(*scriptExecutionContext(), requestReference, [this, request = WTFMove(request), taskHandler](auto&& result) mutable {
@@ -304,24 +304,24 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
             auto& response = protectedResponse.get();
 
             if (!response.ok()) {
-                taskHandler->error(Exception { TypeError, "Response is not OK"_s });
+                taskHandler->error(Exception { ExceptionCode::TypeError, "Response is not OK"_s });
                 return;
             }
 
             if (hasResponseVaryStarHeaderValue(response)) {
-                taskHandler->error(Exception { TypeError, "Response has a '*' Vary header value"_s });
+                taskHandler->error(Exception { ExceptionCode::TypeError, "Response has a '*' Vary header value"_s });
                 return;
             }
 
             if (response.status() == 206) {
-                taskHandler->error(Exception { TypeError, "Response is a 206 partial"_s });
+                taskHandler->error(Exception { ExceptionCode::TypeError, "Response is a 206 partial"_s });
                 return;
             }
 
             CacheQueryOptions options;
             for (const auto& record : taskHandler->records()) {
                 if (DOMCacheEngine::queryCacheMatch(request->resourceRequest(), record.request, record.response, options)) {
-                    taskHandler->error(Exception { InvalidStateError, "addAll cannot store several matching requests"_s});
+                    taskHandler->error(Exception { ExceptionCode::InvalidStateError, "addAll cannot store several matching requests"_s });
                     return;
                 }
             }
@@ -383,17 +383,17 @@ void DOMCache::put(RequestInfo&& info, Ref<FetchResponse>&& response, DOMPromise
     }
 
     if (hasResponseVaryStarHeaderValue(response.get())) {
-        promise.reject(Exception { TypeError, "Response has a '*' Vary header value"_s });
+        promise.reject(Exception { ExceptionCode::TypeError, "Response has a '*' Vary header value"_s });
         return;
     }
 
     if (response->status() == 206) {
-        promise.reject(Exception { TypeError, "Response is a 206 partial"_s });
+        promise.reject(Exception { ExceptionCode::TypeError, "Response is a 206 partial"_s });
         return;
     }
 
     if (response->isDisturbedOrLocked()) {
-        promise.reject(Exception { TypeError, "Response is disturbed or locked"_s });
+        promise.reject(Exception { ExceptionCode::TypeError, "Response is disturbed or locked"_s });
         return;
     }
 
@@ -498,7 +498,7 @@ void DOMCache::queryCache(ResourceRequest&& request, const CacheQueryOptions& op
             return;
         }
 
-        auto records = WTF::map(result.value(), [](auto&& record) {
+        auto records = WTF::map(WTFMove(result).value(), [](CrossThreadRecord&& record) {
             return fromCrossThreadRecord(WTFMove(record));
         });
         callback(WTFMove(records));
@@ -551,7 +551,7 @@ void DOMCache::batchPutOperation(const FetchRequest& request, FetchResponse& res
 
 void DOMCache::batchPutOperation(Vector<Record>&& records, CompletionHandler<void(ExceptionOr<void>&&)>&& callback)
 {
-    auto crossThreadRecords = WTF::map(records, [](auto&& record) {
+    auto crossThreadRecords = WTF::map(WTFMove(records), [](Record&& record) {
         return toCrossThreadRecord(WTFMove(record));
     });
     m_connection->batchPutOperation(m_identifier, WTFMove(crossThreadRecords), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](auto&& result) mutable {

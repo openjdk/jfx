@@ -26,8 +26,6 @@
 #include "config.h"
 #include "PushManager.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "DocumentInlines.h"
 #include "EventLoop.h"
 #include "Exception.h"
@@ -38,6 +36,7 @@
 #include "Logging.h"
 #include "NotificationClient.h"
 #include "PushCrypto.h"
+#include "PushSubscriptionOwner.h"
 #include "ScriptExecutionContext.h"
 #include "ServiceWorkerRegistration.h"
 #include <wtf/IsoMallocInlines.h>
@@ -48,8 +47,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(PushManager);
 
-PushManager::PushManager(ServiceWorkerRegistration& serviceWorkerRegistration)
-    : m_serviceWorkerRegistration(serviceWorkerRegistration)
+PushManager::PushManager(PushSubscriptionOwner& pushSubscriptionOwner)
+    : m_pushSubscriptionOwner(pushSubscriptionOwner)
 {
 }
 
@@ -62,12 +61,12 @@ Vector<String> PushManager::supportedContentEncodings()
 
 void PushManager::ref() const
 {
-    m_serviceWorkerRegistration.ref();
+    m_pushSubscriptionOwner.ref();
 }
 
 void PushManager::deref() const
 {
-    m_serviceWorkerRegistration.deref();
+    m_pushSubscriptionOwner.deref();
 }
 
 void PushManager::subscribe(ScriptExecutionContext& context, std::optional<PushSubscriptionOptionsInit>&& options, DOMPromiseDeferred<IDLInterface<PushSubscription>>&& promise)
@@ -76,12 +75,12 @@ void PushManager::subscribe(ScriptExecutionContext& context, std::optional<PushS
 
     context.eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, context = Ref { context }, options = WTFMove(options), promise = WTFMove(promise)]() mutable {
         if (!options || !options->userVisibleOnly) {
-            promise.reject(Exception { NotAllowedError, "Subscribing for push requires userVisibleOnly to be true"_s });
+            promise.reject(Exception { ExceptionCode::NotAllowedError, "Subscribing for push requires userVisibleOnly to be true"_s });
             return;
         }
 
         if (!options || !options->applicationServerKey) {
-            promise.reject(Exception { NotSupportedError, "Subscribing for push requires an applicationServerKey"_s });
+            promise.reject(Exception { ExceptionCode::NotSupportedError, "Subscribing for push requires an applicationServerKey"_s });
             return;
         }
 
@@ -97,7 +96,7 @@ void PushManager::subscribe(ScriptExecutionContext& context, std::optional<PushS
         }, [](String& value) -> KeyDataResult {
             auto decoded = base64URLDecode(value);
             if (!decoded)
-                return Exception { InvalidCharacterError, "applicationServerKey is not properly base64url-encoded"_s };
+                return Exception { ExceptionCode::InvalidCharacterError, "applicationServerKey is not properly base64url-encoded"_s };
             return WTFMove(decoded.value());
         });
 
@@ -107,12 +106,14 @@ void PushManager::subscribe(ScriptExecutionContext& context, std::optional<PushS
         }
 
         if (!PushCrypto::validateP256DHPublicKey(keyDataResult.returnValue())) {
-            promise.reject(Exception { InvalidAccessError, "applicationServerKey must contain a valid P-256 public key"_s });
+            promise.reject(Exception { ExceptionCode::InvalidAccessError, "applicationServerKey must contain a valid P-256 public key"_s });
             return;
         }
 
-        if (!m_serviceWorkerRegistration.active()) {
-            promise.reject(Exception { InvalidStateError, "Subscribing for push requires an active service worker"_s });
+        if (!m_pushSubscriptionOwner.isActive()) {
+            // Only PushSubscriptionOwner objects related to service workers will ever return `false` for isActive(),
+            // so this error message is correct.
+            promise.reject(Exception { ExceptionCode::InvalidStateError, "Subscribing for push requires an active service worker"_s });
             return;
         }
 
@@ -120,12 +121,12 @@ void PushManager::subscribe(ScriptExecutionContext& context, std::optional<PushS
         auto permission = client ? client->checkPermission(context.ptr()) : NotificationPermission::Denied;
 
         if (permission == NotificationPermission::Denied) {
-            promise.reject(Exception { NotAllowedError, "User denied push permission"_s });
+            promise.reject(Exception { ExceptionCode::NotAllowedError, "User denied push permission"_s });
             return;
         }
 
         if (permission == NotificationPermission::Default && !context->isDocument()) {
-            promise.reject(Exception { NotAllowedError, "User denied push permission"_s });
+            promise.reject(Exception { ExceptionCode::NotAllowedError, "User denied push permission"_s });
             return;
         }
 
@@ -135,11 +136,11 @@ void PushManager::subscribe(ScriptExecutionContext& context, std::optional<PushS
 
             auto& document = downcast<Document>(context.get());
             if (!document.isSameOriginAsTopDocument()) {
-                promise.reject(Exception { NotAllowedError, "Cannot request permission from cross-origin iframe"_s });
+                promise.reject(Exception { ExceptionCode::NotAllowedError, "Cannot request permission from cross-origin iframe"_s });
                 return;
             }
 
-            auto* window = document.frame() ? document.frame()->window() : nullptr;
+            RefPtr window = document.frame() ? document.frame()->window() : nullptr;
             if (!window || !window->consumeTransientActivation()) {
 #if !RELEASE_LOG_DISABLED
                 Seconds lastActivationDuration = window ? MonotonicTime::now() - window->lastActivationTimestamp() : Seconds::infinity();
@@ -148,30 +149,30 @@ void PushManager::subscribe(ScriptExecutionContext& context, std::optional<PushS
 
                 auto errorMessage = "Push notification prompting can only be done from a user gesture."_s;
                 document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, errorMessage);
-                promise.reject(Exception { NotAllowedError, errorMessage });
+                promise.reject(Exception { ExceptionCode::NotAllowedError, errorMessage });
                 return;
             }
 
             client->requestPermission(context, [this, protectedThis = WTFMove(protectedThis), keyData = keyDataResult.releaseReturnValue(), promise = WTFMove(promise)](auto permission) mutable {
                 if (permission != NotificationPermission::Granted) {
-                    promise.reject(Exception { NotAllowedError, "User denied push permission"_s });
+                    promise.reject(Exception { ExceptionCode::NotAllowedError, "User denied push permission"_s });
                     return;
                 }
 
-                m_serviceWorkerRegistration.subscribeToPushService(WTFMove(keyData), WTFMove(promise));
+                m_pushSubscriptionOwner.subscribeToPushService(WTFMove(keyData), WTFMove(promise));
             });
             return;
         }
 
         RELEASE_ASSERT(permission == NotificationPermission::Granted);
-        m_serviceWorkerRegistration.subscribeToPushService(keyDataResult.releaseReturnValue(), WTFMove(promise));
+        m_pushSubscriptionOwner.subscribeToPushService(keyDataResult.releaseReturnValue(), WTFMove(promise));
     });
 }
 
 void PushManager::getSubscription(ScriptExecutionContext& context, DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&& promise)
 {
     context.eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, promise = WTFMove(promise)]() mutable {
-        m_serviceWorkerRegistration.getPushSubscription(WTFMove(promise));
+        m_pushSubscriptionOwner.getPushSubscription(WTFMove(promise));
     });
 }
 
@@ -196,5 +197,3 @@ void PushManager::permissionState(ScriptExecutionContext& context, std::optional
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

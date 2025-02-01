@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,7 +120,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         // as expected, so the user is responsible for passing allowPad=false
         // if one of those wrap modes is needed.
 
-        // RT-27443
+        // JDK-8090325
         // TODO: we really only need the padding here to implement the
         // CLAMP_TO_ZERO mode on devices and/or to implement the edge
         // smoothing tricks; but currently neither of those are needed/used
@@ -467,7 +467,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                     // data transfer and storage costs (only 1 byte per pixel,
                     // and works regardless of internalFormat).
 
-                    // RT-27443
+                    // JDK-8090325
                     // TODO: consider caching this buffer as a static (probably
                     // fine for desktop, but might not be so good for tv)...
                     int initSize = texw * texh * initBytesPerPixel;

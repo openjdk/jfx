@@ -49,14 +49,6 @@
  * Most GVariant API functions are in gvariant.c.
  */
 
-/**
- * GVariant:
- *
- * #GVariant is an opaque data structure and can only be accessed
- * using the following functions.
- *
- * Since: 2.24
- **/
 struct _GVariant
 /* see below for field member documentation */
 {
@@ -643,8 +635,14 @@ g_variant_new_from_bytes (const GVariantType *type,
 
       /* posix_memalign() requires the alignment to be a multiple of
        * sizeof(void*), and a power of 2. See g_variant_type_info_query() for
-       * details on the alignment format. */
-      if (posix_memalign (&aligned_data, MAX (sizeof (void *), alignment + 1),
+       * details on the alignment format.
+       *
+       * While calling posix_memalign() with aligned_size==0 is safe on glibc,
+       * POSIX specifies that the behaviour is implementation-defined, so avoid
+       * that and leave aligned_data==NULL in that case.
+       * See https://pubs.opengroup.org/onlinepubs/9699919799/functions/posix_memalign.html */
+      if (aligned_size != 0 &&
+          posix_memalign (&aligned_data, MAX (sizeof (void *), alignment + 1),
                           aligned_size) != 0)
         g_error ("posix_memalign failed");
 

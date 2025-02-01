@@ -38,6 +38,7 @@
 namespace WebCore {
 
 class TrackBase;
+using TrackID = uint64_t;
 
 class TrackListBase : public RefCounted<TrackListBase>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TrackListBase);
@@ -56,6 +57,8 @@ public:
     using RefCounted<TrackListBase>::ref;
     using RefCounted<TrackListBase>::deref;
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+
+    void didMoveToNewDocument(Document&);
 
     WebCoreOpaqueRoot opaqueRoot();
 

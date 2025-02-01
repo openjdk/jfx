@@ -288,39 +288,6 @@
                 "url": "https://www.w3.org/TR/css-ui-4/#widget-accent"
             }
         },
-        "align-tracks": {
-            "values": [
-                "normal",
-                "first",
-                "last",
-                "baseline",
-                "space-between",
-                "space-around",
-                "space-evenly",
-                "stretch",
-                "unsafe",
-                "safe",
-                "center",
-                "start",
-                "end",
-                "flex-start",
-                "flex-end"
-            ],
-            "codegen-properties": {
-                "initial": "initialAlignTracks",
-                "converter": "ContentAlignmentDataList",
-                "settings-flag": "masonryTrackAlignmentEnabled",
-                "parser-function": "consumeAlignTracks",
-                "parser-grammar-unused": "normal | <baseline-position> | <content-distribution> | [ <overflow-position>? <content-position> ]",
-                "parser-grammar-unused-reason": "Needs support for ordered groups, '&&' groups and optionals",
-                "comment": "Alternate defintion in css-flexbox - flex-start | flex-end | center | space-between | space-around | stretch"
-            },
-            "specification": {
-                "category": "css-grid",
-                "url": "https://drafts.csswg.org/css-grid-3/#tracks-alignment"
-            },
-            "status": "in development"
-        },
         "block-step-size": {
             "codegen-properties": {
                 "settings-flag": "cssRhythmicSizingEnabled",
@@ -476,6 +443,7 @@
             "codegen-properties": {
                 "high-priority": true,
                 "parser-function": "consumeDisplay",
+                "parser-function-requires-context-mode": true,
                 "parser-grammar-unused": "[ <display-outside> || <display-inside> ] | <display-listitem> | <display-internal> | <display-box> | <display-legacy> | <-webkit-display>",
                 "parser-grammar-unused-reason": "Needs support for '||' groups and '&& groups."
             },
@@ -967,6 +935,27 @@
                 "url": "https://drafts.csswg.org/css-fonts-4/#font-variant-east-asian-prop"
             }
         },
+        "font-variant-emoji": {
+            "inherited": true,
+            "values": [
+                "normal",
+                "text",
+                "emoji",
+                "unicode"
+            ],
+            "codegen-properties": {
+                "settings-flag": "cssFontVariantEmojiEnabled",
+                "parser-grammar": "<<values>>",
+                "name-for-methods": "VariantEmoji",
+                "font-property": true,
+                "high-priority": true,
+                "parser-exported": true
+            },
+            "specification": {
+                "category": "css-fonts",
+                "url": "https://drafts.csswg.org/css-fonts/#font-variant-emoji-prop"
+            }
+        },
         "font-synthesis": {
             "inherited": true,
             "codegen-properties": {
@@ -1065,6 +1054,7 @@
                     "font-variant-numeric",
                     "font-variant-east-asian",
                     "font-variant-position",
+                    "font-variant-emoji",
                     "font-feature-settings",
                     {
                         "value": "font-optical-sizing",
@@ -1090,45 +1080,14 @@
                               "font-variant-alternates",
                     "font-variant-numeric",
                     "font-variant-east-asian",
-                    "font-variant-position"
+                    "font-variant-position",
+                    "font-variant-emoji"
                               ]
             },
             "specification": {
                 "category": "css-fonts",
                 "url": "https://www.w3.org/TR/css-fonts-3/#propdef-font-variant"
             }
-        },
-        "justify-tracks": {
-            "values": [
-                "normal",
-                "space-between",
-                "space-around",
-                "space-evenly",
-                "stretch",
-                "unsafe",
-                "safe",
-                "center",
-                "start",
-                "end",
-                "flex-start",
-                "flex-end",
-                "left",
-                "right"
-            ],
-            "codegen-properties": {
-                "initial": "initialJustifyTracks",
-                "converter": "ContentAlignmentDataList",
-                "settings-flag": "masonryTrackAlignmentEnabled",
-                "parser-function": "consumeJustifyTracks",
-                "parser-grammar-unused": "normal | <content-distribution> | [ <overflow-position>? [ <content-position> | left | right ] ]",
-                "parser-grammar-unused-reason": "Needs support for ordered groups and optionals.",
-                "comment": "Alternate defintion in css-flexbox - flex-start | flex-end | center | space-between | space-around"
-            },
-            "specification": {
-                "category": "css-grid",
-                "url": "https://drafts.csswg.org/css-grid-3/#tracks-alignment"
-            },
-            "status": "in development"
         },
         "-webkit-locale": {
             "inherited": true,
@@ -1204,6 +1163,9 @@
             ],
             "codegen-properties": {
                 "settings-flag": "cssTextSpacingEnabled",
+                "font-property": true,
+                "high-priority": true,
+                "sink-priority": true,
                 "converter": "TextSpacingTrim",
                 "parser-function": "consumeTextSpacingTrim",
                 "parser-grammar-unused": "auto | space-all | trim-all | [ allow-end || space-first ]",
@@ -1223,6 +1185,9 @@
             ],
             "codegen-properties": {
                 "settings-flag": "cssTextSpacingEnabled",
+                "font-property": true,
+                "high-priority": true,
+                "sink-priority": true,
                 "converter": "TextAutospace",
                 "parser-function": "consumeTextAutospace",
                 "parser-grammar-unused": "normal | auto | no-autospace | [ [ ideograph-alpha || ideograph-numeric || punctuation ] || [ insert | replace ] ]",
@@ -1242,13 +1207,11 @@
                 "vertical-rl",
                 {
                     "value": "sideways-lr",
-                    "status": "unimplemented",
-                    "url": "https://w3c.github.io/csswg-drafts/css-writing-modes/#block-flow"
+                    "settings-flag": "sidewaysWritingModesEnabled"
                 },
                 {
                     "value": "sideways-rl",
-                    "status": "unimplemented",
-                    "url": "https://w3c.github.io/csswg-drafts/css-writing-modes/#block-flow"
+                    "settings-flag": "sidewaysWritingModesEnabled"
                 },
                 {
                     "value": "lr-tb",
@@ -1361,7 +1324,6 @@
         },
         "alignment-baseline": {
             "values": [
-                "auto",
                 "baseline",
                 "before-edge",
                 "text-before-edge",
@@ -1427,7 +1389,6 @@
             "animatable": true,
             "codegen-properties": {
                 "name-for-methods": "CompositeOperation",
-                "settings-flag": "webAnimationsCompositeOperationsEnabled",
                 "parser-grammar": "<single-animation-composition>#"
             },
             "specification": {
@@ -1555,6 +1516,26 @@
             "specification": {
                 "category": "css-animations",
                 "url": "https://www.w3.org/TR/css3-animations/#animation-play-state-property"
+            }
+        },
+        "animation-timeline": {
+            "values": [
+                "auto",
+                "none"
+            ],
+            "animatable": true,
+            "codegen-properties": {
+                "converter": "AnimationTimeline",
+                "name-for-methods": "Timeline",
+                "settings-flag": "scrollDrivenAnimationsEnabled",
+                "parser-function": "consumeAnimationTimeline",
+                "parser-function-requires-context": true,
+                "parser-grammar-unused": "auto | none | <dashed-ident> | <scroll()> | <view()>",
+                "parser-grammar-unused-reason": "Needs support for function notation."
+            },
+            "specification": {
+                "category": "css-animations",
+                "url": "https://drafts.csswg.org/css-animations-2/#animation-timeline"
             }
         },
         "animation-timing-function": {
@@ -3170,7 +3151,7 @@
                 "converter": "PathOperation",
                 "parser-function": "consumePathOperation",
                 "parser-function-requires-context": true,
-                "parser-function-requires-additional-parameters": ["ConsumeRay::Exclude"],
+                "parser-function-requires-additional-parameters": ["RejectRay"],
                 "parser-grammar-unused": "<clip-source> | [ <basic-shape> || <geometry-box> ] | none",
                 "parser-grammar-unused-reason": "Needs support for '||' groups."
             },
@@ -3254,7 +3235,7 @@
             },
             "specification": {
                 "category": "css-lists",
-                "url": "https://www.w3.org/TR/css-lists-3/#propdef-counter-increment"
+                "url": "https://drafts.csswg.org/css-lists/#propdef-counter-increment"
             }
         },
         "counter-reset": {
@@ -3269,7 +3250,22 @@
             },
             "specification": {
                 "category": "css-lists",
-                "url": "https://www.w3.org/TR/css-lists-3/#counter-properties"
+                "url": "https://drafts.csswg.org/css-lists/#propdef-counter-reset"
+            }
+        },
+        "counter-set": {
+            "values": [
+                "none"
+            ],
+            "codegen-properties": {
+                "custom": "All",
+                "parser-function": "consumeCounterSet",
+                "parser-grammar-unused": "[ <counter-name> <integer>? ]+ | none",
+                "parser-grammar-unused-reason": "Needs support for '+' multipliers and optionals."
+            },
+            "specification": {
+                "category": "css-lists",
+                "url": "https://drafts.csswg.org/css-lists/#propdef-counter-set"
             }
         },
         "cursor": {
@@ -3797,12 +3793,12 @@
                 "font-property": true,
                 "high-priority": true,
                 "sink-priority": true,
-                "converter": "Spacing",
-                "parser-grammar": "normal | <length unitless-allowed>"
+                "converter": "TextLengthOrNormal",
+                "parser-grammar": "normal | <length-percentage unitless-allowed>"
             },
             "specification": {
                 "category": "css-text",
-                "url": "https://www.w3.org/TR/css-text-3/#letter-spacing-property"
+                "url": "https://www.w3.org/TR/css-text/#letter-spacing-property"
             }
         },
         "lighting-color": {
@@ -4273,12 +4269,102 @@
                     "mask-origin",
                     "mask-clip",
                     "mask-composite",
-                    "mask-mode"
+                    "mask-mode",
+                    "mask-border-source",
+                    "mask-border-slice",
+                    "mask-border-width",
+                    "mask-border-outset",
+                    "mask-border-repeat"
                 ]
             },
             "specification": {
                 "category": "css-masking",
                 "url": "https://www.w3.org/TR/css-masking-1/#propdef-mask"
+            }
+        },
+        "mask-border": {
+            "codegen-properties": {
+                "longhands": [
+                    "mask-border-source",
+                    "mask-border-slice",
+                    "mask-border-width",
+                    "mask-border-outset",
+                    "mask-border-repeat"
+                ]
+            },
+            "specification": {
+                "category": "css-masking"
+            }
+        },
+        "mask-border-outset": {
+            "codegen-properties": {
+                "aliases": [
+                    "-webkit-mask-box-image-outset"
+                ],
+                "custom": "All",
+                "parser-function": "consumeBorderImageOutset",
+                "parser-grammar-unused": "[ <number [0,inf]> | <length [0,inf]> ]{1,4}",
+                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+
+            },
+            "specification": {
+                "category": "css-masking"
+            }
+        },
+        "mask-border-repeat": {
+            "codegen-properties": {
+                "aliases": [
+                    "-webkit-mask-box-image-repeat"
+                ],
+                "custom": "All",
+                "parser-function": "consumeBorderImageRepeat",
+                "parser-grammar-unused": "[ stretch | repeat | space | round ]{1,2}",
+                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+            },
+            "specification": {
+                "category": "css-masking"
+            }
+        },
+        "mask-border-slice": {
+            "codegen-properties": {
+                "aliases": [
+                    "-webkit-mask-box-image-slice"
+                ],
+                "custom": "All",
+                "parser-function": "consumeBorderImageSlice",
+                "parser-function-requires-current-property": true,
+                "parser-grammar-unused": "[ <number [0,inf]> | <percentage [0,inf]> ]{1,4} && fill?",
+                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers, '&&' groups and optionals."
+            },
+            "specification": {
+                "category": "css-masking"
+            }
+        },
+        "mask-border-source": {
+            "codegen-properties": {
+                "aliases": [
+                    "-webkit-mask-box-image-source"
+                ],
+                "converter": "StyleImage<CSSPropertyMaskBorderSource>",
+                "parser-grammar": "none | <image>"
+            },
+            "specification": {
+                "category": "css-masking"
+            }
+        },
+        "mask-border-width": {
+            "codegen-properties": {
+                "aliases": [
+                    "-webkit-mask-box-image-width"
+                ],
+                "custom": "All",
+                "parser-function": "consumeBorderImageWidth",
+                "parser-function-requires-current-property": true,
+                "parser-grammar-unused": "[ <length-percentage [0,inf]> | <number [0,inf]> | auto ]{1,4}",
+                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+            },
+            "specification": {
+                "category": "css-masking"
             }
         },
         "mask-clip": {
@@ -4463,6 +4549,7 @@
             "status": "experimental"
         },
         "math-style": {
+            "inherited": true,
             "values": [
                 "normal",
                 "compact"
@@ -4638,7 +4725,7 @@
                 "settings-flag": "cssMotionPathEnabled",
                 "parser-function": "consumePathOperation",
                 "parser-function-requires-context": true,
-                "parser-function-requires-additional-parameters": ["ConsumeRay::Include"],
+                "parser-function-requires-additional-parameters": ["RejectFillRule"],
                 "parser-grammar-unused": "none | <ray()> | <path()> | <url> | [ <basic-shape> && <coord-box>? ] | <coord-box>",
                 "parser-grammar-unused-reason": "Needs support for '||' groups, '&&' groups, optionals and function notation."
             },
@@ -4660,12 +4747,13 @@
         },
         "offset-position": {
             "values": [
+                "normal",
                 "auto"
             ],
             "codegen-properties": {
-                "converter": "PositionOrAuto",
+                "converter": "PositionOrAutoOrNormal",
                 "settings-flag": "cssMotionPathEnabled",
-                "parser-grammar": "auto | <position>"
+                "parser-grammar": "normal | auto | <position>"
             },
             "specification": {
                 "category": "css-motion-path",
@@ -4868,10 +4956,7 @@
             "values": [
                 "visible",
                 "hidden",
-                {
-                    "value": "clip",
-                    "settings-flag": "overflowClipEnabled"
-                },
+                "clip",
                 "scroll",
                 "auto",
                 {
@@ -4891,10 +4976,7 @@
             "values": [
                 "visible",
                 "hidden",
-                {
-                    "value": "clip",
-                    "settings-flag": "overflowClipEnabled"
-                },
+                "clip",
                 "scroll",
                 "auto",
                 {
@@ -5219,6 +5301,7 @@
             }
         },
         "paint-order": {
+            "inherited": true,
             "codegen-properties": {
                 "converter": "PaintOrder",
                 "parser-function": "consumePaintOrder",
@@ -5329,8 +5412,8 @@
                     "url": "https://www.w3.org/TR/css-logical/#resize"
                 },
                 {
-                    "value": "auto",
-                    "status": "non-standard"
+                    "value": "-internal-textarea-auto",
+                    "status": "internal"
                 }
             ],
             "codegen-properties": {
@@ -5704,7 +5787,6 @@
             ],
             "codegen-properties": {
                 "converter": "TextAlignLast",
-                "settings-flag": "cssTextAlignLastEnabled",
                 "parser-grammar": "<<values>>"
             },
             "specification": {
@@ -5851,32 +5933,53 @@
         },
         "text-wrap": {
             "inherited": true,
+            "codegen-properties": {
+                "longhands": [
+                    "text-wrap-mode",
+                    "text-wrap-style"
+                ]
+            },
+            "specification": {
+                "category": "css-text",
+                "url": "https://drafts.csswg.org/css-text-4/#text-wrap-shorthand"
+            }
+        },
+        "text-wrap-mode": {
+            "inherited": true,
             "values": [
                 "wrap",
-                "nowrap",
-                {
-                    "value": "balance",
-                    "settings-flag": "cssTextWrapNewValuesEnabled"
-                },
-                {
-                    "value": "stable",
-                    "settings-flag": "cssTextWrapNewValuesEnabled"
-                },
-                {
-                    "value": "pretty",
-                    "settings-flag": "cssTextWrapNewValuesEnabled"
-                }
+                "nowrap"
             ],
             "codegen-properties": {
-                "settings-flag": "cssWhiteSpaceLonghandsEnabled",
+                "parser-grammar": "<<values>>",
+                "parser-exported": true
+                },
+            "specification": {
+                "category": "css-text",
+                "url": "https://drafts.csswg.org/css-text-4/#text-wrap-mode"
+            }
+                },
+        "text-wrap-style": {
+            "inherited": true,
+            "values": [
+                "auto",
+                "balance",
+                {
+                    "value": "pretty",
+                    "settings-flag": "cssTextWrapPrettyEnabled"
+                },
+                "stable"
+            ],
+            "codegen-properties": {
+                "settings-flag": "cssTextWrapStyleEnabled",
                 "parser-grammar": "<<values>>",
                 "parser-exported": true
             },
             "specification": {
                 "category": "css-text",
-                "url": "https://www.w3.org/TR/css-text-4/#text-wrap"
+                "url": "https://drafts.csswg.org/css-text-4/#text-wrap-style"
             },
-            "status": "in development"
+            "status": "experimental"
         },
         "top": {
             "values": [
@@ -5909,12 +6012,29 @@
                     "transition-property",
                     "transition-duration",
                     "transition-timing-function",
-                    "transition-delay"
+                    "transition-delay",
+                    "transition-behavior"
                 ]
             },
             "specification": {
                 "category": "css-transitions",
                 "url": "https://www.w3.org/TR/css3-transitions/#transition-shorthand-property"
+            }
+        },
+        "transition-behavior": {
+            "values": [
+                "normal",
+                "allow-discrete"
+            ],
+            "animatable": true,
+            "codegen-properties": {
+                "name-for-methods": "AllowsDiscreteTransitions",
+                "separator": ",",
+                "parser-grammar": "<transition-behavior-value>#"
+            },
+            "specification": {
+                "category": "css-transitions",
+                "url": "https://drafts.csswg.org/css-transitions-2/#transition-behavior-property"
             }
         },
         "transition-delay": {
@@ -6061,12 +6181,12 @@
             "codegen-properties": {
                 "longhands": [
                     "white-space-collapse",
-                    "text-wrap"
+                    "text-wrap-mode"
                 ]
             },
             "specification": {
                 "category": "css-text",
-                "url": "https://www.w3.org/TR/css-text-4/#white-space-property"
+                "url": "https://drafts.csswg.org/css-text-4/#white-space-property"
             }
         },
         "white-space-collapse": {
@@ -6078,16 +6198,14 @@
                 "break-spaces"
             ],
             "codegen-properties": {
-                "settings-flag": "cssWhiteSpaceLonghandsEnabled",
                 "parser-grammar": "<<values>>",
                 "parser-exported": true
             },
             "specification": {
                 "category": "css-text",
                 "url": "https://www.w3.org/TR/css-text-4/#white-space-collapsing"
+            }
             },
-            "status": "in development"
-        },
         "widows": {
             "inherited": true,
             "codegen-properties": {
@@ -6135,8 +6253,8 @@
                 "keep-all",
                 "break-word",
                 {
-                    "settings-flag": "cssWordBreakAutoEnabled",
-                    "value": "auto"
+                    "settings-flag": "cssWordBreakAutoPhraseEnabled",
+                    "value": "auto-phrase"
                 }
             ],
             "codegen-properties": {
@@ -6156,13 +6274,14 @@
                 "normal"
             ],
             "codegen-properties": {
-                "conditional-converter": "WordSpacing",
-                "parser-grammar": "normal | <length-percentage unitless-allowed>",
-                "parser-grammar-comment": "The current specification has a <length>, not a <length-percentage>"
+                "custom": "Inherit",
+                "sink-priority": true,
+                "converter": "TextLengthOrNormal",
+                "parser-grammar": "normal | <length-percentage unitless-allowed>"
             },
             "specification": {
-                "category": "css-22",
-                "url": "https://www.w3.org/TR/CSS22/text.html#propdef-word-spacing"
+                "category": "css-text",
+                "url": "https://www.w3.org/TR/css-text/#word-spacing-property"
             }
         },
         "x": {
@@ -6200,20 +6319,6 @@
                 "category": "css-22",
                 "url": "https://www.w3.org/TR/CSS22/visuren.html#propdef-z-index"
             }
-        },
-        "alt": {
-            "codegen-properties": {
-                "aliases": [
-                    "-webkit-alt"
-                ],
-                "name-for-methods": "ContentAltText",
-                "custom": "Value",
-                "parser-function": "consumeAlt",
-                "parser-function-requires-context": true,
-                "parser-grammar-unused": "<string> | <attr()>",
-                "parser-grammar-unused-reason": "Needs support for function notation."
-            },
-            "status": "non-standard"
         },
         "appearance": {
             "values": [
@@ -6275,7 +6380,6 @@
             ],
             "codegen-properties": {
                 "custom": "All",
-                "settings-flag": "aspectRatioEnabled",
                 "parser-function": "consumeAspectRatio",
                 "parser-grammar-unused": "auto || <ratio>",
                 "parser-grammar-unused-reason": "Needs support for '||' groups."
@@ -6936,7 +7040,6 @@
                 "slice"
             ],
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_BOX_DECORATION_BREAK",
                 "parser-grammar": "<<values>>"
             },
             "status": {
@@ -6970,7 +7073,6 @@
             ],
             "codegen-properties": {
                 "name-for-methods": "BlendMode",
-                "enable-if": "ENABLE_CSS_COMPOSITING",
                 "parser-grammar": "<<values>>"
             },
             "specification":  {
@@ -6984,7 +7086,6 @@
                 "isolate"
             ],
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_COMPOSITING",
                 "parser-grammar": "<<values>>"
             },
             "specification":  {
@@ -7266,13 +7367,32 @@
         },
         "-webkit-backdrop-filter": {
             "codegen-properties": {
+                "related-property": "backdrop-filter",
                 "conditional-converter": "FilterOperations",
-                "enable-if": "ENABLE_FILTERS_LEVEL_2",
                 "parser-function": "consumeFilter",
                 "parser-function-requires-context": true,
                 "parser-function-requires-additional-parameters": ["AllowedFilterFunctions::PixelFilters"],
                 "parser-grammar-unused": "none | <filter-value-list>",
                 "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers."
+            },
+            "status": {
+                "status": "experimental"
+            },
+            "specification": {
+                "category": "css-filters",
+                "url": "https://drafts.fxtf.org/filters-2/#BackdropFilterProperty"
+            }
+        },
+        "backdrop-filter": {
+            "codegen-properties": {
+                "related-property": "-webkit-backdrop-filter",
+                "conditional-converter": "FilterOperations",
+                "parser-function": "consumeFilter",
+                "parser-function-requires-context": true,
+                "parser-function-requires-additional-parameters": ["AllowedFilterFunctions::PixelFilters"],
+                "parser-grammar-unused": "none | <filter-value-list>",
+                "parser-grammar-unused-reason": "Needs support for functional syntax groupings and '+' multipliers.",
+                "settings-flag": "cssUnprefixedBackdropFilterEnabled"
             },
             "status": {
                 "status": "experimental"
@@ -7820,77 +7940,16 @@
         "-webkit-mask-box-image": {
             "codegen-properties": {
                 "longhands": [
-                    "-webkit-mask-box-image-source",
-                    "-webkit-mask-box-image-slice",
-                    "-webkit-mask-box-image-width",
-                    "-webkit-mask-box-image-outset",
-                    "-webkit-mask-box-image-repeat"
+                    "mask-border-source",
+                    "mask-border-slice",
+                    "mask-border-width",
+                    "mask-border-outset",
+                    "mask-border-repeat"
                 ]
             },
-            "status": "non-standard",
-            "specification": {
-                "category": "css-masking"
-            }
-        },
-        "-webkit-mask-box-image-outset": {
-            "codegen-properties": {
-                "custom": "All",
-                "parser-function": "consumeBorderImageOutset",
-                "parser-grammar-unused": "[ <number [0,inf]> | <length [0,inf]> ]{1,4}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
-
-            },
-            "status": "non-standard",
-            "specification": {
-                "category": "css-masking"
-            }
-        },
-        "-webkit-mask-box-image-repeat": {
-            "codegen-properties": {
-                "custom": "All",
-                "parser-function": "consumeBorderImageRepeat",
-                "parser-grammar-unused": "[ stretch | repeat | space | round ]{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
-            },
-            "status": "non-standard",
-            "specification": {
-                "category": "css-masking"
-            }
-        },
-        "-webkit-mask-box-image-slice": {
-            "codegen-properties": {
-                "custom": "All",
-                "parser-function": "consumeBorderImageSlice",
-                "parser-function-requires-current-property": true,
-                "parser-grammar-unused": "[ <number [0,inf]> | <percentage [0,inf]> ]{1,4} && fill?",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers, '&&' groups and optionals."
-            },
-            "status": "non-standard",
-            "specification": {
-                "category": "css-masking"
-            }
-        },
-        "-webkit-mask-box-image-source": {
-            "codegen-properties": {
-                "converter": "StyleImage<CSSPropertyWebkitMaskBoxImageSource>",
-                "parser-grammar": "none | <image>"
-            },
-            "status": "non-standard",
-            "specification": {
-                "category": "css-masking"
-            }
-        },
-        "-webkit-mask-box-image-width": {
-            "codegen-properties": {
-                "custom": "All",
-                "parser-function": "consumeBorderImageWidth",
-                "parser-function-requires-current-property": true,
-                "parser-grammar-unused": "[ <length-percentage [0,inf]> | <number [0,inf]> | auto ]{1,4}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
-            },
-            "status": "non-standard",
-            "specification": {
-                "category": "css-masking"
+            "status": {
+                "status": "obsolete",
+                "comment": "Differs from mask-border in that it always includes the 'fill' keyword in 'mask-border-slice'."
             }
         },
         "-webkit-mask-clip": {
@@ -8273,7 +8332,7 @@
         "text-decoration-thickness": {
             "codegen-properties": {
                 "converter": "TextDecorationThickness",
-                "parser-grammar": "auto | from-font | <length>",
+                "parser-grammar": "auto | from-font | <length-percentage>",
                 "parser-grammar-comment": "The current specification has a <length-percentage>, not just <length>"
             },
             "specification": {
@@ -8550,7 +8609,6 @@
         },
         "translate": {
             "codegen-properties": {
-                "settings-flag": "cssIndividualTransformPropertiesEnabled",
                 "converter": "Translate",
                 "parser-function": "consumeTranslate",
                 "parser-function-requires-context-mode": true,
@@ -8564,7 +8622,6 @@
         },
         "scale": {
             "codegen-properties": {
-                "settings-flag": "cssIndividualTransformPropertiesEnabled",
                 "converter": "Scale",
                 "parser-function": "consumeScale",
                 "parser-function-requires-context-mode": true,
@@ -8579,7 +8636,6 @@
         },
         "rotate": {
             "codegen-properties": {
-                "settings-flag": "cssIndividualTransformPropertiesEnabled",
                 "converter": "Rotate",
                 "parser-function": "consumeRotate",
                 "parser-function-requires-context-mode": true,
@@ -9013,6 +9069,45 @@
                 "url": "https://drafts.csswg.org/css-scroll-snap-1/#propdef-scroll-snap-stop"
             }
         },
+        "scroll-timeline": {
+            "codegen-properties": {
+                "longhands": [
+                    "scroll-timeline-name",
+                    "scroll-timeline-axis"
+                ],
+                "settings-flag": "scrollDrivenAnimationsEnabled"
+            },
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#scroll-timeline-shorthand"
+            }
+        },
+        "scroll-timeline-axis": {
+            "codegen-properties": {
+                "converter": "ScrollTimelineAxis",
+                "name-for-methods": "ScrollTimelineAxes",
+                "parser-exported": true,
+                "parser-grammar": "<axis>#",
+                "settings-flag": "scrollDrivenAnimationsEnabled"
+            },
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#scroll-timeline-axis"
+            }
+        },
+        "scroll-timeline-name": {
+            "codegen-properties": {
+                "converter": "ScrollTimelineName",
+                "name-for-methods": "ScrollTimelineNames",
+                "parser-exported": true,
+                "parser-grammar": "<single-scroll-timeline-name>#",
+                "settings-flag": "scrollDrivenAnimationsEnabled"
+            },
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#scroll-timeline-name"
+            }
+        },
         "scrollbar-color": {
             "codegen-properties": {
                 "converter": "ScrollbarColor",
@@ -9098,6 +9193,74 @@
             "specification": {
                 "category": "css-shapes",
                 "url": "https://www.w3.org/TR/css-shapes/#propdef-shape-image-threshold"
+            }
+        },
+        "view-timeline": {
+            "codegen-properties": {
+                "longhands": [
+                    "view-timeline-name",
+                    "view-timeline-axis",
+                    "view-timeline-inset"
+                ],
+                "settings-flag": "scrollDrivenAnimationsEnabled"
+            },
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#view-timeline-shorthand"
+            }
+        },
+        "view-timeline-axis": {
+            "codegen-properties": {
+                "converter": "ScrollTimelineAxis",
+                "name-for-methods": "ViewTimelineAxes",
+                "parser-exported": true,
+                "parser-grammar": "<axis>#",
+                "settings-flag": "scrollDrivenAnimationsEnabled"
+            },
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#view-timeline-axis"
+            }
+        },
+        "view-timeline-inset": {
+            "codegen-properties": {
+                "converter": "ViewTimelineInset",
+                "name-for-methods": "ViewTimelineInsets",
+                "parser-function": "consumeViewTimelineInset",
+                "parser-function-requires-context": true,
+                "parser-grammar-unused": "[ <single-view-timeline-inset>{1,2} ]#",
+                "parser-grammar-unused-reason": "Needs support for {1,2} combined with #.",
+                "settings-flag": "scrollDrivenAnimationsEnabled"
+            },
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#view-timeline-inset"
+            }
+        },
+        "view-timeline-name": {
+            "codegen-properties": {
+                "converter": "ScrollTimelineName",
+                "name-for-methods": "ViewTimelineNames",
+                "parser-exported": true,
+                "parser-grammar": "<single-scroll-timeline-name>#",
+                "settings-flag": "scrollDrivenAnimationsEnabled"
+            },
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#view-timeline-name"
+            }
+        },
+        "view-transition-name": {
+            "codegen-properties": {
+                "converter": "ViewTransitionName",
+                "parser-function": "consumeViewTransitionName",
+                "parser-grammar-unused": "none | <custom-ident>",
+                "parser-grammar-unused-reason": "Needs support for applying restrictions to <custom-ident>. The <custom-ident> production used here excludes the keyword auto.",
+                "settings-flag": "viewTransitionsEnabled"
+            },
+            "specification": {
+                "category": "css-view-transitions",
+                "url": "https://drafts.csswg.org/css-view-transitions/#view-transition-name-prop"
             }
         },
         "-webkit-tap-highlight-color": {
@@ -9248,7 +9411,6 @@
                     "parser-function-requires-context": true,
                     "parser-grammar-unused": "[ <integer [0,inf]> && <symbol> ]#",
                     "parser-grammar-unused-reason": "Needs support for '&&' groups"
-                    
         },
                 "specification": {
                     "category": "css-counter-styles",
@@ -9667,13 +9829,13 @@
         "@font-palette-values": {
             "font-family": {
                 "codegen-properties": {
-                    "parser-function": "consumeFamilyName",
-                    "parser-grammar-unused": "<family-name>",
+                    "parser-function": "consumeFamilyNameList",
+                    "parser-grammar-unused": "<family-name>#",
                     "parser-grammar-unused-reason": "Needs support for special 'family-name' processing."
                 },
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://www.w3.org/TR/css-fonts-4/#font-family-2-desc"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#font-family-2-desc"
                 }
             },
             "base-palette": {
@@ -9962,6 +10124,11 @@
             "longname": "CSS Basic User Interface Module",
             "url": "https://www.w3.org/TR/css-ui-3/"
         },
+        "css-view-transitions": {
+            "shortname": "CSS View Transitions",
+            "longname": "CSS View Transitions Module",
+            "url": "https://drafts.csswg.org/css-view-transitions/"
+        },
         "css-will-change": {
             "shortname": "CSS Will Change",
             "longname": "CSS Will Change Module",
@@ -9971,6 +10138,11 @@
             "shortname": "CSS Writing Modes",
             "longname": "CSS Writing Modes Module",
             "url": "https://www.w3.org/TR/css-writing-modes-3/"
+        },
+        "scroll-animations": {
+            "shortname": "Scroll-driven Animations",
+            "longname": "Scroll-driven Animations",
+            "url": "https://www.w3.org/TR/scroll-animations-1/"
         },
         "svg": {
             "shortname": "SVG",
@@ -10222,6 +10394,7 @@
         },
         "<shape-box>": {
             "grammar": "<box> | margin-box",
+            "exported": true,
             "specification": {
                 "category": "css-shapes",
                 "url": "https://www.w3.org/TR/css-shapes-1/#typedef-shape-box"
@@ -10492,6 +10665,14 @@
             "specification": {
                 "category": "css-animations",
                 "url": "https://www.w3.org/TR/css-animations-1/#typedef-single-animation-play-state"
+            }
+        },
+        "<transition-behavior-value>": {
+            "grammar": "normal | allow-discrete",
+            "exported": true,
+            "specification": {
+                "category": "css-transitions",
+                "url": "https://drafts.csswg.org/css-transitions-2/#typedef-transition-behavior-value"
             }
         },
         "<page-size>": {
@@ -10919,6 +11100,38 @@
         "<-webkit-display>": {
             "grammar": "-webkit-inline-flex | -webkit-box | -webkit-inline-box | -webkit-flex",
             "status": "non-standard"
+        },
+        "<axis>": {
+            "grammar": "block | inline | x | y",
+            "exported": true,
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#scroll-notation"
+            }
+        },
+        "<scroller>": {
+            "grammar": "root | nearest | self",
+            "exported": true,
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#scroll-notation"
+            }
+        },
+        "<single-scroll-timeline-name>": {
+            "grammar": "none | <dashed-ident>",
+            "exported": true,
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#scroll-timeline-name"
+            }
+        },
+        "<single-view-timeline-inset>": {
+            "grammar": "auto | <length-percentage>",
+            "exported": true,
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#propdef-view-timeline-inset"
+            }
         }
     }
 }

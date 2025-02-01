@@ -38,6 +38,7 @@ class AudioBasicProcessorNode : public AudioNode {
     WTF_MAKE_ISO_ALLOCATED(AudioBasicProcessorNode);
 public:
     AudioBasicProcessorNode(BaseAudioContext&, NodeType);
+    virtual ~AudioBasicProcessorNode();
 
     // AudioNode
     void process(size_t framesToProcess) override;
@@ -59,6 +60,8 @@ protected:
 
     AudioProcessor* processor() { return m_processor.get(); }
     const AudioProcessor* processor() const { return m_processor.get(); }
+
+    float noiseInjectionMultiplier() const override { return 0.01; }
 
     std::unique_ptr<AudioProcessor> m_processor;
 };

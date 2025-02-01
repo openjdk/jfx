@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -696,7 +696,7 @@ public abstract class NGNode {
         // parent transforms on the nodes.  The short fix is to disable
         // this block and use the more general form below, but we need
         // to revisit this and see if we can make it work more optimally.
-        // @see RT-12105 http://javafx-jira.kenai.com/browse/RT-12105
+        // @see JDK-8091880
         if (false && this instanceof NGGroup) {
             List<NGNode> children = ((NGGroup)this).getChildren();
             BaseBounds tmp = TEMP_BOUNDS;
@@ -900,11 +900,23 @@ public abstract class NGNode {
     /**
      * Clears the dirty flag. This should only happen during rendering.
      */
-    protected void clearDirty() {
-        dirty = DirtyFlag.CLEAN;
-        childDirty = false;
-        dirtyBounds.makeEmpty();
-        dirtyChildrenAccumulated = 0;
+    public void clearDirty() {
+        if (dirty != DirtyFlag.CLEAN || childDirty) {
+            dirty = DirtyFlag.CLEAN;
+            childDirty = false;
+            dirtyBounds.makeEmpty();
+            dirtyChildrenAccumulated = 0;
+
+            if (this instanceof NGGroup) {
+                List<NGNode> children = ((NGGroup) this).getChildren();
+                for (NGNode child : children) {
+                    child.clearDirty();
+                }
+            }
+        }
+        if (getClipNode() != null) {
+            getClipNode().clearDirty();
+        }
     }
 
     /**
@@ -917,22 +929,6 @@ public abstract class NGNode {
             List<NGNode> children = ((NGGroup)this).getChildren();
             for (int i=0; i<children.size(); i++) {
                 children.get(i).clearPainted();
-            }
-        }
-    }
-
-    public void clearDirtyTree() {
-        clearDirty();
-        if (getClipNode() != null) {
-            getClipNode().clearDirtyTree();
-        }
-        if (this instanceof NGGroup) {
-            List<NGNode> children = ((NGGroup) this).getChildren();
-            for (int i = 0; i < children.size(); ++i) {
-                NGNode child = children.get(i);
-                if (child.dirty != DirtyFlag.CLEAN || child.childDirty) {
-                    child.clearDirtyTree();
-                }
             }
         }
     }
@@ -1003,7 +999,7 @@ public abstract class NGNode {
      *         safe. Returning something other than null is simply an
      *         optimization for cases where the dirty region is substantially
      *         smaller than the clip.
-     * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (RT-23957)
+     * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (JDK-8090845)
      */
     public /*final*/ int accumulateDirtyRegions(final RectBounds clip,
                                                 final RectBounds dirtyRegionTemp,
@@ -1047,7 +1043,7 @@ public abstract class NGNode {
 
     /**
      * Accumulates the dirty region of a node.
-     * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (RT-23957)
+     * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (JDK-8090845)
      */
     int accumulateNodeDirtyRegion(final RectBounds clip,
                                   final RectBounds dirtyRegionTemp,
@@ -1095,7 +1091,7 @@ public abstract class NGNode {
      * using polymorphism because we wanted to centralize all of the dirty region
      * management code in one place, rather than having it spread between Prism,
      * Scenario, and any other future toolkits.
-     * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (RT-23957)
+     * TODO: Only made non-final for the sake of testing (see javafx-sg-prism tests) (JDK-8090845)
      */
     int accumulateGroupDirtyRegion(final RectBounds clip,
                                    final RectBounds dirtyRegionTemp,
@@ -1407,12 +1403,6 @@ public abstract class NGNode {
             }
             mask = mask << 2;
         }//for
-
-        // If we are going to cull a node/group that's dirty,
-        // make sure it's dirty flags are properly cleared.
-        if (cullingBits == 0 && (dirty != DirtyFlag.CLEAN || childDirty)) {
-            clearDirtyTree();
-        }
 
 //        System.out.printf("%s bits: %s bounds: %s\n",
 //            this, Integer.toBinaryString(cullingBits), TEMP_RECT_BOUNDS);
@@ -1824,8 +1814,8 @@ public abstract class NGNode {
         // Note that when we invalidate the opaqueRegion of an NGNode, we don't
         // walk up the tree or communicate with the parents (unlike dirty flags).
         // An NGGroup does not compute an opaqueRegion based on the union of opaque
-        // regions of its children (although this is a fine idea to consider!). See RT-32441
-        // If we ever fix RT-32441, we must be sure to handle the case of a Group being used
+        // regions of its children (although this is a fine idea to consider!). See JDK-8092168
+        // If we ever fix JDK-8092168, we must be sure to handle the case of a Group being used
         // as a clip node (such that invalidating a child on the group invalidates the
         // opaque region of every node up to the root).
 
@@ -1858,7 +1848,7 @@ public abstract class NGNode {
                     // Technically a flip/quadrant rotation is allowed as well, but we don't have a convenient
                     // way to do that yet.
                     if (clipOpaqueRegion == null || (clip.getTransform().getType() & ~(BaseTransform.TYPE_TRANSLATION | BaseTransform.TYPE_MASK_SCALE)) != 0) {
-                        // RT-25095: If this node has a clip who's opaque region cannot be determined, then
+                        // JDK-8125859: If this node has a clip who's opaque region cannot be determined, then
                         // we cannot determine any opaque region for this node (in fact, it might not have one).
                         // Also, if the transform is something other than identity, scale, or translate then
                         // we're just going to bail (sorry, rotate, maybe next time!)
@@ -1955,8 +1945,7 @@ public abstract class NGNode {
         if (PULSE_LOGGING_ENABLED) {
             PulseLogger.incrementCounter("Nodes visited during render");
         }
-        // Clear the visuals changed flag
-        clearDirty();
+
         // If it isn't visible, then punt
         if (!visible || opacity == 0f) return;
 
@@ -2126,7 +2115,6 @@ public abstract class NGNode {
 
         BaseBounds clipBounds = getClippedBounds(new RectBounds(), curXform);
         if (clipBounds.isEmpty()) {
-            clearDirtyTree();
             return;
         }
 
@@ -2141,7 +2129,7 @@ public abstract class NGNode {
             return;
         }
 
-        // TODO: optimize this (RT-26936)
+        // TODO: optimize this (JDK-8091917)
         // Extract clip bounds
         Rectangle clipRect = new Rectangle(clipBounds);
         clipRect.intersectWith(PrEffectHelper.getGraphicsClipNoClone(g));
@@ -2151,7 +2139,6 @@ public abstract class NGNode {
         PrDrawable contentImg = (PrDrawable)
             Effect.getCompatibleImage(fctx, clipRect.width, clipRect.height);
         if (contentImg == null) {
-            clearDirtyTree();
             return;
         }
         Graphics gContentImg = contentImg.createGraphics();
@@ -2189,33 +2176,20 @@ public abstract class NGNode {
         ((ReadbackGraphics) g).releaseReadBackBuffer(bgRTT);
     }
 
-    private void renderRectClip(Graphics g, NGRectangle clipNode) {
-        BaseBounds newClip = clipNode.getShape().getBounds();
-        if (!clipNode.getTransform().isIdentity()) {
-            newClip = clipNode.getTransform().transform(newClip, newClip);
-        }
-        final BaseTransform curXform = g.getTransformNoClone();
-        final Rectangle curClip = g.getClipRectNoClone();
-        newClip = curXform.transform(newClip, newClip);
-        newClip.intersectWith(PrEffectHelper.getGraphicsClipNoClone(g));
-        if (newClip.isEmpty() ||
-            newClip.getWidth() == 0 ||
-            newClip.getHeight() == 0) {
-            clearDirtyTree();
+    private void renderRectClip(Graphics g, Rectangle clipRect) {
+        if (clipRect.isEmpty()) {
             return;
         }
+        final Rectangle curClip = g.getClipRectNoClone();
         // REMIND: avoid garbage by changing setClipRect to accept xywh
-        g.setClipRect(new Rectangle(newClip));
+        g.setClipRect(clipRect);
         renderForClip(g);
         g.setClipRect(curClip);
-        clipNode.clearDirty(); // as render() is not called on the clipNode,
-                               // make sure the dirty flags are cleared
     }
 
     void renderClip(Graphics g) {
         //  if clip's opacity is 0 there's nothing to render
         if (getClipNode().getOpacity() == 0.0) {
-            clearDirtyTree();
             return;
         }
 
@@ -2224,23 +2198,22 @@ public abstract class NGNode {
 
         BaseBounds clipBounds = getClippedBounds(new RectBounds(), curXform);
         if (clipBounds.isEmpty()) {
-            clearDirtyTree();
             return;
         }
+
+        // TODO: optimize this (JDK-8091917)
+        // Extract clip bounds
+        Rectangle clipRect = new Rectangle(clipBounds);
+        clipRect.intersectWith(PrEffectHelper.getGraphicsClipNoClone(g));
 
         if (getClipNode() instanceof NGRectangle) {
             // optimized case for rectangular clip
             NGRectangle rectNode = (NGRectangle)getClipNode();
             if (rectNode.isRectClip(curXform, false)) {
-                renderRectClip(g, rectNode);
+                renderRectClip(g, clipRect);
                 return;
             }
         }
-
-        // TODO: optimize this (RT-26936)
-        // Extract clip bounds
-        Rectangle clipRect = new Rectangle(clipBounds);
-        clipRect.intersectWith(PrEffectHelper.getGraphicsClipNoClone(g));
 
         if (!curXform.is2D()) {
             Rectangle savedClip = g.getClipRect();
@@ -2256,13 +2229,6 @@ public abstract class NGNode {
             clipInput.flush();
             nodeInput.flush();
             g.setClipRect(savedClip);
-            // There may have been some errors in the application of the
-            // effect and we would not know to what extent the nodes were
-            // rendered and cleared or left dirty.  clearDirtyTree() will
-            // clear both this node its clip node, and it will not recurse
-            // to the children unless they are still marked dirty.  It should
-            // be cheap if there was no problem and thorough if there was...
-            clearDirtyTree();
             return;
         }
 
@@ -2271,7 +2237,6 @@ public abstract class NGNode {
         PrDrawable contentImg = (PrDrawable)
             Effect.getCompatibleImage(fctx, clipRect.width, clipRect.height);
         if (contentImg == null) {
-            clearDirtyTree();
             return;
         }
         Graphics gContentImg = contentImg.createGraphics();
@@ -2286,7 +2251,6 @@ public abstract class NGNode {
         PrDrawable clipImg = (PrDrawable)
             Effect.getCompatibleImage(fctx, clipRect.width, clipRect.height);
         if (clipImg == null) {
-            getClipNode().clearDirtyTree();
             Effect.releaseCompatibleImage(fctx, contentImg);
             return;
         }
@@ -2532,7 +2496,7 @@ public abstract class NGNode {
             if (bounds.getBoundsType() == BaseBounds.BoundsType.RECTANGLE) {
                 return bounds;
             } else {
-                //RT-29453 - CCE: in case we get 3D bounds we need to "flatten" them
+                //JDK-8124495 - CCE: in case we get 3D bounds we need to "flatten" them
                 return new RectBounds(bounds.getMinX(), bounds.getMinY(), bounds.getMaxX(), bounds.getMaxY());
             }
         }

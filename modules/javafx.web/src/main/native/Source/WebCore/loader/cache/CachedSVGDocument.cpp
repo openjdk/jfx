@@ -23,6 +23,7 @@
 #include "config.h"
 #include "CachedSVGDocument.h"
 
+#include "ParserContentPolicy.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
 
@@ -44,20 +45,25 @@ CachedSVGDocument::~CachedSVGDocument() = default;
 
 void CachedSVGDocument::setEncoding(const String& chs)
 {
-    m_decoder->setEncoding(chs, TextResourceDecoder::EncodingFromHTTPHeader);
+    protectedDecoder()->setEncoding(chs, TextResourceDecoder::EncodingFromHTTPHeader);
 }
 
 String CachedSVGDocument::encoding() const
 {
-    return String::fromLatin1(m_decoder->encoding().name());
+    return String::fromLatin1(protectedDecoder()->encoding().name());
+}
+
+RefPtr<TextResourceDecoder> CachedSVGDocument::protectedDecoder() const
+{
+    return m_decoder;
 }
 
 void CachedSVGDocument::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
 {
     if (data) {
         // We don't need to create a new frame because the new document belongs to the parent UseElement.
-        auto document = SVGDocument::create(nullptr, m_settings, response().url());
-        document->setContent(m_decoder->decodeAndFlush(data->makeContiguous()->data(), data->size()));
+        Ref document = SVGDocument::create(nullptr, m_settings.copyRef(), response().url());
+        document->setMarkupUnsafe(protectedDecoder()->decodeAndFlush(data->makeContiguous()->data(), data->size()), { ParserContentPolicy::AllowDeclarativeShadowRoots });
         m_document = WTFMove(document);
     }
     CachedResource::finishLoading(data, metrics);

@@ -50,7 +50,7 @@ void ShareDataReader::start(Document* document, ShareDataWithParsedURL&& shareDa
     int count = 0;
     m_pendingFileLoads.reserveInitialCapacity(m_shareData.shareData.files.size());
     for (auto& blob : m_shareData.shareData.files) {
-        m_pendingFileLoads.uncheckedAppend(makeUniqueRef<BlobLoader>([this, count, fileName = blob->name()](BlobLoader&) {
+        m_pendingFileLoads.append(makeUniqueRef<BlobLoader>([this, count, fileName = blob->name()](BlobLoader&) {
             this->didFinishLoading(count, fileName);
         }));
         m_pendingFileLoads.last()->start(*blob, document, FileReaderLoader::ReadAsArrayBuffer);
@@ -71,7 +71,7 @@ void ShareDataReader::didFinishLoading(int loadIndex, const String& fileName)
 
     if (m_pendingFileLoads[loadIndex]->errorCode()) {
         if (auto completionHandler = std::exchange(m_completionHandler, { }))
-            completionHandler(Exception { AbortError, "Abort due to error while reading files."_s });
+            completionHandler(Exception { ExceptionCode::AbortError, "Abort due to error while reading files."_s });
         cancel();
         return;
     }

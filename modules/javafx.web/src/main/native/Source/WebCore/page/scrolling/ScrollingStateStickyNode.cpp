@@ -40,9 +40,10 @@
 
 namespace WebCore {
 
-Ref<ScrollingStateStickyNode> ScrollingStateStickyNode::create(ScrollingStateTree& stateTree, ScrollingNodeID nodeID)
+ScrollingStateStickyNode::ScrollingStateStickyNode(ScrollingNodeID nodeID, Vector<Ref<ScrollingStateNode>>&& children, OptionSet<ScrollingStateNodeProperty> changedProperties, std::optional<PlatformLayerIdentifier> layerID, StickyPositionViewportConstraints&& constraints)
+    : ScrollingStateNode(ScrollingNodeType::Sticky, nodeID, WTFMove(children), changedProperties, layerID)
+    , m_constraints(WTFMove(constraints))
 {
-    return adoptRef(*new ScrollingStateStickyNode(stateTree, nodeID));
 }
 
 ScrollingStateStickyNode::ScrollingStateStickyNode(ScrollingStateTree& tree, ScrollingNodeID nodeID)
@@ -91,10 +92,9 @@ FloatPoint ScrollingStateStickyNode::computeLayerPosition(const LayoutRect& view
         FloatRect constrainingRect;
         if (is<ScrollingStateFrameScrollingNode>(scrollingStateNode))
             constrainingRect = viewportRect;
-        else {
-            auto& overflowScrollingNode = downcast<ScrollingStateOverflowScrollingNode>(scrollingStateNode);
-            constrainingRect = FloatRect(overflowScrollingNode.scrollPosition(), m_constraints.constrainingRectAtLastLayout().size());
-        }
+        else if (RefPtr overflowScrollingNode = dynamicDowncast<ScrollingStateOverflowScrollingNode>(scrollingStateNode))
+            constrainingRect = FloatRect(overflowScrollingNode->scrollPosition(), m_constraints.constrainingRectAtLastLayout().size());
+
         constrainingRect.move(offsetFromStickyAncestors);
         return m_constraints.layerPositionForConstrainingRect(constrainingRect);
     };
@@ -129,6 +129,10 @@ void ScrollingStateStickyNode::reconcileLayerPositionForViewportRect(const Layou
     FloatPoint position = computeLayerPosition(viewportRect);
     if (layer().representsGraphicsLayer()) {
         auto* graphicsLayer = static_cast<GraphicsLayer*>(layer());
+        ASSERT(graphicsLayer);
+        // Crash data suggest that graphicsLayer can be null: rdar://106547410.
+        if (!graphicsLayer)
+            return;
 
         LOG_WITH_STREAM(Compositing, stream << "ScrollingStateStickyNode " << scrollingNodeID() << " reconcileLayerPositionForViewportRect " << action << " position of layer " << graphicsLayer->primaryLayerID() << " to " << position << " sticky offset " << m_constraints.stickyOffsetAtLastLayout());
 

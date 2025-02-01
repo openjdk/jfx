@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,9 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
-
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import com.sun.javafx.menu.MenuBase;
-import com.sun.javafx.stage.WindowHelper;
-import com.sun.javafx.tk.Toolkit;
-
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
@@ -49,6 +39,12 @@ import javafx.scene.control.skin.MenuBarSkin;
 import javafx.scene.control.skin.MenuBarSkinShim;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.menu.MenuBase;
+import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 
@@ -62,17 +58,18 @@ public class MenuBarSkinTest {
     private Scene scene;
     private Stage stage;
 
-
-    @BeforeClass public static void initToolKit() {
+    @BeforeAll
+    public static void initToolKit() {
         tk = Toolkit.getToolkit();
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         menubar = new MenuBar();
         menubar.setUseSystemMenuBar(false);
         menubar.getMenus().addAll(new Menu("File"), new Menu("Edit"));
 
-        // Pending RT-37118, MenuBar needs to be in a scene in order to set the skin.
+        // Pending JDK-8095650, MenuBar needs to be in a scene in order to set the skin.
         scene = new Scene(new Group(menubar));
         skin = new MenuBarSkinMock(menubar);
         menubar.setSkin(skin);
@@ -98,7 +95,7 @@ public class MenuBarSkinTest {
     @Test public void testDispose() {
 
         if (tk.getSystemMenu().isSupported()) {
-            // setting system menu bar true should create a sceneProperty listener for RT-36554
+            // setting system menu bar true should create a sceneProperty listener for JDK-8094110
             menubar.setUseSystemMenuBar(true);
             assertEquals(menubar.getMenus().size(), getSystemMenus().size());
         }

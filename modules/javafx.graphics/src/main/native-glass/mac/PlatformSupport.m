@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 #import "PlatformSupport.h"
 #import "GlassMacros.h"
+#import <Network/Network.h>
 
 #define INIT_CLASS(CLS, NAME)\
     if (CLS == nil) {\
@@ -63,9 +64,12 @@
         }\
     }
 
-static jobject currentPreferences = nil;
-
-@implementation PlatformSupport
+@implementation PlatformSupport {
+    nw_path_monitor_t pathMonitor;
+    jobject currentPreferences;
+    bool currentPathConstrained;
+    bool currentPathExpensive;
+}
 
 + (void)initIDs:(JNIEnv*)env {
     INIT_CLASS(jMapClass, "java/util/Map");
@@ -88,9 +92,77 @@ static jobject currentPreferences = nil;
     INIT_STATIC_METHOD(jColorClass, jColorRgbMethod, "rgb", "(IIID)Ljavafx/scene/paint/Color;");
 }
 
-+ (jobject)collectPreferences {
-    GET_MAIN_JENV;
+- (id)initWithEnv:(JNIEnv*)jEnv application:(jobject)jApp {
+    if (!(self = [super init])) {
+        return nil;
+    }
 
+    self->env = jEnv;
+    self->application = jApp;
+    self->currentPreferences = nil;
+    self->currentPathConstrained = false;
+    self->currentPathExpensive = false;
+
+    [[NSNotificationCenter defaultCenter]
+        addObserver:self
+        selector:@selector(platformPreferencesDidChange)
+        name:NSPreferredScrollerStyleDidChangeNotification
+        object:nil];
+
+    [[NSDistributedNotificationCenter defaultCenter]
+        addObserver:self
+        selector:@selector(platformPreferencesDidChange)
+        name:@"AppleInterfaceThemeChangedNotification"
+        object:nil];
+
+    [[NSDistributedNotificationCenter defaultCenter]
+        addObserver:self
+        selector:@selector(platformPreferencesDidChange)
+        name:@"AppleColorPreferencesChangedNotification"
+        object:nil];
+
+    [[[NSWorkspace sharedWorkspace] notificationCenter]
+        addObserver:self
+        selector:@selector(platformPreferencesDidChange)
+        name:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
+        object:nil];
+
+    pathMonitor = nw_path_monitor_create();
+    nw_path_monitor_set_update_handler(pathMonitor, ^(nw_path_t path) {
+        self->currentPathConstrained = nw_path_is_constrained(path);
+        self->currentPathExpensive = nw_path_is_expensive(path);
+        [self updatePreferences];
+    });
+
+    nw_path_monitor_set_queue(pathMonitor, dispatch_get_main_queue());
+    nw_path_monitor_start(pathMonitor);
+
+    return self;
+}
+
+- (void)stopEventProcessing {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[NSDistributedNotificationCenter defaultCenter] removeObserver:self];
+    [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:self];
+    nw_path_monitor_cancel(pathMonitor);
+}
+
+- (void)platformPreferencesDidChange {
+    // Some dynamic colors like NSColor.controlAccentColor don't seem to be reliably updated
+    // at the exact moment AppleColorPreferencesChangedNotification is received.
+    // As a workaround, we wait for a short period of time (one second seems sufficient) before
+    // we query the updated platform preferences.
+
+    [NSObject cancelPreviousPerformRequestsWithTarget:self
+              selector:@selector(updatePreferences)
+              object:nil];
+
+    [self performSelector:@selector(updatePreferences)
+          withObject:nil
+          afterDelay:1.0];
+}
+
+- (jobject)collectPreferences {
     jobject preferences = (*env)->NewObject(env, jHashMapClass, jHashMapInitMethod);
     GLASS_CHECK_EXCEPTION(env);
     if (preferences == nil) {
@@ -103,52 +175,73 @@ static jobject currentPreferences = nil;
     // colors.
     NSAppearance* lastAppearance = [NSAppearance currentAppearance];
     [NSAppearance setCurrentAppearance:[NSApp effectiveAppearance]];
-    [PlatformSupport queryNSColors:preferences];
+    [self queryNSColors:preferences];
     [NSAppearance setCurrentAppearance:lastAppearance];
+
+    [self putBoolean:preferences
+          key:"macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion"
+          value:[[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion]];
+
+    [self putBoolean:preferences
+          key:"macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency"
+          value:[[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceTransparency]];
+
+    [self putString:preferences
+          key:"macOS.NSScroller.preferredScrollerStyle"
+          value:[NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay
+              ? "NSScrollerStyleOverlay" : "NSScrollerStyleLegacy"];
+
+    [self putBoolean:preferences
+          key:"macOS.NWPathMonitor.currentPathConstrained"
+          value:currentPathConstrained];
+
+    [self putBoolean:preferences
+          key:"macOS.NWPathMonitor.currentPathExpensive"
+          value:currentPathExpensive];
 
     return preferences;
 }
 
-+ (void)queryNSColors:(jobject)preferences {
+- (void)queryNSColors:(jobject)preferences {
     // Label colors
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.labelColor" value:[NSColor labelColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.secondaryLabelColor" value:[NSColor secondaryLabelColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.tertiaryLabelColor" value:[NSColor tertiaryLabelColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.quaternaryLabelColor" value:[NSColor quaternaryLabelColor]];
+    [self putColor:preferences key:"macOS.NSColor.labelColor" value:[NSColor labelColor]];
+    [self putColor:preferences key:"macOS.NSColor.secondaryLabelColor" value:[NSColor secondaryLabelColor]];
+    [self putColor:preferences key:"macOS.NSColor.tertiaryLabelColor" value:[NSColor tertiaryLabelColor]];
+    [self putColor:preferences key:"macOS.NSColor.quaternaryLabelColor" value:[NSColor quaternaryLabelColor]];
 
     // Text colors
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.textColor" value:[NSColor textColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.placeholderTextColor" value:[NSColor placeholderTextColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedTextColor" value:[NSColor selectedTextColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.textBackgroundColor" value:[NSColor textBackgroundColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedTextBackgroundColor" value:[NSColor selectedTextBackgroundColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.keyboardFocusIndicatorColor" value:[NSColor keyboardFocusIndicatorColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.unemphasizedSelectedTextColor" value:[NSColor unemphasizedSelectedTextColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.unemphasizedSelectedTextBackgroundColor" value:[NSColor unemphasizedSelectedTextBackgroundColor]];
+    [self putColor:preferences key:"macOS.NSColor.textColor" value:[NSColor textColor]];
+    [self putColor:preferences key:"macOS.NSColor.placeholderTextColor" value:[NSColor placeholderTextColor]];
+    [self putColor:preferences key:"macOS.NSColor.selectedTextColor" value:[NSColor selectedTextColor]];
+    [self putColor:preferences key:"macOS.NSColor.textBackgroundColor" value:[NSColor textBackgroundColor]];
+    [self putColor:preferences key:"macOS.NSColor.selectedTextBackgroundColor" value:[NSColor selectedTextBackgroundColor]];
+    [self putColor:preferences key:"macOS.NSColor.keyboardFocusIndicatorColor" value:[NSColor keyboardFocusIndicatorColor]];
+    [self putColor:preferences key:"macOS.NSColor.unemphasizedSelectedTextColor" value:[NSColor unemphasizedSelectedTextColor]];
+    [self putColor:preferences key:"macOS.NSColor.unemphasizedSelectedTextBackgroundColor" value:[NSColor unemphasizedSelectedTextBackgroundColor]];
 
     // Content colors
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.linkColor" value:[NSColor linkColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.separatorColor" value:[NSColor separatorColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedContentBackgroundColor" value:[NSColor selectedContentBackgroundColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.unemphasizedSelectedContentBackgroundColor" value:[NSColor unemphasizedSelectedContentBackgroundColor]];
+    [self putColor:preferences key:"macOS.NSColor.linkColor" value:[NSColor linkColor]];
+    [self putColor:preferences key:"macOS.NSColor.separatorColor" value:[NSColor separatorColor]];
+    [self putColor:preferences key:"macOS.NSColor.selectedContentBackgroundColor" value:[NSColor selectedContentBackgroundColor]];
+    [self putColor:preferences key:"macOS.NSColor.unemphasizedSelectedContentBackgroundColor" value:[NSColor unemphasizedSelectedContentBackgroundColor]];
 
     // Menu colors
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedMenuItemTextColor" value:[NSColor selectedMenuItemTextColor]];
+    [self putColor:preferences key:"macOS.NSColor.selectedMenuItemTextColor" value:[NSColor selectedMenuItemTextColor]];
 
     // Table colors
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.gridColor" value:[NSColor gridColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.headerTextColor" value:[NSColor headerTextColor]];
-    [PlatformSupport putColors:preferences key:"macOS.NSColor.alternatingContentBackgroundColors" value:[NSColor alternatingContentBackgroundColors]];
+    [self putColor:preferences key:"macOS.NSColor.gridColor" value:[NSColor gridColor]];
+    [self putColor:preferences key:"macOS.NSColor.headerTextColor" value:[NSColor headerTextColor]];
+    [self putColors:preferences key:"macOS.NSColor.alternatingContentBackgroundColors" value:[NSColor alternatingContentBackgroundColors]];
 
     // Control colors
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.controlAccentColor" value:[NSColor controlAccentColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.controlColor" value:[NSColor controlColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.controlBackgroundColor" value:[NSColor controlBackgroundColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.controlTextColor" value:[NSColor controlTextColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.disabledControlTextColor" value:[NSColor disabledControlTextColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedControlColor" value:[NSColor selectedControlColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedControlTextColor" value:[NSColor selectedControlTextColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.alternateSelectedControlTextColor" value:[NSColor alternateSelectedControlTextColor]];
+    [self putColor:preferences key:"macOS.NSColor.controlAccentColor" value:[NSColor controlAccentColor]];
+    [self putColor:preferences key:"macOS.NSColor.controlColor" value:[NSColor controlColor]];
+    [self putColor:preferences key:"macOS.NSColor.controlBackgroundColor" value:[NSColor controlBackgroundColor]];
+    [self putColor:preferences key:"macOS.NSColor.controlTextColor" value:[NSColor controlTextColor]];
+    [self putColor:preferences key:"macOS.NSColor.disabledControlTextColor" value:[NSColor disabledControlTextColor]];
+    [self putColor:preferences key:"macOS.NSColor.selectedControlColor" value:[NSColor selectedControlColor]];
+    [self putColor:preferences key:"macOS.NSColor.selectedControlTextColor" value:[NSColor selectedControlTextColor]];
+    [self putColor:preferences key:"macOS.NSColor.alternateSelectedControlTextColor" value:[NSColor alternateSelectedControlTextColor]];
 
     const char* controlTint = nil;
     switch ([NSColor currentControlTint]) {
@@ -158,36 +251,38 @@ static jobject currentPreferences = nil;
         case NSClearControlTint: controlTint = "NSClearControlTint"; break;
     }
     if (controlTint != nil) {
-        [PlatformSupport putString:preferences key:"macOS.NSColor.currentControlTint" value:controlTint];
+        [self putString:preferences key:"macOS.NSColor.currentControlTint" value:controlTint];
     }
 
     // Window colors
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.windowBackgroundColor" value:[NSColor windowBackgroundColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.windowFrameTextColor" value:[NSColor windowFrameTextColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.underPageBackgroundColor" value:[NSColor underPageBackgroundColor]];
+    [self putColor:preferences key:"macOS.NSColor.windowBackgroundColor" value:[NSColor windowBackgroundColor]];
+    [self putColor:preferences key:"macOS.NSColor.windowFrameTextColor" value:[NSColor windowFrameTextColor]];
+    [self putColor:preferences key:"macOS.NSColor.underPageBackgroundColor" value:[NSColor underPageBackgroundColor]];
 
     // Highlights and shadows
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.findHighlightColor" value:[NSColor findHighlightColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.highlightColor" value:[NSColor highlightColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.shadowColor" value:[NSColor shadowColor]];
+    [self putColor:preferences key:"macOS.NSColor.findHighlightColor" value:[NSColor findHighlightColor]];
+    [self putColor:preferences key:"macOS.NSColor.highlightColor" value:[NSColor highlightColor]];
+    [self putColor:preferences key:"macOS.NSColor.shadowColor" value:[NSColor shadowColor]];
 
     // Adaptable system colors
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemBlueColor" value:[NSColor systemBlueColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemBrownColor" value:[NSColor systemBrownColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemGrayColor" value:[NSColor systemGrayColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemGreenColor" value:[NSColor systemGreenColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemIndigoColor" value:[NSColor systemIndigoColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemOrangeColor" value:[NSColor systemOrangeColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemPinkColor" value:[NSColor systemPinkColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemPurpleColor" value:[NSColor systemPurpleColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemRedColor" value:[NSColor systemRedColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemTealColor" value:[NSColor systemTealColor]];
-    [PlatformSupport putColor:preferences key:"macOS.NSColor.systemYellowColor" value:[NSColor systemYellowColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemBlueColor" value:[NSColor systemBlueColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemBrownColor" value:[NSColor systemBrownColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemGrayColor" value:[NSColor systemGrayColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemGreenColor" value:[NSColor systemGreenColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemIndigoColor" value:[NSColor systemIndigoColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemOrangeColor" value:[NSColor systemOrangeColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemPinkColor" value:[NSColor systemPinkColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemPurpleColor" value:[NSColor systemPurpleColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemRedColor" value:[NSColor systemRedColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemTealColor" value:[NSColor systemTealColor]];
+    [self putColor:preferences key:"macOS.NSColor.systemYellowColor" value:[NSColor systemYellowColor]];
 }
 
-+ (void)updatePreferences:(jobject)application {
-    GET_MAIN_JENV;
-
+/**
+ * Collect all platform preferences and notify the JavaFX application when a preference has changed.
+ * The change notification includes all preferences, not only the changed preferences.
+ */
+- (void)updatePreferences {
     jobject newPreferences = [self collectPreferences];
     if (newPreferences == nil) {
         return;
@@ -222,9 +317,18 @@ static jobject currentPreferences = nil;
     (*env)->DeleteLocalRef(env, newPreferences);
 }
 
-+ (void)putString:(jobject)preferences key:(const char*)key value:(const char*)value {
-    GET_MAIN_JENV;
+- (void)putBoolean:(jobject)preferences key:(const char*)key value:(bool)value {
+    jobject prefKey = (*env)->NewStringUTF(env, key);
+    GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefKey);
 
+    jobject prefValue = (*env)->GetStaticObjectField(env, jBooleanClass, value ? jBooleanTRUE : jBooleanFALSE);
+    GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefValue);
+
+    (*env)->CallObjectMethod(env, preferences, jMapPutMethod, prefKey, prefValue);
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+- (void)putString:(jobject)preferences key:(const char*)key value:(const char*)value {
     jobject prefKey = (*env)->NewStringUTF(env, key);
     GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefKey);
 
@@ -238,13 +342,11 @@ static jobject currentPreferences = nil;
     GLASS_CHECK_EXCEPTION(env);
 }
 
-+ (void)putColor:(jobject)preferences key:(const char*)colorName value:(NSColor*)color {
-    GET_MAIN_JENV;
-
+- (void)putColor:(jobject)preferences key:(const char*)colorName value:(NSColor*)color {
     jobject prefKey = (*env)->NewStringUTF(env, colorName);
     GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefKey);
 
-    NSColor* c = [color colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
+    NSColor* c = [color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
     jobject prefValue = (*env)->CallStaticObjectMethod(
         env, jColorClass, jColorRgbMethod,
         (int)([c redComponent] * 255.0f),
@@ -257,9 +359,7 @@ static jobject currentPreferences = nil;
     GLASS_CHECK_EXCEPTION(env);
 }
 
-+ (void)putColors:(jobject)preferences key:(const char*)colorName value:(NSArray*)colors {
-    GET_MAIN_JENV;
-
+- (void)putColors:(jobject)preferences key:(const char*)colorName value:(NSArray*)colors {
     jobject prefKey = (*env)->NewStringUTF(env, colorName);
     GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefKey);
 
@@ -268,7 +368,7 @@ static jobject currentPreferences = nil;
     GLASS_CHECK_NONNULL_EXCEPTION_RETURN(env, prefValue);
 
     for (int i = 0; i < count; ++i) {
-        NSColor* c = [colors[i] colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
+        NSColor* c = [colors[i] colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
         jobject fxcolor = (*env)->CallStaticObjectMethod(
             env, jColorClass, jColorRgbMethod,
             (int)([c redComponent] * 255.0f),

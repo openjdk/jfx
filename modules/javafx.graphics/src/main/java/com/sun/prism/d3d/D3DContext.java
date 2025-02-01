@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -239,7 +239,7 @@ class D3DContext extends BaseShaderContext {
 
     /**
      * OpenGL projection transform use z-range of [-1, 1] while D3D expects it
-     * to be [0, 1], so we need to adjust the matrix, see RT-32880.
+     * to be [0, 1], so we need to adjust the matrix, see JDK-8123305.
      */
     private GeneralTransform3D adjustClipSpace(GeneralTransform3D projViewTx) {
         double[] m = projViewTx.get(tempAdjustClipSpaceMat);

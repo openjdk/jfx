@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,6 +79,7 @@ public:
     };
 
     enum ResultCondition {
+        Carry = X86Assembler::ConditionC,
         Overflow = X86Assembler::ConditionO,
         Signed = X86Assembler::ConditionS,
         PositiveOrZero = X86Assembler::ConditionNS,
@@ -1423,6 +1424,11 @@ public:
         }
     }
 
+    void loadPair32(Address src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(src.base, TrustedImm32(src.offset), dest1, dest2);
+    }
+
     void zeroExtend16To32(RegisterID src, RegisterID dest)
     {
         m_assembler.movzwl_rr(src, dest);
@@ -1474,6 +1480,11 @@ public:
     {
         store32(src1, Address(dest, offset.m_value));
         store32(src2, Address(dest, offset.m_value + 4));
+    }
+
+    void storePair32(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair32(src1, src2, dest.base, TrustedImm32(dest.offset));
     }
 
     static ALWAYS_INLINE RegisterID getUnusedRegister(BaseIndex address)
@@ -4359,6 +4370,12 @@ public:
     static void replaceWithJump(CodeLocationLabel<startTag> instructionStart, CodeLocationLabel<destTag> destination)
     {
         X86Assembler::replaceWithJump(instructionStart.taggedPtr(), destination.taggedPtr());
+    }
+
+    template<PtrTag startTag>
+    static void replaceWithNops(CodeLocationLabel<startTag> instructionStart, size_t memoryToFillWithNopsInBytes)
+    {
+        X86Assembler::replaceWithNops(instructionStart.taggedPtr(), memoryToFillWithNopsInBytes);
     }
 
     static ptrdiff_t maxJumpReplacementSize()

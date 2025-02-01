@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@
 #include "BufferImageJava.h"
 #include "GraphicsContext.h"
 #include "ImageData.h"
+#include "ImageBuffer.h"
 #include "MIMETypeRegistry.h"
 #include "PlatformContextJava.h"
 #include "GraphicsContextJava.h"
@@ -38,7 +39,7 @@ namespace WebCore {
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
     const Parameters& parameters, const ImageBufferCreationContext&)
 {
-    IntSize backendSize = ImageBufferBackend::calculateBackendSize(parameters);
+    IntSize backendSize = parameters.backendSize;
     if (backendSize.isEmpty())
         return nullptr;
 
@@ -53,8 +54,8 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
     jobject imageObj = env->CallObjectMethod(
         PL_GetGraphicsManager(env),
         midCreateImage,
-        (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.width()),
-        (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.height())
+        (jint) ceilf(parameters.resolutionScale * parameters.backendSize.width()),
+        (jint) ceilf(parameters.resolutionScale * parameters.backendSize.height())
     );
 
     if (WTF::CheckAndClearException(env) || !imageObj) {
@@ -87,11 +88,11 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         parameters, WTFMove(platformImage), WTFMove(context), backendSize));
 }
 
-std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
+/*std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
     const Parameters& parameters, const GraphicsContext&)
 {
     return ImageBufferJavaBackend::create(parameters, nullptr);
-}
+}*/
 
 ImageBufferJavaBackend::ImageBufferJavaBackend(
     const Parameters& parameters, PlatformImagePtr image, std::unique_ptr<GraphicsContext>&& context, IntSize backendSize)
@@ -138,7 +139,7 @@ Vector<uint8_t> ImageBufferJavaBackend::toDataJava(const String& mimeType, std::
     return { };
 }
 
-void *ImageBufferJavaBackend::getData() const
+void* ImageBufferJavaBackend::getData()
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -175,7 +176,7 @@ void ImageBufferJavaBackend::update() const
     WTF::CheckAndClearException(env);
 }
 
-GraphicsContext& ImageBufferJavaBackend::context() const
+GraphicsContext& ImageBufferJavaBackend::context()
 {
     return *m_context;
 }
@@ -184,19 +185,15 @@ void ImageBufferJavaBackend::flushContext()
 {
 }
 
-IntSize ImageBufferJavaBackend::backendSize() const
-{
-    return m_backendSize;
-}
 
-RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy)
+RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage()
 {
     return NativeImage::create((m_image.get()));
 }
 
-RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImageForDrawing(GraphicsContext& destination)
+RefPtr<NativeImage> ImageBufferJavaBackend::createNativeImageReference()
 {
-     return copyNativeImage(DontCopyBackingStore);   //REVISIT
+     return copyNativeImage();
 }
 
 void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
@@ -234,7 +231,7 @@ void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer
 
 size_t ImageBufferJavaBackend::calculateMemoryCost(const Parameters& parameters)
 {
-    IntSize backendSize = calculateBackendSize(parameters);
+    IntSize backendSize = parameters.backendSize;
     return ImageBufferBackend::calculateMemoryCost(backendSize, calculateBytesPerRow(backendSize));
 }
 
@@ -246,7 +243,7 @@ unsigned ImageBufferJavaBackend::calculateBytesPerRow(const IntSize& backendSize
 
 unsigned ImageBufferJavaBackend::bytesPerRow() const
 {
-    IntSize backendSize = calculateBackendSize(m_parameters);
+    IntSize backendSize = m_backendSize;
     return calculateBytesPerRow(backendSize);
 }
 

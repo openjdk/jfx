@@ -25,8 +25,8 @@
 
 package test.robot.javafx.stage;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.util.Util.TIMEOUT;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -36,7 +36,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
 import test.robot.testharness.VisualTestBase;
 
@@ -71,8 +71,7 @@ public class StageAttributesTest extends VisualTestBase {
             bottomStage.show();
         });
 
-        assertTrue("Timeout waiting for bottom stage to be shown",
-            bottomShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertTrue(bottomShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for bottom stage to be shown");
 
         runAndWait(() -> {
             // Top stage, will be inconified
@@ -95,8 +94,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         if (topShown) {
-            assertTrue("Timeout waiting for top stage to be shown",
-                topShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+            assertTrue(topShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for top stage to be shown");
         }
 
         sleep(1000);

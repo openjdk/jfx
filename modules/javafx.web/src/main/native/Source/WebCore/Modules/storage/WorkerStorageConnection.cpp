@@ -55,7 +55,7 @@ void WorkerStorageConnection::scopeClosed()
 
     auto getDirectoryCallbacks = std::exchange(m_getDirectoryCallbacks, { });
     for (auto& callback : getDirectoryCallbacks.values())
-        callback(Exception { InvalidStateError });
+        callback(Exception { ExceptionCode::InvalidStateError });
 
     m_scope = nullptr;
 }
@@ -100,7 +100,7 @@ void WorkerStorageConnection::getEstimate(ClientOrigin&& origin, StorageConnecti
 
     auto* workerLoaderProxy = m_scope->thread().workerLoaderProxy();
     if (!workerLoaderProxy)
-        return completionHandler(Exception { InvalidStateError });
+        return completionHandler(Exception { ExceptionCode::InvalidStateError });
 
     auto callbackIdentifier = ++m_lastCallbackIdentifier;
     m_getEstimateCallbacks.add(callbackIdentifier, WTFMove(completionHandler));
@@ -110,13 +110,13 @@ void WorkerStorageConnection::getEstimate(ClientOrigin&& origin, StorageConnecti
 
         auto& document = downcast<Document>(context);
         auto mainThreadConnection = document.storageConnection();
-        auto mainThreadCallback = [callbackIdentifier, contextIdentifier](auto&& result) mutable {
+        auto mainThreadCallback = [callbackIdentifier, contextIdentifier](ExceptionOr<StorageEstimate>&& result) mutable {
             ScriptExecutionContext::postTaskTo(contextIdentifier, [callbackIdentifier, result = crossThreadCopy(WTFMove(result))] (auto& scope) mutable {
                 downcast<WorkerGlobalScope>(scope).storageConnection().didGetEstimate(callbackIdentifier, WTFMove(result));
             });
         };
         if (!mainThreadConnection)
-            return mainThreadCallback(Exception { InvalidStateError });
+            return mainThreadCallback(Exception { ExceptionCode::InvalidStateError });
 
         mainThreadConnection->getEstimate(WTFMove(origin), WTFMove(mainThreadCallback));
     });
@@ -134,7 +134,7 @@ void WorkerStorageConnection::fileSystemGetDirectory(ClientOrigin&& origin, Stor
 
     auto* workerLoaderProxy = m_scope->thread().workerLoaderProxy();
     if (!workerLoaderProxy)
-        return completionHandler(Exception { InvalidStateError });
+        return completionHandler(Exception { ExceptionCode::InvalidStateError });
 
     auto callbackIdentifier = ++m_lastCallbackIdentifier;
     m_getDirectoryCallbacks.add(callbackIdentifier, WTFMove(completionHandler));
@@ -150,7 +150,7 @@ void WorkerStorageConnection::fileSystemGetDirectory(ClientOrigin&& origin, Stor
             });
         };
         if (!mainThreadConnection)
-            return mainThreadCallback(Exception { InvalidStateError });
+            return mainThreadCallback(Exception { ExceptionCode::InvalidStateError });
 
         mainThreadConnection->fileSystemGetDirectory(WTFMove(origin), WTFMove(mainThreadCallback));
     });
@@ -172,7 +172,7 @@ void WorkerStorageConnection::didGetDirectory(uint64_t callbackIdentifier, Excep
         return callback(WTFMove(result));
 
     if (!m_scope)
-        return callback(Exception { InvalidStateError });
+        return callback(Exception { ExceptionCode::InvalidStateError });
     releaseConnectionScope.release();
 
     auto& workerFileSystemStorageConnection = m_scope->getFileSystemStorageConnection(Ref { *mainThreadFileSystemStorageConnection });

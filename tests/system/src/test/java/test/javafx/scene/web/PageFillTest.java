@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,10 @@
 package test.javafx.scene.web;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -41,15 +39,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.web.WebEngineShim;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
-
 import test.util.Util;
 
 public class PageFillTest {
@@ -106,17 +101,17 @@ public class PageFillTest {
         return (deltaRed <= delta && deltaGreen <= delta && deltaBlue <= delta && deltaOpacity <= delta);
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         Util.launch(launchLatch, PageFillTestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownOnce() {
         Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void setupTestObjects() {
         Platform.runLater(() -> {
             webView = new WebView();
@@ -156,7 +151,7 @@ public class PageFillTest {
             webView.getEngine().loadContent(content);
         });
 
-        assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
+        assertTrue(Util.await(webViewStateLatch), "Timeout when waiting for focus change ");
         Util.sleep(1000);
 
         Util.runAndWait(() -> {

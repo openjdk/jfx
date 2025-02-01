@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,14 @@
 
 #if ENABLE(ASSEMBLER)
 
+#include <wtf/TZoneMallocInlines.h>
+
 namespace JSC {
 namespace Probe {
 
 static void flushDirtyStackPages(State*);
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Context);
 
 void executeJSCJITProbe(State* state)
 {
@@ -39,10 +43,6 @@ void executeJSCJITProbe(State* state)
 #if CPU(ARM64)
     auto& cpu = context.cpu;
     void* originalLR = cpu.gpr<void*>(ARM64Registers::lr);
-    void* originalPC = cpu.pc();
-#elif CPU(MIPS)
-    auto& cpu = context.cpu;
-    void* originalRA = cpu.gpr<void*>(MIPSRegisters::ra);
     void* originalPC = cpu.pc();
 #endif
 
@@ -53,9 +53,6 @@ void executeJSCJITProbe(State* state)
 #if CPU(ARM64)
     // The ARM64 probe trampoline does not support changing both lr and pc.
     RELEASE_ASSERT(originalPC == cpu.pc() || originalLR == cpu.gpr<void*>(ARM64Registers::lr));
-#elif CPU(MIPS)
-    // The MIPS probe trampoline does not support changing both ra and pc.
-    RELEASE_ASSERT(originalPC == cpu.pc() || originalRA == cpu.gpr<void*>(MIPSRegisters::ra));
 #endif
 
     if (context.hasWritesToFlush()) {

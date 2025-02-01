@@ -165,9 +165,9 @@ void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGInlineText& text, Measu
         data->lastCharacter = currentCharacter;
     }
 
-    if (m_simpleWidthIterator) {
+    if (auto simpleWidthIterator = std::exchange(m_simpleWidthIterator, nullptr)) {
         GlyphBuffer glyphBuffer;
-        m_simpleWidthIterator->finalize(glyphBuffer);
+        simpleWidthIterator->finalize(glyphBuffer);
     }
 
     if (!data->allCharactersMap)
@@ -179,38 +179,28 @@ void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGInlineText& text, Measu
 
 void SVGTextMetricsBuilder::walkTree(RenderElement& start, RenderSVGInlineText* stopAtLeaf, MeasureTextData* data)
 {
-    for (auto& child : childrenOfType<RenderObject>(start)) {
-        if (is<RenderSVGInlineText>(child)) {
-            auto& text = downcast<RenderSVGInlineText>(child);
-            if (stopAtLeaf && stopAtLeaf != &text) {
-                data->processRenderer = false;
-                measureTextRenderer(text, data);
-                continue;
-            }
-
-            data->processRenderer = true;
-            measureTextRenderer(text, data);
-            if (stopAtLeaf)
+    auto* child = start.firstChild();
+    while (child) {
+        if (auto* text = dynamicDowncast<RenderSVGInlineText>(*child)) {
+            data->processRenderer = !stopAtLeaf || stopAtLeaf == text;
+            measureTextRenderer(*text, data);
+            if (stopAtLeaf && stopAtLeaf == text)
                 return;
-
+        } else if (auto* renderer = dynamicDowncast<RenderSVGInline>(*child)) {
+            // Visit children of text content elements.
+            if (auto* inlineChild = renderer->firstChild()) {
+                child = inlineChild;
             continue;
         }
-
-        if (!is<RenderSVGInline>(child))
-            continue;
-
-        walkTree(downcast<RenderSVGInline>(child), stopAtLeaf, data);
+    }
+        child = child->nextInPreOrderAfterChildren(&start);
     }
 }
 
-void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGInlineText& text)
+void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGText& textRoot, RenderSVGInlineText* stopAtLeaf)
 {
-    auto* textRoot = RenderSVGText::locateRenderSVGTextAncestor(text);
-    if (!textRoot)
-        return;
-
     MeasureTextData data(nullptr);
-    walkTree(*textRoot, &text, &data);
+    walkTree(textRoot, stopAtLeaf, &data);
 }
 
 void SVGTextMetricsBuilder::buildMetricsAndLayoutAttributes(RenderSVGText& textRoot, RenderSVGInlineText* stopAtLeaf, SVGCharacterDataMap& allCharactersMap)

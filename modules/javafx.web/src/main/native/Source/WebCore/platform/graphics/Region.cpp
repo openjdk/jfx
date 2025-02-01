@@ -90,7 +90,7 @@ Vector<IntRect, 1> Region::rects() const
 
     if (!m_shape) {
         if (!m_bounds.isEmpty())
-            rects.uncheckedAppend(m_bounds);
+            rects.append(m_bounds);
         return rects;
     }
 
@@ -665,6 +665,15 @@ void Region::setShape(Shape&& shape)
         m_shape = makeUnique<Shape>(WTFMove(shape));
     else
         *m_shape = WTFMove(shape);
+}
+
+bool Region::Shape::isValid() const
+{
+    for (auto span = spans_begin(), end = spans_end(); span != end; ++span) {
+        if (UNLIKELY(span->segmentIndex > m_segments.size()))
+            return false;
+    }
+    return true;
 }
 
 TextStream& operator<<(TextStream& ts, const Region& region)

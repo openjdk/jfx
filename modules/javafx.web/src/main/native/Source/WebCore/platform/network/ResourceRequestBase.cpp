@@ -27,6 +27,7 @@
 #include "ResourceRequestBase.h"
 
 #include "HTTPHeaderNames.h"
+#include "HTTPStatusCodes.h"
 #include "Logging.h"
 #include "PublicSuffix.h"
 #include "RegistrableDomain.h"
@@ -99,6 +100,8 @@ void ResourceRequestBase::setAsIsolatedCopy(const ResourceRequest& other)
     setIsAppInitiated(other.isAppInitiated());
     setPrivacyProxyFailClosedForUnreachableNonMainHosts(other.privacyProxyFailClosedForUnreachableNonMainHosts());
     setUseAdvancedPrivacyProtections(other.useAdvancedPrivacyProtections());
+    setDidFilterLinkDecoration(other.didFilterLinkDecoration());
+    setIsPrivateTokenUsageByThirdPartyAllowed(other.isPrivateTokenUsageByThirdPartyAllowed());
 }
 
 bool ResourceRequestBase::isEmpty() const
@@ -122,11 +125,12 @@ const URL& ResourceRequestBase::url() const
     return m_requestData.m_url;
 }
 
-void ResourceRequestBase::setURL(const URL& url)
+void ResourceRequestBase::setURL(const URL& url, bool didFilterLinkDecoration)
 {
     updateResourceRequest();
 
     m_requestData.m_url = url;
+    m_requestData.m_didFilterLinkDecoration = didFilterLinkDecoration;
 
     m_platformRequestUpdated = false;
 }
@@ -135,9 +139,9 @@ static bool shouldUseGet(const ResourceRequestBase& request, const ResourceRespo
 {
     if (equalLettersIgnoringASCIICase(request.httpMethod(), "get"_s) || equalLettersIgnoringASCIICase(request.httpMethod(), "head"_s))
         return false;
-    if (redirectResponse.httpStatusCode() == 301 || redirectResponse.httpStatusCode() == 302)
+    if (redirectResponse.httpStatusCode() == httpStatus301MovedPermanently || redirectResponse.httpStatusCode() == httpStatus302Found)
         return equalLettersIgnoringASCIICase(request.httpMethod(), "post"_s);
-    return redirectResponse.httpStatusCode() == 303;
+    return redirectResponse.httpStatusCode() == httpStatus303SeeOther;
 }
 
 // https://fetch.spec.whatwg.org/#concept-http-redirect-fetch Step 11
@@ -490,11 +494,11 @@ void ResourceRequestBase::setResponseContentDispositionEncodingFallbackArray(con
     m_requestData.m_responseContentDispositionEncodingFallbackArray.clear();
     m_requestData.m_responseContentDispositionEncodingFallbackArray.reserveInitialCapacity(!encoding1.isNull() + !encoding2.isNull() + !encoding3.isNull());
     if (!encoding1.isNull())
-        m_requestData.m_responseContentDispositionEncodingFallbackArray.uncheckedAppend(encoding1);
+        m_requestData.m_responseContentDispositionEncodingFallbackArray.append(encoding1);
     if (!encoding2.isNull())
-        m_requestData.m_responseContentDispositionEncodingFallbackArray.uncheckedAppend(encoding2);
+        m_requestData.m_responseContentDispositionEncodingFallbackArray.append(encoding2);
     if (!encoding3.isNull())
-        m_requestData.m_responseContentDispositionEncodingFallbackArray.uncheckedAppend(encoding3);
+        m_requestData.m_responseContentDispositionEncodingFallbackArray.append(encoding3);
 
     m_platformRequestUpdated = false;
 }
@@ -661,6 +665,18 @@ void ResourceRequestBase::setUseAdvancedPrivacyProtections(bool useAdvancedPriva
     m_requestData.m_useAdvancedPrivacyProtections = useAdvancedPrivacyProtections;
 
     m_platformRequestUpdated = false;
+}
+
+void ResourceRequestBase::setDidFilterLinkDecoration(bool didFilterLinkDecoration)
+{
+    if (m_requestData.m_didFilterLinkDecoration == didFilterLinkDecoration)
+        return;
+    m_requestData.m_didFilterLinkDecoration = didFilterLinkDecoration;
+}
+
+void ResourceRequestBase::setIsPrivateTokenUsageByThirdPartyAllowed(bool isPrivateTokenUsageByThirdPartyAllowed)
+{
+    m_requestData.m_isPrivateTokenUsageByThirdPartyAllowed = isPrivateTokenUsageByThirdPartyAllowed;
 }
 
 bool equalIgnoringHeaderFields(const ResourceRequestBase& a, const ResourceRequestBase& b)

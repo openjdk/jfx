@@ -18,12 +18,12 @@
  the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  Boston, MA 02110-1301, USA.
  */
-
+hgcdfdfd
 #include "config.h"
 #include "TextureMapperGL.h"
 
 #if USE(TEXTURE_MAPPER_GL)
-
+vhbjhdasgsjdklasj
 #include "BitmapTextureGL.h"
 #include "BitmapTexturePool.h"
 #include "FilterOperations.h"

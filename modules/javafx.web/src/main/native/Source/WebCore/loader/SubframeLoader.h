@@ -31,6 +31,7 @@
 #pragma once
 
 #include "FrameLoader.h"
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -44,7 +45,7 @@ class Widget;
 
 // This is a slight misnomer. It handles the higher level logic of loading both subframes and plugins.
 class FrameLoader::SubframeLoader {
-    WTF_MAKE_NONCOPYABLE(SubframeLoader); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(SubframeLoader); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     explicit SubframeLoader(LocalFrame&);
 
@@ -71,9 +72,10 @@ private:
     URL completeURL(const String&) const;
 
     bool shouldConvertInvalidURLsToBlank() const;
+    Ref<LocalFrame> protectedFrame() const;
 
     bool m_containsPlugins { false };
-    LocalFrame& m_frame;
+    WeakRef<LocalFrame> m_frame;
 };
 
 } // namespace WebCore

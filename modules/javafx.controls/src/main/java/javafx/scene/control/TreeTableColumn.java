@@ -254,7 +254,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
                 tc.setTreeTableView(getTreeTableView());
             }
 
-            // This code was commented out due to RT-22391, with this enabled
+            // This code was commented out due to JDK-8116917, with this enabled
             // the parent column will be null, which is not desired
 //                // set the parent of this column to also have this tableView
 //                if (getParentColumn() != null) {
@@ -298,7 +298,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
             while (c.next()) {
                 // update the TreeTableColumn.treeTableView property
                 for (TreeTableColumn<S,?> tc : c.getRemoved()) {
-                    // Fix for RT-16978. In TableColumnHeader we add before we
+                    // Fix for JDK-8128151. In TableColumnHeader we add before we
                     // remove when moving a TreeTableColumn. This means that for
                     // a very brief moment the tc is duplicated, and we can prevent
                     // nulling out the tableview and parent column. Without this

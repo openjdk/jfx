@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Yusuke Suzuki <yusukesuzuki@slowstart.org>.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,17 +26,20 @@
 
 #pragma once
 
-#if ENABLE(ASSEMBLER) && OS(LINUX)
+#if ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))
 
 #include <stdio.h>
 #include <wtf/Lock.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/CString.h>
 
 namespace JSC {
 
 class PerfLog {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PerfLog);
     WTF_MAKE_NONCOPYABLE(PerfLog);
+    friend class LazyNeverDestroyed<PerfLog>;
 public:
     static void log(CString&&, const uint8_t* executableAddress, size_t);
 
@@ -55,4 +59,4 @@ private:
 
 } // namespace JSC
 
-#endif // ENABLE(ASSEMBLER) && OS(LINUX)
+#endif  // ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))

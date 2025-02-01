@@ -32,17 +32,22 @@
 #include "CachedImage.h"
 #include "EXTBlendMinMax.h"
 #include "EXTClipControl.h"
+#include "EXTColorBufferFloat.h"
 #include "EXTColorBufferHalfFloat.h"
+#include "EXTConservativeDepth.h"
 #include "EXTDepthClamp.h"
 #include "EXTDisjointTimerQuery.h"
+#include "EXTDisjointTimerQueryWebGL2.h"
 #include "EXTFloatBlend.h"
 #include "EXTFragDepth.h"
 #include "EXTPolygonOffsetClamp.h"
+#include "EXTRenderSnorm.h"
 #include "EXTShaderTextureLOD.h"
 #include "EXTTextureCompressionBPTC.h"
 #include "EXTTextureCompressionRGTC.h"
 #include "EXTTextureFilterAnisotropic.h"
 #include "EXTTextureMirrorClampToEdge.h"
+#include "EXTTextureNorm16.h"
 #include "EXTsRGB.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
@@ -50,8 +55,12 @@
 #include "ImageData.h"
 #include "InspectorInstrumentation.h"
 #include "KHRParallelShaderCompile.h"
+#include "NVShaderNoperspectiveInterpolation.h"
+#include "OESDrawBuffersIndexed.h"
 #include "OESElementIndexUint.h"
 #include "OESFBORenderMipmap.h"
+#include "OESSampleVariables.h"
+#include "OESShaderMultisampleInterpolation.h"
 #include "OESStandardDerivatives.h"
 #include "OESTextureFloat.h"
 #include "OESTextureFloatLinear.h"
@@ -61,7 +70,9 @@
 #include "RenderBox.h"
 #include "WebCodecsVideoFrame.h"
 #include "WebCoreOpaqueRootInlines.h"
+#include "WebGLBlendFuncExtended.h"
 #include "WebGLBuffer.h"
+#include "WebGLClipCullDistance.h"
 #include "WebGLColorBufferFloat.h"
 #include "WebGLCompressedTextureASTC.h"
 #include "WebGLCompressedTextureETC.h"
@@ -73,15 +84,21 @@
 #include "WebGLDebugShaders.h"
 #include "WebGLDepthTexture.h"
 #include "WebGLDrawBuffers.h"
+#include "WebGLDrawInstancedBaseVertexBaseInstance.h"
 #include "WebGLFramebuffer.h"
 #include "WebGLLoseContext.h"
 #include "WebGLMultiDraw.h"
+#include "WebGLMultiDrawInstancedBaseVertexBaseInstance.h"
 #include "WebGLPolygonMode.h"
 #include "WebGLProgram.h"
+#include "WebGLProvokingVertex.h"
+#include "WebGLRenderSharedExponent.h"
 #include "WebGLRenderbuffer.h"
 #include "WebGLSampler.h"
+#include "WebGLStencilTexturing.h"
 #include "WebGLTexture.h"
 #include "WebGLTransformFeedback.h"
+#include "WebGLUtilities.h"
 #include "WebGLVertexArrayObject.h"
 #include "WebGLVertexArrayObjectOES.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
@@ -95,20 +112,9 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLRenderingContext);
 
-std::unique_ptr<WebGLRenderingContext> WebGLRenderingContext::create(CanvasBase& canvas, Ref<GraphicsContextGL>&& context, GraphicsContextGLAttributes attributes)
+std::unique_ptr<WebGLRenderingContext> WebGLRenderingContext::create(CanvasBase& canvas, WebGLContextAttributes&& attributes)
 {
-    auto renderingContext = std::unique_ptr<WebGLRenderingContext>(new WebGLRenderingContext(canvas, WTFMove(context), attributes));
-    // This is virtual and can't be called in the constructor.
-    renderingContext->initializeNewContext();
-
-    InspectorInstrumentation::didCreateCanvasRenderingContext(*renderingContext);
-
-    return renderingContext;
-}
-
-WebGLRenderingContext::WebGLRenderingContext(CanvasBase& canvas, Ref<GraphicsContextGL>&& context, GraphicsContextGLAttributes attributes)
-    : WebGLRenderingContextBase(canvas, WTFMove(context), attributes)
-{
+    return std::unique_ptr<WebGLRenderingContext>(new WebGLRenderingContext(canvas, WTFMove(attributes)));
 }
 
 WebGLRenderingContext::~WebGLRenderingContext()
@@ -116,45 +122,46 @@ WebGLRenderingContext::~WebGLRenderingContext()
     m_activeQuery = nullptr;
 }
 
-void WebGLRenderingContext::initializeVertexArrayObjects()
+void WebGLRenderingContext::initializeDefaultObjects()
 {
-    m_defaultVertexArrayObject = WebGLVertexArrayObjectOES::create(*this, WebGLVertexArrayObjectOES::Type::Default);
-    addContextObject(*m_defaultVertexArrayObject);
+    WebGLRenderingContextBase::initializeDefaultObjects();
+    m_defaultVertexArrayObject = WebGLVertexArrayObjectOES::createDefault(*this);
     m_boundVertexArrayObject = m_defaultVertexArrayObject;
 }
 
-WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
+std::optional<WebGLExtensionAny> WebGLRenderingContext::getExtension(const String& name)
 {
     if (isContextLost())
-        return nullptr;
+        return std::nullopt;
 
     // When adding extensions that use enableDraftExtensions, add them to the webgl-draft-extensions-flag.js test.
-    const bool enableDraftExtensions = scriptExecutionContext()->settingsValues().webGLDraftExtensionsEnabled;
+    [[maybe_unused]] const bool enableDraftExtensions = scriptExecutionContext()->settingsValues().webGLDraftExtensionsEnabled;
 
 #define ENABLE_IF_REQUESTED(type, variable, nameLiteral, canEnable) \
     if (equalIgnoringASCIICase(name, nameLiteral ## _s)) { \
+        if (!(canEnable)) \
+            return std::nullopt; \
         if (!variable) { \
-            variable = (canEnable) ? adoptRef(new type(*this)) : nullptr; \
-            if (variable != nullptr) \
+            variable = adoptRef(new type(*this)); \
                 InspectorInstrumentation::didEnableExtension(*this, name); \
         } \
-        return variable.get(); \
+        return *variable; \
     }
 
     ENABLE_IF_REQUESTED(ANGLEInstancedArrays, m_angleInstancedArrays, "ANGLE_instanced_arrays", ANGLEInstancedArrays::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTBlendMinMax, m_extBlendMinMax, "EXT_blend_minmax", EXTBlendMinMax::supported(*m_context));
-    ENABLE_IF_REQUESTED(EXTClipControl, m_extClipControl, "EXT_clip_control", EXTClipControl::supported(*m_context) && enableDraftExtensions);
+    ENABLE_IF_REQUESTED(EXTClipControl, m_extClipControl, "EXT_clip_control", EXTClipControl::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTColorBufferHalfFloat, m_extColorBufferHalfFloat, "EXT_color_buffer_half_float", EXTColorBufferHalfFloat::supported(*m_context));
-    ENABLE_IF_REQUESTED(EXTDepthClamp, m_extDepthClamp, "EXT_depth_clamp", EXTDepthClamp::supported(*m_context) && enableDraftExtensions);
+    ENABLE_IF_REQUESTED(EXTDepthClamp, m_extDepthClamp, "EXT_depth_clamp", EXTDepthClamp::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTDisjointTimerQuery, m_extDisjointTimerQuery, "EXT_disjoint_timer_query", EXTDisjointTimerQuery::supported(*m_context) && scriptExecutionContext()->settingsValues().webGLTimerQueriesEnabled);
     ENABLE_IF_REQUESTED(EXTFloatBlend, m_extFloatBlend, "EXT_float_blend", EXTFloatBlend::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTFragDepth, m_extFragDepth, "EXT_frag_depth", EXTFragDepth::supported(*m_context));
-    ENABLE_IF_REQUESTED(EXTPolygonOffsetClamp, m_extPolygonOffsetClamp, "EXT_polygon_offset_clamp", EXTPolygonOffsetClamp::supported(*m_context) && enableDraftExtensions);
+    ENABLE_IF_REQUESTED(EXTPolygonOffsetClamp, m_extPolygonOffsetClamp, "EXT_polygon_offset_clamp", EXTPolygonOffsetClamp::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTShaderTextureLOD, m_extShaderTextureLOD, "EXT_shader_texture_lod", EXTShaderTextureLOD::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTTextureCompressionBPTC, m_extTextureCompressionBPTC, "EXT_texture_compression_bptc", EXTTextureCompressionBPTC::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTTextureCompressionRGTC, m_extTextureCompressionRGTC, "EXT_texture_compression_rgtc", EXTTextureCompressionRGTC::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTTextureFilterAnisotropic, m_extTextureFilterAnisotropic, "EXT_texture_filter_anisotropic", EXTTextureFilterAnisotropic::supported(*m_context));
-    ENABLE_IF_REQUESTED(EXTTextureMirrorClampToEdge, m_extTextureMirrorClampToEdge, "EXT_texture_mirror_clamp_to_edge", EXTTextureMirrorClampToEdge::supported(*m_context) && enableDraftExtensions);
+    ENABLE_IF_REQUESTED(EXTTextureMirrorClampToEdge, m_extTextureMirrorClampToEdge, "EXT_texture_mirror_clamp_to_edge", EXTTextureMirrorClampToEdge::supported(*m_context));
     ENABLE_IF_REQUESTED(EXTsRGB, m_extsRGB, "EXT_sRGB", EXTsRGB::supported(*m_context));
     ENABLE_IF_REQUESTED(KHRParallelShaderCompile, m_khrParallelShaderCompile, "KHR_parallel_shader_compile", KHRParallelShaderCompile::supported(*m_context));
     ENABLE_IF_REQUESTED(OESElementIndexUint, m_oesElementIndexUint, "OES_element_index_uint", OESElementIndexUint::supported(*m_context));
@@ -165,6 +172,7 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
     ENABLE_IF_REQUESTED(OESTextureHalfFloat, m_oesTextureHalfFloat, "OES_texture_half_float", OESTextureHalfFloat::supported(*m_context));
     ENABLE_IF_REQUESTED(OESTextureHalfFloatLinear, m_oesTextureHalfFloatLinear, "OES_texture_half_float_linear", OESTextureHalfFloatLinear::supported(*m_context));
     ENABLE_IF_REQUESTED(OESVertexArrayObject, m_oesVertexArrayObject, "OES_vertex_array_object", OESVertexArrayObject::supported(*m_context));
+    ENABLE_IF_REQUESTED(WebGLBlendFuncExtended, m_webglBlendFuncExtended, "WEBGL_blend_func_extended", WebGLBlendFuncExtended::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLColorBufferFloat, m_webglColorBufferFloat, "WEBGL_color_buffer_float", WebGLColorBufferFloat::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLCompressedTextureASTC, m_webglCompressedTextureASTC, "WEBGL_compressed_texture_astc", WebGLCompressedTextureASTC::supported(*m_context));
     ENABLE_IF_REQUESTED(WebGLCompressedTextureETC, m_webglCompressedTextureETC, "WEBGL_compressed_texture_etc", WebGLCompressedTextureETC::supported(*m_context));
@@ -179,8 +187,8 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
     ENABLE_IF_REQUESTED(WebGLDrawBuffers, m_webglDrawBuffers, "WEBGL_draw_buffers", supportsDrawBuffers());
     ENABLE_IF_REQUESTED(WebGLLoseContext, m_webglLoseContext, "WEBGL_lose_context", true);
     ENABLE_IF_REQUESTED(WebGLMultiDraw, m_webglMultiDraw, "WEBGL_multi_draw", WebGLMultiDraw::supported(*m_context));
-    ENABLE_IF_REQUESTED(WebGLPolygonMode, m_webglPolygonMode, "WEBGL_polygon_mode", WebGLPolygonMode::supported(*m_context) && enableDraftExtensions);
-    return nullptr;
+    ENABLE_IF_REQUESTED(WebGLPolygonMode, m_webglPolygonMode, "WEBGL_polygon_mode", WebGLPolygonMode::supported(*m_context));
+    return std::nullopt;
 }
 
 std::optional<Vector<String>> WebGLRenderingContext::getSupportedExtensions()
@@ -190,26 +198,26 @@ std::optional<Vector<String>> WebGLRenderingContext::getSupportedExtensions()
 
     Vector<String> result;
 
-    const bool enableDraftExtensions = scriptExecutionContext()->settingsValues().webGLDraftExtensionsEnabled;
+    [[maybe_unused]] const bool enableDraftExtensions = scriptExecutionContext()->settingsValues().webGLDraftExtensionsEnabled;
 
 #define APPEND_IF_SUPPORTED(nameLiteral, condition) \
     if (condition) \
         result.append(nameLiteral ## _s);
 
     APPEND_IF_SUPPORTED("ANGLE_instanced_arrays", ANGLEInstancedArrays::supported(*m_context))
-    APPEND_IF_SUPPORTED("EXT_clip_control", EXTClipControl::supported(*m_context) && enableDraftExtensions)
     APPEND_IF_SUPPORTED("EXT_blend_minmax", EXTBlendMinMax::supported(*m_context))
+    APPEND_IF_SUPPORTED("EXT_clip_control", EXTClipControl::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_color_buffer_half_float", EXTColorBufferHalfFloat::supported(*m_context))
-    APPEND_IF_SUPPORTED("EXT_depth_clamp", EXTDepthClamp::supported(*m_context) && enableDraftExtensions)
+    APPEND_IF_SUPPORTED("EXT_depth_clamp", EXTDepthClamp::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_disjoint_timer_query", EXTDisjointTimerQuery::supported(*m_context) && scriptExecutionContext()->settingsValues().webGLTimerQueriesEnabled)
     APPEND_IF_SUPPORTED("EXT_float_blend", EXTFloatBlend::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_frag_depth", EXTFragDepth::supported(*m_context))
-    APPEND_IF_SUPPORTED("EXT_polygon_offset_clamp", EXTPolygonOffsetClamp::supported(*m_context) && enableDraftExtensions)
+    APPEND_IF_SUPPORTED("EXT_polygon_offset_clamp", EXTPolygonOffsetClamp::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_shader_texture_lod", EXTShaderTextureLOD::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_texture_compression_bptc", EXTTextureCompressionBPTC::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_texture_compression_rgtc", EXTTextureCompressionRGTC::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_texture_filter_anisotropic", EXTTextureFilterAnisotropic::supported(*m_context))
-    APPEND_IF_SUPPORTED("EXT_texture_mirror_clamp_to_edge", EXTTextureMirrorClampToEdge::supported(*m_context) && enableDraftExtensions)
+    APPEND_IF_SUPPORTED("EXT_texture_mirror_clamp_to_edge", EXTTextureMirrorClampToEdge::supported(*m_context))
     APPEND_IF_SUPPORTED("EXT_sRGB", EXTsRGB::supported(*m_context))
     APPEND_IF_SUPPORTED("KHR_parallel_shader_compile", KHRParallelShaderCompile::supported(*m_context))
     APPEND_IF_SUPPORTED("OES_element_index_uint", OESElementIndexUint::supported(*m_context))
@@ -220,6 +228,7 @@ std::optional<Vector<String>> WebGLRenderingContext::getSupportedExtensions()
     APPEND_IF_SUPPORTED("OES_texture_half_float", OESTextureHalfFloat::supported(*m_context))
     APPEND_IF_SUPPORTED("OES_texture_half_float_linear", OESTextureHalfFloatLinear::supported(*m_context))
     APPEND_IF_SUPPORTED("OES_vertex_array_object", OESVertexArrayObject::supported(*m_context))
+    APPEND_IF_SUPPORTED("WEBGL_blend_func_extended", WebGLBlendFuncExtended::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_color_buffer_float", WebGLColorBufferFloat::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_compressed_texture_astc", WebGLCompressedTextureASTC::supported(*m_context))
     APPEND_IF_SUPPORTED("WEBGL_compressed_texture_etc", WebGLCompressedTextureETC::supported(*m_context))
@@ -234,7 +243,7 @@ std::optional<Vector<String>> WebGLRenderingContext::getSupportedExtensions()
     APPEND_IF_SUPPORTED("WEBGL_draw_buffers", supportsDrawBuffers())
     APPEND_IF_SUPPORTED("WEBGL_lose_context", true)
     APPEND_IF_SUPPORTED("WEBGL_multi_draw", WebGLMultiDraw::supported(*m_context))
-    APPEND_IF_SUPPORTED("WEBGL_polygon_mode", WebGLPolygonMode::supported(*m_context) && enableDraftExtensions)
+    APPEND_IF_SUPPORTED("WEBGL_polygon_mode", WebGLPolygonMode::supported(*m_context))
 
     return result;
 }
@@ -260,7 +269,7 @@ WebGLAny WebGLRenderingContext::getFramebufferAttachmentParameter(GCGLenum targe
     }
 #endif
 
-    RefPtr object = m_framebufferBinding->getAttachmentObject(attachment);
+    auto object = m_framebufferBinding->getAttachmentObject(attachment);
     if (!object) {
         if (pname == GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE)
             return static_cast<unsigned>(GraphicsContextGL::NONE);
@@ -270,18 +279,19 @@ WebGLAny WebGLRenderingContext::getFramebufferAttachmentParameter(GCGLenum targe
         return nullptr;
     }
 
+    const bool isTexture = std::holds_alternative<RefPtr<WebGLTexture>>(*object);
         switch (pname) {
         case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE:
-        if (object->isTexture())
+        if (isTexture)
             return static_cast<unsigned>(GraphicsContextGL::TEXTURE);
         return static_cast<unsigned>(GraphicsContextGL::RENDERBUFFER);
         case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_OBJECT_NAME:
-        if (object->isTexture())
-            return static_pointer_cast<WebGLTexture>(WTFMove(object));
-        return static_pointer_cast<WebGLRenderbuffer>(WTFMove(object));
+        if (isTexture)
+            return std::get<RefPtr<WebGLTexture>>(WTFMove(*object));
+        return std::get<RefPtr<WebGLRenderbuffer>>(WTFMove(*object));
         case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL:
         case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE:
-        if (!object->isTexture())
+        if (!isTexture)
             break;
             return m_context->getFramebufferAttachmentParameteri(target, attachment, pname);
     case GraphicsContextGL::FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING_EXT:
@@ -311,7 +321,7 @@ long long WebGLRenderingContext::getInt64Parameter(GCGLenum pname)
     return m_context->getInteger64EXT(pname);
 }
 
-GCGLint WebGLRenderingContext::getMaxDrawBuffers()
+GCGLint WebGLRenderingContext::maxDrawBuffers()
 {
     if (!supportsDrawBuffers())
         return 0;
@@ -323,7 +333,7 @@ GCGLint WebGLRenderingContext::getMaxDrawBuffers()
     return std::min(m_maxDrawBuffers, m_maxColorAttachments);
 }
 
-GCGLint WebGLRenderingContext::getMaxColorAttachments()
+GCGLint WebGLRenderingContext::maxColorAttachments()
 {
     if (!supportsDrawBuffers())
         return 0;
@@ -358,6 +368,11 @@ void WebGLRenderingContext::addMembersToOpaqueRoots(JSC::AbstractSlotVisitor& vi
 
     Locker locker { objectGraphLock() };
     addWebCoreOpaqueRoot(visitor, m_activeQuery.get());
+}
+
+WebCoreOpaqueRoot root(const WebGLExtension<WebGLRenderingContext>* extension)
+{
+    return WebCoreOpaqueRoot { extension->opaqueRoot() };
 }
 
 } // namespace WebCore

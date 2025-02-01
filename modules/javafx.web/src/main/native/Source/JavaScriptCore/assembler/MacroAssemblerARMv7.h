@@ -114,11 +114,10 @@ public:
 
     Vector<LinkRecord, 0, UnsafeVectorOverflow>& jumpsToLink() { return m_assembler.jumpsToLink(); }
     static bool canCompact(JumpType jumpType) { return ARMv7Assembler::canCompact(jumpType); }
-    static JumpLinkType computeJumpType(JumpType jumpType, const uint8_t* from, const uint8_t* to) { return ARMv7Assembler::computeJumpType(jumpType, from, to); }
     static JumpLinkType computeJumpType(LinkRecord& record, const uint8_t* from, const uint8_t* to) { return ARMv7Assembler::computeJumpType(record, from, to); }
     static int jumpSizeDelta(JumpType jumpType, JumpLinkType jumpLinkType) { return ARMv7Assembler::jumpSizeDelta(jumpType, jumpLinkType); }
 
-    template <Assembler::CopyFunction copy>
+    template<MachineCodeCopyMode copy>
     ALWAYS_INLINE static void link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction, uint8_t* to) { return ARMv7Assembler::link<copy>(record, from, fromInstruction, to); }
 
     struct ArmAddress {
@@ -166,6 +165,7 @@ public:
     };
 
     enum ResultCondition {
+        Carry = ARMv7Assembler::ConditionCS,
         Overflow = ARMv7Assembler::ConditionVS,
         Signed = ARMv7Assembler::ConditionMI,
         PositiveOrZero = ARMv7Assembler::ConditionPL,
@@ -534,6 +534,22 @@ public:
         rotateRight32(srcDst, imm, srcDst);
     }
 
+    void rotateLeft32(RegisterID src, RegisterID shift, RegisterID dest)
+    {
+        RegisterID scratch = getCachedDataTempRegisterIDAndInvalidate();
+        m_assembler.ARM_and(scratch, shift, ARMThumbImmediate::makeEncodedImm(0x1f));
+        m_assembler.sub(scratch, ARMThumbImmediate::makeUInt12(32), scratch);
+        m_assembler.ror(dest, src, scratch);
+    }
+
+    void rotateLeft32(RegisterID src, TrustedImm32 shift, RegisterID dest)
+    {
+        RegisterID scratch = getCachedDataTempRegisterIDAndInvalidate();
+        move(shift, scratch);
+        m_assembler.ARM_and(scratch, scratch, ARMThumbImmediate::makeEncodedImm(0x1f));
+        m_assembler.sub(scratch, ARMThumbImmediate::makeUInt12(32), scratch);
+        m_assembler.ror(dest, src, scratch);
+    }
     void rshift32(RegisterID src, RegisterID shiftAmount, RegisterID dest)
     {
         RegisterID scratch = getCachedDataTempRegisterIDAndInvalidate();
@@ -590,6 +606,13 @@ public:
     void urshift32(TrustedImm32 imm, RegisterID dest)
     {
         urshift32(dest, imm, dest);
+    }
+
+    void addUnsignedRightShift32(RegisterID src1, RegisterID src2, TrustedImm32 amount, RegisterID dest)
+    {
+        // dest = src1 + (src2 >> amount)
+        urshift32(src2, amount, dataTempRegister);
+        add32(src1, dataTempRegister, dest);
     }
 
     void sub32(RegisterID src, RegisterID dest)
@@ -1283,6 +1306,28 @@ public:
         storePair32(src1, src2, Address(armAddress.base, armAddress.u.offset));
     }
 
+    void transfer32(Address src, Address dest)
+    {
+        load32(src, dataTempRegister);
+        store32(dataTempRegister, dest);
+    }
+
+    void transferPtr(Address src, Address dest)
+    {
+        transfer32(src, dest);
+    }
+
+    void transfer32(BaseIndex src, BaseIndex dest)
+    {
+        load32(src, dataTempRegister);
+        store32(dataTempRegister, dest);
+    }
+
+    void transferPtr(BaseIndex src, BaseIndex dest)
+    {
+        transfer32(src, dest);
+    }
+
     void storeCond8(RegisterID src, Address addr, RegisterID result)
     {
         ASSERT(!addr.offset);
@@ -1364,6 +1409,34 @@ public:
         // Don't let any more than 12 bits of an instruction word
         // be controlled by an attacker.
         return !immediate.isUInt12();
+    }
+
+    // Popcount (could be implemented via VCNT?)
+
+    static bool supportsCountPopulation() { return false; }
+
+    NO_RETURN_DUE_TO_CRASH void countPopulation32(RegisterID, RegisterID)
+    {
+        ASSERT(!supportsCountPopulation());
+        CRASH();
+    }
+
+    NO_RETURN_DUE_TO_CRASH void countPopulation32(RegisterID, RegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsCountPopulation());
+        CRASH();
+    }
+
+    NO_RETURN_DUE_TO_CRASH void countPopulation64(RegisterID, RegisterID)
+    {
+        ASSERT(!supportsCountPopulation());
+        CRASH();
+    }
+
+    NO_RETURN_DUE_TO_CRASH void countPopulation64(RegisterID, RegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsCountPopulation());
+        CRASH();
     }
 
     // Floating-point operations:
@@ -1686,16 +1759,26 @@ public:
         CRASH();
     }
 
-    NO_RETURN_DUE_TO_CRASH void roundTowardNearestIntDouble(FPRegisterID, FPRegisterID)
+    // this is provided (unlike the other rounding instructions) since it is
+    // used in a more limited fashion (for Uint8ClampedArray)--its range is
+    // limited to doubles that round to a 32-bit signed int--otherwise, it will
+    // saturate (and signal an FP exception [which is non-trapping])
+    void roundTowardNearestIntDouble(FPRegisterID src, FPRegisterID dest)
     {
-        ASSERT(!supportsFloatingPointRounding());
-        CRASH();
+        m_assembler.vcvt_floatingPointToSignedNearest(asSingle(dest), src);
+        m_assembler.vcvt_signedToFloatingPoint(dest, asSingle(dest));
     }
 
     void convertInt32ToFloat(RegisterID src, FPRegisterID dest)
     {
         m_assembler.vmov(fpTempRegister, src, src);
         m_assembler.vcvt_signedToFloatingPoint(dest, fpTempRegisterAsSingle(), /* toDouble: */ false);
+    }
+
+    void convertInt32ToDouble(TrustedImm32 imm, FPRegisterID dest)
+    {
+        move(imm, dataTempRegister);
+        convertInt32ToDouble(dataTempRegister, dest);
     }
 
     void convertInt32ToDouble(RegisterID src, FPRegisterID dest)
@@ -2150,6 +2233,12 @@ public:
         ARMv7Assembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
     }
 
+    template<PtrTag startTag>
+    static void replaceWithNops(CodeLocationLabel<startTag> instructionStart, size_t memoryToFillWithNopsInBytes)
+    {
+        ARMv7Assembler::replaceWithNops(instructionStart.dataLocation(), memoryToFillWithNopsInBytes);
+    }
+
     static ptrdiff_t maxJumpReplacementSize()
     {
         return ARMv7Assembler::maxJumpReplacementSize();
@@ -2333,6 +2422,12 @@ public:
     {
         // use addressTempRegister incase the branch32 we call uses dataTempRegister. :-/
         load32WithUnalignedHalfWords(left, addressTempRegister);
+        return branch32(cond, addressTempRegister, right);
+    }
+
+    Jump branch32WithMemory16(RelationalCondition cond, Address left, RegisterID right)
+    {
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, addressTempRegister);
         return branch32(cond, addressTempRegister, right);
     }
 
@@ -2654,6 +2749,13 @@ public:
         m_assembler.udf(imm);
     }
 
+    void setCarry(RegisterID dest)
+    {
+        m_assembler.it(ARMv7Assembler::ConditionCS, false);
+        move(TrustedImm32(1), dest);
+        move(TrustedImm32(0), dest);
+    }
+
     static bool isBreakpoint(void* address) { return ARMv7Assembler::isBkpt(address); }
 
     ALWAYS_INLINE Call nearCall()
@@ -2705,10 +2807,11 @@ public:
     ALWAYS_INLINE Call call(RegisterID target, RegisterID callTag) { return UNUSED_PARAM(callTag), call(target, NoPtrTag); }
     ALWAYS_INLINE Call call(Address address, RegisterID callTag) { return UNUSED_PARAM(callTag), call(address, NoPtrTag); }
 
-    ALWAYS_INLINE void callOperation(const CodePtr<OperationPtrTag> operation)
+    template<PtrTag tag>
+    ALWAYS_INLINE void callOperation(const CodePtr<tag> operation)
     {
         move(TrustedImmPtr(operation.taggedPtr()), addressTempRegister);
-        call(addressTempRegister, OperationPtrTag);
+        call(addressTempRegister, tag);
     }
 
     ALWAYS_INLINE void ret()
@@ -2804,6 +2907,18 @@ public:
         m_assembler.it(armV7Condition(cond), false);
         m_assembler.mov(dest, ARMThumbImmediate::makeUInt16(1));
         m_assembler.mov(dest, ARMThumbImmediate::makeUInt16(0));
+    }
+
+    void moveConditionally32(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
+    {
+        auto passCase = branch32(cond, left, right);
+        move(elseCase, dest);
+        auto done = jump();
+
+        passCase.link(this);
+        move(thenCase, dest);
+
+        done.link(this);
     }
 
     ALWAYS_INLINE DataLabel32 moveWithPatch(TrustedImm32 imm, RegisterID dst)

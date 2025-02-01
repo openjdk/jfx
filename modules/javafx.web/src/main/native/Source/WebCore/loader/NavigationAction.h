@@ -49,6 +49,7 @@ class MouseEvent;
 class UIEventWithKeyState;
 
 enum class SyntheticClickType : uint8_t;
+enum class MouseButton : int8_t;
 
 // NavigationAction should never hold a strong reference to the originating document either directly
 // or indirectly as doing so prevents its destruction even after navigating away from it because
@@ -56,8 +57,8 @@ enum class SyntheticClickType : uint8_t;
 class NavigationAction {
 public:
     NavigationAction();
-    WEBCORE_EXPORT NavigationAction(Document&, const ResourceRequest&, InitiatedByMainFrame, NavigationType = NavigationType::Other, ShouldOpenExternalURLsPolicy = ShouldOpenExternalURLsPolicy::ShouldNotAllow, Event* = nullptr, const AtomString& downloadAttribute = nullAtom());
-    NavigationAction(Document&, const ResourceRequest&, InitiatedByMainFrame, FrameLoadType, bool isFormSubmission, Event* = nullptr, ShouldOpenExternalURLsPolicy = ShouldOpenExternalURLsPolicy::ShouldNotAllow, const AtomString& downloadAttribute = nullAtom());
+    WEBCORE_EXPORT NavigationAction(Document&, const ResourceRequest&, InitiatedByMainFrame, bool, NavigationType = NavigationType::Other, ShouldOpenExternalURLsPolicy = ShouldOpenExternalURLsPolicy::ShouldNotAllow, Event* = nullptr, const AtomString& downloadAttribute = nullAtom());
+    NavigationAction(Document&, const ResourceRequest&, InitiatedByMainFrame, bool, FrameLoadType, bool isFormSubmission, Event* = nullptr, ShouldOpenExternalURLsPolicy = ShouldOpenExternalURLsPolicy::ShouldNotAllow, const AtomString& downloadAttribute = nullAtom());
 
     WEBCORE_EXPORT ~NavigationAction();
 
@@ -83,7 +84,7 @@ public:
 
         LayoutPoint absoluteLocation;
         FloatPoint locationInRootViewCoordinates;
-        short button;
+        MouseButton button;
         SyntheticClickType syntheticClickType;
         bool buttonDown;
     };
@@ -92,10 +93,10 @@ public:
 
     NavigationAction copyWithShouldOpenExternalURLsPolicy(ShouldOpenExternalURLsPolicy) const;
 
-    bool isEmpty() const { return !m_requester || m_requester->url.isEmpty() || m_resourceRequest.url().isEmpty(); }
+    bool isEmpty() const { return !m_requester || m_requester->url.isEmpty() || m_originalRequest.url().isEmpty(); }
 
-    URL url() const { return m_resourceRequest.url(); }
-    const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
+    URL url() const { return m_originalRequest.url(); }
+    const ResourceRequest& originalRequest() const { return m_originalRequest; }
 
     NavigationType type() const { return m_type; }
 
@@ -149,7 +150,7 @@ private:
     // Do not add a strong reference to the originating document or a subobject that holds the
     // originating document. See comment above the class for more details.
     std::optional<NavigationRequester> m_requester;
-    ResourceRequest m_resourceRequest;
+    ResourceRequest m_originalRequest;
     std::optional<UIEventWithKeyStateData> m_keyStateEventData;
     std::optional<MouseEventData> m_mouseEventData;
     RefPtr<UserGestureToken> m_userGestureToken { UserGestureIndicator::currentUserGesture() };

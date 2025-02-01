@@ -52,19 +52,7 @@ namespace LLInt {
 #define WASM_SLOW_PATH_HIDDEN_DECL(name) \
     WASM_SLOW_PATH_DECL(name) REFERENCED_FROM_ASM WTF_INTERNAL
 
-#define WASM_IPINT_EXTERN_CPP_DECL(name, ...) \
-    extern "C" UGPRPair ipint_extern_##name(Wasm::Instance* instance, __VA_ARGS__)
-
-#define WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(name, ...) \
-    WASM_IPINT_EXTERN_CPP_DECL(name, __VA_ARGS__) REFERENCED_FROM_ASM WTF_INTERNAL
-
-#define WASM_IPINT_EXTERN_CPP_DECL_1P(name) \
-    extern "C" UGPRPair ipint_extern_##name(Wasm::Instance* instance)
-
-#define WASM_IPINT_EXTERN_CPP_HIDDEN_DECL_1P(name) \
-    WASM_IPINT_EXTERN_CPP_DECL_1P(name) REFERENCED_FROM_ASM WTF_INTERNAL
-
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 WASM_SLOW_PATH_HIDDEN_DECL(prologue_osr);
 WASM_SLOW_PATH_HIDDEN_DECL(loop_osr);
 WASM_SLOW_PATH_HIDDEN_DECL(epilogue_osr);
@@ -75,61 +63,39 @@ WASM_SLOW_PATH_HIDDEN_DECL(trace);
 WASM_SLOW_PATH_HIDDEN_DECL(out_of_line_jump_target);
 
 WASM_SLOW_PATH_HIDDEN_DECL(ref_func);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(ref_func, unsigned index);
 WASM_SLOW_PATH_HIDDEN_DECL(table_get);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(table_get, unsigned, unsigned);
 WASM_SLOW_PATH_HIDDEN_DECL(table_set);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(table_set, unsigned tableIndex, unsigned index, EncodedJSValue value);
 WASM_SLOW_PATH_HIDDEN_DECL(table_init);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(table_init, uint32_t* metadata, uint32_t dest, uint64_t srcAndLength);
 WASM_SLOW_PATH_HIDDEN_DECL(table_fill);
-WASM_IPINT_EXTERN_CPP_DECL(table_fill, uint32_t tableIndex, EncodedJSValue fill, int64_t offsetAndSize);
 WASM_SLOW_PATH_HIDDEN_DECL(table_grow);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(table_grow, int32_t tableIndex, EncodedJSValue fill, uint32_t size);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL_1P(current_memory);
 WASM_SLOW_PATH_HIDDEN_DECL(grow_memory);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(memory_grow, int32_t);
 WASM_SLOW_PATH_HIDDEN_DECL(memory_init);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(memory_init, int32_t, int32_t, int64_t);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(data_drop, int32_t);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(memory_copy, int32_t, int32_t, int32_t);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(memory_fill, int32_t, int32_t, int32_t);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(elem_drop, int32_t);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(table_copy, int32_t*, int32_t, int64_t);
-WASM_IPINT_EXTERN_CPP_DECL(table_size, int32_t);
 WASM_SLOW_PATH_HIDDEN_DECL(call);
 WASM_SLOW_PATH_HIDDEN_DECL(call_indirect);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(call_indirect, CallFrame* callFrame, unsigned functionIndex, unsigned* metadataEntry);
-
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(call, unsigned);
 
 WASM_SLOW_PATH_HIDDEN_DECL(call_ref);
 WASM_SLOW_PATH_HIDDEN_DECL(tail_call);
 WASM_SLOW_PATH_HIDDEN_DECL(tail_call_indirect);
 WASM_SLOW_PATH_HIDDEN_DECL(call_builtin);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(set_global_ref, uint32_t globalIndex, JSValue value);
 WASM_SLOW_PATH_HIDDEN_DECL(set_global_ref);
-
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(get_global_64, unsigned);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(set_global_64, unsigned, uint64_t);
 
 WASM_SLOW_PATH_HIDDEN_DECL(set_global_ref_portable_binding);
 WASM_SLOW_PATH_HIDDEN_DECL(memory_atomic_wait32);
 WASM_SLOW_PATH_HIDDEN_DECL(memory_atomic_wait64);
 WASM_SLOW_PATH_HIDDEN_DECL(memory_atomic_notify);
 WASM_SLOW_PATH_HIDDEN_DECL(throw);
-WASM_IPINT_EXTERN_CPP_HIDDEN_DECL(throw, CallFrame*, uint32_t);
 WASM_SLOW_PATH_HIDDEN_DECL(rethrow);
 WASM_SLOW_PATH_HIDDEN_DECL(retrieve_and_clear_exception);
 WASM_SLOW_PATH_HIDDEN_DECL(array_new);
 WASM_SLOW_PATH_HIDDEN_DECL(array_get);
 WASM_SLOW_PATH_HIDDEN_DECL(array_set);
+WASM_SLOW_PATH_HIDDEN_DECL(array_fill);
 WASM_SLOW_PATH_HIDDEN_DECL(struct_new);
 WASM_SLOW_PATH_HIDDEN_DECL(struct_get);
 WASM_SLOW_PATH_HIDDEN_DECL(struct_set);
 
 extern "C" NO_RETURN void wasm_log_crash(CallFrame*, Wasm::Instance* instance) REFERENCED_FROM_ASM WTF_INTERNAL;
-extern "C" UGPRPair slow_path_wasm_throw_exception(CallFrame*, const WasmInstruction*, Wasm::Instance* instance, Wasm::ExceptionType) REFERENCED_FROM_ASM WTF_INTERNAL;
+extern "C" UGPRPair slow_path_wasm_throw_exception(CallFrame*, Wasm::Instance* instance, Wasm::ExceptionType) REFERENCED_FROM_ASM WTF_INTERNAL;
 extern "C" UGPRPair slow_path_wasm_popcount(const WasmInstruction* pc, uint32_t) REFERENCED_FROM_ASM WTF_INTERNAL;
 extern "C" UGPRPair slow_path_wasm_popcountll(const WasmInstruction* pc, uint64_t) REFERENCED_FROM_ASM WTF_INTERNAL;
 

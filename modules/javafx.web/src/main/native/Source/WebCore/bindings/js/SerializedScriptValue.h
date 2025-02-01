@@ -37,7 +37,14 @@
 #include <wtf/Gigacage.h>
 #include <wtf/text/WTFString.h>
 
+#if ENABLE(MEDIA_STREAM)
+#include "MediaStreamTrackDataHolder.h"
+#endif
+
 #if ENABLE(WEB_CODECS)
+#include "WebCodecsAudioData.h"
+#include "WebCodecsAudioInternalData.h"
+#include "WebCodecsEncodedAudioChunk.h"
 #include "WebCodecsEncodedVideoChunk.h"
 #include "WebCodecsVideoFrame.h"
 #endif
@@ -60,7 +67,7 @@ class OffscreenCanvas;
 #endif
 class IDBValue;
 class MessagePort;
-class ImageBitmapBacking;
+class DetachedImageBitmap;
 class FragmentedSharedBuffer;
 enum class SerializationReturnCode;
 
@@ -90,34 +97,31 @@ public:
     WEBCORE_EXPORT JSC::JSValue deserialize(JSC::JSGlobalObject&, JSC::JSGlobalObject*, const Vector<RefPtr<MessagePort>>&, SerializationErrorMode = SerializationErrorMode::Throwing, bool* didFail = nullptr);
     JSC::JSValue deserialize(JSC::JSGlobalObject&, JSC::JSGlobalObject*, const Vector<RefPtr<MessagePort>>&, const Vector<String>& blobURLs, const Vector<String>& blobFilePaths, SerializationErrorMode = SerializationErrorMode::Throwing, bool* didFail = nullptr);
 
-    static uint32_t wireFormatVersion();
-
     WEBCORE_EXPORT String toString() const;
 
     // API implementation helpers. These don't expose special behavior for ArrayBuffers or MessagePorts.
     WEBCORE_EXPORT static RefPtr<SerializedScriptValue> create(JSContextRef, JSValueRef, JSValueRef* exception);
     WEBCORE_EXPORT JSValueRef deserialize(JSContextRef, JSValueRef* exception);
 
-    bool hasBlobURLs() const { return !m_blobHandles.isEmpty(); }
+    bool hasBlobURLs() const { return !m_internals.blobHandles.isEmpty(); }
 
     Vector<String> blobURLs() const;
-    Vector<URLKeepingBlobAlive> blobHandles() const { return crossThreadCopy(m_blobHandles); }
+    Vector<URLKeepingBlobAlive> blobHandles() const { return crossThreadCopy(m_internals.blobHandles); }
     void writeBlobsToDiskForIndexedDB(CompletionHandler<void(IDBValue&&)>&&);
     IDBValue writeBlobsToDiskForIndexedDBSynchronously();
     static Ref<SerializedScriptValue> createFromWireBytes(Vector<uint8_t>&& data)
     {
         return adoptRef(*new SerializedScriptValue(WTFMove(data)));
     }
-    const Vector<uint8_t>& wireBytes() const { return m_data; }
+    const Vector<uint8_t>& wireBytes() const { return m_internals.data; }
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static RefPtr<SerializedScriptValue> decode(Decoder&);
-
-    size_t memoryCost() const { return m_memoryCost; }
+    size_t memoryCost() const { return m_internals.memoryCost; }
 
     WEBCORE_EXPORT ~SerializedScriptValue();
 
 private:
+    friend struct IPC::ArgumentCoder<SerializedScriptValue, void>;
+
     static ExceptionOr<Ref<SerializedScriptValue>> create(JSC::JSGlobalObject&, JSC::JSValue, Vector<JSC::Strong<JSC::JSObject>>&& transfer, Vector<RefPtr<MessagePort>>&, SerializationForStorage, SerializationErrorMode, SerializationContext);
     WEBCORE_EXPORT SerializedScriptValue(Vector<unsigned char>&&, std::unique_ptr<ArrayBufferContentsArray>&& = nullptr
 #if ENABLE(WEB_RTC)
@@ -126,10 +130,15 @@ private:
 #if ENABLE(WEB_CODECS)
         , Vector<RefPtr<WebCodecsEncodedVideoChunkStorage>>&& = { }
         , Vector<WebCodecsVideoFrameData>&& = { }
+        , Vector<RefPtr<WebCodecsEncodedAudioChunkStorage>>&& = { }
+        , Vector<WebCodecsAudioInternalData>&& = { }
+#endif
+#if ENABLE(MEDIA_STREAM)
+        , Vector<std::unique_ptr<MediaStreamTrackDataHolder>>&& = { }
 #endif
         );
 
-    SerializedScriptValue(Vector<unsigned char>&&, Vector<URLKeepingBlobAlive>&& blobHandles, std::unique_ptr<ArrayBufferContentsArray>, std::unique_ptr<ArrayBufferContentsArray> sharedBuffers, Vector<std::optional<ImageBitmapBacking>>&& backingStores
+    SerializedScriptValue(Vector<unsigned char>&&, Vector<URLKeepingBlobAlive>&& blobHandles, std::unique_ptr<ArrayBufferContentsArray>, std::unique_ptr<ArrayBufferContentsArray> sharedBuffers, Vector<std::optional<DetachedImageBitmap>>&&
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
         , Vector<std::unique_ptr<DetachedOffscreenCanvas>>&& = { }
         , Vector<RefPtr<OffscreenCanvas>>&& = { }
@@ -145,142 +154,55 @@ private:
 #if ENABLE(WEB_CODECS)
         , Vector<RefPtr<WebCodecsEncodedVideoChunkStorage>>&& = { }
         , Vector<WebCodecsVideoFrameData>&& = { }
+        , Vector<RefPtr<WebCodecsEncodedAudioChunkStorage>>&& = { }
+        , Vector<WebCodecsAudioInternalData>&& = { }
+#endif
+#if ENABLE(MEDIA_STREAM)
+        , Vector<std::unique_ptr<MediaStreamTrackDataHolder>>&& = { }
 #endif
         );
 
     size_t computeMemoryCost() const;
 
-    Vector<unsigned char> m_data;
-    std::unique_ptr<ArrayBufferContentsArray> m_arrayBufferContentsArray;
-    std::unique_ptr<ArrayBufferContentsArray> m_sharedBufferContentsArray;
-    Vector<std::optional<ImageBitmapBacking>> m_backingStores;
-#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
-    Vector<std::unique_ptr<DetachedOffscreenCanvas>> m_detachedOffscreenCanvases;
-    Vector<RefPtr<OffscreenCanvas>> m_inMemoryOffscreenCanvases;
-#endif
-    Vector<RefPtr<MessagePort>> m_inMemoryMessagePorts;
-#if ENABLE(WEB_RTC)
-    Vector<std::unique_ptr<DetachedRTCDataChannel>> m_detachedRTCDataChannels;
-#endif
-#if ENABLE(WEBASSEMBLY)
-    std::unique_ptr<WasmModuleArray> m_wasmModulesArray;
-    std::unique_ptr<WasmMemoryHandleArray> m_wasmMemoryHandlesArray;
-#endif
-#if ENABLE(WEB_CODECS)
-    Vector<RefPtr<WebCodecsEncodedVideoChunkStorage>> m_serializedVideoChunks;
-    Vector<WebCodecsVideoFrameData> m_serializedVideoFrames;
-#endif
-    Vector<URLKeepingBlobAlive> m_blobHandles;
-    size_t m_memoryCost { 0 };
-};
-
-template<class Encoder>
-void SerializedScriptValue::encode(Encoder& encoder) const
-{
-    encoder << m_data;
-
-    auto hasArray = m_arrayBufferContentsArray && m_arrayBufferContentsArray->size();
-    encoder << hasArray;
-
-    if (hasArray) {
-        encoder << static_cast<uint64_t>(m_arrayBufferContentsArray->size());
-        for (const auto& arrayBufferContents : *m_arrayBufferContentsArray)
-            encoder << std::span(reinterpret_cast<const uint8_t*>(arrayBufferContents.data()), arrayBufferContents.sizeInBytes());
-    }
-
-#if ENABLE(WEB_RTC)
-    encoder << static_cast<uint64_t>(m_detachedRTCDataChannels.size());
-    for (const auto &channel : m_detachedRTCDataChannels)
-        encoder << *channel;
-#endif
-
-#if ENABLE(WEB_CODECS)
-    encoder << static_cast<uint64_t>(m_serializedVideoChunks.size());
-    for (const auto &videoChunk : m_serializedVideoChunks)
-        encoder << videoChunk->data();
-
-    // FIXME: encode video frames
-#endif
-}
-
-template<class Decoder>
-RefPtr<SerializedScriptValue> SerializedScriptValue::decode(Decoder& decoder)
-{
-    Vector<uint8_t> data;
-    if (!decoder.decode(data))
-        return nullptr;
-
-    bool hasArray;
-    if (!decoder.decode(hasArray))
-        return nullptr;
-
+    struct Internals {
+        Vector<unsigned char> data;
     std::unique_ptr<ArrayBufferContentsArray> arrayBufferContentsArray;
-    if (hasArray) {
-        uint64_t arrayLength;
-        if (!decoder.decode(arrayLength))
-            return nullptr;
-        ASSERT(arrayLength);
-
-        arrayBufferContentsArray = makeUnique<ArrayBufferContentsArray>();
-        while (arrayLength--) {
-            std::span<const uint8_t> data;
-            if (!decoder.decode(data))
-                return nullptr;
-
-            auto buffer = Gigacage::tryMalloc(Gigacage::Primitive, data.size_bytes());
-            if (!buffer)
-                return nullptr;
-
-            static_assert(sizeof(std::span<const uint8_t>::element_type) == 1);
-            memcpy(buffer, data.data(), data.size_bytes());
-            JSC::ArrayBufferDestructorFunction destructor = ArrayBuffer::primitiveGigacageDestructor();
-            arrayBufferContentsArray->append({ buffer, data.size_bytes(), std::nullopt, WTFMove(destructor) });
-        }
-    }
-
 #if ENABLE(WEB_RTC)
-    uint64_t detachedRTCDataChannelsSize;
-    if (!decoder.decode(detachedRTCDataChannelsSize))
-        return nullptr;
-
     Vector<std::unique_ptr<DetachedRTCDataChannel>> detachedRTCDataChannels;
-    while (detachedRTCDataChannelsSize--) {
-        std::optional<DetachedRTCDataChannel> detachedRTCDataChannel;
-        decoder >> detachedRTCDataChannel;
-        if (!detachedRTCDataChannel)
-            return nullptr;
-        detachedRTCDataChannels.append(makeUnique<DetachedRTCDataChannel>(WTFMove(*detachedRTCDataChannel)));
-    }
 #endif
 #if ENABLE(WEB_CODECS)
-    uint64_t serializedVideoChunksSize;
-    if (!decoder.decode(serializedVideoChunksSize))
-        return nullptr;
-
     Vector<RefPtr<WebCodecsEncodedVideoChunkStorage>> serializedVideoChunks;
-    while (serializedVideoChunksSize--) {
-        std::optional<WebCodecsEncodedVideoChunkData> videoChunkData;
-        decoder >> videoChunkData;
-        if (!videoChunkData)
-            return nullptr;
-        serializedVideoChunks.append(WebCodecsEncodedVideoChunkStorage::create(WTFMove(*videoChunkData)));
+        Vector<RefPtr<WebCodecsEncodedAudioChunkStorage>> serializedAudioChunks;
+        Vector<WebCodecsVideoFrameData> serializedVideoFrames { };
+        Vector<WebCodecsAudioInternalData> serializedAudioData { };
+#endif
+#if ENABLE(MEDIA_STREAM)
+        Vector<std::unique_ptr<MediaStreamTrackDataHolder>> serializedMediaStreamTracks { };
+#endif
+        std::unique_ptr<ArrayBufferContentsArray> sharedBufferContentsArray { };
+        Vector<std::optional<DetachedImageBitmap>> detachedImageBitmaps { };
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
+        Vector<std::unique_ptr<DetachedOffscreenCanvas>> detachedOffscreenCanvases { };
+        Vector<RefPtr<OffscreenCanvas>> inMemoryOffscreenCanvases { };
+#endif
+        Vector<RefPtr<MessagePort>> inMemoryMessagePorts { };
+#if ENABLE(WEBASSEMBLY)
+        std::unique_ptr<WasmModuleArray> wasmModulesArray { };
+        std::unique_ptr<WasmMemoryHandleArray> wasmMemoryHandlesArray { };
+#endif
+        Vector<URLKeepingBlobAlive> blobHandles { };
+        size_t memoryCost { 0 };
+    };
+    friend struct IPC::ArgumentCoder<Internals, void>;
+
+    static Ref<SerializedScriptValue> create(Internals&& internals)
+    {
+        return adoptRef(*new SerializedScriptValue(WTFMove(internals)));
     }
-    // FIXME: decode video frames
-    Vector<WebCodecsVideoFrameData> serializedVideoFrames;
-#endif
 
-    return adoptRef(*new SerializedScriptValue(WTFMove(data), WTFMove(arrayBufferContentsArray)
-#if ENABLE(WEB_RTC)
-        , WTFMove(detachedRTCDataChannels)
-#endif
-#if ENABLE(WEB_CODECS)
-        , WTFMove(serializedVideoChunks)
-#endif
-#if ENABLE(WEB_CODECS)
-        , WTFMove(serializedVideoFrames)
-#endif
-        ));
-}
+    WEBCORE_EXPORT explicit SerializedScriptValue(Internals&&);
 
+    Internals m_internals;
+};
 
 }

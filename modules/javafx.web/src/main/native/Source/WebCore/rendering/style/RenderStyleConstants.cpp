@@ -330,6 +330,16 @@ TextStream& operator<<(TextStream& ts, ContentPosition position)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, ContentVisibility contentVisibility)
+{
+    switch (contentVisibility) {
+    case ContentVisibility::Visible: ts << "visible"; break;
+    case ContentVisibility::Auto: ts << "auto"; break;
+    case ContentVisibility::Hidden: ts << "hidden"; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, CursorType cursor)
 {
     switch (cursor) {
@@ -409,6 +419,10 @@ TextStream& operator<<(TextStream& ts, DisplayType display)
     case DisplayType::Grid: ts << "grid"; break;
     case DisplayType::InlineGrid: ts << "inline-grid"; break;
     case DisplayType::FlowRoot: ts << "flow-root"; break;
+    case DisplayType::Ruby: ts << "ruby"; break;
+    case DisplayType::RubyBlock: ts << "block ruby"; break;
+    case DisplayType::RubyBase: ts << "ruby-base"; break;
+    case DisplayType::RubyAnnotation: ts << "ruby-text"; break;
     case DisplayType::None: ts << "none"; break;
     }
     return ts;
@@ -837,19 +851,26 @@ TextStream& operator<<(TextStream& ts, PseudoId pseudoId)
     case PseudoId::None: ts << "none"; break;
     case PseudoId::FirstLine: ts << "first-line"; break;
     case PseudoId::FirstLetter: ts << "first-letter"; break;
+    case PseudoId::GrammarError: ts << "grammar-error"; break;
     case PseudoId::Highlight: ts << "highlight"; break;
     case PseudoId::Marker: ts << "marker"; break;
     case PseudoId::Backdrop: ts << "backdrop"; break;
     case PseudoId::Before: ts << "before"; break;
     case PseudoId::After: ts << "after"; break;
     case PseudoId::Selection: ts << "selection"; break;
-    case PseudoId::Scrollbar: ts << "scrollbar"; break;
-    case PseudoId::ScrollbarThumb: ts << "scrollbar-thumb"; break;
-    case PseudoId::ScrollbarButton: ts << "scrollbar-button"; break;
-    case PseudoId::ScrollbarTrack: ts << "scrollbar-track"; break;
-    case PseudoId::ScrollbarTrackPiece: ts << "scrollbar-trackpiece"; break;
-    case PseudoId::ScrollbarCorner: ts << "scrollbar-corner"; break;
-    case PseudoId::Resizer: ts << "resizer"; break;
+    case PseudoId::SpellingError: ts << "spelling-error"; break;
+    case PseudoId::ViewTransition: ts << "view-transition"; break;
+    case PseudoId::ViewTransitionGroup: ts << "view-transition-group"; break;
+    case PseudoId::ViewTransitionImagePair: ts << "view-transition-image-pair"; break;
+    case PseudoId::ViewTransitionOld: ts << "view-transition-old"; break;
+    case PseudoId::ViewTransitionNew: ts << "view-transition-new"; break;
+    case PseudoId::WebKitResizer: ts << "-webkit-resizer"; break;
+    case PseudoId::WebKitScrollbar: ts << "-webkit-scrollbar"; break;
+    case PseudoId::WebKitScrollbarThumb: ts << "-webkit-scrollbar-thumb"; break;
+    case PseudoId::WebKitScrollbarButton: ts << "-webkit-scrollbar-button"; break;
+    case PseudoId::WebKitScrollbarTrack: ts << "-webkit-scrollbar-track"; break;
+    case PseudoId::WebKitScrollbarTrackPiece: ts << "-webkit-scrollbar-trackpiece"; break;
+    case PseudoId::WebKitScrollbarCorner: ts << "-webkit-scrollbar-corner"; break;
     default:
         ts << "other";
         break;
@@ -1167,14 +1188,22 @@ TextStream& operator<<(TextStream& ts, TextUnderlinePosition underlinePosition)
     return ts;
 }
 
-TextStream& operator<<(TextStream& ts, TextWrap wrap)
+TextStream& operator<<(TextStream& ts, TextWrapMode wrap)
 {
     switch (wrap) {
-    case TextWrap::Wrap: ts << "wrap"; break;
-    case TextWrap::NoWrap: ts << "nowrap"; break;
-    case TextWrap::Balance: ts << "balance"; break;
-    case TextWrap::Stable: ts << "stable"; break;
-    case TextWrap::Pretty: ts << "pretty"; break;
+    case TextWrapMode::Wrap: ts << "wrap"; break;
+    case TextWrapMode::NoWrap: ts << "nowrap"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, TextWrapStyle style)
+{
+    switch (style) {
+    case TextWrapStyle::Auto: ts << "auto"; break;
+    case TextWrapStyle::Balance: ts << "balance"; break;
+    case TextWrapStyle::Pretty: ts << "pretty"; break;
+    case TextWrapStyle::Stable: ts << "stable"; break;
     }
     return ts;
 }
@@ -1326,7 +1355,7 @@ TextStream& operator<<(TextStream& ts, WordBreak wordBreak)
     case WordBreak::BreakAll: ts << "break-all"; break;
     case WordBreak::KeepAll: ts << "keep-all"; break;
     case WordBreak::BreakWord: ts << "break-word"; break;
-    case WordBreak::Auto: ts << "auto"; break;
+    case WordBreak::AutoPhrase: ts << "auto-phrase"; break;
     }
     return ts;
 }

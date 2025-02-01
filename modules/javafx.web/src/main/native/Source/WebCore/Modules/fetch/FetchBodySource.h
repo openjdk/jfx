@@ -37,9 +37,10 @@ namespace WebCore {
 
 class FetchBodyOwner;
 
-class FetchBodySource final : public ReadableStreamSource {
+class FetchBodySource final : public RefCountedReadableStreamSource {
 public:
     FetchBodySource(FetchBodyOwner&);
+    virtual ~FetchBodySource();
 
     bool enqueue(RefPtr<JSC::ArrayBuffer>&& chunk) { return controller().enqueue(WTFMove(chunk)); }
     void close();

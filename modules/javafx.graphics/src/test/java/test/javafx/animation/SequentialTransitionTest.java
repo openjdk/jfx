@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,6 @@
 
 package test.javafx.animation;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Arrays;
 import javafx.animation.Animation;
 import javafx.animation.Interpolator;
@@ -38,8 +34,11 @@ import javafx.scene.Node;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SequentialTransitionTest {
 
@@ -55,7 +54,7 @@ public class SequentialTransitionTest {
     private Animation child2;
     private Animation child3;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         node = new Rectangle();
         child1 = new AnimationDummy(ONE_SEC);

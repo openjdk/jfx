@@ -112,7 +112,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
                 }
             }
             updateSelection();
-            getSkinnable().requestLayout(); // RT-18052 resize of choicebox should happen immediately.
+            getSkinnable().requestLayout(); // JDK-8128697 resize of choicebox should happen immediately.
         }
     };
 
@@ -158,12 +158,12 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 
                 long currentSelectedIndex = sm.getSelectedIndex();
 
-                // This is a fix for RT-9071. Ideally this won't be necessary in
+                // This is a fix for JDK-8110365. Ideally this won't be necessary in
                 // the long-run, but for now at least this resolves the
                 // positioning
                 // problem of ChoiceBox inside a Cell.
                 getSkinnable().autosize();
-                // -- End of RT-9071 fix
+                // -- End of JDK-8110365 fix
 
                 double y = 0;
 
@@ -324,8 +324,8 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 //        popup.visibleProperty().addListener(new InvalidationListener() {
 //            @Override public void invalidated(ObservableValue valueModel) {
 //                if (popup.isVisible() {
-////                    RadioMenuItem selected = (RadioMenuItem) toggleGroup.getSelectedToggle();
-////                    if (selected != null) selected.requestFocus();
+//--                    RadioMenuItem selected = (RadioMenuItem) toggleGroup.getSelectedToggle();
+//--                    if (selected != null) selected.requestFocus();
 //                } else {
 //                    getBehavior().close();
 //                }

@@ -61,18 +61,22 @@ MediaList& CSSImportRule::media() const
 
 String CSSImportRule::layerName() const
 {
-    auto name = m_importRule.get().cascadeLayerName();
+    auto name = m_importRule->cascadeLayerName();
     if (!name)
         return { };
 
     return stringFromCascadeLayerName(*name);
 }
 
-String CSSImportRule::cssText() const
+String CSSImportRule::supportsText() const
+{
+    return m_importRule->supportsText();
+}
+
+String CSSImportRule::cssTextInternal(const String& urlString) const
 {
     StringBuilder builder;
-
-    builder.append("@import ", serializeURL(m_importRule.get().href()));
+    builder.append("@import ", serializeURL(urlString));
 
     if (auto layerName = this->layerName(); !layerName.isNull()) {
         if (layerName.isEmpty())
@@ -81,14 +85,35 @@ String CSSImportRule::cssText() const
             builder.append(" layer(", layerName, ')');
     }
 
+    auto supports = supportsText();
+    if (!supports.isNull())
+        builder.append(" supports(", WTFMove(supports), ')');
+
     if (!mediaQueries().isEmpty()) {
         builder.append(' ');
         MQ::serialize(builder, mediaQueries());
     }
 
     builder.append(';');
-
     return builder.toString();
+}
+
+String CSSImportRule::cssText() const
+{
+    return cssTextInternal(m_importRule->href());
+}
+
+String CSSImportRule::cssTextWithReplacementURLs(const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
+{
+    if (RefPtr sheet = styleSheet()) {
+        auto urlString = replacementURLStringsForCSSStyleSheet.get(sheet);
+        if (!urlString.isEmpty())
+            return cssTextInternal(urlString);
+    }
+
+    auto urlString = m_importRule->href();
+    auto replacementURLString = replacementURLStrings.get(urlString);
+    return replacementURLString.isEmpty() ? cssTextInternal(urlString) : cssTextInternal(replacementURLString);
 }
 
 CSSStyleSheet* CSSImportRule::styleSheet() const
@@ -116,5 +141,14 @@ void CSSImportRule::setMediaQueries(MQ::MediaQueryList&& queries)
     m_importRule->setMediaQueries(WTFMove(queries));
 }
 
+void CSSImportRule::getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
+{
+    RefPtr sheet = styleSheet();
+    if (!sheet)
+        return;
+
+    if (childStyleSheets.add(sheet).isNewEntry)
+        sheet->getChildStyleSheets(childStyleSheets);
+}
 
 } // namespace WebCore

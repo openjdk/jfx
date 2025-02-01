@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -350,7 +350,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         // out of the editing state.
         // This MUST come before the updateItem call below, otherwise it will
         // call cancelEdit(), resulting in both commit and cancel events being
-        // fired (as identified in RT-29650)
+        // fired (as identified in JDK-8124615)
         super.commitEdit(newValue);
 
         final TableView<S> table = getTableView();
@@ -434,7 +434,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     @Override public void updateSelected(boolean selected) {
         // copied from Cell, with the first conditional clause below commented
         // out, as it is valid for an empty TableCell to be selected, as long
-        // as the parent TableRow is not empty (see RT-15529).
+        // as the parent TableRow is not empty (see JDK-8113895).
         /*if (selected && isEmpty()) return;*/
         if (getTableRow() == null || getTableRow().isEmpty()) return;
         setSelected(selected);
@@ -483,7 +483,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
         // Ideally we would just use the following two lines of code, rather
         // than the updateItem() call beneath, but if we do this we end up with
-        // RT-22428 where all the columns are collapsed.
+        // JDK-8126803 where all the columns are collapsed.
         // itemDirty = true;
         // requestLayout();
         updateItem(oldIndex);
@@ -621,7 +621,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     }
 
     /*
-     * This was brought in to fix the issue in RT-22077, namely that the
+     * This was brought in to fix the issue in JDK-8126798, namely that the
      * ObservableValue was being GC'd, meaning that changes to the value were
      * no longer being delivered. By extracting this value out of the method,
      * it is now referred to from TableCell and will therefore no longer be
@@ -665,15 +665,15 @@ public class TableCell<S,T> extends IndexedCell<T> {
                 tableColumn == null ||
                 !tableColumn.isVisible()) {
 
-            // RT-30484 We need to allow a first run to be special-cased to allow
+            // JDK-8116529 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
-            // the correct visual state to be set up. In particular, in RT-30484
+            // the correct visual state to be set up. In particular, in JDK-8116529
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.
-            // RT-32621: There are circumstances where we need to updateItem,
+            // JDK-8115233: There are circumstances where we need to updateItem,
             // even when the index is greater than the itemCount. For example,
-            // RT-32621 identifies issues where a TreeTableView collapses a
+            // JDK-8115233 identifies issues where a TreeTableView collapses a
             // TreeItem but the custom cells remain visible. This is now
             // resolved with the check for indexExceedsItemCount.
             if ((!isEmpty && oldValue != null) || isFirstRun || indexExceedsItemCount) {
@@ -685,16 +685,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
             currentObservableValue = tableColumn.getCellObservableValue(index);
             final T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
 
-            // RT-35864 - if the index didn't change, then avoid calling updateItem
+            // JDK-8092593 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == index) {
                 if (!isItemChanged(oldValue, newValue)) {
-                    // RT-36670: we need to check the row item here to prevent
+                    // JDK-8096643: we need to check the row item here to prevent
                     // the issue where the cell value and index doesn't change,
                     // but the backing row object does.
                     S oldRowItem = oldRowItemRef != null ? oldRowItemRef.get() : null;
                     if (oldRowItem != null && oldRowItem.equals(rowItem)) {
-                        // RT-37054:  we break out of the if/else code here and
+                        // JDK-8096969:  we break out of the if/else code here and
                         // proceed with the code following this, so that we may
                         // still update references, listeners, etc as required//.
                         break outer;

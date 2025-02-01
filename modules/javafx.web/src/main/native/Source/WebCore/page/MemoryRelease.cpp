@@ -35,11 +35,13 @@
 #include "CommonVM.h"
 #include "CookieJar.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "FontCache.h"
 #include "GCController.h"
 #include "HRTFElevation.h"
 #include "HTMLMediaElement.h"
 #include "HTMLNameCache.h"
+#include "ImmutableStyleProperties.h"
 #include "InlineStyleSheetOwner.h"
 #include "InspectorInstrumentation.h"
 #include "LayoutIntegrationLineLayout.h"
@@ -49,9 +51,12 @@
 #include "Page.h"
 #include "PerformanceLogging.h"
 #include "RenderTheme.h"
+#include "RenderView.h"
+#include "SVGPathElement.h"
 #include "ScrollingThread.h"
 #include "SelectorQuery.h"
 #include "StyleScope.h"
+#include "StyleSheetContentsCache.h"
 #include "StyledElement.h"
 #include "TextPainter.h"
 #include "WorkerGlobalScope.h"
@@ -77,16 +82,18 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     GlyphDisplayListCache::singleton().clear();
     SelectorQueryCache::singleton().clear();
 
-    for (auto* document : Document::allDocuments()) {
-        if (auto* renderView = document->renderView())
+    for (auto& document : Document::allDocuments()) {
+        if (CheckedPtr renderView = document->renderView())
             LayoutIntegration::LineLayout::releaseCaches(*renderView);
     }
 
     if (maintainMemoryCache == MaintainMemoryCache::No)
         MemoryCache::singleton().pruneDeadResourcesToSize(0);
 
-    InlineStyleSheetOwner::clearCache();
+    Style::StyleSheetContentsCache::singleton().clear();
     HTMLNameCache::clear();
+    ImmutableStyleProperties::clearDeduplicationMap();
+    SVGPathElement::clearCache();
 }
 
 static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCache maintainBackForwardCache, MaintainMemoryCache maintainMemoryCache)
@@ -111,9 +118,15 @@ static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCa
         page.cookieJar().clearCache();
     });
 
-    for (auto& document : copyToVectorOf<RefPtr<Document>>(Document::allDocuments())) {
+    auto allDocuments = Document::allDocuments();
+    auto protectedDocuments = WTF::map(allDocuments, [](auto& document) -> Ref<Document> {
+        return document.get();
+    });
+    for (auto& document : protectedDocuments) {
+        document->clearQuerySelectorAllResults();
         document->styleScope().releaseMemory();
-        document->fontSelector().emptyCaches();
+        if (RefPtr fontSelector = document->fontSelectorIfExists())
+            fontSelector->emptyCaches();
         document->cachedResourceLoader().garbageCollectDocumentResources();
     }
 

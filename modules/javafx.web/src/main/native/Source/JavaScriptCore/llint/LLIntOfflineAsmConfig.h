@@ -47,7 +47,6 @@
 #define OFFLINE_ASM_X86_64_WIN 0
 #define OFFLINE_ASM_ARMv7k 0
 #define OFFLINE_ASM_ARMv7s 0
-#define OFFLINE_ASM_MIPS 0
 #define OFFLINE_ASM_RISCV64 0
 
 #else // ENABLE(C_LOOP)
@@ -97,12 +96,6 @@
 #define OFFLINE_ASM_X86_64_WIN 0
 #endif
 
-#if CPU(MIPS)
-#define OFFLINE_ASM_MIPS 1
-#else
-#define OFFLINE_ASM_MIPS 0
-#endif
-
 #if CPU(ARM64)
 #define OFFLINE_ASM_ARM64 1
 #else
@@ -121,19 +114,6 @@
 #define OFFLINE_ASM_RISCV64 1
 #else
 #define OFFLINE_ASM_RISCV64 0
-#endif
-
-#if CPU(MIPS)
-#ifdef WTF_MIPS_PIC
-#define S(x) #x
-#define SX(x) S(x)
-#define OFFLINE_ASM_CPLOAD(reg) \
-    ".set noreorder\n" \
-    ".cpload " SX(reg) "\n" \
-    ".set reorder\n"
-#else
-#define OFFLINE_ASM_CPLOAD(reg)
-#endif
 #endif
 
 #endif // ENABLE(C_LOOP)
@@ -200,10 +180,16 @@
 #define OFFLINE_ASM_WEBASSEMBLY 0
 #endif
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
-#define OFFLINE_ASM_WEBASSEMBLY_B3JIT 1
+#if ENABLE(WEBASSEMBLY_OMGJIT)
+#define OFFLINE_ASM_WEBASSEMBLY_OMGJIT 1
 #else
-#define OFFLINE_ASM_WEBASSEMBLY_B3JIT 0
+#define OFFLINE_ASM_WEBASSEMBLY_OMGJIT 0
+#endif
+
+#if ENABLE(WEBASSEMBLY_BBQJIT)
+#define OFFLINE_ASM_WEBASSEMBLY_BBQJIT 1
+#else
+#define OFFLINE_ASM_WEBASSEMBLY_BBQJIT 0
 #endif
 
 #if HAVE(FAST_TLS)

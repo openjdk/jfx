@@ -34,20 +34,26 @@
 
 namespace WebCore {
 
-static bool isViewportElement(Node* node)
+// FIXME: This doesn't match SVGElement::viewportElement() as it has an extra check for
+// foreign object.
+static bool isViewportElement(const SVGElement* element)
 {
-    return (node->hasTagName(SVGNames::svgTag)
-        || node->hasTagName(SVGNames::symbolTag)
-        || node->hasTagName(SVGNames::foreignObjectTag)
-        || is<SVGImageElement>(*node));
+    if (!element)
+        return false;
+
+    return element->hasTagName(SVGNames::svgTag)
+        || element->hasTagName(SVGNames::symbolTag)
+        || element->hasTagName(SVGNames::foreignObjectTag)
+        || is<SVGImageElement>(*element);
 }
 
 SVGElement* SVGLocatable::nearestViewportElement(const SVGElement* element)
 {
     ASSERT(element);
     for (Element* current = element->parentOrShadowHostElement(); current; current = current->parentOrShadowHostElement()) {
-        if (isViewportElement(current))
-            return downcast<SVGElement>(current);
+        auto* svgElement = dynamicDowncast<SVGElement>(*current);
+        if (isViewportElement(svgElement))
+            return svgElement;
     }
 
     return nullptr;
@@ -58,8 +64,9 @@ SVGElement* SVGLocatable::farthestViewportElement(const SVGElement* element)
     ASSERT(element);
     SVGElement* farthest = nullptr;
     for (Element* current = element->parentOrShadowHostElement(); current; current = current->parentOrShadowHostElement()) {
-        if (isViewportElement(current))
-            farthest = downcast<SVGElement>(current);
+        auto* svgElement = dynamicDowncast<SVGElement>(*current);
+        if (isViewportElement(svgElement))
+            farthest = svgElement;
     }
     return farthest;
 }
@@ -68,7 +75,7 @@ FloatRect SVGLocatable::getBBox(SVGElement* element, StyleUpdateStrategy styleUp
 {
     ASSERT(element);
     if (styleUpdateStrategy == AllowStyleUpdate)
-        element->document().updateLayoutIgnorePendingStylesheets();
+        element->document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
 
     // FIXME: Eventually we should support getBBox for detached elements.
     if (!element->renderer())
@@ -81,7 +88,7 @@ AffineTransform SVGLocatable::computeCTM(SVGElement* element, CTMScope mode, Sty
 {
     ASSERT(element);
     if (styleUpdateStrategy == AllowStyleUpdate)
-        element->document().updateLayoutIgnorePendingStylesheets();
+        element->document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
 
     SVGElement* stopAtElement = mode == NearestViewportScope ? nearestViewportElement(element) : nullptr;
 
@@ -101,10 +108,11 @@ AffineTransform SVGLocatable::computeCTM(SVGElement* element, CTMScope mode, Sty
     AffineTransform ctm;
 
     for (Element* currentElement = element; currentElement; currentElement = currentElement->parentOrShadowHostElement()) {
-        if (!currentElement->isSVGElement())
+        auto* svgElement = dynamicDowncast<SVGElement>(*currentElement);
+        if (!svgElement)
             break;
 
-        ctm = downcast<SVGElement>(*currentElement).localCoordinateSpaceTransform(mode).multiply(ctm);
+        ctm = svgElement->localCoordinateSpaceTransform(mode).multiply(ctm);
 
         // For getCTM() computation, stop at the nearest viewport element
         if (currentElement == stopAtElement)
@@ -118,12 +126,12 @@ ExceptionOr<Ref<SVGMatrix>> SVGLocatable::getTransformToElement(SVGElement* targ
 {
     AffineTransform ctm = getCTM(styleUpdateStrategy);
 
-    if (is<SVGGraphicsElement>(target)) {
-        AffineTransform targetCTM = downcast<SVGGraphicsElement>(*target).getCTM(styleUpdateStrategy);
+    if (auto* graphicsElement = dynamicDowncast<SVGGraphicsElement>(target)) {
+        AffineTransform targetCTM = graphicsElement->getCTM(styleUpdateStrategy);
         if (auto inverse = targetCTM.inverse())
             ctm = inverse.value() * ctm;
         else
-            return Exception { InvalidStateError, "Matrix is not invertible"_s };
+            return Exception { ExceptionCode::InvalidStateError, "Matrix is not invertible"_s };
     }
 
     return SVGMatrix::create(ctm);

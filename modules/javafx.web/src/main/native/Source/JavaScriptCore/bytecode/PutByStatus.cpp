@@ -252,6 +252,28 @@ PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, Co
                 break;
             }
 
+            case AccessCase::CustomAccessorSetter: {
+                auto conditionSet = access.conditionSet();
+                if (!conditionSet.isStillValid())
+                    continue;
+
+                Structure* currStructure = access.hasAlternateBase() ? access.alternateBase()->structure() : access.structure();
+                // For now, we only support cases which JSGlobalObject is the same to the currently profiledBlock.
+                if (currStructure->globalObject() != profiledBlock->globalObject())
+                    return PutByStatus(JSC::slowVersion(summary), *stubInfo);
+
+                auto customAccessorSetter = access.as<GetterSetterAccessCase>().customAccessor();
+                std::unique_ptr<DOMAttributeAnnotation> domAttribute;
+                if (access.as<GetterSetterAccessCase>().domAttribute())
+                    domAttribute = WTF::makeUnique<DOMAttributeAnnotation>(*access.as<GetterSetterAccessCase>().domAttribute());
+                result.m_state = CustomAccessor;
+
+                auto variant = PutByVariant::customSetter(access.identifier(), access.structure(), WTFMove(conditionSet), customAccessorSetter, WTFMove(domAttribute));
+                if (!result.appendVariant(variant))
+                    return PutByStatus(JSC::slowVersion(summary), *stubInfo);
+                break;
+            }
+
             case AccessCase::Setter: {
                 Structure* structure = access.structure();
 
@@ -266,27 +288,25 @@ PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, Co
 
                 case ComplexGetStatus::Inlineable: {
                     auto callLinkStatus = makeUnique<CallLinkStatus>();
-                    if (CallLinkInfo* callLinkInfo = access.as<GetterSetterAccessCase>().callLinkInfo()) {
-                        *callLinkStatus = CallLinkStatus::computeFor(
-                            locker, profiledBlock, *callLinkInfo, callExitSiteData);
-                    }
+                    if (CallLinkInfo* callLinkInfo = stubInfo->callLinkInfoAt(locker, i))
+                        *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
 
                     auto variant = PutByVariant::setter(access.identifier(), structure, complexGetStatus.offset(), complexGetStatus.conditionSet(), WTFMove(callLinkStatus));
                     if (!result.appendVariant(variant))
                         return PutByStatus(JSC::slowVersion(summary), *stubInfo);
+                    break;
                 }
                 }
                 break;
             }
 
             case AccessCase::CustomValueSetter:
-            case AccessCase::CustomAccessorSetter:
                 return PutByStatus(MakesCalls);
 
             case AccessCase::ProxyObjectStore: {
                 auto& accessCase = access.as<ProxyObjectAccessCase>();
                 auto callLinkStatus = makeUnique<CallLinkStatus>();
-                if (CallLinkInfo* callLinkInfo = accessCase.callLinkInfo())
+                if (CallLinkInfo* callLinkInfo = stubInfo->callLinkInfoAt(locker, i))
                     *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
                 auto variant = PutByVariant::proxy(accessCase.identifier(), access.structure(), WTFMove(callLinkStatus));
                 if (!result.appendVariant(variant))
@@ -381,6 +401,16 @@ PutByStatus PutByStatus::computeFor(JSGlobalObject* globalObject, const Structur
             if (attributes & (PropertyAttribute::Accessor | PropertyAttribute::ReadOnly))
                 return PutByStatus(LikelyTakesSlowPath);
 
+            if (isDirect && attributes) {
+                Structure* existingTransition = Structure::attributeChangeTransitionToExistingStructureConcurrently(structure, identifier.uid(), 0, offset);
+                if (!existingTransition)
+                    return PutByStatus(LikelyTakesSlowPath);
+                bool didAppend = result.appendVariant(PutByVariant::transition(identifier, structure, existingTransition, { }, offset));
+                if (!didAppend)
+                    return PutByStatus(LikelyTakesSlowPath);
+                continue;
+            }
+
             WatchpointSet* replaceSet = structure->propertyReplacementWatchpointSet(offset);
             if (!replaceSet || replaceSet->isStillValid()) {
                 // When this executes, it'll create, and fire, this replacement watchpoint set.
@@ -455,6 +485,7 @@ bool PutByStatus::makesCalls() const
     case MakesCalls:
     case ObservedSlowPathAndMakesCalls:
     case Megamorphic:
+    case CustomAccessor:
         return true;
     case Simple: {
         for (unsigned i = m_variants.size(); i--;) {
@@ -536,7 +567,8 @@ void PutByStatus::merge(const PutByStatus& other)
         return;
 
     case Simple:
-        if (other.m_state != Simple)
+    case CustomAccessor:
+        if (other.m_state != m_state)
             return mergeSlow();
 
         for (const PutByVariant& other : other.m_variants) {
@@ -569,31 +601,34 @@ void PutByStatus::filter(const StructureSet& set)
 
 void PutByStatus::dump(PrintStream& out) const
 {
+    out.print("(");
     switch (m_state) {
     case NoInformation:
-        out.print("(NoInformation)");
+        out.print("NoInformation");
         return;
     case Simple:
-        out.print("(", listDump(m_variants), ")");
-        return;
+        out.print("Simple");
+        break;
+    case CustomAccessor:
+        out.print("CustomAccessor");
+        break;
     case Megamorphic:
         out.print("Megamorphic");
-        return;
+        break;
     case LikelyTakesSlowPath:
         out.print("LikelyTakesSlowPath");
-        return;
+        break;
     case ObservedTakesSlowPath:
         out.print("ObservedTakesSlowPath");
-        return;
+        break;
     case MakesCalls:
         out.print("MakesCalls");
-        return;
+        break;
     case ObservedSlowPathAndMakesCalls:
         out.print("ObservedSlowPathAndMakesCalls");
-        return;
+        break;
     }
-
-    RELEASE_ASSERT_NOT_REACHED();
+    out.print(", ", listDump(m_variants), ")");
 }
 
 } // namespace JSC

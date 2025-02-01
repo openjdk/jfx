@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,6 +65,7 @@ import com.sun.javafx.css.StyleCache;
 import com.sun.javafx.css.StyleCacheEntry;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleMap;
+import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import javafx.css.converter.FontConverter;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
@@ -119,7 +120,7 @@ final class CssStyleHelper {
         if ( canReuseStyleHelper(node, styleMap) ) {
 
             //
-            // RT-33080
+            // JDK-8123731
             //
             // If we're reusing a style helper, clear the fontSizeCache in case either this node or some parent
             // node has changed font from a user calling setFont.
@@ -469,7 +470,7 @@ final class CssStyleHelper {
                 cacheContainer.cssSetProperties.isEmpty()) return;
 
         resetInProgress = true;
-        // RT-31714 - make a copy of the entry set and clear the cssSetProperties immediately.
+        // JDK-8094367 - make a copy of the entry set and clear the cssSetProperties immediately.
         Set<Entry<CssMetaData, CalculatedValue>> entrySet = new HashSet<>(cacheContainer.cssSetProperties.entrySet());
         cacheContainer.cssSetProperties.clear();
 
@@ -637,11 +638,13 @@ final class CssStyleHelper {
         final List<CssMetaData<? extends Styleable,  ?>> styleables = node.getCssMetaData();
         final int numStyleables = styleables.size();
 
-        for (int n = 0; n < numStyleables; n++) {
-
-            @SuppressWarnings("unchecked") // this is a widening conversion
-            final CssMetaData<Styleable,Object> cssMetaData =
-                    (CssMetaData<Styleable,Object>)styleables.get(n);
+        for (int n = -1; n < numStyleables; n++) {
+            // The 'transition' property is a special pseudo-property that is always processed
+            // before other CSS properties, as its value might affect the transitions that are
+            // applied to other properties.
+            final CssMetaData<Styleable, ?> cssMetaData = n < 0 ?
+                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
+                    (CssMetaData<Styleable, ?>)styleables.get(n);
 
             // Don't bother looking up styles that don't inherit.
             if (inheritOnly && cssMetaData.isInherits() == false) {
@@ -665,8 +668,7 @@ final class CssStyleHelper {
             CascadingStyle style = getStyle(node, property, styleMap, transitionStates[0]);
             if (style != null) {
                 final ParsedValue cssValue = style.getParsedValue();
-                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
-                ParsedValue resolved = resolveLookups(node, cssValue, styleMap, transitionStates[0], whence, new HashSet<>());
+                ParsedValue resolved = resolveLookups(node, cssValue, styleMap, transitionStates[0], new HashSet<>());
                 boolean isRelative = ParsedValueImpl.containsFontRelativeSize(resolved, false);
                 if (!isRelative) {
                     continue;
@@ -750,10 +752,7 @@ final class CssStyleHelper {
      * Called by the Node whenever it has transitioned from one set of
      * pseudo-class states to another. This function will then lookup the
      * new values for each of the styleable variables on the Node, and
-     * then either set the value directly or start an animation based on
-     * how things are specified in the CSS file. Currently animation support
-     * is disabled until the new parser comes online with support for
-     * animations and that support is detectable via the API.
+     * then set the new value via {@link StyleableProperty#applyStyle}.
      */
     void transitionToState(final Node node) {
 
@@ -829,11 +828,14 @@ final class CssStyleHelper {
         // For each property that is settable, we need to do a lookup and
         // transition to that value.
         transitionStateInProgress = true;
-        for(int n=0; n<max; n++) {
 
-            @SuppressWarnings("unchecked") // this is a widening conversion
-            final CssMetaData<Styleable,Object> cssMetaData =
-                    (CssMetaData<Styleable,Object>)styleables.get(n);
+        for (int n = -1; n < max; n++) {
+            // The 'transition' property is a special pseudo-property that is always processed
+            // before other CSS properties, as its value might affect the transitions that are
+            // applied to other properties.
+            final CssMetaData<Styleable, ?> cssMetaData = n < 0 ?
+                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
+                    (CssMetaData<Styleable, ?>)styleables.get(n);
 
             // Don't bother looking up styles that don't inherit.
             if (inheritOnly && cssMetaData.isInherits() == false) {
@@ -849,7 +851,7 @@ final class CssStyleHelper {
             CalculatedValue calculatedValue = cacheEntry.get(property);
 
             // If there is no calculatedValue and we're on the fast path,
-            // take the slow path if cssFlags is REAPPLY (RT-31691)
+            // take the slow path if cssFlags is REAPPLY (JDK-8116341)
             final boolean forceSlowpath =
                     fastpath && calculatedValue == null && isForceSlowpath;
 
@@ -883,7 +885,7 @@ final class CssStyleHelper {
             try {
 
                 //
-                // RT-19089
+                // JDK-8127435
                 // If the current value of the property was set by CSS
                 // and there is no style for the property, then reset this
                 // property to its initial value. If it was not set by CSS
@@ -928,7 +930,7 @@ final class CssStyleHelper {
                 final StyleOrigin originOfCurrentValue = styleableProperty.getStyleOrigin();
 
 
-                // RT-10522:
+                // JDK-8110994:
                 // If the user set the property and there is a style and
                 // the style came from the user agent stylesheet, then
                 // skip the value. A style from a user agent stylesheet should
@@ -956,7 +958,7 @@ final class CssStyleHelper {
                 final Object value = calculatedValue.getValue();
                 final Object currentValue = styleableProperty.getValue();
 
-                // RT-21185: Only apply the style if something has changed.
+                // JDK-8102176: Only apply the style if something has changed.
                 if ((originOfCurrentValue != originOfCalculatedValue)
                         || (currentValue != null
                         ? currentValue.equals(value) == false
@@ -995,7 +997,7 @@ final class CssStyleHelper {
                     logger.warning(msg);
                 }
 
-                // RT-27155: if setting value raises exception, reset value
+                // JDK-8125956: if setting value raises exception, reset value
                 // the value to initial and thereafter skip setting the property
                 cacheEntry.put(property, SKIP);
 
@@ -1215,7 +1217,7 @@ final class CssStyleHelper {
             StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(styleable);
             StyleOrigin origin = styleableProperty != null ? styleableProperty.getStyleOrigin() : null;
 
-            // RT-16308: if there is no matching style and the user set
+            // JDK-8117129: if there is no matching style and the user set
             // the property, do not look for inherited styles.
             if (origin == StyleOrigin.USER) {
 
@@ -1316,7 +1318,6 @@ final class CssStyleHelper {
             final Styleable styleable,
             final ParsedValue parsedValue,
             final StyleMap styleMap, Set<PseudoClass> states,
-            final ObjectProperty<StyleOrigin> whence,
             Set<ParsedValue> resolves) {
 
         //
@@ -1335,38 +1336,22 @@ final class CssStyleHelper {
                     resolveRef(styleable, sval, styleMap, states);
 
                 if (resolved != null) {
+                    ParsedValue<?, ?> resolvedParsedValue = resolved.getParsedValue();
 
-                    if (resolves.contains(resolved.getParsedValue())) {
-
+                    if (!resolves.add(resolvedParsedValue)) {
                         if (LOGGER.isLoggable(Level.WARNING)) {
                             LOGGER.warning("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
                         }
+
                         throw new IllegalArgumentException("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
-
-                    } else {
-                        resolves.add(parsedValue);
-                    }
-
-                    // The origin of this parsed value is the greatest of
-                    // any of the resolved reference. If a resolved reference
-                    // comes from an inline style, for example, then the value
-                    // calculated from the resolved lookup should have inline
-                    // as its origin. Otherwise, an inline style could be
-                    // stored in shared cache.
-                    final StyleOrigin wOrigin = whence.get();
-                    final StyleOrigin rOrigin = resolved.getOrigin();
-                    if (rOrigin != null && (wOrigin == null ||  wOrigin.compareTo(rOrigin) < 0)) {
-                        whence.set(rOrigin);
                     }
 
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    ParsedValue pv = resolveLookups(styleable, resolved.getParsedValue(), styleMap, states, whence, resolves);
+                    ParsedValue<?, ?> pv = resolveLookups(styleable, resolvedParsedValue, styleMap, states, resolves);
 
-                    if (resolves != null) {
-                        resolves.remove(parsedValue);
-                    }
+                    resolves.remove(resolvedParsedValue);
 
                     return pv;
 
@@ -1391,11 +1376,9 @@ final class CssStyleHelper {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
                     resolved[l][ll] =
-                        resolveLookups(styleable, layers[l][ll], styleMap, states, whence, resolves);
+                        resolveLookups(styleable, layers[l][ll], styleMap, states, resolves);
                 }
             }
-
-            resolves.clear();
 
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 
@@ -1407,10 +1390,8 @@ final class CssStyleHelper {
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 resolved[l] =
-                    resolveLookups(styleable, layer[l], styleMap, states, whence, resolves);
+                    resolveLookups(styleable, layer[l], styleMap, states, resolves);
             }
-
-            resolves.clear();
 
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 
@@ -1456,7 +1437,7 @@ final class CssStyleHelper {
         // Find value that could not be looked up. If the resolved value does not contain lookups, then the
         // ClassCastException is not because of trying to convert a String (which is the missing lookup)
         // to some value, but is because the convert method got some wrong value - like a paint when it should be a color.
-        // See RT-33319 for an example of this.
+        // See JDK-8097038 for an example of this.
         String missingLookup = resolved != null && resolved.isContainsLookups() ? getUnresolvedLookup(resolved) : null;
 
         StringBuilder sbuf = new StringBuilder();
@@ -1542,8 +1523,7 @@ final class CssStyleHelper {
             ParsedValue resolved = null;
             try {
 
-                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
-                resolved = resolveLookups(styleable, cssValue, styleMap, states, whence, new HashSet<>());
+                resolved = resolveLookups(styleable, cssValue, styleMap, states, new HashSet<>());
 
                 final String property = cssMetaData.getProperty();
 
@@ -1616,7 +1596,7 @@ final class CssStyleHelper {
                 }
 
                 final StyleConverter cssMetaDataConverter = cssMetaData.getConverter();
-                // RT-37727 - handling of properties that are insets is wonky. If the property is -fx-inset, then
+                // JDK-8095062 - handling of properties that are insets is wonky. If the property is -fx-inset, then
                 // there isn't an issue because the converter assigns the InsetsConverter to the ParsedValue.
                 // But -my-insets will parse as an array of numbers and the parser will assign the Size sequence
                 // converter to it. So, if the CssMetaData says it uses InsetsConverter, use the InsetsConverter
@@ -1635,8 +1615,7 @@ final class CssStyleHelper {
                 else
                     val = cssMetaData.getConverter().convert(resolved, fontForFontRelativeSizes);
 
-                final StyleOrigin origin = whence.get();
-                return new CalculatedValue(val, origin, isRelative);
+                return new CalculatedValue(val, style.getOrigin(), isRelative);
 
             } catch (ClassCastException cce) {
                 final String msg = formatUnresolvedLookupMessage(styleable, cssMetaData, style.getStyle(),resolved, cce);
@@ -1851,7 +1830,7 @@ final class CssStyleHelper {
 
         Set<PseudoClass> states = styleable instanceof Node ? ((Node)styleable).pseudoClassStates : styleable.getPseudoClassStates();
 
-        // RT-20145 - if looking for font size and the node has a font,
+        // JDK-8127344 - if looking for font size and the node has a font,
         // use the font property's value if it was set by the user and
         // there is not an inline or author style.
 

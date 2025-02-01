@@ -43,6 +43,7 @@
 #include "LegacyRenderSVGImage.h"
 #include "LocalFrame.h"
 #include "Logging.h"
+#include "MemoryCache.h"
 #include "Page.h"
 #include "RenderImage.h"
 #include "RenderSVGImage.h"
@@ -110,9 +111,24 @@ static inline bool pageIsBeingDismissed(Document& document)
     return frame && frame->loader().pageDismissalEventBeingDispatched() != FrameLoader::PageDismissalType::None;
 }
 
+// https://html.spec.whatwg.org/multipage/images.html#updating-the-image-data:list-of-available-images
+static bool canReuseFromListOfAvailableImages(const CachedResourceRequest& request, Document& document)
+{
+    CachedResourceHandle resource = MemoryCache::singleton().resourceForRequest(request.resourceRequest(), document.page()->sessionID());
+    if (!resource || resource->stillNeedsLoad() || resource->isPreloaded())
+        return false;
+
+    if (resource->options().mode == FetchOptions::Mode::Cors && !document.securityOrigin().isSameOriginAs(*resource->origin()))
+        return false;
+
+    if (resource->options().mode != request.options().mode || resource->options().credentials != request.options().credentials)
+        return false;
+
+    return true;
+}
+
 ImageLoader::ImageLoader(Element& element)
     : m_element(element)
-    , m_image(nullptr)
     , m_derefElementTimer(*this, &ImageLoader::timerFired)
     , m_hasPendingBeforeLoadEvent(false)
     , m_hasPendingLoadEvent(false)
@@ -125,8 +141,8 @@ ImageLoader::ImageLoader(Element& element)
 
 ImageLoader::~ImageLoader()
 {
-    if (m_image)
-        m_image->removeClient(*this);
+    if (CachedResourceHandle image = m_image)
+        image->removeClient(*this);
 
     ASSERT(m_hasPendingLoadEvent || m_hasPendingErrorEvent || !loadEventSender().hasPendingEvents(*this));
     if (m_hasPendingLoadEvent || m_hasPendingErrorEvent)
@@ -147,8 +163,7 @@ void ImageLoader::clearImageWithoutConsideringPendingLoadEvent()
     LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " clearImageWithoutConsideringPendingLoadEvent");
 
     ASSERT(m_failedLoadURL.isEmpty());
-    CachedImage* oldImage = m_image.get();
-    if (oldImage) {
+    if (CachedResourceHandle oldImage = m_image) {
         m_image = nullptr;
             m_hasPendingBeforeLoadEvent = false;
         if (m_hasPendingLoadEvent || m_hasPendingErrorEvent) {
@@ -156,11 +171,10 @@ void ImageLoader::clearImageWithoutConsideringPendingLoadEvent()
             m_hasPendingLoadEvent = m_hasPendingErrorEvent = false;
         }
         m_imageComplete = true;
-        if (oldImage)
             oldImage->removeClient(*this);
     }
 
-    if (RenderImageResource* imageResource = renderImageResource())
+    if (CheckedPtr imageResource = renderImageResource())
         imageResource->resetAnimation();
 }
 
@@ -168,13 +182,13 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
 {
     // If we're not making renderers for the page, then don't load images. We don't want to slow
     // down the raw HTML parsing case by loading images we don't intend to display.
-    Document& document = element().document();
-    if (!document.hasLivingRenderTree())
+    Ref document = element().document();
+    if (!document->hasLivingRenderTree())
         return;
 
     AtomString attr = element().imageSourceURL();
 
-    LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " updateFromElement, current URI is " << sourceURI(attr));
+    LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " updateFromElement, current URL is " << attr);
 
     // Avoid loading a URL we already failed to load.
     if (!m_failedLoadURL.isEmpty() && attr == m_failedLoadURL)
@@ -182,19 +196,18 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
 
     // Do not load any image if the 'src' attribute is missing or if it is
     // an empty string.
-    CachedResourceHandle<CachedImage> newImage = nullptr;
+    CachedResourceHandle<CachedImage> newImage;
     if (!attr.isNull() && !StringView(attr).containsOnly<isASCIIWhitespace<UChar>>()) {
         ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
         options.contentSecurityPolicyImposition = element().isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
         options.loadedFromPluginElement = is<HTMLPlugInElement>(element()) ? LoadedFromPluginElement::Yes : LoadedFromPluginElement::No;
         options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
         options.serviceWorkersMode = is<HTMLPlugInElement>(element()) ? ServiceWorkersMode::None : ServiceWorkersMode::All;
-        bool isImageElement = is<HTMLImageElement>(element());
-        if (isImageElement) {
-            auto& imageElement = downcast<HTMLImageElement>(element());
-            options.referrerPolicy = imageElement.referrerPolicy();
-            options.fetchPriorityHint = imageElement.fetchPriorityHint();
-            if (imageElement.usesSrcsetOrPicture())
+        RefPtr imageElement = dynamicDowncast<HTMLImageElement>(element());
+        if (imageElement) {
+            options.referrerPolicy = imageElement->referrerPolicy();
+            options.fetchPriorityHint = imageElement->fetchPriorityHint();
+            if (imageElement->usesSrcsetOrPicture())
                 options.initiator = Initiator::Imageset;
         }
 
@@ -205,7 +218,7 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
         if (m_image && attr == m_pendingURL)
             imageURL = m_image->url();
         else {
-            imageURL = document.completeURL(sourceURI(attr));
+            imageURL = document->completeURL(attr);
             m_pendingURL = attr;
         }
         ResourceRequest resourceRequest(imageURL);
@@ -215,27 +228,28 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
         request.setInitiator(element());
 
         if (m_loadManually) {
-            bool autoLoadOtherImages = document.cachedResourceLoader().autoLoadImages();
-            document.cachedResourceLoader().setAutoLoadImages(false);
-            auto* page = m_element.document().page();
+            Ref cachedResourceLoader = document->cachedResourceLoader();
+            bool autoLoadOtherImages = cachedResourceLoader->autoLoadImages();
+            cachedResourceLoader->setAutoLoadImages(false);
+            RefPtr page = m_element->document().page();
+            // FIXME: We shouldn't do an explicit `new` here.
             newImage = new CachedImage(WTFMove(request), page->sessionID(), &page->cookieJar());
             newImage->setStatus(CachedResource::Pending);
             newImage->setLoading(true);
-            document.cachedResourceLoader().m_documentResources.set(newImage->url().string(), newImage.get());
-            document.cachedResourceLoader().setAutoLoadImages(autoLoadOtherImages);
+            cachedResourceLoader->m_documentResources.set(newImage->url().string(), newImage.get());
+            cachedResourceLoader->setAutoLoadImages(autoLoadOtherImages);
         } else {
 #if !LOG_DISABLED
             auto oldState = m_lazyImageLoadState;
 #endif
-            if (m_lazyImageLoadState == LazyImageLoadState::None && isImageElement) {
-                auto& imageElement = downcast<HTMLImageElement>(element());
-                if (imageElement.isLazyLoadable() && document.settings().lazyImageLoadingEnabled()) {
+            if (m_lazyImageLoadState == LazyImageLoadState::None && imageElement) {
+                if (imageElement->isLazyLoadable() && document->settings().lazyImageLoadingEnabled() && !canReuseFromListOfAvailableImages(request, document)) {
                     m_lazyImageLoadState = LazyImageLoadState::Deferred;
                     request.setIgnoreForRequestCount(true);
                 }
             }
             auto imageLoading = (m_lazyImageLoadState == LazyImageLoadState::Deferred) ? ImageLoading::DeferredUntilVisible : ImageLoading::Immediate;
-            newImage = document.cachedResourceLoader().requestImage(WTFMove(request), imageLoading).value_or(nullptr);
+            newImage = document->cachedResourceLoader().requestImage(WTFMove(request), imageLoading).value_or(nullptr);
             LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " updateFromElement " << element() << " - state changed from " << oldState << " to " << m_lazyImageLoadState << ", loading is " << imageLoading << " new image " << newImage.get());
         }
 
@@ -263,11 +277,11 @@ void ImageLoader::didUpdateCachedImage(RelevantMutation relevantMutation, Cached
 {
     LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " didUpdateCachedImage " << newImage.get());
 
-    auto& document = element().document();
+    Ref document = element().document();
 
-    CachedImage* oldImage = m_image.get();
+    CachedResourceHandle oldImage = m_image;
     if (newImage != oldImage || relevantMutation == RelevantMutation::Yes) {
-        LOG_WITH_STREAM(LazyLoading, stream << " switching from old image " << oldImage << " to image " << newImage.get() << " " << (newImage ? newImage->url() : URL()));
+        LOG_WITH_STREAM(LazyLoading, stream << " switching from old image " << oldImage.get() << " to image " << newImage.get() << " " << (newImage ? newImage->url() : URL()));
 
             m_hasPendingBeforeLoadEvent = false;
         if (m_hasPendingLoadEvent) {
@@ -285,12 +299,12 @@ void ImageLoader::didUpdateCachedImage(RelevantMutation relevantMutation, Cached
         }
 
         m_image = newImage;
-        m_hasPendingBeforeLoadEvent = !document.isImageDocument() && newImage;
+        m_hasPendingBeforeLoadEvent = !document->isImageDocument() && newImage;
         m_hasPendingLoadEvent = newImage;
         m_imageComplete = !newImage;
 
         if (newImage) {
-            if (!document.isImageDocument())
+            if (!document->isImageDocument())
                 dispatchPendingBeforeLoadEvent();
             else
                 updateRenderer();
@@ -302,7 +316,7 @@ void ImageLoader::didUpdateCachedImage(RelevantMutation relevantMutation, Cached
             // being queued to fire.
             newImage->addClient(*this);
         } else
-            resetLazyImageLoading(element().document());
+            resetLazyImageLoading(element().protectedDocument());
 
         if (oldImage) {
             oldImage->removeClient(*this);
@@ -310,7 +324,7 @@ void ImageLoader::didUpdateCachedImage(RelevantMutation relevantMutation, Cached
         }
     }
 
-    if (RenderImageResource* imageResource = renderImageResource())
+    if (CheckedPtr imageResource = renderImageResource())
         imageResource->resetAnimation();
 
     // Only consider updating the protection ref-count of the Element immediately before returning
@@ -322,6 +336,24 @@ void ImageLoader::updateFromElementIgnoringPreviousError(RelevantMutation releva
 {
     clearFailedLoadURL();
     updateFromElement(relevantMutation);
+}
+
+CachedResourceHandle<CachedImage> ImageLoader::protectedImage() const
+{
+    return m_image;
+}
+
+void ImageLoader::updateFromElementIgnoringPreviousErrorToSameValue()
+{
+    if (!m_image || !m_image->allowsCaching() || !m_failedLoadURL.isEmpty() || element().document().activeServiceWorker()) {
+        updateFromElementIgnoringPreviousError(RelevantMutation::Yes);
+        return;
+    }
+    if (m_hasPendingLoadEvent || !m_pendingURL.isEmpty())
+        return;
+    ASSERT(m_image);
+    m_hasPendingLoadEvent = true;
+    notifyFinished(*protectedImage(), NetworkLoadMetrics { });
 }
 
 static inline void resolvePromises(Vector<RefPtr<DeferredPromise>>& promises)
@@ -337,7 +369,7 @@ static inline void rejectPromises(Vector<RefPtr<DeferredPromise>>& promises, ASC
     ASSERT(!promises.isEmpty());
     auto promisesToBeRejected = std::exchange(promises, { });
     for (auto& promise : promisesToBeRejected)
-        promise->reject(Exception { EncodingError, message });
+        promise->reject(Exception { ExceptionCode::EncodingError, message });
 }
 
 inline void ImageLoader::resolveDecodePromises()
@@ -360,7 +392,7 @@ void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetr
     m_pendingURL = { };
 
     if (isDeferred()) {
-        LazyLoadImageObserver::unobserve(element(), element().document());
+        LazyLoadImageObserver::unobserve(protectedElement(), element().protectedDocument());
         m_lazyImageLoadState = LazyImageLoadState::FullImage;
         LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " notifyFinished() for element " << element() << " setting lazy load state to " << m_lazyImageLoadState);
     }
@@ -381,7 +413,7 @@ void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetr
         loadEventSender().dispatchEventSoon(*this, eventNames().errorEvent);
 
         auto message = makeString("Cannot load image ", imageURL.string(), " due to access control checks.");
-        element().document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, message);
+        element().protectedDocument()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, message);
 
         if (hasPendingDecodePromises())
             rejectDecodePromises("Access control error."_s);
@@ -411,26 +443,26 @@ void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetr
 
 RenderImageResource* ImageLoader::renderImageResource()
 {
-    auto* renderer = element().renderer();
+    CheckedPtr renderer = element().renderer();
     if (!renderer)
         return nullptr;
 
     // We don't return style generated image because it doesn't belong to the ImageLoader.
     // See <https://bugs.webkit.org/show_bug.cgi?id=42840>
-    if (is<RenderImage>(*renderer) && !downcast<RenderImage>(*renderer).isGeneratedContent())
-        return &downcast<RenderImage>(*renderer).imageResource();
+    if (auto* renderImage = dynamicDowncast<RenderImage>(*renderer); renderImage && !renderImage->isGeneratedContent())
+        return &renderImage->imageResource();
 
-    if (auto* svgImage = dynamicDowncast<LegacyRenderSVGImage>(renderer))
+    if (auto* svgImage = dynamicDowncast<LegacyRenderSVGImage>(*renderer))
         return &svgImage->imageResource();
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-    if (auto* svgImage = dynamicDowncast<RenderSVGImage>(renderer))
+    if (auto* svgImage = dynamicDowncast<RenderSVGImage>(*renderer))
         return &svgImage->imageResource();
 #endif
 
 #if ENABLE(VIDEO)
-    if (is<RenderVideo>(*renderer))
-        return &downcast<RenderVideo>(*renderer).imageResource();
+    if (auto* renderVideo = dynamicDowncast<RenderVideo>(*renderer))
+        return &renderVideo->imageResource();
 #endif
 
     return nullptr;
@@ -438,7 +470,7 @@ RenderImageResource* ImageLoader::renderImageResource()
 
 void ImageLoader::updateRenderer()
 {
-    RenderImageResource* imageResource = renderImageResource();
+    CheckedPtr imageResource = renderImageResource();
 
     if (!imageResource)
         return;
@@ -511,14 +543,12 @@ void ImageLoader::decode()
         return;
     }
 
-    Image* image = m_image->image();
-    if (!is<BitmapImage>(image)) {
+    RefPtr bitmapImage = dynamicDowncast<BitmapImage>(m_image->image());
+    if (!bitmapImage) {
         resolveDecodePromises();
         return;
     }
-
-    auto& bitmapImage = downcast<BitmapImage>(*image);
-    bitmapImage.decode([promises = WTFMove(m_decodingPromises)]() mutable {
+    bitmapImage->decode([promises = WTFMove(m_decodingPromises)]() mutable {
         resolvePromises(promises);
     });
 }
@@ -581,7 +611,7 @@ void ImageLoader::dispatchPendingErrorEvent()
     m_hasPendingErrorEvent = false;
     loadEventSender().cancelEvent(*this, eventNames().errorEvent);
     if (element().document().hasLivingRenderTree())
-        element().dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        protectedElement()->dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 
     // Only consider updating the protection ref-count of the Element immediately before returning
     // from this function as doing so might result in the destruction of this ImageLoader.
@@ -629,11 +659,8 @@ VisibleInViewportState ImageLoader::imageVisibleInViewport(const Document& docum
     if (&element().document() != &document)
         return VisibleInViewportState::No;
 
-    auto* renderer = element().renderer();
-    if (!is<RenderReplaced>(renderer))
-        return VisibleInViewportState::No;
-
-    return downcast<RenderReplaced>(*renderer).isContentLikelyVisibleInViewport() ? VisibleInViewportState::Yes : VisibleInViewportState::No;
+    CheckedPtr renderReplaced = dynamicDowncast<RenderReplaced>(element().renderer());
+    return renderReplaced && renderReplaced->isContentLikelyVisibleInViewport() ? VisibleInViewportState::Yes : VisibleInViewportState::No;
 }
 
-}
+} // namespace WebCore

@@ -114,6 +114,14 @@ static std::optional<size_t> stackSize(ThreadType threadType)
         return 1 * MB; // ASan needs more stack space (especially on Debug builds).
 #elif PLATFORM(JAVA) && OS(WINDOWS) && USE(JSVALUE32_64)
     return 1 * MB;
+#elif OS(WINDOWS)
+    // WebGL conformance tests need more stack space <https://webkit.org/b/261297>
+    if (threadType == ThreadType::Graphics)
+#if defined(NDEBUG)
+        return 2 * MB;
+#else
+        return 4 * MB;
+#endif
 #else
     UNUSED_PARAM(threadType);
 #endif
@@ -255,7 +263,7 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
     function();
 }
 
-Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos)
+Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos, SchedulingPolicy schedulingPolicy)
 {
     WTF::initialize();
     Ref<Thread> thread = adoptRef(*new Thread());
@@ -268,7 +276,7 @@ Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, Thre
     context->ref();
     {
         MutexLocker locker(context->mutex);
-        bool success = thread->establishHandle(context.ptr(), stackSize(threadType), qos);
+        bool success = thread->establishHandle(context.ptr(), stackSize(threadType), qos, schedulingPolicy);
         RELEASE_ASSERT(success);
         context->stage = NewThreadContext::Stage::EstablishedHandle;
 
@@ -321,10 +329,15 @@ void Thread::didExit()
 
     if (shouldRemoveThreadFromThreadGroup()) {
         {
-            Vector<Ref<ThreadGroup>> threadGroups;
+            Vector<std::shared_ptr<ThreadGroup>> threadGroups;
             {
                 Locker locker { m_mutex };
-                threadGroups = m_threadGroups.values();
+                for (auto& threadGroupPointerPair : m_threadGroupMap) {
+                    // If ThreadGroup is just being destroyed,
+                    // we do not need to perform unregistering.
+                    if (auto retained = threadGroupPointerPair.value.lock())
+                        threadGroups.append(WTFMove(retained));
+                }
                 m_isShuttingDown = true;
             }
             for (auto& threadGroup : threadGroups) {
@@ -348,16 +361,25 @@ ThreadGroupAddResult Thread::addToThreadGroup(const AbstractLocker& threadGroupL
     if (m_isShuttingDown)
         return ThreadGroupAddResult::NotAdded;
     if (threadGroup.m_threads.add(*this).isNewEntry) {
-        m_threadGroups.add(threadGroup);
+        m_threadGroupMap.add(&threadGroup, threadGroup.weakFromThis());
         return ThreadGroupAddResult::NewlyAdded;
     }
     return ThreadGroupAddResult::AlreadyAdded;
 }
 
+void Thread::removeFromThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup& threadGroup)
+{
+    UNUSED_PARAM(threadGroupLocker);
+    Locker locker { m_mutex };
+    if (m_isShuttingDown)
+        return;
+    m_threadGroupMap.remove(&threadGroup);
+}
+
 unsigned Thread::numberOfThreadGroups()
 {
     Locker locker { m_mutex };
-    return m_threadGroups.values().size();
+    return m_threadGroupMap.size();
 }
 
 bool Thread::exchangeIsCompilationThread(bool newValue)
@@ -489,7 +511,7 @@ void initialize()
 #if PLATFORM(COCOA)
         initializeLibraryPathDiagnostics();
 #endif
-#if OS(WINDOWS)
+#if USE(WINDOWS_EVENT_LOOP)
         RunLoop::registerRunLoopMessageWindowClass();
 #endif
     });

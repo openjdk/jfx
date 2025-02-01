@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,9 +29,6 @@ import java.io.File;
 import java.io.RandomAccessFile;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
@@ -53,9 +50,6 @@ class FontFileWriter implements FontConstants {
     RandomAccessFile raFile;
 
     public FontFileWriter() {
-        if (!hasTempPermission()) {
-            tracker = FontTracker.getTracker();
-        }
     }
 
     protected void setLength(int size) throws IOException {
@@ -80,26 +74,19 @@ class FontFileWriter implements FontConstants {
         return file;
     }
 
-    @SuppressWarnings("removal")
-    public File openFile() throws PrivilegedActionException {
+    public File openFile() throws IOException {
         pos = 0;
         writtenBytes = 0;
-        file = AccessController.doPrivileged(
-                (PrivilegedExceptionAction<File>) () -> {
-                    try {
-                        return Files.createTempFile("+JXF", ".tmp").toFile();
-                    } catch (IOException e) {
-                        // don't reveal temporary directory location
-                        throw new IOException("Unable to create temporary file");
-                    }
-                }
-        );
+        try {
+            file = Files.createTempFile("+JXF", ".tmp").toFile();
+        } catch (IOException e) {
+            // don't reveal temporary directory location
+            throw new IOException("Unable to create temporary file");
+        }
         if (tracker != null) {
             tracker.add(file);
         }
-        raFile = AccessController.doPrivileged(
-                (PrivilegedExceptionAction<RandomAccessFile>) () -> new RandomAccessFile(file, "rw")
-        );
+        raFile = new RandomAccessFile(file, "rw");
         if (tracker != null) {
             tracker.set(file, raFile);
         }
@@ -124,7 +111,6 @@ class FontFileWriter implements FontConstants {
         }
     }
 
-    @SuppressWarnings("removal")
     public void deleteFile() {
         if (file != null) {
             if (tracker != null) {
@@ -135,12 +121,7 @@ class FontFileWriter implements FontConstants {
             } catch (Exception e) {
             }
             try {
-                AccessController.doPrivileged(
-                        (PrivilegedExceptionAction<Void>) () -> {
-                            file.delete();
-                            return null;
-                        }
-                );
+                file.delete();
                 if (PrismFontFactory.debugFonts) {
                     System.err.println("Temp file delete: " + file.getPath());
                 }
@@ -247,29 +228,6 @@ class FontFileWriter implements FontConstants {
         pos += length;
     }
 
-    /**
-     * Used with the byte count tracker for fonts created from streams.
-     * If a thread can create temp files anyway, there is no point in counting
-     * font bytes.
-     */
-    @SuppressWarnings("removal")
-    static boolean hasTempPermission() {
-        if (System.getSecurityManager() == null) {
-            return true;
-        }
-        File f = null;
-        boolean hasPerm = false;
-        try {
-            f = Files.createTempFile("+JXF", ".tmp").toFile();
-            f.delete();
-            f = null;
-            hasPerm = true;
-        } catch (Throwable t) {
-            /* inc. any kind of SecurityException */
-        }
-        return hasPerm;
-    }
-
     /* Like JDK, FX allows untrusted code to create fonts which consume
      * disk resource. We need to place some reasonable limit on the amount
      * that can be consumed to prevent D.O.S type attacks.
@@ -342,19 +300,13 @@ class FontFileWriter implements FontConstants {
             private static HashMap<File, RandomAccessFile> files = new HashMap<>();
 
             private static Thread t = null;
-            @SuppressWarnings("removal")
             static void init() {
                 if (t == null) {
                     // Add a shutdown hook to remove the temp file.
-                    java.security.AccessController.doPrivileged(
-                            (java.security.PrivilegedAction) () -> {
-                                t = new Thread(() -> {
-                                    runHooks();
-                                });
-                                Runtime.getRuntime().addShutdownHook(t);
-                                return null;
-                            }
-                    );
+                    t = new Thread(() -> {
+                        runHooks();
+                    });
+                    Runtime.getRuntime().addShutdownHook(t);
                 }
             }
 

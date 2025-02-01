@@ -41,7 +41,7 @@ public:
         float top { 0 };
         float bottom { 0 };
     };
-    Line(const FloatRect& lineBoxLogicalRect, const FloatRect& lineBoxRect, const FloatRect& contentOverflow, EnclosingTopAndBottom, float aligmentBaseline, FontBaseline baselineType, float contentLogicalLeft, float contentLogicalLeftIgnoringInlineDirection, float contentLogicalWidth, bool isLeftToRightDirection, bool isHorizontal, bool isTruncatedInBlockDirection);
+    Line(const FloatRect& lineBoxLogicalRect, const FloatRect& lineBoxRect, const FloatRect& contentOverflow, EnclosingTopAndBottom, float alignmentBaseline, FontBaseline baselineType, float contentLogicalLeft, float contentLogicalLeftIgnoringInlineDirection, float contentLogicalWidth, bool isLeftToRightDirection, bool isHorizontal, bool isTruncatedInBlockDirection);
 
     float left() const { return m_lineBoxRect.x(); }
     float right() const { return m_lineBoxRect.maxX(); }
@@ -68,10 +68,11 @@ public:
     float enclosingContentLogicalTop() const { return m_enclosingLogicalTopAndBottom.top; }
     float enclosingContentLogicalBottom() const { return m_enclosingLogicalTopAndBottom.bottom; }
 
-    float baseline() const { return m_aligmentBaseline; }
+    float baseline() const { return m_alignmentBaseline; }
     FontBaseline baselineType() const { return m_baselineType; }
 
     bool isHorizontal() const { return m_isHorizontal; }
+    bool isLeftToRightInlineDirection() const { return m_isLeftToRightDirection; }
 
     bool isTruncatedInBlockDirection() const { return m_isTruncatedInBlockDirection; }
 
@@ -86,11 +87,15 @@ public:
     float contentLogicalWidth() const { return m_contentLogicalWidth; }
 
     size_t firstBoxIndex() const { return m_firstBoxIndex; }
+    size_t lastBoxIndex() const { return firstBoxIndex() + boxCount() - 1; }
     size_t boxCount() const { return m_boxCount; }
     bool isFirstAfterPageBreak() const { return m_isFirstAfterPageBreak; }
 
-    void moveVertically(float offset);
+    void moveInBlockDirection(float offset, bool isHorizontalWritingMode);
     void setEllipsisVisualRect(const FloatRect& ellipsisVisualRect) { m_ellipsisVisualRect = ellipsisVisualRect; }
+
+    bool hasContentAfterEllipsisBox() const { return m_hasContentAfterEllipsisBox; }
+    void setHasContentAfterEllipsisBox() { m_hasContentAfterEllipsisBox = true; }
 
     void setFirstBoxIndex(size_t firstBoxIndex) { m_firstBoxIndex = firstBoxIndex; }
     void setBoxCount(size_t boxCount) { m_boxCount = boxCount; }
@@ -115,7 +120,7 @@ private:
     // While the line box usually enclose them as well, its vertical geometry is based on
     // the layout bounds of the inline level boxes which may be different when line-height is present.
     EnclosingTopAndBottom m_enclosingLogicalTopAndBottom;
-    float m_aligmentBaseline { 0.f };
+    float m_alignmentBaseline { 0.f };
     // Content is mostly in flush with the line box edge except for cases like text-align.
     float m_contentLogicalLeft { 0.f };
     float m_contentLogicalLeftIgnoringInlineDirection { 0.f };
@@ -125,16 +130,17 @@ private:
     bool m_isHorizontal : 1 { true };
     bool m_isFirstAfterPageBreak : 1 { false };
     bool m_isTruncatedInBlockDirection : 1 { false };
+    bool m_hasContentAfterEllipsisBox : 1 { false };
     // This is visual rect ignoring block direction.
     std::optional<FloatRect> m_ellipsisVisualRect { };
 };
 
-inline Line::Line(const FloatRect& lineBoxLogicalRect, const FloatRect& lineBoxRect, const FloatRect& contentOverflow, EnclosingTopAndBottom enclosingLogicalTopAndBottom, float aligmentBaseline, FontBaseline baselineType, float contentLogicalLeft, float contentLogicalLeftIgnoringInlineDirection, float contentLogicalWidth, bool isLeftToRightDirection, bool isHorizontal, bool isTruncatedInBlockDirection)
+inline Line::Line(const FloatRect& lineBoxLogicalRect, const FloatRect& lineBoxRect, const FloatRect& contentOverflow, EnclosingTopAndBottom enclosingLogicalTopAndBottom, float alignmentBaseline, FontBaseline baselineType, float contentLogicalLeft, float contentLogicalLeftIgnoringInlineDirection, float contentLogicalWidth, bool isLeftToRightDirection, bool isHorizontal, bool isTruncatedInBlockDirection)
     : m_lineBoxRect(lineBoxRect)
     , m_lineBoxLogicalRect(lineBoxLogicalRect)
     , m_contentOverflow(contentOverflow)
     , m_enclosingLogicalTopAndBottom(enclosingLogicalTopAndBottom)
-    , m_aligmentBaseline(aligmentBaseline)
+    , m_alignmentBaseline(alignmentBaseline)
     , m_contentLogicalLeft(contentLogicalLeft)
     , m_contentLogicalLeftIgnoringInlineDirection(contentLogicalLeftIgnoringInlineDirection)
     , m_contentLogicalWidth(contentLogicalWidth)
@@ -145,24 +151,32 @@ inline Line::Line(const FloatRect& lineBoxLogicalRect, const FloatRect& lineBoxR
 {
 }
 
-inline void Line::moveVertically(float offset)
+inline void Line::moveInBlockDirection(float offset, bool isHorizontalWritingMode)
 {
-    m_lineBoxRect.move({ { }, offset });
+    ASSERT(isHorizontalWritingMode == m_isHorizontal);
+
+    if (!offset)
+        return;
+
+    auto physicalOffset = isHorizontalWritingMode ? FloatSize { { }, offset } : FloatSize { offset, { } };
+
+    m_lineBoxRect.move(physicalOffset);
+    m_scrollableOverflow.move(physicalOffset);
+    m_contentOverflow.move(physicalOffset);
+    m_inkOverflow.move(physicalOffset);
+    if (m_ellipsisVisualRect.has_value())
+        m_ellipsisVisualRect->move(physicalOffset);
+
     m_lineBoxLogicalRect.move({ { }, offset });
-    m_scrollableOverflow.move({ { }, offset });
-    m_contentOverflow.move({ { }, offset });
-    m_inkOverflow.move({ { }, offset });
     m_enclosingLogicalTopAndBottom.top += offset;
     m_enclosingLogicalTopAndBottom.bottom += offset;
-    if (m_ellipsisVisualRect.has_value())
-        m_ellipsisVisualRect->move({ { }, offset });
 }
 
 inline FloatRect Line::visibleRectIgnoringBlockDirection() const
 {
     if (m_isTruncatedInBlockDirection)
         return { };
-    if (!hasEllipsis())
+    if (!hasEllipsis() || hasContentAfterEllipsisBox())
         return m_inkOverflow;
     if (m_isLeftToRightDirection) {
         auto visibleLineBoxRight = std::min(m_lineBoxRect.maxX(), m_ellipsisVisualRect->maxX());

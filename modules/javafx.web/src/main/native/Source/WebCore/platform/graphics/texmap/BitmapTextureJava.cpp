@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,10 @@
 
 namespace WebCore {
 
-void BitmapTextureJava::updateContents(const void*, const IntRect&, const IntPoint&, int)
+
+void BitmapTextureJava::updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine)
 {
+    notImplemented();
 }
 
 void BitmapTextureJava::didReset()
@@ -44,9 +46,9 @@ void BitmapTextureJava::didReset()
                      DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
 }
 
-void BitmapTextureJava::updateContents(Image* image, const IntRect& targetRect, const IntPoint& offset)
+void BitmapTextureJava::updateContents(NativeImage* image, const IntRect& targetRect, const IntPoint& offset)
 {
-    m_image->context().drawImage(*image, targetRect, IntRect(offset, targetRect.size()), CompositeOperator::Copy);
+    //m_image->context().drawImage(*image, targetRect, IntRect(offset, targetRect.size()));
 }
 
 RefPtr<BitmapTexture> BitmapTextureJava::applyFilters(TextureMapper&, const FilterOperations&, bool)

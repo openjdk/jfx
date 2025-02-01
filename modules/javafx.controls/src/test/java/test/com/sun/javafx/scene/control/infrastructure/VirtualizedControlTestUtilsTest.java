@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,6 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.VirtualizedControlTestUtils.*;
 
 import javafx.collections.FXCollections;
@@ -41,6 +36,21 @@ import javafx.scene.control.ScrollBar;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Rudimentary test of VirtualizedControlTestUtils.
@@ -60,9 +70,9 @@ public class VirtualizedControlTestUtilsTest {
     public void testFireMouseOnVerticalTrack() {
         ListView<?> list = createAndShowListView();
         ScrollBar scrollBar = getVerticalScrollBar(list);
-        assertEquals("sanity: initial value of scrollBar", 0, scrollBar.getValue(), 0.1);
+        assertEquals(0, scrollBar.getValue(), 0.1, "sanity: initial value of scrollBar");
         fireMouseOnVerticalTrack(list);
-        assertTrue("mouse on track must have scrolled", scrollBar.getValue() > 0);
+        assertTrue(scrollBar.getValue() > 0, "mouse on track must have scrolled");
     }
 
     /**
@@ -72,21 +82,25 @@ public class VirtualizedControlTestUtilsTest {
     public void testFireMouseOnHorizontalTrack() {
         ListView<?> list = createAndShowListView();
         ScrollBar scrollBar = getHorizontalScrollBar(list);
-        assertEquals("sanity: initial value of scrollBar", 0, scrollBar.getValue(), 0.1);
+        assertEquals(0, scrollBar.getValue(), 0.1, "sanity: initial value of scrollBar");
         fireMouseOnHorizontalTrack(list);
-        assertTrue("mouse on track must have scrolled", scrollBar.getValue() > 0);
+        assertTrue(scrollBar.getValue() > 0, "mouse on track must have scrolled");
     }
 
-    @Test (expected=IllegalStateException.class)
+    @Test
     public void testGetVerticalScrollBarThrowsWithoutSkin() {
-        ListView<?> list = new ListView<>();
-        getVerticalScrollBar(list);
+        assertThrows(IllegalStateException.class, () -> {
+            ListView<?> list = new ListView<>();
+            getVerticalScrollBar(list);
+        });
     }
 
-    @Test (expected=IllegalStateException.class)
+    @Test
     public void testGetHorizontalScrollBarThrowsWithoutSkin() {
-        ListView<?> list = new ListView<>();
-        getHorizontalScrollBar(list);
+        assertThrows(IllegalStateException.class, () -> {
+            ListView<?> list = new ListView<>();
+            getHorizontalScrollBar(list);
+        });
     }
 
     /**
@@ -98,10 +112,8 @@ public class VirtualizedControlTestUtilsTest {
         assertEquals(rows, control.getItems().size());
         assertEquals(100, scene.getWidth(), 1);
         assertEquals(330, scene.getHeight(), 1);
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getHorizontalScrollBar(control).isVisible());
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getVerticalScrollBar(control).isVisible());
+        assertTrue(getHorizontalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
+        assertTrue(getVerticalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
     }
 
   //----------------- setup
@@ -172,7 +184,8 @@ public class VirtualizedControlTestUtilsTest {
         }
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException)throwable;
@@ -183,9 +196,10 @@ public class VirtualizedControlTestUtilsTest {
         rows = 60;
     }
 
-    @After public void cleanup() {
-        if (stage != null) stage.hide();
+    @AfterEach
+    public void cleanup() {
+        if (stage != null)
+            stage.hide();
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
-
 }

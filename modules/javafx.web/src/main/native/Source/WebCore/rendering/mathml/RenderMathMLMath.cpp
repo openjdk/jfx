@@ -42,8 +42,9 @@ using namespace MathMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLMath);
 
 RenderMathMLMath::RenderMathMLMath(MathMLRowElement& element, RenderStyle&& style)
-    : RenderMathMLRow(element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLMath, element, WTFMove(style))
 {
+    ASSERT(isRenderMathMLMath());
 }
 
 void RenderMathMLMath::centerChildren(LayoutUnit contentWidth)

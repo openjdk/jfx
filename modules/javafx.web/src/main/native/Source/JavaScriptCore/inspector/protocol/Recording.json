@@ -2,13 +2,18 @@
     "domain": "Recording",
     "description": "General types used for recordings of actions performed in the inspected page.",
     "debuggableTypes": ["page", "web-page"],
-    "targetTypes": ["page"],
+    "targetTypes": ["page", "worker"],
     "version": 2,
     "types": [
         {
             "id": "Type",
             "type": "string",
-            "enum": ["canvas-2d", "offscreen-canvas-2d", "canvas-bitmaprenderer", "canvas-webgl", "canvas-webgl2"],
+            "enum": [
+                "canvas-2d", "offscreen-canvas-2d",
+                "canvas-bitmaprenderer", "offscreen-canvas-bitmaprenderer",
+                "canvas-webgl", "offscreen-canvas-webgl",
+                "canvas-webgl2", "offscreen-canvas-webgl2"
+            ],
             "description": "The type of the recording."
         },
         {

@@ -27,7 +27,7 @@
 #include "AccessibilityAtspi.h"
 #include "AccessibilityAtspiEnums.h"
 #include "AccessibilityObject.h"
-#include "AccessibilityObjectInterface.h"
+#include "AXCoreObject.h"
 #include "Editing.h"
 #include "PlatformScreen.h"
 #include "RenderLayer.h"
@@ -239,7 +239,7 @@ static Vector<unsigned, 128> offsetMapping(const String& text)
 
     Vector<unsigned, 128> offsets;
     SurrogatePairAwareTextIterator iterator(text.characters16(), 0, text.length(), text.length());
-    UChar32 character;
+    char32_t character;
     unsigned clusterLength = 0;
     unsigned i;
     for (i = 0; iterator.consume(character, clusterLength); iterator.advance(clusterLength), ++i) {
@@ -404,7 +404,7 @@ IntPoint AccessibilityObjectAtspi::boundaryOffset(unsigned utf16Offset, TextGran
         if (!utf16Offset && m_hasListMarkerAtStart)
             return { 0, 1 };
 
-        startPosition = isStartOfWord(offsetPosition) && deprecatedIsEditingWhitespace(offsetPosition.characterBefore()) ? offsetPosition : startOfWord(offsetPosition, LeftWordIfOnBoundary);
+        startPosition = isStartOfWord(offsetPosition) && deprecatedIsEditingWhitespace(offsetPosition.characterBefore()) ? offsetPosition : startOfWord(offsetPosition, WordSide::LeftWordIfOnBoundary);
         endPostion = nextWordPosition(startPosition);
         auto positionAfterSpacingAndFollowingWord = nextWordPosition(endPostion);
         if (positionAfterSpacingAndFollowingWord != endPostion) {
@@ -784,7 +784,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         }
 
         addAttributeIfNeeded("family-name"_s, style.fontCascade().firstFamily());
-        addAttributeIfNeeded("size"_s, makeString(std::round(style.computedFontSize() * 72 / WebCore::screenDPI()), "pt"));
+        addAttributeIfNeeded("size"_s, makeString(std::round(style.computedFontSize() * 72 / WebCore::fontDPI()), "pt"));
         addAttributeIfNeeded("weight"_s, makeString(static_cast<float>(style.fontCascade().weight())));
         addAttributeIfNeeded("style"_s, style.fontCascade().italic() ? "italic"_s : "normal"_s);
         addAttributeIfNeeded("strikethrough"_s, style.textDecorationLine() & TextDecorationLine::LineThrough ? "true"_s : "false"_s);
@@ -850,7 +850,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
     }
 
     VisiblePosition offsetPosition = m_coreObject->visiblePositionForIndex(adjustInputOffset(*utf16Offset, m_hasListMarkerAtStart));
-    auto* childNode = offsetPosition.deepEquivalent().deprecatedNode();
+    auto childNode = offsetPosition.deepEquivalent().protectedDeprecatedNode();
     if (!childNode)
         return { WTFMove(defaultAttributes), -1, -1 };
 

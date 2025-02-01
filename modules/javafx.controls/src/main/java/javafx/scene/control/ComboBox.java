@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -266,7 +266,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 // and if we don't check here we may change the selection
                 // mistakenly because the indexOf above will return the first
                 // instance always, and selection may be on the second or
-                // later instances. This is RT-19227.
+                // later instances. This is JDK-8127705.
                 T selectedItem = sm.getSelectedItem();
                 if (selectedItem == null || ! selectedItem.equals(getValue())) {
                     sm.clearAndSelect(index);
@@ -492,11 +492,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     private ChangeListener<T> selectedItemListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
             if (wasSetAllCalled && t1 == null) {
-                // no-op: fix for RT-22572 where the developer was completely
+                // no-op: fix for JDK-8117197 where the developer was completely
                 // replacing all items in the ComboBox, and expecting the
                 // selection (and ComboBox.value) to remain set. If this isn't
                 // here, we would updateValue(null).
-                // Additional fix for RT-22937: adding the '&& t1 == null'.
+                // Additional fix for JDK-8115968: adding the '&& t1 == null'.
                 // Without this, there would be circumstances where the user
                 // selecting a new value from the ComboBox would end up in here,
                 // when we really should go into the updateValue(t1) call below.
@@ -618,14 +618,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                     T selectedItem = getSelectedItem();
                     for (int i = 0; i < comboBox.getItems().size(); i++) {
                         if (selectedItem.equals(comboBox.getItems().get(i))) {
-                            comboBox.setValue(null);
-                            setSelectedItem(null);
-                            setSelectedIndex(i);
+                            clearAndSelect(i);
                             break;
                         }
                     }
                 }
-
                 comboBox.previousItemCount = getItemCount();
             }
         };

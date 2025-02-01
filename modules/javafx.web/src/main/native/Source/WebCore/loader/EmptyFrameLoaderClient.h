@@ -93,10 +93,11 @@ private:
     LocalFrame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) final;
     void dispatchShow() final;
 
-    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String&, FramePolicyFunction&&) final;
-    void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String&, PolicyCheckIdentifier, FramePolicyFunction&&) final;
-    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) final;
+    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, const String&, FramePolicyFunction&&) final;
+    void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String&, std::optional<HitTestResult>&&, FramePolicyFunction&&) final;
+    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, const String&, uint64_t, std::optional<HitTestResult>&&, bool, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&) final;
     void broadcastFrameRemovalToOtherProcesses() final;
+    void broadcastMainFrameURLChangeToOtherProcesses(const URL&) final;
     void cancelPolicyCheck() final;
 
     void dispatchUnableToImplementPolicy(const ResourceError&) final;
@@ -132,7 +133,10 @@ private:
     ResourceError cannotShowMIMETypeError(const ResourceResponse&) const final;
     ResourceError fileDoesNotExistError(const ResourceResponse&) const final;
     ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const final;
+    ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const final;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const final;
+
+    void loadStorageAccessQuirksIfNeeded() final;
 
     bool shouldFallBack(const ResourceError&) const final;
 
@@ -168,9 +172,9 @@ private:
     void saveViewStateToItem(HistoryItem&) final;
     bool canCachePage() const final;
     void didDisplayInsecureContent() final;
-    void didRunInsecureContent(SecurityOrigin&, const URL&) final;
+    void didRunInsecureContent(SecurityOrigin&) final;
     RefPtr<LocalFrame> createFrame(const AtomString&, HTMLFrameOwnerElement&) final;
-    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool) final;
+    RefPtr<Widget> createPlugin(HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool) final;
 
     ObjectContentType objectContentType(const URL&, const String&) final;
     AtomString overrideMediaType() const final;
@@ -196,10 +200,9 @@ private:
     RefPtr<LegacyPreviewLoaderClient> createPreviewLoaderClient(const String&, const String&) final;
 #endif
 
-#if ENABLE(TRACKING_PREVENTION)
     bool hasFrameSpecificStorageAccess() final;
-#endif
 
+    void dispatchLoadEventToOwnerElementInAnotherProcess() final;
 #if PLATFORM(JAVA)
     bool isJavaFrameLoaderClient() override { return true; }
 #endif

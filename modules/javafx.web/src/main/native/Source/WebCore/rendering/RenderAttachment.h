@@ -53,7 +53,6 @@ public:
 
 private:
     void element() const = delete;
-    bool isAttachment() const override { return true; }
     ASCIILiteral renderName() const override { return "RenderAttachment"_s; }
     LayoutSize layoutWideLayoutAttachmentOnly();
     void layoutShadowContent(const LayoutSize&);
@@ -73,6 +72,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderAttachment, isAttachment())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderAttachment, isRenderAttachment())
 
 #endif // ENABLE(ATTACHMENT_ELEMENT)

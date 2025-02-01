@@ -111,6 +111,7 @@ public:
     inline LayoutSize borderBoxLogicalSize() const;
 
     WEBCORE_EXPORT RoundedRectRadii borderRadii() const;
+    RoundedRect borderRoundedRect() const;
     RoundedRect roundedBorderBoxRect() const;
 
     // The content area of the box (excludes padding - and intrinsic padding for table cells, etc... - and border).
@@ -130,13 +131,12 @@ public:
     inline LayoutRect computedCSSContentBoxRect() const;
 
     // Bounds of the outline box in absolute coords. Respects transforms
-    LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* /*repaintContainer*/, const RenderGeometryMap*) const final;
+    LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* /*repaintContainer*/, const RenderGeometryMap* = nullptr) const final;
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = nullptr) const override;
 
-    FloatRect repaintRectInLocalCoordinates() const override { return borderBoxRect(); }
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const override { return borderBoxRect(); }
     FloatRect objectBoundingBox() const override { return borderBoxRect(); }
 
-    const RenderBlockFlow* blockFormattingContextRoot() const;
     // Note these functions are not equivalent of childrenOfType<RenderBox>
     RenderBox* parentBox() const;
     RenderBox* firstChildBox() const;
@@ -161,17 +161,16 @@ public:
     inline LayoutUnit logicalLeftVisualOverflow() const;
     inline LayoutUnit logicalRightVisualOverflow() const;
 
+    // RenderBox's basic implementation accounts for the writing mode (only).
+    virtual LayoutOptionalOutsets allowedLayoutOverflow() const;
     void addLayoutOverflow(const LayoutRect&);
     void addVisualOverflow(const LayoutRect&);
     void clearOverflow();
 
-    virtual inline bool isTopLayoutOverflowAllowed() const;
-    virtual inline bool isLeftLayoutOverflowAllowed() const;
-
     void addVisualEffectOverflow();
     LayoutRect applyVisualEffectOverflow(const LayoutRect&) const;
-    void addOverflowFromChild(const RenderBox* child) { addOverflowFromChild(child, child->locationOffset()); }
-    void addOverflowFromChild(const RenderBox* child, const LayoutSize& delta);
+    void addOverflowFromChild(const RenderBox& child) { addOverflowFromChild(child, child.locationOffset()); }
+    void addOverflowFromChild(const RenderBox& child, const LayoutSize& delta);
 
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const override;
 
@@ -241,6 +240,9 @@ public:
         const RenderStyle* styleToUse = overrideStyle ? overrideStyle : &style();
         return m_marginBox.end(styleToUse->writingMode(), styleToUse->direction());
     }
+    LayoutUnit marginBlockStart(const WritingMode& writingMode) const { return m_marginBox.before(writingMode); }
+    LayoutUnit marginInlineStart(const WritingMode& writingMode) const { return m_marginBox.start(writingMode); }
+
     void setMarginBefore(LayoutUnit value, const RenderStyle* overrideStyle = nullptr) { m_marginBox.setBefore(value, (overrideStyle ? overrideStyle : &style())->writingMode()); }
     void setMarginAfter(LayoutUnit value, const RenderStyle* overrideStyle = nullptr) { m_marginBox.setAfter(value, (overrideStyle ? overrideStyle : &style())->writingMode()); }
     void setMarginStart(LayoutUnit value, const RenderStyle* overrideStyle = nullptr)
@@ -354,8 +356,8 @@ public:
     void computeAndSetBlockDirectionMargins(const RenderBlock& containingBlock);
 
     enum RenderBoxFragmentInfoFlags { CacheRenderBoxFragmentInfo, DoNotCacheRenderBoxFragmentInfo };
-    LayoutRect borderBoxRectInFragment(RenderFragmentContainer*, RenderBoxFragmentInfoFlags = CacheRenderBoxFragmentInfo) const;
-    LayoutRect clientBoxRectInFragment(RenderFragmentContainer*) const;
+    LayoutRect borderBoxRectInFragment(const RenderFragmentContainer*, RenderBoxFragmentInfoFlags = CacheRenderBoxFragmentInfo) const;
+    LayoutRect clientBoxRectInFragment(const RenderFragmentContainer*) const;
     RenderFragmentContainer* clampToStartAndEndFragments(RenderFragmentContainer*) const;
     bool hasFragmentRangeInFragmentedFlow() const;
     virtual LayoutUnit offsetFromLogicalTopOfFirstPage() const;
@@ -372,8 +374,8 @@ public:
     void setInlineBoxWrapper(LegacyInlineElementBox*);
     void deleteLineBoxWrapper();
 
-    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
-    std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
+    RepaintRects localRectsForRepaint(RepaintOutlineBounds) const override;
+    std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const override;
     void repaintDuringLayoutIfMoved(const LayoutRect&);
     virtual void repaintOverhangingFloats(bool paintAllDescendants);
 
@@ -449,7 +451,7 @@ public:
     inline LayoutUnit availableHeight() const;
 
     WEBCORE_EXPORT virtual int verticalScrollbarWidth() const;
-    WEBCORE_EXPORT int horizontalScrollbarHeight() const;
+    WEBCORE_EXPORT virtual int horizontalScrollbarHeight() const;
     int intrinsicScrollbarLogicalWidth() const;
     inline int scrollbarLogicalWidth() const;
     inline int scrollbarLogicalHeight() const;
@@ -551,9 +553,12 @@ public:
     LayoutUnit flipForWritingMode(LayoutUnit position) const; // The offset is in the block direction (y for horizontal writing modes, x for vertical writing modes).
     LayoutPoint flipForWritingMode(const LayoutPoint&) const;
     LayoutSize flipForWritingMode(const LayoutSize&) const;
-    void flipForWritingMode(LayoutRect&) const;
     FloatPoint flipForWritingMode(const FloatPoint&) const;
+
+    void flipForWritingMode(LayoutRect&) const;
     void flipForWritingMode(FloatRect&) const;
+    void flipForWritingMode(RepaintRects&) const;
+
     // These represent your location relative to your container as a physical offset.
     // In layout related methods you almost always want the logical location (e.g. x() and y()).
     LayoutPoint topLeftLocation() const
@@ -588,11 +593,12 @@ public:
 
     // Returns false if the rect has no intersection with the applied clip rect. When the context specifies edge-inclusive
     // intersection, this return value allows distinguishing between no intersection and zero-area intersection.
-    bool applyCachedClipAndScrollPosition(LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
+    bool applyCachedClipAndScrollPosition(RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const final;
 
     virtual bool hasRelativeDimensions() const;
     virtual bool hasRelativeLogicalHeight() const;
     virtual bool hasRelativeLogicalWidth() const;
+    void willBeRemovedFromTree(IsInternalMove) override;
 
     bool hasHorizontalLayoutOverflow() const
     {
@@ -636,8 +642,7 @@ public:
     virtual bool needsLayoutAfterFragmentRangeChange() const { return false; }
 
     bool isGridItem() const { return parent() && parent()->isRenderGrid() && !isExcludedFromNormalLayout(); }
-    bool isFlexItem() const { return parent() && parent()->isFlexibleBox() && !isExcludedFromNormalLayout(); }
-    inline bool isBlockLevelBox() const;
+    bool isFlexItem() const { return parent() && parent()->isRenderFlexibleBox() && !isExcludedFromNormalLayout(); }
 
     virtual void adjustBorderBoxRectForPainting(LayoutRect&) { };
 
@@ -652,13 +657,14 @@ public:
     inline std::optional<LayoutUnit> explicitIntrinsicInnerLogicalHeight() const;
 
     bool establishesIndependentFormattingContext() const override;
-    bool establishesBlockFormattingContext() const;
 
     void updateFloatPainterAfterSelfPaintingLayerChange();
 
+    bool computeHasTransformRelatedProperty(const RenderStyle&) const;
+
 protected:
-    RenderBox(Element&, RenderStyle&&, BaseTypeFlags);
-    RenderBox(Document&, RenderStyle&&, BaseTypeFlags);
+    RenderBox(Type, Element&, RenderStyle&&, OptionSet<TypeFlag> = { }, TypeSpecificFlags = { });
+    RenderBox(Type, Document&, RenderStyle&&, OptionSet<TypeFlag> = { }, TypeSpecificFlags = { });
 
     void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -690,6 +696,8 @@ protected:
     std::optional<LayoutUnit> computeIntrinsicLogicalContentHeightUsing(Length logicalHeightLength, std::optional<LayoutUnit> intrinsicContentHeight, LayoutUnit borderAndPadding) const;
 
     virtual bool shouldComputeSizeAsReplaced() const { return isReplacedOrInlineBlock() && !isInlineBlockOrInlineTable(); }
+
+    LayoutRect localOutlineBoundsRepaintRect() const;
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject*, RenderGeometryMap&) const override;
@@ -773,7 +781,7 @@ private:
 
     LayoutRect frameRectForStickyPositioning() const override { return frameRect(); }
 
-    LayoutRect computeVisibleRectUsingPaintOffset(const LayoutRect&) const;
+    RepaintRects computeVisibleRectsUsingPaintOffset(const RepaintRects&) const;
 
     LayoutPoint topLeftLocationWithFlipping() const;
 
@@ -805,8 +813,8 @@ private:
 
 inline RenderBox* RenderBox::parentBox() const
 {
-    if (is<RenderBox>(parent()))
-        return downcast<RenderBox>(parent());
+    if (auto* box = dynamicDowncast<RenderBox>(parent()))
+        return box;
 
     ASSERT(!parent());
     return nullptr;
@@ -814,8 +822,8 @@ inline RenderBox* RenderBox::parentBox() const
 
 inline RenderBox* RenderBox::firstChildBox() const
 {
-    if (is<RenderBox>(firstChild()))
-        return downcast<RenderBox>(firstChild());
+    if (auto* box = dynamicDowncast<RenderBox>(firstChild()))
+        return box;
 
     ASSERT(!firstChild());
     return nullptr;
@@ -828,8 +836,8 @@ inline RenderBox* RenderBox::firstInFlowChildBox() const
 
 inline RenderBox* RenderBox::lastChildBox() const
 {
-    if (is<RenderBox>(lastChild()))
-        return downcast<RenderBox>(lastChild());
+    if (auto* box = dynamicDowncast<RenderBox>(lastChild()))
+        return box;
 
     ASSERT(!lastChild());
     return nullptr;
@@ -842,8 +850,8 @@ inline RenderBox* RenderBox::lastInFlowChildBox() const
 
 inline RenderBox* RenderBox::previousSiblingBox() const
 {
-    if (is<RenderBox>(previousSibling()))
-        return downcast<RenderBox>(previousSibling());
+    if (auto* box = dynamicDowncast<RenderBox>(previousSibling()))
+        return box;
 
     ASSERT(!previousSibling());
     return nullptr;
@@ -860,8 +868,8 @@ inline RenderBox* RenderBox::previousInFlowSiblingBox() const
 
 inline RenderBox* RenderBox::nextSiblingBox() const
 {
-    if (is<RenderBox>(nextSibling()))
-        return downcast<RenderBox>(nextSibling());
+    if (auto* box = dynamicDowncast<RenderBox>(nextSibling()))
+        return box;
 
     ASSERT(!nextSibling());
     return nullptr;
@@ -895,4 +903,4 @@ LayoutUnit synthesizedBaseline(const RenderBox&, const RenderStyle& parentStyle,
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderBox, isBox())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderBox, isRenderBox())

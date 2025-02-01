@@ -26,8 +26,6 @@
 #include "config.h"
 #include "SWServerRegistration.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "HTTPParsers.h"
 #include "Logging.h"
 #include "SWServer.h"
@@ -41,6 +39,11 @@ namespace WebCore {
 static ServiceWorkerRegistrationIdentifier generateServiceWorkerRegistrationIdentifier()
 {
     return ServiceWorkerRegistrationIdentifier::generate();
+}
+
+Ref<SWServerRegistration> SWServerRegistration::create(SWServer& server, const ServiceWorkerRegistrationKey& key, ServiceWorkerUpdateViaCache updateViaCache, const URL& scopeURL, const URL& scriptURL, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, NavigationPreloadState&& navigationPreloadState)
+{
+    return adoptRef(*new SWServerRegistration(server, key, updateViaCache, scopeURL, scriptURL, serviceWorkerPageIdentifier, WTFMove(navigationPreloadState)));
 }
 
 SWServerRegistration::SWServerRegistration(SWServer& server, const ServiceWorkerRegistrationKey& key, ServiceWorkerUpdateViaCache updateViaCache, const URL& scopeURL, const URL& scriptURL, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, NavigationPreloadState&& navigationPreloadState)
@@ -142,7 +145,7 @@ void SWServerRegistration::fireUpdateFoundEvent()
 void SWServerRegistration::forEachConnection(const Function<void(SWServer::Connection&)>& apply)
 {
     for (auto connectionIdentifierWithClients : m_connectionsWithClientRegistrations.values()) {
-        if (auto* connection = m_server.connection(connectionIdentifierWithClients))
+        if (CheckedPtr connection = protectedServer()->connection(connectionIdentifierWithClients))
             apply(*connection);
     }
 }
@@ -201,7 +204,7 @@ void SWServerRegistration::notifyClientsOfControllerChange()
 {
     std::optional<ServiceWorkerData> newController = activeWorker() ? std::optional { activeWorker()->data() } : std::nullopt;
     for (auto& item : m_clientsUsingRegistration) {
-        if (auto* connection = m_server.connection(item.key))
+        if (CheckedPtr connection = protectedServer()->connection(item.key))
             connection->notifyClientsOfControllerChange(item.value, newController);
     }
 }
@@ -232,23 +235,23 @@ bool SWServerRegistration::tryClear()
 // https://w3c.github.io/ServiceWorker/#clear-registration
 void SWServerRegistration::clear()
 {
-    if (m_preInstallationWorker) {
-        ASSERT(m_preInstallationWorker->state() == ServiceWorkerState::Parsed);
-        m_preInstallationWorker->terminate();
+    if (RefPtr preInstallationWorker = m_preInstallationWorker) {
+        ASSERT(preInstallationWorker->state() == ServiceWorkerState::Parsed);
+        preInstallationWorker->terminate();
         m_preInstallationWorker = nullptr;
     }
 
-    RefPtr<SWServerWorker> installingWorker = this->installingWorker();
+    RefPtr installingWorker = this->installingWorker();
     if (installingWorker) {
         installingWorker->terminate();
         updateRegistrationState(ServiceWorkerRegistrationState::Installing, nullptr);
     }
-    RefPtr<SWServerWorker> waitingWorker = this->waitingWorker();
+    RefPtr waitingWorker = this->waitingWorker();
     if (waitingWorker) {
         waitingWorker->terminate();
         updateRegistrationState(ServiceWorkerRegistrationState::Waiting, nullptr);
     }
-    RefPtr<SWServerWorker> activeWorker = this->activeWorker();
+    RefPtr activeWorker = this->activeWorker();
     if (activeWorker) {
         activeWorker->terminate();
         updateRegistrationState(ServiceWorkerRegistrationState::Active, nullptr);
@@ -264,7 +267,7 @@ void SWServerRegistration::clear()
     notifyClientsOfControllerChange();
 
     // Remove scope to registration map[scopeString].
-    m_server.removeRegistration(identifier());
+    protectedServer()->removeRegistration(identifier());
 }
 
 // https://w3c.github.io/ServiceWorker/#try-activate-algorithm
@@ -293,7 +296,7 @@ void SWServerRegistration::activate()
         return;
 
     // If registration's active worker is not null, then:
-    if (auto* worker = activeWorker()) {
+    if (RefPtr worker = activeWorker()) {
         // Terminate registration's active worker.
         worker->terminate();
         // Run the Update Worker State algorithm passing registration's active worker and redundant as the arguments.
@@ -308,7 +311,7 @@ void SWServerRegistration::activate()
     // FIXME: For each service worker client whose creation URL matches registration's scope url...
 
     // The registration now has an active worker so we need to check if there are any ready promises that were waiting for this.
-    m_server.resolveRegistrationReadyRequests(*this);
+    protectedServer()->resolveRegistrationReadyRequests(*this);
 
     // For each service worker client who is using registration:
     // - Set client's active worker to registration's active worker.
@@ -318,18 +321,20 @@ void SWServerRegistration::activate()
 
     // Invoke Run Service Worker algorithm with activeWorker as the argument.
     // Queue a task to fire the activate event.
-    ASSERT(activeWorker());
-    m_server.runServiceWorkerAndFireActivateEvent(*activeWorker());
+    RefPtr activeWorker = this->activeWorker();
+    ASSERT(activeWorker);
+    protectedServer()->runServiceWorkerAndFireActivateEvent(*activeWorker);
 }
 
 // https://w3c.github.io/ServiceWorker/#activate (post activate event steps).
 void SWServerRegistration::didFinishActivation(ServiceWorkerIdentifier serviceWorkerIdentifier)
 {
-    if (!activeWorker() || activeWorker()->identifier() != serviceWorkerIdentifier)
+    RefPtr activeWorker = this->activeWorker();
+    if (!activeWorker || activeWorker->identifier() != serviceWorkerIdentifier)
         return;
 
     // Run the Update Worker State algorithm passing registration's active worker and activated as the arguments.
-    updateWorkerState(*activeWorker(), ServiceWorkerState::Activated);
+    updateWorkerState(*activeWorker, ServiceWorkerState::Activated);
 }
 
 // https://w3c.github.io/ServiceWorker/#on-client-unload-algorithm
@@ -344,18 +349,19 @@ void SWServerRegistration::handleClientUnload()
 
 bool SWServerRegistration::isUnregistered() const
 {
-    return m_server.getRegistration(key()) != this;
+    return protectedServer()->getRegistration(key()) != this;
 }
 
 void SWServerRegistration::controlClient(ScriptExecutionContextIdentifier identifier)
 {
-    ASSERT(activeWorker());
+    RefPtr activeWorker = this->activeWorker();
+    ASSERT(activeWorker);
 
     addClientUsingRegistration(identifier);
 
     HashSet<ScriptExecutionContextIdentifier> identifiers;
     identifiers.add(identifier);
-    m_server.connection(identifier.processIdentifier())->notifyClientsOfControllerChange(identifiers, activeWorker()->data());
+    protectedServer()->connection(identifier.processIdentifier())->notifyClientsOfControllerChange(identifiers, activeWorker->data());
 }
 
 bool SWServerRegistration::shouldSoftUpdate(const FetchOptions& options) const
@@ -368,7 +374,7 @@ bool SWServerRegistration::shouldSoftUpdate(const FetchOptions& options) const
 
 void SWServerRegistration::softUpdate()
 {
-    m_server.softUpdate(*this);
+    protectedServer()->softUpdate(*this);
 }
 
 void SWServerRegistration::scheduleSoftUpdate(IsAppInitiated isAppInitiated)
@@ -387,22 +393,24 @@ void SWServerRegistration::scheduleSoftUpdate(IsAppInitiated isAppInitiated)
 // https://w3c.github.io/ServiceWorker/#dom-navigationpreloadmanager-enable, steps run in parallel.
 std::optional<ExceptionData> SWServerRegistration::enableNavigationPreload()
 {
-    if (!m_activeWorker)
-        return ExceptionData { InvalidStateError, "No active worker"_s };
+    RefPtr activeWorker = this->activeWorker();
+    if (!activeWorker)
+        return ExceptionData { ExceptionCode::InvalidStateError, "No active worker"_s };
 
     m_preloadState.enabled = true;
-    m_server.storeRegistrationForWorker(*m_activeWorker);
+    protectedServer()->storeRegistrationForWorker(*activeWorker);
     return { };
 }
 
 // https://w3c.github.io/ServiceWorker/#dom-navigationpreloadmanager-disable, steps run in parallel.
 std::optional<ExceptionData> SWServerRegistration::disableNavigationPreload()
 {
-    if (!m_activeWorker)
-        return ExceptionData { InvalidStateError, "No active worker"_s };
+    RefPtr activeWorker = this->activeWorker();
+    if (!activeWorker)
+        return ExceptionData { ExceptionCode::InvalidStateError, "No active worker"_s };
 
     m_preloadState.enabled = false;
-    m_server.storeRegistrationForWorker(*m_activeWorker);
+    protectedServer()->storeRegistrationForWorker(*activeWorker);
     return { };
 }
 
@@ -410,15 +418,15 @@ std::optional<ExceptionData> SWServerRegistration::disableNavigationPreload()
 std::optional<ExceptionData> SWServerRegistration::setNavigationPreloadHeaderValue(String&& headerValue)
 {
     if (!isValidHTTPHeaderValue(headerValue))
-        return ExceptionData { TypeError, "Invalid header value"_s };
-    if (!m_activeWorker)
-        return ExceptionData { InvalidStateError, "No active worker"_s };
+        return ExceptionData { ExceptionCode::TypeError, "Invalid header value"_s };
+
+    RefPtr activeWorker = this->activeWorker();
+    if (!activeWorker)
+        return ExceptionData { ExceptionCode::InvalidStateError, "No active worker"_s };
 
     m_preloadState.headerValue = WTFMove(headerValue);
-    m_server.storeRegistrationForWorker(*m_activeWorker);
+    protectedServer()->storeRegistrationForWorker(*activeWorker);
     return { };
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

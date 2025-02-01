@@ -24,6 +24,7 @@
 #include "JSDOMGlobalObject.h"
 #include "NodeConstants.h"
 #include <JavaScriptCore/JSDestructibleObject.h>
+#include <JavaScriptCore/StructureInlines.h>
 #include <wtf/SignedPtr.h>
 
 namespace WebCore {
@@ -76,6 +77,7 @@ public:
     using DOMWrapped = ImplementationClass;
 
     ImplementationClass& wrapped() const { return m_wrapped; }
+    Ref<ImplementationClass> protectedWrapped() const { return m_wrapped; }
     static ptrdiff_t offsetOfWrapped() { return OBJECT_OFFSETOF(JSDOMWrapper, m_wrapped); }
     constexpr static bool hasCustomPtrTraits() { return !std::is_same_v<PtrTraits, RawPtrTraits<ImplementationClass>>; };
 

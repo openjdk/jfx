@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,9 @@ import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableObjectValueStub;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ObservableValueBaseTest {
 
@@ -44,7 +45,7 @@ public class ObservableValueBaseTest {
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<Object> changeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         valueModel = new ObservableObjectValueStub<>();
         invalidationListener = new InvalidationListenerMock();
@@ -178,25 +179,37 @@ public class ObservableValueBaseTest {
         observer2.check(valueModel, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testAddingNull_InvalidationListener() {
-        valueModel.addListener((InvalidationListener)null);
+        assertThrows(NullPointerException.class, () -> {
+            valueModel.addListener((InvalidationListener)null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void testAddingNull_ChangeListener() {
-        valueModel.addListener((ChangeListener<Object>)null);
+        assertThrows(NullPointerException.class, () -> {
+            valueModel.addListener((ChangeListener<Object>)null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void testRemovingNull_InvalidationListener() {
-        valueModel.removeListener((InvalidationListener)null);
+        assertThrows(NullPointerException.class, () -> {
+            valueModel.removeListener((InvalidationListener)null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void testRemovingNull_ChangeListener() {
-        valueModel.removeListener((ChangeListener<Object>)null);
+        assertThrows(NullPointerException.class, () -> {
+            valueModel.removeListener((ChangeListener<Object>)null);
+        });
     }
+
 
     private class AddingListenerMock extends InvalidationListenerMock {
         @Override public void invalidated(Observable valueModel) {

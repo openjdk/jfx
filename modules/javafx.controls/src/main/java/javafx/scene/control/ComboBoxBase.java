@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,7 +120,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public ComboBoxBase() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
 
-        // Fix for RT-29885
+        // Fix for JDK-8115009
         getProperties().addListener((MapChangeListener<Object, Object>) change -> {
             if (change.wasAdded()) {
                 if (change.getKey() == "FOCUSED") {
@@ -129,7 +129,7 @@ public abstract class ComboBoxBase<T> extends Control {
                 }
             }
         });
-        // End of fix for RT-29885
+        // End of fix for JDK-8115009
     }
 
     /* *************************************************************************

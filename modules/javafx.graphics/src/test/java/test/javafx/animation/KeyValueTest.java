@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import com.sun.javafx.animation.KeyValueHelper;
 import com.sun.javafx.animation.KeyValueType;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyValue;
-import static org.junit.Assert.assertEquals;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.FloatProperty;
@@ -48,7 +47,9 @@ import javafx.beans.value.WritableIntegerValue;
 import javafx.beans.value.WritableLongValue;
 import javafx.beans.value.WritableValue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KeyValueTest {
 
@@ -77,15 +78,19 @@ public class KeyValueTest {
         assertKeyValue(KeyValueType.BOOLEAN, v, Boolean.TRUE, Interpolator.EASE_BOTH, kv);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBooleanFactory_Interpolator_NullTarget() {
-        new KeyValue(null, true, Interpolator.EASE_BOTH);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue(null, true, Interpolator.EASE_BOTH);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBooleanFactory_Interpolator_NullInterpolator() {
-        final BooleanProperty v = new SimpleBooleanProperty();
-        new KeyValue(v, true, null);
+        assertThrows(NullPointerException.class, () -> {
+            final BooleanProperty v = new SimpleBooleanProperty();
+            new KeyValue(v, true, null);
+        });
     }
 
 
@@ -97,9 +102,11 @@ public class KeyValueTest {
         assertKeyValue(KeyValueType.BOOLEAN, v, Boolean.TRUE, Interpolator.LINEAR, kv);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBooleanFactory_NullTarget() {
-        new KeyValue(null, true);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue(null, true);
+        });
     }
 
 
@@ -112,15 +119,19 @@ public class KeyValueTest {
         assertEquals(Math.PI, ((Number)kv.getEndValue()).doubleValue(), EPSILON_DOUBLE);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testDoubleFactory_Interpolator_NullTarget() {
-        new KeyValue(null, Math.PI, Interpolator.EASE_BOTH);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue(null, Math.PI, Interpolator.EASE_BOTH);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testDoubleFactory_Interpolator_NullInterpolator() {
-        final DoubleProperty v = new SimpleDoubleProperty();
-        new KeyValue(v, Math.PI, null);
+        assertThrows(NullPointerException.class, () -> {
+            final DoubleProperty v = new SimpleDoubleProperty();
+            new KeyValue(v, Math.PI, null);
+        });
     }
 
 
@@ -133,9 +144,11 @@ public class KeyValueTest {
         assertEquals(Math.E, ((Number)kv.getEndValue()).doubleValue(), EPSILON_DOUBLE);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testDoubleFactory_NullTarget() {
-        new KeyValue(null, Math.E);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue(null, Math.E);
+        });
     }
 
 
@@ -148,15 +161,19 @@ public class KeyValueTest {
         assertEquals((float)Math.E, ((Number)kv.getEndValue()).floatValue(), EPSILON_FLOAT);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testFloatFactory_Interpolator_NullTarget() {
-        new KeyValue((WritableFloatValue)null, (float)Math.E, Interpolator.EASE_BOTH);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue((WritableFloatValue)null, (float)Math.E, Interpolator.EASE_BOTH);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testFloatFactory_Interpolator_NullInterpolator() {
-        final FloatProperty v = new SimpleFloatProperty();
-        new KeyValue(v, (float)Math.E, null);
+        assertThrows(NullPointerException.class, () -> {
+            final FloatProperty v = new SimpleFloatProperty();
+            new KeyValue(v, (float)Math.E, null);
+        });
     }
 
 
@@ -169,9 +186,11 @@ public class KeyValueTest {
         assertEquals((float)Math.PI, ((Number)kv.getEndValue()).floatValue(), EPSILON_FLOAT);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testFloatFactory_NullTarget() {
-        new KeyValue((WritableFloatValue)null, (float)Math.PI);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue((WritableFloatValue)null, (float)Math.PI);
+        });
     }
 
 
@@ -183,15 +202,19 @@ public class KeyValueTest {
         assertKeyValue(KeyValueType.INTEGER, v, Integer.MAX_VALUE, Interpolator.EASE_BOTH, kv);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testIntegerFactory_Interpolator_NullTarget() {
-        new KeyValue((WritableIntegerValue)null, 1, Interpolator.EASE_BOTH);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue((WritableIntegerValue)null, 1, Interpolator.EASE_BOTH);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testIntegerFactory_Interpolator_NullInterpolator() {
-        final IntegerProperty v = new SimpleIntegerProperty();
-        new KeyValue(v, 1, null);
+        assertThrows(NullPointerException.class, () -> {
+            final IntegerProperty v = new SimpleIntegerProperty();
+            new KeyValue(v, 1, null);
+        });
     }
 
 
@@ -203,9 +226,11 @@ public class KeyValueTest {
         assertKeyValue(KeyValueType.INTEGER, v, Integer.MIN_VALUE, Interpolator.LINEAR, kv);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testIntegerFactory_NullTarget() {
-        new KeyValue((WritableIntegerValue)null, Integer.MIN_VALUE);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue((WritableIntegerValue)null, Integer.MIN_VALUE);
+        });
     }
 
 
@@ -217,15 +242,19 @@ public class KeyValueTest {
         assertKeyValue(KeyValueType.LONG, v, Long.MAX_VALUE, Interpolator.EASE_BOTH, kv);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testLongFactory_Interpolator_NullTarget() {
-        new KeyValue((WritableLongValue)null, 1L, Interpolator.EASE_BOTH);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue((WritableLongValue)null, 1L, Interpolator.EASE_BOTH);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testLongFactory_Interpolator_NullInterpolator() {
-        final LongProperty v = new SimpleLongProperty();
-        new KeyValue(v, 1L, null);
+        assertThrows(NullPointerException.class, () -> {
+            final LongProperty v = new SimpleLongProperty();
+            new KeyValue(v, 1L, null);
+        });
     }
 
 
@@ -237,9 +266,11 @@ public class KeyValueTest {
         assertKeyValue(KeyValueType.LONG, v, Long.MIN_VALUE, Interpolator.LINEAR, kv);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testLongFactory_NullTarget() {
-        new KeyValue((WritableLongValue)null, Long.MIN_VALUE);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue((WritableLongValue)null, Long.MIN_VALUE);
+        });
     }
 
 
@@ -251,15 +282,19 @@ public class KeyValueTest {
         assertKeyValue(KeyValueType.OBJECT, v, "Hello World", Interpolator.EASE_BOTH, kv);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testObjectFactory_Interpolator_NullTarget() {
-        new KeyValue(null, "Hello World", Interpolator.EASE_BOTH);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue(null, "Hello World", Interpolator.EASE_BOTH);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testObjectFactory_Interpolator_NullInterpolator() {
-        final StringProperty v = new SimpleStringProperty();
-        new KeyValue(v, "Hello World", null);
+        assertThrows(NullPointerException.class, () -> {
+            final StringProperty v = new SimpleStringProperty();
+            new KeyValue(v, "Hello World", null);
+        });
     }
 
 
@@ -271,9 +306,11 @@ public class KeyValueTest {
         assertKeyValue(KeyValueType.OBJECT, v, "Goodbye World", Interpolator.LINEAR, kv);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testObjectFactory_NullTarget() {
-        new KeyValue(null, "Goodbye World");
+        assertThrows(NullPointerException.class, () -> {
+            new KeyValue(null, "Goodbye World");
+        });
     }
 
 }

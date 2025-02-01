@@ -197,7 +197,7 @@ audio_chain_new (AudioChain * prev, GstAudioConverter * convert)
 {
   AudioChain *chain;
 
-  chain = g_slice_new0 (AudioChain);
+  chain = g_new0 (AudioChain, 1);
   chain->prev = prev;
 
   if (convert->current_layout == GST_AUDIO_LAYOUT_NON_INTERLEAVED) {
@@ -229,7 +229,7 @@ audio_chain_free (AudioChain * chain)
   if (chain->make_func_notify)
     chain->make_func_notify (chain->make_func_data);
   g_free (chain->tmp);
-  g_slice_free (AudioChain, chain);
+  g_free (chain);
 }
 
 static gpointer *
@@ -1347,7 +1347,7 @@ gst_audio_converter_new (GstAudioConverterFlags flags, GstAudioInfo * in_info,
       && !opt_matrix)
     goto unpositioned;
 
-  convert = g_slice_new0 (GstAudioConverter);
+  convert = g_new0 (GstAudioConverter, 1);
 
   convert->flags = flags;
   convert->in = *in_info;
@@ -1481,7 +1481,7 @@ gst_audio_converter_free (GstAudioConverter * convert)
 
   gst_structure_free (convert->config);
 
-  g_slice_free (GstAudioConverter, convert);
+  g_free (convert);
 }
 
 /**

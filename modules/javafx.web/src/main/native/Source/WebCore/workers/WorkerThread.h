@@ -62,6 +62,8 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
+enum class AdvancedPrivacyProtections : uint16_t;
+
 struct WorkerThreadStartupData;
 
 struct WorkerParameters {
@@ -82,10 +84,9 @@ public:
     Settings::Values settingsValues;
     WorkerThreadMode workerThreadMode { WorkerThreadMode::CreateNewThread };
     PAL::SessionID sessionID;
-#if ENABLE(SERVICE_WORKER)
     std::optional<ServiceWorkerData> serviceWorkerData;
-#endif
     ScriptExecutionContextIdentifier clientIdentifier;
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections;
     std::optional<uint64_t> noiseInjectionHashSalt;
 
     WorkerParameters isolatedCopy() const;
@@ -114,8 +115,7 @@ public:
 
     void clearProxies() override;
 
-    void setWorkerClient(std::unique_ptr<WorkerClient>&& client) { m_workerClient = WTFMove(client); }
-    WorkerClient* workerClient() { return m_workerClient.get(); }
+    void setWorkerClient(std::unique_ptr<WorkerClient> client) { m_workerClient = WTFMove(client); }
 protected:
     WorkerThread(const WorkerParameters&, const ScriptBuffer& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerBadgeProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
 

@@ -56,6 +56,11 @@ ExceptionOr<Ref<ReadableStream>> ReadableStream::createFromJSValues(JSC::JSGloba
     return adoptRef(*new ReadableStream(result.releaseReturnValue()));
 }
 
+ExceptionOr<Ref<InternalReadableStream>> ReadableStream::createInternalReadableStream(JSDOMGlobalObject& globalObject, Ref<ReadableStreamSource>&& source)
+{
+    return InternalReadableStream::createFromUnderlyingSource(globalObject, toJSNewlyCreated(&globalObject, &globalObject, WTFMove(source)), JSC::jsUndefined());
+}
+
 ExceptionOr<Ref<ReadableStream>> ReadableStream::create(JSDOMGlobalObject& globalObject, Ref<ReadableStreamSource>&& source)
 {
     return createFromJSValues(globalObject, toJSNewlyCreated(&globalObject, &globalObject, WTFMove(source)), JSC::jsUndefined());
@@ -79,11 +84,10 @@ ExceptionOr<Vector<Ref<ReadableStream>>> ReadableStream::tee(bool shouldClone)
 
     auto pair = result.releaseReturnValue();
 
-    Vector<Ref<ReadableStream>> sequence;
-    sequence.reserveInitialCapacity(2);
-    sequence.uncheckedAppend(ReadableStream::create(WTFMove(pair.first)));
-    sequence.uncheckedAppend(ReadableStream::create(WTFMove(pair.second)));
-    return sequence;
+    return Vector {
+        ReadableStream::create(WTFMove(pair.first)),
+        ReadableStream::create(WTFMove(pair.second))
+    };
 }
 
 JSC::JSValue JSReadableStream::cancel(JSC::JSGlobalObject& globalObject, JSC::CallFrame& callFrame)

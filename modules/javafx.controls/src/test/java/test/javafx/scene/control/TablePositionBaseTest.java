@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package test.javafx.scene.control;
 
-import org.junit.Test;
-
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test Tree/TablePosition.
@@ -56,5 +55,4 @@ public class TablePositionBaseTest {
     public void testNullTreeTable() {
         new TreeTablePosition<>(null, 2, new TreeTableColumn<>());
     }
-
 }

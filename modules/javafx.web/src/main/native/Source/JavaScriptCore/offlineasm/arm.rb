@@ -62,7 +62,7 @@ require "risc"
 # d11 => csfr3
 # d12 => csfr4
 # d13 => csfr5
-# d14 => csfr6
+# d14 => scratch
 # d15 => scratch
 
 class Node
@@ -176,8 +176,6 @@ class FPRegisterID
             "d12"
         when "csfr5"
             "d13"
-        when "csfr6"
-            "d14"
         else
             raise "Bad register #{name} for ARM at #{codeOriginString}"
         end
@@ -941,6 +939,8 @@ class Instruction
             $asm.puts "dmb sy"
         when "fence"
             $asm.puts "dmb ish"
+        when "writefence"
+            $asm.puts "dmb ishst"
         when "clrbp"
             $asm.puts "bic #{operands[2].armOperand}, #{operands[0].armOperand}, #{operands[1].armOperand}"
         when "globaladdr"
@@ -984,7 +984,7 @@ class Instruction
                 $asm.puts ".indirect_symbol #{operands[0].asmLabel}"
                 $asm.puts ".long 0"
                 
-                $asm.puts ".text"
+                $asm.puts "OFFLINE_ASM_TEXT_SECTION"
                 $asm.puts ".align 4"
 
                 $asm.putStr("#elif OS(LINUX)")

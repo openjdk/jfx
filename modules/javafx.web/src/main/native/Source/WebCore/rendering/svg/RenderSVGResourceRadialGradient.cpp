@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
- * Copyright (C) 2012 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (C) 2021, 2022, 2023 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,7 +22,10 @@
 #include "config.h"
 #include "RenderSVGResourceRadialGradient.h"
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+#include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGResourceRadialGradientInlines.h"
+#include "RenderSVGShape.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -30,47 +33,44 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourceRadialGradient);
 
 RenderSVGResourceRadialGradient::RenderSVGResourceRadialGradient(SVGRadialGradientElement& element, RenderStyle&& style)
-    : RenderSVGResourceGradient(element, WTFMove(style))
+    : RenderSVGResourceGradient(Type::SVGResourceRadialGradient, element, WTFMove(style))
 {
 }
 
 RenderSVGResourceRadialGradient::~RenderSVGResourceRadialGradient() = default;
 
-bool RenderSVGResourceRadialGradient::collectGradientAttributes()
+void RenderSVGResourceRadialGradient::collectGradientAttributesIfNeeded()
 {
-    m_attributes = RadialGradientAttributes();
-    return radialGradientElement().collectGradientAttributes(m_attributes);
+    if (m_attributes.has_value())
+        return;
+
+    radialGradientElement().synchronizeAllAttributes();
+
+    auto attributes = RadialGradientAttributes { };
+    if (radialGradientElement().collectGradientAttributes(attributes))
+        m_attributes = WTFMove(attributes);
 }
 
-FloatPoint RenderSVGResourceRadialGradient::centerPoint(const RadialGradientAttributes& attributes) const
+RefPtr<Gradient> RenderSVGResourceRadialGradient::createGradient(const RenderStyle& style)
 {
-    return SVGLengthContext::resolvePoint(&radialGradientElement(), attributes.gradientUnits(), attributes.cx(), attributes.cy());
-}
+    if (!m_attributes)
+        return nullptr;
 
-FloatPoint RenderSVGResourceRadialGradient::focalPoint(const RadialGradientAttributes& attributes) const
-{
-    return SVGLengthContext::resolvePoint(&radialGradientElement(), attributes.gradientUnits(), attributes.fx(), attributes.fy());
-}
+    auto centerPoint = SVGLengthContext::resolvePoint(&radialGradientElement(), m_attributes->gradientUnits(), m_attributes->cx(), m_attributes->cy());
+    auto radius = SVGLengthContext::resolveLength(&radialGradientElement(), m_attributes->gradientUnits(), m_attributes->r());
 
-float RenderSVGResourceRadialGradient::radius(const RadialGradientAttributes& attributes) const
-{
-    return SVGLengthContext::resolveLength(&radialGradientElement(), attributes.gradientUnits(), attributes.r());
-}
+    auto focalPoint = SVGLengthContext::resolvePoint(&radialGradientElement(), m_attributes->gradientUnits(), m_attributes->fx(), m_attributes->fy());
+    auto focalRadius = SVGLengthContext::resolveLength(&radialGradientElement(), m_attributes->gradientUnits(), m_attributes->fr());
 
-float RenderSVGResourceRadialGradient::focalRadius(const RadialGradientAttributes& attributes) const
-{
-    return SVGLengthContext::resolveLength(&radialGradientElement(), attributes.gradientUnits(), attributes.fr());
-}
-
-Ref<Gradient> RenderSVGResourceRadialGradient::buildGradient(const RenderStyle& style) const
-{
     return Gradient::create(
-        Gradient::RadialData { focalPoint(m_attributes), centerPoint(m_attributes), focalRadius(m_attributes), radius(m_attributes), 1 },
+        Gradient::RadialData { focalPoint, centerPoint, focalRadius, radius, 1 },
         { ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied },
-        platformSpreadMethodFromSVGType(m_attributes.spreadMethod()),
-        stopsByApplyingColorFilter(m_attributes.stops(), style),
+        platformSpreadMethodFromSVGType(m_attributes->spreadMethod()),
+        stopsByApplyingColorFilter(m_attributes->stops(), style),
         RenderingResourceIdentifier::generate()
     );
 }
 
 }
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

@@ -49,7 +49,9 @@ struct MediaTrackCapabilities {
     String groupId;
     String displaySurface;
     std::optional<DoubleRange> focusDistance;
+    std::optional<Vector<String>> whiteBalanceMode;
     std::optional<DoubleRange> zoom;
+    std::optional<bool> torch;
 };
 
 MediaTrackCapabilities toMediaTrackCapabilities(const RealtimeMediaSourceCapabilities&, const String& groupId);

@@ -20,20 +20,28 @@
 
 #include "config.h"
 #include <wtf/dtoa.h>
+#include <wtf/dragonbox/dragonbox_to_chars.h>
 
 namespace WTF {
 
 const char* numberToString(float number, NumberToStringBuffer& buffer)
 {
     double_conversion::StringBuilder builder(&buffer[0], sizeof(buffer));
-    double_conversion::DoubleToStringConverter::EcmaScriptConverter().ToShortestSingle(number, &builder);
+    dragonbox::ToShortest(number, &builder);
     return builder.Finalize();
 }
 
 const char* numberToString(double d, NumberToStringBuffer& buffer)
 {
     double_conversion::StringBuilder builder(&buffer[0], sizeof(buffer));
-    auto& converter = double_conversion::DoubleToStringConverter::EcmaScriptConverter();
+    dragonbox::ToShortest(d, &builder);
+    return builder.Finalize();
+}
+
+const char* numberToStringWithTrailingPoint(double d, NumberToStringBuffer& buffer)
+{
+    double_conversion::StringBuilder builder(&buffer[0], sizeof(buffer));
+    auto& converter = double_conversion::DoubleToStringConverter::EcmaScriptConverterWithTrailingPoint();
     converter.ToShortest(d, &builder);
     return builder.Finalize();
 }
@@ -137,17 +145,5 @@ const char* numberToCSSString(double d, NumberToCSSStringBuffer& buffer)
         builder.RemoveCharacters(0, 1);
     return builder.Finalize();
 }
-
-namespace Internal {
-
-double parseDoubleFromLongString(const UChar* string, size_t length, size_t& parsedLength)
-{
-    Vector<LChar> conversionBuffer(length);
-    for (size_t i = 0; i < length; ++i)
-        conversionBuffer[i] = isASCII(string[i]) ? string[i] : 0;
-    return parseDouble(conversionBuffer.data(), length, parsedLength);
-}
-
-} // namespace Internal
 
 } // namespace WTF

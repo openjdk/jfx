@@ -34,6 +34,7 @@ import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.*;
+import javafx.css.PseudoClass;
 import javafx.css.Stylesheet;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
@@ -100,7 +101,7 @@ import com.sun.javafx.logging.PlatformLogger;
  *
  * @since JavaFX 8.0
  */
-public class SubScene extends Node {
+public non-sealed class SubScene extends Node {
     static {
         // This is used by classes in different packages to get access to
         // private and package private methods.
@@ -256,7 +257,9 @@ public class SubScene extends Node {
      * Defines the root {@code Node} of the {@code SubScene} scene graph.
      * If a {@code Group} is used as the root, the
      * contents of the scene graph will be clipped by the {@code SubScene}'s width and height.
-     *
+     * <p>
+     * The {@code :root} pseudo-class matches the root node.
+     * <p>
      * {@code SubScene} doesn't accept null root.
      *
      */
@@ -317,9 +320,11 @@ public class SubScene extends Node {
                         StyleManager.getInstance().forget(SubScene.this);
                         oldRoot.setScenes(null, null);
                         oldRoot.getStyleClass().remove("root");
+                        oldRoot.pseudoClassStateChanged(PseudoClass.getPseudoClass("root"), false);
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
+                    _value.pseudoClassStateChanged(PseudoClass.getPseudoClass("root"), true);
                     _value.setScenes(getScene(), SubScene.this);
                     markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable

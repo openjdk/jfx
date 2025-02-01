@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,16 +28,17 @@ package test.javafx.beans.property;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableStringValueStub;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class StringPropertyBaseTest {
 
@@ -54,7 +55,7 @@ public class StringPropertyBaseTest {
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<String> changeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new StringPropertyMock();
         invalidationListener = new InvalidationListenerMock();
@@ -203,12 +204,15 @@ public class StringPropertyBaseTest {
         changeListener.check(property, VALUE_1a, VALUE_1b, 2);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
-        final StringProperty v = new SimpleStringProperty(VALUE_1a);
-        property.bind(v);
-        property.set(VALUE_1a);
+        assertThrows(RuntimeException.class, () -> {
+            final StringProperty v = new SimpleStringProperty(VALUE_1a);
+            property.bind(v);
+            property.set(VALUE_1a);
+        });
     }
+
 
     @Test
     public void testLazyBind() {
@@ -274,10 +278,13 @@ public class StringPropertyBaseTest {
         changeListener.check(property, VALUE_1b, VALUE_1a, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> {
+            property.bind(null);
+        });
     }
+
 
     @Test
     public void testRebind() {

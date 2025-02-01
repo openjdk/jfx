@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,8 +53,6 @@ import com.sun.webkit.graphics.*;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,10 +79,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     private final static PlatformLogger log =
             PlatformLogger.getLogger(WCGraphicsPrismContext.class.getName());
-    @SuppressWarnings("removal")
-    private final static boolean DEBUG_DRAW_CLIP_SHAPE = Boolean.valueOf(
-            AccessController.doPrivileged((PrivilegedAction<String>) () ->
-            System.getProperty("com.sun.webkit.debugDrawClipShape", "false")));
+    private final static boolean DEBUG_DRAW_CLIP_SHAPE =
+        Boolean.valueOf(System.getProperty("com.sun.webkit.debugDrawClipShape", "false"));
 
     Graphics baseGraphics;
     private BaseTransform baseTransform;
@@ -145,6 +141,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             cachedGraphics = (l != null)
                     ? l.getGraphics()
                     : baseGraphics;
+
+            if (cachedGraphics == null) {
+                log.fine("getGraphics failed - couldn't acquire cachedGraphics");
+                return null;
+            }
 
             ResourceFactory rf = cachedGraphics.getResourceFactory();
             if (!rf.isDisposed()) {
@@ -798,7 +799,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 @Override void doPaint(Graphics g) {
                     Image img = ((PrismImage)texture).getImage();
 
-                    // Create subImage only if srcRect doesn't fit the texture bounds. See RT-20193.
+                    // Create subImage only if srcRect doesn't fit the texture bounds. See JDK-8116190.
                     if (!srcRect.contains(new WCRectangle(0, 0, texture.getWidth(), texture.getHeight()))) {
 
                         img = img.createSubImage(srcRect.getIntX(),
@@ -1001,7 +1002,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             }
         }
 
-        // adjust x coordinate (see RT-29908)
+        // adjust x coordinate (see JDK-8115418)
         if (rtl) {
             x += (TextUtilities.getLayoutWidth(str.substring(from), f.getPlatformFont()) -
                   layout.getBounds().getWidth());
@@ -1371,7 +1372,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             this.bounds = new Rectangle(bounds);
             this.permanent = permanent;
 
-            // avoid creating zero-size drawable, see also RT-21410
+            // avoid creating zero-size drawable, see also JDK-8117714
             int w = Math.max(bounds.width, 1);
             int h = Math.max(bounds.height, 1);
             fctx = getFilterContext(g);
@@ -1666,7 +1667,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 Object renderHelper,
                 Effect defaultInput) {
             // We have an unpaired lock() here, because unlocking is done
-            // internally by ImageData. See RT-33625 for details.
+            // internally by ImageData. See JDK-8095424 for details.
             img.lock();
             ImageData imgData = new ImageData(fctx, img, new Rectangle(
                                               (int) transform.getMxt(),

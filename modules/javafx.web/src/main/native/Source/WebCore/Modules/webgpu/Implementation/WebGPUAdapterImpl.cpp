@@ -58,9 +58,6 @@ static Ref<SupportedFeatures> supportedFeatures(const Vector<WGPUFeatureName>& f
         case WGPUFeatureName_TimestampQuery:
             result.append("timestamp-query"_s);
             break;
-        case WGPUFeatureName_PipelineStatisticsQuery:
-            result.append("pipeline-statistics-query"_s);
-            break;
         case WGPUFeatureName_TextureCompressionBC:
             result.append("texture-compression-bc"_s);
             break;
@@ -114,6 +111,7 @@ static Ref<SupportedLimits> supportedLimits(WGPUAdapter adapter)
         limits.limits.maxTextureDimension3D,
         limits.limits.maxTextureArrayLayers,
         limits.limits.maxBindGroups,
+        limits.limits.maxBindGroupsPlusVertexBuffers,
         limits.limits.maxBindingsPerBindGroup,
         limits.limits.maxDynamicUniformBuffersPerPipelineLayout,
         limits.limits.maxDynamicStorageBuffersPerPipelineLayout,
@@ -215,7 +213,8 @@ void AdapterImpl::requestDevice(const DeviceDescriptor& descriptor, CompletionHa
         .maxTextureDimension3D =    2048,
         .maxTextureArrayLayers =    256,
         .maxBindGroups =    4,
-        .maxBindingsPerBindGroup =    640,
+        .maxBindGroupsPlusVertexBuffers = 24,
+        .maxBindingsPerBindGroup =    1000,
         .maxDynamicUniformBuffersPerPipelineLayout =    8,
         .maxDynamicStorageBuffersPerPipelineLayout =    4,
         .maxSampledTexturesPerShaderStage =    16,
@@ -268,6 +267,7 @@ void AdapterImpl::requestDevice(const DeviceDescriptor& descriptor, CompletionHa
         SET_MAX_VALUE(maxTextureDimension3D)
         SET_MAX_VALUE(maxTextureArrayLayers)
         SET_MAX_VALUE(maxBindGroups)
+        SET_MAX_VALUE(maxBindGroupsPlusVertexBuffers)
         SET_MAX_VALUE(maxBindingsPerBindGroup)
         SET_MAX_VALUE(maxDynamicUniformBuffersPerPipelineLayout)
         SET_MAX_VALUE(maxDynamicStorageBuffersPerPipelineLayout)
@@ -306,16 +306,17 @@ void AdapterImpl::requestDevice(const DeviceDescriptor& descriptor, CompletionHa
     WGPURequiredLimits requiredLimits { nullptr, WTFMove(limits) };
 
     WGPUDeviceDescriptor backingDescriptor {
-        nullptr,
-        label.data(),
-        static_cast<uint32_t>(features.size()),
-        features.data(),
-        &requiredLimits, {
+        .nextInChain = nullptr,
+        .label = label.data(),
+        .requiredFeatureCount = static_cast<uint32_t>(features.size()),
+        .requiredFeatures = features.data(),
+        .requiredLimits = &requiredLimits,
+        .defaultQueue = {
             { },
             "queue"
         },
-        nullptr, // FIXME: Implement device lost callback.
-        nullptr,
+        .deviceLostCallback = nullptr,
+        .deviceLostUserdata = nullptr,
     };
 
     auto requestedLimits = SupportedLimits::create(limits.maxTextureDimension1D,
@@ -323,6 +324,7 @@ void AdapterImpl::requestDevice(const DeviceDescriptor& descriptor, CompletionHa
         limits.maxTextureDimension3D,
         limits.maxTextureArrayLayers,
         limits.maxBindGroups,
+        limits.maxBindGroupsPlusVertexBuffers,
         limits.maxBindingsPerBindGroup,
         limits.maxDynamicUniformBuffersPerPipelineLayout,
         limits.maxDynamicStorageBuffersPerPipelineLayout,
@@ -351,8 +353,8 @@ void AdapterImpl::requestDevice(const DeviceDescriptor& descriptor, CompletionHa
         limits.maxComputeWorkgroupsPerDimension);
 
     auto requestedFeatures = supportedFeatures(features);
-    auto blockPtr = makeBlockPtr([protectedThis = Ref { *this }, convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback), requestedLimits, requestedFeatures](WGPURequestDeviceStatus, WGPUDevice device, const char*) mutable {
-        callback(DeviceImpl::create(adoptWebGPU(device), WTFMove(requestedFeatures), WTFMove(requestedLimits), convertToBackingContext));
+    auto blockPtr = makeBlockPtr([protectedThis = Ref { *this }, convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback), requestedLimits, requestedFeatures](WGPURequestDeviceStatus status, WGPUDevice device, const char*) mutable {
+        callback(DeviceImpl::create(adoptWebGPU(device), status == WGPURequestDeviceStatus_Success ? WTFMove(requestedFeatures) : SupportedFeatures::create({ }), WTFMove(requestedLimits), convertToBackingContext));
     });
     wgpuAdapterRequestDevice(m_backing.get(), &backingDescriptor, &requestDeviceCallback, Block_copy(blockPtr.get())); // Block_copy is matched with Block_release above in requestDeviceCallback().
 }

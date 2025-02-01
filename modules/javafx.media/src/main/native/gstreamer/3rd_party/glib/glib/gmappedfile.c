@@ -340,7 +340,7 @@ g_mapped_file_get_length (GMappedFile *file)
  *
  * If the file is empty then %NULL is returned.
  *
- * Returns: the contents of @file, or %NULL.
+ * Returns: (transfer none) (nullable): the contents of @file, or %NULL.
  *
  * Since: 2.8
  */

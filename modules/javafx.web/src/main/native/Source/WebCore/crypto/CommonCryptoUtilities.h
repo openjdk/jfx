@@ -30,7 +30,9 @@
 #include "CryptoAlgorithmIdentifier.h"
 #include <CommonCrypto/CommonCryptor.h>
 #include <CommonCrypto/CommonRandom.h>
+
 #include <pal/spi/cocoa/CommonCryptoSPI.h>
+
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -38,5 +40,4 @@ namespace WebCore {
 bool getCommonCryptoDigestAlgorithm(CryptoAlgorithmIdentifier, CCDigestAlgorithm&);
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_CRYPTO)
+#endif

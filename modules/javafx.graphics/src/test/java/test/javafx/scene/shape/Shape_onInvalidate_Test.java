@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,40 +25,29 @@
 
 package test.javafx.scene.shape;
 
-import java.util.Arrays;
-import java.util.Collection;
-
+import java.util.stream.Stream;
 import javafx.scene.paint.Color;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 import com.sun.javafx.scene.DirtyBits;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
+
+import org.junit.jupiter.params.provider.Arguments;
 import test.com.sun.javafx.test.OnInvalidateMethodsTestBase;
 
-@RunWith(Parameterized.class)
 public class Shape_onInvalidate_Test extends OnInvalidateMethodsTestBase {
 
-    public Shape_onInvalidate_Test(Configuration config) {
-        super(config);
-    }
-
-    @Parameters
-    public static Collection<Object[]> data() {
-        Object[][] data = new Object[][] {
-            {new Configuration(Line.class, "strokeWidth", 2.0, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS})},
-            {new Configuration(Line.class, "strokeLineJoin", StrokeLineJoin.BEVEL, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS})},
-            {new Configuration(Line.class, "strokeLineCap", StrokeLineCap.BUTT, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS})},
-            {new Configuration(Line.class, "strokeMiterLimit", 4.0, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS})},
-            {new Configuration(Line.class, "strokeDashOffset", 1.0, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS})},
-            {new Configuration(Line.class, "fill", Color.RED, new DirtyBits[] {DirtyBits.SHAPE_FILL})},
-            {new Configuration(Line.class, "stroke", Color.RED, new DirtyBits[] {DirtyBits.SHAPE_STROKE})},
-            {new Configuration(Line.class, "smooth", false, new DirtyBits[] {DirtyBits.NODE_SMOOTH})}
-        };
-        return Arrays.asList(data);
+    public static Stream<Arguments> data() {
+        return Stream.of(
+            Arguments.of( new Configuration(Line.class, "strokeWidth", 2.0, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS}) ),
+            Arguments.of( new Configuration(Line.class, "strokeLineJoin", StrokeLineJoin.BEVEL, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS}) ),
+            Arguments.of( new Configuration(Line.class, "strokeLineCap", StrokeLineCap.BUTT, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS}) ),
+            Arguments.of( new Configuration(Line.class, "strokeMiterLimit", 4.0, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS}) ),
+            Arguments.of( new Configuration(Line.class, "strokeDashOffset", 1.0, new DirtyBits[] {DirtyBits.SHAPE_STROKEATTRS}) ),
+            Arguments.of( new Configuration(Line.class, "fill", Color.RED, new DirtyBits[] {DirtyBits.SHAPE_FILL}) ),
+            Arguments.of( new Configuration(Line.class, "stroke", Color.RED, new DirtyBits[] {DirtyBits.SHAPE_STROKE}) ),
+            Arguments.of( new Configuration(Line.class, "smooth", false, new DirtyBits[] {DirtyBits.NODE_SMOOTH}) )
+        );
     }
 }

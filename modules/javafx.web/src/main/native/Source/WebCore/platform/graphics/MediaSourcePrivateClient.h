@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,23 +27,24 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
+#include "MediaPromiseTypes.h"
 #include "PlatformTimeRanges.h"
+#include <wtf/CompletionHandler.h>
+#include <wtf/Forward.h>
 #include <wtf/Logger.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
 class MediaSourcePrivate;
 
-class MediaSourcePrivateClient : public CanMakeWeakPtr<MediaSourcePrivateClient> {
+class MediaSourcePrivateClient : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaSourcePrivateClient> {
 public:
     virtual ~MediaSourcePrivateClient() = default;
 
     virtual void setPrivateAndOpen(Ref<MediaSourcePrivate>&&) = 0;
-    virtual MediaTime duration() const = 0;
-    virtual const PlatformTimeRanges& buffered() const = 0;
-    virtual void seekToTime(const MediaTime&) = 0;
-    virtual void monitorSourceBuffers() = 0;
+    virtual Ref<MediaTimePromise> waitForTarget(const SeekTarget&) = 0;
+    virtual Ref<MediaPromise> seekToTime(const MediaTime&) = 0;
 
 #if !RELEASE_LOG_DISABLED
     virtual void setLogIdentifier(const void*) = 0;

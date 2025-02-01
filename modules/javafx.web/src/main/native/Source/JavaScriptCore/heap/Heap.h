@@ -290,8 +290,8 @@ class Heap {
 public:
     friend class JIT;
     friend class DFG::SpeculativeJIT;
-    static Heap* heap(const JSValue); // 0 for immediate values
-    static Heap* heap(const HeapCell*);
+    static JSC::Heap* heap(const JSValue); // 0 for immediate values
+    static JSC::Heap* heap(const HeapCell*);
 
     // This constant determines how many blocks we iterate between checks of our
     // deadline when calling Heap::isPagedOut. Decreasing it will cause us to detect
@@ -327,7 +327,12 @@ public:
 
     JS_EXPORT_PRIVATE GCActivityCallback* fullActivityCallback();
     JS_EXPORT_PRIVATE GCActivityCallback* edenActivityCallback();
+
+    JS_EXPORT_PRIVATE void setFullActivityCallback(RefPtr<GCActivityCallback>&&);
+    JS_EXPORT_PRIVATE void setEdenActivityCallback(RefPtr<GCActivityCallback>&&);
+
     JS_EXPORT_PRIVATE void setGarbageCollectionTimerEnabled(bool);
+    JS_EXPORT_PRIVATE void scheduleOpportunisticFullCollection();
 
     JS_EXPORT_PRIVATE IncrementalSweeper& sweeper();
 
@@ -391,8 +396,8 @@ public:
     // 2. Use this API may trigger JSRopeString::resolveRope. If this API need
     // to be used when resolving a rope string, then make sure to call this API
     // after the rope string is completely resolved.
-    void reportExtraMemoryAllocated(size_t);
-    void reportExtraMemoryAllocated(GCDeferralContext*, size_t);
+    void reportExtraMemoryAllocated(const JSCell*, size_t);
+    void reportExtraMemoryAllocated(GCDeferralContext*, const JSCell*, size_t);
     JS_EXPORT_PRIVATE void reportExtraMemoryVisited(size_t);
 
 #if ENABLE(RESOURCE_USAGE)
@@ -571,6 +576,8 @@ public:
         m_possiblyAccessedStringsFromConcurrentThreads.append(WTFMove(string));
     }
 
+    bool isInPhase(CollectorPhase phase) const { return m_currentPhase == phase; }
+
 private:
     friend class AllocatingScope;
     friend class CodeBlock;
@@ -617,7 +624,8 @@ private:
 
     Lock& lock() { return m_lock; }
 
-    JS_EXPORT_PRIVATE void reportExtraMemoryAllocatedSlowCase(GCDeferralContext*, size_t);
+    void reportExtraMemoryAllocatedPossiblyFromAlreadyMarkedCell(const JSCell*, size_t);
+    JS_EXPORT_PRIVATE void reportExtraMemoryAllocatedSlowCase(GCDeferralContext*, const JSCell*, size_t);
     JS_EXPORT_PRIVATE void deprecatedReportExtraMemorySlowCase(size_t);
 
     bool shouldCollectInCollectorThread(const AbstractLocker&);
@@ -762,6 +770,7 @@ private:
     MutatorState m_mutatorState { MutatorState::Running };
     const size_t m_ramSize;
     const size_t m_minBytesPerCycle;
+    size_t m_bytesAllocatedBeforeLastEdenCollect { 0 };
     size_t m_sizeAfterLastCollect { 0 };
     size_t m_sizeAfterLastFullCollect { 0 };
     size_t m_sizeBeforeLastFullCollect { 0 };
@@ -773,10 +782,13 @@ private:
     size_t m_maxEdenSize;
     size_t m_maxEdenSizeWhenCritical;
     size_t m_maxHeapSize;
+    size_t m_totalBytesVisitedAfterLastFullCollect { 0 };
     size_t m_totalBytesVisited { 0 };
     size_t m_totalBytesVisitedThisCycle { 0 };
     double m_incrementBalance { 0 };
 
+    bool m_shouldDoOpportunisticFullCollection { false };
+    bool m_isInOpportunisticTask { false };
     bool m_shouldDoFullCollection { false };
     Markable<CollectionScope, EnumMarkableTraits<CollectionScope>> m_collectionScope;
     Markable<CollectionScope, EnumMarkableTraits<CollectionScope>> m_lastCollectionScope;
@@ -829,7 +841,7 @@ private:
 
     Vector<String> m_possiblyAccessedStringsFromConcurrentThreads;
 
-    RefPtr<FullGCActivityCallback> m_fullActivityCallback;
+    RefPtr<GCActivityCallback> m_fullActivityCallback;
     RefPtr<GCActivityCallback> m_edenActivityCallback;
     Ref<IncrementalSweeper> m_sweeper;
     Ref<StopIfNecessaryTimer> m_stopIfNecessaryTimer;
@@ -909,6 +921,7 @@ private:
     MonotonicTime m_lastGCStartTime;
     MonotonicTime m_lastGCEndTime;
     MonotonicTime m_currentGCStartTime;
+    MonotonicTime m_lastFullGCEndTime;
     Seconds m_totalGCTime;
 
     uintptr_t m_barriersExecuted { 0 };

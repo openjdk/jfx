@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,14 +37,16 @@ import javafx.scene.shape.ClosePath;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
-import org.junit.Test;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  */
 public class NGRegionTest {
-    @Test public void setOpaqueInsetsInvalidatesOpaqueRegion() {
+    @Test
+    public void setOpaqueInsetsInvalidatesOpaqueRegion() {
         NGRegion r = new NGRegion();
         r.getOpaqueRegion(); // Forces to validate the opaque region
         assertFalse(NGNodeShim.isOpaqueRegionInvalid(r)); // sanity check
@@ -52,7 +54,8 @@ public class NGRegionTest {
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(r));
     }
 
-    @Test public void updateShapeInvalidatesOpaqueRegion() {
+    @Test
+    public void updateShapeInvalidatesOpaqueRegion() {
         NGRegion r = new NGRegion();
         r.getOpaqueRegion(); // Forces to validate the opaque region
         assertFalse(NGNodeShim.isOpaqueRegionInvalid(r)); // sanity check
@@ -60,9 +63,10 @@ public class NGRegionTest {
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(r));
     }
 
-    // RT-13820: We change the shape internally and call this same method, so it
+    // JDK-8112908: We change the shape internally and call this same method, so it
     // needs to invalidate the opaque region.
-    @Test public void updateShapeToSameInstanceInvalidatesOpaqueRegion() {
+    @Test
+    public void updateShapeToSameInstanceInvalidatesOpaqueRegion() {
         LineTo lineTo;
         Path p = new Path(
                 new MoveTo(10, 20),
@@ -79,7 +83,8 @@ public class NGRegionTest {
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(r));
     }
 
-    @Test public void setSizeInvalidatesOpaqueRegion() {
+    @Test
+    public void setSizeInvalidatesOpaqueRegion() {
         NGRegion r = new NGRegion();
         r.getOpaqueRegion(); // Forces to validate the opaque region
         assertFalse(NGNodeShim.isOpaqueRegionInvalid(r)); // sanity check
@@ -93,7 +98,8 @@ public class NGRegionTest {
     // background is changed on the Region, setOpaqueInsets is called which invalidates
     // the opaque region).
 
-    @Test public void updateBackgroundWithSameSizeButTransparentFillInvalidatesOpaqueInsets() {
+    @Test
+    public void updateBackgroundWithSameSizeButTransparentFillInvalidatesOpaqueInsets() {
         Region r = new Region();
         NGRegion peer = NodeHelper.getPeer(r);
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
@@ -105,7 +111,8 @@ public class NGRegionTest {
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(peer));
     }
 
-    @Test public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets() {
+    @Test
+    public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets() {
         Region r = new Region();
         NGRegion peer = NodeHelper.getPeer(r);
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
@@ -117,7 +124,8 @@ public class NGRegionTest {
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(peer));
     }
 
-    @Test public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets2() {
+    @Test
+    public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets2() {
         Region r = new Region();
         NGRegion peer = NodeHelper.getPeer(r);
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
@@ -129,7 +137,8 @@ public class NGRegionTest {
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(peer));
     }
 
-    @Test public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets3() {
+    @Test
+    public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets3() {
         Region r = new Region();
         NGRegion peer = NodeHelper.getPeer(r);
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package test.com.sun.javafx.util;
 
 import com.sun.javafx.util.Utils;
-import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 
@@ -39,7 +38,9 @@ import javafx.scene.SubScene;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class UtilsTest {
     @Test
@@ -47,14 +48,14 @@ public class UtilsTest {
         // normal use case
         String s = "VK_ENTER";
         String[] split = Utils.split(s, "_");
-        assertEquals("Array content: " + Arrays.toString(split),2, split.length);
+        assertEquals(2, split.length, "Array content: " + Arrays.toString(split));
         assertEquals("VK", split[0]);
         assertEquals("ENTER", split[1]);
 
         // normal use case
         s = "VK_LEFT_ARROW";
         split = Utils.split(s, "_");
-        assertEquals("Array content: " + Arrays.toString(split),3, split.length);
+        assertEquals(3, split.length, "Array content: " + Arrays.toString(split));
         assertEquals("VK", split[0]);
         assertEquals("LEFT", split[1]);
         assertEquals("ARROW", split[2]);
@@ -62,12 +63,12 @@ public class UtilsTest {
         // split with same string as separator - expect empty array
         s = "VK_LEFT_ARROW";
         split = Utils.split(s, "VK_LEFT_ARROW");
-        assertEquals("Array content: " + Arrays.toString(split),0, split.length);
+        assertEquals(0, split.length, "Array content: " + Arrays.toString(split));
 
         // split with longer string as separator - expect empty array
         s = "VK_LEFT_ARROW";
         split = Utils.split(s, "VK_LEFT_ARROW_EXT");
-        assertEquals("Array content: " + Arrays.toString(split),0, split.length);
+        assertEquals(0, split.length, "Array content: " + Arrays.toString(split));
     }
 
     @Test
@@ -126,8 +127,8 @@ public class UtilsTest {
         //assertEquals("\\", r);
 
         //Error case - no length
-        ///*String*/ s = "hi\\u";
-        ///*String*/ r = Utils.convertUnicode(s);
+        //*String*/ s = "hi\\u";
+        //*String*/ r = Utils.convertUnicode(s);
         //assertEquals("hi\\u", r);
     }
 

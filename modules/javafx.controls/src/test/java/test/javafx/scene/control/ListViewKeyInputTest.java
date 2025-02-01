@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,33 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.control.Button;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.FocusModelShim;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.input.KeyCode;
-import java.util.List;
+import javafx.scene.layout.HBox;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 import test.com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
@@ -41,24 +59,6 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import com.sun.javafx.tk.Toolkit;
-import javafx.scene.control.FocusModel;
-import javafx.scene.control.FocusModelShim;
-import javafx.scene.control.IndexedCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.layout.HBox;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 public class ListViewKeyInputTest {
     private ListView<String> listView;
@@ -69,7 +69,8 @@ public class ListViewKeyInputTest {
 
     private StageLoader stageLoader;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
@@ -82,7 +83,8 @@ public class ListViewKeyInputTest {
         listView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         listView.getSkin().dispose();
         stageLoader.dispose();
     }
@@ -223,7 +225,7 @@ public class ListViewKeyInputTest {
         sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-        assertTrue(debug(), fm.isFocused(0));
+        assertTrue(fm.isFocused(0), debug());
         assertTrue(sm.isSelected(0));
     }
 
@@ -280,7 +282,7 @@ public class ListViewKeyInputTest {
     @Test public void testHomeKey() {
         sm.clearAndSelect(3);
         keyboard.doKeyPress(KeyCode.HOME);
-        assertTrue(debug(), isSelected(0));
+        assertTrue(isSelected(0), debug());
         assertTrue(isNotSelected(1,2,3));
     }
 
@@ -319,7 +321,7 @@ public class ListViewKeyInputTest {
                 (Utils.isMac() ? KeyModifier.CTRL : null));
 
         assertTrue(isNotSelected(5));
-        assertTrue(debug(), fm.isFocused(5));
+        assertTrue(fm.isFocused(5), debug());
         assertTrue(isAnchor(5));
     }
 
@@ -376,7 +378,7 @@ public class ListViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
-        assertTrue(debug(), sm.isSelected(0));
+        assertTrue(sm.isSelected(0), debug());
         assertTrue(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
     }
@@ -529,7 +531,7 @@ public class ListViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);  // select 0,1,2
         assertTrue(isSelected(0, 1, 2));
         assertTrue(isNotSelected(3));
-        assertTrue(debug(), isAnchor(2));
+        assertTrue(isAnchor(2), debug());
     }
 
     // test 33
@@ -569,7 +571,7 @@ public class ListViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);  // select 0,1,2
         assertTrue(isSelected(0, 1, 2));
         assertTrue(isNotSelected(3, 4));
-        assertTrue(debug(), isAnchor(2));
+        assertTrue(isAnchor(2), debug());
     }
 
     // test 35
@@ -588,7 +590,7 @@ public class ListViewKeyInputTest {
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
         keyboard.doDownArrowPress(KeyModifier.SHIFT);  // select 1,2,3
-        assertTrue(debug(), isSelected(1, 2, 3));
+        assertTrue(isSelected(1, 2, 3), debug());
         assertTrue(isNotSelected(0));
     }
 
@@ -692,7 +694,7 @@ public class ListViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2));
         assertTrue(isNotSelected(3,4));
-        assertTrue(debug(),isAnchor(2));
+        assertTrue(isAnchor(2), debug());
     }
 
     // test 51
@@ -712,7 +714,7 @@ public class ListViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
         assertTrue(isSelected(3,4,5,6,7,8,9));
         assertTrue(isNotSelected(0,1,2));
-        assertTrue(debug(),isAnchor(3));
+        assertTrue(isAnchor(3), debug());
     }
 
     // test 42
@@ -759,7 +761,7 @@ public class ListViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3));
         assertTrue(isNotSelected(4,5));
-        assertTrue(debug(), isAnchor(3));
+        assertTrue(isAnchor(3), debug());
     }
 
     // test 49
@@ -811,7 +813,7 @@ public class ListViewKeyInputTest {
 
 
     /***************************************************************************
-     * Tests for discontinuous multiple selection (RT-18953)
+     * Tests for discontinuous multiple selection (JDK-8117952)
      **************************************************************************/
 
     // Test 1
@@ -827,7 +829,7 @@ public class ListViewKeyInputTest {
 
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
-        assertTrue(debug(),isSelected(0,2,3,4));
+        assertTrue(isSelected(0,2,3,4), debug());
         assertTrue(isAnchor(2));
     }
 
@@ -1038,7 +1040,7 @@ public class ListViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5));
-        assertTrue(debug(), isNotSelected(6,7,8,9));
+        assertTrue(isNotSelected(6,7,8,9), debug());
     }
 
     @Test public void test_rt14451_2() {
@@ -1050,7 +1052,7 @@ public class ListViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5));
-        assertTrue(debug(), isNotSelected(6,7,8,9));
+        assertTrue(isNotSelected(6,7,8,9), debug());
 
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
         assertTrue(isNotSelected(0,1,2,3,4));
@@ -1066,13 +1068,13 @@ public class ListViewKeyInputTest {
     @Test public void test_rt26835_2() {
         sm.clearAndSelect(5);
         keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey());
-        assertTrue(debug(), fm.isFocused(listView.getItems().size() - 1));
+        assertTrue(fm.isFocused(listView.getItems().size() - 1), debug());
     }
 
     @Test public void test_rt27175() {
         sm.clearAndSelect(5);
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        assertTrue(debug(), fm.isFocused(0));
+        assertTrue(fm.isFocused(0), debug());
         assertTrue(isSelected(0,1,2,3,4,5));
     }
 
@@ -1310,7 +1312,7 @@ public class ListViewKeyInputTest {
         assertNotSame(newSelectionOwner, nextSelectionOwner);
     }
 
-    @Ignore("Fix not yet implemented")
+    @Disabled("Fix not yet implemented")
     @Test public void test_rt20641_pageUp() {
         final int items = 20;
         listView.getItems().clear();
@@ -1344,7 +1346,7 @@ public class ListViewKeyInputTest {
         assertTrue(selectedIndex0 < selectedIndex2);
     }
 
-    @Ignore("Fix not yet implemented")
+    @Disabled("Fix not yet implemented")
     @Test public void test_rt20641_pageDown() {
         final int items = 100;
         listView.getItems().clear();
@@ -1571,7 +1573,7 @@ public class ListViewKeyInputTest {
         assertTrue(isNotSelected(0,1));
         assertTrue(isSelected(2,3,4));
         assertEquals(3, sm.getSelectedItems().size());
-        assertTrue("Focus index incorrectly at: " + fm.getFocusedIndex(), fm.isFocused(4));
+        assertTrue(fm.isFocused(4), "Focus index incorrectly at: " + fm.getFocusedIndex());
     }
 
     @Test public void test_rt33301_multipleSelection_up() {
@@ -1832,7 +1834,7 @@ public class ListViewKeyInputTest {
         sl.dispose();
     }
 
-    @Ignore("JDK-8289909") // there is no guarantee that there will be 8 selected items (can be 7 as well)
+    @Disabled("JDK-8289909") // there is no guarantee that there will be 8 selected items (can be 7 as well)
     @Test public void test_rt34407_up_up_down() {
         final int items = 100;
         listView.getItems().clear();
@@ -2216,7 +2218,7 @@ public class ListViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertEquals(expectedSize, indices.size());
-        assertTrue(debug(),sm.isSelected(0));
+        assertTrue(sm.isSelected(0), debug());
 
         if (resetSelection) {
             sm.clearAndSelect(0);

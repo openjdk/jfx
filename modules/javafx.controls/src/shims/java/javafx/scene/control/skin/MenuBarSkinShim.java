@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ public class MenuBarSkinShim {
 
     // can only access the getNodeForMenu method in MenuBarSkin from this package.
     public static MenuButton getNodeForMenu(MenuBarSkin skin, int i) {
-        return skin.getNodeForMenu(i);
+        return skin.menuBarButtonAt(i);
     }
 
     public static Skin getPopupSkin(MenuButton mb) {

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,16 +67,16 @@ public:
     using RefCounted<WebXRSession>::ref;
     using RefCounted<WebXRSession>::deref;
 
-    using TrackingAndRenderingClient::weakPtrFactory;
-    using TrackingAndRenderingClient::WeakValueType;
-    using TrackingAndRenderingClient::WeakPtrImplType;
+    using PlatformXR::TrackingAndRenderingClient::weakPtrFactory;
+    using PlatformXR::TrackingAndRenderingClient::WeakValueType;
+    using PlatformXR::TrackingAndRenderingClient::WeakPtrImplType;
 
     XREnvironmentBlendMode environmentBlendMode() const;
     XRInteractionMode interactionMode() const;
     XRVisibilityState visibilityState() const;
     const WebXRRenderState& renderState() const;
     const WebXRInputSourceArray& inputSources() const;
-    PlatformXR::Device* device() const { return m_device.get(); }
+    RefPtr<PlatformXR::Device> device() const { return m_device.get(); }
 
     ExceptionOr<void> updateRenderState(const XRRenderStateInit&);
     void requestReferenceSpace(XRReferenceSpaceType, RequestReferenceSpacePromise&&);
@@ -97,7 +98,7 @@ public:
     XRSessionMode mode() const { return m_mode; }
 
     const Vector<PlatformXR::Device::ViewData>& views() const { return m_views; }
-    const PlatformXR::Device::FrameData& frameData() const { return m_frameData; }
+    const PlatformXR::FrameData& frameData() const { return m_frameData; }
     const WebXRViewerSpace& viewerReferenceSpace() const { return m_viewerReferenceSpace; }
     bool posesCanBeReported(const Document&) const;
 
@@ -118,7 +119,7 @@ private:
     void stop() override;
 
     // PlatformXR::TrackingAndRenderingClient
-    void sessionDidInitializeInputSources(Vector<PlatformXR::Device::FrameData::InputSource>&&) final;
+    void sessionDidInitializeInputSources(Vector<PlatformXR::FrameData::InputSource>&&) final;
     void sessionDidEnd() final;
     void updateSessionVisibilityState(PlatformXR::VisibilityState) final;
 
@@ -130,7 +131,7 @@ private:
 
     bool frameShouldBeRendered() const;
     void requestFrameIfNeeded();
-    void onFrame(PlatformXR::Device::FrameData&&);
+    void onFrame(PlatformXR::FrameData&&);
     void applyPendingRenderState();
 
     XREnvironmentBlendMode m_environmentBlendMode { XREnvironmentBlendMode::Opaque };
@@ -142,7 +143,7 @@ private:
 
     WebXRSystem& m_xrSystem;
     XRSessionMode m_mode;
-    WeakPtr<PlatformXR::Device> m_device;
+    ThreadSafeWeakPtr<PlatformXR::Device> m_device;
     FeatureList m_requestedFeatures;
     RefPtr<WebXRRenderState> m_activeRenderState;
     RefPtr<WebXRRenderState> m_pendingRenderState;
@@ -154,7 +155,7 @@ private:
     bool m_isDeviceFrameRequestPending { false };
 
     Vector<PlatformXR::Device::ViewData> m_views;
-    PlatformXR::Device::FrameData m_frameData;
+    PlatformXR::FrameData m_frameData;
 
     double m_minimumInlineFOV { 0.0 };
     double m_maximumInlineFOV { piFloat };

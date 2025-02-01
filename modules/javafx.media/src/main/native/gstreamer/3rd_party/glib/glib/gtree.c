@@ -36,38 +36,6 @@
 #include "gtestutils.h"
 #include "gslice.h"
 
-/**
- * SECTION:trees-binary
- * @title: Balanced Binary Trees
- * @short_description: a sorted collection of key/value pairs optimized
- *                     for searching and traversing in order
- *
- * The #GTree structure and its associated functions provide a sorted
- * collection of key/value pairs optimized for searching and traversing
- * in order. This means that most of the operations  (access, search,
- * insertion, deletion, ...) on #GTree are O(log(n)) in average and O(n)
- * in worst case for time complexity. But, note that maintaining a
- * balanced sorted #GTree of n elements is done in time O(n log(n)).
- *
- * To create a new #GTree use g_tree_new().
- *
- * To insert a key/value pair into a #GTree use g_tree_insert()
- * (O(n log(n))).
- *
- * To remove a key/value pair use g_tree_remove() (O(n log(n))).
- *
- * To look up the value corresponding to a given key, use
- * g_tree_lookup() and g_tree_lookup_extended().
- *
- * To find out the number of nodes in a #GTree, use g_tree_nnodes(). To
- * get the height of a #GTree, use g_tree_height().
- *
- * To traverse a #GTree, calling a function for each node visited in
- * the traversal, use g_tree_foreach().
- *
- * To destroy a #GTree, use g_tree_destroy().
- **/
-
 #define MAX_GTREE_HEIGHT 40
 /* G_MAXUINT nodes will be covered by tree height of log2(G_MAXUINT) + 2. */
 G_STATIC_ASSERT ((G_GUINT64_CONSTANT (1) << (MAX_GTREE_HEIGHT - 2)) >= G_MAXUINT);
@@ -157,7 +125,7 @@ g_tree_node_new (gpointer key,
 }
 
 /**
- * g_tree_new:
+ * g_tree_new: (constructor)
  * @key_compare_func: the function used to order the nodes in the #GTree.
  *   It should return values similar to the standard strcmp() function -
  *   0 if the two arguments are equal, a negative value if the first argument
@@ -1160,7 +1128,7 @@ g_tree_lookup_extended (GTree         *tree,
 /**
  * g_tree_foreach:
  * @tree: a #GTree
- * @func: the function to call for each node visited.
+ * @func: (scope call): the function to call for each node visited.
  *     If this function returns %TRUE, the traversal is stopped.
  * @user_data: user data to pass to the function
  *
@@ -1199,7 +1167,7 @@ g_tree_foreach (GTree         *tree,
 /**
  * g_tree_foreach_node:
  * @tree: a #GTree
- * @func: the function to call for each node visited.
+ * @func: (scope call): the function to call for each node visited.
  *     If this function returns %TRUE, the traversal is stopped.
  * @user_data: user data to pass to the function
  *
@@ -1240,7 +1208,7 @@ g_tree_foreach_node (GTree             *tree,
 /**
  * g_tree_traverse:
  * @tree: a #GTree
- * @traverse_func: the function to call for each node visited. If this
+ * @traverse_func: (scope call): the function to call for each node visited. If this
  *   function returns %TRUE, the traversal is stopped.
  * @traverse_type: the order in which nodes are visited, one of %G_IN_ORDER,
  *   %G_PRE_ORDER and %G_POST_ORDER
@@ -1300,7 +1268,7 @@ g_tree_traverse (GTree         *tree,
 /**
  * g_tree_search_node:
  * @tree: a #GTree
- * @search_func: a function used to search the #GTree
+ * @search_func: (scope call): a function used to search the #GTree
  * @user_data: the data passed as the second argument to @search_func
  *
  * Searches a #GTree using @search_func.
@@ -1334,7 +1302,7 @@ g_tree_search_node (GTree         *tree,
 /**
  * g_tree_search:
  * @tree: a #GTree
- * @search_func: a function used to search the #GTree
+ * @search_func: (scope call): a function used to search the #GTree
  * @user_data: the data passed as the second argument to @search_func
  *
  * Searches a #GTree using @search_func.

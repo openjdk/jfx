@@ -58,7 +58,8 @@ StyleCrossfadeImage::~StyleCrossfadeImage()
 
 bool StyleCrossfadeImage::operator==(const StyleImage& other) const
 {
-    return is<StyleCrossfadeImage>(other) && equals(downcast<StyleCrossfadeImage>(other));
+    auto* otherCrossfadeImage = dynamicDowncast<StyleCrossfadeImage>(other);
+    return otherCrossfadeImage && equals(*otherCrossfadeImage);
 }
 
 bool StyleCrossfadeImage::equals(const StyleCrossfadeImage& other) const
@@ -134,7 +135,7 @@ void StyleCrossfadeImage::load(CachedResourceLoader& loader, const ResourceLoade
     m_inputImagesAreReady = true;
 }
 
-RefPtr<Image> StyleCrossfadeImage::image(const RenderElement* renderer, const FloatSize& size) const
+RefPtr<Image> StyleCrossfadeImage::image(const RenderElement* renderer, const FloatSize& size, bool isForFirstLine) const
 {
     if (!renderer)
         return &Image::nullImage();
@@ -145,8 +146,8 @@ RefPtr<Image> StyleCrossfadeImage::image(const RenderElement* renderer, const Fl
     if (!m_from || !m_to)
         return &Image::nullImage();
 
-    auto fromImage = m_from->image(renderer, size);
-    auto toImage = m_to->image(renderer, size);
+    auto fromImage = m_from->image(renderer, size, isForFirstLine);
+    auto toImage = m_to->image(renderer, size, isForFirstLine);
 
     if (!fromImage || !toImage)
         return &Image::nullImage();

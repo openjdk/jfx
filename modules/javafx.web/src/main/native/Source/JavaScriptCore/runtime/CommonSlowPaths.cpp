@@ -139,10 +139,10 @@ namespace JSC {
     RETURN_WITH_PROFILING(value__, PROFILE_VALUE(returnValue__))
 
 #define PROFILE_VALUE(value__) \
-    PROFILE_VALUE_IN(value__, m_profile)
+    PROFILE_VALUE_IN(value__, m_valueProfile)
 
 #define PROFILE_VALUE_IN(value, profileName) do { \
-        bytecode.metadata(codeBlock).profileName.m_buckets[0] = JSValue::encode(value); \
+        codeBlock->valueProfileForOffset(bytecode.profileName).m_buckets[0] = JSValue::encode(value); \
     } while (false)
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_direct_arguments)
@@ -177,7 +177,7 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_this)
     JSObject* result;
     JSObject* constructorAsObject = asObject(GET(bytecode.m_callee).jsValue());
     JSFunction* constructor = jsDynamicCast<JSFunction*>(constructorAsObject);
-    if (constructor && constructor->canUseAllocationProfile()) {
+    if (constructor && constructor->canUseAllocationProfiles()) {
         WriteBarrier<JSCell>& cachedCallee = bytecode.metadata(codeBlock).m_cachedCallee;
         if (!cachedCallee)
             cachedCallee.set(vm, codeBlock, constructor);
@@ -185,7 +185,7 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_this)
             cachedCallee.setWithoutWriteBarrier(JSCell::seenMultipleCalleeObjects());
 
         size_t inlineCapacity = bytecode.m_inlineCapacity;
-        ObjectAllocationProfileWithPrototype* allocationProfile = constructor->ensureRareDataAndAllocationProfile(globalObject, inlineCapacity)->objectAllocationProfile();
+        ObjectAllocationProfileWithPrototype* allocationProfile = constructor->ensureRareDataAndObjectAllocationProfile(globalObject, inlineCapacity)->objectAllocationProfile();
         CHECK_EXCEPTION();
         Structure* structure = allocationProfile->structure();
         result = constructEmptyObject(vm, structure);
@@ -229,7 +229,7 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_promise)
     }
 
     JSFunction* constructor = jsDynamicCast<JSFunction*>(constructorAsObject);
-    if (constructor && constructor->canUseAllocationProfile()) {
+    if (constructor && constructor->canUseAllocationProfiles()) {
         WriteBarrier<JSCell>& cachedCallee = bytecode.metadata(codeBlock).m_cachedCallee;
         if (!cachedCallee)
             cachedCallee.set(vm, codeBlock, constructor);
@@ -261,7 +261,7 @@ static JSClass* createInternalFieldObject(JSGlobalObject* globalObject, VM& vm, 
     JSClass* result = JSClass::create(vm, structure);
 
     JSFunction* constructor = jsDynamicCast<JSFunction*>(constructorAsObject);
-    if (constructor && constructor->canUseAllocationProfile()) {
+    if (constructor && constructor->canUseAllocationProfiles()) {
         WriteBarrier<JSCell>& cachedCallee = bytecode.metadata(codeBlock).m_cachedCallee;
         if (!cachedCallee)
             cachedCallee.set(vm, codeBlock, constructor);
@@ -810,7 +810,7 @@ ALWAYS_INLINE UGPRPair iteratorOpenTryFastImpl(VM& vm, JSGlobalObject* globalObj
     auto bytecode = pc->asKnownWidth<OpIteratorOpen, width>();
     auto& metadata = bytecode.metadata(codeBlock);
     JSValue iterable = GET_C(bytecode.m_iterable).jsValue();
-    PROFILE_VALUE_IN(iterable, m_iterableProfile);
+    PROFILE_VALUE_IN(iterable, m_iterableValueProfile);
     JSValue symbolIterator = GET_C(bytecode.m_symbolIterator).jsValue();
     auto& iterator = GET(bytecode.m_iterator);
 
@@ -820,7 +820,7 @@ ALWAYS_INLINE UGPRPair iteratorOpenTryFastImpl(VM& vm, JSGlobalObject* globalObj
         GET(bytecode.m_next) = JSValue();
         auto* iteratedObject = jsCast<JSObject*>(iterable);
         iterator = JSArrayIterator::create(vm, globalObject->arrayIteratorStructure(), iteratedObject, IterationKind::Values);
-        PROFILE_VALUE_IN(iterator.jsValue(), m_iteratorProfile);
+        PROFILE_VALUE_IN(iterator.jsValue(), m_iteratorValueProfile);
         return encodeResult(pc, reinterpret_cast<void*>(static_cast<uintptr_t>(IterationMode::FastArray)));
     }
 
@@ -877,7 +877,7 @@ ALWAYS_INLINE UGPRPair iteratorNextTryFastImpl(VM& vm, JSGlobalObject* globalObj
                 ASSERT(index == static_cast<unsigned>(index));
                 value = array->getIndex(globalObject, static_cast<unsigned>(index));
                 CHECK_EXCEPTION();
-                PROFILE_VALUE_IN(value, m_valueProfile);
+                PROFILE_VALUE_IN(value, m_valueValueProfile);
             } else {
                 // No need for a barrier here because we know this is a primitive.
                 indexSlot.setWithoutWriteBarrier(jsNumber(-1));
@@ -927,6 +927,8 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_enter)
     BEGIN();
     Heap::heap(codeBlock)->writeBarrier(codeBlock);
     GET(codeBlock->scopeRegister()) = jsCast<JSCallee*>(callFrame->jsCallee())->scope();
+    if (UNLIKELY(codeBlock->couldBeTainted()))
+        vm.setMightBeExecutingTaintedCode();
     END();
 }
 
@@ -1373,7 +1375,7 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_new_array_with_species)
 
     if (LIKELY(speciesResult.first == SpeciesConstructResult::FastPath)) {
         if (UNLIKELY(length > std::numeric_limits<unsigned>::max()))
-            THROW(createRangeError(globalObject, "Array size is not a small enough positive integer."_s));
+            THROW(createRangeError(globalObject, ArrayInvalidLengthError));
 
         JSArray* result = constructEmptyArray(globalObject, &arrayAllocationProfile, static_cast<unsigned>(length));
         CHECK_EXCEPTION();

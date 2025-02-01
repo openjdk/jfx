@@ -33,8 +33,6 @@ class RenderSVGTransformableContainer final : public RenderSVGContainer {
 public:
     RenderSVGTransformableContainer(SVGGraphicsElement&, RenderStyle&&);
 
-    bool isSVGTransformableContainer() const final { return true; }
-
 private:
     ASCIILiteral renderName() const final { return "RenderSVGTransformableContainer"_s; }
 
@@ -51,6 +49,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTransformableContainer, isSVGTransformableContainer())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTransformableContainer, isRenderSVGTransformableContainer())
 
 #endif // ENABLE(LAYER_BASED_SVG_ENGINE)

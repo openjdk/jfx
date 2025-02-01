@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -176,7 +176,7 @@ static jfieldID  jPixelsScaleYField = 0;
     }
 }
 
-// RT-37304: do not use menuNeedsUpdate here, even though Cocoa prohibits
+// JDK-8096139: do not use menuNeedsUpdate here, even though Cocoa prohibits
 // changing the menu structure during menuWillOpen...
 - (void)menuWillOpen: (NSMenu *)menu
 {

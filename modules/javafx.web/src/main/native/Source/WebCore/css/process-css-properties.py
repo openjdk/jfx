@@ -333,6 +333,9 @@ class Value:
                 print(f"SKIPPED value {json_value['value']} in {key_path} due to '{json_value['status']}' status designation.")
             return None
 
+        if json_value.get("status", None) != "internal" and json_value["value"].startswith("-internal-"):
+            raise Exception(f'Value "{json_value["value"]}" starts with "-internal-" but does not have "status": "internal" set.')
+
         return Value(**json_value)
 
     @property
@@ -2411,6 +2414,18 @@ class GenerationContext:
         to.write(f"}}")
         to.newline()
 
+    def generate_property_id_bit_set(self, *, to, name, iterable, mapping_to_property=lambda p: p):
+        to.write(f"const WTF::BitSet<numCSSProperties> {name} = ([]() -> WTF::BitSet<numCSSProperties> {{")
+
+        with to.indent():
+            to.write(f"WTF::BitSet<numCSSProperties> result;")
+
+            for item in iterable:
+                to.write(f"result.set({mapping_to_property(item).id});")
+
+            to.write(f"return result;")
+        to.write(f"}})();")
+        to.newline()
 
 # Generates `CSSPropertyNames.h` and `CSSPropertyNames.cpp`.
 class GenerateCSSPropertyNames:
@@ -2839,10 +2854,23 @@ class GenerateCSSPropertyNames:
                 default="return { };"
             )
 
-            self.generation_context.generate_property_id_switch_function_bool(
+            self.generation_context.generate_property_id_bit_set(
                 to=writer,
-                signature="bool CSSProperty::isColorProperty(CSSPropertyID id)",
+                name="CSSProperty::colorProperties",
                 iterable=(p for p in self.properties_and_descriptors.style_properties.all if p.codegen_properties.color_property)
+            )
+
+            physical_properties = []
+            for _, property_group in sorted(self.generation_context.properties_and_descriptors.style_properties.logical_property_groups.items(), key=lambda x: x[0]):
+                kind = property_group["kind"]
+                destinations = LogicalPropertyGroup.logical_property_group_resolvers["physical"][kind]
+                for property in [property_group["physical"][a_destination] for a_destination in destinations]:
+                    physical_properties.append(property)
+
+            self.generation_context.generate_property_id_bit_set(
+                to=writer,
+                name="CSSProperty::physicalProperties",
+                iterable=sorted(list(set(physical_properties)), key=lambda x: x.id)
             )
 
             self.generation_context.generate_property_id_switch_function(
@@ -2987,7 +3015,7 @@ class GenerateCSSPropertyNames:
         to.newline()
 
     def _generate_css_property_names_h_property_settings(self, *, to):
-        settings_variable_declarations = (f"bool {flag} {{ false }};" for flag in self.properties_and_descriptors.settings_flags)
+        settings_variable_declarations = (f"bool {flag} : 1 {{ false }};" for flag in self.properties_and_descriptors.settings_flags)
 
         to.write(f"struct CSSPropertySettings {{")
         with to.indent():
@@ -3333,10 +3361,10 @@ class GenerateStyleBuilderGenerated:
     def _generate_animation_property_value_setter(self, to, property):
         to.write(f"auto& list = builderState.style().{property.method_name_for_ensure_animations_or_transitions}();")
         to.write(f"size_t childIndex = 0;")
-        to.write(f"if (is<CSSValueList>(value)) {{")
+        to.write(f"if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {{")
         to.write(f"    // Walk each value and put it into an animation, creating new animations as needed.")
-        to.write(f"    for (auto& currentValue : downcast<CSSValueList>(value)) {{")
-        to.write(f"        if (childIndex <= list.size())")
+        to.write(f"    for (auto& currentValue : *valueList) {{")
+        to.write(f"        if (childIndex >= list.size())")
         to.write(f"            list.append(Animation::create());")
         to.write(f"        builderState.styleMap().mapAnimation{property.name_for_methods}(list.animation(childIndex), currentValue);")
         to.write(f"        ++childIndex;")
@@ -3403,9 +3431,9 @@ class GenerateStyleBuilderGenerated:
     def _generate_fill_layer_property_value_setter(self, to, property):
         to.write(f"auto* child = &builderState.style().{property.method_name_for_ensure_layers}();")
         to.write(f"FillLayer* previousChild = nullptr;")
-        to.write(f"if (is<CSSValueList>(value)) {{")
+        to.write(f"if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {{")
         to.write(f"    // Walk each value and put it into a layer, creating new layers as needed.")
-        to.write(f"    for (auto& item : downcast<CSSValueList>(value)) {{")
+        to.write(f"    for (auto& item : *valueList) {{")
         to.write(f"        if (!child) {{")
         to.write(f"            previousChild->setNext(FillLayer::create({property.enum_name_for_layers_type}));")
         to.write(f"            child = previousChild->next();")
@@ -4489,7 +4517,7 @@ class TermGeneratorNonFastPathKeywordTerm(TermGenerator):
                 else:
                     conditions.append(f"!{context_string}.{keyword_term.settings_flag}")
             if keyword_term.status == "internal":
-                conditions.append(f"!isValueAllowedInMode(keyword, {context_string}.mode)")
+                conditions.append(f"!isUASheetBehavior({context_string}.mode)")
 
             if keyword_term.aliased_to:
                 return_value = keyword_term.aliased_to.id
@@ -4598,7 +4626,7 @@ class KeywordFastPathGenerator:
                     else:
                         return_expression.append(f"context.{keyword_term.settings_flag}")
                 if keyword_term.status == "internal":
-                    return_expression.append("isValueAllowedInMode(keyword, context.mode)")
+                    return_expression.append("isUASheetBehavior(context.mode)")
 
                 keyword_term_and_return_expressions.append(KeywordTermReturnExpression(keyword_term, return_expression))
 

@@ -268,11 +268,13 @@ interface UIScriptController {
     readonly attribute boolean isShowingMenu;
     readonly attribute object menuRect;
     readonly attribute object contextMenuRect;
+    readonly attribute object contextMenuPreviewRect;
     object rectForMenuAction(DOMString action);
     undefined chooseMenuAction(DOMString action, object callback);
     undefined dismissMenu();
 
     readonly attribute boolean isShowingPopover;
+    readonly attribute boolean isShowingFormValidationBubble;
     attribute object willPresentPopoverCallback;
     attribute object didDismissPopoverCallback;
 
@@ -289,12 +291,17 @@ interface UIScriptController {
 
     undefined setScrollViewKeyboardAvoidanceEnabled(boolean enabled);
 
+    undefined beginInteractiveObscuredInsetsChange();
+    undefined endInteractiveObscuredInsetsChange();
+    undefined setObscuredInsets(double top, double right, double bottom, double left);
+
     undefined becomeFirstResponder();
     undefined resignFirstResponder();
     readonly attribute boolean isPresentingModally;
 
     undefined copyText(DOMString text);
     undefined paste();
+    readonly attribute long long pasteboardChangeCount;
 
     readonly attribute double contentOffsetX;
     readonly attribute double contentOffsetY;
@@ -315,6 +322,7 @@ interface UIScriptController {
     readonly attribute double zoomScale;
     readonly attribute double minimumZoomScale;
     readonly attribute double maximumZoomScale;
+    readonly attribute boolean isZoomingOrScrolling;
 
     // Overides the "in stable state" behavior of WKWebView (only applies to iOS)
     // When false, content rect updates to the web process have inStableState=false, as if a scroll or zoom were in progress.
@@ -324,6 +332,7 @@ interface UIScriptController {
     readonly attribute object contentVisibleRect;
     readonly attribute object selectionStartGrabberViewRect;
     readonly attribute object selectionEndGrabberViewRect;
+    readonly attribute object selectionEndGrabberViewShapePathDescription;
     readonly attribute object selectionCaretViewRect;
     readonly attribute object selectionCaretViewRectInGlobalCoordinates;
     readonly attribute object selectionRangeViewRects;
@@ -361,11 +370,15 @@ interface UIScriptController {
     undefined removeViewFromWindow(object callback);
     undefined addViewToWindow(object callback);
 
+    undefined resizeWindowTo(unsigned long width, unsigned long height);
+
     undefined installTapGestureOnWindow(object callback);
 
     undefined overridePreference(DOMString preference, DOMString value);
 
     undefined setSafeAreaInsets(double top, double right, double bottom, double left);
+
+    undefined setAppAccentColor(unsigned short red, unsigned short green, unsigned short blue);
 
     undefined firstResponderSuppressionForWebView(boolean shouldSuppress);
     undefined makeWindowContentViewFirstResponder();
@@ -375,6 +388,9 @@ interface UIScriptController {
     undefined setHardwareKeyboardAttached(boolean attached);
 
     undefined setWebViewEditable(boolean editable);
+
+    // Only affects macOS.
+    undefined setWebViewAllowsMagnification(boolean allowsMagnification);
 
     object attachmentInfo(DOMString attachmentIdentifier);
     undefined insertAttachmentForFilePath(DOMString filePath, DOMString contentType, object callback);
@@ -390,4 +406,8 @@ interface UIScriptController {
     readonly attribute unsigned long countOfUpdatesWithLayerChanges;
 
     readonly attribute unsigned long long currentImageAnalysisRequestID;
+    undefined installFakeMachineReadableCodeResultsForImageAnalysis();
+
+    undefined setInlinePrediction(DOMString completion);
+    undefined acceptInlinePrediction();
 };

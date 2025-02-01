@@ -76,12 +76,13 @@ bool DeviceMotionController::hasLastData()
 
 RefPtr<Event> DeviceMotionController::getLastEvent()
 {
-    return DeviceMotionEvent::create(eventNames().devicemotionEvent, deviceMotionClient().lastMotion());
+    RefPtr lastMotion = deviceMotionClient().lastMotion();
+    return DeviceMotionEvent::create(eventNames().devicemotionEvent, lastMotion.get());
 }
 
-const char* DeviceMotionController::supplementName()
+ASCIILiteral DeviceMotionController::supplementName()
 {
-    return "DeviceMotionController";
+    return "DeviceMotionController"_s;
 }
 
 DeviceMotionController* DeviceMotionController::from(Page* page)

@@ -34,6 +34,7 @@
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
 #include "CommonAtomStrings.h"
+#include "DocumentInlines.h"
 #include "HTMLNames.h"
 #include "MediaQueryEvaluator.h"
 #include "RuleSetBuilder.h"
@@ -75,12 +76,24 @@ static unsigned rulesCountForName(const RuleSet::AtomRuleMap& map, const AtomStr
 
 static bool isHostSelectorMatchingInShadowTree(const CSSSelector& startSelector)
 {
+    auto isHostSelectorMatchingInShadowTreeInSelectorList = [](const CSSSelectorList* selectorList) {
+        if (!selectorList || selectorList->isEmpty())
+            return false;
+        for (auto* selector = selectorList->first(); selector; selector = CSSSelectorList::next(selector)) {
+            if (isHostSelectorMatchingInShadowTree(*selector))
+                return true;
+        }
+        return false;
+    };
+
     bool hasOnlyOneCompound = true;
     bool hasHostInLastCompound = false;
     for (auto* selector = &startSelector; selector; selector = selector->tagHistory()) {
-        if (selector->match() == CSSSelector::Match::PseudoClass && selector->pseudoClassType() == CSSSelector::PseudoClassType::Host)
+        if (selector->match() == CSSSelector::Match::PseudoClass && selector->pseudoClass() == CSSSelector::PseudoClass::Host)
             hasHostInLastCompound = true;
-        if (selector->tagHistory() && selector->relation() != CSSSelector::RelationType::Subselector) {
+        if (isHostSelectorMatchingInShadowTreeInSelectorList(selector->selectorList()))
+            return true;
+        if (selector->tagHistory() && selector->relation() != CSSSelector::Relation::Subselector) {
             hasOnlyOneCompound = false;
             hasHostInLastCompound = false;
         }
@@ -100,31 +113,30 @@ static bool shouldHaveBucketForAttributeName(const CSSSelector& attributeSelecto
 
 void RuleSet::addRule(const StyleRule& rule, unsigned selectorIndex, unsigned selectorListIndex)
 {
-    RuleData ruleData(rule, selectorIndex, selectorListIndex, m_ruleCount);
-    addRule(WTFMove(ruleData), 0, 0);
+    RuleData ruleData(rule, selectorIndex, selectorListIndex, m_ruleCount, IsStartingStyle::No);
+    addRule(WTFMove(ruleData), 0, 0, 0);
 }
 
-void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerIdentifier, ContainerQueryIdentifier containerQueryIdentifier)
+void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerIdentifier, ContainerQueryIdentifier containerQueryIdentifier, ScopeRuleIdentifier scopeRuleIdentifier)
 {
     ASSERT(ruleData.position() == m_ruleCount);
 
     ++m_ruleCount;
 
-    if (cascadeLayerIdentifier) {
-        auto oldSize = m_cascadeLayerIdentifierForRulePosition.size();
-        m_cascadeLayerIdentifierForRulePosition.grow(m_ruleCount);
-        std::fill(m_cascadeLayerIdentifierForRulePosition.begin() + oldSize, m_cascadeLayerIdentifierForRulePosition.end(), 0);
-        m_cascadeLayerIdentifierForRulePosition.last() = cascadeLayerIdentifier;
+    auto storeIdentifier = [&](auto identifier, auto& container) {
+        if (identifier) {
+            auto oldSize = container.size();
+            container.grow(m_ruleCount);
+            std::fill(container.begin() + oldSize, container.end(), 0);
+            container.last() = identifier;
     }
+    };
+    storeIdentifier(cascadeLayerIdentifier, m_cascadeLayerIdentifierForRulePosition);
+    storeIdentifier(containerQueryIdentifier, m_containerQueryIdentifierForRulePosition);
+    storeIdentifier(scopeRuleIdentifier, m_scopeRuleIdentifierForRulePosition);
 
-    if (containerQueryIdentifier) {
-        auto oldSize = m_containerQueryIdentifierForRulePosition.size();
-        m_containerQueryIdentifierForRulePosition.grow(m_ruleCount);
-        std::fill(m_containerQueryIdentifierForRulePosition.begin() + oldSize, m_containerQueryIdentifierForRulePosition.end(), 0);
-        m_containerQueryIdentifierForRulePosition.last() = containerQueryIdentifier;
-    }
-
-    m_features.collectFeatures(ruleData);
+    const auto& scopeRules = scopeRulesFor(ruleData);
+    m_features.collectFeatures(ruleData, scopeRules);
 
     unsigned classBucketSize = 0;
     const CSSSelector* idSelector = nullptr;
@@ -175,19 +187,19 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
                 tagSelector = selector;
             break;
         case CSSSelector::Match::PseudoElement:
-            switch (selector->pseudoElementType()) {
-            case CSSSelector::PseudoElementWebKitCustom:
-            case CSSSelector::PseudoElementWebKitCustomLegacyPrefixed:
+            switch (selector->pseudoElement()) {
+            case CSSSelector::PseudoElement::UserAgentPart:
+            case CSSSelector::PseudoElement::UserAgentPartLegacyAlias:
                 customPseudoElementSelector = selector;
                 break;
-            case CSSSelector::PseudoElementSlotted:
+            case CSSSelector::PseudoElement::Slotted:
                 slottedPseudoElementSelector = selector;
                 break;
-            case CSSSelector::PseudoElementPart:
+            case CSSSelector::PseudoElement::Part:
                 partPseudoElementSelector = selector;
                 break;
 #if ENABLE(VIDEO)
-            case CSSSelector::PseudoElementCue:
+            case CSSSelector::PseudoElement::Cue:
                 cuePseudoElementSelector = selector;
                 break;
 #endif
@@ -196,18 +208,17 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
             }
             break;
         case CSSSelector::Match::PseudoClass:
-            switch (selector->pseudoClassType()) {
-            case CSSSelector::PseudoClassType::Link:
-            case CSSSelector::PseudoClassType::Visited:
-            case CSSSelector::PseudoClassType::AnyLink:
-            case CSSSelector::PseudoClassType::AnyLinkDeprecated:
+            switch (selector->pseudoClass()) {
+            case CSSSelector::PseudoClass::Link:
+            case CSSSelector::PseudoClass::Visited:
+            case CSSSelector::PseudoClass::AnyLink:
                 linkSelector = selector;
                 break;
-            case CSSSelector::PseudoClassType::Focus:
-            case CSSSelector::PseudoClassType::FocusVisible:
+            case CSSSelector::PseudoClass::Focus:
+            case CSSSelector::PseudoClass::FocusVisible:
                 focusSelector = selector;
                 break;
-            case CSSSelector::PseudoClassType::Host:
+            case CSSSelector::PseudoClass::Host:
                 hostPseudoClassSelector = selector;
                 break;
             default:
@@ -215,11 +226,14 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
             }
             break;
         case CSSSelector::Match::Unknown:
+        case CSSSelector::Match::ForgivingUnknown:
+        case CSSSelector::Match::ForgivingUnknownNestContaining:
+        case CSSSelector::Match::HasScope:
         case CSSSelector::Match::NestingParent:
         case CSSSelector::Match::PagePseudoClass:
             break;
         }
-        if (selector->relation() != CSSSelector::RelationType::Subselector)
+        if (selector->relation() != CSSSelector::Relation::Subselector)
             break;
         selector = selector->tagHistory();
     } while (selector);
@@ -253,13 +267,13 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
         ruleData.disableSelectorFiltering();
 
         auto* nextSelector = customPseudoElementSelector->tagHistory();
-        if (nextSelector && nextSelector->match() == CSSSelector::Match::PseudoElement && nextSelector->pseudoElementType() == CSSSelector::PseudoElementPart) {
+        if (nextSelector && nextSelector->match() == CSSSelector::Match::PseudoElement && nextSelector->pseudoElement() == CSSSelector::PseudoElement::Part) {
             // Handle selectors like ::part(foo)::placeholder with the part codepath.
             m_partPseudoElementRules.append(ruleData);
             return;
         }
 
-        addToRuleSet(customPseudoElementSelector->value(), m_shadowPseudoElementRules, ruleData);
+        addToRuleSet(customPseudoElementSelector->value(), m_userAgentPartRules, ruleData);
         return;
     }
 
@@ -328,7 +342,7 @@ void RuleSet::traverseRuleDatas(Function&& function)
     traverseMap(m_attributeLowercaseLocalNameRules);
     traverseMap(m_tagLocalNameRules);
     traverseMap(m_tagLowercaseLocalNameRules);
-    traverseMap(m_shadowPseudoElementRules);
+    traverseMap(m_userAgentPartRules);
     traverseVector(m_linkPseudoClassRules);
 #if ENABLE(VIDEO)
     traverseVector(m_cuePseudoRules);
@@ -399,10 +413,8 @@ RuleSet::CollectedMediaQueryChanges RuleSet::evaluateDynamicMediaQueryRules(cons
         return collectedChanges;
 
     traverseRuleDatas([&](RuleData& ruleData) {
-        auto it = affectedRulePositionsAndResults.find(ruleData.position());
-        if (it == affectedRulePositionsAndResults.end())
-            return;
-        ruleData.setEnabled(it->value);
+        if (auto result = affectedRulePositionsAndResults.getOptional(ruleData.position()))
+            ruleData.setEnabled(*result);
     });
 
     return collectedChanges;
@@ -422,7 +434,7 @@ void RuleSet::shrinkToFit()
     shrinkMapVectorsToFit(m_attributeLowercaseLocalNameRules);
     shrinkMapVectorsToFit(m_tagLocalNameRules);
     shrinkMapVectorsToFit(m_tagLowercaseLocalNameRules);
-    shrinkMapVectorsToFit(m_shadowPseudoElementRules);
+    shrinkMapVectorsToFit(m_userAgentPartRules);
 
     m_linkPseudoClassRules.shrinkToFit();
 #if ENABLE(VIDEO)
@@ -447,6 +459,27 @@ void RuleSet::shrinkToFit()
     m_containerQueryIdentifierForRulePosition.shrinkToFit();
     m_resolverMutatingRulesInLayers.shrinkToFit();
 }
+
+Vector<Ref<const StyleRuleScope>> RuleSet::scopeRulesFor(const RuleData& ruleData) const
+{
+    if (m_scopeRuleIdentifierForRulePosition.size() <= ruleData.position())
+        return { };
+
+    Vector<Ref<const StyleRuleScope>> queries;
+
+    auto identifier = m_scopeRuleIdentifierForRulePosition[ruleData.position()];
+    while (identifier) {
+        auto& query = m_scopeRules[identifier - 1];
+        queries.append(query.scopeRule);
+        identifier = query.parent;
+    };
+
+    // Order scopes from outermost to innermost.
+    queries.reverse();
+
+    return queries;
+}
+
 
 } // namespace Style
 } // namespace WebCore

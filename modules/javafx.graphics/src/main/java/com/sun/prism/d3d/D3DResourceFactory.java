@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,6 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
@@ -429,7 +427,8 @@ class D3DResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public Shader createShader(InputStream pixelShaderCode,
+    public Shader createShader(String pixelShaderName,
+                               InputStream pixelShaderCode,
                                Map<String, Integer> samplers,
                                Map<String, Integer> params,
                                int maxTexCoordIndex,
@@ -451,15 +450,11 @@ class D3DResourceFactory extends BaseShaderFactory {
             throw new IllegalArgumentException("Shader name must be non-null");
         }
         try {
-            @SuppressWarnings("removal")
-            InputStream stream = AccessController.doPrivileged(
-                    (PrivilegedAction<InputStream>) () -> D3DResourceFactory.class.
-                           getResourceAsStream("hlsl/" + name + ".obj")
-            );
+            InputStream stream = D3DResourceFactory.class.getResourceAsStream("hlsl/" + name + ".obj");
             Class klass = Class.forName("com.sun.prism.shader." + name + "_Loader");
             Method m = klass.getMethod("loadShader",
-                new Class[] { ShaderFactory.class, InputStream.class });
-            return (Shader)m.invoke(null, new Object[] { this, stream });
+                new Class[] { ShaderFactory.class, String.class, InputStream.class });
+            return (Shader)m.invoke(null, new Object[] { this, name, stream });
         } catch (Throwable e) {
             e.printStackTrace();
             throw new InternalError("Error loading stock shader " + name);

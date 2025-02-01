@@ -27,6 +27,7 @@
 
 #include "FloatConversion.h"
 #include "FloatPoint.h"
+#include "LegacyRenderSVGResourceRadialGradient.h"
 #include "NodeName.h"
 #include "RadialGradientAttributes.h"
 #include "RenderSVGResourceRadialGradient.h"
@@ -98,7 +99,7 @@ void SVGRadialGradientElement::svgAttributeChanged(const QualifiedName& attrName
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
         updateRelativeLengthsInformation();
-        updateSVGRendererForElementChange();
+        invalidateGradientResource();
         return;
     }
 
@@ -107,7 +108,11 @@ void SVGRadialGradientElement::svgAttributeChanged(const QualifiedName& attrName
 
 RenderPtr<RenderElement> SVGRadialGradientElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
     return createRenderer<RenderSVGResourceRadialGradient>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGResourceRadialGradient>(*this, WTFMove(style));
 }
 
 static void setGradientAttributes(SVGGradientElement& element, RadialGradientAttributes& attributes, bool isRadial = true)
@@ -152,7 +157,7 @@ bool SVGRadialGradientElement::collectGradientAttributes(RadialGradientAttribute
     if (!renderer())
         return false;
 
-    HashSet<SVGGradientElement*> processedGradients;
+    HashSet<RefPtr<SVGGradientElement>> processedGradients;
     SVGGradientElement* current = this;
 
     setGradientAttributes(*current, attributes);
@@ -161,8 +166,8 @@ bool SVGRadialGradientElement::collectGradientAttributes(RadialGradientAttribute
     while (true) {
         // Respect xlink:href, take attributes from referenced element
         auto target = SVGURIReference::targetElementFromIRIString(current->href(), treeScopeForSVGReferences());
-        if (is<SVGGradientElement>(target.element)) {
-            current = downcast<SVGGradientElement>(target.element.get());
+        if (auto* gradientElement = dynamicDowncast<SVGGradientElement>(target.element.get())) {
+            current = gradientElement;
 
             // Cycle detection
             if (processedGradients.contains(current))

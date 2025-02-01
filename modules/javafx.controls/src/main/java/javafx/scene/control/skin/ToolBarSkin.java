@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -791,7 +791,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 } else {
                     CustomMenuItem customMenuItem = new CustomMenuItem(node);
 
-                    // RT-36455 (JDK-8096292):
+                    // JDK-8096292 (JDK-8096292):
                     // We can't be totally certain of all nodes, but for the
                     // most common nodes we can check to see whether we should
                     // hide the menu when the node is clicked on. The common

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package test.com.sun.javafx.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
 
@@ -41,10 +41,10 @@ public class TestHelper {
     // account
     // for stroke width
     public static void assertSimilar(Bounds expected, Bounds actual) {
-        assertEquals("minX", expected.getMinX(), actual.getMinX(), 1);
-        assertEquals("minY", expected.getMinY(), actual.getMinY(), 1);
-        assertEquals("maxX", expected.getMaxX(), actual.getMaxX(), 1);
-        assertEquals("maxY", expected.getMaxY(), actual.getMaxY(), 1);
+        assertEquals(expected.getMinX(), actual.getMinX(), 1, "minX");
+        assertEquals(expected.getMinY(), actual.getMinY(), 1, "minY");
+        assertEquals(expected.getMaxX(), actual.getMaxX(), 1, "maxX");
+        assertEquals(expected.getMaxY(), actual.getMaxY(), 1, "maxY");
     }
 
     public static final float EPSILON = 1.0e-4f;

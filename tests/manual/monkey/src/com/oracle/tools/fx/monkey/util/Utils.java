@@ -25,9 +25,18 @@
 package com.oracle.tools.fx.monkey.util;
 
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
+import javafx.application.Platform;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 
 /**
  * Monkey Tester Utilities
@@ -52,5 +61,37 @@ public class Utils {
         HBox b = new HBox(nodes);
         b.setSpacing(2);
         return b;
+    }
+
+    public static boolean eq(Object a, Object b) {
+        if (a == null) {
+            return b == null;
+        }
+        return a.equals(b);
+    }
+
+    public static void showDialog(Node owner, String windowName, String title, Parent content) {
+        Window w = FX.getParentWindow(owner);
+        Stage s = new Stage();
+        s.initModality(Modality.WINDOW_MODAL);
+        s.initOwner(w);
+
+        FX.name(s, windowName);
+        s.setTitle(title);
+        s.setScene(new Scene(content));
+        s.setWidth(900);
+        s.setHeight(500);
+        s.show();
+    }
+
+    public static void showTextDialog(Node owner, String windowName, String title, String text) {
+        TextArea textField = new TextArea(text);
+        textField.setEditable(false);
+        textField.setWrapText(false);
+
+        BorderPane p = new BorderPane();
+        p.setCenter(textField);
+
+        showDialog(owner, windowName, title, p);
     }
 }

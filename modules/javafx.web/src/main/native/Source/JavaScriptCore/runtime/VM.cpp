@@ -40,22 +40,24 @@
 #include "CodeCache.h"
 #include "CommonIdentifiers.h"
 #include "ControlFlowProfiler.h"
-#include "CustomGetterSetter.h"
-#include "DOMAttributeGetterSetter.h"
+#include "CustomGetterSetterInlines.h"
+#include "DOMAttributeGetterSetterInlines.h"
 #include "Debugger.h"
 #include "DeferredWorkTimer.h"
 #include "Disassembler.h"
 #include "DoublePredictionFuzzerAgent.h"
 #include "ErrorInstance.h"
-#include "EvalCodeBlock.h"
+#include "EvalCodeBlockInlines.h"
+#include "EvalExecutableInlines.h"
 #include "Exception.h"
 #include "FTLThunks.h"
 #include "FileBasedFuzzerAgent.h"
-#include "FunctionCodeBlock.h"
-#include "FunctionExecutable.h"
-#include "GetterSetter.h"
+#include "FunctionCodeBlockInlines.h"
+#include "FunctionExecutableInlines.h"
+#include "GetterSetterInlines.h"
 #include "GigacageAlignedMemoryAllocator.h"
 #include "HasOwnPropertyCache.h"
+#include "HashMapImplInlines.h"
 #include "Heap.h"
 #include "HeapProfiler.h"
 #include "IncrementalSweeper.h"
@@ -69,47 +71,57 @@
 #include "JSAPIValueWrapper.h"
 #include "JSBigInt.h"
 #include "JSGlobalObject.h"
-#include "JSImmutableButterfly.h"
+#include "JSImmutableButterflyInlines.h"
 #include "JSLock.h"
 #include "JSMap.h"
 #include "JSMicrotask.h"
 #include "JSPromise.h"
-#include "JSPropertyNameEnumerator.h"
-#include "JSScriptFetchParameters.h"
-#include "JSScriptFetcher.h"
+#include "JSPropertyNameEnumeratorInlines.h"
+#include "JSScriptFetchParametersInlines.h"
+#include "JSScriptFetcherInlines.h"
 #include "JSSet.h"
-#include "JSSourceCode.h"
-#include "JSTemplateObjectDescriptor.h"
+#include "JSSourceCodeInlines.h"
+#include "JSTemplateObjectDescriptorInlines.h"
 #include "LLIntData.h"
 #include "LLIntExceptions.h"
 #include "MarkedBlockInlines.h"
 #include "MegamorphicCache.h"
 #include "MinimumReservedZoneSize.h"
-#include "ModuleProgramCodeBlock.h"
-#include "ModuleProgramExecutable.h"
+#include "ModuleProgramCodeBlockInlines.h"
+#include "ModuleProgramExecutableInlines.h"
 #include "NarrowingNumberPredictionFuzzerAgent.h"
 #include "NativeExecutable.h"
 #include "NumberObject.h"
 #include "PredictionFileCreatingFuzzerAgent.h"
 #include "ProfilerDatabase.h"
-#include "ProgramCodeBlock.h"
-#include "ProgramExecutable.h"
-#include "PropertyTable.h"
+#include "ProgramCodeBlockInlines.h"
+#include "ProgramExecutableInlines.h"
+#include "PropertyTableInlines.h"
 #include "RandomizingFuzzerAgent.h"
 #include "RegExpCache.h"
+#include "RegExpInlines.h"
 #include "ResourceExhaustion.h"
 #include "SamplingProfiler.h"
 #include "ScopedArguments.h"
 #include "ShadowChicken.h"
+#include "SideDataRepository.h"
 #include "SimpleTypedArrayController.h"
 #include "SourceProviderCache.h"
 #include "StrongInlines.h"
-#include "StructureChain.h"
+#include "StructureChainInlines.h"
 #include "StructureInlines.h"
+#include "StructureStubInfo.h"
+#include "SymbolInlines.h"
+#include "SymbolTableInlines.h"
 #include "TestRunnerUtils.h"
 #include "ThunkGenerators.h"
 #include "TypeProfiler.h"
 #include "TypeProfilerLog.h"
+#include "UnlinkedEvalCodeBlockInlines.h"
+#include "UnlinkedFunctionCodeBlockInlines.h"
+#include "UnlinkedFunctionExecutableInlines.h"
+#include "UnlinkedModuleProgramCodeBlockInlines.h"
+#include "UnlinkedProgramCodeBlockInlines.h"
 #include "VMEntryScopeInlines.h"
 #include "VMInlines.h"
 #include "VMInspector.h"
@@ -199,7 +211,8 @@ void VM::computeCanUseJIT()
 static bool vmCreationShouldCrash = false;
 
 VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
-    : m_identifier(VMIdentifier::generate())
+    : topCallFrame(CallFrame::noCaller())
+    , m_identifier(VMIdentifier::generate())
     , m_apiLock(adoptRef(new JSLock(this)))
     , m_runLoop(runLoop ? *runLoop : WTF::RunLoop::current())
     , m_random(Options::seedOfVMRandomForFuzzer() ? Options::seedOfVMRandomForFuzzer() : cryptographicallyRandomNumber<uint32_t>())
@@ -208,7 +221,6 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     , heap(*this, heapType)
     , clientHeap(heap)
     , vmType(vmType)
-    , topCallFrame(CallFrame::noCaller())
     , deferredWorkTimer(DeferredWorkTimer::create(*this))
     , m_atomStringTable(vmType == Default ? Thread::current().atomStringTable() : new AtomStringTable)
     , emptyList(new ArgList)
@@ -225,6 +237,35 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
         CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(VMCreationDisallowed, "VM creation disallowed"_s, 0x4242424220202020, 0xbadbeef0badbeef, 0x1234123412341234, 0x1337133713371337);
 
     VMInspector::instance().add(this);
+
+    // Set up lazy initializers.
+    {
+        m_hasOwnPropertyCache.initLater([](VM&, auto& ref) {
+            ref.set(HasOwnPropertyCache::create());
+        });
+
+        m_megamorphicCache.initLater([](VM&, auto& ref) {
+            ref.set(makeUniqueRef<MegamorphicCache>());
+        });
+
+        m_shadowChicken.initLater([](VM&, auto& ref) {
+            ref.set(makeUniqueRef<ShadowChicken>());
+        });
+
+        m_heapProfiler.initLater([](VM& vm, auto& ref) {
+            ref.set(makeUniqueRef<HeapProfiler>(vm));
+        });
+
+        m_stringSearcherTables.initLater([](VM&, auto& ref) {
+            ref.set(makeUniqueRef<AdaptiveStringSearcherTables>());
+        });
+
+        m_watchdog.initLater([](VM& vm, auto& ref) {
+            ref.set(adoptRef(*new Watchdog(&vm)));
+            vm.ensureTerminationException();
+            vm.requestEntryScopeService(EntryScopeService::Watchdog);
+        });
+    }
 
     updateSoftReservedZoneSize(Options::softReservedZoneSize());
     setLastStackTop(Thread::current());
@@ -375,11 +416,10 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     // Make sure that any stubs that the JIT is going to use are initialized in non-compilation threads.
     if (Options::useJIT()) {
         jitStubs = makeUnique<JITThunks>();
+        jitStubs->initialize(*this);
 #if ENABLE(FTL_JIT)
         ftlThunks = makeUnique<FTL::Thunks>();
 #endif // ENABLE(FTL_JIT)
-        getCTIInternalFunctionTrampolineFor(CodeForCall);
-        getCTIInternalFunctionTrampolineFor(CodeForConstruct);
         m_sharedJITStubs = makeUnique<SharedJITStubSet>();
         getBoundFunction(/* isJSFunction */ true);
     }
@@ -421,11 +461,14 @@ VM::~VM()
     if (Wasm::Worklist* worklist = Wasm::existingWorklistOrNull())
         worklist->stopAllPlansForContext(*this);
 #endif
-    if (UNLIKELY(m_watchdog))
-        m_watchdog->willDestroyVM(this);
+    if (auto* watchdog = this->watchdog(); UNLIKELY(watchdog))
+        watchdog->willDestroyVM(this);
     m_traps.willDestroyVM();
     m_isInService = false;
     WTF::storeStoreFence();
+
+    if (m_hasSideData)
+        sideDataRepository().deleteAll(this);
 
     // Never GC, ever again.
     heap.incrementDeferralDepth();
@@ -551,23 +594,6 @@ VM*& VM::sharedInstanceInternal()
     return sharedInstance;
 }
 
-Watchdog& VM::ensureWatchdog()
-{
-    if (!m_watchdog) {
-        m_watchdog = adoptRef(new Watchdog(this));
-        ensureTerminationException();
-        requestEntryScopeService(EntryScopeService::Watchdog);
-    }
-    return *m_watchdog;
-}
-
-HeapProfiler& VM::ensureHeapProfiler()
-{
-    if (!m_heapProfiler)
-        m_heapProfiler = makeUnique<HeapProfiler>(*this);
-    return *m_heapProfiler;
-}
-
 #if ENABLE(SAMPLING_PROFILER)
 SamplingProfiler& VM::ensureSamplingProfiler(Ref<Stopwatch>&& stopwatch)
 {
@@ -655,14 +681,20 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
         return imulThunkGenerator;
     case RandomIntrinsic:
         return randomThunkGenerator;
+#if !OS(WINDOWS)
     case BoundFunctionCallIntrinsic:
         return boundFunctionCallGenerator;
     case RemoteFunctionCallIntrinsic:
         return remoteFunctionCallGenerator;
+#endif
     case NumberConstructorIntrinsic:
         return numberConstructorCallThunkGenerator;
     case StringConstructorIntrinsic:
         return stringConstructorCallThunkGenerator;
+    case ToIntegerOrInfinityIntrinsic:
+        return toIntegerOrInfinityThunkGenerator;
+    case ToLengthIntrinsic:
+        return toLengthThunkGenerator;
     default:
         return nullptr;
     }
@@ -671,6 +703,11 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
 MacroAssemblerCodeRef<JITThunkPtrTag> VM::getCTIStub(ThunkGenerator generator)
 {
     return jitStubs->ctiStub(*this, generator);
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> VM::getCTIStub(CommonJITThunkID thunkID)
+{
+    return jitStubs->ctiStub(thunkID);
 }
 
 #endif // ENABLE(JIT)
@@ -777,20 +814,11 @@ CodePtr<JSEntryPtrTag> VM::getCTIInternalFunctionTrampolineFor(CodeSpecializatio
     return LLInt::getCodePtr<JSEntryPtrTag>(llint_internal_function_construct_trampoline);
 }
 
-MacroAssemblerCodeRef<JSEntryPtrTag> VM::getCTILinkCall()
-{
-#if ENABLE(JIT)
-    if (Options::useJIT())
-        return getCTIStub(linkCallThunkGenerator).template retagged<JSEntryPtrTag>();
-#endif
-    return LLInt::getCodeRef<JSEntryPtrTag>(llint_link_call_trampoline);
-}
-
 MacroAssemblerCodeRef<JSEntryPtrTag> VM::getCTIThrowExceptionFromCallSlowPath()
 {
 #if ENABLE(JIT)
     if (Options::useJIT())
-        return getCTIStub(throwExceptionFromCallSlowPathGenerator).template retagged<JSEntryPtrTag>();
+        return getCTIStub(CommonJITThunkID::ThrowExceptionFromCallSlowPath).template retagged<JSEntryPtrTag>();
 #endif
     return LLInt::callToThrow(*this).template retagged<JSEntryPtrTag>();
 }
@@ -798,8 +826,17 @@ MacroAssemblerCodeRef<JSEntryPtrTag> VM::getCTIThrowExceptionFromCallSlowPath()
 MacroAssemblerCodeRef<JITStubRoutinePtrTag> VM::getCTIVirtualCall(CallMode callMode)
 {
 #if ENABLE(JIT)
-    if (Options::useJIT())
-        return virtualThunkFor(*this, callMode);
+    if (Options::useJIT()) {
+        switch (callMode) {
+        case CallMode::Regular:
+            return getCTIStub(CommonJITThunkID::VirtualThunkForRegularCall).template retagged<JITStubRoutinePtrTag>();
+        case CallMode::Tail:
+            return getCTIStub(CommonJITThunkID::VirtualThunkForTailCall).template retagged<JITStubRoutinePtrTag>();
+        case CallMode::Construct:
+            return getCTIStub(CommonJITThunkID::VirtualThunkForConstruct).template retagged<JITStubRoutinePtrTag>();
+        }
+        RELEASE_ASSERT_NOT_REACHED();
+    }
 #endif
     switch (callMode) {
     case CallMode::Regular:
@@ -921,7 +958,7 @@ Exception* VM::throwException(JSGlobalObject* globalObject, Exception* exception
 
     CallFrame* throwOriginFrame = topJSCallFrame();
     if (UNLIKELY(Options::breakOnThrow())) {
-        CodeBlock* codeBlock = throwOriginFrame && !throwOriginFrame->isWasmFrame() ? throwOriginFrame->codeBlock() : nullptr;
+        CodeBlock* codeBlock = throwOriginFrame && !throwOriginFrame->isNativeCalleeFrame() ? throwOriginFrame->codeBlock() : nullptr;
         dataLog("Throwing exception in call frame ", RawPointer(throwOriginFrame), " for code block ", codeBlock, "\n");
         WTFBreakpointTrap();
     }
@@ -1448,13 +1485,6 @@ Ref<Waiter> VM::syncWaiter()
     return m_syncWaiter;
 }
 
-void VM::ensureShadowChicken()
-{
-    if (m_shadowChicken)
-        return;
-    m_shadowChicken = makeUnique<ShadowChicken>();
-}
-
 JSCell* VM::sentinelSetBucketSlow()
 {
     ASSERT(!m_sentinelSetBucket);
@@ -1664,10 +1694,57 @@ void VM::removeDebugger(Debugger& debugger)
     m_debuggers.remove(&debugger);
 }
 
-void VM::performOpportunisticallyScheduledTasks(MonotonicTime deadline)
+void VM::performOpportunisticallyScheduledTasks(MonotonicTime deadline, OptionSet<SchedulerOptions> options)
 {
+    constexpr bool verbose = false;
+
+    dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] QUERY");
     JSLockHolder locker { *this };
-    if (!deferredWorkTimer->hasAnyPendingWork())
+    if (deferredWorkTimer->hasAnyPendingWork()) {
+        dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] GaveUp: No pending tasks");
+        return;
+    }
+
+    SetForScope insideOpportunisticTaskScope { heap.m_isInOpportunisticTask, true };
+    [&] {
+        auto secondsSinceEpoch = ApproximateTime::now().secondsSinceEpoch();
+        auto remainingTime = deadline.secondsSinceEpoch() - secondsSinceEpoch;
+
+        if (options.contains(SchedulerOptions::HasImminentlyScheduledWork)) {
+            dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] GaveUp: HasImminentlyScheduledWork ", remainingTime);
+            return;
+        }
+
+        static constexpr auto minimumDelayBeforeOpportunisticFullGC = 30_ms;
+        static constexpr auto minimumDelayBeforeOpportunisticEdenGC = 10_ms;
+        static constexpr auto extraDurationToAvoidExceedingDeadlineDuringFullGC = 2_ms;
+        static constexpr auto extraDurationToAvoidExceedingDeadlineDuringEdenGC = 1_ms;
+
+        auto timeSinceFinishingLastFullGC = secondsSinceEpoch - heap.m_lastFullGCEndTime.secondsSinceEpoch();
+        if (timeSinceFinishingLastFullGC > minimumDelayBeforeOpportunisticFullGC && heap.m_shouldDoOpportunisticFullCollection && heap.m_totalBytesVisitedAfterLastFullCollect) {
+            auto estimatedGCDuration = (heap.lastFullGCLength() * heap.m_totalBytesVisited) / heap.m_totalBytesVisitedAfterLastFullCollect;
+            if (estimatedGCDuration + extraDurationToAvoidExceedingDeadlineDuringFullGC < remainingTime) {
+                dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] FULL");
+                heap.collectSync(CollectionScope::Full);
+                heap.m_shouldDoOpportunisticFullCollection = false;
+                return;
+            }
+        }
+
+        auto timeSinceLastGC = secondsSinceEpoch - std::max(heap.m_lastGCEndTime, heap.m_currentGCStartTime).secondsSinceEpoch();
+        if (timeSinceLastGC > minimumDelayBeforeOpportunisticEdenGC && heap.m_bytesAllocatedThisCycle && heap.m_bytesAllocatedBeforeLastEdenCollect) {
+            auto estimatedGCDuration = (heap.lastEdenGCLength() * heap.m_bytesAllocatedThisCycle) / heap.m_bytesAllocatedBeforeLastEdenCollect;
+            if (estimatedGCDuration + extraDurationToAvoidExceedingDeadlineDuringEdenGC < remainingTime) {
+                dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] EDEN: ", timeSinceFinishingLastFullGC, " ", timeSinceLastGC, " ", heap.m_shouldDoOpportunisticFullCollection, " ", heap.m_totalBytesVisitedAfterLastFullCollect, " ", heap.m_bytesAllocatedThisCycle, " ", heap.m_bytesAllocatedBeforeLastEdenCollect, " ", heap.m_lastGCEndTime, " ", heap.m_currentGCStartTime, " ", (heap.lastFullGCLength() * heap.m_totalBytesVisited) / heap.m_totalBytesVisitedAfterLastFullCollect, " ", remainingTime, " ", (heap.lastEdenGCLength() * heap.m_bytesAllocatedThisCycle) / heap.m_bytesAllocatedBeforeLastEdenCollect);
+                heap.collectSync(CollectionScope::Eden);
+                heap.m_shouldDoOpportunisticFullCollection = false;
+                return;
+            }
+        }
+
+        dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] GaveUp: nothing met. ", timeSinceFinishingLastFullGC, " ", timeSinceLastGC, " ", heap.m_shouldDoOpportunisticFullCollection, " ", heap.m_totalBytesVisitedAfterLastFullCollect, " ", heap.m_bytesAllocatedThisCycle, " ", heap.m_bytesAllocatedBeforeLastEdenCollect, " ", heap.m_lastGCEndTime, " ", heap.m_currentGCStartTime, " ", (heap.lastFullGCLength() * heap.m_totalBytesVisited) / heap.m_totalBytesVisitedAfterLastFullCollect, " ", remainingTime, " ", (heap.lastEdenGCLength() * heap.m_bytesAllocatedThisCycle) / heap.m_bytesAllocatedBeforeLastEdenCollect);
+    }();
+
         heap.sweeper().doWorkUntil(*this, deadline);
 }
 
@@ -1700,16 +1777,10 @@ void MicrotaskQueue::visitAggregateImpl(Visitor& visitor)
 }
 DEFINE_VISIT_AGGREGATE(MicrotaskQueue);
 
-void VM::ensureMegamorphicCacheSlow()
-{
-    ASSERT(!m_megamorphicCache);
-    m_megamorphicCache = makeUnique<MegamorphicCache>();
-}
-
 void VM::invalidateStructureChainIntegrity(StructureChainIntegrityEvent)
 {
-    if (m_megamorphicCache)
-        m_megamorphicCache->bumpEpoch();
+    if (auto* megamorphicCache = this->megamorphicCache())
+        megamorphicCache->bumpEpoch();
 }
 
 #if ENABLE(WEBASSEMBLY)

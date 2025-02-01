@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -212,7 +212,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 stableBackbuffer.dispose();
                 stableBackbuffer = null;
             } else {
-                // RT-27554
+                // JDK-8092059
                 // TODO: this implementation was done to make sure there is a
                 // context current for the hardware backbuffer before we start
                 // attempting to use the FBO associated with the
@@ -303,6 +303,11 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         if (stableBackbuffer != null) {
             stableBackbuffer.dispose();
             stableBackbuffer = null;
+        }
+
+        if (drawable != null) {
+            drawable.dispose();
+            drawable = null;
         }
     }
 

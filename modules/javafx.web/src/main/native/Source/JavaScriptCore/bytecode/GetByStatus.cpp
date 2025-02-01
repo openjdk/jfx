@@ -263,7 +263,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
                 auto& accessCase = access.as<ProxyObjectAccessCase>();
                 auto status = GetByStatus(accessCase);
                 auto callLinkStatus = makeUnique<CallLinkStatus>();
-                if (CallLinkInfo* callLinkInfo = accessCase.callLinkInfo())
+                if (CallLinkInfo* callLinkInfo = stubInfo->callLinkInfoAt(locker, 0))
                     *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
                 status.appendVariant(GetByVariant(accessCase.identifier(), { }, invalidOffset, { }, WTFMove(callLinkStatus)));
                 return status;
@@ -313,9 +313,46 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
                 return GetByStatus(JSC::slowVersion(summary), stubInfo);
             }
 
-            ComplexGetStatus complexGetStatus = ComplexGetStatus::computeFor(
-                structure, access.conditionSet(), access.uid());
+            switch (access.type()) {
+            case AccessCase::CustomAccessorGetter: {
+                auto conditionSet = access.conditionSet();
+                if (!conditionSet.isStillValid())
+                    continue;
 
+                Structure* currStructure = access.hasAlternateBase() ? access.alternateBase()->structure() : access.structure();
+                // For now, we only support cases which JSGlobalObject is the same to the currently profiledBlock.
+                if (currStructure->globalObject() != profiledBlock->globalObject())
+                    return GetByStatus(JSC::slowVersion(summary), stubInfo);
+
+                auto customAccessorGetter = access.as<GetterSetterAccessCase>().customAccessor();
+                std::unique_ptr<DOMAttributeAnnotation> domAttribute;
+                if (access.as<GetterSetterAccessCase>().domAttribute())
+                    domAttribute = WTF::makeUnique<DOMAttributeAnnotation>(*access.as<GetterSetterAccessCase>().domAttribute());
+
+                ASSERT((AccessCase::Miss == access.type() || access.isCustom()) == (access.offset() == invalidOffset));
+                GetByVariant variant(access.identifier(), StructureSet(structure), invalidOffset,
+                    WTFMove(conditionSet), nullptr,
+                    nullptr,
+                    customAccessorGetter,
+                    WTFMove(domAttribute));
+
+                if (!result.appendVariant(variant))
+                    return GetByStatus(JSC::slowVersion(summary), stubInfo);
+
+                if (domAttribute) {
+                    // Give up when custom accesses are not merged into one.
+                    if (result.numVariants() != 1)
+                        return GetByStatus(JSC::slowVersion(summary), stubInfo);
+                    result.m_containsDOMGetter = true;
+                } else {
+                    if (result.m_containsDOMGetter)
+                        return GetByStatus(JSC::slowVersion(summary), stubInfo);
+                }
+                result.m_state = CustomAccessor;
+                break;
+            }
+            default: {
+                ComplexGetStatus complexGetStatus = ComplexGetStatus::computeFor(structure, access.conditionSet(), access.uid());
             switch (complexGetStatus.kind()) {
             case ComplexGetStatus::ShouldSkip:
                 continue;
@@ -326,10 +363,6 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
             case ComplexGetStatus::Inlineable: {
                 std::unique_ptr<CallLinkStatus> callLinkStatus;
                 JSFunction* intrinsicFunction = nullptr;
-                CodePtr<CustomAccessorPtrTag> customAccessorGetter;
-                std::unique_ptr<DOMAttributeAnnotation> domAttribute;
-                bool haveDOMAttribute = false;
-
                 switch (access.type()) {
                 case AccessCase::Load:
                 case AccessCase::GetGetter:
@@ -342,48 +375,33 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
                 }
                 case AccessCase::Getter: {
                     callLinkStatus = makeUnique<CallLinkStatus>();
-                    if (CallLinkInfo* callLinkInfo = access.as<GetterSetterAccessCase>().callLinkInfo()) {
-                        *callLinkStatus = CallLinkStatus::computeFor(
-                            locker, profiledBlock, *callLinkInfo, callExitSiteData);
-                    }
-                    break;
-                }
-                case AccessCase::CustomAccessorGetter: {
-                    customAccessorGetter = access.as<GetterSetterAccessCase>().customAccessor();
-                    if (!access.as<GetterSetterAccessCase>().domAttribute())
-                        return GetByStatus(JSC::slowVersion(summary), stubInfo);
-                    domAttribute = WTF::makeUnique<DOMAttributeAnnotation>(*access.as<GetterSetterAccessCase>().domAttribute());
-                    haveDOMAttribute = true;
-                    result.m_state = Custom;
+                        if (CallLinkInfo* callLinkInfo = stubInfo->callLinkInfoAt(locker, listIndex))
+                            *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
                     break;
                 }
                 default: {
                     // FIXME: It would be totally sweet to support more of these at some point in the
                     // future. https://bugs.webkit.org/show_bug.cgi?id=133052
                     return GetByStatus(JSC::slowVersion(summary), stubInfo);
-                } }
+                    }
+                    }
 
                 ASSERT((AccessCase::Miss == access.type() || access.isCustom()) == (access.offset() == invalidOffset));
                 GetByVariant variant(access.identifier(), StructureSet(structure), complexGetStatus.offset(),
-                    complexGetStatus.conditionSet(), WTFMove(callLinkStatus),
-                    intrinsicFunction,
-                    customAccessorGetter,
-                    WTFMove(domAttribute));
+                        complexGetStatus.conditionSet(), WTFMove(callLinkStatus), intrinsicFunction);
 
                 if (!result.appendVariant(variant))
                     return GetByStatus(JSC::slowVersion(summary), stubInfo);
 
-                if (haveDOMAttribute) {
-                    // Give up when custom accesses are not merged into one.
-                    if (result.numVariants() != 1)
-                        return GetByStatus(JSC::slowVersion(summary), stubInfo);
-                } else {
                     // Give up when custom access and simple access are mixed.
-                    if (result.m_state == Custom)
+                    if (result.m_state == CustomAccessor)
                         return GetByStatus(JSC::slowVersion(summary), stubInfo);
+                    break;
+                }
                 }
                 break;
-            } }
+        }
+            }
         }
 
         result.shrinkToFit();
@@ -489,7 +507,7 @@ bool GetByStatus::makesCalls() const
     case NoInformation:
     case LikelyTakesSlowPath:
     case ObservedTakesSlowPath:
-    case Custom:
+    case CustomAccessor:
     case ModuleNamespace:
         return false;
     case Simple:
@@ -535,7 +553,7 @@ void GetByStatus::merge(const GetByStatus& other)
 
     case Megamorphic:
         if (m_state != other.m_state) {
-            if (other.m_state == Simple || other.m_state == Custom) {
+            if (other.m_state == Simple || other.m_state == CustomAccessor) {
                 *this = other;
                 return;
             }
@@ -544,7 +562,7 @@ void GetByStatus::merge(const GetByStatus& other)
         return;
 
     case Simple:
-    case Custom:
+    case CustomAccessor:
     case ProxyObject:
         if (m_state != other.m_state)
             return mergeSlow();
@@ -644,8 +662,8 @@ void GetByStatus::dump(PrintStream& out) const
     case Simple:
         out.print("Simple");
         break;
-    case Custom:
-        out.print("Custom");
+    case CustomAccessor:
+        out.print("CustomAccessor");
         break;
     case Megamorphic:
         out.print("Megamorphic");

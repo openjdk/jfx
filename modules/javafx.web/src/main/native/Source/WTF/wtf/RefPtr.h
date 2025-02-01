@@ -29,21 +29,6 @@
 
 namespace WTF {
 
-template<typename T> struct DefaultRefDerefTraits {
-    static ALWAYS_INLINE T* refIfNotNull(T* ptr)
-    {
-        if (LIKELY(ptr))
-            ptr->ref();
-        return ptr;
-    }
-
-    static ALWAYS_INLINE void derefIfNotNull(T* ptr)
-    {
-        if (LIKELY(ptr))
-            ptr->deref();
-    }
-};
-
 template<typename T, typename PtrTraits, typename RefDerefTraits> class RefPtr;
 template<typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTraits = DefaultRefDerefTraits<T>> RefPtr<T, PtrTraits, RefDerefTraits> adoptRef(T*);
 
@@ -77,7 +62,6 @@ public:
     T* get() const { return PtrTraits::unwrap(m_ptr); }
 
     Ref<T> releaseNonNull() { ASSERT(m_ptr); Ref<T> tmp(adoptRef(*m_ptr)); m_ptr = nullptr; return tmp; }
-    Ref<const T> releaseConstNonNull() { ASSERT(m_ptr); Ref<const T> tmp(adoptRef(*m_ptr)); m_ptr = nullptr; return tmp; }
 
     T* leakRef() WARN_UNUSED_RETURN;
 
@@ -251,13 +235,8 @@ inline RefPtr<T, U, V> static_pointer_cast(RefPtr<X, Y, Z>&& p)
 template <typename T, typename U, typename V>
 struct IsSmartPtr<RefPtr<T, U, V>> {
     static constexpr bool value = true;
+    static constexpr bool isNullable = true;
 };
-
-template<typename ExpectedType, typename ArgType, typename PtrTraits, typename RefDerefTraits>
-inline bool is(RefPtr<ArgType, PtrTraits, RefDerefTraits>& source)
-{
-    return is<ExpectedType>(source.get());
-}
 
 template<typename ExpectedType, typename ArgType, typename PtrTraits, typename RefDerefTraits>
 inline bool is(const RefPtr<ArgType, PtrTraits, RefDerefTraits>& source)
@@ -266,50 +245,55 @@ inline bool is(const RefPtr<ArgType, PtrTraits, RefDerefTraits>& source)
 }
 
 template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
-inline RefPtr<Target> checkedDowncast(RefPtr<Source, PtrTraits, RefDerefTraits> source)
+inline RefPtr<match_constness_t<Source, Target>> checkedDowncast(RefPtr<Source, PtrTraits, RefDerefTraits> source)
 {
     static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
     static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
     RELEASE_ASSERT(!source || is<Target>(*source));
-    return static_pointer_cast<Target>(WTFMove(source));
+    return static_pointer_cast<match_constness_t<Source, Target>>(WTFMove(source));
 }
 
 template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
-inline Target* downcast(RefPtr<Source, PtrTraits, RefDerefTraits>& source)
+inline RefPtr<match_constness_t<Source, Target>> uncheckedDowncast(RefPtr<Source, PtrTraits, RefDerefTraits> source)
 {
-    return downcast<Target>(source.get());
+    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    ASSERT_WITH_SECURITY_IMPLICATION(!source || is<Target>(*source));
+    return static_pointer_cast<match_constness_t<Source, Target>>(WTFMove(source));
 }
 
 template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
-inline Target* downcast(const RefPtr<Source, PtrTraits, RefDerefTraits>& source)
+inline RefPtr<match_constness_t<Source, Target>> downcast(RefPtr<Source, PtrTraits, RefDerefTraits> source)
 {
-    return downcast<Target>(source.get());
+    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    // FIXME: This is too expensive to enable on x86 for now but we should try and
+    // enable the RELEASE_ASSERT() on all architectures.
+#if CPU(ARM64)
+    RELEASE_ASSERT(!source || is<Target>(*source));
+#else
+    ASSERT_WITH_SECURITY_IMPLICATION(!source || is<Target>(*source));
+#endif
+    return static_pointer_cast<match_constness_t<Source, Target>>(WTFMove(source));
 }
 
 template<typename Target, typename Source, typename TargetPtrTraits = RawPtrTraits<Target>, typename TargetRefDerefTraits = DefaultRefDerefTraits<Target>,
     typename SourcePtrTraits, typename SourceRefDerefTraits>
-inline RefPtr<Target, TargetPtrTraits, TargetRefDerefTraits> dynamicDowncast(const RefPtr<Source, SourcePtrTraits, SourceRefDerefTraits>& source)
+inline RefPtr<match_constness_t<Source, Target>, TargetPtrTraits, TargetRefDerefTraits> dynamicDowncast(RefPtr<Source, SourcePtrTraits, SourceRefDerefTraits> source)
 {
     static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
     static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
     if (!is<Target>(source))
         return nullptr;
-    return static_pointer_cast<Target, TargetPtrTraits, TargetRefDerefTraits>(source);
+    return static_pointer_cast<match_constness_t<Source, Target>, TargetPtrTraits, TargetRefDerefTraits>(WTFMove(source));
 }
 
-template<typename Target, typename Source, typename TargetPtrTraits = RawPtrTraits<Target>, typename TargetRefDerefTraits = DefaultRefDerefTraits<Target>,
-    typename SourcePtrTraits, typename SourceRefDerefTraits>
-inline RefPtr<Target, TargetPtrTraits, TargetRefDerefTraits> dynamicDowncast(RefPtr<Source, SourcePtrTraits, SourceRefDerefTraits>&& source)
-{
-    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
-    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
-    if (!is<Target>(source))
-        return nullptr;
-    return static_pointer_cast<Target, TargetPtrTraits, TargetRefDerefTraits>(WTFMove(source));
-}
+template<typename T>
+using RefPtrAllowingPartiallyDestroyed = RefPtr<T, RawPtrTraits<T>, RefDerefTraitsAllowingPartiallyDestroyed<T>>;
 
 } // namespace WTF
 
 using WTF::RefPtr;
+using WTF::RefPtrAllowingPartiallyDestroyed;
 using WTF::adoptRef;
 using WTF::static_pointer_cast;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "CodeBlockHash.h"
 #include "JITCode.h"
 #include "MachineStackMarker.h"
+#include "NativeCallee.h"
 #include "PCToCodeOriginMap.h"
 #include "WasmCompilationMode.h"
 #include "WasmIndexOrName.h"
@@ -38,6 +39,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/Stopwatch.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakRandom.h>
 
@@ -47,7 +49,7 @@ class VM;
 class ExecutableBase;
 
 class SamplingProfiler : public ThreadSafeRefCounted<SamplingProfiler> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SamplingProfiler);
 public:
 
     struct UnprocessedStackFrame {
@@ -67,6 +69,7 @@ public:
         CalleeBits unverifiedCallee;
         CodeBlock* verifiedCodeBlock { nullptr };
         CallSiteIndex callSiteIndex;
+        NativeCallee::Category nativeCalleeCategory { NativeCallee::Category::InlineCache };
 #if ENABLE(WEBASSEMBLY)
         std::optional<Wasm::IndexOrName> wasmIndexOrName;
 #endif
@@ -118,13 +121,12 @@ public:
 
             bool hasExpressionInfo() const
             {
-                return lineNumber != std::numeric_limits<unsigned>::max()
-                    && columnNumber != std::numeric_limits<unsigned>::max();
+                return lineColumn.line != std::numeric_limits<unsigned>::max()
+                    && lineColumn.column != std::numeric_limits<unsigned>::max();
             }
 
             // These attempt to be expression-level line and column number.
-            unsigned lineNumber { std::numeric_limits<unsigned>::max() };
-            unsigned columnNumber { std::numeric_limits<unsigned>::max() };
+            LineColumn lineColumn { std::numeric_limits<unsigned>::max(), std::numeric_limits<unsigned>::max() };
             BytecodeIndex bytecodeIndex;
             CodeBlockHash codeBlockHash;
             JITType jitType { JITType::None };
@@ -138,12 +140,12 @@ public:
         unsigned lineNumber() const
         {
             ASSERT(hasExpressionInfo());
-            return semanticLocation.lineNumber;
+            return semanticLocation.lineColumn.line;
         }
         unsigned columnNumber() const
         {
             ASSERT(hasExpressionInfo());
-            return semanticLocation.columnNumber;
+            return semanticLocation.lineColumn.column;
         }
 
         // These are function-level data.
@@ -156,7 +158,8 @@ public:
     };
 
     struct UnprocessedStackTrace {
-        Seconds timestamp;
+        MonotonicTime timestamp;
+        Seconds stopwatchTimestamp;
         void* topPC;
         bool topFrameIsLLInt;
         void* llintPC;
@@ -165,7 +168,8 @@ public:
     };
 
     struct StackTrace {
-        Seconds timestamp;
+        MonotonicTime timestamp;
+        Seconds stopwatchTimestamp;
         Vector<StackFrame> frames;
         StackTrace()
         { }
@@ -219,7 +223,6 @@ private:
     Vector<StackTrace> m_stackTraces WTF_GUARDED_BY_LOCK(m_lock);
     Vector<UnprocessedStackTrace> m_unprocessedStackTraces WTF_GUARDED_BY_LOCK(m_lock);
     Seconds m_timingInterval;
-    Seconds m_lastTime WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<Thread> m_thread;
     RefPtr<Thread> m_jscExecutionThread WTF_GUARDED_BY_LOCK(m_lock);
     HashSet<JSCell*> m_liveCellPointers WTF_GUARDED_BY_LOCK(m_lock);

@@ -24,9 +24,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BitmapTexture_h
-#define BitmapTexture_h
-
+#pragma once
+#if PLATFORM(JAVA)
 #include "IntPoint.h"
 #include "IntRect.h"
 #include "IntSize.h"
@@ -37,7 +36,7 @@ namespace WebCore {
 
 class FilterOperations;
 class GraphicsLayer;
-class Image;
+class NativeImage;
 class TextureMapper;
 
 // A 2D texture that can be the target of software or GL rendering.
@@ -60,7 +59,7 @@ public:
     virtual bool isBackedByOpenGL() const { return false; }
 
     virtual IntSize size() const = 0;
-    virtual void updateContents(Image*, const IntRect&, const IntPoint& offset) = 0;
+    virtual void updateContents(NativeImage*, const IntRect&, const IntPoint& offset)=0;
     void updateContents(GraphicsLayer*, const IntRect& target, const IntPoint& offset, float scale = 1);
     virtual void updateContents(const void*, const IntRect& target, const IntPoint& offset, int bytesPerLine) = 0;
     virtual bool isValid() const = 0;
@@ -89,5 +88,85 @@ private:
 };
 
 }
+#else
+#include "ClipStack.h"
+#include "FilterOperation.h"
+#include "IntPoint.h"
+#include "IntRect.h"
+#include "IntSize.h"
+#include "TextureMapperGLHeaders.h"
+#include <wtf/OptionSet.h>
+#include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
 
-#endif // BitmapTexture_h
+namespace WebCore {
+
+class GraphicsLayer;
+class NativeImage;
+class TextureMapper;
+enum class TextureMapperFlags : uint16_t;
+
+class BitmapTexture final : public RefCounted<BitmapTexture> {
+public:
+    enum class Flags : uint8_t {
+        SupportsAlpha = 1 << 0,
+        DepthBuffer = 1 << 1,
+    };
+
+    static Ref<BitmapTexture> create(const IntSize& size, OptionSet<Flags> flags = { }, GLint internalFormat = GL_DONT_CARE)
+    {
+        return adoptRef(*new BitmapTexture(size, flags, internalFormat));
+    }
+
+    WEBCORE_EXPORT ~BitmapTexture();
+
+    const IntSize& size() const { return m_size; };
+    OptionSet<Flags> flags() const { return m_flags; }
+    GLint internalFormat() const { return m_internalFormat; }
+    bool isOpaque() const { return !m_flags.contains(Flags::SupportsAlpha); }
+
+    void bindAsSurface();
+    void initializeStencil();
+    void initializeDepthBuffer();
+    uint32_t id() const { return m_id; }
+
+    void updateContents(NativeImage*, const IntRect&, const IntPoint& offset);
+    void updateContents(GraphicsLayer*, const IntRect& target, const IntPoint& offset, float scale = 1);
+    void updateContents(const void*, const IntRect& target, const IntPoint& offset, int bytesPerLine);
+
+    void reset(const IntSize&, OptionSet<Flags> = { });
+
+    int numberOfBytes() const { return size().width() * size().height() * 32 >> 3; }
+
+    RefPtr<const FilterOperation> filterOperation() const { return m_filterOperation; }
+    void setFilterOperation(RefPtr<const FilterOperation>&& filterOperation) { m_filterOperation = WTFMove(filterOperation); }
+
+    ClipStack& clipStack() { return m_clipStack; }
+
+    void copyFromExternalTexture(GLuint textureID);
+
+    OptionSet<TextureMapperFlags> colorConvertFlags() const { return m_colorConvertFlags; }
+
+private:
+    BitmapTexture(const IntSize&, OptionSet<Flags>, GLint internalFormat);
+
+    void clearIfNeeded();
+    void createFboIfNeeded();
+
+    OptionSet<Flags> m_flags;
+    IntSize m_size;
+    GLuint m_id { 0 };
+    GLuint m_fbo { 0 };
+    GLuint m_depthBufferObject { 0 };
+    GLuint m_stencilBufferObject { 0 };
+    bool m_stencilBound { false };
+    bool m_shouldClear { true };
+    ClipStack m_clipStack;
+    OptionSet<TextureMapperFlags> m_colorConvertFlags;
+    RefPtr<const FilterOperation> m_filterOperation;
+    GLint m_internalFormat { 0 };
+    GLenum m_format { 0 };
+};
+
+} // namespace WebCore
+#endif

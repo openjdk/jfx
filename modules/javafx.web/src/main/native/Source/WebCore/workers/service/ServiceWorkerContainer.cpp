@@ -26,8 +26,6 @@
 #include "config.h"
 #include "ServiceWorkerContainer.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ContentSecurityPolicy.h"
 #include "DOMPromiseProxy.h"
 #include "DedicatedWorkerGlobalScope.h"
@@ -89,7 +87,7 @@ ServiceWorkerContainer::ServiceWorkerContainer(ScriptExecutionContext* context, 
     , m_navigator(navigator)
 {
     // We should queue messages until the DOMContentLoaded event has fired or startMessages() has been called.
-    if (is<Document>(context) && downcast<Document>(*context).parsing())
+    if (RefPtr document = dynamicDowncast<Document>(context); document && document->parsing())
         m_shouldDeferMessageEvents = true;
 }
 
@@ -117,7 +115,7 @@ auto ServiceWorkerContainer::ready() -> ReadyPromise&
             return *m_readyPromise;
 
         auto& context = *scriptExecutionContext();
-        ensureSWClientConnection().whenRegistrationReady(context.topOrigin().data(), context.url(), [this, protectedThis = Ref { *this }](auto&& registrationData) mutable {
+        ensureSWClientConnection().whenRegistrationReady(context.topOrigin().data(), context.url(), [this, protectedThis = Ref { *this }](ServiceWorkerRegistrationData&& registrationData) mutable {
             queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, registrationData = WTFMove(registrationData)]() mutable {
                 auto* context = scriptExecutionContext();
                 if (!context || !m_readyPromise)
@@ -139,73 +137,74 @@ ServiceWorker* ServiceWorkerContainer::controller() const
 
 void ServiceWorkerContainer::addRegistration(const String& relativeScriptURL, const RegistrationOptions& options, Ref<DeferredPromise>&& promise)
 {
-    auto* context = scriptExecutionContext();
     if (m_isStopped) {
-        promise->reject(Exception(InvalidStateError));
+        promise->reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
     if (relativeScriptURL.isEmpty()) {
-        promise->reject(Exception { TypeError, "serviceWorker.register() cannot be called with an empty script URL"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "serviceWorker.register() cannot be called with an empty script URL"_s });
         return;
     }
 
     ServiceWorkerJobData jobData(ensureSWClientConnection().serverConnectionIdentifier(), contextIdentifier());
 
-    jobData.scriptURL = context->completeURL(relativeScriptURL);
+    auto& context = *scriptExecutionContext();
+    jobData.scriptURL = context.completeURL(relativeScriptURL);
 
-    auto* contentSecurityPolicy = is<Document>(context) ? downcast<Document>(context)->contentSecurityPolicy() : nullptr;
+    RefPtr document = dynamicDowncast<Document>(context);
+    CheckedPtr contentSecurityPolicy = document ? document->contentSecurityPolicy() : nullptr;
     if (contentSecurityPolicy && !contentSecurityPolicy->allowWorkerFromSource(jobData.scriptURL)) {
-        promise->reject(Exception { SecurityError });
+        promise->reject(Exception { ExceptionCode::SecurityError });
         return;
     }
 
     if (!jobData.scriptURL.isValid()) {
         CONTAINER_RELEASE_LOG_ERROR("addRegistration: Invalid scriptURL");
-        promise->reject(Exception { TypeError, "serviceWorker.register() must be called with a valid relative script URL"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "serviceWorker.register() must be called with a valid relative script URL"_s });
         return;
     }
 
-    Page* page = is<Document>(context) ? downcast<Document>(context)->page() : nullptr;
+    auto* page = document ? document->page() : nullptr;
     jobData.isFromServiceWorkerPage = page && page->isServiceWorkerPage();
     if (!jobData.scriptURL.protocolIsInHTTPFamily() && !jobData.isFromServiceWorkerPage) {
         CONTAINER_RELEASE_LOG_ERROR("addRegistration: Invalid scriptURL scheme is not HTTP or HTTPS");
-        promise->reject(Exception { TypeError, "serviceWorker.register() must be called with a script URL whose protocol is either HTTP or HTTPS"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "serviceWorker.register() must be called with a script URL whose protocol is either HTTP or HTTPS"_s });
         return;
     }
 
     auto path = jobData.scriptURL.path();
     if (path.containsIgnoringASCIICase("%2f"_s) || path.containsIgnoringASCIICase("%5c"_s)) {
         CONTAINER_RELEASE_LOG_ERROR("addRegistration: scriptURL contains invalid character");
-        promise->reject(Exception { TypeError, "serviceWorker.register() must be called with a script URL whose path does not contain '%2f' or '%5c'"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "serviceWorker.register() must be called with a script URL whose path does not contain '%2f' or '%5c'"_s });
         return;
     }
 
     if (!options.scope.isEmpty())
-        jobData.scopeURL = context->completeURL(options.scope);
+        jobData.scopeURL = context.completeURL(options.scope);
     else
         jobData.scopeURL = URL(jobData.scriptURL, "./"_s);
 
     if (!jobData.scopeURL.isNull() && !jobData.scopeURL.protocolIsInHTTPFamily() && !jobData.isFromServiceWorkerPage) {
         CONTAINER_RELEASE_LOG_ERROR("addRegistration: scopeURL scheme is not HTTP or HTTPS");
-        promise->reject(Exception { TypeError, "Scope URL provided to serviceWorker.register() must be either HTTP or HTTPS"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Scope URL provided to serviceWorker.register() must be either HTTP or HTTPS"_s });
         return;
     }
 
     path = jobData.scopeURL.path();
     if (path.containsIgnoringASCIICase("%2f"_s) || path.containsIgnoringASCIICase("%5c"_s)) {
         CONTAINER_RELEASE_LOG_ERROR("addRegistration: scopeURL contains invalid character");
-        promise->reject(Exception { TypeError, "Scope URL provided to serviceWorker.register() cannot have a path that contains '%2f' or '%5c'"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Scope URL provided to serviceWorker.register() cannot have a path that contains '%2f' or '%5c'"_s });
         return;
     }
 
     CONTAINER_RELEASE_LOG("addRegistration: Registering service worker. jobID=%" PRIu64, jobData.identifier().jobIdentifier.toUInt64());
 
-    jobData.clientCreationURL = context->url();
-    jobData.topOrigin = context->topOrigin().data();
+    jobData.clientCreationURL = context.url();
+    jobData.topOrigin = context.topOrigin().data();
     jobData.workerType = options.type;
     jobData.type = ServiceWorkerJobType::Register;
-    jobData.domainForCachePartition = context->domainForCachePartition();
+    jobData.domainForCachePartition = context.domainForCachePartition();
     jobData.registrationOptions = options;
 
     scheduleJob(makeUnique<ServiceWorkerJob>(*this, WTFMove(promise), WTFMove(jobData)));
@@ -213,8 +212,8 @@ void ServiceWorkerContainer::addRegistration(const String& relativeScriptURL, co
 
 void ServiceWorkerContainer::willSettleRegistrationPromise(bool success)
 {
-    auto* context = scriptExecutionContext();
-    Page* page = is<Document>(context) ? downcast<Document>(*context).page() : nullptr;
+    RefPtr document = dynamicDowncast<Document>(scriptExecutionContext());
+    auto* page = document ? document->page() : nullptr;
     if (!page || !page->isServiceWorkerPage())
         return;
 
@@ -230,7 +229,7 @@ void ServiceWorkerContainer::unregisterRegistration(ServiceWorkerRegistrationIde
     ASSERT(!m_isStopped);
     if (!m_swConnection) {
         ASSERT_NOT_REACHED();
-        promise.reject(Exception(InvalidStateError));
+        promise.reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
@@ -249,7 +248,7 @@ void ServiceWorkerContainer::updateRegistration(const URL& scopeURL, const URL& 
     if (!m_swConnection) {
         ASSERT_NOT_REACHED();
         if (promise)
-            promise->reject(Exception(InvalidStateError));
+            promise->reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
@@ -284,18 +283,18 @@ void ServiceWorkerContainer::scheduleJob(std::unique_ptr<ServiceWorkerJob>&& job
 void ServiceWorkerContainer::getRegistration(const String& clientURL, Ref<DeferredPromise>&& promise)
 {
     if (m_isStopped) {
-        promise->reject(Exception { InvalidStateError });
+        promise->reject(Exception { ExceptionCode::InvalidStateError });
         return;
     }
 
     auto& context = *scriptExecutionContext();
     URL parsedURL = context.completeURL(clientURL);
     if (!protocolHostAndPortAreEqual(parsedURL, context.url())) {
-        promise->reject(Exception { SecurityError, "Origin of clientURL is not client's origin"_s });
+        promise->reject(Exception { ExceptionCode::SecurityError, "Origin of clientURL is not client's origin"_s });
         return;
     }
 
-    ensureSWClientConnection().matchRegistration(SecurityOriginData { context.topOrigin().data() }, parsedURL, [this, protectedThis = Ref { *this }, promise = WTFMove(promise)](auto&& result) mutable {
+    ensureSWClientConnection().matchRegistration(SecurityOriginData { context.topOrigin().data() }, parsedURL, [this, protectedThis = Ref { *this }, promise = WTFMove(promise)](std::optional<ServiceWorkerRegistrationData>&& result) mutable {
         queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, promise = WTFMove(promise), result = WTFMove(result)]() mutable {
             if (!result) {
                 promise->resolve();
@@ -335,12 +334,12 @@ void ServiceWorkerContainer::updateWorkerState(ServiceWorkerIdentifier identifie
 void ServiceWorkerContainer::getRegistrations(Ref<DeferredPromise>&& promise)
 {
     if (m_isStopped) {
-        promise->reject(Exception { InvalidStateError });
+        promise->reject(Exception { ExceptionCode::InvalidStateError });
         return;
     }
 
     auto& context = *scriptExecutionContext();
-    ensureSWClientConnection().getRegistrations(SecurityOriginData { context.topOrigin().data() }, context.url(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise)] (auto&& registrationDatas) mutable {
+    ensureSWClientConnection().getRegistrations(SecurityOriginData { context.topOrigin().data() }, context.url(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise)] (Vector<ServiceWorkerRegistrationData>&& registrationDatas) mutable {
         queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, promise = WTFMove(promise), registrationDatas = WTFMove(registrationDatas)]() mutable {
             auto registrations = WTF::map(WTFMove(registrationDatas), [&](auto&& registrationData) {
                 return ServiceWorkerRegistration::getOrCreate(*scriptExecutionContext(), *this, WTFMove(registrationData));
@@ -577,9 +576,9 @@ SWClientConnection& ServiceWorkerContainer::ensureSWClientConnection()
 {
     ASSERT(scriptExecutionContext());
     if (!m_swConnection || m_swConnection->isClosed()) {
-        auto& context = *scriptExecutionContext();
-        if (is<WorkerGlobalScope>(context))
-            m_swConnection = &downcast<WorkerGlobalScope>(context).swClientConnection();
+        // Using RefPtr here results in an m_adoptionIsRequired assert.
+        if (auto* workerGlobal = dynamicDowncast<WorkerGlobalScope>(*scriptExecutionContext()))
+            m_swConnection = &workerGlobal->swClientConnection();
         else
             m_swConnection = &mainThreadConnection();
     }
@@ -591,7 +590,7 @@ void ServiceWorkerContainer::addRegistration(ServiceWorkerRegistration& registra
     ASSERT(m_creationThread.ptr() == &Thread::current());
 
     ensureSWClientConnection().addServiceWorkerRegistrationInServer(registration.identifier());
-    m_registrations.add(registration.identifier(), &registration);
+    m_registrations.add(registration.identifier(), registration);
 }
 
 void ServiceWorkerContainer::removeRegistration(ServiceWorkerRegistration& registration)
@@ -659,8 +658,7 @@ void ServiceWorkerContainer::getNotifications(const URL& serviceWorkerRegistrati
             return;
         }
 
-        auto data = result.releaseReturnValue();
-        auto notifications = map(data, [context](auto&& data) {
+        auto notifications = map(result.releaseReturnValue(), [context](NotificationData&& data) {
             auto notification = Notification::create(*context, WTFMove(data));
             notification->markAsShown();
             return notification;
@@ -697,8 +695,8 @@ ServiceWorkerOrClientIdentifier ServiceWorkerContainer::contextIdentifier()
 {
     ASSERT(m_creationThread.ptr() == &Thread::current());
     ASSERT(scriptExecutionContext());
-    if (is<ServiceWorkerGlobalScope>(*scriptExecutionContext()))
-        return downcast<ServiceWorkerGlobalScope>(*scriptExecutionContext()).thread().identifier();
+    if (RefPtr serviceWorkerGlobal = dynamicDowncast<ServiceWorkerGlobalScope>(*scriptExecutionContext()))
+        return serviceWorkerGlobal->thread().identifier();
     return scriptExecutionContext()->identifier();
 }
 
@@ -749,5 +747,3 @@ void ServiceWorkerContainer::getNavigationPreloadState(ServiceWorkerRegistration
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

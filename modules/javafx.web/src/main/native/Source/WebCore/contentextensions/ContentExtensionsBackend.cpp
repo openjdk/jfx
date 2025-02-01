@@ -36,6 +36,7 @@
 #include "ContentRuleListResults.h"
 #include "DFABytecodeInterpreter.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "ExtensionStyleSheets.h"
 #include "LocalFrame.h"
@@ -131,10 +132,12 @@ auto ContentExtensionsBackend::actionsFromContentRuleList(const ContentExtension
     if (auto totalActionCount = actionLocations.size() + universalActions.size()) {
         Vector<uint32_t> vector;
         vector.reserveInitialCapacity(totalActionCount);
-        for (uint64_t actionLocation : actionLocations)
-            vector.uncheckedAppend(static_cast<uint32_t>(actionLocation));
-        for (uint64_t actionLocation : universalActions)
-            vector.uncheckedAppend(static_cast<uint32_t>(actionLocation));
+        vector.appendContainerWithMapping(actionLocations, [](uint64_t actionLocation) {
+            return static_cast<uint32_t>(actionLocation);
+        });
+        vector.appendContainerWithMapping(universalActions, [](uint64_t actionLocation) {
+            return static_cast<uint32_t>(actionLocation);
+        });
         std::sort(vector.begin(), vector.end());
 
         // Add actions in reverse order to properly deal with IgnorePreviousRules.
@@ -163,15 +166,15 @@ auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& re
     const String& urlString = resourceLoadInfo.resourceURL.string();
     ASSERT_WITH_MESSAGE(urlString.containsOnlyASCII(), "A decoded URL should only contain ASCII characters. The matching algorithm assumes the input is ASCII.");
 
-    Vector<ActionsFromContentRuleList> actionsVector;
-    actionsVector.reserveInitialCapacity(m_contentExtensions.size());
     ASSERT(!(resourceLoadInfo.getResourceFlags() & ActionConditionMask));
     const ResourceFlags flags = resourceLoadInfo.getResourceFlags() | ActionConditionMask;
-    for (auto& [identifier, contentExtension] : m_contentExtensions) {
+    Vector<ActionsFromContentRuleList> actionsVector = WTF::compactMap(m_contentExtensions, [&](auto& entry) -> std::optional<ActionsFromContentRuleList> {
+        auto& [identifier, contentExtension] = entry;
         if (ruleListFilter(identifier) == ShouldSkipRuleList::Yes)
-            continue;
-        actionsVector.uncheckedAppend(actionsFromContentRuleList(contentExtension.get(), urlString, resourceLoadInfo, flags));
-    }
+            return std::nullopt;
+        return actionsFromContentRuleList(contentExtension.get(), urlString, resourceLoadInfo, flags);
+    });
+
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
     MonotonicTime addedTimeEnd = MonotonicTime::now();
     dataLogF("Time added: %f microseconds %s \n", (addedTimeEnd - addedTimeStart).microseconds(), resourceLoadInfo.resourceURL.string().utf8().data());
@@ -235,10 +238,8 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
             && frame->isMainFrame()
             && resourceType == ResourceType::Document)
             mainDocumentURL = url;
-        else if (auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame())) {
-            if (auto* mainDocument = localFrame->document())
-            mainDocumentURL = mainDocument->url();
-    }
+        else if (auto* page = frame->page())
+            mainDocumentURL = page->mainFrameURL();
     }
     if (currentDocument)
         frameURL = currentDocument->url();
@@ -300,7 +301,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
             }
         }
 
-        results.results.uncheckedAppend({ contentRuleListIdentifier, WTFMove(result) });
+        results.results.append({ contentRuleListIdentifier, WTFMove(result) });
     }
 
     if (currentDocument) {
@@ -323,7 +324,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
                 && ((equalLettersIgnoringASCIICase(url.host(), "www.google-analytics.com"_s) && equalLettersIgnoringASCIICase(url.path(), "/analytics.js"_s))
                     || (equalLettersIgnoringASCIICase(url.host(), "www.googletagmanager.com"_s) && equalLettersIgnoringASCIICase(url.path(), "/gtm.js"_s)))) {
                 if (auto* frame = currentDocument->frame())
-                    frame->script().evaluateIgnoringException(ScriptSourceCode { "try { window.dataLayer.hide.end(); console.log('Called window.dataLayer.hide.end() in frame ' + document.URL + ' because the content blocker blocked the load of the https://www.google-analytics.com/analytics.js script'); } catch (e) { }"_s });
+                    frame->script().evaluateIgnoringException(ScriptSourceCode { "try { window.dataLayer.hide.end(); console.log('Called window.dataLayer.hide.end() in frame ' + document.URL + ' because the content blocker blocked the load of the https://www.google-analytics.com/analytics.js script'); } catch (e) { }"_s, JSC::SourceTaintedOrigin::Untainted });
             }
         }
     }

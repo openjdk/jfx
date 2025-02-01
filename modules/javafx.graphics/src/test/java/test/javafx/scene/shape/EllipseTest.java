@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,60 +32,69 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Ellipse;
-import org.junit.Test;
 
-import static test.com.sun.javafx.test.TestHelper.assertSimilar;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import test.com.sun.javafx.scene.shape.StubEllipseHelper;
+import static test.com.sun.javafx.test.TestHelper.assertSimilar;
 
 
 public class EllipseTest {
 
-    @Test public void testPropertyPropagation_visible() throws Exception {
+    @Test
+    public void testPropertyPropagation_visible() throws Exception {
         final Ellipse node = new StubEllipse();
         NodeTest.testBooleanPropertyPropagation(node, "visible", false, true);
     }
 
-    @Test public void testPropertyPropagation_centerX() throws Exception {
+    @Test
+    public void testPropertyPropagation_centerX() throws Exception {
         final Ellipse node = new StubEllipse();
         NodeTest.testDoublePropertyPropagation(node, "centerX", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_centerY() throws Exception {
+    @Test
+    public void testPropertyPropagation_centerY() throws Exception {
         final Ellipse node = new StubEllipse();
         NodeTest.testDoublePropertyPropagation(node, "centerY", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_radiusX() throws Exception {
+    @Test
+    public void testPropertyPropagation_radiusX() throws Exception {
         final Ellipse node = new StubEllipse();
         NodeTest.testDoublePropertyPropagation(node, "radiusX", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_radiusY() throws Exception {
+    @Test
+    public void testPropertyPropagation_radiusY() throws Exception {
         final Ellipse node = new StubEllipse();
         NodeTest.testDoublePropertyPropagation(node, "radiusY", 100, 200);
     }
 
-    @Test public void testBoundPropertySync_radiusX() throws Exception {
+    @Test
+    public void testBoundPropertySync_radiusX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubEllipse(300.0, 300.0, 100.0, 100.0),
                 "radiusX", "radiusX", 150.0);
     }
 
-    @Test public void testBoundPropertySync_radiusY() throws Exception {
+    @Test
+    public void testBoundPropertySync_radiusY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubEllipse(300.0, 300.0, 100.0, 100.0),
                 "radiusY", "radiusY", 150.0);
     }
 
-    @Test public void testBoundPropertySync_centerX() throws Exception {
+    @Test
+    public void testBoundPropertySync_centerX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubEllipse(300.0, 300.0, 100.0, 100.0),
                 "centerX", "centerX", 10.0);
     }
 
-    @Test public void testBoundPropertySync_centerY() throws Exception {
+    @Test
+    public void testBoundPropertySync_centerY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubEllipse(300.0, 300.0, 100.0, 100.0),
                 "centerY", "centerY", 10.0);
@@ -100,7 +109,8 @@ public class EllipseTest {
                 original.getHeight(), original.getWidth()), e.getBoundsInParent());
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new StubEllipse().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

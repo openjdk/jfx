@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,11 @@
 
 #include "CPU.h"
 #include "WasmPlan.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace Wasm {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Worklist);
 
 namespace WasmWorklistInternal {
 static constexpr bool verbose = false;
@@ -222,10 +225,10 @@ Worklist::Worklist()
     , m_planEnqueued(AutomaticThreadCondition::create())
 {
     unsigned numberOfCompilationThreads = Options::useConcurrentJIT() ? Options::numberOfWasmCompilerThreads() : 1;
-    m_threads.reserveInitialCapacity(numberOfCompilationThreads);
     Locker locker { *m_lock };
-    for (unsigned i = 0; i < numberOfCompilationThreads; ++i)
-        m_threads.uncheckedAppend(Worklist::Thread::create(locker, *this));
+    m_threads = Vector<Ref<Thread>>(numberOfCompilationThreads, [&](size_t) {
+        return Worklist::Thread::create(locker, *this);
+    });
 }
 
 Worklist::~Worklist()

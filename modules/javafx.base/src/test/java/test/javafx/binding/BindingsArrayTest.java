@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,11 +35,11 @@ import javafx.collections.ObservableList;
 import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
 import javafx.collections.ObservableFloatArray;
 import javafx.collections.ObservableIntegerArray;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
@@ -56,12 +56,12 @@ public class BindingsArrayTest {
     private ObservableList<Object> list2;
     private IntegerProperty index;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         ErrorLoggingUtiltity.reset();
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         property = new SimpleListProperty<>();
         list1 = FXCollections.<Object>observableArrayList(data1, data2);
@@ -87,10 +87,13 @@ public class BindingsArrayTest {
         assertEquals(0, size.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSize_Null() {
-        Bindings.size((ObservableList<Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.size((ObservableList<Object>) null);
+        });
     }
+
 
     @Test
     public void testIsEmpty() {
@@ -110,10 +113,13 @@ public class BindingsArrayTest {
         assertTrue(empty.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIsEmpty_Null() {
-        Bindings.isEmpty((ObservableList<Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.isEmpty((ObservableList<Object>) null);
+        });
     }
+
 
     @Test
     public void testIsNotEmpty() {
@@ -133,10 +139,13 @@ public class BindingsArrayTest {
         assertFalse(notEmpty.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIsNotEmpty_Null() {
-        Bindings.isNotEmpty((ObservableList<Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.isNotEmpty((ObservableList<Object>) null);
+        });
     }
+
 
     @Test
     public void testValueAt_Constant() {
@@ -189,15 +198,21 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testValueAt_Constant_Null() {
-        Bindings.valueAt(null, 0);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.valueAt(null, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+
+    @Test
     public void testValueAt_Constant_NegativeIndex() {
-        Bindings.valueAt(property, -1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Bindings.valueAt(property, -1);
+        });
     }
+
 
     @Test
     public void testValueAt_Variable() {
@@ -262,15 +277,21 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testValueAt_Variable_Null() {
-        Bindings.valueAt((ObservableList<Object>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.valueAt((ObservableList<Object>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testValueAt_Variable_NullIndex() {
-        Bindings.valueAt(property, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.valueAt(property, null);
+        });
     }
+
 
     @Test
     public void testBooleanValueAt_Constant() {
@@ -330,16 +351,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBooleanValueAt_Constant_Null() {
-        Bindings.booleanValueAt(null, 0);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.booleanValueAt(null, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+
+    @Test
     public void testBooleanValueAt_Constant_NegativeIndex() {
-        final ListProperty<Boolean> localProperty = new SimpleListProperty<>();
-        Bindings.booleanValueAt(localProperty, -1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            final ListProperty<Boolean> localProperty = new SimpleListProperty<>();
+            Bindings.booleanValueAt(localProperty, -1);
+        });
     }
+
 
     @Test
     public void testBooleanValueAt_Variable() {
@@ -422,16 +449,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBooleanValueAt_Variable_Null() {
-        Bindings.booleanValueAt((ObservableList<Boolean>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.booleanValueAt((ObservableList<Boolean>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testBooleanValueAt_Variable_NullIndex() {
-        final ListProperty<Boolean> localProperty = new SimpleListProperty<>();
-        Bindings.booleanValueAt(localProperty, null);
+        assertThrows(NullPointerException.class, () -> {
+            final ListProperty<Boolean> localProperty = new SimpleListProperty<>();
+            Bindings.booleanValueAt(localProperty, null);
+        });
     }
+
 
     @Test
     public void testDoubleValueAt_Constant() {
@@ -491,16 +524,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testDoubleValueAt_Constant_Null() {
-        Bindings.doubleValueAt(null, 0);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.doubleValueAt(null, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+
+    @Test
     public void testDoubleValueAt_Constant_NegativeIndex() {
-        final ListProperty<Double> localProperty = new SimpleListProperty<>();
-        Bindings.doubleValueAt(localProperty, -1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            final ListProperty<Double> localProperty = new SimpleListProperty<>();
+            Bindings.doubleValueAt(localProperty, -1);
+        });
     }
+
 
     @Test
     public void testDoubleValueAt_Variable() {
@@ -583,16 +622,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testDoubleValueAt_Variable_Null() {
-        Bindings.doubleValueAt((ObservableList<Double>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.doubleValueAt((ObservableList<Double>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testDoubleValueAt_Variable_NullIndex() {
-        final ListProperty<Double> localProperty = new SimpleListProperty<>();
-        Bindings.doubleValueAt(localProperty, null);
+        assertThrows(NullPointerException.class, () -> {
+            final ListProperty<Double> localProperty = new SimpleListProperty<>();
+            Bindings.doubleValueAt(localProperty, null);
+        });
     }
+
 
     @Test
     public void testFloatValueAt_Constant() {
@@ -652,16 +697,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testFloatValueAt_Constant_Null() {
-        Bindings.floatValueAt((ObservableFloatArray) null, 0);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.floatValueAt((ObservableFloatArray) null, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+
+    @Test
     public void testFloatValueAt_Constant_NegativeIndex() {
-        final ListProperty<Float> localProperty = new SimpleListProperty<>();
-        Bindings.floatValueAt(localProperty, -1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            final ListProperty<Float> localProperty = new SimpleListProperty<>();
+            Bindings.floatValueAt(localProperty, -1);
+        });
     }
+
 
     @Test
     public void testFloatValueAt_Variable() {
@@ -744,16 +795,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testFloatValueAt_Variable_Null() {
-        Bindings.floatValueAt((ObservableList<Float>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.floatValueAt((ObservableList<Float>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testFloatValueAt_Variable_NullIndex() {
-        final ListProperty<Float> localProperty = new SimpleListProperty<>();
-        Bindings.floatValueAt(localProperty, null);
+        assertThrows(NullPointerException.class, () -> {
+            final ListProperty<Float> localProperty = new SimpleListProperty<>();
+            Bindings.floatValueAt(localProperty, null);
+        });
     }
+
 
     @Test
     public void testIntegerValueAt_Constant() {
@@ -813,16 +870,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIntegerValueAt_Constant_Null() {
-        Bindings.integerValueAt((ObservableIntegerArray) null, 0);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.integerValueAt((ObservableIntegerArray) null, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+
+    @Test
     public void testIntegerValueAt_Constant_NegativeIndex() {
-        final ListProperty<Integer> localProperty = new SimpleListProperty<>();
-        Bindings.integerValueAt(localProperty, -1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            final ListProperty<Integer> localProperty = new SimpleListProperty<>();
+            Bindings.integerValueAt(localProperty, -1);
+        });
     }
+
 
     @Test
     public void testIntegerValueAt_Variable() {
@@ -905,16 +968,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIntegerValueAt_Variable_Null() {
-        Bindings.integerValueAt((ObservableList<Integer>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.integerValueAt((ObservableList<Integer>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testIntegerValueAt_Variable_NullIndex() {
-        final ListProperty<Integer> localProperty = new SimpleListProperty<>();
-        Bindings.integerValueAt(localProperty, null);
+        assertThrows(NullPointerException.class, () -> {
+            final ListProperty<Integer> localProperty = new SimpleListProperty<>();
+            Bindings.integerValueAt(localProperty, null);
+        });
     }
+
 
     @Test
     public void testLongValueAt_Constant() {
@@ -974,16 +1043,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testLongValueAt_Constant_Null() {
-        Bindings.longValueAt(null, 0);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.longValueAt(null, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+
+    @Test
     public void testLongValueAt_Constant_NegativeIndex() {
-        final ListProperty<Long> localProperty = new SimpleListProperty<>();
-        Bindings.longValueAt(localProperty, -1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            final ListProperty<Long> localProperty = new SimpleListProperty<>();
+            Bindings.longValueAt(localProperty, -1);
+        });
     }
+
 
     @Test
     public void testLongValueAt_Variable() {
@@ -1066,16 +1141,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testLongValueAt_Variable_Null() {
-        Bindings.longValueAt((ObservableList<Long>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.longValueAt((ObservableList<Long>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testLongValueAt_Variable_NullIndex() {
-        final ListProperty<Long> localProperty = new SimpleListProperty<>();
-        Bindings.longValueAt(localProperty, null);
+        assertThrows(NullPointerException.class, () -> {
+            final ListProperty<Long> localProperty = new SimpleListProperty<>();
+            Bindings.longValueAt(localProperty, null);
+        });
     }
+
 
     @Test
     public void testStringValueAt_Constant() {
@@ -1135,16 +1216,22 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testStringValueAt_Constant_Null() {
-        Bindings.stringValueAt(null, 0);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.stringValueAt(null, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+
+    @Test
     public void testStringValueAt_Constant_NegativeIndex() {
-        final ListProperty<String> localProperty = new SimpleListProperty<>();
-        Bindings.stringValueAt(localProperty, -1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            final ListProperty<String> localProperty = new SimpleListProperty<>();
+            Bindings.stringValueAt(localProperty, -1);
+        });
     }
+
 
     @Test
     public void testStringValueAt_Variable() {
@@ -1216,16 +1303,19 @@ public class BindingsArrayTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testStringValueAt_Variable_Null() {
-        Bindings.stringValueAt((ObservableList<String>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.stringValueAt((ObservableList<String>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testStringValueAt_Variable_NullIndex() {
-        final ListProperty<String> localProperty = new SimpleListProperty<>();
-        Bindings.stringValueAt(localProperty, null);
+        assertThrows(NullPointerException.class, () -> {
+            final ListProperty<String> localProperty = new SimpleListProperty<>();
+            Bindings.stringValueAt(localProperty, null);
+        });
     }
-
-
 }

@@ -1119,6 +1119,18 @@ gboolean  gst_tag_list_take    (GstTagList ** old_taglist,
  */
 #define GST_TAG_PRIVATE_DATA                         "private-data"
 
+/**
+ * GST_TAG_CONTAINER_SPECIFIC_TRACK_ID:
+ *
+ * Unique identifier for the audio, video or text track this tag is associated
+ * with. The mappings for several container formats are defined in the [Sourcing
+ * In-band Media Resource Tracks from Media Containers into HTML
+ * specification](https://dev.w3.org/html5/html-sourcing-inband-tracks/).
+ *
+ * Since: 1.24
+ */
+#define GST_TAG_CONTAINER_SPECIFIC_TRACK_ID "container-specific-track-id"
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTagList, gst_tag_list_unref)
 
 G_END_DECLS

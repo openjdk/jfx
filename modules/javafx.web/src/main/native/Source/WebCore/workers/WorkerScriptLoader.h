@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "AdvancedPrivacyProtections.h"
 #include "CertificateInfo.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginEmbedderPolicy.h"
@@ -40,6 +41,7 @@
 #include "ThreadableLoaderClient.h"
 #include <memory>
 #include <wtf/FastMalloc.h>
+#include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/URL.h>
@@ -70,6 +72,8 @@ public:
 
     void notifyError();
 
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const { return m_advancedPrivacyProtections; }
+
     const ScriptBuffer& script() const { return m_script; }
     const ContentSecurityPolicyResponseHeaders& contentSecurityPolicy() const { return m_contentSecurityPolicy; }
     const String& referrerPolicy() const { return m_referrerPolicy; }
@@ -96,7 +100,6 @@ public:
 
     WEBCORE_EXPORT static ResourceError validateWorkerResponse(const ResourceResponse&, Source, FetchOptions::Destination);
 
-#if ENABLE(SERVICE_WORKER)
     class ServiceWorkerDataManager : public ThreadSafeRefCounted<ServiceWorkerDataManager, WTF::DestructionThread::Main> {
     public:
         static Ref<ServiceWorkerDataManager> create(ScriptExecutionContextIdentifier identifier) { return adoptRef(*new ServiceWorkerDataManager(identifier)); }
@@ -119,7 +122,6 @@ public:
     void setControllingServiceWorker(ServiceWorkerData&&);
     std::optional<ServiceWorkerData> takeServiceWorkerData();
     WEBCORE_EXPORT static RefPtr<ServiceWorkerDataManager> serviceWorkerDataManagerFromIdentifier(ScriptExecutionContextIdentifier);
-#endif
 
     ScriptExecutionContextIdentifier clientIdentifier() const { return m_clientIdentifier; }
     const String& userAgentForSharedWorker() const { return m_userAgentForSharedWorker; }
@@ -156,14 +158,13 @@ private:
     ResourceResponse::Tainting m_responseTainting { ResourceResponse::Tainting::Basic };
     ResourceError m_error;
     ScriptExecutionContextIdentifier m_clientIdentifier;
-#if ENABLE(SERVICE_WORKER)
     bool m_didAddToWorkerScriptLoaderMap { false };
     bool m_isMatchingServiceWorkerRegistration { false };
     std::optional<SecurityOriginData> m_topOriginForServiceWorkerRegistration;
     RefPtr<ServiceWorkerDataManager> m_serviceWorkerDataManager;
     WeakPtr<ScriptExecutionContext> m_context;
-#endif
     String m_userAgentForSharedWorker;
+    OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
 };
 
 } // namespace WebCore

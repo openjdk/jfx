@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@
 #include "fxplugins_common.h"
 
 #define PTS_DEBUG 0
+#define MEDIA_FORMAT_DEBUG 0
 
 enum
 {
@@ -206,8 +207,11 @@ static void gst_mfwrapper_init(GstMFWrapper *decoder)
     decoder->pDecoder = NULL;
     decoder->pDecoderOutput = NULL;
 
-    decoder->pColorConvert = NULL;
-    decoder->pColorConvertOutput = NULL;
+    for (int i = 0; i < MAX_COLOR_CONVERT; i++)
+    {
+        decoder->pColorConvert[i] = NULL;
+        decoder->pColorConvertOutput[i] = NULL;
+    }
 
     decoder->header = NULL;
     decoder->header_size = 0;
@@ -216,6 +220,10 @@ static void gst_mfwrapper_init(GstMFWrapper *decoder)
     decoder->height = 1080;
     decoder->framerate_num = 2997;
     decoder->framerate_den = 100;
+
+    decoder->defaultStride = 0;
+    decoder->pixel_num = 0;
+    decoder->pixel_den = 0;
 }
 
 static void gst_mfwrapper_dispose(GObject* object)
@@ -225,8 +233,11 @@ static void gst_mfwrapper_dispose(GObject* object)
     SafeRelease(&decoder->pDecoderOutput);
     SafeRelease(&decoder->pDecoder);
 
-    SafeRelease(&decoder->pColorConvertOutput);
-    SafeRelease(&decoder->pColorConvert);
+    for (int i = 0; i < MAX_COLOR_CONVERT; i++)
+    {
+        SafeRelease(&decoder->pColorConvertOutput[i]);
+        SafeRelease(&decoder->pColorConvert[i]);
+    }
 
     if (decoder->hr_mfstartup == S_OK)
         MFShutdown();
@@ -356,6 +367,65 @@ static void mfwrapper_set_src_caps(GstMFWrapper *decoder)
         }
     }
 }
+
+#if MEDIA_FORMAT_DEBUG
+static void mfwrapper_print_media_format(GUID format)
+{
+    if (IsEqualGUID(format, MFVideoFormat_I420))
+        g_print("JFXMEDIA MFVideoFormat_I420\n");
+    else if (IsEqualGUID(format, MFVideoFormat_IYUV))
+        g_print("JFXMEDIA MFVideoFormat_IYUV\n");
+    else if (IsEqualGUID(format, MFVideoFormat_NV12))
+        g_print("JFXMEDIA MFVideoFormat_NV12\n");
+    else if (IsEqualGUID(format, MFVideoFormat_YUY2))
+        g_print("JFXMEDIA MFVideoFormat_YUY2\n");
+    else if (IsEqualGUID(format, MFVideoFormat_YV12))
+        g_print("JFXMEDIA MFVideoFormat_YV12\n");
+    else if (IsEqualGUID(format, MFVideoFormat_P010))
+        g_print("JFXMEDIA MFVideoFormat_P010\n");
+    else if (IsEqualGUID(format, MFVideoFormat_ARGB32))
+        g_print("JFXMEDIA MFVideoFormat_ARGB32\n");
+    else if (IsEqualGUID(format, MFVideoFormat_RGB32))
+        g_print("JFXMEDIA MFVideoFormat_RGB32\n");
+    else if (IsEqualGUID(format, MFVideoFormat_A2R10G10B10))
+        g_print("JFXMEDIA MFVideoFormat_A2R10G10B10\n");
+    else if (IsEqualGUID(format, MFVideoFormat_A16B16G16R16F))
+        g_print("JFXMEDIA MFVideoFormat_A16B16G16R16F\n");
+    else if (IsEqualGUID(format, MFVideoFormat_RGB24))
+        g_print("JFXMEDIA MFVideoFormat_RGB24\n");
+    else if (IsEqualGUID(format, MFVideoFormat_AYUV))
+        g_print("JFXMEDIA MFVideoFormat_AYUV\n");
+    else
+        g_print("JFXMEDIA Unknown MF Format\n");
+}
+
+static void mfwrapper_print_output_media_formats(IMFTransform *pMFTrasnform, const char *name)
+{
+    HRESULT hr = S_OK;
+    GUID subType;
+    DWORD dwTypeIndex = 0;
+    IMFMediaType *pType = NULL;
+
+    g_print("JFXMEDIA MF Transform (%s) output formats:\n", name);
+    if (pMFTrasnform == NULL)
+    {
+        g_print("JFXMEDIA Error: pMFTrasnform == NULL\n");
+        return;
+    }
+
+    do
+    {
+        hr = pMFTrasnform->GetOutputAvailableType(0, dwTypeIndex, &pType);
+        if (SUCCEEDED(hr))
+        {
+            hr = pType->GetGUID(MF_MT_SUBTYPE, &subType);
+            mfwrapper_print_media_format(subType);
+            SafeRelease(&pType);
+            dwTypeIndex++;
+        }
+    } while (hr != MF_E_NO_MORE_TYPES && SUCCEEDED(hr));
+}
+#endif // MEDIA_FORMAT_DEBUG
 
 static void mfwrapper_nalu_to_start_code(BYTE *pbBuffer, gsize size)
 {
@@ -493,198 +563,515 @@ static gboolean mfwrapper_process_input(GstMFWrapper *decoder, GstBuffer *buf)
         return FALSE;
 }
 
-static HRESULT mfwrapper_init_colorconvert(GstMFWrapper *decoder)
+static HRESULT mfwrapper_configure_colorconvert_input_type(GstMFWrapper *decoder,
+                                                           IMFTransform *pInput,
+                                                           IMFTransform *pColorConvert)
 {
-    DWORD dwStatus = 0;
+    HRESULT hr = S_OK;
+    IMFMediaType *pInputOutputType = NULL;
+    IMFMediaType *pColorConvertInputType = NULL;
+    GUID subType;
 
-    IMFMediaType *pDecoderOutputType = NULL;
-    IMFMediaType *pInputType = NULL;
-    IMFMediaType *pConverterOutputType = NULL;
+    if (decoder == NULL || pInput == NULL || pColorConvert == NULL)
+        return E_POINTER;
+
+    // Get decoder output type. It should be already configured.
+    if (SUCCEEDED(hr))
+        hr = pInput->GetOutputCurrentType(0, &pInputOutputType);
+
+    if (SUCCEEDED(hr))
+        hr = pInputOutputType->GetGUID(MF_MT_SUBTYPE, &subType);
+
+#if MEDIA_FORMAT_DEBUG
+    g_print("JFXMEDIA mfwrapper_configure_colorconvert_input_type() Input output type:\n");
+    mfwrapper_print_media_format(subType);
+#endif // MEDIA_FORMAT_DEBUG
+
+    // Set input type on color converter. Create new one with all information we know.
+    // Setting one from decoder will not work since it does not contain all information.
+    if (SUCCEEDED(hr))
+        hr = MFCreateMediaType(&pColorConvertInputType);
+
+    if (SUCCEEDED(hr))
+        hr = pColorConvertInputType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+
+    if (SUCCEEDED(hr))
+        hr = pColorConvertInputType->SetGUID(MF_MT_SUBTYPE, subType);
+
+    if (SUCCEEDED(hr))
+    {
+        hr = MFSetAttributeSize(pColorConvertInputType, MF_MT_FRAME_SIZE,
+                decoder->width, decoder->height);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        hr = MFSetAttributeRatio(pColorConvertInputType, MF_MT_FRAME_RATE,
+                decoder->framerate_num, decoder->framerate_den);
+    }
+
+    if (SUCCEEDED(hr) && decoder->defaultStride != 0)
+    {
+        hr = pColorConvertInputType->SetUINT32(MF_MT_DEFAULT_STRIDE,
+                (UINT32)decoder->defaultStride);
+    }
+
+    if (SUCCEEDED(hr) && decoder->pixel_num != 0 && decoder->pixel_den != 0)
+    {
+        hr = MFSetAttributeRatio(pColorConvertInputType, MF_MT_PIXEL_ASPECT_RATIO,
+                (UINT32)decoder->pixel_num, (UINT32)decoder->pixel_den);
+    }
+
+    if (SUCCEEDED(hr))
+        hr = pColorConvert->SetInputType(0, pColorConvertInputType, 0);
+
+    SafeRelease(&pColorConvertInputType);
+    SafeRelease(&pInputOutputType);
+
+    return hr;
+}
+
+static HRESULT mfwrapper_set_colorconvert_output_type(GstMFWrapper *decoder,
+                                                      IMFMediaType *pOutputType,
+                                                      IMFTransform *pColorConvert)
+{
+    HRESULT hr = S_OK;
+    GUID subType;
+    IMFMediaType *pNewOutputType = NULL;
+    IMFMediaType *pCurrentOutputType = NULL;
+    GUID currentSubType;
+    guint width = 0;
+    guint height = 0;
+
+    if (decoder == NULL || pOutputType == NULL || pColorConvert == NULL)
+    {
+        return E_POINTER;
+    }
+
+    // We only need subtype
+    hr = pOutputType->GetGUID(MF_MT_SUBTYPE, &subType);
+
+    // For color convert we need to re-create output type with more information
+    if (SUCCEEDED(hr))
+        hr = MFCreateMediaType(&pNewOutputType);
+
+    if (SUCCEEDED(hr))
+        hr = pNewOutputType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+
+    if (SUCCEEDED(hr))
+        hr = pNewOutputType->SetGUID(MF_MT_SUBTYPE, subType);
+
+    if (SUCCEEDED(hr))
+        hr = MFSetAttributeSize(pNewOutputType, MF_MT_FRAME_SIZE, decoder->width, decoder->height);
+
+    if (SUCCEEDED(hr))
+        hr = MFSetAttributeRatio(pNewOutputType, MF_MT_FRAME_RATE, decoder->framerate_num, decoder->framerate_den);
+
+    if (SUCCEEDED(hr))
+    {
+#if MEDIA_FORMAT_DEBUG
+        g_print("JFXMEDIA Setting color convert output type:\n");
+        mfwrapper_print_media_format(subType);
+#endif // MEDIA_FORMAT_DEBUG
+        hr = pColorConvert->SetOutputType(0, pNewOutputType, 0);
+        SafeRelease(&pNewOutputType);
+        if (hr != S_OK) // S_OK means format was set
+        {
+#if MEDIA_FORMAT_DEBUG
+            g_print("JFXMEDIA Failed setting color convert output type (hr=0x%X):\n", hr);
+            mfwrapper_print_media_format(subType);
+#endif // MEDIA_FORMAT_DEBUG
+            return E_FAIL;
+        }
+
+        // Re-check format just in case
+        hr = pColorConvert->GetOutputCurrentType(0, &pCurrentOutputType);
+        if (SUCCEEDED(hr))
+            hr = pCurrentOutputType->GetGUID(MF_MT_SUBTYPE, &currentSubType);
+
+        SafeRelease(&pCurrentOutputType);
+
+        if (SUCCEEDED(hr) && !IsEqualGUID(subType, currentSubType))
+        {
+#if MEDIA_FORMAT_DEBUG
+            g_print("JFXMEDIA Error: unexpected sub type vs current sub type\n");
+            mfwrapper_print_media_format(subType);
+            mfwrapper_print_media_format(currentSubType);
+#endif // MEDIA_FORMAT_DEBUG
+            return E_FAIL;
+        }
+    }
+
+    return hr;
+}
+
+static HRESULT mfwrapper_configure_colorconvert_output_type(GstMFWrapper *decoder,
+                                                            IMFTransform *pColorConvert,
+                                                            GUID *outputType)
+{
+    HRESULT hr = S_OK;
     IMFMediaType *pOutputType = NULL;
     GUID subType;
-    UINT32 unDefaultStride = 0;
-    UINT32 unNumerator = 0;
-    UINT32 unDenominator = 0;
+    DWORD dwTypeIndex = 0;
+
+    // We need following types:
+    // MFVideoFormat_IYUV (prefered)
+    // MFVideoFormat_NV12 (requires second converter)
+    IMFMediaType *pOutputTypeIYUV = NULL;
+    IMFMediaType *pOutputTypeNV12 = NULL;
+
+    if (decoder == NULL || pColorConvert == NULL || outputType == NULL)
+        return E_POINTER;
+
+#if MEDIA_FORMAT_DEBUG
+    mfwrapper_print_output_media_formats(pColorConvert, "Color Converter");
+#endif // MEDIA_FORMAT_DEBUG
+
+    do
+    {
+        hr = pColorConvert->GetOutputAvailableType(0, dwTypeIndex, &pOutputType);
+        if (hr == MF_E_NO_MORE_TYPES)
+            break;
+
+        if (SUCCEEDED(hr))
+            hr = pOutputType->GetGUID(MF_MT_SUBTYPE, &subType);
+
+        if (SUCCEEDED(hr) && IsEqualGUID(subType, MFVideoFormat_IYUV))
+            pOutputTypeIYUV = pOutputType;
+        else if (SUCCEEDED(hr) && IsEqualGUID(subType, MFVideoFormat_NV12))
+            pOutputTypeNV12 = pOutputType;
+        else if (SUCCEEDED(hr))
+            SafeRelease(&pOutputType);
+
+        pOutputType = NULL;
+
+        dwTypeIndex++;
+    } while (hr != MF_E_NO_MORE_TYPES && SUCCEEDED(hr));
+
+    // Set hr to error code, it might be SUCCEEDED after loop
+    // and pOutputTypeIYUV can be NULL, so we will try other
+    // formats as well.
+    hr = E_FAIL;
+
+    // We should cache as much supported formats as possible.
+    // Try them in order we prefered.
+    if (pOutputTypeIYUV)
+    {
+        hr = mfwrapper_set_colorconvert_output_type(decoder, pOutputTypeIYUV,
+                                                    pColorConvert);
+        if (SUCCEEDED(hr))
+            (*outputType) = MFVideoFormat_IYUV;
+    }
+
+    // Try only if previous one failed
+    if (hr != S_OK && pOutputTypeNV12)
+    {
+        hr = mfwrapper_set_colorconvert_output_type(decoder, pOutputTypeNV12,
+                                                    pColorConvert);
+        if (SUCCEEDED(hr))
+            (*outputType) = MFVideoFormat_NV12;
+    }
+
+    SafeRelease(&pOutputTypeIYUV);
+    SafeRelease(&pOutputTypeNV12);
+
+    return hr;
+}
+
+// pInput - Input transform for which mfwrapper_init_colorconvert() will create
+// color convert with best possible output type.
+// ppColorConvert - Receives pointer to color convert.
+// ppColorConvertOutput - Receives pointer to color convert output buffer.
+// outputType - Will be set to color convert output type (IYUV or NV12)
+static HRESULT mfwrapper_init_colorconvert(GstMFWrapper *decoder,
+                                           IMFTransform *pInput,
+                                           IMFTransform **ppColorConvert,
+                                           IMFSample **ppColorConvertOutput,
+                                           GUID *outputType)
+{
+    DWORD dwStatus = 0;
     MFT_OUTPUT_STREAM_INFO outputStreamInfo;
 
-    HRESULT hr = CoCreateInstance(CLSID_VideoProcessorMFT, NULL, CLSCTX_ALL, IID_PPV_ARGS(&decoder->pColorConvert));
-
-    // Set input type
-    DWORD dwTypeIndex = 0;
-    do
+    if (pInput == NULL || ppColorConvert == NULL ||
+        ppColorConvertOutput == NULL || outputType == NULL)
     {
-        hr = decoder->pDecoder->GetOutputAvailableType(0, dwTypeIndex, &pDecoderOutputType);
-        dwTypeIndex++;
+        return E_POINTER;
+    }
 
-        if (SUCCEEDED(hr))
-            hr = pDecoderOutputType->GetGUID(MF_MT_SUBTYPE, &subType);
-
-        if (SUCCEEDED(hr) && !IsEqualGUID(subType, MFVideoFormat_NV12))
-        {
-            SafeRelease(&pDecoderOutputType);
-            hr = E_FAIL;
-            continue;
-        }
-
-        if (SUCCEEDED(hr))
-            hr = MFCreateMediaType(&pInputType);
-
-        if (SUCCEEDED(hr))
-            hr = pInputType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
-
-        if (SUCCEEDED(hr))
-            hr = pInputType->SetGUID(MF_MT_SUBTYPE, subType);
-
-        if (SUCCEEDED(hr))
-            hr = MFSetAttributeSize(pInputType, MF_MT_FRAME_SIZE, decoder->width, decoder->height);
-
-        if (SUCCEEDED(hr))
-            hr = MFSetAttributeRatio(pInputType, MF_MT_FRAME_RATE, decoder->framerate_num, decoder->framerate_den);
-
-        if (SUCCEEDED(hr))
-        {
-            hr = pDecoderOutputType->GetUINT32(MF_MT_DEFAULT_STRIDE, &unDefaultStride);
-            if (SUCCEEDED(hr))
-                hr = pInputType->SetUINT32(MF_MT_DEFAULT_STRIDE, unDefaultStride);
-        }
-
-        if (SUCCEEDED(hr))
-        {
-            hr = MFGetAttributeRatio(pDecoderOutputType, MF_MT_PIXEL_ASPECT_RATIO, &unNumerator, &unDenominator);
-            if (SUCCEEDED(hr))
-                hr = MFSetAttributeRatio(pInputType, MF_MT_PIXEL_ASPECT_RATIO, unNumerator, unDenominator);
-        }
-
-        if (SUCCEEDED(hr))
-            hr = decoder->pColorConvert->SetInputType(0, pInputType, 0);
-
-        SafeRelease(&pInputType);
-
-        if (SUCCEEDED(hr))
-            hr = decoder->pDecoder->SetOutputType(0, pDecoderOutputType, 0);
-
-        SafeRelease(&pDecoderOutputType);
-
-    } while (hr != MF_E_NO_MORE_TYPES && FAILED(hr));
-
-    // Set output type
-    dwTypeIndex = 0;
-    do
-    {
-        hr = decoder->pColorConvert->GetOutputAvailableType(0, dwTypeIndex, &pConverterOutputType);
-        dwTypeIndex++;
-
-        if (SUCCEEDED(hr))
-            hr = pConverterOutputType->GetGUID(MF_MT_SUBTYPE, &subType);
-
-        if (SUCCEEDED(hr) && !(IsEqualGUID(subType, MFVideoFormat_IYUV) || IsEqualGUID(subType, MFVideoFormat_I420)))
-        {
-            SafeRelease(&pConverterOutputType);
-            hr = E_FAIL;
-            continue;
-        }
-
-        SafeRelease(&pConverterOutputType);
-
-        if (SUCCEEDED(hr))
-            hr = MFCreateMediaType(&pOutputType);
-
-        if (SUCCEEDED(hr))
-            hr = pOutputType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
-
-        if (SUCCEEDED(hr))
-            hr = pOutputType->SetGUID(MF_MT_SUBTYPE, subType);
-
-        if (SUCCEEDED(hr))
-            hr = MFSetAttributeSize(pOutputType, MF_MT_FRAME_SIZE, decoder->width, decoder->height);
-
-        if (SUCCEEDED(hr))
-            hr = MFSetAttributeRatio(pOutputType, MF_MT_FRAME_RATE, decoder->framerate_num, decoder->framerate_den);
-
-        if (SUCCEEDED(hr))
-            hr = decoder->pColorConvert->SetOutputType(0, pOutputType, 0);
-
-        SafeRelease(&pOutputType);
-
-    } while (hr != MF_E_NO_MORE_TYPES && FAILED(hr));
+    HRESULT hr = CoCreateInstance(CLSID_VideoProcessorMFT, NULL, CLSCTX_ALL, IID_PPV_ARGS(ppColorConvert));
+    if (SUCCEEDED(hr))
+        hr = mfwrapper_configure_colorconvert_input_type(decoder, pInput, (*ppColorConvert));
 
     if (SUCCEEDED(hr))
-        hr = decoder->pColorConvert->GetOutputStreamInfo(0, &outputStreamInfo);
+        hr = mfwrapper_configure_colorconvert_output_type(decoder, (*ppColorConvert), outputType);
+
+    if (SUCCEEDED(hr))
+        hr = (*ppColorConvert)->GetOutputStreamInfo(0, &outputStreamInfo);
 
     if (SUCCEEDED(hr))
     {
-        if (!((outputStreamInfo.dwFlags & MFT_OUTPUT_STREAM_PROVIDES_SAMPLES) || (outputStreamInfo.dwFlags & MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES)))
+        if (!((outputStreamInfo.dwFlags & MFT_OUTPUT_STREAM_PROVIDES_SAMPLES) ||
+              (outputStreamInfo.dwFlags & MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES)))
         {
-            hr = MFCreateSample(&decoder->pColorConvertOutput);
+            hr = MFCreateSample(ppColorConvertOutput);
             if (SUCCEEDED(hr))
             {
                 IMFMediaBuffer *pBuffer = NULL;
                 hr = MFCreateMemoryBuffer(outputStreamInfo.cbSize, &pBuffer);
                 if (SUCCEEDED(hr))
-                    hr = decoder->pColorConvertOutput->AddBuffer(pBuffer);
+                    hr = (*ppColorConvertOutput)->AddBuffer(pBuffer);
                 SafeRelease(&pBuffer);
             }
         }
     }
 
     if (SUCCEEDED(hr))
-        hr = decoder->pColorConvert->GetInputStatus(0, &dwStatus);
+        hr = (*ppColorConvert)->GetInputStatus(0, &dwStatus);
 
     if (FAILED(hr) || dwStatus != MFT_INPUT_STATUS_ACCEPT_DATA) {
         return hr;
     }
 
     if (SUCCEEDED(hr))
-        hr = decoder->pColorConvert->ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, NULL);
+        hr = (*ppColorConvert)->ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, NULL);
 
     if (SUCCEEDED(hr))
-        hr = decoder->pColorConvert->ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, NULL);
+        hr = (*ppColorConvert)->ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, NULL);
 
     if (SUCCEEDED(hr))
-        hr = decoder->pColorConvert->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, NULL);
+        hr = (*ppColorConvert)->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, NULL);
 
     return hr;
 }
 
-static gboolean mfwrapper_convert_output(GstMFWrapper *decoder)
+static HRESULT mfwrapper_set_decoder_output_type(GstMFWrapper *decoder,
+                                                 IMFMediaType *pOutputType,
+                                                 gboolean bInitColorConverter)
+{
+    HRESULT hr = S_OK;
+    GUID subType;
+    IMFMediaType *pCurrentOutputType = NULL;
+    GUID currentSubType;
+    guint width = 0;
+    guint height = 0;
+
+    if (decoder == NULL && pOutputType == NULL)
+        return E_POINTER;
+
+    hr = pOutputType->GetGUID(MF_MT_SUBTYPE, &subType);
+    if (SUCCEEDED(hr))
+    {
+#if MEDIA_FORMAT_DEBUG
+        g_print("JFXMEDIA Setting decoder output type:\n");
+        mfwrapper_print_media_format(subType);
+#endif // MEDIA_FORMAT_DEBUG
+        hr = decoder->pDecoder->SetOutputType(0, pOutputType, 0);
+        if (hr != S_OK) // S_OK means format was set
+        {
+#if MEDIA_FORMAT_DEBUG
+            g_print("JFXMEDIA Failed setting decoder output type (hr=0x%X):\n", hr);
+            mfwrapper_print_media_format(subType);
+#endif // MEDIA_FORMAT_DEBUG
+            return E_FAIL;
+        }
+
+        // Re-check format just in case
+        hr = decoder->pDecoder->GetOutputCurrentType(0, &pCurrentOutputType);
+        if (SUCCEEDED(hr))
+            hr = pCurrentOutputType->GetGUID(MF_MT_SUBTYPE, &currentSubType);
+
+        SafeRelease(&pCurrentOutputType);
+
+        if (SUCCEEDED(hr) && !IsEqualGUID(subType, currentSubType))
+        {
+#if MEDIA_FORMAT_DEBUG
+            g_print("JFXMEDIA Error: unexpected sub type vs current sub type\n");
+            mfwrapper_print_media_format(subType);
+            mfwrapper_print_media_format(currentSubType);
+#endif // MEDIA_FORMAT_DEBUG
+            return E_FAIL;
+        }
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        // Update width and height from configured decoder output type.
+        // We need to do this before color convert, so we pass correct
+        // resolution to color convert and caps.
+        hr = MFGetAttributeSize(pOutputType, MF_MT_FRAME_SIZE, &width, &height);
+        if (SUCCEEDED(hr) && (decoder->width != width || decoder->height != height))
+        {
+            decoder->width = width;
+            decoder->height = height;
+        }
+        hr = S_OK; // Ok if we do not have above attribute
+
+        // Cache stride and pixel aspect ratio. Ok if we do not have it.
+        UINT32 unDefaultStride = 0;
+        hr = pOutputType->GetUINT32(MF_MT_DEFAULT_STRIDE, &unDefaultStride);
+        if (SUCCEEDED(hr))
+        {
+            decoder->defaultStride = unDefaultStride;
+        }
+        hr = S_OK;
+
+        UINT32 unNumerator = 0;
+        UINT32 unDenominator = 0;
+        hr = MFGetAttributeRatio(pOutputType, MF_MT_PIXEL_ASPECT_RATIO, &unNumerator, &unDenominator);
+        if (SUCCEEDED(hr))
+        {
+            decoder->pixel_num = unNumerator;
+            decoder->pixel_den = unDenominator;
+        }
+        hr = S_OK;
+    }
+
+    // Init color converter if needed
+    if (SUCCEEDED(hr) && bInitColorConverter)
+    {
+        IMFTransform *pColorConvert = NULL;
+        IMFSample *pColorConvertOutput = NULL;
+        GUID outputType;
+
+        hr = mfwrapper_init_colorconvert(decoder, decoder->pDecoder,
+                    &pColorConvert, &pColorConvertOutput, &outputType);
+        if (SUCCEEDED(hr) && IsEqualGUID(outputType, MFVideoFormat_NV12)) {
+            decoder->pColorConvert[COLOR_CONVERT_NV12] = pColorConvert;
+            decoder->pColorConvertOutput[COLOR_CONVERT_NV12] = pColorConvertOutput;
+
+            // We got NV12, so init second one for NV12->IYUV
+            hr = mfwrapper_init_colorconvert(decoder,
+                    decoder->pColorConvert[COLOR_CONVERT_NV12], &pColorConvert,
+                    &pColorConvertOutput, &outputType);
+        }
+
+        if (SUCCEEDED(hr) && IsEqualGUID(outputType, MFVideoFormat_IYUV)) {
+            decoder->pColorConvert[COLOR_CONVERT_IYUV] = pColorConvert;
+            decoder->pColorConvertOutput[COLOR_CONVERT_IYUV] = pColorConvertOutput;
+        }
+    }
+
+    // Update caps on src pad in case if something changed
+    if (SUCCEEDED(hr))
+        mfwrapper_set_src_caps(decoder);
+
+    return hr;
+}
+
+static HRESULT mfwrapper_configure_decoder_output_type(GstMFWrapper *decoder)
+{
+    HRESULT hr = S_OK;
+    IMFMediaType *pOutputType = NULL;
+    GUID subType;
+    DWORD dwTypeIndex = 0;
+
+    // Note: See JDK-8336277. Looks like "H.265 / HEVC Video Decoder" has
+    // a bug and if we succesfully called SetOutputType() on given media
+    // type it does not mean that decoder actually switch format. So, to
+    // consider format set succesfully we need to check return value of
+    // SetOutputType() and re-read back format via GetOutputCurrentType().
+
+    // We need to support following formats:
+    // MFVideoFormat_IYUV - Our prefered format, since we can render it directly.
+    // MFVideoFormat_NV12 - Decoder prefered, but requires color converter.
+    // MFVideoFormat_P010 - Decoder prefered, but requires color converter (10-bit video).
+    IMFMediaType *pOutputTypeIYUV = NULL;
+    IMFMediaType *pOutputTypeNV12 = NULL;
+    IMFMediaType *pOutputTypeP010 = NULL;
+
+#if MEDIA_FORMAT_DEBUG
+    mfwrapper_print_output_media_formats(decoder->pDecoder, "Video Decoder");
+#endif // MEDIA_FORMAT_DEBUG
+
+    do
+    {
+        hr = decoder->pDecoder->GetOutputAvailableType(0, dwTypeIndex, &pOutputType);
+        if (hr == MF_E_NO_MORE_TYPES)
+            break;
+
+        if (SUCCEEDED(hr))
+            hr = pOutputType->GetGUID(MF_MT_SUBTYPE, &subType);
+
+        if (SUCCEEDED(hr) && IsEqualGUID(subType, MFVideoFormat_IYUV))
+            pOutputTypeIYUV = pOutputType;
+        else if (SUCCEEDED(hr) && IsEqualGUID(subType, MFVideoFormat_NV12))
+            pOutputTypeNV12 = pOutputType;
+        else if (SUCCEEDED(hr) && IsEqualGUID(subType, MFVideoFormat_P010))
+            pOutputTypeP010 = pOutputType;
+        else if (SUCCEEDED(hr))
+            SafeRelease(&pOutputType);
+
+        pOutputType = NULL;
+
+        dwTypeIndex++;
+    } while (hr != MF_E_NO_MORE_TYPES && SUCCEEDED(hr));
+
+    // Set hr to error code, it might be SUCCEEDED after loop
+    // and pOutputTypeIYUV can be NULL, so we will try other
+    // formats as well.
+    hr = E_FAIL;
+
+    // We should cache as much supported formats as possible.
+    // Try them in order we prefered.
+    if (pOutputTypeIYUV)
+        hr = mfwrapper_set_decoder_output_type(decoder, pOutputTypeIYUV, false);
+
+    // Try only if previous one failed
+    if (hr != S_OK && pOutputTypeNV12)
+        hr = mfwrapper_set_decoder_output_type(decoder, pOutputTypeNV12, true);
+
+    if (hr != S_OK && pOutputTypeP010)
+        hr = mfwrapper_set_decoder_output_type(decoder, pOutputTypeP010, true);
+
+    SafeRelease(&pOutputTypeIYUV);
+    SafeRelease(&pOutputTypeNV12);
+    SafeRelease(&pOutputTypeP010);
+
+    return hr;
+}
+
+static gboolean mfwrapper_convert_output_helper(GstMFWrapper *decoder,
+                                                IMFSample *pInputSample,
+                                                IMFTransform *pColorConvert,
+                                                IMFSample *pColorConvertOutput)
 {
     DWORD dwFlags = 0;
     DWORD dwStatus = 0;
     MFT_OUTPUT_DATA_BUFFER outputDataBuffer;
     outputDataBuffer.dwStreamID = 0;
-    outputDataBuffer.pSample = decoder->pColorConvertOutput;
+    outputDataBuffer.pSample = pColorConvertOutput;
     outputDataBuffer.dwStatus = 0;
     outputDataBuffer.pEvents = NULL;
     IMFMediaType *pOutputType = NULL;
 
-    if (decoder->pColorConvert == NULL || decoder->pColorConvertOutput == NULL)
+    if (decoder == NULL || pColorConvert == NULL || pColorConvertOutput == NULL)
         return FALSE;
 
     // Extra call to unblock color converter, since it expects ProcessOutput to be called
     // until it returns MF_E_TRANSFORM_NEED_MORE_INPUT
-    HRESULT hr = decoder->pColorConvert->ProcessOutput(0, 1, &outputDataBuffer, &dwStatus);
+    HRESULT hr = pColorConvert->ProcessOutput(0, 1, &outputDataBuffer, &dwStatus);
 
-    hr = decoder->pColorConvert->ProcessInput(0, decoder->pDecoderOutput, 0);
+    hr = pColorConvert->ProcessInput(0, pInputSample, 0);
 
     if (SUCCEEDED(hr))
-        hr = decoder->pColorConvert->GetOutputStatus(&dwFlags);
+        hr = pColorConvert->GetOutputStatus(&dwFlags);
 
     if (SUCCEEDED(hr) && dwFlags != MFT_OUTPUT_STATUS_SAMPLE_READY)
         return FALSE;
 
-    hr = decoder->pColorConvert->ProcessOutput(0, 1, &outputDataBuffer, &dwStatus);
+    hr = pColorConvert->ProcessOutput(0, 1, &outputDataBuffer, &dwStatus);
     SafeRelease(&outputDataBuffer.pEvents);
     if (hr == MF_E_TRANSFORM_STREAM_CHANGE)
     {
         if (outputDataBuffer.dwStatus == MFT_OUTPUT_DATA_BUFFER_FORMAT_CHANGE)
         {
-            hr = decoder->pColorConvert->GetOutputAvailableType(0, 0, &pOutputType);
+            hr = pColorConvert->GetOutputAvailableType(0, 0, &pOutputType);
 
             if (SUCCEEDED(hr))
                 hr = pOutputType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_IYUV);
 
             if (SUCCEEDED(hr))
-                hr = decoder->pColorConvert->SetOutputType(0, pOutputType, 0);
+                hr = pColorConvert->SetOutputType(0, pOutputType, 0);
 
             SafeRelease(&pOutputType);
         }
@@ -698,6 +1085,39 @@ static gboolean mfwrapper_convert_output(GstMFWrapper *decoder)
     }
 
     return FALSE;
+}
+
+static gboolean mfwrapper_convert_output(GstMFWrapper *decoder)
+{
+    gboolean result = TRUE;
+    // Sample to convert. Always start from decoder
+    IMFSample *pInputSample = decoder->pDecoderOutput;
+
+    if (decoder == NULL || pInputSample == NULL)
+        return FALSE;
+
+    if (decoder->pColorConvert[COLOR_CONVERT_NV12] &&
+        decoder->pColorConvertOutput[COLOR_CONVERT_NV12])
+    {
+        result = mfwrapper_convert_output_helper(decoder,
+                                                 pInputSample,
+                                                 decoder->pColorConvert[COLOR_CONVERT_NV12],
+                                                 decoder->pColorConvertOutput[COLOR_CONVERT_NV12]);
+        pInputSample = decoder->pColorConvertOutput[COLOR_CONVERT_NV12]; // Keep converting
+    }
+
+    if (result && pInputSample != NULL &&
+        decoder->pColorConvert[COLOR_CONVERT_IYUV] &&
+        decoder->pColorConvertOutput[COLOR_CONVERT_IYUV])
+    {
+        result = mfwrapper_convert_output_helper(decoder,
+                                                 pInputSample,
+                                                 decoder->pColorConvert[COLOR_CONVERT_IYUV],
+                                                 decoder->pColorConvertOutput[COLOR_CONVERT_IYUV]);
+
+    }
+
+    return result;
 }
 
 static GstFlowReturn mfwrapper_deliver_sample(GstMFWrapper *decoder, IMFSample *pSample)
@@ -774,7 +1194,6 @@ static GstFlowReturn mfwrapper_deliver_sample(GstMFWrapper *decoder, IMFSample *
 
 static gint mfwrapper_process_output(GstMFWrapper *decoder)
 {
-    IMFMediaType *pOutputType = NULL;
     MFT_OUTPUT_DATA_BUFFER outputDataBuffer;
     outputDataBuffer.dwStreamID = 0;
     outputDataBuffer.pSample = decoder->pDecoderOutput;
@@ -804,53 +1223,7 @@ static gint mfwrapper_process_output(GstMFWrapper *decoder)
     {
         if (outputDataBuffer.dwStatus == MFT_OUTPUT_DATA_BUFFER_FORMAT_CHANGE)
         {
-            GUID subType;
-            guint width = 0; guint height = 0;
-            DWORD dwTypeIndex = 0;
-
-            do
-            {
-                hr = decoder->pDecoder->GetOutputAvailableType(0, dwTypeIndex, &pOutputType);
-
-                if (SUCCEEDED(hr))
-                    hr = pOutputType->GetGUID(MF_MT_SUBTYPE, &subType);
-
-                if (SUCCEEDED(hr))
-                    hr = MFGetAttributeSize(pOutputType, MF_MT_FRAME_SIZE, &width, &height);
-
-                if (SUCCEEDED(hr) && (decoder->width != width || decoder->height != height))
-                {
-                    decoder->width = width;
-                    decoder->height = height;
-                }
-
-                // If decoder prefers MFVideoFormat_P010, then it means we dealing with 10 or 12-bit
-                // HEVC, in this case setup color converter
-                if (SUCCEEDED(hr) && dwTypeIndex == 0 && IsEqualGUID(subType, MFVideoFormat_P010))
-                {
-                    hr = mfwrapper_init_colorconvert(decoder);
-                    break;
-                }
-
-                dwTypeIndex++;
-
-                // I420 and IYUV are same
-                if (SUCCEEDED(hr) && !IsEqualGUID(subType, MFVideoFormat_IYUV) && !IsEqualGUID(subType, MFVideoFormat_I420))
-                {
-                    SafeRelease(&pOutputType);
-                    hr = E_FAIL;
-                    continue;
-                }
-
-                if (SUCCEEDED(hr))
-                    hr = decoder->pDecoder->SetOutputType(0, pOutputType, 0);
-            } while (hr != MF_E_NO_MORE_TYPES && FAILED(hr));
-
-            // Update caps on src pad in case if something changed
-            if (SUCCEEDED(hr))
-                mfwrapper_set_src_caps(decoder);
-
-            SafeRelease(&pOutputType);
+            hr = mfwrapper_configure_decoder_output_type(decoder);
         }
     }
     else if (SUCCEEDED(hr))
@@ -858,11 +1231,14 @@ static gint mfwrapper_process_output(GstMFWrapper *decoder)
         if (outputDataBuffer.dwStatus == 0)
         {
             // Check if we need to convert output
-            if (decoder->pColorConvert && decoder->pColorConvertOutput)
+            if (decoder->pColorConvert[COLOR_CONVERT_IYUV] &&
+                decoder->pColorConvertOutput[COLOR_CONVERT_IYUV])
             {
                 if (mfwrapper_convert_output(decoder))
                 {
-                    ret = mfwrapper_deliver_sample(decoder, decoder->pColorConvertOutput);
+                    // Deliver from IYUV color converter
+                    ret = mfwrapper_deliver_sample(decoder,
+                                decoder->pColorConvertOutput[COLOR_CONVERT_IYUV]);
                 }
             }
             else
@@ -945,8 +1321,14 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
     case GST_EVENT_FLUSH_STOP:
     {
         decoder->pDecoder->ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
-        if (decoder->pColorConvert)
-            decoder->pColorConvert->ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+        for (int i = 0; i < MAX_COLOR_CONVERT; i++)
+        {
+            if (decoder->pColorConvert[i])
+            {
+                decoder->pColorConvert[i]->
+                        ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+            }
+        }
 
         ret = mfwrapper_push_sink_event(decoder, event);
 
@@ -958,11 +1340,15 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
         decoder->is_eos_received = TRUE;
 
         // Let decoder know that we got end of stream
-        hr = decoder->pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
+        hr = decoder->pDecoder->
+                ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
 
         // Ask decoder to produce all remaining data
         if (SUCCEEDED(hr))
-            decoder->pDecoder->ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0);
+        {
+            decoder->pDecoder->
+                    ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0);
+        }
 
         // Deliver remaining data
         gint po_ret;
@@ -971,11 +1357,16 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
             po_ret = mfwrapper_process_output(decoder);
         } while (po_ret == PO_DELIVERED);
 
-        if (decoder->pColorConvert)
+        for (int i = 0; i < MAX_COLOR_CONVERT; i++)
         {
-            hr = decoder->pColorConvert->ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
-            if (SUCCEEDED(hr))
-                hr = decoder->pColorConvert->ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+            if (decoder->pColorConvert[i])
+            {
+                hr = decoder->pColorConvert[i]->
+                        ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
+                if (SUCCEEDED(hr))
+                    hr = decoder->pColorConvert[i]->
+                            ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+            }
         }
 
         // We done pushing all frames. Deliver EOS.
@@ -991,7 +1382,10 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
         gst_event_parse_caps(event, &caps);
         if (!mfwrapper_sink_set_caps(pad, parent, caps))
         {
-            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to decode stream"), NULL, ("mfwrapper.c"), ("mfwrapper_sink_event"), 0);
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                                     GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
+                                     g_strdup("Failed to decode stream"), NULL,
+                                     ("mfwrapper.c"), ("mfwrapper_sink_event"), 0);
         }
 
         // INLINE - gst_event_unref()
@@ -1161,10 +1555,10 @@ static HRESULT mfwrapper_set_input_media_type(GstMFWrapper *decoder, GstCaps *ca
     if (s == NULL)
         return E_FAIL;
 
-    hr = MFCreateMediaType(&pInputType);
-
     if (!mfwrapper_get_mf_media_types(caps, &majorType, &subType))
         return E_FAIL;
+
+    hr = MFCreateMediaType(&pInputType);
 
     if (SUCCEEDED(hr))
         hr = pInputType->SetGUID(MF_MT_MAJOR_TYPE, majorType);

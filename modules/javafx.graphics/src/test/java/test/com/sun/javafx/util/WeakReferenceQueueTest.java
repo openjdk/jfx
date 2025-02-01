@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,13 +27,14 @@ package test.com.sun.javafx.util;
 
 import com.sun.javafx.util.WeakReferenceQueue;
 import com.sun.javafx.util.WeakReferenceQueueShim;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Iterator;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class WeakReferenceQueueTest {
     @Test
@@ -203,7 +204,11 @@ public class WeakReferenceQueueTest {
         }
 
         // finally, give the VM some idle time to perform gc
-        try { Thread.sleep(100); } catch (InterruptedException e) {}
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            fail(e);
+        }
 
         // hope that worked!
     }

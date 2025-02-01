@@ -23,6 +23,8 @@
 #error "Only <glib.h> can be included directly."
 #endif
 
+#ifndef __GI_SCANNER__
+
 static inline void
 g_autoptr_cleanup_generic_gfree (void *p)
 {
@@ -113,3 +115,5 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC (GPathBuf, g_path_buf_free)
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (GPathBuf, g_path_buf_clear)
 
 G_GNUC_END_IGNORE_DEPRECATIONS
+
+#endif /* __GI_SCANNER__ */

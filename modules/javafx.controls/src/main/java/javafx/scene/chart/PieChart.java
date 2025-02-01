@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -115,7 +115,7 @@ public class PieChart extends Chart {
     private Timeline dataRemoveTimeline = null;
     private final ListChangeListener<Data> dataChangeListener = c -> {
         while (c.next()) {
-            // RT-28090 Probably a sort happened, just reorder the pointers.
+            // JDK-8124777 Probably a sort happened, just reorder the pointers.
             if (c.wasPermutated()) {
                 Data ptr = begin;
                 for (int i = 0; i < getData().size(); i++) {
@@ -381,7 +381,7 @@ public class PieChart extends Chart {
             );
         } else {
             item.setCurrentPieValue(item.getPieValue());
-            requestChartLayout(); // RT-23091
+            requestChartLayout(); // JDK-8115802
         }
     }
 
@@ -439,7 +439,7 @@ public class PieChart extends Chart {
                 new KeyFrame(Duration.millis(500),
                         actionEvent -> {
                             text.setOpacity(0);
-                            // RT-23597 : item's chart might have been set to null if
+                            // JDK-8117811 : item's chart might have been set to null if
                             // this item is added and removed before its add animation finishes.
                             if (item.getChart() == null) item.setChart(PieChart.this);
                             item.getChart().getChartChildren().add(text);
@@ -457,7 +457,7 @@ public class PieChart extends Chart {
         }
 
         // we sort the text nodes to always be at the end of the children list, so they have a higher z-order
-        // (Fix for RT-34564)
+        // (Fix for JDK-8122332)
         for (int i = 0; i < getChartChildren().size(); i++) {
             Node n = getChartChildren().get(i);
             if (n instanceof Text) {
@@ -496,7 +496,7 @@ public class PieChart extends Chart {
                             ft.setOnFinished(new EventHandler<ActionEvent>() {
                                  @Override public void handle(ActionEvent actionEvent) {
                                      getChartChildren().remove(item.textNode);
-                                     // remove chart references from old data - RT-22553
+                                     // remove chart references from old data - JDK-8126613
                                      item.setChart(null);
                                      removeDataItemRef(item);
                                      item.textNode.setOpacity(1.0);
@@ -743,7 +743,7 @@ public class PieChart extends Chart {
      */
     private void updateLegend() {
         Node legendNode = getLegend();
-        if (legendNode != null && legendNode != legend) return; // RT-23596 dont update when user has set legend.
+        if (legendNode != null && legendNode != legend) return; // JDK-8126273 dont update when user has set legend.
         legend.setVertical(getLegendSide().equals(Side.LEFT) || getLegendSide().equals(Side.RIGHT));
         List<Legend.LegendItem> legendList = new ArrayList<>();
         if (getData() != null) {

@@ -130,6 +130,8 @@ public:
 
     float distanceTo(const FloatPoint3D& a) const;
 
+    friend bool operator==(const FloatPoint3D&, const FloatPoint3D&) = default;
+
 private:
     float m_x { 0 };
     float m_y { 0 };
@@ -178,11 +180,6 @@ inline FloatPoint3D operator-(const FloatPoint3D& a, const FloatPoint3D& b)
 inline FloatPoint3D operator-(const FloatPoint3D& a, const FloatPoint& b)
 {
     return FloatPoint3D(a.x() - b.x(), a.y() - b.y(), a.z());
-}
-
-inline bool operator==(const FloatPoint3D& a, const FloatPoint3D& b)
-{
-    return a.x() == b.x() && a.y() == b.y() && a.z() == b.z();
 }
 
 inline float operator*(const FloatPoint3D& a, const FloatPoint3D& b)

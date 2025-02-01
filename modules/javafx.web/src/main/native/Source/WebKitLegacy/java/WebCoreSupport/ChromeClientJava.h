@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,9 @@ public:
     void takeFocus(FocusDirection) override;
 
     void focusedElementChanged(Element*) override;
-    void focusedFrameChanged(LocalFrame*) override;
+    void focusedFrameChanged(Frame*) override;
+        void rootFrameAdded(const LocalFrame&) override;
+        void rootFrameRemoved(const LocalFrame&) override;
 
     // The Frame pointer provides the ChromeClient with context about which
     // Frame wants to create the new Page. Also, the newly created window

@@ -24,8 +24,10 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.Label;
 import javafx.scene.control.skin.LabelSkin;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.sheets.LabeledPropertySheet;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -40,12 +42,14 @@ public class LabelPage extends TestPaneBase implements HasSkinnable {
     public LabelPage() {
         super("LabelPage");
 
-        control = new Label();
-
-        // JDK-8092102
-//        control.textTruncatedProperty().addListener((s,p,c) -> {
-//            System.err.println("truncated: " + c);
-//        });
+        control = new Label() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         OptionPane op = new OptionPane();
         LabeledPropertySheet.appendTo(op, "Label", true, control);

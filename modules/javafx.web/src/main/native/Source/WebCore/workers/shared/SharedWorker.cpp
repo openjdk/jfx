@@ -50,10 +50,10 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SharedWorker);
 #define SHARED_WORKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(SharedWorker, "%p - [identifier=%" PUBLIC_LOG_STRING "] SharedWorker::" fmt, this, m_identifier.toString().utf8().data(), ##__VA_ARGS__)
 #define SHARED_WORKER_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(SharedWorker, "%p - [identifier=%" PUBLIC_LOG_STRING "] SharedWorker::" fmt, this, m_identifier.toString().utf8().data(), ##__VA_ARGS__)
 
-static HashMap<SharedWorkerObjectIdentifier, SharedWorker*>& allSharedWorkers()
+static HashMap<SharedWorkerObjectIdentifier, WeakRef<SharedWorker, WeakPtrImplWithEventTargetData>>& allSharedWorkers()
 {
     ASSERT(isMainThread());
-    static NeverDestroyed<HashMap<SharedWorkerObjectIdentifier, SharedWorker*>> allSharedWorkers;
+    static NeverDestroyed<HashMap<SharedWorkerObjectIdentifier, WeakRef<SharedWorker, WeakPtrImplWithEventTargetData>>> allSharedWorkers;
     return allSharedWorkers;
 }
 
@@ -70,25 +70,25 @@ static inline SharedWorkerObjectConnection* mainThreadConnection()
 ExceptionOr<Ref<SharedWorker>> SharedWorker::create(Document& document, String&& scriptURLString, std::optional<std::variant<String, WorkerOptions>>&& maybeOptions)
 {
     if (!mainThreadConnection())
-        return Exception { NotSupportedError, "Shared workers are not supported"_s };
+        return Exception { ExceptionCode::NotSupportedError, "Shared workers are not supported"_s };
 
     if (!document.hasBrowsingContext())
-        return Exception { InvalidStateError, "No browsing context"_s };
+        return Exception { ExceptionCode::InvalidStateError, "No browsing context"_s };
 
     auto url = document.completeURL(scriptURLString);
     if (!url.isValid())
-        return Exception { SyntaxError, "Invalid script URL"_s };
+        return Exception { ExceptionCode::SyntaxError, "Invalid script URL"_s };
 
-    auto* contentSecurityPolicy = document.contentSecurityPolicy();
+    CheckedPtr contentSecurityPolicy = document.contentSecurityPolicy();
     if (contentSecurityPolicy)
         contentSecurityPolicy->upgradeInsecureRequestIfNeeded(url, ContentSecurityPolicy::InsecureRequestType::Load);
 
     // Per the specification, any same-origin URL (including blob: URLs) can be used. data: URLs can also be used, but they create a worker with an opaque origin.
     if (!document.securityOrigin().canRequest(url, OriginAccessPatternsForWebProcess::singleton()) && !url.protocolIsData())
-        return Exception { SecurityError, "URL of the shared worker is cross-origin"_s };
+        return Exception { ExceptionCode::SecurityError, "URL of the shared worker is cross-origin"_s };
 
     if (contentSecurityPolicy && !contentSecurityPolicy->allowWorkerFromSource(url))
-        return Exception { SecurityError };
+        return Exception { ExceptionCode::SecurityError };
 
     WorkerOptions options;
     if (maybeOptions) {
@@ -121,7 +121,7 @@ SharedWorker::SharedWorker(Document& document, const SharedWorkerKey& key, Ref<M
     , m_blobURLExtension({ m_key.url.protocolIsBlob() ? m_key.url : URL(), document.topOrigin().data() }) // Keep blob URL alive until the worker has finished loading.
 {
     SHARED_WORKER_RELEASE_LOG("SharedWorker:");
-    allSharedWorkers().add(m_identifier, this);
+    allSharedWorkers().add(m_identifier, *this);
 }
 
 SharedWorker::~SharedWorker()

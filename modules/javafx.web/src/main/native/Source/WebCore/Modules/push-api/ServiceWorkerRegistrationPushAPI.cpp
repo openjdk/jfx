@@ -26,9 +26,8 @@
 #include "config.h"
 #include "ServiceWorkerRegistrationPushAPI.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "PushManager.h"
+#include "ScriptExecutionContext.h"
 #include "ServiceWorkerRegistration.h"
 #include <wtf/StdLibExtras.h>
 
@@ -65,11 +64,9 @@ ServiceWorkerRegistrationPushAPI* ServiceWorkerRegistrationPushAPI::from(Service
     return supplement;
 }
 
-const char* ServiceWorkerRegistrationPushAPI::supplementName()
+ASCIILiteral ServiceWorkerRegistrationPushAPI::supplementName()
 {
-    return "ServiceWorkerRegistrationPushAPI";
+    return "ServiceWorkerRegistrationPushAPI"_s;
 }
 
 }
-
-#endif // ENABLE(SERVICE_WORKER)

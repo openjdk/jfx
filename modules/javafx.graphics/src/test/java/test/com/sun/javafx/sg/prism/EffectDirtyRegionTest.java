@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,8 +51,9 @@ import com.sun.scenario.effect.InnerShadow;
 import com.sun.scenario.effect.MotionBlur;
 import com.sun.scenario.effect.Offset;
 import com.sun.scenario.effect.SepiaTone;
-import junit.framework.Assert;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class EffectDirtyRegionTest {
 
@@ -479,7 +480,7 @@ public class EffectDirtyRegionTest {
 
     private void compareResult(DirtyRegionContainer expected, DirtyRegionContainer computed) {
         for (int i = 0; i < computed.size(); i++) {
-            Assert.assertEquals(expected.getDirtyRegion(i), computed.getDirtyRegion(i));
+            assertEquals(expected.getDirtyRegion(i), computed.getDirtyRegion(i));
         }
     }
 

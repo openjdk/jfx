@@ -29,6 +29,7 @@
 #include "FloatPoint.h"
 #include "FloatPoint3D.h"
 #include "IntPoint.h"
+#include "Quaternion.h"
 #include <array>
 #include <string.h> //for memcpy
 #include <wtf/FastMalloc.h>
@@ -132,13 +133,13 @@ public:
 
     WEBCORE_EXPORT TransformationMatrix(const AffineTransform&);
 
-    static TransformationMatrix fromQuaternion(double qx, double qy, double qz, double qw);
+    static TransformationMatrix fromQuaternion(const Quaternion&);
 
     // Field of view in radians
     static TransformationMatrix fromProjection(double fovUp, double fovDown, double fovLeft, double fovRight, double depthNear, double depthFar);
     static TransformationMatrix fromProjection(double fovy, double aspect, double depthNear, double depthFar);
 
-    static const TransformationMatrix identity;
+    WEBCORE_EXPORT static const TransformationMatrix identity;
 
     void setMatrix(double a, double b, double c, double d, double e, double f)
     {
@@ -326,30 +327,17 @@ public:
         double angle;
         double m11, m12, m21, m22;
 
-        bool operator==(const Decomposed2Type& other) const
-        {
-            return scaleX == other.scaleX && scaleY == other.scaleY
-                && translateX == other.translateX && translateY == other.translateY
-                && angle == other.angle
-                && m11 == other.m11 && m12 == other.m12 && m21 == other.m21 && m22 == other.m22;
-        }
+        friend bool operator==(const Decomposed2Type&, const Decomposed2Type&) = default;
     };
 
     struct Decomposed4Type {
         double scaleX, scaleY, scaleZ;
         double skewXY, skewXZ, skewYZ;
-        double quaternionX, quaternionY, quaternionZ, quaternionW;
+        Quaternion quaternion;
         double translateX, translateY, translateZ;
         double perspectiveX, perspectiveY, perspectiveZ, perspectiveW;
 
-        bool operator==(const Decomposed4Type& other) const
-        {
-            return scaleX == other.scaleX && scaleY == other.scaleY && scaleZ == other.scaleZ
-                && skewXY == other.skewXY && skewXZ == other.skewXZ && skewYZ == other.skewYZ
-                && quaternionX == other.quaternionX && quaternionY == other.quaternionY && quaternionZ == other.quaternionZ && quaternionW == other.quaternionW
-                && translateX == other.translateX && translateY == other.translateY && translateZ == other.translateZ
-                && perspectiveX == other.perspectiveX && perspectiveY == other.perspectiveY && perspectiveZ == other.perspectiveZ && perspectiveW == other.perspectiveW;
-        }
+        friend bool operator==(const Decomposed4Type&, const Decomposed4Type&) = default;
     };
 
     bool decompose2(Decomposed2Type&) const WARN_UNUSED_RETURN;

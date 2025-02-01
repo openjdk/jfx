@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -119,7 +119,7 @@ void Font::platformDestroy()
 
 RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleFactor) const
 {
-    return Font::create(*m_platformData.derive(scaleFactor), origin(), Interstitial::No);
+    return Font::create(*m_platformData.derive(scaleFactor), origin(), IsInterstitial::No);
 }
 
 float Font::platformWidthForGlyph(Glyph c) const
@@ -166,12 +166,12 @@ Path Font::platformPathForGlyph(Glyph) const
     return Path();
 }
 
-bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const
+bool Font::platformSupportsCodePoint(char32_t character, std::optional<char32_t> variation) const
 {
     return variation ? false : glyphForCharacter(character);
 }
 
-ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariantEmoji, UChar32)
+ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariantEmoji, char32_t)
 {
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=259205 We can't return RequireText or RequireEmoji
     // unless we have a way of knowing whether a font/glyph is color or not.

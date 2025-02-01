@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,8 +36,6 @@ import com.sun.javafx.iio.common.ImageTools;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import java.util.Map;
 
@@ -109,11 +107,7 @@ public class IosImageLoader extends ImageLoaderImpl {
 
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            NativeLibLoader.loadLibrary("nativeiio");
-            return null;
-        });
+        NativeLibLoader.loadLibrary("nativeiio");
 
         COLOR_SPACE_MAPPING = Map.of(
             GRAY,              ImageType.GRAY,
@@ -218,8 +212,9 @@ public class IosImageLoader extends ImageLoaderImpl {
     * @inheritDoc
     */
     @Override
-    public ImageFrame load(int imageIndex, int width, int height, boolean preserveAspectRatio, boolean smooth)
-            throws IOException {
+    public ImageFrame load(int imageIndex, double w, double h, boolean preserveAspectRatio, boolean smooth,
+                           float screenPixelScale, float imagePixelScale) throws IOException {
+        ImageTools.validateMaxDimensions(w, h, imagePixelScale);
 
         if (imageIndex >= nImages) {
             dispose();
@@ -227,9 +222,10 @@ public class IosImageLoader extends ImageLoaderImpl {
         }
 
         // Determine output image dimensions.
-        int[] widthHeight = ImageTools.computeDimensions(inWidth, inHeight, width, height, preserveAspectRatio);
-        width = widthHeight[0];
-        height = widthHeight[1];
+        int[] widthHeight = ImageTools.computeDimensions(
+            inWidth, inHeight, (int)(w * imagePixelScale), (int)(h * imagePixelScale), preserveAspectRatio);
+        int width = widthHeight[0];
+        int height = widthHeight[1];
 
         final ImageMetadata md = new ImageMetadata(
                 null, // gamma
@@ -261,7 +257,7 @@ public class IosImageLoader extends ImageLoaderImpl {
                 width,
                 height,
                 width * nComponents,
-                null,
+                imagePixelScale,
                 md);
     }
 }

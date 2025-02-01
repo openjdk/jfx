@@ -76,6 +76,9 @@ namespace WebCore {
     macro(AudioBuffer) \
     macro(AudioBufferSourceNode) \
     macro(AudioContext) \
+    macro(AudioData) \
+    macro(AudioDecoder) \
+    macro(AudioEncoder) \
     macro(AudioDestinationNode) \
     macro(AudioListener) \
     macro(AudioNode) \
@@ -115,7 +118,11 @@ namespace WebCore {
     macro(CompressionStreamTransform) \
     macro(ConstantSourceNode) \
     macro(ContactsManager) \
+    macro(ContentVisibilityAutoStateChangeEvent) \
     macro(ConvolverNode) \
+    macro(CreateHTMLCallback) \
+    macro(CreateScriptCallback) \
+    macro(CreateScriptURLCallback) \
     macro(Credential) \
     macro(CredentialsContainer) \
     macro(CryptoKey) \
@@ -148,9 +155,11 @@ namespace WebCore {
     macro(CSSRGB) \
     macro(CSSRotate) \
     macro(CSSScale) \
+    macro(CSSScopeRule) \
     macro(CSSSkew) \
     macro(CSSSkewX) \
     macro(CSSSkewY) \
+    macro(CSSStartingStyleRule) \
     macro(CSSStyleValue) \
     macro(CSSTransformComponent) \
     macro(CSSTransformValue) \
@@ -159,9 +168,12 @@ namespace WebCore {
     macro(CSSUnitValue) \
     macro(CSSUnparsedValue) \
     macro(CSSVariableReferenceValue) \
+    macro(CookieChangeEvent) \
     macro(CookieStore) \
+    macro(CookieStoreManager) \
     macro(CustomElementRegistry) \
     macro(CustomEffect) \
+    macro(CustomStateSet) \
     macro(Database) \
     macro(DataTransferItem) \
     macro(DataTransferItemList) \
@@ -170,10 +182,13 @@ namespace WebCore {
     macro(DecompressionStreamTransform) \
     macro(DelayNode) \
     macro(DeprecationReportBody) \
+    macro(DigitalIdentity) \
     macro(DocumentTimeline) \
     macro(DynamicsCompressorNode) \
     macro(ElementInternals) \
+    macro(EncodedAudioChunk) \
     macro(EncodedVideoChunk) \
+    macro(ExtendableCookieChangeEvent) \
     macro(ExtendableEvent) \
     macro(ExtendableMessageEvent) \
     macro(FakeXRDevice) \
@@ -234,14 +249,13 @@ namespace WebCore {
     macro(GamepadButton) \
     macro(GamepadEvent) \
     macro(GamepadHapticActuator) \
-    macro(HighlightRegister) \
+    macro(HighlightRegistry) \
     macro(Highlight) \
     macro(HTMLAttachmentElement) \
     macro(HTMLAudioElement) \
     macro(HTMLDialogElement) \
     macro(HTMLDataListElement) \
     macro(HTMLEmbedElement) \
-    macro(HTMLMenuItemElement) \
     macro(HTMLModelElement) \
     macro(Headers) \
     macro(IDBCursor) \
@@ -258,11 +272,13 @@ namespace WebCore {
     macro(IIRFilterNode) \
     macro(ImageBitmap) \
     macro(ImageBitmapRenderingContext) \
+    macro(ImageCapture) \
     macro(IdleDeadline) \
     macro(InputDeviceInfo) \
     macro(InputEvent) \
     macro(IntersectionObserver) \
     macro(IntersectionObserverEntry) \
+    macro(InvokeEvent) \
     macro(KeyframeEffect) \
     macro(Lock) \
     macro(LockManager) \
@@ -289,9 +305,16 @@ namespace WebCore {
     macro(MediaStreamAudioDestinationNode) \
     macro(MediaStreamAudioSourceNode) \
     macro(MediaStreamTrack) \
+    macro(MediaStreamTrackProcessor) \
     macro(MerchantValidationEvent) \
     macro(MockRTCRtpTransform) \
+    macro(NavigateEvent) \
+    macro(Navigation) \
+    macro(NavigationCurrentEntryChangeEvent) \
+    macro(NavigationDestination) \
+    macro(NavigationHistoryEntry) \
     macro(NavigationPreloadManager) \
+    macro(NavigationTransition) \
     macro(NavigatorCredentials) \
     macro(NavigatorMediaDevices) \
     macro(NavigatorPermissions) \
@@ -332,6 +355,7 @@ namespace WebCore {
     macro(PushEvent) \
     macro(PushManager) \
     macro(PushMessageData) \
+    macro(PushNotificationEvent) \
     macro(PushSubscription) \
     macro(PushSubscriptionChangeEvent) \
     macro(PushSubscriptionOptions) \
@@ -384,6 +408,7 @@ namespace WebCore {
     macro(SQLTransaction) \
     macro(ScreenLuminance) \
     macro(ScreenOrientation) \
+    macro(ScrollTimeline) \
     macro(ServiceWorker) \
     macro(ServiceWorkerContainer) \
     macro(ServiceWorkerGlobalScope) \
@@ -417,11 +442,19 @@ namespace WebCore {
     macro(ToggleEvent) \
     macro(TransformStream) \
     macro(TransformStreamDefaultController) \
+    macro(TrustedHTML) \
+    macro(TrustedScript) \
+    macro(TrustedScriptURL) \
+    macro(TrustedTypePolicy) \
+    macro(TrustedTypePolicyFactory) \
+    macro(TrustedTypePolicyOptions) \
     macro(UndoItem) \
     macro(UndoManager) \
     macro(VideoDecoder) \
     macro(VideoEncoder) \
     macro(VideoFrame) \
+    macro(ViewTimeline) \
+    macro(ViewTransition) \
     macro(VisualViewport) \
     macro(WakeLock) \
     macro(WakeLockSentinel) \
@@ -449,6 +482,12 @@ namespace WebCore {
     macro(WebKitMediaKeySession) \
     macro(WebKitMediaKeys) \
     macro(WebSocket) \
+    macro(WebTransport) \
+    macro(WebTransportBidirectionalStream) \
+    macro(WebTransportDatagramDuplexStream) \
+    macro(WebTransportError) \
+    macro(WebTransportReceiveStream) \
+    macro(WebTransportSendStream) \
     macro(WindowClient) \
     macro(Worklet) \
     macro(WorkletGlobalScope) \
@@ -480,6 +519,7 @@ namespace WebCore {
     macro(XRViewerPose) \
     macro(XRViewport) \
     macro(XRWebGLLayer) \
+    macro(VideoTrackGenerator) \
     macro(abortAlgorithm) \
     macro(abortSteps) \
     macro(addAbortAlgorithmToSignal) \
@@ -571,10 +611,12 @@ namespace WebCore {
     macro(makeThisTypeError) \
     macro(matchingElementInFlatTree) \
     macro(mediaStreamTrackConstraints) \
+    macro(navigation) \
     macro(onbackgroundfetchsuccess) \
     macro(onbackgroundfetchfail) \
     macro(onbackgroundfetchabort) \
     macro(onbackgroundfetchclick) \
+    macro(oncookiechange) \
     macro(onnotificationclick) \
     macro(onnotificationclose) \
     macro(onpush) \
@@ -662,6 +704,7 @@ namespace WebCore {
     macro(textEncoderStreamEncoder) \
     macro(textEncoderStreamTransform) \
     macro(transformAlgorithm) \
+    macro(trustedTypes) \
     macro(underlyingByteSource) \
     macro(underlyingSink) \
     macro(underlyingSource) \

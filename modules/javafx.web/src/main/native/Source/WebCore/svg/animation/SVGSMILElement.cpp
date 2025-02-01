@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2013-2017 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -195,7 +195,7 @@ void SVGSMILElement::buildPendingResource()
         target = WTFMove(result.element);
         id = WTFMove(result.identifier);
     }
-    RefPtr svgTarget = is<SVGElement>(target) && target->isConnected() ? downcast<SVGElement>(target.get()) : nullptr;
+    RefPtr svgTarget = target && target->isConnected() ? dynamicDowncast<SVGElement>(*target) : nullptr;
 
     if (svgTarget != targetElement())
         setTargetElement(svgTarget.get());
@@ -559,9 +559,9 @@ void SVGSMILElement::svgAttributeChanged(const QualifiedName& attrName)
     animationAttributeChanged();
 }
 
-inline Element* SVGSMILElement::eventBaseFor(const Condition& condition)
+inline RefPtr<Element> SVGSMILElement::eventBaseFor(const Condition& condition)
 {
-    return condition.m_baseID.isEmpty() ? targetElement() : treeScope().getElementById(condition.m_baseID);
+    return condition.m_baseID.isEmpty() ? RefPtr<Element> { targetElement() } : treeScope().getElementById(condition.m_baseID);
 }
 
 void SVGSMILElement::connectConditions()
@@ -583,11 +583,12 @@ void SVGSMILElement::connectConditions()
             condition.m_syncbase = treeScope().getElementById(condition.m_baseID);
             if (!condition.m_syncbase)
                 continue;
-            if (!is<SVGSMILElement>(*condition.m_syncbase)) {
+            auto* svgSMILElement = dynamicDowncast<SVGSMILElement>(*condition.m_syncbase);
+            if (!svgSMILElement) {
                 condition.m_syncbase = nullptr;
                 continue;
             }
-            downcast<SVGSMILElement>(*condition.m_syncbase).addTimeDependent(this);
+            svgSMILElement->addTimeDependent(this);
         }
     }
 }
@@ -719,7 +720,7 @@ SMILTime SVGSMILElement::repeatCount() const
         return SMILTime::indefinite();
     bool ok;
     double result = value.string().toDouble(&ok);
-    return m_cachedRepeatCount = ok && result > 0 ? result : SMILTime::unresolved();
+    return m_cachedRepeatCount = (ok && result > 0 && std::isfinite(result)) ? result : SMILTime::unresolved();
 }
 
 SMILTime SVGSMILElement::maxValue() const

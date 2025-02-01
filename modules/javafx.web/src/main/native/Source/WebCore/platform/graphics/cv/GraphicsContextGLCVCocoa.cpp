@@ -446,18 +446,6 @@ static const GLfloat* YCbCrToRGBMatrixForRangeAndTransferFunction(PixelRange ran
     return iterator->second;
 }
 
-inline bool GraphicsContextGLCVCocoa::TextureContent::operator==(const TextureContent& other) const
-{
-    return surface == other.surface
-        && surfaceSeed == other.surfaceSeed
-        && level == other.level
-        && internalFormat == other.internalFormat
-        && format == other.format
-        && type == other.type
-        && unpackFlipY == other.unpackFlipY
-        && orientation == other.orientation;
-}
-
 std::unique_ptr<GraphicsContextGLCVCocoa> GraphicsContextGLCVCocoa::create(GraphicsContextGLCocoa& context)
 {
     std::unique_ptr<GraphicsContextGLCVCocoa> cv { new GraphicsContextGLCVCocoa(context) };
@@ -614,7 +602,7 @@ bool GraphicsContextGLCVCocoa::copyVideoSampleToTexture(const VideoFrameCV& vide
         return false;
 
     auto orientation = videoFrame.orientation();
-    TextureContent content { reinterpret_cast<intptr_t>(surface), IOSurfaceGetSeed(surface), level, internalFormat, format, type, unpackFlipY, orientation };
+    TextureContent content { reinterpret_cast<intptr_t>(surface), IOSurfaceGetID(surface), IOSurfaceGetSeed(surface), level, internalFormat, format, type, unpackFlipY, orientation };
     auto it = m_knownContent.find(outputTexture);
     if (it != m_knownContent.end() && it->value == content) {
         // If the texture hasn't been modified since the last time we copied to it, and the

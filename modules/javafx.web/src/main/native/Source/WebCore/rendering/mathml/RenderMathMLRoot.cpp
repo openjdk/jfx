@@ -48,9 +48,10 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLRoot);
 
 RenderMathMLRoot::RenderMathMLRoot(MathMLRootElement& element, RenderStyle&& style)
-    : RenderMathMLRow(element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLRoot, element, WTFMove(style))
 {
     m_radicalOperator.setOperator(RenderMathMLRoot::style(), gRadicalCharacter, MathOperator::Type::VerticalOperator);
+    ASSERT(isRenderMathMLRoot());
 }
 
 MathMLRootElement& RenderMathMLRoot::element() const

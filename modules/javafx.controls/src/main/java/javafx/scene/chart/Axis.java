@@ -698,8 +698,6 @@ public abstract class Axis<T> extends Region {
                 }
             }
 
-            // call tick marks updated to inform subclasses that we have updated tick marks
-            tickMarksUpdated();
             // mark all done
             oldLength = length;
             rangeValid = true;
@@ -708,7 +706,7 @@ public abstract class Axis<T> extends Region {
         if (lengthDiffers || rangeInvalid || measureInvalid || tickLabelsVisibleInvalid) {
             measureInvalid = false;
             tickLabelsVisibleInvalid = false;
-            // RT-12272 : tick labels overlapping
+            // JDK-8112169 : tick labels overlapping
             // first check if all visible labels fit, if not, retain every nth label
             labelsToSkip.clear();
             int numLabelsToSkip = 0;
@@ -750,6 +748,9 @@ public abstract class Axis<T> extends Region {
                 }
             }
             updateTickMarks(side, length);
+
+            // call tick marks updated to inform subclasses that we have updated tick marks
+            tickMarksUpdated();
         }
     }
 

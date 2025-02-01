@@ -27,6 +27,7 @@
 #include "LocalFrame.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderLayerScrollableArea.h"
 #include "RenderStyleSetters.h"
 #include "ShadowRoot.h"
 #include "StyleInheritedData.h"
@@ -38,8 +39,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTextControlMultiLine);
 
 RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element, RenderStyle&& style)
-    : RenderTextControl(element, WTFMove(style))
+    : RenderTextControl(Type::TextControlMultiLine, element, WTFMove(style))
 {
+    ASSERT(isRenderTextControlMultiLine());
 }
 
 RenderTextControlMultiLine::~RenderTextControlMultiLine()
@@ -56,6 +58,10 @@ bool RenderTextControlMultiLine::nodeAtPoint(const HitTestRequest& request, HitT
 {
     if (!RenderTextControl::nodeAtPoint(request, result, locationInContainer, accumulatedOffset, hitTestAction))
         return false;
+
+    const LayoutPoint adjustedPoint(accumulatedOffset + location());
+    if (isPointInOverflowControl(result, locationInContainer.point(), adjustedPoint))
+        return true;
 
     if (result.innerNode() == &textAreaElement() || result.innerNode() == innerTextElement())
         hitInnerTextElement(result, locationInContainer.point(), accumulatedOffset);
@@ -104,12 +110,11 @@ void RenderTextControlMultiLine::layoutExcludedChildren(bool relayoutChildren)
     RenderElement* placeholderRenderer = placeholder ? placeholder->renderer() : 0;
     if (!placeholderRenderer)
         return;
-    if (is<RenderBox>(placeholderRenderer)) {
-        auto& placeholderBox = downcast<RenderBox>(*placeholderRenderer);
-        placeholderBox.mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox.borderAndPaddingLogicalWidth(), LengthType::Fixed));
-        placeholderBox.layoutIfNeeded();
-        placeholderBox.setX(borderLeft() + paddingLeft());
-        placeholderBox.setY(borderTop() + paddingTop());
+    if (CheckedPtr placeholderBox = dynamicDowncast<RenderBox>(placeholderRenderer)) {
+        placeholderBox->mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox->borderAndPaddingLogicalWidth(), LengthType::Fixed));
+        placeholderBox->layoutIfNeeded();
+        placeholderBox->setX(borderLeft() + paddingLeft());
+        placeholderBox->setY(borderTop() + paddingTop());
     }
 }
 

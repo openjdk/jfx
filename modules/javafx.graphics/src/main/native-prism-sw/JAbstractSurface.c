@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,8 +66,8 @@ JNIEXPORT void JNICALL
 Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle,
         jintArray arrayHandle, jint offset, jint scanLength,
         jint x, jint y, jint width, jint height) {
-    jint dstX = 0;
-    jint dstY = 0;
+    const jint dstX = 0;
+    const jint dstY = 0;
 
     Surface* surface;
 
@@ -85,7 +85,7 @@ Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle
         y < 0 || y >= surfaceHeight ||
         width  < 0 || width  > (surfaceWidth  - x) ||
         height < 0 || height > (surfaceHeight - y) ||
-        scanLength < width) {
+        scanLength < width || offset < 0) {
         JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Illegal arguments");
         return;
     }
@@ -144,8 +144,8 @@ JNIEXPORT void JNICALL
 Java_com_sun_pisces_AbstractSurface_setRGBImpl(JNIEnv* env, jobject objectHandle,
         jintArray arrayHandle, jint offset, jint scanLength,
         jint x, jint y, jint width, jint height) {
-    jint srcX = 0;
-    jint srcY = 0;
+    const jint srcX = 0;
+    const jint srcY = 0;
 
     Surface* surface;
     surface = (Surface*)JLongToPointer(
@@ -162,7 +162,7 @@ Java_com_sun_pisces_AbstractSurface_setRGBImpl(JNIEnv* env, jobject objectHandle
         y < 0 || y >= surfaceHeight ||
         width  < 0 || width  > (surfaceWidth  - x) ||
         height < 0 || height > (surfaceHeight - y) ||
-        scanLength < width) {
+        scanLength < width || offset < 0) {
         JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Illegal arguments");
         return;
     }

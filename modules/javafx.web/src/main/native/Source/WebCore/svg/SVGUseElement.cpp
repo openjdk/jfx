@@ -33,9 +33,9 @@
 #include "ElementChildIteratorInlines.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "LegacyRenderSVGResource.h"
 #include "LegacyRenderSVGTransformableContainer.h"
 #include "NodeName.h"
-#include "RenderSVGResource.h"
 #include "RenderSVGTransformableContainer.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementTypeHelpers.h"
@@ -231,7 +231,8 @@ static inline bool isDisallowedElement(const SVGElement& element)
 
 static inline bool isDisallowedElement(const Element& element)
 {
-    return !element.isSVGElement() || isDisallowedElement(downcast<SVGElement>(element));
+    auto* svgElement = dynamicDowncast<SVGElement>(element);
+    return !svgElement || isDisallowedElement(*svgElement);
 }
 
 void SVGUseElement::clearShadowTree()
@@ -319,8 +320,12 @@ static bool isDirectReference(const SVGElement& element)
 
 Path SVGUseElement::toClipPath()
 {
-    auto targetClone = this->targetClone();
-    if (!is<SVGGraphicsElement>(targetClone))
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    RELEASE_ASSERT(!document().settings().layerBasedSVGEngineEnabled());
+#endif
+
+    RefPtr targetClone = dynamicDowncast<SVGGraphicsElement>(this->targetClone());
+    if (!targetClone)
         return { };
 
     if (!isDirectReference(*targetClone)) {
@@ -329,13 +334,20 @@ Path SVGUseElement::toClipPath()
         return { };
     }
 
-    // FIXME: [LBSE] Stop mutating the path here and stop calling animatedLocalTransform().
-    Path path = downcast<SVGGraphicsElement>(*targetClone).toClipPath();
+    Path path = targetClone->toClipPath();
     SVGLengthContext lengthContext(this);
     // FIXME: Find a way to do this without manual resolution of x/y here. It's potentially incorrect.
     path.translate(FloatSize(x().value(lengthContext), y().value(lengthContext)));
     path.transform(animatedLocalTransform());
     return path;
+}
+
+RefPtr<SVGElement> SVGUseElement::clipChild() const
+{
+    auto targetClone = this->targetClone();
+    if (!targetClone || !isDirectReference(*targetClone))
+        return nullptr;
+    return targetClone;
 }
 
 RenderElement* SVGUseElement::rendererClipChild() const
@@ -353,8 +365,8 @@ static inline void disassociateAndRemoveClones(const Vector<Ref<Element>>& clone
     for (auto& clone : clones) {
         for (auto& descendant : descendantsOfType<SVGElement>(clone.get()))
             descendant.setCorrespondingElement(nullptr);
-        if (is<SVGElement>(clone))
-            downcast<SVGElement>(clone.get()).setCorrespondingElement(nullptr);
+        if (auto* svgClone = dynamicDowncast<SVGElement>(clone.get()))
+            svgClone->setCorrespondingElement(nullptr);
         clone->remove();
     }
 }
@@ -449,26 +461,26 @@ SVGElement* SVGUseElement::findTarget(AtomString* targetID) const
         if (!targetID->isNull() && isExternalURIReference(original.href(), original.document()))
             *targetID = nullAtom();
     }
-    if (!is<SVGElement>(targetResult.element))
+    auto* target = dynamicDowncast<SVGElement>(targetResult.element.get());
+    if (!target)
         return nullptr;
-    auto& target = downcast<SVGElement>(*targetResult.element);
 
-    if (!target.isConnected() || isDisallowedElement(target))
+    if (!target->isConnected() || isDisallowedElement(*target))
         return nullptr;
 
     if (correspondingElement) {
         for (auto& ancestor : lineageOfType<SVGElement>(*this)) {
-            if (ancestor.correspondingElement() == &target)
+            if (ancestor.correspondingElement() == target)
                 return nullptr;
         }
     } else {
-        if (target.contains(this))
+        if (target->contains(this))
             return nullptr;
         // Target should only refer to a node in the same tree or a node in another document.
-        ASSERT(!isDescendantOrShadowDescendantOf(&target));
+        ASSERT(!isDescendantOrShadowDescendantOf(target));
     }
 
-    return &target;
+    return target;
 }
 
 void SVGUseElement::cloneTarget(ContainerNode& container, SVGElement& target) const

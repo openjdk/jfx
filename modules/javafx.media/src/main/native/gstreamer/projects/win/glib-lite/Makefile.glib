@@ -30,6 +30,7 @@ C_SOURCES = \
         gdataset.c \
         gdate.c \
         gdatetime.c \
+        gdatetime-private.c \
         gdir.c \
         genviron.c \
         gerror.c \
@@ -72,6 +73,7 @@ C_SOURCES = \
         gshell.c \
         gslice.c \
         gslist.c \
+        gspawn.c \
         gspawn-win32-helper.c \
         gspawn-win32.c \
         gstdio.c \
@@ -80,7 +82,6 @@ C_SOURCES = \
         gstringchunk.c \
         gtestutils.c \
         gthread.c \
-        gthread-win32.c \
         gthreadpool.c \
         gtimer.c \
         gtimezone.c \
@@ -134,7 +135,7 @@ CFLAGS =   -DWIN32 \
            -DLIBDIR \
            -DNVALGRIND \
            -DG_OS_WIN32 \
-           -DFFI_BUILDING \
+           -DFFI_STATIC_BUILD \
            -DG_DISABLE_DEPRECATED \
            $(INCLUDES) \
            $(COMPILER_FLAGS)

@@ -148,7 +148,7 @@ bool HTMLElementStack::ElementRecord::isAbove(ElementRecord& other) const
 
 HTMLElementStack::~HTMLElementStack()
 {
-#if PLATFORM(JAVA) // RT-26487
+#if PLATFORM(JAVA) // JDK-8125359
     while (m_top) {
         m_top = m_top->releaseNext();
     }
@@ -193,7 +193,8 @@ void HTMLElementStack::popAll()
     m_bodyElement = nullptr;
     m_stackDepth = 0;
     while (m_top) {
-        topNode().finishParsingChildren();
+        if (RefPtr element = dynamicDowncast<Element>(topNode()))
+            element->finishParsingChildren();
         m_top = m_top->releaseNext();
     }
 }

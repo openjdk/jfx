@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,21 +89,22 @@ setupTools("linux_gtk3",
     { propFile ->
         ByteArrayOutputStream results2 = new ByteArrayOutputStream();
         exec {
-            commandLine("${toolchainDir}pkg-config", "--cflags", "gtk+-3.0", "gthread-2.0", "xtst")
+            commandLine("${toolchainDir}pkg-config", "--cflags", "gtk+-3.0", "gthread-2.0", "xtst", "gio-unix-2.0")
             setStandardOutput(results2);
         }
         propFile << "cflagsGTK3=" << results2.toString().trim() << "\n";
 
         ByteArrayOutputStream results4 = new ByteArrayOutputStream();
         exec {
-            commandLine("${toolchainDir}pkg-config", "--libs", "gtk+-3.0", "gthread-2.0", "xtst")
+            commandLine("${toolchainDir}pkg-config", "--libs", "gtk+-3.0", "gthread-2.0", "xtst", "gio-unix-2.0")
             setStandardOutput(results4);
         }
         propFile << "libsGTK3=" << results4.toString().trim()  << "\n";
 
     },
     { properties ->
-        def cflagsGTK3 = properties.getProperty("cflagsGTK3")
+        def cflagsGTK3 = properties.getProperty("cflagsGTK3") \
+                            + " -I${project(":graphics").projectDir}/src/main/native-glass/gtk/libpipewire/include"
         def libsGTK3 = properties.getProperty("libsGTK3")
         if (cflagsGTK3 && libsGTK3) {
             gtk3CCFlags.addAll(cflagsGTK3.split(" "))
@@ -172,7 +173,7 @@ setupTools("linux_freetype_tools",
                 freetypeLinkFlags.addAll(libs.split(" "))
             }
         } else {
-            throw new IllegalStateException("Linux freetype packages not found.\nIf freetype pacakges are installed, please remove the build directory and try again.")
+            throw new IllegalStateException("Linux freetype packages not found.\nIf freetype packages are installed, please remove the build directory and try again.")
         }
     }
 )

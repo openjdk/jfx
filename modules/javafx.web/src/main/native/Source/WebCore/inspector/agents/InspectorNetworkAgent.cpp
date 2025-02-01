@@ -117,7 +117,7 @@ public:
         m_statusCode = response.httpStatusCode();
 
         // FIXME: This assumes text only responses. We should support non-text responses as well.
-        PAL::TextEncoding textEncoding(response.textEncodingName().string());
+        PAL::TextEncoding textEncoding(response.textEncodingName());
         bool useDetector = false;
         if (!textEncoding.isValid()) {
             textEncoding = PAL::UTF8Encoding();
@@ -563,8 +563,8 @@ void InspectorNetworkAgent::didReceiveResponse(ResourceLoaderIdentifier identifi
     bool isNotModified = response.httpStatusCode() == 304;
 
     CachedResource* cachedResource = nullptr;
-    if (is<SubresourceLoader>(resourceLoader) && !isNotModified)
-        cachedResource = downcast<SubresourceLoader>(resourceLoader)->cachedResource();
+    if (auto* subresourceLoader = dynamicDowncast<SubresourceLoader>(resourceLoader); subresourceLoader && !isNotModified)
+        cachedResource = subresourceLoader->cachedResource();
     if (!cachedResource && loader)
         cachedResource = InspectorPageAgent::cachedResource(loader->frame(), response.url());
 
@@ -871,10 +871,10 @@ Protocol::ErrorStringOr<void> InspectorNetworkAgent::enable()
         Locker locker { WebSocket::allActiveWebSocketsLock() };
 
         for (auto* webSocket : activeWebSockets()) {
-            if (!is<Document>(webSocket->scriptExecutionContext()))
+            RefPtr document = dynamicDowncast<Document>(webSocket->scriptExecutionContext());
+            if (!document)
                 continue;
 
-            auto& document = downcast<Document>(*webSocket->scriptExecutionContext());
             auto channel = webSocket->channel();
 
             auto identifier = channel->progressIdentifier();
@@ -1049,7 +1049,7 @@ Protocol::ErrorStringOr<String> InspectorNetworkAgent::getSerializedCertificate(
         return makeUnexpected("Missing certificate of resource for given requestId"_s);
 
     WTF::Persistence::Encoder encoder;
-    WTF::Persistence::Coder<WebCore::CertificateInfo>::encode(encoder, certificate.value());
+    WTF::Persistence::Coder<WebCore::CertificateInfo>::encodeForPersistence(encoder, certificate.value());
     return base64EncodeToString(encoder.buffer(), encoder.bufferSize());
 }
 
@@ -1078,10 +1078,10 @@ Protocol::ErrorStringOr<Ref<Protocol::Runtime::RemoteObject>> InspectorNetworkAg
         return makeUnexpected("Missing web socket for given requestId"_s);
 
     // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display iframe's and worker's WebSockets
-    if (!is<Document>(webSocket->scriptExecutionContext()))
+    RefPtr document = dynamicDowncast<Document>(webSocket->scriptExecutionContext());
+    if (!document)
         return makeUnexpected("Not supported"_s);
 
-    auto* document = downcast<Document>(webSocket->scriptExecutionContext());
     auto* frame = document->frame();
     if (!frame)
         return makeUnexpected("Missing frame of web socket for given requestId"_s);
@@ -1158,10 +1158,8 @@ bool InspectorNetworkAgent::shouldInterceptRequest(const ResourceLoader& loader)
     if (!m_interceptionEnabled)
         return false;
 
-#if ENABLE(SERVICE_WORKER)
     if (loader.options().serviceWorkerRegistrationIdentifier)
         return false;
-#endif
 
     return shouldIntercept(loader.url(), Protocol::Network::NetworkStage::Request);
 }
@@ -1277,9 +1275,9 @@ Protocol::ErrorStringOr<void> InspectorNetworkAgent::interceptWithResponse(const
     if (status)
         overrideResponse.setHTTPStatusCode(*status);
     if (!!statusText)
-        overrideResponse.setHTTPStatusText(AtomString { statusText });
+        overrideResponse.setHTTPStatusText(String { statusText });
     if (!!mimeType)
-        overrideResponse.setMimeType(AtomString { mimeType });
+        overrideResponse.setMimeType(String { mimeType });
     if (headers) {
         HTTPHeaderMap explicitHeaders;
         for (auto& header : *headers) {
@@ -1335,7 +1333,7 @@ Protocol::ErrorStringOr<void> InspectorNetworkAgent::interceptRequestWithRespons
     ResourceResponse response(pendingRequest->m_loader->url(), mimeType, data->size(), String());
     response.setSource(ResourceResponse::Source::InspectorOverride);
     response.setHTTPStatusCode(status);
-    response.setHTTPStatusText(AtomString { statusText });
+    response.setHTTPStatusText(String { statusText });
     HTTPHeaderMap explicitHeaders;
     for (auto& header : headers.get()) {
         auto headerValue = header.value->asString();

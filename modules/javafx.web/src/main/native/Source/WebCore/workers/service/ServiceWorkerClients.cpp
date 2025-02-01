@@ -24,8 +24,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SERVICE_WORKER)
 #include "ServiceWorkerClients.h"
 
 #include "JSDOMPromiseDeferred.h"
@@ -57,7 +55,7 @@ void ServiceWorkerClients::get(ScriptExecutionContext& context, const String& id
     callOnMainThread([promiseIdentifier = addPendingPromise(WTFMove(promise)), serviceWorkerIdentifier, id = id.isolatedCopy()] () {
         auto connection = SWContextManager::singleton().connection();
         connection->findClientByVisibleIdentifier(serviceWorkerIdentifier, id, [promiseIdentifier, serviceWorkerIdentifier] (auto&& clientData) {
-            SWContextManager::singleton().postTaskToServiceWorker(serviceWorkerIdentifier, [promiseIdentifier, data = crossThreadCopy(WTFMove(clientData))] (auto& context) mutable {
+            SWContextManager::singleton().postTaskToServiceWorker(serviceWorkerIdentifier, [promiseIdentifier, data = crossThreadCopy(std::forward<decltype(clientData)>(clientData))] (auto& context) mutable {
                 if (auto promise = context.clients().takePendingPromise(promiseIdentifier))
                     didFinishGetRequest(context, *promise, WTFMove(data));
             });
@@ -68,7 +66,7 @@ void ServiceWorkerClients::get(ScriptExecutionContext& context, const String& id
 
 static inline void matchAllCompleted(ServiceWorkerGlobalScope& scope, DeferredPromise& promise, Vector<ServiceWorkerClientData>&& clientsData)
 {
-    auto clients = WTF::map(clientsData, [&] (auto&& clientData) {
+    auto clients = WTF::map(WTFMove(clientsData), [&] (ServiceWorkerClientData&& clientData) {
         return ServiceWorkerClient::create(scope, WTFMove(clientData));
     });
     std::sort(clients.begin(), clients.end(), [&] (auto& a, auto& b) {
@@ -83,7 +81,7 @@ void ServiceWorkerClients::matchAll(ScriptExecutionContext& context, const Clien
 
     callOnMainThread([promiseIdentifier = addPendingPromise(WTFMove(promise)), serviceWorkerIdentifier, options] () mutable {
         auto connection = SWContextManager::singleton().connection();
-        connection->matchAll(serviceWorkerIdentifier, options, [promiseIdentifier, serviceWorkerIdentifier] (auto&& clientsData) mutable {
+        connection->matchAll(serviceWorkerIdentifier, options, [promiseIdentifier, serviceWorkerIdentifier] (Vector<ServiceWorkerClientData>&& clientsData) mutable {
             SWContextManager::singleton().postTaskToServiceWorker(serviceWorkerIdentifier, [promiseIdentifier, clientsData = crossThreadCopy(WTFMove(clientsData))] (auto& scope) mutable {
                 if (auto promise = scope.clients().takePendingPromise(promiseIdentifier))
                     matchAllCompleted(scope, *promise, WTFMove(clientsData));
@@ -97,18 +95,18 @@ void ServiceWorkerClients::openWindow(ScriptExecutionContext& context, const Str
     LOG(ServiceWorker, "WebProcess %i service worker calling openWindow to URL %s", getpid(), urlString.utf8().data());
 
     if (context.settingsValues().serviceWorkersUserGestureEnabled && !downcast<ServiceWorkerGlobalScope>(context).isProcessingUserGesture()) {
-        promise->reject(Exception { InvalidAccessError, "ServiceWorkerClients.openWindow() requires a user gesture"_s });
+        promise->reject(Exception { ExceptionCode::InvalidAccessError, "ServiceWorkerClients.openWindow() requires a user gesture"_s });
         return;
     }
 
     auto url = context.completeURL(urlString);
     if (!url.isValid()) {
-        promise->reject(Exception { TypeError, makeString("URL string ", urlString, " cannot successfully be parsed"_s) });
+        promise->reject(Exception { ExceptionCode::TypeError, makeString("URL string ", urlString, " cannot successfully be parsed"_s) });
         return;
     }
 
     if (url.protocolIsAbout()) {
-        promise->reject(Exception { TypeError, makeString("ServiceWorkerClients.openWindow() cannot be called with URL "_s, url.string()) });
+        promise->reject(Exception { ExceptionCode::TypeError, makeString("ServiceWorkerClients.openWindow() cannot be called with URL "_s, url.string()) });
         return;
     }
 
@@ -116,7 +114,7 @@ void ServiceWorkerClients::openWindow(ScriptExecutionContext& context, const Str
     callOnMainThread([promiseIdentifier = addPendingPromise(WTFMove(promise)), serviceWorkerIdentifier, url = url.isolatedCopy()] () mutable {
         auto connection = SWContextManager::singleton().connection();
         connection->openWindow(serviceWorkerIdentifier, url, [promiseIdentifier, serviceWorkerIdentifier] (auto&& result) mutable {
-            SWContextManager::singleton().postTaskToServiceWorker(serviceWorkerIdentifier, [promiseIdentifier, result = crossThreadCopy(WTFMove(result))] (ServiceWorkerGlobalScope& scope) mutable {
+            SWContextManager::singleton().postTaskToServiceWorker(serviceWorkerIdentifier, [promiseIdentifier, result = crossThreadCopy(std::forward<decltype(result)>(result))] (ServiceWorkerGlobalScope& scope) mutable {
                 LOG(ServiceWorker, "WebProcess %i finished ServiceWorkerClients::openWindow call result is %d.", getpid(), !result.hasException());
 
                 auto promise = scope.clients().takePendingPromise(promiseIdentifier);
@@ -151,7 +149,7 @@ void ServiceWorkerClients::claim(ScriptExecutionContext& context, Ref<DeferredPr
 
     callOnMainThread([promiseIdentifier = addPendingPromise(WTFMove(promise)), serviceWorkerIdentifier] () mutable {
         auto connection = SWContextManager::singleton().connection();
-        connection->claim(serviceWorkerIdentifier, [promiseIdentifier, serviceWorkerIdentifier](auto&& result) mutable {
+        connection->claim(serviceWorkerIdentifier, [promiseIdentifier, serviceWorkerIdentifier](ExceptionOr<void>&& result) mutable {
             SWContextManager::singleton().postTaskToServiceWorker(serviceWorkerIdentifier, [promiseIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
                 if (auto promise = scope.clients().takePendingPromise(promiseIdentifier)) {
                     DOMPromiseDeferred<void> pendingPromise { promise.releaseNonNull() };
@@ -180,5 +178,3 @@ WebCoreOpaqueRoot root(ServiceWorkerClients* clients)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,17 +29,18 @@ import static javafx.concurrent.Worker.State.READY;
 import static javafx.concurrent.Worker.State.RUNNING;
 import static javafx.concurrent.Worker.State.FAILED;
 import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngine;
 import netscape.javascript.JSObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -58,53 +59,57 @@ public class LoadTest extends TestBase {
         load(new File(FILE));
         WebEngine web = getEngine();
 
-        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
-        assertTrue("Location.endsWith(FILE)", web.getLocation().endsWith(FILE));
-        assertNotNull("Document should not be null", web.getDocument());
+        assertTrue(getLoadState() == SUCCEEDED, "Load task completed successfully");
+        assertTrue(web.getLocation().endsWith(FILE), "Location.endsWith(FILE)");
+        assertNotNull(web.getDocument(),"Document should not be null");
     }
 
-    @Test public void testLoadBadUrl() {
+    @Test
+    public void testLoadBadUrl() {
         final String URL = "bad://url";
         load(URL);
         WebEngine web = getEngine();
 
-        assertTrue("Load task failed", getLoadState() == FAILED);
-        assertEquals("Location", URL, web.getLocation());
-        assertNull("Document should be null", web.getDocument());
+        assertTrue(getLoadState() == FAILED, "Load task failed");
+        assertEquals(URL, web.getLocation(), "Location");
+        assertNull(web.getDocument(), "Document should be null");
     }
 
-    @Test public void testLoadHtmlContent() {
+    @Test
+    public void testLoadHtmlContent() {
         final String TITLE = "In a Silent Way";
         loadContent("<html><head><title>" + TITLE + "</title></head></html>");
         WebEngine web = getEngine();
 
-        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
-        assertEquals("Location", "", web.getLocation());
-        assertNotNull("Document should not be null", web.getDocument());
+        assertTrue(getLoadState() == SUCCEEDED, "Load task completed successfully");
+        assertEquals("", web.getLocation(), "Location");
+        assertNotNull(web.getDocument(), "Document should not be null");
     }
 
-    @Test public void testLoadPlainContent() {
+    @Test
+    public void testLoadPlainContent() {
         final String TEXT =
                 "<html><head><title>Hidden Really Well</title></head></html>";
         loadContent(TEXT, "text/plain");
         final WebEngine web = getEngine();
 
-        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
-        assertEquals("Location", "", web.getLocation());
+        assertTrue(getLoadState() == SUCCEEDED, "Load task completed successfully");
+        assertEquals("", web.getLocation(), "Location");
 
         // DOM access should happen on FX thread
         submit(() -> {
             Document doc = web.getDocument();
-            assertNotNull("Document should not be null", doc);
+            assertNotNull(doc, "Document should not be null");
             Node el = // html -> body -> pre -> text
                     doc.getDocumentElement().getLastChild().getFirstChild().getFirstChild();
             String text = ((Text)el).getNodeValue();
-            assertEquals("Plain text should not be interpreted as HTML",
-                    TEXT, text);
+            assertEquals(TEXT, text,
+                    "Plain text should not be interpreted as HTML");
         });
     }
 
-    @Test public void testLoadEmpty() {
+    @Test
+    public void testLoadEmpty() {
         testLoadEmpty(null);
         testLoadEmpty("");
         testLoadEmpty("about:blank");
@@ -114,56 +119,59 @@ public class LoadTest extends TestBase {
         load(url);
         final WebEngine web = getEngine();
 
-        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
-        assertEquals("Location", "about:blank", web.getLocation());
-        assertNull("Title should be null", web.getTitle());
+        assertTrue(getLoadState() == SUCCEEDED, "Load task completed successfully");
+        assertEquals("about:blank", web.getLocation(), "Location");
+        assertNull(web.getTitle(), "Title should be null");
 
         submit(() -> {
             Document doc = web.getDocument();
-            assertNotNull("Document should not be null", doc);
+            assertNotNull(doc, "Document should not be null");
 
             Element html = doc.getDocumentElement();
-            assertNotNull("There should be an HTML element", html);
-            assertEquals("HTML element should have tag HTML", "HTML", html.getTagName());
+            assertNotNull(html, "There should be an HTML element");
+            assertEquals("HTML", html.getTagName(), "HTML element should have tag HTML");
 
             NodeList htmlNodes = html.getChildNodes();
-            assertNotNull("HTML element should have two children", htmlNodes);
-            assertEquals("HTML element should have two children", 2, htmlNodes.getLength());
+            assertNotNull(htmlNodes, "HTML element should have two children");
+            assertEquals(2, htmlNodes.getLength(), "HTML element should have two children");
 
             Element head = (Element) htmlNodes.item(0);
             NodeList headNodes = head.getChildNodes();
-            assertNotNull("There should be a HEAD element", head);
-            assertEquals("HEAD element should have tag HEAD", "HEAD", head.getTagName());
-            assertTrue("HEAD element should have no children",
-                    headNodes == null || headNodes.getLength() == 0);
+            assertNotNull(head, "There should be a HEAD element");
+            assertEquals("HEAD", head.getTagName(), "HEAD element should have tag HEAD");
+            assertTrue(headNodes == null || headNodes.getLength() == 0,
+                    "HEAD element should have no children");
 
             Element body = (Element) htmlNodes.item(1);
             NodeList bodyNodes = body.getChildNodes();
-            assertNotNull("There should be a BODY element", body);
-            assertEquals("BODY element should have tag BODY", "BODY", body.getTagName());
-            assertTrue("BODY element should have no children",
-                    bodyNodes == null || bodyNodes.getLength() == 0);
+            assertNotNull(body, "There should be a BODY element");
+            assertEquals("BODY", body.getTagName(), "BODY element should have tag BODY");
+            assertTrue(bodyNodes == null || bodyNodes.getLength() == 0,
+                    "BODY element should have no children");
         });
     }
 
-    @Test public void testLoadUrlWithEncodedSpaces() {
+    @Test
+    public void testLoadUrlWithEncodedSpaces() {
         final String URL = "http://localhost/test.php?param=a%20b%20c";
         load(URL);
         WebEngine web = getEngine();
 
-        assertEquals("Unexpected location", URL, web.getLocation());
+        assertEquals(URL, web.getLocation(), "Unexpected location");
     }
 
-    @Test public void testLoadUrlWithUnencodedSpaces() {
+    @Test
+    public void testLoadUrlWithUnencodedSpaces() {
         final String URL = "http://localhost/test.php?param=a b c";
         load(URL);
         WebEngine web = getEngine();
 
-        assertEquals("Unexpected location",
-                URL.replace(" ", "%20"), web.getLocation());
+        assertEquals(URL.replace(" ", "%20"), web.getLocation(),
+                "Unexpected location");
     }
 
-    @Test public void testLoadContentWithLocalScript() {
+    @Test
+    public void testLoadContentWithLocalScript() {
         WebEngine webEngine = getEngine();
 
         final StringBuilder result = new StringBuilder();
@@ -180,31 +188,35 @@ public class LoadTest extends TestBase {
                 "</html>";
         loadContent(html);
 
-        assertEquals("Unexpected result", "ALERT: foo", result.toString());
-        assertEquals("Unexpected load state", SUCCEEDED, getLoadState());
-        assertEquals("Unexpected location", "", webEngine.getLocation());
-        assertNotNull("Document is null", webEngine.getDocument());
+        assertEquals("ALERT: foo", result.toString(), "Unexpected result");
+        assertEquals(SUCCEEDED, getLoadState(), "Unexpected load state");
+        assertEquals("", webEngine.getLocation(), "Unexpected location");
+        assertNotNull(webEngine.getDocument(), "Document is null");
     }
 
-    @Test public void testLoadLocalCSS() {
+    @Test
+    public void testLoadLocalCSS() {
         load(new File("src/test/resources/test/html/dom.html"));
         submit(() -> {
-            assertEquals("Font weight should be bold", "700", getEngine().executeScript(
-                "window.getComputedStyle(document.getElementById('p3')).getPropertyValue('font-weight')"));
-            assertEquals("font style should be italic", "italic", getEngine().executeScript(
-                "window.getComputedStyle(document.getElementById('p3')).getPropertyValue('font-style')"));
+            assertEquals("700", getEngine().executeScript(
+                "window.getComputedStyle(document.getElementById('p3')).getPropertyValue('font-weight')"),
+                    "Font weight should be bold");
+            assertEquals("italic", getEngine().executeScript(
+                "window.getComputedStyle(document.getElementById('p3')).getPropertyValue('font-style')"),
+                    "font style should be italic");
         });
     }
 
-    @Test public void testLoadTitleChanged() {
+    @Test
+    public void testLoadTitleChanged() {
         final String FILE = "src/test/resources/test/html/ipsum.html";
         final CountDownLatch latch = new CountDownLatch(1);
 
         submit(() -> {
             WebEngine webEngine = new WebEngine();
             webEngine.titleProperty().addListener((observable, oldValue, newValue) -> {
-                assertTrue("loadContent in SUCCEEDED State", webEngine.getLoadWorker().getState() == SUCCEEDED);
-                assertEquals("Title", "Lorem Ipsum", webEngine.getTitle());
+                assertTrue(webEngine.getLoadWorker().getState() == SUCCEEDED, "loadContent in SUCCEEDED State");
+                assertEquals("Lorem Ipsum", webEngine.getTitle(), "Title");
                 latch.countDown();
             });
 
@@ -217,15 +229,16 @@ public class LoadTest extends TestBase {
         }
     }
 
-    @Test public void testLoadContentTitleChanged() {
+    @Test
+    public void testLoadContentTitleChanged() {
         final String TITLE = "Title Test";
         final CountDownLatch latch = new CountDownLatch(1);
 
         submit(() -> {
             WebEngine webEngine = new WebEngine();
             webEngine.titleProperty().addListener((observable, oldValue, newValue) -> {
-                assertTrue("loadContent in SUCCEEDED State", webEngine.getLoadWorker().getState() == SUCCEEDED);
-                assertEquals("Title", TITLE, webEngine.getTitle());
+                assertTrue(webEngine.getLoadWorker().getState() == SUCCEEDED, "loadContent in SUCCEEDED State");
+                assertEquals(TITLE, webEngine.getTitle(), "Title");
                 latch.countDown();
             });
 
@@ -243,7 +256,8 @@ public class LoadTest extends TestBase {
      * @bug 8140501
      * summary loadContent on location changed
      */
-    @Test public void loadContentOnLocationChange() throws Exception {
+    @Test
+    public void loadContentOnLocationChange() throws Exception {
         final CountDownLatch latch = new CountDownLatch(2);
 
         submit(() -> {
@@ -255,7 +269,7 @@ public class LoadTest extends TestBase {
                 // ref : https://html.spec.whatwg.org
                 if (newValue.equalsIgnoreCase("about:blank")) {
                     webEngine.loadContent("");
-                    assertTrue("loadContent in READY State", webEngine.getLoadWorker().getState() == READY);
+                    assertTrue(webEngine.getLoadWorker().getState() == READY, "loadContent in READY State");
                 }
             });
 
@@ -266,7 +280,7 @@ public class LoadTest extends TestBase {
             }));
 
             webEngine.load("");
-            assertTrue("load task completed successfully", webEngine.getLoadWorker().getState() == SUCCEEDED);
+            assertTrue(webEngine.getLoadWorker().getState() == SUCCEEDED, "load task completed successfully");
         });
         try {
             latch.await();
@@ -280,7 +294,8 @@ public class LoadTest extends TestBase {
      * @bug 8140501
      * summary load url on location changed
      */
-    @Test public void loadUrlOnLocationChange() throws Exception {
+    @Test
+    public void loadUrlOnLocationChange() throws Exception {
         // Cancelling loadContent is synchronous,
         // there wont be 2 SUCCEEDED event
         final CountDownLatch latch = new CountDownLatch(1);
@@ -290,7 +305,7 @@ public class LoadTest extends TestBase {
             webEngine.locationProperty().addListener((observable, oldValue, newValue) -> {
                 if (newValue.equalsIgnoreCase("")) {
                     webEngine.load("");
-                    assertTrue("Load in READY State", webEngine.getLoadWorker().getState() == READY);
+                    assertTrue(webEngine.getLoadWorker().getState() == READY, "Load in READY State");
                 }
             });
 
@@ -301,7 +316,7 @@ public class LoadTest extends TestBase {
             }));
 
             webEngine.loadContent("");
-            assertTrue("loadContent task running", webEngine.getLoadWorker().getState() == RUNNING);
+            assertTrue(webEngine.getLoadWorker().getState() == RUNNING, "loadContent task running");
         });
         try {
             latch.await();
@@ -315,34 +330,35 @@ public class LoadTest extends TestBase {
      * @bug 8152420
      * summary loading relative sub-resource from jar
      */
-    @Test public void loadJarFile() throws Exception {
+    @Test
+    public void loadJarFile() throws Exception {
 
         // archive-root0.html -- src archive-r0.js, c/archive-c0.js
         load("jar:" + new File(System.getProperties().get("WEB_ARCHIVE_JAR_TEST_DIR").toString()
                 + "/webArchiveJar.jar").toURI().toASCIIString() + "!/archive-root0.html");
-        assertEquals("archive-root0.html failed to load src='archive-r0.js'",
-                "loaded", executeScript("jsr0()").toString());
+        assertEquals("loaded", executeScript("jsr0()").toString(),
+                "archive-root0.html failed to load src='archive-r0.js'");
 
-        assertEquals("archive-root0.html failed to load src='c/archive-c0.js'",
-                "loaded", executeScript("jsc0()").toString());
+        assertEquals("loaded", executeScript("jsc0()").toString(),
+                "archive-root0.html failed to load src='c/archive-c0.js'");
 
         // archive-root1.html -- src ./archive-r0.js, ./c/archive-c0.js
         load("jar:" + new File(System.getProperties().get("WEB_ARCHIVE_JAR_TEST_DIR").toString()
                 + "/webArchiveJar.jar").toURI().toASCIIString() + "!/archive-root1.html");
-        assertEquals("archive-root1.html failed to load src='./archive-r0.js'",
-                "loaded", executeScript("jsr0()").toString());
+        assertEquals("loaded", executeScript("jsr0()").toString(),
+                "archive-root1.html failed to load src='./archive-r0.js'");
 
-        assertEquals("archive-root1.html failed to load src='./c/archive-c0.js'",
-                "loaded", executeScript("jsc0()").toString());
+        assertEquals("loaded", executeScript("jsc0()").toString(),
+                "archive-root1.html failed to load src='./c/archive-c0.js'");
 
         // archive-root2.html -- src ./c/../archive-r0.js, ./c/./././archive-c0.js
         load("jar:" + new File(System.getProperties().get("WEB_ARCHIVE_JAR_TEST_DIR").toString()
                 + "/webArchiveJar.jar").toURI().toASCIIString() + "!/archive-root2.html");
-        assertEquals("archive-root2.html failed to load src='./c/../archive-r0.js'",
-                "loaded", executeScript("jsr0()").toString());
+        assertEquals("loaded", executeScript("jsr0()").toString(),
+                "archive-root2.html failed to load src='./c/../archive-r0.js'");
 
-        assertEquals("archive-root2.html failed to load src='./c/./././archive-c0.js'",
-                "loaded", executeScript("jsc0()").toString());
+        assertEquals("loaded", executeScript("jsc0()").toString(),
+                "archive-root2.html failed to load src='./c/./././archive-c0.js'");
     }
 
     /**
@@ -366,7 +382,9 @@ public class LoadTest extends TestBase {
      * @bug 8153681
      * summary testing jrt url scheme support in WebView
      */
-    @Test(timeout = 30000) public void loadJrtResource() throws Exception {
+    @Test
+    @Timeout(30)
+    public void loadJrtResource() throws Exception {
         assumeTrue(isJigsawMode());
 
         final String[] jrtResources = {
@@ -380,11 +398,11 @@ public class LoadTest extends TestBase {
         // Load single resource and check for image is being rendered
         // Check the natural width of rendered image
         load(jrtResources[0]);
-        assertEquals("Failed to load " + jrtResources[0],
-                1, executeScript("document.getElementsByTagName('img').length"));
+        assertEquals(1, executeScript("document.getElementsByTagName('img').length"),
+                "Failed to load " + jrtResources[0]);
 
-        assertEquals("Failed to Render " + jrtResources[0],
-                16, executeScript("document.getElementsByTagName('img')[0].naturalWidth"));
+        Integer actualWidth = (Integer) executeScript("document.getElementsByTagName('img')[0].naturalWidth");
+        assertEquals(16, actualWidth, "Failed to Render " + jrtResources[0]);
 
         // LoadContent with multiple jrt resource which needs to
         // resolve path navigation i.e ./ or ../ in native url handler
@@ -399,7 +417,7 @@ public class LoadTest extends TestBase {
                     final String msg = String.format(
                             "Failed to load : %d / %d resources",
                             imageEvent.failed, jrtResources.length);
-                    assertTrue(msg, imageEvent.loaded == jrtResources.length);
+                    assertTrue(imageEvent.loaded == jrtResources.length, msg);
                     latch.countDown();
                 }
             }));
@@ -423,31 +441,32 @@ public class LoadTest extends TestBase {
     }
 
     // JDK-8282134 Certain regex can cause a JS trap in WebView
-    @Test public void jsRegexpTrapTest() {
+    @Test
+    public void jsRegexpTrapTest() {
         final String FILE = "src/test/resources/test/html/unicode.html";
         load(new File(FILE));
         WebEngine web = getEngine();
-        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
+        assertTrue(getLoadState() == SUCCEEDED, "Load task completed successfully");
     }
 
     // JDK-8311097 Synchronous XMLHttpRequest not receiving data
-    @Test public void testSynchronousDataRequest() {
+    @Test
+    public void testSynchronousDataRequest() {
         final String TEXT = "pass";
         final String FILE = "src/test/resources/test/html/sync-request.html";
         load(new File(FILE));
         final WebEngine web = getEngine();
 
-        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
+        assertTrue(getLoadState() == SUCCEEDED, "Load task completed successfully");
 
         // DOM access should happen on FX thread
         submit(() -> {
             Document doc = web.getDocument();
-            assertNotNull("Document should not be null", doc);
+            assertNotNull(doc, "Document should not be null");
 
             var body = doc.getDocumentElement().getLastChild();
             String text = getTargetText(body);
-            assertEquals("Found expected text",
-                    TEXT, text);
+            assertEquals(TEXT, text, "Found expected text");
         });
     }
 
@@ -463,7 +482,7 @@ public class LoadTest extends TestBase {
         while (!"target".equals(getId(c))) {
             c = c.getNextSibling();
         }
-        assertNotNull("Found target element", c);
+        assertNotNull(c, "Found target element");
         return c.getTextContent();
     }
 }

@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "AXObjectCache.h"
 #include "Cursor.h"
 #include "DisabledAdaptations.h"
 #include "FocusDirection.h"
@@ -64,6 +65,7 @@ class DateTimeChooserClient;
 class FileChooser;
 class FileIconLoader;
 class FloatRect;
+class Frame;
 class Element;
 class Geolocation;
 class HitTestResult;
@@ -104,18 +106,21 @@ public:
     IntPoint accessibilityScreenToRootView(const IntPoint&) const override;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const override;
     PlatformPageClient platformPageClient() const override;
+#if PLATFORM(IOS_FAMILY)
+    void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const override;
+#endif
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, bool avoidBackendSizeCheck = false) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, OptionSet<ImageBufferOptions>) const override;
     RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>) override;
 
 #if ENABLE(WEBGL)
     RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const override;
 #endif
-
-    RefPtr<WebGPU::GPU> createGPUForWebGPU() const;
-
+#if HAVE(WEBGPU_IMPLEMENTATION)
+    RefPtr<WebGPU::GPU> createGPUForWebGPU() const override;
+#endif
     RefPtr<ShapeDetection::BarcodeDetector> createBarcodeDetector(const ShapeDetection::BarcodeDetectorOptions&) const;
     void getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&&) const;
     RefPtr<ShapeDetection::FaceDetector> createFaceDetector(const ShapeDetection::FaceDetectorOptions&) const;
@@ -145,7 +150,7 @@ public:
     void takeFocus(FocusDirection);
 
     void focusedElementChanged(Element*);
-    void focusedFrameChanged(LocalFrame*);
+    void focusedFrameChanged(Frame*);
 
     WEBCORE_EXPORT Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&);
     WEBCORE_EXPORT void show();

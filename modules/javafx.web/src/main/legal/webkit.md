@@ -1,4 +1,4 @@
-## WebKit Open Source Project: WebKit v617.1
+## WebKit Open Source Project: WebKit v619.1
 
 ### WebKit Notice
 ```
@@ -38,11 +38,11 @@ Apache 2.0, Unicode, and BSD-style licenses.
 
 Copyright (C) 1999-2004 Harri Porten (porten@kde.org)
 Copyright (C) 2000-2003 Peter Kelly (pmk@post.com)
-Copyright (C) 2002-2023 Apple Inc. All rights reserved.
+Copyright (C) 2002-2024 Apple Inc. All rights reserved.
 Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
 Copyright (C) 2006-2007 Maks Orlovich
 Copyright (C) 2005-2008 Eric Seidel <eric@webkit.org>
-Copyright (C) 2009-2023 Igalia, S.L.
+Copyright (C) 2009-2024 Igalia, S.L.
 Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
 Copyright (C) 2009 Acision BV. All rights reserved.
 Copyright (C) 2006 Bjoern Graf (bjoern.graf@gmail.com)
@@ -55,7 +55,8 @@ Copyright (C) 2009-2011 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
 Copyright (C) 2008-2022 Google Inc. All rights reserved.
 Copyright (C) 2007-2009 Torch Mobile, Inc.
 Copyright (C) 2010 &yet, LLC. (nate@andyet.net)
-Copyright (C) 2006-2012 the V8 project authors. All rights reserved.
+Copyright 2006-2012 the V8 project authors. All rights reserved.
+Copyright (C) 2012 the V8 project authors. All rights reserved.
 Copyright (C) 2010-2011 Research In Motion Limited. All rights reserved.
 Copyright (C) 2015-2016 Canon Inc. All rights reserved.
 Copyright (C) 2010 Peter Varga (pvarga@inf.u-szeged.hu), University of Szeged
@@ -87,6 +88,8 @@ Copyright (C) 2007-2008 Alp Toker <alp@atoker.com>
 Copyright (C) 2009 Gustavo Noronha Silva <gns@gnome.org>
 Copyright (C) 2000 Daniel Molkentin (molkentin@kde.org)
 Copyright (C) 2000 Stefan Schimanski (schimmi@kde.org)
+Copyright (C) 1999-2000 Antti Koivisto (koivisto@kde.org)
+Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
 Copyright (C) 2013 Michael Pruett <michael@68k.org>
 Copyright (C) 2006 Jon Shier (jshier@iastate.edu)
 Copyright (C) 2003-2022 Apple Inc. All rights reseved.
@@ -136,8 +139,6 @@ Copyright (C) 1998-1999 Torben Weis <weis@kde.org>
 Copyright (C) 2000 Simon Hausmann <hausmann@kde.org>
 Copyright (C) 2009 Antonio Gomes <tonikitoo@webkit.org>
 Copyright (C) 2011 Rik Cabanier (cabanier@adobe.com)
-Copyright (C) 1999-2000 Antti Koivisto (koivisto@kde.org)
-Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
 Copyright (C) 2007-2008 Holger Hans Peter Freyther
 Copyright (C) 2011 Brent Fulgham
 Copyright (C) 2006 Michael Emmel mike.emmel@gmail.com
@@ -162,8 +163,8 @@ Copyright (C) 2010 Daniel Bates (dbates@intudata.com)
 Copyright (C) 2011 Robert Hogan <robert@roberthogan.net>
 Copyright (C) 2020 Noam Rosenthal (noam@webkit.org)
 Copyright (C) 2005-2006 Alexander Kellett <lypanov@kde.org>
-Copyright (C) 2009 Jeff Schiller <codedread@gmail.com>
 Copyright (C) 2005-2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
+Copyright (C) 2009 Jeff Schiller <codedread@gmail.com>
 Copyright (C) Research In Motion Limited 2010-11. All rights reserved.
 Copyright (C) Apple 2023. All rights reserved.
 Copyright (C) Google 2014-2017. All rights reserved.
@@ -1669,13 +1670,13 @@ Source/WebCore/platform/graphics/filters/software
 Source/WebCore/platform/graphics/harfbuzz
 Source/WebCore/platform/graphics/iso
 Source/WebCore/platform/graphics/opentype
+Source/WebCore/platform/graphics/re
 Source/WebCore/platform/graphics/texmap
 Source/WebCore/platform/graphics/transforms
 Source/WebCore/platform/image-decoders
 Source/WebCore/platform/image-decoders/avif
 Source/WebCore/platform/image-decoders/gif
 Source/WebCore/platform/image-decoders/jpeg
-Source/WebCore/platform/image-decoders/jpeg2000
 Source/WebCore/platform/image-decoders/png
 Source/WebCore/platform/mediastream
 Source/WebCore/platform/mock
@@ -1716,7 +1717,7 @@ Source/bmalloc/libpas/src/test
 Source/bmalloc/libpas/src/toys
 Source/bmalloc/libpas/src/verifier
 
-Copyright (C) 1016-2023 Apple Inc. All rights reserved.
+Copyright (C) 1016-2024 Apple Inc. All rights reserved.
 Copyright (C) 2006-2008 Eric Seidel <eric@webkit.org>
 Copyright (C) 2008 Kelvin W Sherlock (ksherlock@gmail.com)
 Copyright (C) 2009-2023 Igalia S.L.
@@ -1729,16 +1730,16 @@ Copyright (C) 2015-2018 Yusuke Suzuki <utatane.tea@gmail.com>.
 Copyright (C) 2016-2018 Oleksandr Skachkov <gskachkov@gmail.com>.
 Copyright (C) 2016 Caitlin Potter <caitp@igalia.com>.
 Copyright (C) 2015-2016 Canon Inc. All rights reserved.
-Copyright (C) 2015 Andy VanWagoner <andy@vanwagoner.family>.
 Copyright (C) 2017 Caio Lima <ticaiolima@gmail.com>.
 Copyright (C) 2023 Devin Rousso <webkit@devinrousso.com>.
 Copyright (C) 2015 Jordan Harband. All rights reserved.
+Copyright (C) 2015 Andy VanWagoner <andy@vanwagoner.family>.
 Copyright (C) 2022 Jarred Sumner. All rights reserved.
 Copyright (C) 2021 Igalia S.A. All rights reserved.
 Copyright (C) 2011-2013 Intel Corporation. All rights reserved.
 Copyright (C) 2005-2022 Google Inc. All rights reserved.
 Copyright (C) 2011 The Chromium Authors. All rights reserved.
-Copyright (C) 2010-2023 Igalia, S.L. All rights reserved.
+Copyright (C) 2010-2024 Igalia, S.L. All rights reserved.
 Copyright (C) 2010-2013 Patrick Gansterer <paroga@paroga.com>
 Copyright (C) 2017 Oleksandr Skachkov <gskackhov@gmail.com>.
 Copyright (C) 2014 Saam Barati. <saambarati1@gmail.com>
@@ -1947,6 +1948,7 @@ Source/WebCore/Modules/webgpu
 Source/WebCore/Modules/webgpu/Implementation
 Source/WebCore/Modules/webgpu/InternalAPI
 Source/WebCore/Modules/websockets
+Source/WebCore/Modules/webtransport
 Source/WebCore/Modules/webxr
 Source/WebCore/PAL/pal
 Source/WebCore/PAL/pal/crypto
@@ -1959,6 +1961,7 @@ Source/WebCore/PAL/pal/text
 Source/WebCore/Scripts
 Source/WebCore/Scripts/SettingsTemplates
 Source/WebCore
+Source/WebCore/WebCoreSwift
 Source/WebCore/accessibility
 Source/WebCore/accessibility/isolatedtree
 Source/WebCore/animation
@@ -1973,11 +1976,9 @@ Source/WebCore/crypto/openssl
 Source/WebCore/crypto/parameters
 Source/WebCore/css
 Source/WebCore/css/calc
+Source/WebCore/css/color
 Source/WebCore/css/parser
 Source/WebCore/cssjit
-Source/WebCore/display
-Source/WebCore/display/compositing
-Source/WebCore/display/css
 Source/WebCore/dom
 Source/WebCore/dom/messageports
 Source/WebCore/domjit
@@ -2003,6 +2004,7 @@ Source/WebCore/layout/formattingContexts/flex
 Source/WebCore/layout/formattingContexts/inline
 Source/WebCore/layout/formattingContexts/inline/display
 Source/WebCore/layout/formattingContexts/inline/invalidation
+Source/WebCore/layout/formattingContexts/inline/ruby
 Source/WebCore/layout/formattingContexts/inline/text
 Source/WebCore/layout/formattingContexts/table
 Source/WebCore/layout/integration
@@ -2010,12 +2012,14 @@ Source/WebCore/layout/integration/flex
 Source/WebCore/layout/integration/inline
 Source/WebCore/layout/layouttree
 Source/WebCore/loader
+Source/WebCore/loader/archive
 Source/WebCore/loader/cache
 Source/WebCore/page
 Source/WebCore/page/csp
 Source/WebCore/page/linux
 Source/WebCore/page/scrolling
 Source/WebCore/page/scrolling/nicosia
+Source/WebCore/page/text-extraction
 Source/WebCore/platform
 Source/WebCore/platform/adwaita
 Source/WebCore/platform/animation
@@ -2030,8 +2034,6 @@ Source/WebCore/platform/generic
 Source/WebCore/platform/graphics
 Source/WebCore/platform/graphics/coretext
 Source/WebCore/platform/graphics/cv
-Source/WebCore/platform/graphics/displaylists
-Source/WebCore/platform/graphics/epoxy
 Source/WebCore/platform/graphics/gbm
 Source/WebCore/platform/graphics/gpu
 Source/WebCore/platform/graphics/iso
@@ -2052,11 +2054,15 @@ Source/WebCore/platform/playstation
 Source/WebCore/platform/text
 Source/WebCore/platform/text/hyphen
 Source/WebCore/platform/text/icu
+Source/WebCore/platform/unix
+Source/WebCore/platform/video-codecs
 Source/WebCore/platform/win
 Source/WebCore/plugins
 Source/WebCore/rendering
+Source/WebCore/rendering/adwaita
 Source/WebCore/rendering/style
 Source/WebCore/rendering/svg
+Source/WebCore/rendering/svg/legacy
 Source/WebCore/rendering/updating
 Source/WebCore/storage
 Source/WebCore/style
@@ -2080,27 +2086,28 @@ Source/WebKitLegacy/scripts
 Source/bmalloc/bmalloc
 Source/cmake
 
-Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+Copyright (C) 2003-2024 Apple Inc. All rights reserved.
 Copyright (C) 2017-2022 Sony Interactive Entertainment Inc.
 Copyright (C) 2023 Colin Vidal <colin@cvidal.org> All rights reserved.
 Copyright (C) 2014 University of Washington. All rights reserved.
-Copyright (C) 2009-2019 Google Inc. All rights reserved.
-Copyright (C) 2014-2023 Igalia S. L.
+Copyright (C) 2009-2020 Google Inc. All rights reserved.
+Copyright (C) 2014-2024 Igalia S. L.
 Copyright (C) 2015 Canon Inc. All rights reserved.
 Copyright (C) 2019-2021 Alexey Shvayka <shvaikalesh@gmail.com>.
-Copyright (C) 2014-2017 Yusuke Suzuki <utatane.tea@gmail.com>
-Copyright (C) 2014-2023 Igalia S.L. All rights reserved.
+Copyright (C) 2014-2023 Yusuke Suzuki <utatane.tea@gmail.com>
+Copyright (C) 2014-2024 Igalia S.L. All rights reserved.
 Copyright (C) 2013-2014 University of Szeged. All rights reserved.
 Copyright (C) 2013 Digia Plc. and/or its subsidiary(-ies)
 Copyright (C) 2017-2019 Oleksandr Skachkov <gskachkov@gmail.com>.
 Copyright (C) 2016 Caitlin Potter <caitp@igalia.com>.
 Copyright (C) 2017 Caio Lima <ticaiolima@gmail.com>.
-Copyright (C) 2016-2022 Apple Inc.
+Copyright (C) 2016-2023 Apple Inc.
 Copyright (C) 2015-2018 Andy VanWagoner (andy@vanwagoner.family)
 Copyright (C) 2015-2016 Sukolsak Sakshuwong (sukolsak@gmail.com)
 Copyright (C) 2016 Yusuke Suzuki <yusuke.suzuki@sslab.ics.keio.ac.jp>
 Copyright (C) 2022 Leonardo Taccari <leot@NetBSD.org>.
 Copyright (C) 2018 Yusuke Suzuki <utatane.tea@gmail.com>. All rights reserved.
+Copyright (C) 2011 the V8 project authors. All rights reserved.
 Copyright (C) 2022 Jarred Sumner. All rights reserved.
 Copyright (C) 2017 Konstantin Tokarev <annulen@yandex.ru>
 Copyright (C) 2023 Sony Interactive Entertainment Inc. All rights reserved.
@@ -2125,6 +2132,7 @@ Copyright (C) 2020 RDK Management  All rights reserved.
 Copyright (C) 2023 ChangSeok Oh <changseok@webkit.org>
 Copyright (C) 2006 Alexey Proskuryakov
 Copyright (C) 2010-2011 Nokia Corporation and/or its subsidiary(-ies)
+Copyright (C) 2010 University of Szeged
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
@@ -2232,6 +2240,7 @@ Source/WebCore/loader/cache
 Source/WebCore/page
 Source/WebCore/platform
 Source/WebCore/platform/cf
+Source/WebCore/platform/graphics/controls
 Source/WebCore/platform/graphics/opentype
 Source/WebCore/platform/mediarecorder
 Source/WebCore/platform/mediastream
@@ -2243,7 +2252,7 @@ Source/WebCore/testing
 Source/WebCore/workers
 Source/bmalloc/bmalloc/darwin
 
-Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+Copyright (C) 2006-2024 Apple Inc. All rights reserved.
 Copyright (C) 2010-2014 Google Inc. All rights reserved.
 Copyright (C) 2007 Justin Haygood (jhaygood@reaktix.com)
 Copyright (C) 2016-2017 Sony Interactive Entertainment Inc.
@@ -2279,71 +2288,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---------------------------------
 The below license applies to some files in the following directories:
-Source/JavaScriptCore/assembler
-
-Copyright (C) 2009-2023 Apple Inc. All rights reserved.
-Copyright (C) 2009 University of Szeged
-Copyright (C) 2010 MIPS Technologies, Inc. All rights reserved.
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-1. Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY MIPS TECHNOLOGIES, INC. ``AS IS'' AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL MIPS TECHNOLOGIES, INC. OR
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
----------------------------------
-The below license applies to some files in the following directories:
-Source/JavaScriptCore/assembler
-Source/JavaScriptCore/offlineasm
-
-Copyright (C) 2008-2022 Apple Inc. All rights reserved.
-Copyright (C) 2010-2012 MIPS Technologies, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-1. Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY MIPS TECHNOLOGIES, INC. ``AS IS'' AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL MIPS TECHNOLOGIES, INC. OR
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
----------------------------------
-The below license applies to some files in the following directories:
 Source/JavaScriptCore/bytecode
 
-Copyright (C) 2021 Apple Inc. All rights reserved.
+Copyright (C) 2021-2023 Apple Inc. All rights reserved.
 Copyright (C) 2021 Igalia S.A. All rights reserved.
 
 
@@ -2463,8 +2410,8 @@ Source/JavaScriptCore/inspector
 Source/WebCore/inspector
 Source/WebCore/xml
 
-Copyright (C) 2011 Google Inc. All rights reserved.
-Copyright (C) 2017 Apple Inc. All rights reserved.
+Copyright (C) 2011-2014 Google Inc. All rights reserved.
+Copyright (C) 2017-2024 Apple Inc. All rights reserved.
 Copyright (C) 2013 Samsung Electronics. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -2743,15 +2690,16 @@ Source/JavaScriptCore/runtime
 Source/JavaScriptCore/yarr
 Source/WTF/wtf
 Source/WebCore/rendering/svg
+Source/WebCore/rendering/svg/legacy
 
 Copyright (C) 2010-2011 University of Szeged
 Copyright (C) 2010 Renata Hodovan (hodovan@inf.u-szeged.hu)
-Copyright (C) 2009-2022 Apple Inc. All rights reserved.
+Copyright (C) 2009-2023 Apple Inc. All rights reserved.
 Copyright (C) 2010 Peter Varga (pvarga@inf.u-szeged.hu), University of Szeged
 Copyright (C) 2011 Gabor Loki <loki@webkit.org>
 Copyright (C) 2012 Google, Inc.
-Copyright (C) 2011 Renata Hodovan <reni@webkit.org>
 Copyright (C) 2020-2022 Igalia S.L.
+Copyright (C) 2011 Renata Hodovan <reni@webkit.org>
 
 All rights reserved.
 
@@ -2899,14 +2847,14 @@ Source/WebCore/platform/graphics/cpu/arm
 Source/WebCore/platform/graphics/cpu/arm/filters
 Source/WebCore/platform/graphics/filters
 Source/WebCore/platform/graphics/filters/software
-Source/WebCore/rendering/svg
+Source/WebCore/rendering/svg/legacy
 
 Copyright (C) 2012 University of Szeged. All rights reserved.
 Copyright (C) 2012 Gabor Rapcsanyi (rgabor@inf.u-szeged.hu), University of Szeged
 Copyright (C) 2010-2012 University of Szeged
 Copyright (C) 2012 Gabor Rapcsanyi
 Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
-Copyright (C) 2018-2023 Apple Inc. All rights reserved.
+Copyright (C) 2018-2024 Apple Inc. All rights reserved.
 Copyright (C) 2011 Felician Marton
 Copyright (C) 2010-2011 Zoltan Herczeg
 Copyright (C) 2004-2007 Nikolas Zimmermann <zimmermann@kde.org>
@@ -3130,6 +3078,40 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---------------------------------
 The below license applies to some files in the following directories:
+Source/WTF/wtf/dragonbox/detail
+Source/WTF/wtf/dragonbox
+Source/WTF/wtf/text
+Source/WebCore/bindings/js
+
+Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+Copyright (C) 2012 Michael Pruett <michael@68k.org>
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+---------------------------------
+The below license applies to some files in the following directories:
 Source/WTF/wtf/generic
 
 Copyright (C) 2016 Konstantin Tokavev <annulen@yandex.ru>
@@ -3208,7 +3190,7 @@ Source/WebCore/html/parser
 Source/WebCore/html/shadow
 Source/WebCore/style
 
-Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+Copyright (C) 2006-2024 Apple Inc. All rights reserved.
 Copyright (C) 2009 Google Inc.
 Copyright (C) 2012 Zan Dobersek <zandobersek@gmail.com>
 Copyright (C) 2012-2022 Igalia S.L.
@@ -3244,7 +3226,6 @@ Source/WebCore/page/scrolling/nicosia
 Source/WebCore/platform/encryptedmedia
 Source/WebCore/platform/encryptedmedia/clearkey
 Source/WebCore/platform/graphics/nicosia
-Source/WebCore/platform/graphics/nicosia/texmap
 Source/WebCore/platform/graphics/texmap
 Source/WebCore/platform/mediacapabilities
 Source/WebCore/platform/mock
@@ -3301,6 +3282,40 @@ THIS SOFTWARE IS PROVIDED BY CANON INC. AND ITS CONTRIBUTORS "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL CANON INC. AND ITS CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+---------------------------------
+The below license applies to some files in the following directories:
+Source/WebCore/Modules/indexeddb
+Source/WebCore/Modules/webgpu/InternalAPI
+Source/WebCore/page
+Source/WebCore/platform
+Source/WebCore/platform/audio
+Source/WebCore/platform/graphics
+Source/WebCore/platform/mediastream
+Source/WebCore/platform/network
+
+Copyright (C) 2023 Apple Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1.  Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+2.  Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
@@ -3377,7 +3392,7 @@ Source/WebCore/Modules/mediastream
 Source/WebCore/platform/mock
 
 Copyright (C) 2014-2015 Ericsson AB. All rights reserved.
-Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+Copyright (C) 2018-2023 Apple Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
@@ -3466,7 +3481,7 @@ Source/WebCore/Modules/webaudio
 Source/WebCore/platform/audio
 
 Copyright (C) 2011-2023, Apple Inc. All rights reserved.
-Copyright (C) 2010-2014, Google Inc. All rights reserved.
+Copyright (C) 2010-2016, Google Inc. All rights reserved.
 Copyright (C) 2012, Intel Corporation. All rights reserved.
 Copyright 2016-2017 The Chromium Authors. All rights reserved.
 
@@ -3613,37 +3628,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------
 The below license applies to some files in the following directories:
 Source/WebCore/bindings/js
-
-Copyright (C) 2012 Michael Pruett <michael@68k.org>
-Copyright (C) 2021 Apple Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-    * Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above
-copyright notice, this list of conditions and the following disclaimer
-in the documentation and/or other materials provided with the
-distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
----------------------------------
-The below license applies to some files in the following directories:
-Source/WebCore/bindings/js
 Source/WebCore/editing
 Source/WebCore/loader
 Source/WebCore/mathml
@@ -3656,7 +3640,7 @@ Source/WebCore/rendering/mathml
 Source/WebCore/xml
 
 Copyright (C) 2011 Julien Chaffraix <jchaffraix@webkit.org>
-Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+Copyright (C) 2004-2024 Apple Inc. All rights reserved.
 Copyright (C) 2009-2022 Google Inc. All rights reserved.
 Copyright (C) 2007-2013 Apple Inc.
 Copyright 2015-2017 The Chromium Authors. All rights reserved.
@@ -3872,6 +3856,7 @@ SUCH DAMAGE.
 The below license applies to some files in the following directories:
 Source/WebCore/css
 Source/WebCore/rendering/style
+Source/WebCore/svg/graphics
 
 Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
 Copyright (C) 2021 Apple Inc. All right reserved.
@@ -4557,13 +4542,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------
 The below license applies to some files in the following directories:
 Source/WebCore/page
-Source/WebCore/replay
 
 Copyright (C) 2004-2022 Apple Inc. All rights reserved.
 Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
 Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
 Copyright (C) 2013 University of Washington.
-Copyright (C) 2012-2013 University of Washington. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
@@ -4835,37 +4818,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---------------------------------
 The below license applies to some files in the following directories:
-Source/WebCore/platform/graphics/freetype
-
-Copyright (C) 2013 Igalia S.L.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-1.  Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
-2.  Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY IGALIA AND ITS CONTRIBUTORS "AS IS" AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL APPLE OR ITS CONTRIBUTORS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
----------------------------------
-The below license applies to some files in the following directories:
 Source/WebCore/platform/graphics/transforms
 
 Copyright (C) 2005-2016 Apple Inc. All rights reserved.
+Copyright (C) 2014 Google Inc. All rights reserved.
 
               2010 Dirk Schulze <krit@webkit.org>
 
@@ -5276,7 +5232,7 @@ The below license applies to some files in the following directories:
 Source/cmake
 
 Copyright (C) 2012 Samsung Electronics
-Copyright (C) 2013-2023 Igalia S.L.
+Copyright (C) 2013-2024 Igalia S.L.
 Copyright (C) 2018-2023 Sony Interactive Entertainment Inc.
 Copyright (C) 2012 Intel Corporation. All rights reserved.
 Copyright (C) 2012 Raphael Kubo da Costa <rakuco@webkit.org>
@@ -5403,11 +5359,11 @@ Source/WebKitLegacy/scripts
 Source/bmalloc/libpas/src/libpas
 Source/bmalloc/libpas/src/test
 
-Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+Copyright (C) 2003-2024 Apple Inc. All rights reserved.
 Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
 Copyright (C) 2012-2018 Igalia, S.L.
 Copyright (C) 2008 Matt Lilek <webkit@mattlilek.com>
-Copyright (C) 2009-2015 Google Inc. All rights reserved.
+Copyright (C) 2009-2021 Google Inc. All rights reserved.
 Copyright (C) 2011-2012 Research In Motion Limited. All rights reserved.
 Copyright (C) 2008 Collabora, Ltd. All rights reserved.
 Copyright (C) 2015 Canon Inc. All rights reserved.
@@ -5659,18 +5615,19 @@ Source/WebCore/platform/text
 Source/WebCore/rendering
 Source/WebCore/rendering/style
 Source/WebCore/rendering/svg
+Source/WebCore/rendering/svg/legacy
 Source/WebCore/testing
 Source/WebCore/workers
 Source/WebKitLegacy/WebCoreSupport
 
-Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+Copyright (C) 2004-2024 Apple Inc. All rights reserved.
 Copyright (C) 2008-2021 Google Inc. All rights reserved.
 Copyright (C) 2012 Research In Motion Limited. All rights reserved.
 Copyright (C) 2007-2009 Torch Mobile, Inc.
 Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
 Copyright (C) 2014 University of Washington. All rights reserved.
 Copyright (C) Research In Motion Limited 2011. All rights reserved.
-Copyright (C) 2013-2022 Igalia S.L.
+Copyright (C) 2013-2024 Igalia S.L.
 Copyright (C) 2013-2014 Igalia, S.L. All rights reserved.
 Copyright (C) 2010. 2012 Google Inc. All rights reserved.
 Copyright (C) 2012 Samsung Electronics. All rights reserved.
@@ -5892,7 +5849,7 @@ Source/WebCore/platform/mediastream
 Source/WebCore/platform/mock
 
 Copyright (C) 2009-2016 Ericsson AB. All rights reserved.
-Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+Copyright (C) 2010-2023 Apple Inc. All rights reserved.
 Copyright (C) 2012 Google Inc. All rights reserved.
 Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
 Copyright (C) 2011, Code Aurora Forum. All rights reserved.
@@ -5931,7 +5888,7 @@ Source/WebCore/platform/mediastream
 Source/WebCore/platform/mock
 
 Copyright (C) 2012 Google Inc. All rights reserved.
-Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+Copyright (C) 2013-2023 Apple Inc. All rights reserved.
 Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
 Copyright (C) 2015-2016 Ericsson AB. All rights reserved.
 Copyright (C) 2012 Google AB. All rights reserved.
@@ -6648,7 +6605,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 The below license applies to some files in the following directories:
 Source/WebCore/rendering
 
-Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+Copyright (C) 2006-2024 Apple Inc. All rights reserved.
 Copyright (C) 2014 Google Inc. All rights reserved.
 
               2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)

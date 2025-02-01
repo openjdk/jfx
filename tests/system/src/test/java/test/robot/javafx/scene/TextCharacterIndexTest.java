@@ -30,9 +30,12 @@ import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.robot.Robot;
 import javafx.scene.text.Font;
 import javafx.scene.text.HitInfo;
@@ -41,17 +44,13 @@ import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
-
-import javafx.scene.input.PickResult;
-import javafx.scene.Node;
-import javafx.geometry.Point3D;
 
 /*
  * Test for verifying character index of Text nodes embedded in TextFlow.
@@ -273,11 +272,11 @@ public class TextCharacterIndexTest {
         while (x < (WIDTH - X_LEADING_OFFSET)) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+            Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
             x += step();
         }
     }
@@ -294,13 +293,13 @@ public class TextCharacterIndexTest {
         while (x < (WIDTH - X_LEADING_OFFSET)) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else if (isSurrogatePair) {
-                Assert.assertEquals(charIndex, insertionIndex - 2);
+                Assertions.assertEquals(charIndex, insertionIndex - 2);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+            Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
             x += step();
         }
     }
@@ -317,13 +316,13 @@ public class TextCharacterIndexTest {
         while (x < (WIDTH - X_LEADING_OFFSET)) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else if (isSurrogatePair) {
-                Assert.assertEquals(charIndex, insertionIndex - 2);
+                Assertions.assertEquals(charIndex, insertionIndex - 2);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+            Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
             x += step();
         }
     }
@@ -340,14 +339,14 @@ public class TextCharacterIndexTest {
         while (x < (WIDTH - X_LEADING_OFFSET)) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else if (isSurrogatePair) {
-                Assert.assertEquals(charIndex, insertionIndex - 2);
+                Assertions.assertEquals(charIndex, insertionIndex - 2);
             }
             else {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+            Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
             x += step();
         }
     }
@@ -365,13 +364,13 @@ public class TextCharacterIndexTest {
             while (x < (WIDTH - X_LEADING_OFFSET)) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else if (isSurrogatePair) {
-                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                    Assertions.assertEquals(charIndex, insertionIndex - 2);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
                 x += step();
             }
         }
@@ -390,13 +389,13 @@ public class TextCharacterIndexTest {
             while (x < (WIDTH - X_LEADING_OFFSET)) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else if (isSurrogatePair) {
-                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                    Assertions.assertEquals(charIndex, insertionIndex - 2);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
                 x += step();
             }
         }
@@ -415,13 +414,13 @@ public class TextCharacterIndexTest {
             while (x < (WIDTH - X_LEADING_OFFSET)) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else if (isSurrogatePair) {
-                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                    Assertions.assertEquals(charIndex, insertionIndex - 2);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
                 x += step();
             }
         }
@@ -440,13 +439,13 @@ public class TextCharacterIndexTest {
             while (x < (WIDTH - X_LEADING_OFFSET)) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else if (isSurrogatePair) {
-                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                    Assertions.assertEquals(charIndex, insertionIndex - 2);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
                 x += step();
             }
         }
@@ -464,13 +463,13 @@ public class TextCharacterIndexTest {
             while (x < (WIDTH - X_LEADING_OFFSET)) {
                 moveMouseOverTextFlow(x, Y_OFFSET);
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else if (isSurrogatePair) {
-                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                    Assertions.assertEquals(charIndex, insertionIndex - 2);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
                 x += step();
             }
     }
@@ -488,13 +487,13 @@ public class TextCharacterIndexTest {
             while (x < (WIDTH - X_LEADING_OFFSET)) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else if (isSurrogatePair) {
-                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                    Assertions.assertEquals(charIndex, insertionIndex - 2);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
                 x += step();
             }
         }
@@ -514,13 +513,13 @@ public class TextCharacterIndexTest {
             while (x < (WIDTH - X_LEADING_OFFSET)) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else if (isSurrogatePair) {
-                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                    Assertions.assertEquals(charIndex, insertionIndex - 2);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textThreeLength, Math.max(textOneLength, textTwoLength)));
+                Assertions.assertTrue(charIndex < Math.max(textThreeLength, Math.max(textOneLength, textTwoLength)));
                 x += step();
             }
         }
@@ -550,21 +549,21 @@ public class TextCharacterIndexTest {
         return 1.0 + random.nextDouble() * 8.0;
     }
 
-    @After
+    @AfterEach
     public void resetUI() {
         Platform.runLater(() -> {
             textFlow.removeEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMouseEvent);
         });
     }
 
-    @Before
+    @BeforeEach
     public void setupUI() {
         Platform.runLater(() -> {
             textFlow.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMouseEvent);
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         long seed = new Random().nextLong();
         System.out.println("seed=" + seed);
@@ -573,7 +572,7 @@ public class TextCharacterIndexTest {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown();
     }

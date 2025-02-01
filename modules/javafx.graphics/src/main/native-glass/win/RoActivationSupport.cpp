@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ namespace
     typedef HRESULT WINAPI FnRoInitialize(RO_INIT_TYPE initType);
     typedef void WINAPI FnRoUninitialize();
     typedef HRESULT WINAPI FnRoActivateInstance(HSTRING activatableClassId, IInspectable** instance);
+    typedef HRESULT WINAPI FnRoGetActivationFactory(HSTRING activatableClassId, REFIID iid, void** factory);
     typedef HRESULT WINAPI FnWindowsCreateString(PCNZWCH sourceString, UINT32 length, HSTRING* string);
     typedef HRESULT WINAPI FnWindowsDeleteString(HSTRING string);
 
@@ -43,6 +44,7 @@ namespace
     FnRoInitialize* pRoInitialize = NULL;
     FnRoUninitialize* pRoUninitialize = NULL;
     FnRoActivateInstance* pRoActivateInstance = NULL;
+    FnRoGetActivationFactory* pRoGetActivationFactory = NULL;
     FnWindowsCreateString* pWindowsCreateString = NULL;
     FnWindowsDeleteString* pWindowsDeleteString = NULL;
 
@@ -69,12 +71,19 @@ void tryInitializeRoActivationSupport()
     wchar_t path[MAX_PATH];
     wchar_t file[MAX_PATH];
 
-    if (GetSystemDirectory(path, sizeof(path) / sizeof(wchar_t)) == 0) {
+    UINT pathSize = sizeof(path) / sizeof(wchar_t);
+    UINT rval = GetSystemDirectoryW(path, pathSize);
+    if (rval == 0 || rval >= pathSize) {
+        fprintf(stderr, "WinRT: Failed to fetch system directory");
         return;
     }
 
     memcpy_s(file, sizeof(file), path, sizeof(path));
-    wcscat_s(file, MAX_PATH-1, L"\\combase.dll");
+    if (wcscat_s(file, MAX_PATH-1, L"\\combase.dll") != 0) {
+        fprintf(stderr, "WinRT: Failed to form path to combase.dll");
+        return;
+    }
+
     hLibComBase = LoadLibraryW(file);
     if (!hLibComBase) {
         fprintf(stderr, moduleNotFoundMessage, "combase.dll");
@@ -85,6 +94,7 @@ void tryInitializeRoActivationSupport()
         loadFunction(hLibComBase, pRoInitialize, "RoInitialize") &&
         loadFunction(hLibComBase, pRoUninitialize, "RoUninitialize") &&
         loadFunction(hLibComBase, pRoActivateInstance, "RoActivateInstance") &&
+        loadFunction(hLibComBase, pRoGetActivationFactory, "RoGetActivationFactory") &&
         loadFunction(hLibComBase, pWindowsCreateString, "WindowsCreateString") &&
         loadFunction(hLibComBase, pWindowsDeleteString, "WindowsDeleteString");
 
@@ -115,6 +125,7 @@ void uninitializeRoActivationSupport()
         pRoInitialize = NULL;
         pRoUninitialize = NULL;
         pRoActivateInstance = NULL;
+        pRoGetActivationFactory = NULL;
         pWindowsCreateString = NULL;
         pWindowsDeleteString = NULL;
     }
@@ -138,6 +149,11 @@ void WINAPI RoUninitialize()
 HRESULT WINAPI RoActivateInstance(HSTRING activatableClassId, IInspectable** instance)
 {
     return pRoActivateInstance(activatableClassId, instance);
+}
+
+HRESULT WINAPI RoGetActivationFactory(HSTRING activatableClassId, REFIID iid, void** factory)
+{
+    return pRoGetActivationFactory(activatableClassId, iid, factory);
 }
 
 HRESULT WINAPI WindowsCreateString(PCNZWCH sourceString, UINT32 length, HSTRING* string)

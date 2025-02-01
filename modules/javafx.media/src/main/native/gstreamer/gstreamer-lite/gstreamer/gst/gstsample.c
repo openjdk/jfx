@@ -106,7 +106,7 @@ _gst_sample_free (GstSample * sample)
   memset (sample, 0xff, sizeof (GstSample));
 #endif
 
-  g_slice_free1 (sizeof (GstSample), sample);
+  g_free (sample);
 }
 
 /**
@@ -129,7 +129,7 @@ gst_sample_new (GstBuffer * buffer, GstCaps * caps, const GstSegment * segment,
 {
   GstSample *sample;
 
-  sample = g_slice_new0 (GstSample);
+  sample = g_new0 (GstSample, 1);
 
   GST_LOG ("new %p", sample);
 
@@ -463,18 +463,38 @@ gst_sample_unref (GstSample * sample)
 
 /**
  * gst_sample_copy: (skip)
- * @buf: a #GstSample.
+ * @sample: a #GstSample.
  *
  * Create a copy of the given sample. This will also make a newly allocated
  * copy of the data the source sample contains.
  *
- * Returns: (transfer full): a new copy of @buf.
+ * Returns: (transfer full): a new copy of @sample.
  *
  * Since: 1.2
  */
 GstSample *
-gst_sample_copy (const GstSample * buf)
+gst_sample_copy (const GstSample * sample)
 {
   return
-      GST_SAMPLE_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (buf)));
+      GST_SAMPLE_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST
+          (sample)));
+}
+
+/**
+ * gst_clear_sample: (skip)
+ * @sample_ptr: a pointer to a #GstSample reference
+ *
+ * Clears a reference to a #GstSample
+ *
+ * @sample_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the sample is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.24
+ */
+void
+gst_clear_sample (GstSample ** sample_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) sample_ptr);
 }

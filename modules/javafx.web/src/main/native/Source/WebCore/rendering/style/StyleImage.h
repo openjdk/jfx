@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,12 +29,14 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class CachedImage;
 class CachedResourceLoader;
 class CSSValue;
+class Document;
 class RenderElement;
 class RenderObject;
 class RenderStyle;
@@ -42,7 +44,7 @@ struct ResourceLoaderOptions;
 
 typedef const void* WrappedImagePtr;
 
-class StyleImage : public RefCounted<StyleImage> {
+class StyleImage : public RefCounted<StyleImage>, public CanMakeWeakPtr<StyleImage> {
 public:
     virtual ~StyleImage() = default;
 
@@ -57,10 +59,11 @@ public:
     // Loading.
     virtual bool isPending() const = 0;
     virtual void load(CachedResourceLoader&, const ResourceLoaderOptions&) = 0;
-    virtual bool isLoaded() const { return true; }
+    virtual bool isLoaded(const RenderElement*) const { return true; }
     virtual bool errorOccurred() const { return false; }
     virtual bool usesDataProtocol() const { return false; }
     virtual bool hasImage() const { return false; }
+    virtual URL reresolvedURL(const Document&) const { return { }; }
 
     // Clients.
     virtual void addClient(RenderElement&) = 0;
@@ -77,7 +80,7 @@ public:
     virtual bool imageHasNaturalDimensions() const { return true; }
 
     // Image.
-    virtual RefPtr<Image> image(const RenderElement*, const FloatSize&) const = 0;
+    virtual RefPtr<Image> image(const RenderElement*, const FloatSize&, bool isForFirstLine = false) const = 0;
     virtual StyleImage* selectedImage() { return this; }
     virtual const StyleImage* selectedImage() const { return this; }
     virtual CachedImage* cachedImage() const { return nullptr; }

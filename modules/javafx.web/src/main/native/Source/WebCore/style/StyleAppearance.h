@@ -82,8 +82,11 @@ enum class StyleAppearance : uint8_t {
     SearchFieldCancelButton,
 #if !PLATFORM(JAVA)
     SliderThumbHorizontal,
-    SliderThumbVertical
+    SliderThumbVertical,
 #endif
+    Switch,
+    SwitchThumb,
+    SwitchTrack
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, StyleAppearance);

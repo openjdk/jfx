@@ -35,10 +35,10 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
@@ -70,13 +70,13 @@ public class SliderTooltipNPETest {
 
     @Test
     public void testSliderTooltipNPE() throws Throwable {
-        Assert.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
+        Assertions.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
         dragSliderAfterTooltipDisplayed(DRAG_DISTANCE);
         if (exception != null) {
             exception.printStackTrace();
             throw exception;
         }
-        Assert.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
+        Assertions.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
     }
 
     private void dragSliderAfterTooltipDisplayed(int dragDistance) throws Exception {
@@ -157,12 +157,12 @@ public class SliderTooltipNPETest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown();
     }

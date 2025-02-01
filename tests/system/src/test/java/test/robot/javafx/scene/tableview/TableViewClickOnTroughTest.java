@@ -25,7 +25,7 @@
 
 package test.robot.javafx.scene.tableview;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -46,10 +46,10 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
@@ -97,15 +97,15 @@ public class TableViewClickOnTroughTest {
         });
         Util.sleep(1000); // Delay for table moving Scrollbar
         double newPosition = verticalBar.getValue();
-        Assert.assertNotEquals(oldPosition, newPosition, 0.1);
+        Assertions.assertNotEquals(oldPosition, newPosition, 0.1);
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown();
     }
