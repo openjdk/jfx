@@ -194,7 +194,7 @@ public abstract class IntegerBinding extends IntegerExpression implements
             valid = false;
             onInvalidating();
 
-            LISTENER_MANAGER.fireValueChanged(this, oldValue);
+            LISTENER_MANAGER.fireValueChanged(this, oldValue, listenerData);
         }
     }
 

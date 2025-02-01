@@ -68,7 +68,7 @@ public class OldValueCachingListenerManagerTest implements ObservableValue<Strin
 
         value = "B";
 
-        helper.fireValueChanged(this);
+        helper.fireValueChanged(this, data);
 
         assertEquals(List.of("CL1: A -> B"), notifications);
 
@@ -77,7 +77,7 @@ public class OldValueCachingListenerManagerTest implements ObservableValue<Strin
         notifications.clear();
         value = "C";
 
-        helper.fireValueChanged(this);
+        helper.fireValueChanged(this, data);
 
         assertEquals(List.of("CL1: B -> C", "CL2: B -> C"), notifications);
 
@@ -86,14 +86,14 @@ public class OldValueCachingListenerManagerTest implements ObservableValue<Strin
         notifications.clear();
         value = "D";
 
-        helper.fireValueChanged(this);
+        helper.fireValueChanged(this, data);
 
         assertEquals(List.of("CL2: C -> D"), notifications);
 
         notifications.clear();
         value = "E";
 
-        helper.fireValueChanged(this);
+        helper.fireValueChanged(this, data);
 
         assertEquals(List.of("CL2: D -> E"), notifications);
     }

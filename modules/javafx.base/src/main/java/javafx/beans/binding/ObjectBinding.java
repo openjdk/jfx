@@ -202,7 +202,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
             valid = false;
             onInvalidating();
 
-            LISTENER_MANAGER.fireValueChanged(this, oldValue);
+            LISTENER_MANAGER.fireValueChanged(this, oldValue, listenerData);
 
             /*
              * Cached value should be cleared to avoid a strong reference to stale data,

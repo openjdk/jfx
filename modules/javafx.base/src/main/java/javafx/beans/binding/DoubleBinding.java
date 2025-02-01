@@ -244,7 +244,7 @@ public abstract class DoubleBinding extends DoubleExpression implements
             valid = false;
             onInvalidating();
 
-            LISTENER_MANAGER.fireValueChanged(this, oldValue);
+            LISTENER_MANAGER.fireValueChanged(this, oldValue, listenerData);
         }
     }
 

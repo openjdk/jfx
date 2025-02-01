@@ -89,7 +89,7 @@ public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProper
      * This method needs to be called, if the value of this property changes.
      */
     protected void fireValueChangedEvent() {
-        LISTENER_MANAGER.fireValueChanged(this);
+        LISTENER_MANAGER.fireValueChanged(this, listenerData);
     }
 
 }

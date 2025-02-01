@@ -137,22 +137,22 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param oldValue the previous value before this change occurred, can be {@code null}
+     * @param listenerData the listener data associated with the instance,
+     *   can be {@code null} which means there are no listeners to notify
      */
-    public void fireValueChanged(I instance, T oldValue) {
-        Object data = getData(instance);
-
-        if (data instanceof ListenerList) {
+    public void fireValueChanged(I instance, T oldValue, Object listenerData) {
+        if (listenerData instanceof ListenerList) {
             @SuppressWarnings("unchecked")
-            ListenerList<T> list = (ListenerList<T>)data;
+            ListenerList<T> list = (ListenerList<T>)listenerData;
 
             callMultipleListeners(instance, list, oldValue);
         }
-        else if (data instanceof InvalidationListener il) {
+        else if (listenerData instanceof InvalidationListener il) {
             ListenerListBase.callInvalidationListener(instance, il);
         }
-        else if (data instanceof ChangeListener) {
+        else if (listenerData instanceof ChangeListener) {
             @SuppressWarnings("unchecked")
-            ChangeListener<T> cl = (ChangeListener<T>) data;
+            ChangeListener<T> cl = (ChangeListener<T>) listenerData;
             T newValue = instance.getValue();  // Required as an earlier listener may have changed the value, and current value is always needed
 
             if (!Objects.equals(newValue, oldValue)) {

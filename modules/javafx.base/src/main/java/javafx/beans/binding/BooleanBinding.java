@@ -192,7 +192,7 @@ public abstract class BooleanBinding extends BooleanExpression implements
             valid = false;
             onInvalidating();
 
-            LISTENER_MANAGER.fireValueChanged(this, oldValue);
+            LISTENER_MANAGER.fireValueChanged(this, oldValue, listenerData);
         }
     }
 

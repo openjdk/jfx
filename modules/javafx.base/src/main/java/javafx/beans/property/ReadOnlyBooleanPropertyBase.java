@@ -87,7 +87,7 @@ public abstract class ReadOnlyBooleanPropertyBase extends ReadOnlyBooleanPropert
      * This method needs to be called, if the value of this property changes.
      */
     protected void fireValueChangedEvent() {
-        LISTENER_MANAGER.fireValueChanged(this);
+        LISTENER_MANAGER.fireValueChanged(this, listenerData);
     }
 
 }

@@ -114,7 +114,7 @@ public abstract class StringPropertyBase extends StringProperty {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        LISTENER_MANAGER.fireValueChanged(this);
+        LISTENER_MANAGER.fireValueChanged(this, listenerData);
     }
 
     private void markInvalid() {

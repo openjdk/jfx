@@ -162,22 +162,22 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
      * Notifies the listeners managed in the given instance.<p>
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
+     * @param listenerData the listener data associated with the instance,
+     *   can be {@code null} which means there are no listeners to notify
      */
-    public void fireValueChanged(I instance) {
-        Object data = getData(instance);
-
-        if (data instanceof OldValueCachingListenerList) {
+    public void fireValueChanged(I instance, Object listenerData) {
+        if (listenerData instanceof OldValueCachingListenerList) {
             @SuppressWarnings("unchecked")
-            OldValueCachingListenerList<T> list = (OldValueCachingListenerList<T>) data;
+            OldValueCachingListenerList<T> list = (OldValueCachingListenerList<T>) listenerData;
 
             callMultipleListeners(instance, list);
         }
-        else if (data instanceof InvalidationListener il) {
+        else if (listenerData instanceof InvalidationListener il) {
             ListenerListBase.callInvalidationListener(instance, il);
         }
-        else if (data instanceof ChangeListenerWrapper) {
+        else if (listenerData instanceof ChangeListenerWrapper) {
             @SuppressWarnings("unchecked")
-            ChangeListenerWrapper<T> clw = (ChangeListenerWrapper<T>) data;
+            ChangeListenerWrapper<T> clw = (ChangeListenerWrapper<T>) listenerData;
 
             callWrappedChangeListener(instance, clw);
         }

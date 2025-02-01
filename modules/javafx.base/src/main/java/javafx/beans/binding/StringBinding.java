@@ -193,7 +193,7 @@ public abstract class StringBinding extends StringExpression implements
             valid = false;
             onInvalidating();
 
-            LISTENER_MANAGER.fireValueChanged(this, oldValue);
+            LISTENER_MANAGER.fireValueChanged(this, oldValue, listenerData);
         }
     }
 

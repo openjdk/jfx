@@ -102,6 +102,6 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      * the following call to fireValueChangedEvent.
      */
     protected void fireValueChangedEvent() {
-        LISTENER_MANAGER.fireValueChanged(this);
+        LISTENER_MANAGER.fireValueChanged(this, listenerData);
     }
 }
