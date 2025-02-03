@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -200,7 +200,9 @@ final class CssStyleHelper {
         // found when matching selectors
         Styleable parent = styleable.getStyleableParent();
         for(int n=1; n<depth; n++) {
-
+            if (parent == null) {
+                return;
+            }
             // TODO: this means that a style like .menu-item:hover won't work. Need to separate CssStyleHelper tree from scene-graph tree
             if (parent instanceof Node == false) {
                 parent=parent.getStyleableParent();
@@ -389,7 +391,9 @@ final class CssStyleHelper {
             //
             Styleable parent = node.getStyleableParent();
             for(int d=1; d<depth; d++) {
-
+                if (parent == null) {
+                    break;
+                }
                 // TODO: won't work for something like .menu-item:hover. Need to separate CssStyleHelper tree from scene-graph tree
                 if ( parent instanceof Node) {
                     Node parentNode = (Node)parent;

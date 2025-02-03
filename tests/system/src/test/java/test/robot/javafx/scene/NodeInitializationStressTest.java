@@ -161,7 +161,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private static final AtomicBoolean failed = new AtomicBoolean();
     // for debugging purposes: setting this to true will skip working tests
     // TODO remove once all the tests pass
-    private static final boolean SKIP_TEST = !false;
+    private static final boolean SKIP_TEST = false;
 
     @Test
     public void accordion() {
@@ -685,8 +685,10 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Test
     public void tooltip() {
         assumeFalse(SKIP_TEST);
+        AtomicBoolean phase = new AtomicBoolean();
         test(() -> {
             Tooltip t = new Tooltip("tooltip");
+            t.setStyle("-fx-background-color:red; -fx-min-width:100px; -fx-min-height:100px; -fx-wrap-text:true; -fx-show-delay:0ms; -fx-hide-delay:0ms;");
             t.setShowDelay(Duration.ZERO);
             t.setHideDelay(Duration.ZERO);
             Label c = new Label("Tooltip");
@@ -700,23 +702,24 @@ public class NodeInitializationStressTest extends RobotTestBase {
             b.setId("Tooltip");
             return b;
         }, (c) -> {
-            Label label = (Label)c.getChildren().get(0);
-            Tooltip t = label.getTooltip();
+            Tooltip t = new Tooltip();
             if (Platform.isFxApplicationThread()) {
+                Label label = (Label)c.getChildren().get(0);
                 Point2D p;
-                if (nextBoolean()) {
+                if (phase.get()) {
                     p = c.localToScreen(c.getWidth() / 2.0, c.getHeight() / 2.0);
                 } else {
                     p = c.localToScreen(c.getWidth() + 2, c.getHeight() + 2);
                 }
                 robot.mouseMove(p);
                 double h = STAGE_HEIGHT;
-                if (nextBoolean()) {
+                if (phase.get()) {
                     h += 10;
                 }
                 label.setMinHeight(h);
                 label.setMaxHeight(h);
                 stage.setHeight(h);
+                phase.set(!phase.get());
             }
         });
     }
@@ -830,7 +833,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
                 try {
                     Random r = new Random();
                     while (running.get()) {
-                        sleep(1 + r.nextInt(50));
+                        sleep(1 + r.nextInt(20));
                         runAndWait(() -> {
                             operation.accept(visibleNode);
                         });
