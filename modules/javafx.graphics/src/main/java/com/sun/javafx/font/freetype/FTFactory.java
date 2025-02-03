@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,10 +77,10 @@ public class FTFactory extends PrismFontFactory {
     @Override
     protected PrismFontFile createFontFile(String name, String filename,
                                            int fIndex, boolean register,
-                                           boolean embedded, boolean copy,
-                                           boolean tracked) throws Exception {
+                                           boolean embedded, boolean copy)
+                                           throws Exception {
         return new FTFontFile(name, filename, fIndex, register,
-                              embedded, copy, tracked);
+                              embedded, copy);
     }
 
     @Override

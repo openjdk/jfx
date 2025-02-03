@@ -24,6 +24,7 @@
  */
 package test.robot.javafx.scene;
 
+import static org.junit.Assume.assumeFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -33,11 +34,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
@@ -87,7 +87,6 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
-import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
@@ -122,7 +121,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
-import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -131,10 +129,7 @@ import org.junit.jupiter.api.Test;
 import test.robot.testharness.RobotTestBase;
 
 /**
- * Tests Node initialization from a background thread, per
- *
- * https://openjfx.io/javadoc/23/javafx.graphics/javafx/scene/Node.html
- *
+ * Stress tests the Node initialization from a background thread, per the {@link Node} specification:
  * "Node objects may be constructed and modified on any thread as long they are not yet attached to a Scene in a Window
  * that is showing. An application must attach nodes to such a Scene or modify them on the JavaFX Application Thread."
  *
@@ -143,32 +138,45 @@ import test.robot.testharness.RobotTestBase;
  * - MenuBar
  * - WebView
  *
- * The test creates a visible node of a given type, and at the same time, starts a number of background threads
- * which also create nodes of the same type.  Each such thread makes repeated accesses of its own node for the duration
- * of test.  Also, the visible node gets accessed periodically just to shake things up.
+ * The test creates a visible node on the JavaFX application thread, and at the same time,
+ * starts a number of background threads which also create nodes of the same type.
+ * Each such thread makes repeated accesses of its own node for the duration
+ * of test.
+ *
+ * Also, the visible node gets accessed periodically in the FX application thread just to shake things up.
  *
  * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
  *
  * TODO add remaining Nodes to the test.
  */
-public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
+public class NodeInitializationStressTest extends RobotTestBase {
     private static final int DURATION = 5000;
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
+    // for debugging purposes: setting this to true will skip working tests
+    // TODO remove once all the tests pass
+    private static final boolean SKIP_TEST = false;
 
     @Test
     public void accordion() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Accordion c = new Accordion();
             c.setSkin(new AccordionSkin(c));
             c.getPanes().add(new TitledPane("Accordion", new BorderPane()));
+            c.getPanes().add(new TitledPane("Accordion", new BorderPane()));
             return c;
-        }, this::accessControl);
+        }, (c) -> {
+            accessControl(c);
+            TitledPane t = (TitledPane)c.getPanes().get(0);
+            t.setExpanded(nextBoolean());
+        });
     }
 
     @Disabled("JDK-8349091") // FIX
     @Test
     public void areaChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             AreaChart c = new AreaChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -182,6 +190,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void barChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             BarChart c = new BarChart(createCategoryAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createCategorySeries());
@@ -195,6 +204,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void bubbleChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             BubbleChart c = new BubbleChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -207,6 +217,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void button() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Button c = new Button();
             c.setSkin(new ButtonSkin(c));
@@ -221,19 +232,22 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void canvas() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
-            return new Canvas(30, 30);
+            return new Canvas(200, 200);
         }, (c) -> {
             accessNode(c);
             GraphicsContext g = c.getGraphicsContext2D();
-            g.setFill(Color.RED);
+            g.setFill(nextColor());
             g.setStroke(Color.BLACK);
-            g.fillRect(5, 5, 5, 5);
+            g.setLineWidth(nextBoolean() ? 0.0 : 1.0);
+            g.fillRect(nextDouble(200), nextDouble(200), nextDouble(50), nextDouble(50));
         });
     }
 
     @Test
     public void checkBox() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             CheckBox c = new CheckBox("checkbox");
             c.setSkin(new CheckBoxSkin(c));
@@ -247,6 +261,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void choiceBox() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ChoiceBox c = new ChoiceBox();
             c.setSkin(new ChoiceBoxSkin(c));
@@ -260,6 +275,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void colorPicker() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ColorPicker c = new ColorPicker();
             c.setSkin(new ColorPickerSkin(c));
@@ -277,6 +293,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void comboBox() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ComboBox c = new ComboBox();
             c.setSkin(new ComboBoxListViewSkin(c));
@@ -294,6 +311,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349004") // FIX
     @Test
     public void datePicker() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             DatePicker c = new DatePicker();
             c.setSkin(new DatePickerSkin(c));
@@ -310,6 +328,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void hyperlink() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Hyperlink c = new Hyperlink("Hyperlink");
             c.setSkin(new HyperlinkSkin(c));
@@ -322,6 +341,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void label() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Label c = new Label("Label");
             c.setSkin(new LabelSkin(c));
@@ -335,6 +355,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void lineChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             LineChart c = new LineChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -347,6 +368,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void listView() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ListView c = new ListView();
             c.setSkin(new ListViewSkin(c));
@@ -361,6 +383,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349096") // FIX
     @Test
     public void menuButton() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             MenuButton c = new MenuButton();
             c.setSkin(new MenuButtonSkin(c));
@@ -376,6 +399,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349105") // FIX
     @Test
     public void pagination() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Pagination c = new Pagination();
             c.setSkin(new PaginationSkin(c));
@@ -392,6 +416,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void passwordField() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             PasswordField c = new PasswordField();
             c.setSkin(new TextFieldSkin(c));
@@ -406,6 +431,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349090") // FIX
     @Test
     public void pieChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             PieChart c = new PieChart();
             c.getData().setAll(createPieSeries());
@@ -418,6 +444,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void radioButton() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             RadioButton c = new RadioButton("RadioButton");
             c.setSkin(new RadioButtonSkin(c));
@@ -431,6 +458,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void scatterChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ScatterChart c = new ScatterChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -443,6 +471,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void scrollPane() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ScrollPane c = new ScrollPane(new Label("ScrollPane"));
             c.setSkin(new ScrollPaneSkin(c));
@@ -455,6 +484,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void spinner() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Spinner c = new Spinner();
             c.setSkin(new SpinnerSkin(c));
@@ -469,6 +499,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349096") // FIX
     @Test
     public void splitMenuButton() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             SplitMenuButton c = new SplitMenuButton();
             c.setSkin(new SplitMenuButtonSkin(c));
@@ -484,6 +515,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedAreaChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             StackedAreaChart c = new StackedAreaChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -497,6 +529,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedBarChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             StackedBarChart c = new StackedBarChart(createCategoryAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createCategorySeries());
@@ -510,6 +543,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8349098") // FIX
     @Test
     public void tabPane() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TabPane c = new TabPane();
             c.setSkin(new TabPaneSkin(c));
@@ -523,6 +557,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void tableView() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TableView<String> c = new TableView<>();
             c.setSkin(new TableViewSkin(c));
@@ -542,6 +577,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void text() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             return new Text(nextString());
         }, (c) -> {
@@ -552,6 +588,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void textArea() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TextArea c = new TextArea();
             c.setSkin(new TextAreaSkin(c));
@@ -563,6 +600,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void textField() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TextField c = new TextField();
             c.setSkin(new TextFieldSkin(c));
@@ -576,6 +614,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void textFlow() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TextFlow c = new TextFlow();
             c.getChildren().setAll(createTextItems());
@@ -588,6 +627,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void titledPane() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TitledPane c = new TitledPane("TitledPane", null);
             c.setSkin(new TitledPaneSkin(c));
@@ -602,6 +642,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void toggleButton() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ToggleButton c = new ToggleButton("ToggleButton");
             c.setSkin(new ToggleButtonSkin(c));
@@ -614,6 +655,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void toolBar() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ToolBar c = new ToolBar();
             c.setSkin(new ToolBarSkin(c));
@@ -628,27 +670,13 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     @Disabled("JDK-8348100") // FIX
     @Test
     public void tooltip() {
-        test(() -> {
-            Tooltip t = new Tooltip("this is a tooltip");
-            t.setShowDelay(Duration.ZERO);
-            t.setHideDelay(Duration.ZERO);
-            Label c = new Label("testing tooltip");
-            c.setSkin(new LabelSkin(c));
-            c.setTooltip(t);
-            return c;
-        }, (c) -> {
-            Tooltip t = c.getTooltip();
-            t.isShowing();
-            t.setGraphic(new Label("yo!"));
-            if (Platform.isFxApplicationThread()) {
-                Point2D p = c.localToScreen(c.getWidth() / 2.0, c.getHeight() / 2.0);
-                robot.mouseMove(p);
-            }
-        });
+        assumeFalse(SKIP_TEST);
+        // TODO will have a better test in JDK-8348100
     }
 
     @Test
     public void treeTableView() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TreeTableView<String> c = new TreeTableView<>();
             c.setSkin(new TreeTableViewSkin(c));
@@ -668,6 +696,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
 
     @Test
     public void treeView() {
+        assumeFalse(SKIP_TEST);
         Supplier<TreeItem<String>> gen = () -> {
             TreeItem<String> root = new TreeItem<>(null);
             return root;
@@ -718,39 +747,64 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     }
 
     private <T extends Node> void test(Supplier<T> generator, Consumer<T> operation) {
-        T visibleNode = generator.get();
-        String title = visibleNode.getClass().getSimpleName();
+        AtomicReference<T> ref = new AtomicReference();
+        runAndWait(() -> {
+            T n = generator.get();
+            ref.set(n);
+        });
+        T visibleNode = ref.get();
+        String title = visibleNode.getId();
+        if (title == null) {
+            title = visibleNode.getClass().getSimpleName();
+        }
 
         setTitle(title);
         setContent(visibleNode);
 
         int threadCount = 1 + Runtime.getRuntime().availableProcessors() * 2;
         AtomicBoolean running = new AtomicBoolean(true);
-        CountDownLatch counter = new CountDownLatch(threadCount);
+        int additionalThreads = 2; // jiggler + tight loop
+        CountDownLatch counter = new CountDownLatch(threadCount + additionalThreads);
 
         try {
-            for (int i = 0; i < threadCount; i++) {
-                new Thread(title) {
-                    @Override
-                    public void run() {
-                        try {
-                            T n = generator.get();
-                            int count = 0;
-                            while (running.get()) {
-                                operation.accept(n);
-
-                                count++;
-                                if ((count % 100) == 0) {
-                                    inFx(() -> {
-                                        operation.accept(visibleNode);
-                                    });
-                                }
-                            }
-                        } finally {
-                            counter.countDown();
-                        }
+            // construct nodes in a tight loop
+            new Thread(() -> {
+                try {
+                    while (running.get()) {
+                        T n = generator.get();
                     }
-                }.start();
+                } finally {
+                    counter.countDown();
+                }
+            }, "tight loop " + title).start();
+
+            // periodically "jiggle" the visible node in the fx thread
+            new Thread(() -> {
+                try {
+                    Random r = new Random();
+                    while (running.get()) {
+                        sleep(1 + r.nextInt(50));
+                        runAndWait(() -> {
+                            operation.accept(visibleNode);
+                        });
+                    }
+                } finally {
+                    counter.countDown();
+                }
+            }, "jiggler " + title).start();
+
+            // stress test from multiple background threads
+            for (int i = 0; i < threadCount; i++) {
+                new Thread(() -> {
+                    try {
+                        T n = generator.get();
+                        while (running.get()) {
+                            operation.accept(n);
+                        }
+                    } finally {
+                        counter.countDown();
+                    }
+                }, title).start();
             }
 
             sleep(DURATION);
@@ -767,11 +821,21 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
     }
 
     private static boolean nextBoolean() {
+        // creating new Random instances each time to avoid additional synchronization
         return new Random().nextBoolean();
     }
 
-    private static double nextDouble() {
-        return new Random().nextInt(50) - 25;
+    private static Color nextColor() {
+        Random r = new Random();
+        return Color.hsb(360 * r.nextDouble(), r.nextDouble(), r.nextDouble(), r.nextDouble());
+    }
+
+    private static double nextDouble(int min, int max) {
+        return min + new Random().nextDouble() * (max - min);
+    }
+
+    private static double nextDouble(int max) {
+        return max * new Random().nextDouble();
     }
 
     private static int nextInt(int max) {
@@ -809,7 +873,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         XYChart.Series s = new XYChart.Series();
         s.setName(name);
         for (int i = 0; i < 7; i++) {
-            double v = nextDouble();
+            double v = nextDouble(-20, 20);
             String cat = String.valueOf(i);
             s.getData().add(new XYChart.Data(cat, v));
         }
@@ -821,7 +885,7 @@ public class NodeInitializationBackgroundThreadTest extends RobotTestBase {
         XYChart.Series s = new XYChart.Series();
         s.setName(name);
         for (int i = 0; i < 7; i++) {
-            double v = nextDouble();
+            double v = nextDouble(-20, 20);
             s.getData().add(new XYChart.Data(i, v));
         }
         return s;
