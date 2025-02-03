@@ -184,10 +184,12 @@ final class MacWindow extends Window {
     private void updateWindowOverlayMetrics(NSWindowToolbarStyle toolbarStyle) {
         double minHeight = NSWindowToolbarStyle.SMALL.size.getHeight();
         var empty = new Dimension2D(0, 0);
+        var size = isUtilityWindow() ? toolbarStyle.utilitySize : toolbarStyle.size;
+
         WindowControlsMetrics metrics = isUsingNonClientOverlay()
             ? _isRightToLeftLayoutDirection()
-                ? new WindowControlsMetrics(empty, toolbarStyle.size, minHeight)
-                : new WindowControlsMetrics(toolbarStyle.size, empty, minHeight)
+                ? new WindowControlsMetrics(empty, size, minHeight)
+                : new WindowControlsMetrics(size, empty, minHeight)
             : new WindowControlsMetrics(empty, empty, minHeight);
 
         windowControlsMetrics.set(metrics);
@@ -200,10 +202,12 @@ final class MacWindow extends Window {
 
         NSWindowToolbarStyle(double width, double height, int style) {
             this.size = new Dimension2D(width, height);
+            this.utilitySize = new Dimension2D(height, height); // width intentionally set to height
             this.style = style;
         }
 
         final Dimension2D size;
+        final Dimension2D utilitySize;
         final int style;
 
         static NSWindowToolbarStyle ofHeight(double height) {

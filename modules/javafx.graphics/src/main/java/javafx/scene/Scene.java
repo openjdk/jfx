@@ -3078,7 +3078,7 @@ public class Scene implements EventTarget {
 
                 if (HeaderBarBase.getHeaderButtonType(intersectedNode) instanceof HeaderButtonType type) {
                     return switch (type) {
-                        case MINIMIZE -> HeaderAreaType.MINIMIZE;
+                        case ICONIFY -> HeaderAreaType.MINIMIZE;
                         case MAXIMIZE -> HeaderAreaType.MAXIMIZE;
                         case CLOSE -> HeaderAreaType.CLOSE;
                     };

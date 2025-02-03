@@ -249,7 +249,7 @@ public final class StageTesterWindow extends Stage {
         var iconifyButton = new Button("Iconify");
         var maximizeButton = new Button("Maximize");
         var closeButton = new Button("Close");
-        HeaderBarBase.setHeaderButtonType(iconifyButton, HeaderButtonType.MINIMIZE);
+        HeaderBarBase.setHeaderButtonType(iconifyButton, HeaderButtonType.ICONIFY);
         HeaderBarBase.setHeaderButtonType(maximizeButton, HeaderButtonType.MAXIMIZE);
         HeaderBarBase.setHeaderButtonType(closeButton, HeaderButtonType.CLOSE);
         return List.of(iconifyButton, maximizeButton, closeButton);

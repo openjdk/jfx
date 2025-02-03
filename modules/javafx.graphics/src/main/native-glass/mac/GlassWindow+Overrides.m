@@ -195,6 +195,11 @@
     self->isWindowResizable = ((mask & NSWindowStyleMaskResizable) != 0);
     [[self->view delegate] setResizableForFullscreen:YES];
 
+    // When we switch to full-screen mode, we always need the standard window buttons to be shown.
+    [[self->nsWindow standardWindowButton:NSWindowCloseButton] setHidden:NO];
+    [[self->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:NO];
+    [[self->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:NO];
+
     if (nsWindow.toolbar != nil) {
         nsWindow.toolbar.visible = NO;
     }
@@ -210,6 +215,13 @@
 - (void)windowWillExitFullScreen:(NSNotification *)notification
 {
     //NSLog(@"windowWillExitFullScreen");
+
+    // When we exit full-screen mode, hide the standard window buttons if they were previously hidden.
+    if (!self->isStandardButtonsVisible) {
+        [[self->nsWindow standardWindowButton:NSWindowCloseButton] setHidden:YES];
+        [[self->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
+        [[self->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:YES];
+    }
 }
 
 - (void)windowDidExitFullScreen:(NSNotification *)notification

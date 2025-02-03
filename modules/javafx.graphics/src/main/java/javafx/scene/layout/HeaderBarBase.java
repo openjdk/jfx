@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.glass.ui.WindowControlsMetrics;
+import com.sun.javafx.scene.layout.HeaderButtonBehavior;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.quantum.WindowStage;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -36,6 +37,7 @@ import javafx.geometry.Dimension2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
@@ -92,12 +94,26 @@ public abstract class HeaderBarBase extends Region {
 
     /**
      * Specifies the {@code HeaderButtonType} of the child, indicating its semantic use in the header bar.
+     * <p>
+     * This property can be set on any {@link Node}. Specifying a header button type also provides the behavior
+     * associated with the button type. If the default behavior is not desired, applications can register an
+     * event filter on the child node that consumes the {@link MouseEvent#MOUSE_RELEASED} event.
      *
      * @param child the child node
      * @param value the {@code HeaderButtonType}, or {@code null}
      */
     public static void setHeaderButtonType(Node child, HeaderButtonType value) {
         Pane.setConstraint(child, HEADER_BUTTON_TYPE, value);
+
+        if (child.getProperties().get(HeaderButtonBehavior.class) instanceof HeaderButtonBehavior behavior) {
+            behavior.dispose();
+        }
+
+        if (value != null) {
+            child.getProperties().put(HeaderButtonBehavior.class, new HeaderButtonBehavior(child, value));
+        } else {
+            child.getProperties().remove(HeaderButtonBehavior.class);
+        }
     }
 
     /**

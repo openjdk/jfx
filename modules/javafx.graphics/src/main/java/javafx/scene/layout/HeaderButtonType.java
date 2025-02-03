@@ -32,29 +32,32 @@ import javafx.stage.Stage;
  * Identifies the semantic type of a button in a custom {@link HeaderBar}, which enables integrations
  * with the platform window manager. For example, hovering over a {@link #MAXIMIZE} button on Windows
  * will summon snap layouts.
- * <p>
- * This property can be set on any {@link Node}. Applications are still required to provide their own
- * click handlers to programmatically trigger the actions associated with header buttons, i.e. call
- * appropriate stage methods like {@link Stage#setIconified(boolean)}, {@link Stage#setMaximized(boolean)}
- * or {@link Stage#close()}.
  *
  * @since 25
  * @see HeaderBarBase#setHeaderButtonType(Node, HeaderButtonType)
  */
 public enum HeaderButtonType {
+
     /**
-     * Identifies the minimize button.
+     * Identifies the iconify button.
      *
      * @see Stage#isIconified()
      * @see Stage#setIconified(boolean)
      */
-    MINIMIZE,
+    ICONIFY,
 
     /**
      * Identifies the maximize button.
+     * <p>
+     * This button toggles the {@link Stage#isMaximized()} or {@link Stage#isFullScreen()} property,
+     * depending on platform-specific invocation semantics. For example, on macOS the button will
+     * put the window into full-screen mode by default, but maximize it to cover the desktop when
+     * the option key is pressed.
      *
      * @see Stage#isMaximized()
      * @see Stage#setMaximized(boolean)
+     * @see Stage#isFullScreen()
+     * @see Stage#setFullScreen(boolean)
      */
     MAXIMIZE,
 

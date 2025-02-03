@@ -374,43 +374,58 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
+        bool isTitled = (jStyleMask & com_sun_glass_ui_Window_TITLED) != 0;
+        bool isClosable = (jStyleMask & com_sun_glass_ui_Window_CLOSABLE) != 0;
+        bool isMinimizable = (jStyleMask & com_sun_glass_ui_Window_MINIMIZABLE) != 0;
+        bool isMaximizable = (jStyleMask & com_sun_glass_ui_Window_MAXIMIZABLE) != 0;
+        bool isTransparent = (jStyleMask & com_sun_glass_ui_Window_TRANSPARENT) != 0;
+        bool isUtility = (jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0;
+        bool isPopup = (jStyleMask & com_sun_glass_ui_Window_POPUP) != 0;
+        bool isUnified = (jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0;
+        bool isExtended = (jStyleMask & com_sun_glass_ui_Window_EXTENDED) != 0;
+        bool isNonClientOverlay = (jStyleMask & com_sun_glass_ui_Window_NON_CLIENT_OVERLAY) != 0;
+
         NSUInteger styleMask = NSWindowStyleMaskBorderless;
         // only titled windows get title
-        if ((jStyleMask&com_sun_glass_ui_Window_TITLED) != 0)
+        if (isTitled)
         {
             styleMask = styleMask|NSWindowStyleMaskTitled;
         }
 
-        bool isUtility = (jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0;
-        bool isPopup = (jStyleMask & com_sun_glass_ui_Window_POPUP) != 0;
-
         // only nontransparent windows get decorations
-        if ((jStyleMask&com_sun_glass_ui_Window_TRANSPARENT) == 0)
+        if (!isTransparent)
         {
-            if ((jStyleMask&com_sun_glass_ui_Window_CLOSABLE) != 0)
+            if (isClosable)
             {
                 styleMask = styleMask|NSWindowStyleMaskClosable;
             }
 
-            if (((jStyleMask&com_sun_glass_ui_Window_MINIMIZABLE) != 0) ||
-                ((jStyleMask&com_sun_glass_ui_Window_MAXIMIZABLE) != 0))
+            if (isMinimizable || isMaximizable)
             {
                 // on Mac OS X there is one set for min/max buttons,
                 // so if clients requests either one, we turn them both on
                 styleMask = styleMask|NSWindowStyleMaskMiniaturizable;
             }
 
-            if ((jStyleMask&com_sun_glass_ui_Window_EXTENDED) != 0) {
+            if (isExtended) {
                 styleMask = styleMask | NSWindowStyleMaskTitled | NSWindowStyleMaskFullSizeContentView;
             }
 
-            if ((jStyleMask&com_sun_glass_ui_Window_UNIFIED) != 0) {
+            if (isUnified) {
                 styleMask = styleMask|NSWindowStyleMaskTexturedBackground;
             }
 
             if (isUtility)
             {
-                styleMask = styleMask | NSWindowStyleMaskUtilityWindow | NSWindowStyleMaskNonactivatingPanel;
+                styleMask = styleMask | NSWindowStyleMaskNonactivatingPanel;
+
+                // The NSWindowStyleMaskUtilityWindow style makes the close button appear very small (because the
+                // title bar is thinner than normal). This doesn't work well with client-side title bars in extended
+                // windows: the point of a client-side title bar is its ability to host custom controls, so it can't
+                // be very thin. We therefore only add this style for non-extended windows.
+                if (!isExtended) {
+                    styleMask |= NSWindowStyleMaskUtilityWindow;
+                }
             }
         }
 
@@ -428,27 +443,35 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 
         NSScreen *screen = (NSScreen*)jlong_to_ptr(jScreenPtr);
         window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow];
+        window->isStandardButtonsVisible = YES;
 
-        if ((jStyleMask & com_sun_glass_ui_Window_EXTENDED) != 0) {
+        if (isExtended) {
             [window->nsWindow setTitleVisibility:NSWindowTitleHidden];
             [window->nsWindow setTitlebarAppearsTransparent:YES];
             [window->nsWindow setToolbar:[NSToolbar new]];
 
-            if ((jStyleMask & com_sun_glass_ui_Window_NON_CLIENT_OVERLAY) == 0) {
+            // An extended window without non-client controls has no visible standard window buttons.
+            if (!isNonClientOverlay) {
                 [[window->nsWindow standardWindowButton:NSWindowCloseButton] setHidden:YES];
                 [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
                 [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:YES];
+                window->isStandardButtonsVisible = NO;
             }
         }
 
-        if ((jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0) {
+        if (isUnified) {
             //Prevent the textured effect from disappearing on border thickness recalculation
             [window->nsWindow setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
         }
 
-        if ((jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0) {
-            [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
-            [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:YES];
+        if (isUtility) {
+            // When we hide the standard window buttons, they are still part of the button group that activates
+            // the hover appearance (the icons inside the buttons) when the cursor is over any of the buttons.
+            // This leads to the close button receiving the hover appearance when the mouse cursor is over one
+            // of the hidden buttons. Setting the hidden buttons' frame to an empty rectangle fixes this.
+            [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setFrame:CGRectMake(0, 0, 0, 0)];
+            [[window->nsWindow standardWindowButton:NSWindowZoomButton] setFrame:CGRectMake(0, 0, 0, 0)];
+
             if (!jOwnerPtr) {
                 [window->nsWindow setLevel:NSNormalWindowLevel];
             }
@@ -459,8 +482,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             window->owner = getGlassWindow(env, jOwnerPtr)->nsWindow; // not retained (use weak reference?)
         }
         window->isResizable = NO;
-        window->isDecorated = (jStyleMask&com_sun_glass_ui_Window_TITLED) != 0 ||
-                              (jStyleMask&com_sun_glass_ui_Window_EXTENDED) != 0;
+        window->isDecorated = isTitled || isExtended;
         /* 10.7 full screen window support */
         if ([NSWindow instancesRespondToSelector:@selector(toggleFullScreen:)]) {
             NSWindowCollectionBehavior behavior = [window->nsWindow collectionBehavior];
@@ -478,8 +500,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setCollectionBehavior: behavior];
         }
 
-        window->isTransparent = (jStyleMask & com_sun_glass_ui_Window_TRANSPARENT) != 0;
-        if (window->isTransparent == YES)
+        if (isTransparent)
         {
             [window->nsWindow setBackgroundColor:[NSColor clearColor]];
             [window->nsWindow setHasShadow:NO];
@@ -491,6 +512,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setOpaque:YES];
         }
 
+        window->isTransparent = isTransparent;
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
 
