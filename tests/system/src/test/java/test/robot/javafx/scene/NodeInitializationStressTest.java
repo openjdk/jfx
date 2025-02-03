@@ -176,6 +176,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void areaChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             AreaChart c = new AreaChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -189,6 +190,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void barChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             BarChart c = new BarChart(createCategoryAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createCategorySeries());
@@ -202,6 +204,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void bubbleChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             BubbleChart c = new BubbleChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -215,6 +218,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8347392") // FIX
     @Test
     public void button() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Button c = new Button();
             c.setSkin(new ButtonSkin(c));
@@ -245,6 +249,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8347392") // FIX
     @Test
     public void checkBox() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             CheckBox c = new CheckBox("checkbox");
             c.setSkin(new CheckBoxSkin(c));
@@ -259,6 +264,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8347392") // FIX
     @Test
     public void choiceBox() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ChoiceBox c = new ChoiceBox();
             c.setSkin(new ChoiceBoxSkin(c));
@@ -308,6 +314,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349004") // FIX
     @Test
     public void datePicker() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             DatePicker c = new DatePicker();
             c.setSkin(new DatePickerSkin(c));
@@ -325,6 +332,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8347392") // FIX
     @Test
     public void hyperlink() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Hyperlink c = new Hyperlink("Hyperlink");
             c.setSkin(new HyperlinkSkin(c));
@@ -338,6 +346,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8347392") // FIX
     @Test
     public void label() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Label c = new Label("Label");
             c.setSkin(new LabelSkin(c));
@@ -351,6 +360,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void lineChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             LineChart c = new LineChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -378,6 +388,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349096") // FIX
     @Test
     public void menuButton() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             MenuButton c = new MenuButton();
             c.setSkin(new MenuButtonSkin(c));
@@ -393,6 +404,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349105") // FIX
     @Test
     public void pagination() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             Pagination c = new Pagination();
             c.setSkin(new PaginationSkin(c));
@@ -424,6 +436,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349090") // FIX
     @Test
     public void pieChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             PieChart c = new PieChart();
             c.getData().setAll(createPieSeries());
@@ -437,6 +450,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8347392") // FIX
     @Test
     public void radioButton() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             RadioButton c = new RadioButton("RadioButton");
             c.setSkin(new RadioButtonSkin(c));
@@ -450,6 +464,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void scatterChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ScatterChart c = new ScatterChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -490,6 +505,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349096") // FIX
     @Test
     public void splitMenuButton() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             SplitMenuButton c = new SplitMenuButton();
             c.setSkin(new SplitMenuButtonSkin(c));
@@ -505,6 +521,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedAreaChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             StackedAreaChart c = new StackedAreaChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
@@ -518,6 +535,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedBarChart() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             StackedBarChart c = new StackedBarChart(createCategoryAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createCategorySeries());
@@ -531,6 +549,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8349098") // FIX
     @Test
     public void tabPane() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TabPane c = new TabPane();
             c.setSkin(new TabPaneSkin(c));
@@ -576,6 +595,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8347392") // FIX
     @Test
     public void textArea() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TextArea c = new TextArea();
             c.setSkin(new TextAreaSkin(c));
@@ -615,6 +635,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8347392") // FIX
     @Test
     public void titledPane() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             TitledPane c = new TitledPane("TitledPane", null);
             c.setSkin(new TitledPaneSkin(c));
@@ -630,6 +651,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8347392") // FIX
     @Test
     public void toggleButton() {
+        assumeFalse(SKIP_TEST);
         test(() -> {
             ToggleButton c = new ToggleButton("ToggleButton");
             c.setSkin(new ToggleButtonSkin(c));
@@ -657,6 +679,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8348100") // FIX
     @Test
     public void tooltip() {
+        assumeFalse(SKIP_TEST);
         // TODO will have a better test in JDK-8348100
     }
 
