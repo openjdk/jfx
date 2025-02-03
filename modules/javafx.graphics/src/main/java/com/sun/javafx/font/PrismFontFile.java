@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,6 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     boolean isCFF;
     boolean isEmbedded = false;
     boolean isCopy = false;
-    boolean isTracked = false;
     boolean isDecoded = false;
     boolean isRegistered = true;
 
@@ -89,18 +88,17 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
     protected PrismFontFile(String name, String filename, int fIndex,
                           boolean register, boolean embedded,
-                          boolean copy, boolean tracked) throws Exception {
+                          boolean copy) throws Exception {
         this.filename = filename;
         this.isRegistered = register;
         this.isEmbedded = embedded;
         this.isCopy = copy;
-        this.isTracked = tracked;
         init(name, fIndex);
     }
 
     WeakReference<PrismFontFile> createFileDisposer(PrismFontFactory factory,
                                                     FileRefCounter rc) {
-        FileDisposer disposer = new FileDisposer(filename, isTracked, rc);
+        FileDisposer disposer = new FileDisposer(filename, rc);
         WeakReference<PrismFontFile> ref = Disposer.addRecord(this, disposer);
         disposer.setFactory(factory, ref);
         return ref;
@@ -196,15 +194,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
     static class FileDisposer implements DisposerRecord {
         String fileName;
-        boolean isTracked;
         FileRefCounter refCounter;
         PrismFontFactory factory;
         WeakReference<PrismFontFile> refKey;
 
-        public FileDisposer(String fileName, boolean isTracked,
-                            FileRefCounter rc) {
+        public FileDisposer(String fileName, FileRefCounter rc) {
             this.fileName = fileName;
-            this.isTracked = isTracked;
             this.refCounter = rc;
         }
 
@@ -226,12 +221,6 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                     File file = new File(fileName);
                     int size = (int)file.length();
                     file.delete();
-                    // decrement tracker only after
-                    // successful deletion.
-                    if (isTracked) {
-                        FontFileWriter.FontTracker.
-                            getTracker().subBytes(size);
-                    }
                     if (factory != null && refKey != null) {
                         Object o = refKey.get();
                         if (o == null) {
