@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -209,7 +209,7 @@ public abstract class PrismFontFactory implements FontFactory {
           createFontFile(String name, String filename,
                          int fIndex, boolean register,
                          boolean embedded,
-                         boolean copy, boolean tracked)
+                         boolean copy)
                          throws Exception;
 
     public abstract GlyphLayout createGlyphLayout();
@@ -219,13 +219,13 @@ public abstract class PrismFontFactory implements FontFactory {
     // contents of the TTC. Onus is on caller to enumerate all the fonts.
     private PrismFontFile createFontResource(String filename, int index) {
         return createFontResource(null, filename, index,
-                                  true, false, false, false);
+                                  true, false, false);
     }
 
     private PrismFontFile createFontResource(String name,
                                              String filename, int index,
                                              boolean register, boolean embedded,
-                                             boolean copy, boolean tracked) {
+                                             boolean copy) {
         String key = (filename+index).toLowerCase();
         /*
          * macOS: we need to load unique fonts for regular and bold.
@@ -241,7 +241,7 @@ public abstract class PrismFontFactory implements FontFactory {
 
         try {
             fr = createFontFile(name, filename, index, register,
-                                embedded, copy, tracked);
+                                embedded, copy);
             if (register) {
                 // Although it looks tempting here to store the lookup name
                 // as what we matched, it isn't safe to do so.
@@ -270,7 +270,7 @@ public abstract class PrismFontFactory implements FontFactory {
    public int findFontIndex(String targetName, String filename) {
 
          try {
-             PrismFontFile fr = createFontFile(null, filename, 0, false, false, false, false);
+             PrismFontFile fr = createFontFile(null, filename, 0, false, false, false);
 
              int cnt = fr.getFontCount();
              if (cnt == 1 || fr.getFullName().equalsIgnoreCase(targetName)) {
@@ -278,7 +278,7 @@ public abstract class PrismFontFactory implements FontFactory {
              }
              int index = 1;
              do {
-                 fr = createFontFile(null, filename, index, false, false, false, false);
+                 fr = createFontFile(null, filename, index, false, false, false);
                  String name = fr.getFullName();
                  if (name.equalsIgnoreCase(targetName)) {
                      return index;
@@ -295,7 +295,7 @@ public abstract class PrismFontFactory implements FontFactory {
     private PrismFontFile createFontResource(String name, String filename) {
         PrismFontFile[] pffArr =
             createFontResources(name, filename,
-                                true, false, false, false, true);
+                                true, false, false, true);
         if (pffArr == null || pffArr.length == 0) {
            return null;
         } else {
@@ -319,7 +319,6 @@ public abstract class PrismFontFactory implements FontFactory {
                                                 boolean register,
                                                 boolean embedded,
                                                 boolean copy,
-                                                boolean tracked,
                                                 boolean loadAll) {
 
         PrismFontFile[] fArr = null;
@@ -327,7 +326,7 @@ public abstract class PrismFontFactory implements FontFactory {
             return null;
         }
         PrismFontFile fr = createFontResource(name, filename, 0, register,
-                                              embedded, copy, tracked);
+                                              embedded, copy);
         if (fr == null) {
             return null;
         }
@@ -352,7 +351,7 @@ public abstract class PrismFontFactory implements FontFactory {
                 } else {
                     fr = createFontFile(null, filename, index,
                                         register, embedded,
-                                        copy, tracked);
+                                        copy);
                     if (fr == null) {
                         return null;
                     }
@@ -1384,7 +1383,7 @@ public abstract class PrismFontFactory implements FontFactory {
             fontWriter.closeFile();
 
             fr = loadEmbeddedFont1(name, tFile.getPath(), register, true,
-                                   fontWriter.isTracking(), loadAll);
+                                   loadAll);
 
             if (fr != null && fr.length > 0) {
                 /* Delete the file downloaded if it was decoded
@@ -1406,8 +1405,7 @@ public abstract class PrismFontFactory implements FontFactory {
         } finally {
             /* If the data isn't a valid font, so that registering it
              * returns null, or we didn't get so far as copying the data,
-             * delete the tmp file and decrement the byte count
-             * in the tracker object before returning.
+             * delete the tmp file before returning.
              */
             if (fr == null) {
                 fontWriter.deleteFile();
@@ -1445,7 +1443,7 @@ public abstract class PrismFontFactory implements FontFactory {
                                      boolean loadAll) {
         addFileCloserHook();
         FontResource[] frArr =
-          loadEmbeddedFont1(name, path, register, false, false, loadAll);
+          loadEmbeddedFont1(name, path, register, false, loadAll);
         if (frArr != null && frArr.length > 0) {
             if (size <= 0) size = getSystemFontSize();
             int num = frArr.length;
@@ -1498,7 +1496,7 @@ public abstract class PrismFontFactory implements FontFactory {
     private synchronized
         PrismFontFile[] loadEmbeddedFont1(String name, String path,
                                           boolean register, boolean copy,
-                                          boolean tracked, boolean loadAll) {
+                                          boolean loadAll) {
 
         ++numEmbeddedFonts;
         /*
@@ -1512,8 +1510,7 @@ public abstract class PrismFontFactory implements FontFactory {
          * know to reference the file directly.
          */
         PrismFontFile[] frArr = createFontResources(name, path, register,
-                                                    true, copy, tracked,
-                                                    loadAll);
+                                                    true, copy, loadAll);
         if (frArr == null || frArr.length == 0) {
             return null; // yes, this means the caller needs to handle null.
         }
