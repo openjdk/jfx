@@ -37,9 +37,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
@@ -89,7 +87,6 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
-import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
@@ -124,7 +121,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
-import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -145,7 +141,9 @@ import test.robot.testharness.RobotTestBase;
  * The test creates a visible node on the JavaFX application thread, and at the same time,
  * starts a number of background threads which also create nodes of the same type.
  * Each such thread makes repeated accesses of its own node for the duration
- * of test.  Also, the visible node gets accessed periodically just to shake things up.
+ * of test.
+ *
+ * Also, the visible node gets accessed periodically in the FX application thread just to shake things up.
  *
  * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
  *
@@ -155,7 +153,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private static final int DURATION = 5000;
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
-    // for debugging purposes: setting this to false will skip working tests
+    // for debugging purposes: setting this to true will skip working tests
     // TODO remove once all the tests pass
     private static final boolean SKIP_TEST = false;
 
@@ -233,13 +231,14 @@ public class NodeInitializationStressTest extends RobotTestBase {
     public void canvas() {
         assumeFalse(SKIP_TEST);
         test(() -> {
-            return new Canvas(30, 30);
+            return new Canvas(200, 200);
         }, (c) -> {
             accessNode(c);
             GraphicsContext g = c.getGraphicsContext2D();
-            g.setFill(Color.RED);
+            g.setFill(nextColor());
             g.setStroke(Color.BLACK);
-            g.fillRect(5, 5, 5, 5);
+            g.setLineWidth(nextBoolean() ? 0.0 : 1.0);
+            g.fillRect(nextDouble(200), nextDouble(200), nextDouble(50), nextDouble(50));
         });
     }
 
@@ -658,24 +657,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Disabled("JDK-8348100") // FIX
     @Test
     public void tooltip() {
-        test(() -> {
-            Tooltip t = new Tooltip("this is a tooltip");
-            t.setShowDelay(Duration.ZERO);
-            t.setHideDelay(Duration.ZERO);
-            Label c = new Label("testing tooltip");
-            c.setSkin(new LabelSkin(c));
-            c.setTooltip(t);
-            c.setId("Tooltip");
-            return c;
-        }, (c) -> {
-            Tooltip t = c.getTooltip();
-            t.isShowing();
-            t.setGraphic(new Label("yo!"));
-            if (Platform.isFxApplicationThread()) {
-                Point2D p = c.localToScreen(c.getWidth() / 2.0, c.getHeight() / 2.0);
-                robot.mouseMove(p);
-            }
-        });
+        // TODO will have a better test in JDK-8348100
     }
 
     @Test
@@ -767,10 +749,11 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
         int threadCount = 1 + Runtime.getRuntime().availableProcessors() * 2;
         AtomicBoolean running = new AtomicBoolean(true);
-        CountDownLatch counter = new CountDownLatch(threadCount + 1);
+        int additionalThreads = 2; // jiggler + tight loop
+        CountDownLatch counter = new CountDownLatch(threadCount + additionalThreads);
 
         try {
-            // construct nodes in a fast loop
+            // construct nodes in a tight loop
             new Thread(() -> {
                 try {
                     while (running.get()) {
@@ -779,23 +762,30 @@ public class NodeInitializationStressTest extends RobotTestBase {
                 } finally {
                     counter.countDown();
                 }
-            }, "fast loop " + title).start();
+            }, "tight loop " + title).start();
+
+            // periodically "jiggle" the visible node in the fx thread
+            new Thread(() -> {
+                try {
+                    Random r = new Random();
+                    while (running.get()) {
+                        sleep(1 + r.nextInt(50));
+                        runAndWait(() -> {
+                            operation.accept(visibleNode);
+                        });
+                    }
+                } finally {
+                    counter.countDown();
+                }
+            }, "jiggler " + title).start();
 
             // stress test from multiple background threads
             for (int i = 0; i < threadCount; i++) {
                 new Thread(() -> {
                     try {
                         T n = generator.get();
-                        int count = 0;
                         while (running.get()) {
                             operation.accept(n);
-
-                            count++;
-                            if ((count % 100) == 0) {
-                                runAndWait(() -> {
-                                    operation.accept(visibleNode);
-                                });
-                            }
                         }
                     } finally {
                         counter.countDown();
@@ -817,11 +807,21 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static boolean nextBoolean() {
+        // creating new Random instances each time to avoid additional synchronization
         return new Random().nextBoolean();
     }
 
-    private static double nextDouble() {
-        return new Random().nextInt(50) - 25;
+    private static Color nextColor() {
+        Random r = new Random();
+        return Color.hsb(360 * r.nextDouble(), r.nextDouble(), r.nextDouble(), r.nextDouble());
+    }
+
+    private static double nextDouble(int min, int max) {
+        return min + new Random().nextDouble() * (max - min);
+    }
+
+    private static double nextDouble(int max) {
+        return max * new Random().nextDouble();
     }
 
     private static int nextInt(int max) {
@@ -859,7 +859,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
         XYChart.Series s = new XYChart.Series();
         s.setName(name);
         for (int i = 0; i < 7; i++) {
-            double v = nextDouble();
+            double v = nextDouble(-20, 20);
             String cat = String.valueOf(i);
             s.getData().add(new XYChart.Data(cat, v));
         }
@@ -871,7 +871,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
         XYChart.Series s = new XYChart.Series();
         s.setName(name);
         for (int i = 0; i < 7; i++) {
-            double v = nextDouble();
+            double v = nextDouble(-20, 20);
             s.getData().add(new XYChart.Data(i, v));
         }
         return s;
