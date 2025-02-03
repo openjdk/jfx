@@ -792,8 +792,8 @@ public class NodeInitializationStressTest extends RobotTestBase {
         accessNode(c);
         c.prefHeight(-1);
         c.prefWidth(-1);
-        c.setPrefWidth(20);
-        c.setPrefHeight(20);
+        c.setPrefWidth(nextBoolean(0.1) ? 20 : 100);
+        c.setPrefHeight(nextBoolean(0.1) ? 20 : 100);
     }
 
     private <T extends Node> void test(Supplier<T> generator, Consumer<T> operation) {
@@ -873,6 +873,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private static boolean nextBoolean() {
         // creating new Random instances each time to avoid additional synchronization
         return new Random().nextBoolean();
+    }
+
+    /**
+     * Randomly returns true with the specified probability.
+     * @param probability the probability value in the range (0.0 ... 1.0)
+     * @return the boolean value
+     */
+    private static boolean nextBoolean(double probability) {
+        return new Random().nextDouble() < probability;
     }
 
     private static Color nextColor() {
