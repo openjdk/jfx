@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1405,8 +1405,7 @@ public abstract class PrismFontFactory implements FontFactory {
         } finally {
             /* If the data isn't a valid font, so that registering it
              * returns null, or we didn't get so far as copying the data,
-             * delete the tmp file and decrement the byte count
-             * in the tracker object before returning.
+             * delete the tmp file before returning.
              */
             if (fr == null) {
                 fontWriter.deleteFile();
