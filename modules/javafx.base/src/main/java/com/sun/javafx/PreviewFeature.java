@@ -44,6 +44,8 @@ public enum PreviewFeature {
         this.featureName = featureName;
     }
 
+    private final String featureName;
+
     private static final String ENABLE_PREVIEW_PROPERTY = "javafx.enablePreview";
     private static final String SUPPRESS_WARNING_PROPERTY = "javafx.suppressPreviewBanner";
 
@@ -74,6 +76,4 @@ public enum PreviewFeature {
                 """, VersionInfo.getVersion(), featureName, SUPPRESS_WARNING_PROPERTY);
         }
     }
-
-    private final String featureName;
 }
