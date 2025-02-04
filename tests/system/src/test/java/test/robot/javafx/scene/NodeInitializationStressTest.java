@@ -155,7 +155,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private static final AtomicBoolean failed = new AtomicBoolean();
     // for debugging purposes: setting this to true will skip working tests
     // TODO remove once all the tests pass
-    private static final boolean SKIP_TEST = false;
+    private static final boolean SKIP_TEST = !false;
 
     @Test
     public void accordion() {
@@ -173,45 +173,47 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void areaChart() {
-        assumeFalse(SKIP_TEST);
+//        assumeFalse(SKIP_TEST);
         test(() -> {
             AreaChart c = new AreaChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void barChart() {
-        assumeFalse(SKIP_TEST);
+//        assumeFalse(SKIP_TEST);
         test(() -> {
             BarChart c = new BarChart(createCategoryAxis("x"), createNumberAxis("y"));
-            c.getData().setAll(createCategorySeries());
+            if (nextBoolean()) {
+                c.getData().setAll(createCategorySeries());
+            }
             return c;
         }, (c) -> {
-            c.getData().setAll(createCategorySeries());
             accessChart(c);
+            c.getData().setAll(createCategorySeries());
+            c.getData().setAll(createCategorySeries());
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void bubbleChart() {
-        assumeFalse(SKIP_TEST);
+//        assumeFalse(SKIP_TEST);
         test(() -> {
             BubbleChart c = new BubbleChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
@@ -357,17 +359,17 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void lineChart() {
-        assumeFalse(SKIP_TEST);
+//        assumeFalse(SKIP_TEST);
         test(() -> {
             LineChart c = new LineChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
@@ -461,17 +463,17 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void scatterChart() {
-        assumeFalse(SKIP_TEST);
+//        assumeFalse(SKIP_TEST);
         test(() -> {
             ScatterChart c = new ScatterChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
@@ -518,29 +520,29 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedAreaChart() {
-        assumeFalse(SKIP_TEST);
+//        assumeFalse(SKIP_TEST);
         test(() -> {
             StackedAreaChart c = new StackedAreaChart(createNumberAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedBarChart() {
-        assumeFalse(SKIP_TEST);
+//        assumeFalse(SKIP_TEST);
         test(() -> {
             StackedBarChart c = new StackedBarChart(createCategoryAxis("x"), createNumberAxis("y"));
             c.getData().setAll(createCategorySeries());
             return c;
         }, (c) -> {
+            c.getData().setAll(createCategorySeries());
             c.getData().setAll(createCategorySeries());
             accessChart(c);
         });
@@ -732,7 +734,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private void accessChart(Chart c) {
         String title = c.getClass().getSimpleName();
         c.setTitle(title);
-        c.setAnimated(true);
+        c.setAnimated(nextBoolean());
         accessRegion(c);
     }
 
