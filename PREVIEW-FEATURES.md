@@ -35,11 +35,11 @@ The key properties of a preview feature are:
 There are several steps that are required to add a new preview feature to JavaFX:
 
 1. Identify all relevant API elements of the feature, and annotate them with `@Deprecated`.
-   The`since` element of the annotation must be set to the same value as the corresponding `@since`
+   The `since` element of the annotation must be set to the same value as the corresponding `@since`
    javadoc tag of the API element.
 2. Add the following javadoc tag to each of the previously deprecated API elements:<p>
    `@deprecated This is a preview feature which may be changed or removed in a future release.`
-3. If the API element is a method or constructor, the implementation should invoke the
-   `com.sun.javafx.PreviewFeature.checkEnabled(<featureName>)` method, where `<featureName>` is a
-   human-readable name that is incorporated into error and warning messages. All API elements of a
-   particular preview feature should use the same human-readable feature name.
+3. Add a new constant to the `com.sun.javafx.PreviewFeature` enumeration, and choose a human-readable name
+   for the preview feature. This name will be used in warning and error messages when the preview feature
+   is used by application developers.
+4. Add runtime checks in appropriate places by invoking `com.sun.javafx.PreviewFeature.<FEATURE>.checkEnabled()`.
