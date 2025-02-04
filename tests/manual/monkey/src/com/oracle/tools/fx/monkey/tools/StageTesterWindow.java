@@ -27,6 +27,7 @@ package com.oracle.tools.fx.monkey.tools;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
+import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Pos;
@@ -246,9 +247,18 @@ public final class StageTesterWindow extends Stage {
     }
 
     private List<Parent> createCustomWindowButtons() {
+        var closeButton = new Button("Close");
         var iconifyButton = new Button("Iconify");
         var maximizeButton = new Button("Maximize");
-        var closeButton = new Button("Close");
+
+        maximizeButton.getPseudoClassStates().subscribe(() -> {
+            if (maximizeButton.getPseudoClassStates().contains(PseudoClass.getPseudoClass("maximized"))) {
+                maximizeButton.setText("Restore");
+            } else {
+                maximizeButton.setText("Maximize");
+            }
+        });
+
         HeaderBarBase.setHeaderButtonType(iconifyButton, HeaderButtonType.ICONIFY);
         HeaderBarBase.setHeaderButtonType(maximizeButton, HeaderButtonType.MAXIMIZE);
         HeaderBarBase.setHeaderButtonType(closeButton, HeaderButtonType.CLOSE);

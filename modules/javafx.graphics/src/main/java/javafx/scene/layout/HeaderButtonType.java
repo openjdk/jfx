@@ -53,6 +53,8 @@ public enum HeaderButtonType {
      * depending on platform-specific invocation semantics. For example, on macOS the button will
      * put the window into full-screen mode by default, but maximize it to cover the desktop when
      * the option key is pressed.
+     * <p>
+     * If the window is maximized, the button will have the {@code maximized} pseudo-class.
      *
      * @see Stage#isMaximized()
      * @see Stage#setMaximized(boolean)

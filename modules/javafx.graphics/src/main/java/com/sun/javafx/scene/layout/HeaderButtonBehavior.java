@@ -27,6 +27,7 @@ package com.sun.javafx.scene.layout;
 
 import com.sun.javafx.PlatformUtil;
 import javafx.beans.value.ObservableValue;
+import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -40,6 +41,8 @@ import java.util.Optional;
 
 public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
 
+    private static final PseudoClass MAXIMIZED_PSEUDO_CLASS = PseudoClass.getPseudoClass("maximized");
+
     private final Node node;
     private final HeaderButtonType type;
     private final Subscription subscription;
@@ -52,16 +55,25 @@ public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
             .flatMap(Scene::windowProperty)
             .map(w -> w instanceof Stage s ? s : null);
 
-        subscription = Subscription.combine(
-            type == HeaderButtonType.MAXIMIZE
-                ? stage.flatMap(Stage::resizableProperty).subscribe(this::onResizableChanged)
-                : Subscription.EMPTY,
-            stage.flatMap(Stage::fullScreenProperty).subscribe(this::onFullScreenChanged),
-            () -> node.removeEventHandler(MouseEvent.MOUSE_RELEASED, this)
-        );
+        if (type == HeaderButtonType.MAXIMIZE) {
+            subscription = Subscription.combine(
+                stage.flatMap(Stage::resizableProperty).subscribe(this::onResizableChanged),
+                stage.flatMap(Stage::fullScreenProperty).subscribe(this::onFullScreenChanged),
+                stage.flatMap(Stage::maximizedProperty).subscribe(this::onMaximizedChanged),
+                () -> node.removeEventHandler(MouseEvent.MOUSE_RELEASED, this)
+            );
+        } else {
+            subscription = Subscription.combine(
+                stage.flatMap(Stage::fullScreenProperty).subscribe(this::onFullScreenChanged),
+                () -> node.removeEventHandler(MouseEvent.MOUSE_RELEASED, this)
+            );
+        }
 
         node.addEventHandler(MouseEvent.MOUSE_RELEASED, this);
-        node.setFocusTraversable(false);
+
+        if (!node.focusTraversableProperty().isBound()) {
+            node.setFocusTraversable(false);
+        }
     }
 
     public void dispose() {
@@ -111,5 +123,9 @@ public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
             node.setVisible(fullScreen != Boolean.TRUE);
             node.setManaged(fullScreen != Boolean.TRUE);
         }
+    }
+
+    private void onMaximizedChanged(Boolean maximized) {
+        node.pseudoClassStateChanged(MAXIMIZED_PSEUDO_CLASS, maximized == Boolean.TRUE);
     }
 }
