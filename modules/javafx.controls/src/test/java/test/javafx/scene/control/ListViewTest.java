@@ -2420,7 +2420,7 @@ public class ListViewTest {
         final ListView<Integer> listView = new ListView(items);
         double prefHeight = 400;
         listView.setPrefHeight(prefHeight);
-        double viewportLength = toViewPortLength(prefHeight);
+        double viewportLength = toViewportLength(prefHeight);
         listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
@@ -2481,7 +2481,7 @@ public class ListViewTest {
         final ListView<Integer> listView = new ListView(items);
         double prefHeight = 400;
         listView.setPrefHeight(prefHeight);
-        double viewportLength = toViewPortLength(prefHeight);
+        double viewportLength = toViewportLength(prefHeight);
         listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
@@ -2602,7 +2602,7 @@ public class ListViewTest {
 
     public static void verifyListViewScrollTo(ListView listView, int listViewHeight, int scrollToIndex, Integer[] heights) {
         double sumOfHeights = 0;
-        double viewportLength = toViewPortLength(listViewHeight);
+        double viewportLength = toViewportLength(listViewHeight);
 
         for (int height : heights) {
             sumOfHeights += height;
@@ -2699,7 +2699,7 @@ public class ListViewTest {
         // But we wan't to ensure, that the VirtualFlow "Doesn't crash" - which was the case before.
     }
 
-    private static double toViewPortLength(double prefHeight) {
+    private static double toViewportLength(double prefHeight) {
         // it would be better to calculate this from listView but there is no API for this
         return prefHeight - 2;
     }
