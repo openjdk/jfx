@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved
  * Copyright (C) Research In Motion Limited 2009. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -50,7 +50,7 @@ namespace WTF {
     // closer to having all the nearly-identical hash functions in one place.
 
     struct StringHash {
-        static unsigned hash(StringImpl* key) { return key->hash(); }
+        static unsigned hash(const StringImpl* key) { return key->hash(); }
         static inline bool equal(const StringImpl* a, const StringImpl* b)
         {
             return WTF::equal(*a, *b);
@@ -109,8 +109,8 @@ namespace WTF {
     };
 
     struct ASCIICaseInsensitiveHash {
-        template<typename T>
         struct FoldCase {
+            template<typename T>
             static inline UChar convert(T character)
             {
                 return toASCIILower(character);
@@ -119,16 +119,16 @@ namespace WTF {
 
         static unsigned hash(const UChar* data, unsigned length)
         {
-            return StringHasher::computeHashAndMaskTop8Bits<UChar, FoldCase<UChar>>(data, length);
+            return StringHasher::computeHashAndMaskTop8Bits<UChar, FoldCase>(data, length);
         }
 
-        static unsigned hash(StringImpl& string)
+        static unsigned hash(const StringImpl& string)
         {
             if (string.is8Bit())
                 return hash(string.characters8(), string.length());
             return hash(string.characters16(), string.length());
         }
-        static unsigned hash(StringImpl* string)
+        static unsigned hash(const StringImpl* string)
         {
             ASSERT(string);
             return hash(*string);
@@ -136,7 +136,7 @@ namespace WTF {
 
         static unsigned hash(const LChar* data, unsigned length)
         {
-            return StringHasher::computeHashAndMaskTop8Bits<LChar, FoldCase<LChar>>(data, length);
+            return StringHasher::computeHashAndMaskTop8Bits<LChar, FoldCase>(data, length);
         }
 
         static inline unsigned hash(const char* data, unsigned length)

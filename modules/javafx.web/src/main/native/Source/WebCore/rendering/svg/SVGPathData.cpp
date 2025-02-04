@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SVGPathData.h"
 
+#include "NodeName.h"
 #include "Path.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
@@ -37,14 +38,13 @@
 #include "SVGPolylineElement.h"
 #include "SVGRectElement.h"
 #include "SVGRenderStyle.h"
+#include "SVGUseElement.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {
 
-static Path pathFromCircleElement(const SVGElement& element)
+static Path pathFromCircleElement(const SVGCircleElement& element)
 {
-    ASSERT(is<SVGCircleElement>(element));
-
     RenderElement* renderer = element.renderer();
     if (!renderer)
         return { };
@@ -61,7 +61,7 @@ static Path pathFromCircleElement(const SVGElement& element)
     return path;
 }
 
-static Path pathFromEllipseElement(const SVGElement& element)
+static Path pathFromEllipseElement(const SVGEllipseElement& element)
 {
     RenderElement* renderer = element.renderer();
     if (!renderer)
@@ -84,25 +84,23 @@ static Path pathFromEllipseElement(const SVGElement& element)
     return path;
 }
 
-static Path pathFromLineElement(const SVGElement& element)
+static Path pathFromLineElement(const SVGLineElement& element)
 {
     Path path;
-    const auto& line = downcast<SVGLineElement>(element);
-
     SVGLengthContext lengthContext(&element);
-    path.moveTo(FloatPoint(line.x1().value(lengthContext), line.y1().value(lengthContext)));
-    path.addLineTo(FloatPoint(line.x2().value(lengthContext), line.y2().value(lengthContext)));
+    path.moveTo(FloatPoint(element.x1().value(lengthContext), element.y1().value(lengthContext)));
+    path.addLineTo(FloatPoint(element.x2().value(lengthContext), element.y2().value(lengthContext)));
     return path;
 }
 
-static Path pathFromPathElement(const SVGElement& element)
+static Path pathFromPathElement(const SVGPathElement& element)
 {
-    return downcast<SVGPathElement>(element).path();
+    return element.path();
 }
 
-static Path pathFromPolygonElement(const SVGElement& element)
+static Path pathFromPolygonElement(const SVGPolygonElement& element)
 {
-    auto& points = downcast<SVGPolygonElement>(element).points().items();
+    auto& points = element.points().items();
     if (points.isEmpty())
         return { };
 
@@ -117,9 +115,9 @@ static Path pathFromPolygonElement(const SVGElement& element)
     return path;
 }
 
-static Path pathFromPolylineElement(const SVGElement& element)
+static Path pathFromPolylineElement(const SVGPolylineElement& element)
 {
-    auto& points = downcast<SVGPolylineElement>(element).points().items();
+    auto& points = element.points().items();
     if (points.isEmpty())
         return { };
 
@@ -132,7 +130,7 @@ static Path pathFromPolylineElement(const SVGElement& element)
     return path;
 }
 
-static Path pathFromRectElement(const SVGElement& element)
+static Path pathFromRectElement(const SVGRectElement& element)
 {
     RenderElement* renderer = element.renderer();
     if (!renderer)
@@ -182,25 +180,45 @@ static Path pathFromRectElement(const SVGElement& element)
     return path;
 }
 
-Path pathFromGraphicsElement(const SVGElement* element)
+static Path pathFromUseElement(const SVGUseElement& element)
 {
-    ASSERT(element);
+    RefPtr clipChildElement = element.clipChild();
+    if (!clipChildElement)
+        return { };
 
-    typedef Path (*PathFromFunction)(const SVGElement&);
-    static HashMap<AtomStringImpl*, PathFromFunction>* map = 0;
-    if (!map) {
-        map = new HashMap<AtomStringImpl*, PathFromFunction>;
-        map->set(SVGNames::circleTag->localName().impl(), pathFromCircleElement);
-        map->set(SVGNames::ellipseTag->localName().impl(), pathFromEllipseElement);
-        map->set(SVGNames::lineTag->localName().impl(), pathFromLineElement);
-        map->set(SVGNames::pathTag->localName().impl(), pathFromPathElement);
-        map->set(SVGNames::polygonTag->localName().impl(), pathFromPolygonElement);
-        map->set(SVGNames::polylineTag->localName().impl(), pathFromPolylineElement);
-        map->set(SVGNames::rectTag->localName().impl(), pathFromRectElement);
+    SVGLengthContext lengthContext(&element);
+    auto x = element.x().value(lengthContext);
+    auto y = element.y().value(lengthContext);
+
+    auto path = pathFromGraphicsElement(*clipChildElement.get());
+    if (x || y)
+        path.translate(FloatSize(x, y));
+
+    return path;
+}
+
+Path pathFromGraphicsElement(const SVGElement& element)
+{
+    switch (element.tagQName().nodeName()) {
+    case ElementNames::SVG::circle:
+        return pathFromCircleElement(uncheckedDowncast<SVGCircleElement>(element));
+    case ElementNames::SVG::ellipse:
+        return pathFromEllipseElement(uncheckedDowncast<SVGEllipseElement>(element));
+    case ElementNames::SVG::line:
+        return pathFromLineElement(uncheckedDowncast<SVGLineElement>(element));
+    case ElementNames::SVG::path:
+        return pathFromPathElement(uncheckedDowncast<SVGPathElement>(element));
+    case ElementNames::SVG::polygon:
+        return pathFromPolygonElement(uncheckedDowncast<SVGPolygonElement>(element));
+    case ElementNames::SVG::polyline:
+        return pathFromPolylineElement(uncheckedDowncast<SVGPolylineElement>(element));
+    case ElementNames::SVG::rect:
+        return pathFromRectElement(uncheckedDowncast<SVGRectElement>(element));
+    case ElementNames::SVG::use:
+        return pathFromUseElement(uncheckedDowncast<SVGUseElement>(element));
+    default:
+        break;
     }
-
-    if (PathFromFunction pathFromFunction = map->get(element->localName().impl()))
-        return (*pathFromFunction)(*element);
 
     return { };
 }

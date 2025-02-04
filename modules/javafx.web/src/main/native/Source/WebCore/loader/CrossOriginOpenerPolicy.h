@@ -39,7 +39,7 @@ class SecurityOrigin;
 struct NavigationRequester;
 struct ReportingClient;
 
-typedef int SandboxFlags;
+using SandboxFlags = int;
 
 // https://html.spec.whatwg.org/multipage/origin.html#cross-origin-opener-policy-value
 enum class CrossOriginOpenerPolicyValue : uint8_t {
@@ -65,6 +65,8 @@ struct CrossOriginOpenerPolicy {
     CrossOriginOpenerPolicy isolatedCopy() const &;
     CrossOriginOpenerPolicy isolatedCopy() &&;
 
+    friend bool operator==(const CrossOriginOpenerPolicy&, const CrossOriginOpenerPolicy&) = default;
+
     void addPolicyHeadersTo(ResourceResponse&) const;
 };
 
@@ -76,11 +78,6 @@ inline const String& CrossOriginOpenerPolicy::reportingEndpointForDisposition(CO
 inline bool CrossOriginOpenerPolicy::hasReportingEndpoint(COOPDisposition disposition) const
 {
     return !reportingEndpointForDisposition(disposition).isEmpty();
-}
-
-inline bool operator==(const CrossOriginOpenerPolicy& a, const CrossOriginOpenerPolicy& b)
-{
-    return a.value == b.value && a.reportOnlyValue == b.reportOnlyValue && a.reportingEndpoint == b.reportingEndpoint && a.reportOnlyReportingEndpoint == b.reportOnlyReportingEndpoint;
 }
 
 // https://html.spec.whatwg.org/multipage/origin.html#coop-enforcement-result
@@ -99,17 +96,3 @@ CrossOriginOpenerPolicy obtainCrossOriginOpenerPolicy(const ResourceResponse&);
 WEBCORE_EXPORT std::optional<CrossOriginOpenerPolicyEnforcementResult> doCrossOriginOpenerHandlingOfResponse(ReportingClient&, const ResourceResponse&, const std::optional<NavigationRequester>&, ContentSecurityPolicy* responseCSP, SandboxFlags effectiveSandboxFlags, const String& referrer, bool isDisplayingInitialEmptyDocument, const CrossOriginOpenerPolicyEnforcementResult& currentCoopEnforcementResult);
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::CrossOriginOpenerPolicyValue> {
-    using values = EnumValues<
-    WebCore::CrossOriginOpenerPolicyValue,
-    WebCore::CrossOriginOpenerPolicyValue::UnsafeNone,
-    WebCore::CrossOriginOpenerPolicyValue::SameOrigin,
-    WebCore::CrossOriginOpenerPolicyValue::SameOriginPlusCOEP,
-    WebCore::CrossOriginOpenerPolicyValue::SameOriginAllowPopups
-    >;
-};
-
-} // namespace WTF

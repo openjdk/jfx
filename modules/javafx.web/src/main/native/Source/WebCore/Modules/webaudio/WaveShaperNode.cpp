@@ -44,7 +44,7 @@ ExceptionOr<Ref<WaveShaperNode>> WaveShaperNode::create(BaseAudioContext& contex
     if (options.curve) {
         curve = Float32Array::tryCreate(options.curve->data(), options.curve->size());
         if (!curve)
-            return Exception { InvalidStateError, "Invalid curve parameter"_s };
+            return Exception { ExceptionCode::InvalidStateError, "Invalid curve parameter"_s };
     }
 
     auto node = adoptRef(*new WaveShaperNode(context));
@@ -77,7 +77,7 @@ ExceptionOr<void> WaveShaperNode::setCurveForBindings(RefPtr<Float32Array>&& cur
     ASSERT(isMainThread());
     DEBUG_LOG(LOGIDENTIFIER);
     if (curve && curve->length() < 2)
-        return Exception { InvalidStateError, "Length of curve array cannot be less than 2"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Length of curve array cannot be less than 2"_s };
 
     if (curve) {
         // The specification states that we should maintain an internal copy of the curve so that
@@ -90,10 +90,16 @@ ExceptionOr<void> WaveShaperNode::setCurveForBindings(RefPtr<Float32Array>&& cur
     return { };
 }
 
-Float32Array* WaveShaperNode::curveForBindings()
+RefPtr<Float32Array> WaveShaperNode::curveForBindings()
 {
     ASSERT(isMainThread());
-    return waveShaperProcessor()->curveForBindings();
+    RefPtr curve = waveShaperProcessor()->curveForBindings();
+    if (!curve)
+        return nullptr;
+
+    // Make a clone of our internal array so that JS cannot modify our internal array
+    // on the main thread while the audio thread is using it for rendering.
+    return Float32Array::create(curve->data(), curve->length());
 }
 
 static inline WaveShaperProcessor::OverSampleType processorType(OverSampleType type)

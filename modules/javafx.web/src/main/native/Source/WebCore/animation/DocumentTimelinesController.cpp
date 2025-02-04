@@ -41,6 +41,7 @@
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DocumentTimelinesController);
 
 DocumentTimelinesController::DocumentTimelinesController(Document& document)
     : m_document(document)
@@ -117,6 +118,9 @@ void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutio
         timelinesToUpdate.append(timeline.copyRef());
 
         for (auto& animation : copyToVector(timeline->relevantAnimations())) {
+            if (animation->isSkippedContentAnimation())
+                continue;
+
             if (animation->timeline() != timeline.ptr()) {
                 ASSERT(!animation->timeline());
                 continue;

@@ -22,8 +22,8 @@
 #pragma once
 
 #include "FilterEffectGeometry.h"
-#include "RenderSVGResourceFilter.h"
-#include "RenderSVGResourceFilterPrimitive.h"
+#include "LegacyRenderSVGResourceFilter.h"
+#include "LegacyRenderSVGResourceFilterPrimitive.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include <wtf/RefPtr.h>
@@ -97,5 +97,9 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGFilterPrimitiveStandardAttributes)
     static bool isType(const WebCore::SVGElement& element) { return element.isFilterEffect(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* svgElement = dynamicDowncast<WebCore::SVGElement>(node);
+        return svgElement && isType(*svgElement);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

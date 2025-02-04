@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -106,9 +106,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1initIDs
         if ((*env)->ExceptionCheck(env)) return;
     }
 
-    if (jViewNotifyKey == NULL)
+    if (jViewNotifyKeyAndReturnConsumed == NULL)
     {
-        jViewNotifyKey = (*env)->GetMethodID(env, jViewClass, "notifyKey", "(II[CI)V");
+        jViewNotifyKeyAndReturnConsumed = (*env)->GetMethodID(env, jViewClass, "notifyKeyAndReturnConsumed", "(II[CI)Z");
         if ((*env)->ExceptionCheck(env)) return;
     }
 
@@ -708,6 +708,27 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1enableInputMethodEven
     {
         NSView<GlassView> *view = getGlassView(env, ptr);
         [view setInputMethodEnabled:(enable==JNI_TRUE)];
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacView
+ * Method:    _finishInputMethodComposition
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1finishInputMethodComposition
+(JNIEnv *env, jobject jView, jlong ptr)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacView__1finishInputMethodComposition");
+    if (!ptr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        NSView<GlassView> *view = getGlassView(env, ptr);
+        [view finishInputMethodComposition];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

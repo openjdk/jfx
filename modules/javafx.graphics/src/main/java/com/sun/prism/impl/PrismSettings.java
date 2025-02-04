@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.prism.impl;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -68,7 +66,6 @@ public final class PrismSettings {
     public static final boolean disableRegionCaching;
     public static final boolean forcePow2;
     public static final boolean noClampToZero;
-    public static final boolean disableD3D9Ex;
     public static final boolean allowHiDPIScaling;
     public static final long maxVram;
     public static final long targetVram;
@@ -113,10 +110,7 @@ public final class PrismSettings {
     }
 
     static {
-        @SuppressWarnings("removal")
-        final Properties systemProperties =
-                (Properties) AccessController.doPrivileged(
-                        (PrivilegedAction) () -> System.getProperties());
+        final Properties systemProperties = System.getProperties();
 
         /* Vsync */
         isVsyncEnabled  = getBoolean(systemProperties, "prism.vsync", true)
@@ -137,7 +131,7 @@ public final class PrismSettings {
         dirtyRegionCount = Utils.clamp(0, getInt(systemProperties, "prism.dirtyregioncount", 6, null), 15);
 
         // Scrolling cache optimization
-        // Disabled as a workaround for RT-39755.
+        // Disabled as a workaround for JDK-8093860.
         scrollCacheOpt = getBoolean(systemProperties, "prism.scrollcacheopt", false);
 
         /* Dirty region optimizations */
@@ -302,7 +296,7 @@ public final class PrismSettings {
          * value. A value of <= 0 will disable this clamping, causing the
          * limit reported by the card to be used without modification.
          *
-         * See RT-21998. This is a workaround for the fact that we don't
+         * See JDK-8117239. This is a workaround for the fact that we don't
          * yet handle the case where a texture allocation fails during
          * rendering of a very large tiled image.
          */
@@ -325,8 +319,6 @@ public final class PrismSettings {
         disableRegionCaching = getBoolean(systemProperties,
                                           "prism.disableRegionCaching",
                                           false);
-
-        disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", false);
 
         disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
 

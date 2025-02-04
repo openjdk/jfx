@@ -55,9 +55,9 @@ void RenderBundleEncoderImpl::setIndexBuffer(const Buffer& buffer, IndexFormat i
     wgpuRenderBundleEncoderSetIndexBuffer(m_backing.get(), m_convertToBackingContext->convertToBacking(buffer), m_convertToBackingContext->convertToBacking(indexFormat), offset.value_or(0), size.value_or(WGPU_WHOLE_SIZE));
 }
 
-void RenderBundleEncoderImpl::setVertexBuffer(Index32 slot, const Buffer& buffer, std::optional<Size64> offset, std::optional<Size64> size)
+void RenderBundleEncoderImpl::setVertexBuffer(Index32 slot, const Buffer* buffer, std::optional<Size64> offset, std::optional<Size64> size)
 {
-    wgpuRenderBundleEncoderSetVertexBuffer(m_backing.get(), slot, m_convertToBackingContext->convertToBacking(buffer), offset.value_or(0), size.value_or(WGPU_WHOLE_SIZE));
+    wgpuRenderBundleEncoderSetVertexBuffer(m_backing.get(), slot, buffer ? m_convertToBackingContext->convertToBacking(*buffer) : nullptr, offset.value_or(0), size.value_or(WGPU_WHOLE_SIZE));
 }
 
 void RenderBundleEncoderImpl::draw(Size32 vertexCount, std::optional<Size32> instanceCount,
@@ -88,18 +88,16 @@ void RenderBundleEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindG
     std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets)
 {
     auto backingOffsets = valueOrDefault(dynamicOffsets);
-    wgpuRenderBundleEncoderSetBindGroup(m_backing.get(), index, m_convertToBackingContext->convertToBacking(bindGroup), backingOffsets.size(), backingOffsets.data());
+    wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(m_backing.get(), index, m_convertToBackingContext->convertToBacking(bindGroup), WTFMove(dynamicOffsets));
 }
 
-void RenderBundleEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
-    const uint32_t* dynamicOffsetsArrayBuffer,
-    size_t dynamicOffsetsArrayBufferLength,
-    Size64 dynamicOffsetsDataStart,
-    Size32 dynamicOffsetsDataLength)
+void RenderBundleEncoderImpl::setBindGroup(Index32, const BindGroup&,
+    const uint32_t*,
+    size_t,
+    Size64,
+    Size32)
 {
-    UNUSED_PARAM(dynamicOffsetsArrayBufferLength);
-    // FIXME: Use checked algebra.
-    wgpuRenderBundleEncoderSetBindGroup(m_backing.get(), index, m_convertToBackingContext->convertToBacking(bindGroup), dynamicOffsetsDataLength, dynamicOffsetsArrayBuffer + dynamicOffsetsDataStart);
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void RenderBundleEncoderImpl::pushDebugGroup(String&& groupLabel)

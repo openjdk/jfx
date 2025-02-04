@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package test.javafx.scene;
 import javafx.collections.ObservableList;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Group;
@@ -36,20 +37,20 @@ import javafx.scene.NodeShim;
 import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import test.com.sun.javafx.scene.StubNodeHelper;
 import test.com.sun.javafx.scene.StubParentHelper;
 
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 
 /**
- * Tests structural aspects of scene graph manipulation. See RT-4095.
+ * Tests structural aspects of scene graph manipulation. See JDK-8106612.
  *
  * The following notation is used in test names to indicate various
  * relationships:
@@ -69,20 +70,17 @@ import test.com.sun.javafx.scene.StubParentHelper;
  */
 
 public class StructureTest {
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     // TODO:
     //  - various nasty observableArrayList updates to Group.content and Scene.content.
     //  - various bind expressions.
 
-    /////////////////////////
+    //-----------------------
     // Setup and teardown. //
-    /////////////////////////
+    //-----------------------
 
-    //////////////////////
+    //--------------------
     // Helper Functions //
-    //////////////////////
+    //--------------------
 
     int occurs(Node child, ObservableList<Node> content) {
         int count = 0;
@@ -146,17 +144,17 @@ public class StructureTest {
         return root != scene.getRoot();
     }
 
-    /////////////////////////////////////
+    //-----------------------------------
     // Simple Structural Relationships //
-    /////////////////////////////////////
+    //-----------------------------------
 
     @Test
     public void testOrphan() {
         Node n = new StubNode();
 
-        assertNull("clipParent is null", NodeShim.getClipParent(n));
-        assertNull("parent is null", n.getParent());
-        assertNull("scene is null", n.getScene());
+        assertNull(NodeShim.getClipParent(n), "clipParent is null");
+        assertNull(n.getParent(), "parent is null");
+        assertNull(n.getScene(), "scene is null");
     }
 
     @Test
@@ -165,10 +163,10 @@ public class StructureTest {
         StubNode child = new StubNode();
         parent.setClip(child);
 
-        assertSame("parent.clip is child", child, parent.getClip());
-        assertSame("child.clipParent is parent", parent, NodeShim.getClipParent(child));
-        assertNull("child.parent is null", child.getParent());
-        assertNull("scene is null", child.getScene());
+        assertSame(child, parent.getClip(), "parent.clip is child");
+        assertSame(parent, NodeShim.getClipParent(child), "child.clipParent is parent");
+        assertNull(child.getParent(), "child.parent is null");
+        assertNull(child.getScene(), "scene is null");
     }
 
     @Test
@@ -176,11 +174,11 @@ public class StructureTest {
         StubNode child = new StubNode();
         Group group = new Group(child);
 
-        assertNull("group.clip is null", group.getClip());
-        assertTrue("isChild of group", isChild(child, group));
-        assertNull("child.clipParent is null", NodeShim.getClipParent(child));
-        assertSame("child.parent is parent", group, child.getParent());
-        assertNull("child.getScene() is null", child.getScene());
+        assertNull(group.getClip(), "group.clip is null");
+        assertTrue(isChild(child, group), "isChild of group");
+        assertNull(NodeShim.getClipParent(child), "child.clipParent is null");
+        assertSame(group, child.getParent(), "child.parent is parent");
+        assertNull(child.getScene(), "child.getScene() is null");
     }
 
     @Test
@@ -188,9 +186,9 @@ public class StructureTest {
         StubParent root = new StubParent();
         Scene scene = new Scene(root);
 
-        assertTrue("isChild of scene", isRoot(root, scene));
-        assertNull("child.clipParent is null", NodeShim.getClipParent(root));
-        assertSame("child.getScene() is scene", scene, root.getScene());
+        assertTrue(isRoot(root, scene), "isChild of scene");
+        assertNull(NodeShim.getClipParent(root), "child.clipParent is null");
+        assertSame(scene, root.getScene(), "child.getScene() is scene");
     }
 
     @Test
@@ -200,8 +198,8 @@ public class StructureTest {
         Scene scene = new Scene(group);
         ParentShim.getChildren(group).add(child);
 
-        assertSame("group.getScene() is scene", scene, group.getScene());
-        assertSame("child.getScene() is scene", scene, child.getScene());
+        assertSame(scene, group.getScene(), "group.getScene() is scene");
+        assertSame(scene, child.getScene(), "child.getScene() is scene");
     }
 
     @Test
@@ -212,59 +210,64 @@ public class StructureTest {
         ParentShim.getChildren(group).add(child);
 
 
-        assertSame("group.getScene() is scene", scene, group.getScene());
-        assertSame("child.getScene() is scene", scene, child.getScene());
+        assertSame(scene, group.getScene(), "group.getScene() is scene");
+        assertSame(scene, child.getScene(), "child.getScene() is scene");
     }
 
-    @Test public void testUnparentCL() {
+    @Test
+    public void testUnparentCL() {
         StubNode child = new StubNode();
         StubNode parent = new StubNode();
         parent.setClip(child);
         parent.setClip(null);
 
-        assertNull("parent.clip is null", parent.getClip());
-        assertNull("child.clipParent is null", NodeShim.getClipParent(child));
+        assertNull(parent.getClip(), "parent.clip is null");
+        assertNull(NodeShim.getClipParent(child), "child.clipParent is null");
     }
 
-    @Test public void testUnparentG() {
+    @Test
+    public void testUnparentG() {
         StubNode child = new StubNode();
         Group parent = new Group(child);
 
         ParentShim.getChildren(parent).remove(child);
 
 
-        assertEquals("parent.content is zero size", 0, ParentShim.getChildren(parent).size());
-        assertNull("child.parent is null", child.getParent());
+        assertEquals(0, ParentShim.getChildren(parent).size(), "parent.content is zero size");
+        assertNull(child.getParent(), "child.parent is null");
     }
 
-    ////////////////////////////////////
+    //----------------------------------
     // Illegal Structure Change Tests //
-    ////////////////////////////////////
+    //----------------------------------
 
     // Test attempts to switch from one part of the scene graph to another.
     // This is the cross product: {CL,CU,G,S}x{CL,CU,G,S} so there
     // are sixteen cases.
 
-    @Test public void testSwitchCLCL() {
+    @Test
+    public void testSwitchCLCL() {
         StubNode child = new StubNode();
         StubNode p1 = new StubNode();
         p1.setClip(child);
         StubNode p2 = new StubNode();
-        thrown.expect(IllegalArgumentException.class);
-        try {
-            p2.setClip(child);
-        } catch (final IllegalArgumentException e) {
-            assertSame("p1.clip is child", child, p1.getClip());
-            assertNull("p2.clip is null", p2.getClip());
-            assertSame("child.clipParent is p1",
-                       p1, NodeShim.getClipParent(child));
-            assertNull("child.parent is null", child.getParent());
-            assertNull("child.getScene() is null", child.getScene());
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            try {
+                p2.setClip(child);
+            } catch (final IllegalArgumentException e) {
+                assertSame(child, p1.getClip(), "p1.clip is child");
+                assertNull(p2.getClip(), "p2.clip is null");
+                assertSame(p1, NodeShim.getClipParent(child),
+                           "child.clipParent is p1");
+                assertNull(child.getParent(), "child.parent is null");
+                assertNull(child.getScene(), "child.getScene() is null");
+                throw e;
+            }
+        });
     }
 
-    @Test public void testSwitchCLG() {
+    @Test
+    public void testSwitchCLG() {
         StubNode child = new StubNode();
         StubNode p1 = new StubNode();
         p1.setClip(child);
@@ -277,15 +280,16 @@ public class StructureTest {
             // expected
         }
 
-        assertSame("p1.clip is child", child, p1.getClip());
-        assertNull("p2.clip is null", p2.getClip());
-        assertTrue("notChild of p2", notChild(child, p2));
-        assertSame("child.clipParent is p1", p1, NodeShim.getClipParent(child));
-        assertNull("child.parent is null", child.getParent());
-        assertNull("child.getScene() is null", child.getScene());
+        assertSame(child, p1.getClip(), "p1.clip is child");
+        assertNull(p2.getClip(), "p2.clip is null");
+        assertTrue(notChild(child, p2), "notChild of p2");
+        assertSame(p1, NodeShim.getClipParent(child), "child.clipParent is p1");
+        assertNull(child.getParent(), "child.parent is null");
+        assertNull(child.getScene(), "child.getScene() is null");
     }
 
-    @Test public void testSwitchCLS() {
+    @Test
+    public void testSwitchCLS() {
         StubParent clipNode = new StubParent();
         StubNode p1 = new StubNode();
         p1.setClip(clipNode);
@@ -295,127 +299,137 @@ public class StructureTest {
         } catch (Throwable t) {
             //expected
         }
-        assertSame("p1.clip is child", clipNode, p1.getClip());
-        assertSame("child.clipParent is p1", p1, NodeShim.getClipParent(clipNode));
-        assertNull("child.parent is null", clipNode.getParent());
-        assertNull("child.getScene() is null", clipNode.getScene());
+        assertSame(clipNode, p1.getClip(), "p1.clip is child");
+        assertSame(p1, NodeShim.getClipParent(clipNode), "child.clipParent is p1");
+        assertNull(clipNode.getParent(), "child.parent is null");
+        assertNull(clipNode.getScene(), "child.getScene() is null");
     }
 
-    @Test public void testSwitchGCL() {
+    @Test
+    public void testSwitchGCL() {
         StubNode child = new StubNode();
         Group p1 = new Group(child);
         StubNode p2 = new StubNode();
-        thrown.expect(IllegalArgumentException.class);
-        try {
-            p2.setClip(child);
-        } catch (final IllegalArgumentException e) {
-            assertNull("p1.clip is null", p1.getClip());
-            assertTrue("isChild of p1", isChild(child, p1));
-            assertNull("p2.clip is null", p2.getClip());
-            assertNull("child.clipParent is null", NodeShim.getClipParent(child));
-            assertSame("child.parent is p1", p1, child.getParent());
-            assertNull("child.getScene() is null", child.getScene());
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            try {
+                p2.setClip(child);
+            } catch (final IllegalArgumentException e) {
+                assertNull(p1.getClip(), "p1.clip is null");
+                assertTrue(isChild(child, p1), "isChild of p1");
+                assertNull(p2.getClip(), "p2.clip is null");
+                assertNull(NodeShim.getClipParent(child), "child.clipParent is null");
+                assertSame(p1, child.getParent(), "child.parent is p1");
+                assertNull(child.getScene(), "child.getScene() is null");
+                throw e;
+            }
+        });
     }
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST DISABLED
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST DISABLED
 
-//    @Test public void testSwitchGG() {
+//    @Test
+//    public void testSwitchGG() {
 //        var child = new StubNode();
 //        var p1 = Group { content: [ child ] };
 //        setHandler();
 //        var p2 = Group { content: [ child ] };
 //
-//        assertTrue("caught IllegalArgumentException", caught instanceof IllegalArgumentException);
-//        assertNull("p1.clip is null", p1.clip);
-//        assertTrue("isChild of p1", isChild(child, p1));
-//        assertNull("p2.clip is null", p2.clip);
-//        assertTrue("notChild of p2", notChild(child, p2));
-//        assertNull("child.clipParent is null", NodeShim.getClipParent(child));
-//        assertSame("child.parent is p1", p1, child.parent);
-//        assertNull("child.getScene() is null", child.getScene());
+//        assertTrue(caught instanceof IllegalArgumentException, "caught IllegalArgumentException");
+//        assertNull(p1.clip, "p1.clip is null");
+//        assertTrue(isChild(child, p1), "isChild of p1");
+//        assertNull(p2.clip, "p2.clip is null");
+//        assertTrue(notChild(child, p2), "notChild of p2");
+//        assertNull(NodeShim.getClipParent(child), "child.clipParent is null");
+//        assertSame(p1, child.parent, "child.parent is p1");
+//        assertNull(child.getScene(), "child.getScene() is null");
 //    }
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST DISABLED
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST DISABLED
 
-//    @Test public void testSwitchGS() {
+//    @Test
+//    public void testSwitchGS() {
 //        var child = new StubNode();
 //        var p1 = Group { content: [ child ] };
 //        setHandler();
 //        var p2 = Scene { content: [ child ] };
 //
-//        assertTrue("caught IllegalArgumentException", caught instanceof IllegalArgumentException);
-//        assertNull("p1.clip is null", p1.clip);
-//        assertTrue("isChild of p1", isChild(child, p1));
-//        assertTrue("notChild of p2", notChild(child, p2));
-//        assertNull("child.clipParent is null", NodeShim.getClipParent(child));
-//        assertSame("child.parent is p1", p1, child.parent);
-//        assertNull("child.getScene() is null", child.getScene());
+//        assertTrue(caught instanceof IllegalArgumentException, "caught IllegalArgumentException");
+//        assertNull(p1.clip, "p1.clip is null");
+//        assertTrue(isChild(child, p1), "isChild of p1");
+//        assertTrue(notChild(child, p2), "notChild of p2");
+//        assertNull(NodeShim.getClipParent(child), "child.clipParent is null");
+//        assertSame(p1, child.parent, "child.parent is p1");
+//        assertNull(child.getScene(), "child.getScene() is null");
 //    }
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST OF STOPGAP POLICY
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST OF STOPGAP POLICY
 
-    @Test public void testSwitchGGStopgap() {
+    @Test
+    public void testSwitchGGStopgap() {
         StubNode child = new StubNode();
         Group p1 = new Group(child);
         Group p2 = new Group(child);
 
-        assertTrue("notChild of p1", notChild(child, p1));
-        assertTrue("isChild of p2", isChild(child, p2));
-        assertSame("child.parent is p2", p2, child.getParent());
+        assertTrue(notChild(child, p1), "notChild of p1");
+        assertTrue(isChild(child, p2), "isChild of p2");
+        assertSame(p2, child.getParent(), "child.parent is p2");
     }
 
-    @Test public void testSwitchSCL() {
+    @Test
+    public void testSwitchSCL() {
         StubParent root = new StubParent();
         Scene scene = new Scene(root);
         StubNode p2 = new StubNode();
-        thrown.expect(IllegalArgumentException.class);
-        try {
-            p2.setClip(root);
-        } catch (final IllegalArgumentException e) {
-            assertTrue("isRoot of scene", isRoot(root, scene));
-            assertNull("p2.clip is null", p2.getClip());
-            assertNull("root.clipParent is null", NodeShim.getClipParent(root));
-            assertSame("root.getScene() is scene", scene, root.getScene());
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            try {
+                p2.setClip(root);
+            } catch (final IllegalArgumentException e) {
+                assertTrue(isRoot(root, scene), "isRoot of scene");
+                assertNull(p2.getClip(), "p2.clip is null");
+                assertNull(NodeShim.getClipParent(root), "root.clipParent is null");
+                assertSame(scene, root.getScene(), "root.getScene() is scene");
+                throw e;
+            }
+        });
     }
 
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST DISABLED
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST DISABLED
 
-//    @Test public void testSwitchSG() {
+//    @Test
+//    public void testSwitchSG() {
 //        var child = new StubNode();
 //        var p1 = Scene { content: [ child ] };
 //        setHandler();
 //        var p2 = Group { content: [ child ] };
 //
-//        assertTrue("caught IllegalArgumentException", caught instanceof IllegalArgumentException);
-//        assertTrue("isChild of p1", isChild(child, p1));
-//        assertNull("p2.clip is null", p2.clip);
-//        assertTrue("notChild of p2", notChild(child, p2));
-//        assertNull("child.clipParent is null", NodeShim.getClipParent(child));
-//        assertSame("child.parent is p1.impl_root", p1.impl_root, child.parent);
-//        assertSame("child.getScene() is p1", p1, child.getScene());
+//        assertTrue(caught instanceof IllegalArgumentException, "caught IllegalArgumentException");
+//        assertTrue(isChild(child, p1), "isChild of p1");
+//        assertNull(p2.clip, "p2.clip is null");
+//        assertTrue(notChild(child, p2), "notChild of p2");
+//        assertNull(NodeShim.getClipParent(child), "child.clipParent is null");
+//        assertSame(p1.impl_root, child.parent, "child.parent is p1.impl_root");
+//        assertSame(p1, child.getScene(), "child.getScene() is p1");
 //    }
 
-// TODO XXX TEMPORARY STOPGAP POLICY RT-4095 -- TEST DISABLED
+// TODO XXX TEMPORARY STOPGAP POLICY JDK-8106612 -- TEST DISABLED
 
-//    @Test public void testSwitchSS() {
+//    @Test
+//    public void testSwitchSS() {
 //        var child = new StubNode();
 //        var p1 = Scene { content: [ child ] };
 //        setHandler();
 //        var p2 = Scene { content: [ child ] };
 //
-//        assertTrue("isChild of p1", isChild(child, p1));
-//        assertTrue("notChild of p2", notChild(child, p2));
-//        assertNull("child.clipParent is null", NodeShim.getClipParent(child));
-//        assertSame("child.parent is p1.impl_root", p1.impl_root, child.parent);
-//        assertSame("child.getScene() is p1", p1, child.getScene());
+//        assertTrue(isChild(child, p1), "isChild of p1");
+//        assertTrue(notChild(child, p2), "notChild of p2");
+//        assertNull(NodeShim.getClipParent(child), "child.clipParent is null");
+//        assertSame(p1.impl_root, child.parent, "child.parent is p1.impl_root");
+//        assertSame(p1, child.getScene(), "child.getScene() is p1");
 //    }
 
-    @Test public void testGroupInsert() {
+    @Test
+    public void testGroupInsert() {
         StubNode n0 = new StubNode();
         n0.setId("n0");
         StubNode n1 = new StubNode();
@@ -432,15 +446,16 @@ public class StructureTest {
             // expected
         }
 
-        assertEquals("g.content is size 3", 3, ParentShim.getChildren(g).size());
-        assertSame("g.content[0] is n0", n0, ParentShim.getChildren(g).get(0));
-        assertSame("g.content[1] is n1", n1, ParentShim.getChildren(g).get(1));
-        assertSame("g.content[2] is n2", n2, ParentShim.getChildren(g).get(2));
+        assertEquals(3, ParentShim.getChildren(g).size(), "g.content is size 3");
+        assertSame(n0, ParentShim.getChildren(g).get(0), "g.content[0] is n0");
+        assertSame(n1, ParentShim.getChildren(g).get(1), "g.content[1] is n1");
+        assertSame(n2, ParentShim.getChildren(g).get(2), "g.content[2] is n2");
 
     }
 
 
-    @Test public void testGroupReplace1() {
+    @Test
+    public void testGroupReplace1() {
         StubNode n0 = new StubNode();
         n0.setId("n0");
         StubNode n1 = new StubNode();
@@ -460,12 +475,13 @@ public class StructureTest {
             // expected
         }
 
-        assertEquals("g.content is size 2", 2, ParentShim.getChildren(g).size());
-        assertSame("g.content[0] is n0", n0, ParentShim.getChildren(g).get(0));
-        assertSame("g.content[1] is n2", n2, ParentShim.getChildren(g).get(1));
+        assertEquals(2, ParentShim.getChildren(g).size(), "g.content is size 2");
+        assertSame(n0, ParentShim.getChildren(g).get(0), "g.content[0] is n0");
+        assertSame(n2, ParentShim.getChildren(g).get(1), "g.content[1] is n2");
     }
 
-    @Test public void testGroupReplace2() {
+    @Test
+    public void testGroupReplace2() {
         StubNode n0 = new StubNode();
         n0.setId("n0");
         StubNode n1 = new StubNode();
@@ -481,13 +497,14 @@ public class StructureTest {
             //Expected
         }
 
-        assertEquals("g.content is size 3", 3, ParentShim.getChildren(g).size());
-        assertSame("g.content[0] is n0", n0, ParentShim.getChildren(g).get(0));
-        assertSame("g.content[1] is n1", n1, ParentShim.getChildren(g).get(1));
-        assertSame("g.content[2] is n2", n2, ParentShim.getChildren(g).get(2));
+        assertEquals(3, ParentShim.getChildren(g).size(), "g.content is size 3");
+        assertSame(n0, ParentShim.getChildren(g).get(0), "g.content[0] is n0");
+        assertSame(n1, ParentShim.getChildren(g).get(1), "g.content[1] is n1");
+        assertSame(n2, ParentShim.getChildren(g).get(2), "g.content[2] is n2");
     }
 
-    @Test public void testGroupReplace3() {
+    @Test
+    public void testGroupReplace3() {
         StubNode n0 = new StubNode();
         n0.setId("n0");
         StubNode n1 = new StubNode();
@@ -498,15 +515,15 @@ public class StructureTest {
         ParentShim.getChildren(g).set(1, n1);
         ParentShim.getChildren(g).set(2, n2);
 
-        assertEquals("g.content is size 3", 3, ParentShim.getChildren(g).size());
-        assertSame("g.content[0] is n0", n0, ParentShim.getChildren(g).get(0));
-        assertSame("g.content[1] is n1", n1, ParentShim.getChildren(g).get(1));
-        assertSame("g.content[2] is n2", n2, ParentShim.getChildren(g).get(2));
+        assertEquals(3, ParentShim.getChildren(g).size(), "g.content is size 3");
+        assertSame(n0, ParentShim.getChildren(g).get(0), "g.content[0] is n0");
+        assertSame(n1, ParentShim.getChildren(g).get(1), "g.content[1] is n1");
+        assertSame(n2, ParentShim.getChildren(g).get(2), "g.content[2] is n2");
     }
 
-    ///////////////////////
+    //---------------------
     // Circularity Tests //
-    ///////////////////////
+    //---------------------
 
     // General form is: given an existing relationship of one kind, add
     // another relationship of some kind that would cause a circularity.
@@ -517,42 +534,47 @@ public class StructureTest {
 
     // Test only {CL,G}x{CL,G} for now.
 
-    @Test public void testCircularCLCL() {
+    @Test
+    public void testCircularCLCL() {
         StubNode node1 = new StubNode();
         StubNode node2 = new StubNode();
         node2.setClip(node1);
-        thrown.expect(IllegalArgumentException.class);
-        try {
-            node1.setClip(node2);
-        } catch (final IllegalArgumentException e) {
-            assertNull("node1.clip is null", node1.getClip());
-            assertSame("node1.clipParent is node2",
-                       node2,
-                       NodeShim.getClipParent(node1));
-            assertSame("node2.clip is node1", node1, node2.getClip());
-            assertNull("node2.clipParent is null", NodeShim.getClipParent(node2));
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            try {
+                node1.setClip(node2);
+            } catch (final IllegalArgumentException e) {
+                assertNull(node1.getClip(), "node1.clip is null");
+                assertSame(node2,
+                           NodeShim.getClipParent(node1),
+                           "node1.clipParent is node2");
+                assertSame(node1, node2.getClip(), "node2.clip is node1");
+                assertNull(NodeShim.getClipParent(node2), "node2.clipParent is null");
+                throw e;
+            }
+        });
     }
 
-    @Test public void testCircularCLG() {
+    @Test
+    public void testCircularCLG() {
         StubNode node1 = new StubNode();
         Group node2 = new Group(node1);
-        thrown.expect(IllegalArgumentException.class);
-        try {
-            node1.setClip(node2);
-        } catch (final IllegalArgumentException e) {
-            assertNull("node1.clip is null", node1.getClip());
-            assertNull("node1.clipParent is null", NodeShim.getClipParent(node1));
-            assertSame("node1.parent is node2", node2, node1.getParent());
-            assertNull("node2.clip is null", node2.getClip());
-            assertNull("node2.clipParent is null", NodeShim.getClipParent(node2));
-            assertTrue("node1 is child of node2", isChild(node1, node2));
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            try {
+                node1.setClip(node2);
+            } catch (final IllegalArgumentException e) {
+                assertNull(node1.getClip(), "node1.clip is null");
+                assertNull(NodeShim.getClipParent(node1), "node1.clipParent is null");
+                assertSame(node2, node1.getParent(), "node1.parent is node2");
+                assertNull(node2.getClip(), "node2.clip is null");
+                assertNull(NodeShim.getClipParent(node2), "node2.clipParent is null");
+                assertTrue(isChild(node1, node2), "node1 is child of node2");
+                throw e;
+            }
+        });
     }
 
-    @Test public void testCircularGCL() {
+    @Test
+    public void testCircularGCL() {
         Group node1 = new Group();
         StubNode node2 = new StubNode();
         node2.setClip(node1);
@@ -565,15 +587,16 @@ public class StructureTest {
             // expected
         }
 
-        assertNull("node1.clip is null", node1.getClip());
-        assertSame("node1.clipParent is node2", node2, NodeShim.getClipParent(node1));
-        assertTrue("node2 is not child of node1", notChild(node2, node1));
-        assertSame("node2.clip is node1", node1, node2.getClip());
-        assertNull("node2.clipParent is null", NodeShim.getClipParent(node2));
-        assertNull("node2.parent is null", node2.getParent());
+        assertNull(node1.getClip(), "node1.clip is null");
+        assertSame(node2, NodeShim.getClipParent(node1), "node1.clipParent is node2");
+        assertTrue(notChild(node2, node1), "node2 is not child of node1");
+        assertSame(node1, node2.getClip(), "node2.clip is node1");
+        assertNull(NodeShim.getClipParent(node2), "node2.clipParent is null");
+        assertNull(node2.getParent(), "node2.parent is null");
     }
 
-    @Test public void testCircularGG() {
+    @Test
+    public void testCircularGG() {
         Group node1 = new Group();
         Group node2 = new Group(node1);
 
@@ -585,25 +608,28 @@ public class StructureTest {
             // expected
         }
 
-        assertSame("node1.parent is node2", node2, node1.getParent());
-        assertTrue("node2 is not a child of node1", notChild(node2, node1));
-        assertNull("node2.parent is null", node2.getParent());
-        assertTrue("node1 is child of node2", isChild(node1, node2));
+        assertSame(node2, node1.getParent(), "node1.parent is node2");
+        assertTrue(notChild(node2, node1), "node2 is not a child of node1");
+        assertNull(node2.getParent(), "node2.parent is null");
+        assertTrue(isChild(node1, node2), "node1 is child of node2");
     }
 
-    @Test public void testCircularSelfCL() {
+    @Test
+    public void testCircularSelfCL() {
         StubNode node1 = new StubNode();
-        thrown.expect(IllegalArgumentException.class);
-        try {
-            node1.setClip(node1);
-        } catch (final IllegalArgumentException e) {
-            assertNull("node1.clip is null", node1.getClip());
-            assertNull("node1.clipParent is null", NodeShim.getClipParent(node1));
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            try {
+                node1.setClip(node1);
+            } catch (final IllegalArgumentException e) {
+                assertNull(node1.getClip(), "node1.clip is null");
+                assertNull(NodeShim.getClipParent(node1), "node1.clipParent is null");
+                throw e;
+            }
+        });
     }
 
-    @Test public void testCircularSelfG() {
+    @Test
+    public void testCircularSelfG() {
         Group node1 = new Group();
 
         ObservableList<Node> content = ParentShim.getChildren(node1);
@@ -614,13 +640,13 @@ public class StructureTest {
             // expected
         }
 
-        assertTrue("node1 is not a child of itself", notChild(node1, node1));
-        assertNull("node1.parent is null", node1.getParent());
+        assertTrue(notChild(node1, node1), "node1 is not a child of itself");
+        assertNull(node1.getParent(), "node1.parent is null");
     }
 
-    //////////////////////////
+    //------------------------
     // Bound Variable Tests //
-    //////////////////////////
+    //------------------------
 
     // Test various cases where a structure variable (Node.clip,
     // Group.content, Scene.content) is initialized to a bind-expression.
@@ -631,7 +657,8 @@ public class StructureTest {
     // don't test these cases for now.
 
 // FAILS:
-//    @Test public void testBindClip() {
+//    @Test
+//    public void testBindClip() {
 //        var c:Node = null;
 //        var p1 = StubNode { clip: bind c id: "p1" };
 //        var p2 = StubNode { clip: bind c id: "p2" };
@@ -646,14 +673,14 @@ public class StructureTest {
 //        println("c.clipParent = {c.getClipParent()}");
 //    }
 
-    ////////////////////
+    //------------------
     // Helper Classes //
-    ////////////////////
+    //------------------
 
     //
     // * A stub node that contains as little functionality as possible.
     // *
-    public static final class StubNode extends Node {
+    public static final class StubNode extends AbstractNode {
         static {
             StubNodeHelper.setStubNodeAccessor(new StubNodeHelper.StubNodeAccessor() {
                 @Override

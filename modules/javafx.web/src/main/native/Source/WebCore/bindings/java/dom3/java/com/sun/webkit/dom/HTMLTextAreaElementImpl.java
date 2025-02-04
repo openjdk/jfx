@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,16 +61,19 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
     }
     native static void setDirNameImpl(long peer, String value);
 
+    @Override
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
     native static boolean getDisabledImpl(long peer);
 
+    @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
     native static void setDisabledImpl(long peer, boolean value);
 
+    @Override
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
@@ -86,11 +89,13 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
     }
     native static void setMaxLengthImpl(long peer, int value);
 
+    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
+    @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
@@ -106,11 +111,13 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
     }
     native static void setPlaceholderImpl(long peer, String value);
 
+    @Override
     public boolean getReadOnly() {
         return getReadOnlyImpl(getPeer());
     }
     native static boolean getReadOnlyImpl(long peer);
 
+    @Override
     public void setReadOnly(boolean value) {
         setReadOnlyImpl(getPeer(), value);
     }
@@ -126,21 +133,25 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
     }
     native static void setRequiredImpl(long peer, boolean value);
 
+    @Override
     public int getRows() {
         return getRowsImpl(getPeer());
     }
     native static int getRowsImpl(long peer);
 
+    @Override
     public void setRows(int value) {
         setRowsImpl(getPeer(), value);
     }
     native static void setRowsImpl(long peer, int value);
 
+    @Override
     public int getCols() {
         return getColsImpl(getPeer());
     }
     native static int getColsImpl(long peer);
 
+    @Override
     public void setCols(int value) {
         setColsImpl(getPeer(), value);
     }
@@ -156,26 +167,31 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
     }
     native static void setWrapImpl(long peer, String value);
 
+    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
+    @Override
     public String getDefaultValue() {
         return getDefaultValueImpl(getPeer());
     }
     native static String getDefaultValueImpl(long peer);
 
+    @Override
     public void setDefaultValue(String value) {
         setDefaultValueImpl(getPeer(), value);
     }
     native static void setDefaultValueImpl(long peer, String value);
 
+    @Override
     public String getValue() {
         return getValueImpl(getPeer());
     }
     native static String getValueImpl(long peer);
 
+    @Override
     public void setValue(String value) {
         setValueImpl(getPeer(), value);
     }
@@ -231,11 +247,13 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
     }
     native static void setSelectionDirectionImpl(long peer, String value);
 
+    @Override
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
     native static String getAccessKeyImpl(long peer);
 
+    @Override
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }
@@ -269,6 +287,7 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
         , String error);
 
 
+    @Override
     public void select()
     {
         selectImpl(getPeer());

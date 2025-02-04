@@ -198,6 +198,8 @@ inline CapabilityLevel canCompile(Node* node)
     case TailCallForwardVarargsInlinedCaller:
     case ConstructForwardVarargs:
     case CallWasm:
+    case CallCustomAccessorGetter:
+    case CallCustomAccessorSetter:
     case VarargsLength:
     case LoadVarargs:
     case ValueToInt32:
@@ -363,6 +365,8 @@ inline CapabilityLevel canCompile(Node* node)
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
     case NewRegexp:
+    case NewMap:
+    case NewSet:
     case StringReplace:
     case StringReplaceRegExp:
     case StringReplaceString:
@@ -404,6 +408,8 @@ inline CapabilityLevel canCompile(Node* node)
     case ArrayPop:
     case ArrayPush:
     case ParseInt:
+    case ToIntegerOrInfinity:
+    case ToLength:
     case AtomicsAdd:
     case AtomicsAnd:
     case AtomicsCompareExchange:

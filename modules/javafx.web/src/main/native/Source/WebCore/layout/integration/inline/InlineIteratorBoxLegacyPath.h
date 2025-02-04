@@ -58,6 +58,13 @@ public:
 
     bool hasHyphen() const { return inlineTextBox()->hasHyphen(); }
     StringView originalText() const { return StringView(inlineTextBox()->renderer().text()).substring(inlineTextBox()->start(), inlineTextBox()->len()); }
+    size_t lineIndex() const
+    {
+        size_t precedingLines = 0;
+        for (auto* rootBox = rootInlineBox().prevRootBox(); rootBox; rootBox = rootBox->prevRootBox())
+            ++precedingLines;
+        return precedingLines;
+    }
     unsigned start() const { return inlineTextBox()->start(); }
     unsigned end() const { return inlineTextBox()->end(); }
     unsigned length() const { return inlineTextBox()->len(); }
@@ -129,7 +136,7 @@ public:
     TextDirection direction() const { return bidiLevel() % 2 ? TextDirection::RTL : TextDirection::LTR; }
     bool isFirstLine() const { return !rootInlineBox().prevRootBox(); }
 
-    bool operator==(const BoxLegacyPath& other) const { return m_inlineBox == other.m_inlineBox; }
+    friend bool operator==(BoxLegacyPath, BoxLegacyPath) = default;
 
     bool atEnd() const { return !m_inlineBox; }
 

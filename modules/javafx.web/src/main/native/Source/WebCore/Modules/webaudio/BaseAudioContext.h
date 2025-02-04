@@ -118,8 +118,7 @@ public:
     float sampleRate() const { return destination().sampleRate(); }
 
     // Asynchronous audio file data decoding.
-    void decodeAudioData(Ref<JSC::ArrayBuffer>&&, RefPtr<AudioBufferCallback>&&, RefPtr<AudioBufferCallback>&&);
-    void decodeAudioData(Ref<JSC::ArrayBuffer>&&, RefPtr<AudioBufferCallback>&&, RefPtr<AudioBufferCallback>&&, std::optional<Ref<DeferredPromise>>&&);
+    void decodeAudioData(Ref<JSC::ArrayBuffer>&&, RefPtr<AudioBufferCallback>&&, RefPtr<AudioBufferCallback>&&, Ref<DeferredPromise>&&);
 
     AudioListener& listener() { return m_listener; }
 
@@ -162,6 +161,10 @@ public:
     // We schedule deletion of all marked nodes at the end of each realtime render quantum.
     void markForDeletion(AudioNode&);
     void deleteMarkedNodes();
+    // In some cases, a node marked for deletion may get ref'd. We need to make sure we no
+    // longer mark the node for deletion or it may get deleted while someone is holding a
+    // Ref / RefPtr to it.
+    void unmarkForDeletion(AudioNode&);
 
     void addTailProcessingNode(AudioNode&);
     void removeTailProcessingNode(AudioNode&);
@@ -248,6 +251,10 @@ protected:
 
     void clear();
 
+protected:
+    // Only accessed when the graph lock is held.
+    const Vector<AudioConnectionRefPtr<AudioNode>>& referencedSourceNodes() const { return m_referencedSourceNodes; }
+
 private:
     void scheduleNodeDeletion();
     void workletIsReady();
@@ -317,7 +324,7 @@ private:
         TailProcessingNode& operator=(const TailProcessingNode&) = delete;
         TailProcessingNode& operator=(TailProcessingNode&&) = delete;
         AudioNode* operator->() const { return m_node.get(); }
-        bool operator==(const TailProcessingNode& other) const { return m_node == other.m_node; }
+        friend bool operator==(const TailProcessingNode&, const TailProcessingNode&) = default;
         bool operator==(const AudioNode& node) const { return m_node == &node; }
     private:
         RefPtr<AudioNode> m_node;

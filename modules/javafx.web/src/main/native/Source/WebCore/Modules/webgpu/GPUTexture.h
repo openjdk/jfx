@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
+#include "GPUIntegralTypes.h"
+#include "GPUTextureDimension.h"
 #include "GPUTextureFormat.h"
 #include "WebGPUTexture.h"
 #include <optional>
@@ -34,20 +37,23 @@
 
 namespace WebCore {
 
+class GPUDevice;
 class GPUTextureView;
+
+struct GPUTextureDescriptor;
 struct GPUTextureViewDescriptor;
 
 class GPUTexture : public RefCounted<GPUTexture> {
 public:
-    static Ref<GPUTexture> create(Ref<WebGPU::Texture>&& backing, GPUTextureFormat format)
+    static Ref<GPUTexture> create(Ref<WebGPU::Texture>&& backing, const GPUTextureDescriptor& descriptor, const GPUDevice& device)
     {
-        return adoptRef(*new GPUTexture(WTFMove(backing), format));
+        return adoptRef(*new GPUTexture(WTFMove(backing), descriptor, device));
     }
 
     String label() const;
     void setLabel(String&&);
 
-    Ref<GPUTextureView> createView(const std::optional<GPUTextureViewDescriptor>&) const;
+    ExceptionOr<Ref<GPUTextureView>> createView(const std::optional<GPUTextureViewDescriptor>&) const;
 
     void destroy();
 
@@ -55,15 +61,33 @@ public:
     const WebGPU::Texture& backing() const { return m_backing; }
     GPUTextureFormat format() const { return m_format; }
 
+    GPUIntegerCoordinateOut width() const;
+    GPUIntegerCoordinateOut height() const;
+    GPUIntegerCoordinateOut depthOrArrayLayers() const;
+    GPUIntegerCoordinateOut mipLevelCount() const;
+    GPUSize32Out sampleCount() const;
+    GPUTextureDimension dimension() const;
+    GPUFlagsConstant usage() const;
+
+    virtual ~GPUTexture();
 private:
-    GPUTexture(Ref<WebGPU::Texture>&& backing, GPUTextureFormat format)
-        : m_backing(WTFMove(backing))
-        , m_format(format)
-    {
-    }
+    GPUTexture(Ref<WebGPU::Texture>&&, const GPUTextureDescriptor&, const GPUDevice&);
+
+    GPUTexture(const GPUTexture&) = delete;
+    GPUTexture(GPUTexture&&) = delete;
+    GPUTexture& operator=(const GPUTexture&) = delete;
+    GPUTexture& operator=(GPUTexture&&) = delete;
 
     Ref<WebGPU::Texture> m_backing;
-    GPUTextureFormat m_format;
+    const GPUTextureFormat m_format;
+    const GPUIntegerCoordinateOut m_width;
+    const GPUIntegerCoordinateOut m_height;
+    const GPUIntegerCoordinateOut m_depthOrArrayLayers;
+    const GPUIntegerCoordinateOut m_mipLevelCount;
+    const GPUSize32Out m_sampleCount;
+    const GPUTextureDimension m_dimension;
+    const GPUFlagsConstant m_usage;
+    Ref<const GPUDevice> m_device;
 };
 
 }

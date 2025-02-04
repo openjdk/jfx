@@ -2,7 +2,8 @@
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2001 Tobias Anton (anton@stud.fbi.fh-darmstadt.de)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2017 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -56,7 +57,6 @@ public:
 
         // Legacy.
         AtomString keyIdentifier;
-        std::optional<unsigned> keyLocation;
         unsigned charCode;
         unsigned keyCode;
         unsigned which;
@@ -68,7 +68,7 @@ public:
 
     WEBCORE_EXPORT void initKeyboardEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&,
         const AtomString& keyIdentifier, unsigned location,
-        bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey = false);
+        bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
 
     const String& key() const { return m_key; }
     const String& code() const { return m_code; }
@@ -84,7 +84,7 @@ public:
 
     EventInterface eventInterface() const final;
     bool isKeyboardEvent() const final;
-    int which() const final;
+    unsigned which() const final;
 
     bool isComposing() const { return m_isComposing; }
 

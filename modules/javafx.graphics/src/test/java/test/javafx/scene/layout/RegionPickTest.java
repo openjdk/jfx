@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,15 +36,16 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import org.junit.Before;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for Region picking. By default, Region has pickOnBounds set to true, so picking
  * anything within the bounds of the region will return true, anything outside the bounds
- * false. However, due to RT-25066, the bounds of a region defined by a shape will be 0x0,
+ * false. However, due to JDK-8088149, the bounds of a region defined by a shape will be 0x0,
  * in which case it will never be picked.
  *
  * If pickOnBounds is false, then an entire different code path is executed. We don't care
@@ -70,7 +71,8 @@ public class RegionPickTest {
 
     private Region region;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         region = new Region();
         region.resizeRelocate(X, Y, WIDTH, HEIGHT);
         region.setPickOnBounds(false);
@@ -84,7 +86,8 @@ public class RegionPickTest {
      *                                                                        *
      *************************************************************************/
 
-    @Test public void pickingNormalRegion() {
+    @Test
+    public void pickingNormalRegion() {
         region.setPickOnBounds(true);
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
         assertFalse(region.contains(CENTER_X, ABOVE));
@@ -100,7 +103,8 @@ public class RegionPickTest {
      *                                                                        *
      *************************************************************************/
 
-    @Test public void pickingEmptyRegionDoesNotWork() {
+    @Test
+    public void pickingEmptyRegionDoesNotWork() {
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
         assertFalse(region.contains(CENTER_X, ABOVE));
         assertFalse(region.contains(RIGHT_OF, CENTER_Y));
@@ -115,7 +119,8 @@ public class RegionPickTest {
      *                                                                        *
      *************************************************************************/
 
-    @Test public void pickingRectangularFillWorks() {
+    @Test
+    public void pickingRectangularFillWorks() {
         region.setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, Insets.EMPTY)));
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
         assertFalse(region.contains(CENTER_X, ABOVE));
@@ -124,7 +129,8 @@ public class RegionPickTest {
         assertTrue(region.contains(CENTER_X, CENTER_Y));
     }
 
-    @Test public void pickingRectangularFillWithInsetsWorks() {
+    @Test
+    public void pickingRectangularFillWithInsetsWorks() {
         // With insets of 10, we ought to not pick inside the region until we get to position 10
         region.setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, new Insets(10))));
         assertFalse(region.contains(X + 9, CENTER_Y));
@@ -138,7 +144,8 @@ public class RegionPickTest {
         assertTrue(region.contains(CENTER_X, CENTER_Y));
     }
 
-    @Test public void pickingRectangularFillWithUniformRadiusWorks() {
+    @Test
+    public void pickingRectangularFillWithUniformRadiusWorks() {
         region.setBackground(new Background(new BackgroundFill(Color.RED, new CornerRadii(10), Insets.EMPTY)));
         // Check points in the top-left corner area
         assertTrue(region.contains(X, Y + 10));
@@ -168,7 +175,8 @@ public class RegionPickTest {
         assertTrue(region.contains(CENTER_X, CENTER_Y));
     }
 
-    @Test public void pickingRectangularFillWithUniformRadiusWithInsetsWorks() {
+    @Test
+    public void pickingRectangularFillWithUniformRadiusWithInsetsWorks() {
         region.setBackground(new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10))));
         // Check points in the top-left corner area
         assertTrue(region.contains(X + 10, Y + 20));
@@ -199,7 +207,8 @@ public class RegionPickTest {
     }
 
     // test with really really large corner radius
-    @Test public void pickingRectangularFillWithUniformVERYLARGERadiusWorks() {
+    @Test
+    public void pickingRectangularFillWithUniformVERYLARGERadiusWorks() {
         region.setBackground(new Background(new BackgroundFill(Color.RED, new CornerRadii(10000000), Insets.EMPTY)));
         // This produces an effective radius of 50 due to my width/height being 100x100
         // Check points in the top-left corner area
@@ -230,7 +239,8 @@ public class RegionPickTest {
         assertTrue(region.contains(CENTER_X, CENTER_Y));
     }
 
-    @Test public void pickingRectangularFillWithIndependentRadiusWorks() {
+    @Test
+    public void pickingRectangularFillWithIndependentRadiusWorks() {
         region.setBackground(new Background(new BackgroundFill(Color.RED, new CornerRadii(1, 2, 3, 4, false),
                                                                Insets.EMPTY)));
         // Check points in the top-left corner area
@@ -261,7 +271,8 @@ public class RegionPickTest {
         assertTrue(region.contains(CENTER_X, CENTER_Y));
     }
 
-    @Test public void pickingRectangularFillWithIndependentRadiusWorks2() {
+    @Test
+    public void pickingRectangularFillWithIndependentRadiusWorks2() {
         region.setBackground(new Background(new BackgroundFill(Color.RED,
             new CornerRadii(1, 2, 3, 4, 5, 6, 7, 8, false, false, false, false, false, false, false, false),
             Insets.EMPTY)));
@@ -293,7 +304,8 @@ public class RegionPickTest {
         assertTrue(region.contains(CENTER_X, CENTER_Y));
     }
 
-    @Test public void pickingRectangularFillWithIndependentRadiusWithInsetsWorks() {
+    @Test
+    public void pickingRectangularFillWithIndependentRadiusWithInsetsWorks() {
         region.setBackground(new Background(new BackgroundFill(Color.RED,
             new CornerRadii(1, 2, 3, 4, 5, 6, 7, 8, false, false, false, false, false, false, false, false),
             new Insets(4, 3, 2, 1))));
@@ -334,7 +346,8 @@ public class RegionPickTest {
      *                                                                        *
      *************************************************************************/
 
-    @Test public void pickingRectangularBorderWorks() {
+    @Test
+    public void pickingRectangularBorderWorks() {
         region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY,
                                                      new BorderWidths(1))));
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
@@ -345,7 +358,8 @@ public class RegionPickTest {
         assertFalse(region.contains(CENTER_X, CENTER_Y));
     }
 
-    @Test public void pickingRectangularBorderWithThickBorder() {
+    @Test
+    public void pickingRectangularBorderWithThickBorder() {
         region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY,
                                                      new BorderWidths(10))));
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
@@ -359,7 +373,8 @@ public class RegionPickTest {
         assertFalse(region.contains(X+10, Y+10));
     }
 
-    @Test public void pickingRectangularBorderWithIndependentBorderWidths() {
+    @Test
+    public void pickingRectangularBorderWithIndependentBorderWidths() {
         region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY,
                                                      new BorderWidths(5, 10, 15, 20))));
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
@@ -389,7 +404,8 @@ public class RegionPickTest {
         assertFalse(region.contains(X + 20, CENTER_Y));
     }
 
-    @Test public void pickingRectangularBorderWithIndependentPercentageBorderWidths() {
+    @Test
+    public void pickingRectangularBorderWithIndependentPercentageBorderWidths() {
         region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY,
                                                      new BorderWidths(.05, .10, .15, .20, true, true, true, true))));
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
@@ -419,7 +435,8 @@ public class RegionPickTest {
         assertFalse(region.contains(X + 20, CENTER_Y));
     }
 
-    @Test public void pickingRectangularBorderWithIndependentBorderWidthsAndInsets() {
+    @Test
+    public void pickingRectangularBorderWithIndependentBorderWidthsAndInsets() {
         region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY,
                                                      new BorderWidths(5, 10, 15, 20), new Insets(1, 2, 3, 4))));
         // Top. Test first and last pixels, and one-past
@@ -447,7 +464,8 @@ public class RegionPickTest {
         assertFalse(region.contains(X+4 + 20, CENTER_Y));
     }
 
-    @Test public void pickingRectangularBorderWithIndependentRadiusWithInsetsWorks() {
+    @Test
+    public void pickingRectangularBorderWithIndependentRadiusWithInsetsWorks() {
         region.setBorder(new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID,
             new CornerRadii(1, 2, 3, 4, 5, 6, 7, 8, false, false, false, false, false, false, false, false),
             new BorderWidths(5, 10, 15, 20), new Insets(4, 3, 2, 1))));
@@ -480,7 +498,8 @@ public class RegionPickTest {
         // TODO Could stand to have more tests testing the inside hit edge
     }
 
-    @Test public void pickingRectangularBorderWithIndependentPercentageRadiusWithInsetsWorks() {
+    @Test
+    public void pickingRectangularBorderWithIndependentPercentageRadiusWithInsetsWorks() {
         region.setBorder(new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID,
             new CornerRadii(.01, .02, .03, .04, .05, .06, .07, .08, true, true, true, true, true, true, true, true),
             new BorderWidths(5, 10, 15, 20), new Insets(4, 3, 2, 1))));
@@ -530,7 +549,8 @@ public class RegionPickTest {
     }
 
 
-    @Test public void pickingSimpleShape() {
+    @Test
+    public void pickingSimpleShape() {
         region.setPickOnBounds(false);
         region.setScaleShape(false);
         region.setCenterShape(false);
@@ -552,7 +572,8 @@ public class RegionPickTest {
 
     }
 
-    @Test public void pickingCenteredShape() {
+    @Test
+    public void pickingCenteredShape() {
         region.setPickOnBounds(false);
         region.setScaleShape(false);
         region.setCenterShape(true);
@@ -575,7 +596,8 @@ public class RegionPickTest {
 
     }
 
-    @Test public void pickingScaledShape() {
+    @Test
+    public void pickingScaledShape() {
         region.setPickOnBounds(false);
         region.setScaleShape(true);
         region.setCenterShape(false);
@@ -607,7 +629,8 @@ public class RegionPickTest {
 
     }
 
-    @Test public void pickingScaledAndCenteredShape() {
+    @Test
+    public void pickingScaledAndCenteredShape() {
         region.setPickOnBounds(false);
         region.setScaleShape(true);
         region.setCenterShape(true);

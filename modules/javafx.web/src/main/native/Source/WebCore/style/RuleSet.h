@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "CSSSelectorList.h"
 #include "MediaQuery.h"
 #include "RuleData.h"
 #include "RuleFeature.h"
@@ -91,7 +92,7 @@ public:
     const RuleDataVector* classRules(const AtomString& key) const { return m_classRules.get(key); }
     const RuleDataVector* attributeRules(const AtomString& key, bool isHTMLName) const;
     const RuleDataVector* tagRules(const AtomString& key, bool isHTMLName) const;
-    const RuleDataVector* shadowPseudoElementRules(const AtomString& key) const { return m_shadowPseudoElementRules.get(key); }
+    const RuleDataVector* userAgentPartRules(const AtomString& key) const { return m_userAgentPartRules.get(key); }
     const RuleDataVector* linkPseudoClassRules() const { return &m_linkPseudoClassRules; }
 #if ENABLE(VIDEO)
     const RuleDataVector& cuePseudoRules() const { return m_cuePseudoRules; }
@@ -107,7 +108,7 @@ public:
     unsigned ruleCount() const { return m_ruleCount; }
 
     bool hasAttributeRules() const { return !m_attributeLocalNameRules.isEmpty(); }
-    bool hasShadowPseudoElementRules() const { return !m_shadowPseudoElementRules.isEmpty(); }
+    bool hasUserAgentPartRules() const { return !m_userAgentPartRules.isEmpty(); }
     bool hasHostPseudoClassRulesMatchingInShadowTree() const { return m_hasHostPseudoClassRulesMatchingInShadowTree; }
 
     static constexpr auto cascadeLayerPriorityForPresentationalHints = std::numeric_limits<CascadeLayerPriority>::min();
@@ -118,6 +119,9 @@ public:
     bool hasContainerQueries() const { return !m_containerQueries.isEmpty(); }
     Vector<const CQ::ContainerQuery*> containerQueriesFor(const RuleData&) const;
 
+    bool hasScopeRules() const { return !m_scopeRules.isEmpty(); }
+    Vector<Ref<const StyleRuleScope>> scopeRulesFor(const RuleData&) const;
+
 private:
     friend class RuleSetBuilder;
 
@@ -125,8 +129,9 @@ private:
 
     using CascadeLayerIdentifier = unsigned;
     using ContainerQueryIdentifier = unsigned;
+    using ScopeRuleIdentifier = unsigned;
 
-    void addRule(RuleData&&, CascadeLayerIdentifier, ContainerQueryIdentifier);
+    void addRule(RuleData&&, CascadeLayerIdentifier, ContainerQueryIdentifier, ScopeRuleIdentifier);
 
     struct ResolverMutatingRule {
         Ref<StyleRuleBase> rule;
@@ -150,6 +155,11 @@ private:
     CascadeLayer& cascadeLayerForIdentifier(CascadeLayerIdentifier identifier) { return m_cascadeLayers[identifier - 1]; }
     const CascadeLayer& cascadeLayerForIdentifier(CascadeLayerIdentifier identifier) const { return m_cascadeLayers[identifier - 1]; }
     CascadeLayerPriority cascadeLayerPriorityForIdentifier(CascadeLayerIdentifier) const;
+
+    struct ScopeAndParent {
+        Ref<const StyleRuleScope> scopeRule;
+        ScopeRuleIdentifier parent;
+    };
 
     struct ContainerQueryAndParent {
         Ref<StyleRuleContainer> containerRule;
@@ -177,7 +187,7 @@ private:
     AtomRuleMap m_attributeLowercaseLocalNameRules;
     AtomRuleMap m_tagLocalNameRules;
     AtomRuleMap m_tagLowercaseLocalNameRules;
-    AtomRuleMap m_shadowPseudoElementRules;
+    AtomRuleMap m_userAgentPartRules;
     RuleDataVector m_linkPseudoClassRules;
 #if ENABLE(VIDEO)
     RuleDataVector m_cuePseudoRules;
@@ -201,6 +211,10 @@ private:
 
     Vector<ContainerQueryAndParent> m_containerQueries;
     Vector<ContainerQueryIdentifier> m_containerQueryIdentifierForRulePosition;
+
+    // @scope
+    Vector<ScopeAndParent> m_scopeRules;
+    Vector<ScopeRuleIdentifier> m_scopeRuleIdentifierForRulePosition;
 
     bool m_hasHostPseudoClassRulesMatchingInShadowTree { false };
     bool m_hasViewportDependentMediaQueries { false };

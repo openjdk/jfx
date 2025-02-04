@@ -78,7 +78,7 @@
 namespace WebCore {
 namespace SelectorCompiler {
 
-using PseudoClassesSet = HashSet<CSSSelector::PseudoClassType, IntHash<CSSSelector::PseudoClassType>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClassType>>;
+using PseudoClassesSet = HashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>>;
 
 #if ENABLE(SELECTOR_OPERATION_STATS)
 
@@ -107,11 +107,9 @@ using PseudoClassesSet = HashSet<CSSSelector::PseudoClassType, IntHash<CSSSelect
     v(operationIsValid) \
     v(operationIsWindowInactive) \
     v(operationMatchesFullscreenPseudoClass) \
-    v(operationMatchesWebkitFullScreenPseudoClass) \
-    v(operationMatchesFullScreenDocumentPseudoClass) \
-    v(operationMatchesFullScreenAncestorPseudoClass) \
-    v(operationMatchesFullScreenAnimatingFullScreenTransitionPseudoClass) \
-    v(operationMatchesFullScreenControlsHiddenPseudoClass) \
+    v(operationMatchesFullscreenDocumentPseudoClass) \
+    v(operationMatchesAnimatingFullscreenTransitionPseudoClass) \
+    v(operationMatchesInWindowFullScreenPseudoClass) \
     v(operationMatchesPictureInPicturePseudoClass) \
     v(operationMatchesFutureCuePseudoClass) \
     v(operationMatchesPastCuePseudoClass) \
@@ -258,11 +256,11 @@ static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesDir, bool,
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesLangPseudoClass, bool, (const Element&, const FixedVector<PossiblyQuotedIdentifier>&));
 #if ENABLE(FULLSCREEN_API)
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFullscreenPseudoClass, bool, (const Element&));
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesWebkitFullScreenPseudoClass, bool, (const Element&));
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFullScreenDocumentPseudoClass, bool, (const Element&));
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFullScreenAncestorPseudoClass, bool, (const Element&));
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFullScreenAnimatingFullScreenTransitionPseudoClass, bool, (const Element&));
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFullScreenControlsHiddenPseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFullscreenDocumentPseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesAnimatingFullscreenTransitionPseudoClass, bool, (const Element&));
+#if ENABLE(VIDEO)
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesInWindowFullScreenPseudoClass, bool, (const Element&));
+#endif
 #endif
 #if ENABLE(PICTURE_IN_PICTURE_API)
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesPictureInPicturePseudoClass, bool, (const Element&));
@@ -650,21 +648,21 @@ void compileSelector(CompiledSelector& compiledSelector, const CSSSelector* sele
     ASSERT(compiledSelector.status != SelectorCompilationStatus::NotCompiled);
 }
 
-static inline FragmentRelation fragmentRelationForSelectorRelation(CSSSelector::RelationType relation)
+static inline FragmentRelation fragmentRelationForSelectorRelation(CSSSelector::Relation relation)
 {
     switch (relation) {
-    case CSSSelector::RelationType::DescendantSpace:
+    case CSSSelector::Relation::DescendantSpace:
         return FragmentRelation::Descendant;
-    case CSSSelector::RelationType::Child:
+    case CSSSelector::Relation::Child:
         return FragmentRelation::Child;
-    case CSSSelector::RelationType::DirectAdjacent:
+    case CSSSelector::Relation::DirectAdjacent:
         return FragmentRelation::DirectAdjacent;
-    case CSSSelector::RelationType::IndirectAdjacent:
+    case CSSSelector::Relation::IndirectAdjacent:
         return FragmentRelation::IndirectAdjacent;
-    case CSSSelector::RelationType::Subselector:
-    case CSSSelector::RelationType::ShadowDescendant:
-    case CSSSelector::RelationType::ShadowPartDescendant:
-    case CSSSelector::RelationType::ShadowSlotted:
+    case CSSSelector::Relation::Subselector:
+    case CSSSelector::Relation::ShadowDescendant:
+    case CSSSelector::Relation::ShadowPartDescendant:
+    case CSSSelector::Relation::ShadowSlotted:
         ASSERT_NOT_REACHED();
     }
     ASSERT_NOT_REACHED();
@@ -695,7 +693,7 @@ static inline FunctionType addPseudoElementPseudoClassType(const CSSSelector&, S
 }
 
 // Handle the forward :nth-child() and backward :nth-last-child().
-static FunctionType addNthChildType(const CSSSelector& selector, SelectorContext selectorContext, FragmentPositionInRootFragments positionInRootFragments, CSSSelector::PseudoClassType firstMatchAlternative, bool visitedMatchEnabled, Vector<std::pair<int, int>, 2>& simpleCases, Vector<NthChildOfSelectorInfo>& filteredCases, PseudoClassesSet& pseudoClasses)
+static FunctionType addNthChildType(const CSSSelector& selector, SelectorContext selectorContext, FragmentPositionInRootFragments positionInRootFragments, CSSSelector::PseudoClass firstMatchAlternative, bool visitedMatchEnabled, Vector<std::pair<int, int>, 2>& simpleCases, Vector<NthChildOfSelectorInfo>& filteredCases, PseudoClassesSet& pseudoClasses)
 {
     int a = selector.nthA();
     int b = selector.nthB();
@@ -903,35 +901,26 @@ JSC_DEFINE_JIT_OPERATION(operationMatchesFullscreenPseudoClass, bool, (const Ele
     return matchesFullscreenPseudoClass(element);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationMatchesWebkitFullScreenPseudoClass, bool, (const Element& element))
+JSC_DEFINE_JIT_OPERATION(operationMatchesFullscreenDocumentPseudoClass, bool, (const Element& element))
 {
-    COUNT_SELECTOR_OPERATION(operationMatchesWebkitFullScreenPseudoClass);
-    return matchesWebkitFullScreenPseudoClass(element);
+    COUNT_SELECTOR_OPERATION(operationMatchesFullscreenDocumentPseudoClass);
+    return matchesFullscreenDocumentPseudoClass(element);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationMatchesFullScreenDocumentPseudoClass, bool, (const Element& element))
+JSC_DEFINE_JIT_OPERATION(operationMatchesAnimatingFullscreenTransitionPseudoClass, bool, (const Element& element))
 {
-    COUNT_SELECTOR_OPERATION(operationMatchesFullScreenDocumentPseudoClass);
-    return matchesFullScreenDocumentPseudoClass(element);
+    COUNT_SELECTOR_OPERATION(operationMatchesAnimatingFullscreenTransitionPseudoClass);
+    return matchesAnimatingFullscreenTransitionPseudoClass(element);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationMatchesFullScreenAncestorPseudoClass, bool, (const Element& element))
+#if ENABLE(VIDEO)
+JSC_DEFINE_JIT_OPERATION(operationMatchesInWindowFullScreenPseudoClass, bool, (const Element& element))
 {
-    COUNT_SELECTOR_OPERATION(operationMatchesFullScreenAncestorPseudoClass);
-    return matchesFullScreenAncestorPseudoClass(element);
+    COUNT_SELECTOR_OPERATION(operationMatchesInWindowFullScreenPseudoClass);
+    return matchesInWindowFullScreenPseudoClass(element);
 }
+#endif
 
-JSC_DEFINE_JIT_OPERATION(operationMatchesFullScreenAnimatingFullScreenTransitionPseudoClass, bool, (const Element& element))
-{
-    COUNT_SELECTOR_OPERATION(operationMatchesFullScreenAnimatingFullScreenTransitionPseudoClass);
-    return matchesFullScreenAnimatingFullScreenTransitionPseudoClass(element);
-}
-
-JSC_DEFINE_JIT_OPERATION(operationMatchesFullScreenControlsHiddenPseudoClass, bool, (const Element& element))
-{
-    COUNT_SELECTOR_OPERATION(operationMatchesFullScreenControlsHiddenPseudoClass);
-    return matchesFullScreenControlsHiddenPseudoClass(element);
-}
 #endif
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
@@ -1009,8 +998,6 @@ JSC_DEFINE_JIT_OPERATION(operationHasAttachment, bool, (const Element& element))
 JSC_DEFINE_JIT_OPERATION(operationMatchesDir, bool, (const Element& element, uint32_t direction))
 {
     COUNT_SELECTOR_OPERATION(operationMatchesDir);
-    if (!element.document().settings().dirPseudoEnabled())
-        return false;
     return element.effectiveTextDirection() == static_cast<TextDirection>(direction);
 }
 
@@ -1052,198 +1039,191 @@ JSC_DEFINE_JIT_OPERATION(operationIsUserValid, bool, (const Element& element))
 
 static inline FunctionType addPseudoClassType(const CSSSelector& selector, SelectorFragment& fragment, SelectorContext selectorContext, FragmentsLevel fragmentLevel, FragmentPositionInRootFragments positionInRootFragments, bool visitedMatchEnabled, VisitedMode& visitedMode, PseudoElementMatchingBehavior pseudoElementMatchingBehavior)
 {
-    CSSSelector::PseudoClassType type = selector.pseudoClassType();
+    auto type = selector.pseudoClass();
     switch (type) {
     // Unoptimized pseudo selector. They are just function call to a simple testing function.
-    case CSSSelector::PseudoClassType::Autofill:
+    case CSSSelector::PseudoClass::Autofill:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsAutofilled));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::AutofillAndObscured:
+    case CSSSelector::PseudoClass::WebKitAutofillAndObscured:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsAutofilledAndObscured));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::AutofillStrongPassword:
+    case CSSSelector::PseudoClass::WebKitAutofillStrongPassword:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsAutofilledStrongPassword));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::AutofillStrongPasswordViewable:
+    case CSSSelector::PseudoClass::WebKitAutofillStrongPasswordViewable:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsAutofilledStrongPasswordViewable));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Checked:
+    case CSSSelector::PseudoClass::Checked:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsChecked));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Default:
+    case CSSSelector::PseudoClass::Default:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesDefaultPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Disabled:
+    case CSSSelector::PseudoClass::Disabled:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesDisabledPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Enabled:
+    case CSSSelector::PseudoClass::Enabled:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesEnabledPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Defined:
+    case CSSSelector::PseudoClass::Defined:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsDefinedElement));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Focus:
+    case CSSSelector::PseudoClass::Focus:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFocusPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::FocusVisible:
+    case CSSSelector::PseudoClass::FocusVisible:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFocusVisiblePseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::FocusWithin:
+    case CSSSelector::PseudoClass::FocusWithin:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFocusWithinPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::FullPageMedia:
-        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsMediaDocument));
-        return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::InRange:
+    case CSSSelector::PseudoClass::InRange:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsInRange));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Indeterminate:
+    case CSSSelector::PseudoClass::Indeterminate:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesIndeterminatePseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Invalid:
+    case CSSSelector::PseudoClass::Invalid:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsInvalid));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Optional:
+    case CSSSelector::PseudoClass::Optional:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsOptionalFormControl));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::OutOfRange:
+    case CSSSelector::PseudoClass::OutOfRange:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsOutOfRange));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::ReadOnly:
+    case CSSSelector::PseudoClass::ReadOnly:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesReadOnlyPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::ReadWrite:
+    case CSSSelector::PseudoClass::ReadWrite:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesReadWritePseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Required:
+    case CSSSelector::PseudoClass::Required:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsRequiredFormControl));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Valid:
+    case CSSSelector::PseudoClass::Valid:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsValid));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::WindowInactive:
+    case CSSSelector::PseudoClass::WindowInactive:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsWindowInactive));
         return FunctionType::SimpleSelectorChecker;
 
 #if ENABLE(FULLSCREEN_API)
-    case CSSSelector::PseudoClassType::Fullscreen:
+    case CSSSelector::PseudoClass::Fullscreen:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFullscreenPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::WebkitFullScreen:
-        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesWebkitFullScreenPseudoClass));
+    case CSSSelector::PseudoClass::InternalFullscreenDocument:
+        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFullscreenDocumentPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::FullScreenDocument:
-        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFullScreenDocumentPseudoClass));
+    case CSSSelector::PseudoClass::InternalAnimatingFullscreenTransition:
+        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesAnimatingFullscreenTransitionPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::FullScreenAncestor:
-        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFullScreenAncestorPseudoClass));
+#if ENABLE(VIDEO)
+    case CSSSelector::PseudoClass::InternalInWindowFullScreen:
+        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesInWindowFullScreenPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::AnimatingFullScreenTransition:
-        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFullScreenAnimatingFullScreenTransitionPseudoClass));
-        return FunctionType::SimpleSelectorChecker;
-
-    case CSSSelector::PseudoClassType::FullScreenControlsHidden:
-        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFullScreenControlsHiddenPseudoClass));
-        return FunctionType::SimpleSelectorChecker;
+#endif
 #endif
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
-    case CSSSelector::PseudoClassType::PictureInPicture:
+    case CSSSelector::PseudoClass::PictureInPicture:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesPictureInPicturePseudoClass));
         return FunctionType::SimpleSelectorChecker;
 #endif
 
 #if ENABLE(VIDEO)
-    case CSSSelector::PseudoClassType::Future:
+    case CSSSelector::PseudoClass::Future:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFutureCuePseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Past:
+    case CSSSelector::PseudoClass::Past:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesPastCuePseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Playing:
+    case CSSSelector::PseudoClass::Playing:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesPlayingPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Paused:
+    case CSSSelector::PseudoClass::Paused:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesPausedPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Seeking:
+    case CSSSelector::PseudoClass::Seeking:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesSeekingPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Buffering:
+    case CSSSelector::PseudoClass::Buffering:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesBufferingPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Stalled:
+    case CSSSelector::PseudoClass::Stalled:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesStalledPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::Muted:
+    case CSSSelector::PseudoClass::Muted:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesMutedPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::VolumeLocked:
+    case CSSSelector::PseudoClass::VolumeLocked:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesVolumeLockedPseudoClass));
         return FunctionType::SimpleSelectorChecker;
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-    case CSSSelector::PseudoClassType::HasAttachment:
+    case CSSSelector::PseudoClass::AppleHasAttachment:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationHasAttachment));
         return FunctionType::SimpleSelectorChecker;
 #endif
 
-    case CSSSelector::PseudoClassType::HtmlDocument:
+    case CSSSelector::PseudoClass::InternalHTMLDocument:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesHtmlDocumentPseudoClass));
         return FunctionType::SimpleSelectorChecker;
 
-    case CSSSelector::PseudoClassType::PopoverOpen:
+    case CSSSelector::PseudoClass::InternalMediaDocument:
+        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsMediaDocument));
+        return FunctionType::SimpleSelectorChecker;
+
+    case CSSSelector::PseudoClass::PopoverOpen:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesPopoverOpenPseudoClass));
         return FunctionType::SimpleSelectorChecker;
 
-    case CSSSelector::PseudoClassType::Modal:
+    case CSSSelector::PseudoClass::Modal:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesModalPseudoClass));
         return FunctionType::SimpleSelectorChecker;
 
-    case CSSSelector::PseudoClassType::UserInvalid:
+    case CSSSelector::PseudoClass::UserInvalid:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsUserInvalid));
         return FunctionType::SimpleSelectorChecker;
 
-    case CSSSelector::PseudoClassType::UserValid:
+    case CSSSelector::PseudoClass::UserValid:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationIsUserValid));
         return FunctionType::SimpleSelectorChecker;
 
     // These pseudo-classes only have meaning with scrollbars.
-    case CSSSelector::PseudoClassType::Horizontal:
-    case CSSSelector::PseudoClassType::Vertical:
-    case CSSSelector::PseudoClassType::Decrement:
-    case CSSSelector::PseudoClassType::Increment:
-    case CSSSelector::PseudoClassType::Start:
-    case CSSSelector::PseudoClassType::End:
-    case CSSSelector::PseudoClassType::DoubleButton:
-    case CSSSelector::PseudoClassType::SingleButton:
-    case CSSSelector::PseudoClassType::NoButton:
-    case CSSSelector::PseudoClassType::CornerPresent:
+    case CSSSelector::PseudoClass::Horizontal:
+    case CSSSelector::PseudoClass::Vertical:
+    case CSSSelector::PseudoClass::Decrement:
+    case CSSSelector::PseudoClass::Increment:
+    case CSSSelector::PseudoClass::Start:
+    case CSSSelector::PseudoClass::End:
+    case CSSSelector::PseudoClass::DoubleButton:
+    case CSSSelector::PseudoClass::SingleButton:
+    case CSSSelector::PseudoClass::NoButton:
+    case CSSSelector::PseudoClass::CornerPresent:
         return FunctionType::CannotMatchAnything;
 
     // FIXME: Compile these pseudoclasses, too!
-    case CSSSelector::PseudoClassType::FirstOfType:
-    case CSSSelector::PseudoClassType::LastOfType:
-    case CSSSelector::PseudoClassType::OnlyOfType:
-    case CSSSelector::PseudoClassType::NthOfType:
-    case CSSSelector::PseudoClassType::NthLastOfType:
-    case CSSSelector::PseudoClassType::Drag:
-    case CSSSelector::PseudoClassType::Has:
-    case CSSSelector::PseudoClassType::RelativeScope:
+    case CSSSelector::PseudoClass::FirstOfType:
+    case CSSSelector::PseudoClass::LastOfType:
+    case CSSSelector::PseudoClass::OnlyOfType:
+    case CSSSelector::PseudoClass::NthOfType:
+    case CSSSelector::PseudoClass::NthLastOfType:
+    case CSSSelector::PseudoClass::WebKitDrag:
+    case CSSSelector::PseudoClass::Has:
+    case CSSSelector::PseudoClass::State:
         return FunctionType::CannotCompile;
 
     // Optimized pseudo selectors.
-    case CSSSelector::PseudoClassType::AnyLink:
-    case CSSSelector::PseudoClassType::Link:
-    case CSSSelector::PseudoClassType::Root:
+    case CSSSelector::PseudoClass::AnyLink:
+    case CSSSelector::PseudoClass::Link:
+    case CSSSelector::PseudoClass::Root:
         fragment.pseudoClasses.add(type);
         return FunctionType::SimpleSelectorChecker;
-    case CSSSelector::PseudoClassType::AnyLinkDeprecated:
-        fragment.pseudoClasses.add(CSSSelector::PseudoClassType::AnyLink);
-        return FunctionType::SimpleSelectorChecker;
 
-    case CSSSelector::PseudoClassType::Visited:
+    case CSSSelector::PseudoClass::Visited:
         // Determine this :visited cannot match anything statically.
         if (!visitedMatchEnabled)
             return FunctionType::CannotMatchAnything;
@@ -1257,34 +1237,30 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         visitedMode = VisitedMode::Visited;
         return FunctionType::SimpleSelectorChecker;
 
-    case CSSSelector::PseudoClassType::Scope:
-        if (selectorContext != SelectorContext::QuerySelector) {
-            fragment.pseudoClasses.add(CSSSelector::PseudoClassType::Root);
-            return FunctionType::SimpleSelectorChecker;
-        }
-        fragment.pseudoClasses.add(CSSSelector::PseudoClassType::Scope);
+    case CSSSelector::PseudoClass::Scope:
+        fragment.pseudoClasses.add(CSSSelector::PseudoClass::Scope);
         return FunctionType::SelectorCheckerWithCheckingContext;
 
-    case CSSSelector::PseudoClassType::Active:
-    case CSSSelector::PseudoClassType::Empty:
-    case CSSSelector::PseudoClassType::FirstChild:
-    case CSSSelector::PseudoClassType::Hover:
-    case CSSSelector::PseudoClassType::LastChild:
-    case CSSSelector::PseudoClassType::OnlyChild:
-    case CSSSelector::PseudoClassType::PlaceholderShown:
-    case CSSSelector::PseudoClassType::Target:
+    case CSSSelector::PseudoClass::Active:
+    case CSSSelector::PseudoClass::Empty:
+    case CSSSelector::PseudoClass::FirstChild:
+    case CSSSelector::PseudoClass::Hover:
+    case CSSSelector::PseudoClass::LastChild:
+    case CSSSelector::PseudoClass::OnlyChild:
+    case CSSSelector::PseudoClass::PlaceholderShown:
+    case CSSSelector::PseudoClass::Target:
         fragment.pseudoClasses.add(type);
         if (selectorContext == SelectorContext::QuerySelector)
             return FunctionType::SimpleSelectorChecker;
         return FunctionType::SelectorCheckerWithCheckingContext;
 
-    case CSSSelector::PseudoClassType::NthChild:
-        return addNthChildType(selector, selectorContext, positionInRootFragments, CSSSelector::PseudoClassType::FirstChild, visitedMatchEnabled, fragment.nthChildFilters, fragment.nthChildOfFilters, fragment.pseudoClasses);
+    case CSSSelector::PseudoClass::NthChild:
+        return addNthChildType(selector, selectorContext, positionInRootFragments, CSSSelector::PseudoClass::FirstChild, visitedMatchEnabled, fragment.nthChildFilters, fragment.nthChildOfFilters, fragment.pseudoClasses);
 
-    case CSSSelector::PseudoClassType::NthLastChild:
-        return addNthChildType(selector, selectorContext, positionInRootFragments, CSSSelector::PseudoClassType::LastChild, visitedMatchEnabled, fragment.nthLastChildFilters, fragment.nthLastChildOfFilters, fragment.pseudoClasses);
+    case CSSSelector::PseudoClass::NthLastChild:
+        return addNthChildType(selector, selectorContext, positionInRootFragments, CSSSelector::PseudoClass::LastChild, visitedMatchEnabled, fragment.nthLastChildFilters, fragment.nthLastChildOfFilters, fragment.pseudoClasses);
 
-    case CSSSelector::PseudoClassType::Not:
+    case CSSSelector::PseudoClass::Not:
         {
             const CSSSelectorList* selectorList = selector.selectorList();
 
@@ -1322,7 +1298,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
 
             return functionType;
         }
-    case CSSSelector::PseudoClassType::Dir:
+    case CSSSelector::PseudoClass::Dir:
         {
             auto& dirArgument = selector.argument();
             if (equalIgnoringASCIICase(dirArgument, "ltr"_s))
@@ -1334,15 +1310,14 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
             return FunctionType::SimpleSelectorChecker;
         }
 
-    case CSSSelector::PseudoClassType::Lang:
+    case CSSSelector::PseudoClass::Lang:
         ASSERT(selector.argumentList() && !selector.argumentList()->isEmpty());
         fragment.languageArgumentsList.append(selector.argumentList());
         return FunctionType::SimpleSelectorChecker;
 
-    case CSSSelector::PseudoClassType::Is:
-    case CSSSelector::PseudoClassType::Where:
-    case CSSSelector::PseudoClassType::Matches:
-    case CSSSelector::PseudoClassType::Any:
+    case CSSSelector::PseudoClass::Is:
+    case CSSSelector::PseudoClass::Where:
+    case CSSSelector::PseudoClass::WebKitAny:
         {
             SelectorList matchesList;
             const CSSSelectorList* selectorList = selector.selectorList();
@@ -1386,11 +1361,8 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
 
             return functionType;
         }
-    case CSSSelector::PseudoClassType::Host:
+    case CSSSelector::PseudoClass::Host:
         return FunctionType::CannotCompile;
-    case CSSSelector::PseudoClassType::Unknown:
-        ASSERT_NOT_REACHED();
-        return FunctionType::CannotMatchAnything;
     }
 
     ASSERT_NOT_REACHED();
@@ -1421,8 +1393,8 @@ inline SelectorCodeGenerator::SelectorCodeGenerator(const CSSSelector* rootSelec
 
 static bool pseudoClassOnlyMatchesLinksInQuirksMode(const CSSSelector& selector)
 {
-    CSSSelector::PseudoClassType pseudoClassType = selector.pseudoClassType();
-    return pseudoClassType == CSSSelector::PseudoClassType::Hover || pseudoClassType == CSSSelector::PseudoClassType::Active;
+    auto pseudoClass = selector.pseudoClass();
+    return pseudoClass == CSSSelector::PseudoClass::Hover || pseudoClass == CSSSelector::PseudoClass::Active;
 }
 
 static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, SelectorContext selectorContext, SelectorFragmentList& selectorFragments, FragmentsLevel fragmentLevel, FragmentPositionInRootFragments positionInRootFragments, bool visitedMatchEnabled, VisitedMode& visitedMode, PseudoElementMatchingBehavior pseudoElementMatchingBehavior)
@@ -1479,35 +1451,41 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
             if (selectorContext == SelectorContext::QuerySelector)
                 return FunctionType::CannotMatchAnything;
 
-            switch (selector->pseudoElementType()) {
-            case CSSSelector::PseudoElementAfter:
-            case CSSSelector::PseudoElementBackdrop:
-            case CSSSelector::PseudoElementBefore:
-            case CSSSelector::PseudoElementFirstLetter:
-            case CSSSelector::PseudoElementFirstLine:
-            case CSSSelector::PseudoElementMarker:
-            case CSSSelector::PseudoElementResizer:
-            case CSSSelector::PseudoElementScrollbar:
-            case CSSSelector::PseudoElementScrollbarButton:
-            case CSSSelector::PseudoElementScrollbarCorner:
-            case CSSSelector::PseudoElementScrollbarThumb:
-            case CSSSelector::PseudoElementScrollbarTrack:
-            case CSSSelector::PseudoElementScrollbarTrackPiece:
-            case CSSSelector::PseudoElementSelection:
-            case CSSSelector::PseudoElementWebKitCustom:
-            case CSSSelector::PseudoElementWebKitCustomLegacyPrefixed:
+            switch (selector->pseudoElement()) {
+            case CSSSelector::PseudoElement::After:
+            case CSSSelector::PseudoElement::Backdrop:
+            case CSSSelector::PseudoElement::Before:
+            case CSSSelector::PseudoElement::FirstLetter:
+            case CSSSelector::PseudoElement::FirstLine:
+            case CSSSelector::PseudoElement::GrammarError:
+            case CSSSelector::PseudoElement::Marker:
+            case CSSSelector::PseudoElement::WebKitResizer:
+            case CSSSelector::PseudoElement::WebKitScrollbar:
+            case CSSSelector::PseudoElement::WebKitScrollbarButton:
+            case CSSSelector::PseudoElement::WebKitScrollbarCorner:
+            case CSSSelector::PseudoElement::WebKitScrollbarThumb:
+            case CSSSelector::PseudoElement::WebKitScrollbarTrack:
+            case CSSSelector::PseudoElement::WebKitScrollbarTrackPiece:
+            case CSSSelector::PseudoElement::Selection:
+            case CSSSelector::PseudoElement::SpellingError:
+            case CSSSelector::PseudoElement::ViewTransition:
+            case CSSSelector::PseudoElement::UserAgentPart:
+            case CSSSelector::PseudoElement::UserAgentPartLegacyAlias:
                 ASSERT(!fragment->pseudoElementSelector);
                 fragment->pseudoElementSelector = selector;
                 break;
-            case CSSSelector::PseudoElementUnknown:
-                ASSERT_NOT_REACHED();
+            case CSSSelector::PseudoElement::WebKitUnknown:
                 return FunctionType::CannotMatchAnything;
 #if ENABLE(VIDEO)
-            case CSSSelector::PseudoElementCue:
+            case CSSSelector::PseudoElement::Cue:
 #endif
-            case CSSSelector::PseudoElementHighlight:
-            case CSSSelector::PseudoElementPart:
-            case CSSSelector::PseudoElementSlotted:
+            case CSSSelector::PseudoElement::Highlight:
+            case CSSSelector::PseudoElement::Part:
+            case CSSSelector::PseudoElement::Slotted:
+            case CSSSelector::PseudoElement::ViewTransitionGroup:
+            case CSSSelector::PseudoElement::ViewTransitionImagePair:
+            case CSSSelector::PseudoElement::ViewTransitionOld:
+            case CSSSelector::PseudoElement::ViewTransitionNew:
                 return FunctionType::CannotCompile;
             }
 
@@ -1545,19 +1523,23 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
         case CSSSelector::Match::Unknown:
             ASSERT_NOT_REACHED();
             return FunctionType::CannotMatchAnything;
+        case CSSSelector::Match::ForgivingUnknown:
+        case CSSSelector::Match::ForgivingUnknownNestContaining:
+        case CSSSelector::Match::HasScope:
+            return FunctionType::CannotMatchAnything;
         }
 
         auto relation = selector->relation();
-        if (relation == CSSSelector::RelationType::Subselector)
+        if (relation == CSSSelector::Relation::Subselector)
             continue;
 
-        if ((relation == CSSSelector::RelationType::ShadowDescendant || relation == CSSSelector::RelationType::ShadowPartDescendant) && !selector->isLastInTagHistory())
+        if ((relation == CSSSelector::Relation::ShadowDescendant || relation == CSSSelector::Relation::ShadowPartDescendant) && !selector->isLastInTagHistory())
             return FunctionType::CannotCompile;
 
-        if (relation == CSSSelector::RelationType::ShadowSlotted)
+        if (relation == CSSSelector::Relation::ShadowSlotted)
             return FunctionType::CannotCompile;
 
-        if (relation == CSSSelector::RelationType::DirectAdjacent || relation == CSSSelector::RelationType::IndirectAdjacent) {
+        if (relation == CSSSelector::Relation::DirectAdjacent || relation == CSSSelector::Relation::IndirectAdjacent) {
             FunctionType relationFunctionType = FunctionType::SelectorCheckerWithCheckingContext;
             if (selectorContext == SelectorContext::QuerySelector)
                 relationFunctionType = FunctionType::SimpleSelectorChecker;
@@ -2277,7 +2259,7 @@ inline void SelectorCodeGenerator::generateEpilogue(StackAllocator& stackAllocat
 
 inline void SelectorCodeGenerator::generateReturn()
 {
-#if CPU(ARM64E)
+#if CPU(ARM64E) && !ENABLE(C_LOOP)
     if (JSC::Options::useJITCage()) {
         m_assembler.farJump(Assembler::TrustedImmPtr(retagCodePtr<void*, CFunctionPtrTag, JSC::OperationPtrTag>(&JSC::vmEntryToCSSJITAfter)), JSC::OperationPtrTag);
         return;
@@ -2902,7 +2884,7 @@ void SelectorCodeGenerator::generateSpecialFailureInQuirksModeForActiveAndHoverI
 {
     if (fragment.onlyMatchesLinksInQuirksMode) {
         // If the element is a link, it can always match :hover or :active.
-        Assembler::Jump isLink = m_assembler.branchTest32(Assembler::NonZero, Assembler::Address(elementAddressRegister, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsLink()));
+        Assembler::Jump isLink = m_assembler.branchTest16(Assembler::NonZero, Assembler::Address(elementAddressRegister, Node::stateFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsLink()));
 
         // Only quirks mode restrict :hover and :active.
         static_assert(sizeof(DocumentCompatibilityMode) == 1, "We generate a byte load/test for the compatibility mode.");
@@ -3144,13 +3126,13 @@ void SelectorCodeGenerator::generateElementMatching(Assembler::JumpList& matchin
 
     generateElementLinkMatching(matchingPostTagNameFailureCases, fragment);
 
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::Root))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::Root))
         generateElementIsRoot(matchingPostTagNameFailureCases);
 
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::Scope))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::Scope))
         generateElementIsScopeRoot(matchingPostTagNameFailureCases);
 
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::Target))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::Target))
         generateElementIsTarget(matchingPostTagNameFailureCases);
 
     for (unsigned i = 0; i < fragment.unoptimizedPseudoClasses.size(); ++i)
@@ -3158,19 +3140,19 @@ void SelectorCodeGenerator::generateElementMatching(Assembler::JumpList& matchin
 
     generateElementDataMatching(matchingPostTagNameFailureCases, fragment);
 
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::Active))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::Active))
         generateElementIsActive(matchingPostTagNameFailureCases, fragment);
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::Empty))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::Empty))
         generateElementIsEmpty(matchingPostTagNameFailureCases);
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::Hover))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::Hover))
         generateElementIsHovered(matchingPostTagNameFailureCases, fragment);
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::OnlyChild))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::OnlyChild))
         generateElementIsOnlyChild(matchingPostTagNameFailureCases);
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::PlaceholderShown))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::PlaceholderShown))
         generateElementHasPlaceholderShown(matchingPostTagNameFailureCases);
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::FirstChild))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::FirstChild))
         generateElementIsFirstChild(matchingPostTagNameFailureCases);
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::LastChild))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::LastChild))
         generateElementIsLastChild(matchingPostTagNameFailureCases);
     if (!fragment.nthChildFilters.isEmpty())
         generateElementIsNthChild(matchingPostTagNameFailureCases, fragment);
@@ -3195,7 +3177,7 @@ void SelectorCodeGenerator::generateElementMatching(Assembler::JumpList& matchin
 
     // Reach here when the generateElementMatching matching succeeded.
     // Only when the matching succeeeded, the last visited element should be stored and checked at the end of the whole matching.
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::Visited))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::Visited))
         generateStoreLastVisitedElement(elementAddressRegister);
 }
 
@@ -3222,9 +3204,9 @@ void SelectorCodeGenerator::generateElementDataMatching(Assembler::JumpList& fai
 
 void SelectorCodeGenerator::generateElementLinkMatching(Assembler::JumpList& failureCases, const SelectorFragment& fragment)
 {
-    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::Link)
-        || fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::AnyLink)
-        || fragment.pseudoClasses.contains(CSSSelector::PseudoClassType::Visited))
+    if (fragment.pseudoClasses.contains(CSSSelector::PseudoClass::Link)
+        || fragment.pseudoClasses.contains(CSSSelector::PseudoClass::AnyLink)
+        || fragment.pseudoClasses.contains(CSSSelector::PseudoClass::Visited))
         generateElementIsLink(failureCases);
 }
 
@@ -3718,7 +3700,7 @@ void SelectorCodeGenerator::generateElementFunctionCallTest(Assembler::JumpList&
 JSC_DEFINE_JIT_OPERATION(operationElementIsActive, bool, (const Element* element))
 {
     COUNT_SELECTOR_OPERATION(operationElementIsActive);
-    return element->active() || InspectorInstrumentation::forcePseudoState(*element, CSSSelector::PseudoClassType::Active);
+    return element->active() || InspectorInstrumentation::forcePseudoState(*element, CSSSelector::PseudoClass::Active);
 }
 
 void SelectorCodeGenerator::generateElementIsActive(Assembler::JumpList& failureCases, const SelectorFragment& fragment)
@@ -3742,7 +3724,7 @@ static void jumpIfElementIsNotEmpty(Assembler& assembler, RegisterAllocator& reg
     notEmptyCases.append(DOMJIT::branchTestIsElementFlagOnNode(assembler, Assembler::NonZero, currentChild));
 
     {
-        Assembler::Jump skipTextNodeCheck = assembler.branchTest32(Assembler::Zero, Assembler::Address(currentChild, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsText()));
+        Assembler::Jump skipTextNodeCheck = assembler.branchTest16(Assembler::Zero, Assembler::Address(currentChild, Node::typeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsText()));
 
         LocalRegister textStringImpl(registerAllocator);
         assembler.loadPtr(Assembler::Address(currentChild, CharacterData::dataMemoryOffset()), textStringImpl);
@@ -3825,7 +3807,7 @@ void SelectorCodeGenerator::generateElementIsFirstChild(Assembler::JumpList& fai
 JSC_DEFINE_JIT_OPERATION(operationElementIsHovered, bool, (const Element* element))
 {
     COUNT_SELECTOR_OPERATION(operationElementIsHovered);
-    return element->hovered() || InspectorInstrumentation::forcePseudoState(*element, CSSSelector::PseudoClassType::Hover);
+    return element->hovered() || InspectorInstrumentation::forcePseudoState(*element, CSSSelector::PseudoClass::Hover);
 }
 
 void SelectorCodeGenerator::generateElementIsHovered(Assembler::JumpList& failureCases, const SelectorFragment& fragment)
@@ -3881,7 +3863,7 @@ void SelectorCodeGenerator::generateElementIsLastChild(Assembler::JumpList& fail
         generateWalkToParentNode(parent);
         auto noParentCase = m_assembler.branchTestPtr(Assembler::Zero, parent);
 
-        failureCases.append(m_assembler.branchTest32(Assembler::Zero, Assembler::Address(parent, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsParsingChildrenFinished())));
+        failureCases.append(m_assembler.branchTest16(Assembler::NonZero, Assembler::Address(parent, Node::stateFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsParsingChildren())));
 
         noParentCase.link(&m_assembler);
         return;
@@ -3896,7 +3878,7 @@ void SelectorCodeGenerator::generateElementIsLastChild(Assembler::JumpList& fail
     m_assembler.move(Assembler::TrustedImm32(0), isLastChildRegister);
 
     {
-        Assembler::Jump notFinishedParsingChildren = m_assembler.branchTest32(Assembler::Zero, Assembler::Address(parentNode, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsParsingChildrenFinished()));
+        Assembler::Jump notFinishedParsingChildren = m_assembler.branchTest16(Assembler::NonZero, Assembler::Address(parentNode, Node::stateFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsParsingChildren()));
 
         Assembler::JumpList successCase = jumpIfNoNextAdjacentElement();
 
@@ -3941,7 +3923,7 @@ void SelectorCodeGenerator::generateElementIsOnlyChild(Assembler::JumpList& fail
         generateWalkToParentNode(parent);
         auto noParentCase = m_assembler.branchTestPtr(Assembler::Zero, parent);
 
-        failureCases.append(m_assembler.branchTest32(Assembler::Zero, Assembler::Address(parent, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsParsingChildrenFinished())));
+        failureCases.append(m_assembler.branchTest16(Assembler::NonZero, Assembler::Address(parent, Node::stateFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsParsingChildren())));
 
         noParentCase.link(&m_assembler);
         return;
@@ -3962,7 +3944,7 @@ void SelectorCodeGenerator::generateElementIsOnlyChild(Assembler::JumpList& fail
             localFailureCases.append(m_assembler.jump());
             successCase.link(&m_assembler);
         }
-        localFailureCases.append(m_assembler.branchTest32(Assembler::Zero, Assembler::Address(parentNode, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsParsingChildrenFinished())));
+        localFailureCases.append(m_assembler.branchTest16(Assembler::NonZero, Assembler::Address(parentNode, Node::stateFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsParsingChildren())));
         Assembler::JumpList successCase = jumpIfNoNextAdjacentElement();
 
         localFailureCases.link(&m_assembler);
@@ -3995,10 +3977,11 @@ void SelectorCodeGenerator::generateElementIsOnlyChild(Assembler::JumpList& fail
 JSC_DEFINE_JIT_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown, bool, (const Element* element, SelectorChecker::CheckingContext* checkingContext))
 {
     COUNT_SELECTOR_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown);
-    if (is<HTMLTextFormControlElement>(*element) && element->isTextField()) {
+    auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(*element);
+    if (formControl && element->isTextField()) {
         if (checkingContext->resolvingMode == SelectorChecker::Mode::ResolvingStyle)
             checkingContext->styleRelations.append({ *element, Style::Relation::Unique, 1 });
-        return downcast<HTMLTextFormControlElement>(*element).isPlaceholderVisible();
+        return formControl->isPlaceholderVisible();
     }
     return false;
 }
@@ -4006,7 +3989,8 @@ JSC_DEFINE_JIT_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlac
 JSC_DEFINE_JIT_OPERATION(operationIsPlaceholderShown, bool, (const Element* element))
 {
     COUNT_SELECTOR_OPERATION(operationIsPlaceholderShown);
-    return is<HTMLTextFormControlElement>(*element) && downcast<HTMLTextFormControlElement>(*element).isPlaceholderVisible();
+    auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(*element);
+    return formControl && formControl->isPlaceholderVisible();
 }
 
 JSC_DEFINE_JIT_OPERATION(operationSynchronizeStyleAttributeInternal, void, (StyledElement* styledElement))
@@ -4136,7 +4120,7 @@ void SelectorCodeGenerator::generateElementHasClasses(Assembler::JumpList& failu
 
 void SelectorCodeGenerator::generateElementIsLink(Assembler::JumpList& failureCases)
 {
-    failureCases.append(m_assembler.branchTest32(Assembler::Zero, Assembler::Address(elementAddressRegister, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsLink())));
+    failureCases.append(m_assembler.branchTest16(Assembler::Zero, Assembler::Address(elementAddressRegister, Node::stateFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsLink())));
 }
 
 static bool nthFilterIsAlwaysSatisified(int a, int b)
@@ -4165,13 +4149,11 @@ void SelectorCodeGenerator::generateElementIsNthChild(Assembler::JumpList& failu
 {
     generateNthChildRelationUpdate(fragment);
 
-    Vector<std::pair<int, int>, 32> validSubsetFilters;
-    validSubsetFilters.reserveInitialCapacity(fragment.nthChildFilters.size());
-    for (const auto& slot : fragment.nthChildFilters) {
+    auto validSubsetFilters = WTF::compactMap<32>(fragment.nthChildFilters, [&](auto& slot) -> std::optional<std::pair<int, int>> {
         if (nthFilterIsAlwaysSatisified(slot.first, slot.second))
-            continue;
-        validSubsetFilters.uncheckedAppend(slot);
-    }
+            return std::nullopt;
+        return slot;
+    });
     if (validSubsetFilters.isEmpty())
         return;
 
@@ -4283,8 +4265,8 @@ void SelectorCodeGenerator::generateNthLastChildParentCheckAndRelationUpdate(Ass
     generateAddStyleRelationIfResolvingStyle(parentNode, relation);
     notElementCase.link(&m_assembler);
 
-    failureCases.append(m_assembler.branchTest32(Assembler::Zero, Assembler::Address(parentNode, Node::nodeFlagsMemoryOffset()),
-        Assembler::TrustedImm32(Node::flagIsParsingChildrenFinished())));
+    failureCases.append(m_assembler.branchTest16(Assembler::NonZero, Assembler::Address(parentNode, Node::stateFlagsMemoryOffset()),
+        Assembler::TrustedImm32(Node::flagIsParsingChildren())));
 
     noParentCase.link(&m_assembler);
 }
@@ -4293,13 +4275,11 @@ void SelectorCodeGenerator::generateElementIsNthLastChild(Assembler::JumpList& f
 {
     generateNthLastChildParentCheckAndRelationUpdate(failureCases, fragment);
 
-    Vector<std::pair<int, int>, 32> validSubsetFilters;
-    validSubsetFilters.reserveInitialCapacity(fragment.nthLastChildFilters.size());
-    for (const auto& slot : fragment.nthLastChildFilters) {
+    auto validSubsetFilters = WTF::compactMap<32>(fragment.nthLastChildFilters, [&](auto& slot) -> std::optional<std::pair<int, int>> {
         if (nthFilterIsAlwaysSatisified(slot.first, slot.second))
-            continue;
-        validSubsetFilters.uncheckedAppend(slot);
-    }
+            return std::nullopt;
+        return slot;
+    });
     if (validSubsetFilters.isEmpty())
         return;
 
@@ -4329,18 +4309,16 @@ void SelectorCodeGenerator::generateElementIsNthLastChildOf(Assembler::JumpList&
 {
     generateNthLastChildParentCheckAndRelationUpdate(failureCases, fragment);
 
-    Vector<const NthChildOfSelectorInfo*> validSubsetFilters;
-    validSubsetFilters.reserveInitialCapacity(fragment.nthLastChildOfFilters.size());
-
     // The initial element must match the selector list.
     for (const NthChildOfSelectorInfo& nthLastChildOfSelectorInfo : fragment.nthLastChildOfFilters)
         generateElementMatchesSelectorList(failureCases, elementAddressRegister, nthLastChildOfSelectorInfo.selectorList);
 
-    for (const NthChildOfSelectorInfo& nthLastChildOfSelectorInfo : fragment.nthLastChildOfFilters) {
+    auto validSubsetFilters = WTF::compactMap(fragment.nthLastChildOfFilters, [](auto& nthLastChildOfSelectorInfo) -> std::optional<const NthChildOfSelectorInfo*> {
         if (nthFilterIsAlwaysSatisified(nthLastChildOfSelectorInfo.a, nthLastChildOfSelectorInfo.b))
-            continue;
-        validSubsetFilters.uncheckedAppend(&nthLastChildOfSelectorInfo);
-    }
+            return std::nullopt;
+        return &nthLastChildOfSelectorInfo;
+    });
+
     if (validSubsetFilters.isEmpty())
         return;
 
@@ -4427,7 +4405,7 @@ void SelectorCodeGenerator::generateRequestedPseudoElementEqualsToSelectorPseudo
             failureCases.append(m_assembler.branch8(Assembler::NotEqual, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoId)), Assembler::TrustedImm32(static_cast<unsigned>(PseudoId::None))));
         else {
             Assembler::Jump skip = m_assembler.branch8(Assembler::Equal, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoId)), Assembler::TrustedImm32(static_cast<unsigned>(PseudoId::None)));
-            failureCases.append(m_assembler.branch8(Assembler::NotEqual, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoId)), Assembler::TrustedImm32(static_cast<unsigned>(CSSSelector::pseudoId(fragment.pseudoElementSelector->pseudoElementType())))));
+            failureCases.append(m_assembler.branch8(Assembler::NotEqual, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoId)), Assembler::TrustedImm32(static_cast<unsigned>(CSSSelector::pseudoId(fragment.pseudoElementSelector->pseudoElement())))));
             skip.link(&m_assembler);
         }
     }
@@ -4442,8 +4420,6 @@ void SelectorCodeGenerator::generateElementIsRoot(Assembler::JumpList& failureCa
 
 void SelectorCodeGenerator::generateElementIsScopeRoot(Assembler::JumpList& failureCases)
 {
-    ASSERT(m_selectorContext == SelectorContext::QuerySelector);
-
     LocalRegister scope(m_registerAllocator);
     loadCheckingContext(scope);
     m_assembler.loadPtr(Assembler::Address(scope, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, scope)), scope);
@@ -4460,7 +4436,7 @@ void SelectorCodeGenerator::generateElementIsScopeRoot(Assembler::JumpList& fail
 JSC_DEFINE_JIT_OPERATION(operationElementIsTarget, bool, (const Element* element))
 {
     COUNT_SELECTOR_OPERATION(operationElementIsTarget);
-    return element == element->document().cssTarget() || InspectorInstrumentation::forcePseudoState(*element, CSSSelector::PseudoClassType::Target);
+    return element == element->document().cssTarget() || InspectorInstrumentation::forcePseudoState(*element, CSSSelector::PseudoClass::Target);
 }
 
 void SelectorCodeGenerator::generateElementIsTarget(Assembler::JumpList& failureCases)
@@ -4484,7 +4460,7 @@ void SelectorCodeGenerator::generateElementIsFirstLink(Assembler::JumpList& fail
     // So the tree walking doesn't loop infinitely and it will be stopped with the following `currentElement == element` condition.
     Assembler::Jump reachedToElement = m_assembler.branchPtr(Assembler::Equal, currentElement, element);
 
-    failureCases.append(m_assembler.branchTest32(Assembler::NonZero, Assembler::Address(currentElement, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsLink())));
+    failureCases.append(m_assembler.branchTest16(Assembler::NonZero, Assembler::Address(currentElement, Node::stateFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsLink())));
 
     // And these ancestors are guaranteed that they are element nodes.
     // So there's no need to check whether it is an element node and whether it is not a nullptr.
@@ -4519,7 +4495,7 @@ void SelectorCodeGenerator::generateMarkPseudoStyleForPseudoElement(Assembler::J
     successCases.append(branchOnResolvingModeWithCheckingContext(Assembler::Equal, SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements, checkingContext));
 
     // When resolving mode is ResolvingStyle, mark the pseudo style for pseudo element.
-    PseudoId dynamicPseudo = CSSSelector::pseudoId(fragment.pseudoElementSelector->pseudoElementType());
+    PseudoId dynamicPseudo = CSSSelector::pseudoId(fragment.pseudoElementSelector->pseudoElement());
     if (dynamicPseudo < PseudoId::FirstInternalPseudoId) {
         failureCases.append(branchOnResolvingModeWithCheckingContext(Assembler::NotEqual, SelectorChecker::Mode::ResolvingStyle, checkingContext));
 

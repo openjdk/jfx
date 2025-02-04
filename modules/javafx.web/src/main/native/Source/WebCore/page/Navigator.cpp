@@ -31,11 +31,13 @@
 #include "DOMPlugin.h"
 #include "DOMPluginArray.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "FeaturePolicy.h"
 #include "FrameLoader.h"
 #include "GPU.h"
 #include "Geolocation.h"
 #include "JSDOMPromiseDeferred.h"
+#include "JSPushSubscription.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
@@ -43,6 +45,7 @@
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "PluginData.h"
+#include "PushStrategy.h"
 #include "Quirks.h"
 #include "ResourceLoadObserver.h"
 #include "ScriptController.h"
@@ -57,6 +60,10 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/WeakPtr.h>
 
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+#include "Logging.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Navigator);
@@ -64,6 +71,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Navigator);
 Navigator::Navigator(ScriptExecutionContext* context, LocalDOMWindow& window)
     : NavigatorBase(context)
     , LocalDOMWindowProperty(&window)
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    , m_pushManager(*this)
+#endif
 {
 }
 
@@ -139,11 +149,7 @@ bool Navigator::canShare(Document& document, const ShareData& data)
     if (!document.isFullyActive() || !validateWebSharePolicy(document))
         return false;
 
-#if ENABLE(FILE_SHARE)
     bool hasShareableFiles = document.settings().webShareFileAPIEnabled() && !data.files.isEmpty();
-#else
-    bool hasShareableFiles = false;
-#endif
 
     if (data.title.isNull() && data.text.isNull() && data.url.isNull() && !hasShareableFiles)
         return false;
@@ -154,28 +160,28 @@ bool Navigator::canShare(Document& document, const ShareData& data)
 void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPromise>&& promise)
 {
     if (!document.isFullyActive()) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
     if (!validateWebSharePolicy(document)) {
-        promise->reject(NotAllowedError, "Third-party iframes are not allowed to call share() unless explicitly allowed via Feature-Policy (web-share)"_s);
+        promise->reject(ExceptionCode::NotAllowedError, "Third-party iframes are not allowed to call share() unless explicitly allowed via Feature-Policy (web-share)"_s);
         return;
     }
 
     if (m_hasPendingShare) {
-        promise->reject(InvalidStateError, "share() is already in progress"_s);
+        promise->reject(ExceptionCode::InvalidStateError, "share() is already in progress"_s);
         return;
     }
 
     auto* window = this->window();
     if (!window || !window->consumeTransientActivation()) {
-        promise->reject(NotAllowedError);
+        promise->reject(ExceptionCode::NotAllowedError);
         return;
     }
 
     if (!canShare(document, data)) {
-        promise->reject(TypeError);
+        promise->reject(ExceptionCode::TypeError);
         return;
     }
 
@@ -186,7 +192,6 @@ void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPro
         { },
         ShareDataOriginator::Web,
     };
-#if ENABLE(FILE_SHARE)
     if (document.settings().webShareFileAPIEnabled() && !data.files.isEmpty()) {
         if (m_loader)
             m_loader->cancel();
@@ -197,7 +202,6 @@ void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPro
         m_loader->start(&document, WTFMove(shareData));
         return;
     }
-#endif
     this->showShareData(shareData, WTFMove(promise));
 }
 
@@ -232,7 +236,7 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
             promise->resolve();
             return;
         }
-        promise->reject(Exception { AbortError, "Abort due to cancellation of share."_s });
+        promise->reject(Exception { ExceptionCode::AbortError, "Abort due to cancellation of share."_s });
     });
 }
 
@@ -362,6 +366,7 @@ bool Navigator::standalone() const
 
 GPU* Navigator::gpu()
 {
+#if HAVE(WEBGPU_IMPLEMENTATION)
     if (!m_gpuForWebGPU) {
         auto* frame = this->frame();
         if (!frame)
@@ -377,6 +382,7 @@ GPU* Navigator::gpu()
 
         m_gpuForWebGPU = GPU::create(*gpu);
     }
+#endif
 
     return m_gpuForWebGPU.get();
 }
@@ -387,25 +393,23 @@ Document* Navigator::document()
     return frame ? frame->document() : nullptr;
 }
 
-#if ENABLE(BADGING)
-
 void Navigator::setAppBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
 {
     auto* frame = this->frame();
     if (!frame) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
     auto* page = frame->page();
     if (!page) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
     auto* document = frame->document();
     if (document && !document->isFullyActive()) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
@@ -441,6 +445,78 @@ void Navigator::clearClientBadge(Ref<DeferredPromise>&& promise)
     setClientBadge(0, WTFMove(promise));
 }
 
-#endif
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+PushManager& Navigator::pushManager()
+{
+    return m_pushManager;
+}
+
+static URL toScope(Navigator& navigator)
+{
+    if (auto* frame = navigator.frame()) {
+        if (auto* document = frame->document())
+            return URL { document->url().protocolHostAndPort() };
+    }
+
+    return { };
+}
+
+void Navigator::subscribeToPushService(const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&& promise)
+{
+    LOG(Push, "Navigator::subscribeToPushService");
+
+    platformStrategies()->pushStrategy()->navigatorSubscribeToPushService(toScope(*this), applicationServerKey, [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto&& result) mutable {
+        LOG(Push, "Navigator::subscribeToPushService completed");
+        if (result.hasException()) {
+            promise.reject(result.releaseException());
+            return;
+        }
+
+        promise.resolve(PushSubscription::create(result.releaseReturnValue(), protectedThis.ptr()));
+    });
+}
+
+void Navigator::unsubscribeFromPushService(PushSubscriptionIdentifier subscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&& promise)
+{
+    LOG(Push, "Navigator::unsubscribeFromPushService");
+
+    platformStrategies()->pushStrategy()->navigatorUnsubscribeFromPushService(toScope(*this), subscriptionIdentifier, [promise = WTFMove(promise)](auto&& result) mutable {
+        LOG(Push, "Navigator::unsubscribeFromPushService completed");
+        promise.settle(WTFMove(result));
+    });
+}
+
+void Navigator::getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&& promise)
+{
+    LOG(Push, "Navigator::getPushSubscription");
+
+    platformStrategies()->pushStrategy()->navigatorGetPushSubscription(toScope(*this), [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto&& result) mutable {
+        LOG(Push, "Navigator::getPushSubscription completed");
+        if (result.hasException()) {
+            promise.reject(result.releaseException());
+            return;
+        }
+
+        auto optionalPushSubscriptionData = result.releaseReturnValue();
+        if (!optionalPushSubscriptionData) {
+            promise.resolve(nullptr);
+            return;
+        }
+
+        promise.resolve(PushSubscription::create(WTFMove(*optionalPushSubscriptionData), protectedThis.ptr()).ptr());
+    });
+}
+
+void Navigator::getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&& promise)
+{
+    LOG(Push, "Navigator::getPushPermissionState");
+
+    platformStrategies()->pushStrategy()->navigatorGetPushPermissionState(toScope(*this), [promise = WTFMove(promise)](auto&& result) mutable {
+        LOG(Push, "Navigator::getPushPermissionState completed");
+        promise.settle(WTFMove(result));
+    });
+}
+
+#endif // #if ENABLE(DECLARATIVE_WEB_PUSH)
 
 } // namespace WebCore

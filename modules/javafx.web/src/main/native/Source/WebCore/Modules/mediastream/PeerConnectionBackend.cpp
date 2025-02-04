@@ -49,6 +49,7 @@
 #include "RTCSessionDescriptionInit.h"
 #include "RTCTrackEvent.h"
 #include "WebRTCProvider.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/UUID.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -112,7 +113,7 @@ PeerConnectionBackend::PeerConnectionBackend(RTCPeerConnection& peerConnection)
 #endif
 {
 #if USE(LIBWEBRTC)
-    auto* document = peerConnection.document();
+    RefPtr document = peerConnection.document();
     if (auto* page = document ? document->page() : nullptr)
         m_shouldFilterICECandidates = page->webRTCProvider().isSupportingMDNS();
 #endif
@@ -235,18 +236,19 @@ static void processRemoteTracks(RTCRtpTransceiver& transceiver, PeerConnectionBa
     transceiver.setFiredDirection(state.firedDirection);
 }
 
-void PeerConnectionBackend::setLocalDescriptionSucceeded(std::optional<DescriptionStates>&& descriptionStates, std::optional<TransceiverStates>&& transceiverStates, std::unique_ptr<RTCSctpTransportBackend>&& sctpBackend)
+void PeerConnectionBackend::setLocalDescriptionSucceeded(std::optional<DescriptionStates>&& descriptionStates, std::optional<TransceiverStates>&& transceiverStates, std::unique_ptr<RTCSctpTransportBackend>&& sctpBackend, std::optional<double> maxMessageSize)
 {
     ASSERT(isMainThread());
     ALWAYS_LOG(LOGIDENTIFIER);
-
+    if (transceiverStates)
+        DEBUG_LOG(LOGIDENTIFIER, "Transceiver states: ", *transceiverStates);
     ASSERT(m_setDescriptionCallback);
-    m_peerConnection.queueTaskKeepingObjectAlive(m_peerConnection, TaskSource::Networking, [this, callback = WTFMove(m_setDescriptionCallback), descriptionStates = WTFMove(descriptionStates), transceiverStates = WTFMove(transceiverStates), sctpBackend = WTFMove(sctpBackend)]() mutable {
+    m_peerConnection.queueTaskKeepingObjectAlive(m_peerConnection, TaskSource::Networking, [this, callback = WTFMove(m_setDescriptionCallback), descriptionStates = WTFMove(descriptionStates), transceiverStates = WTFMove(transceiverStates), sctpBackend = WTFMove(sctpBackend), maxMessageSize]() mutable {
         if (m_peerConnection.isClosed())
             return;
 
         m_peerConnection.updateTransceiversAfterSuccessfulLocalDescription();
-        m_peerConnection.updateSctpBackend(WTFMove(sctpBackend));
+        m_peerConnection.updateSctpBackend(WTFMove(sctpBackend), maxMessageSize);
 
         if (descriptionStates) {
             m_peerConnection.updateDescriptions(WTFMove(*descriptionStates));
@@ -320,13 +322,15 @@ void PeerConnectionBackend::setRemoteDescription(const RTCSessionDescription& se
     doSetRemoteDescription(sessionDescription);
 }
 
-void PeerConnectionBackend::setRemoteDescriptionSucceeded(std::optional<DescriptionStates>&& descriptionStates, std::optional<TransceiverStates>&& transceiverStates, std::unique_ptr<RTCSctpTransportBackend>&& sctpBackend)
+void PeerConnectionBackend::setRemoteDescriptionSucceeded(std::optional<DescriptionStates>&& descriptionStates, std::optional<TransceiverStates>&& transceiverStates, std::unique_ptr<RTCSctpTransportBackend>&& sctpBackend, std::optional<double> maxMessageSize)
 {
     ASSERT(isMainThread());
     ALWAYS_LOG(LOGIDENTIFIER, "Set remote description succeeded");
+    if (transceiverStates)
+        DEBUG_LOG(LOGIDENTIFIER, "Transceiver states: ", *transceiverStates);
     ASSERT(m_setDescriptionCallback);
 
-    m_peerConnection.queueTaskKeepingObjectAlive(m_peerConnection, TaskSource::Networking, [this, callback = WTFMove(m_setDescriptionCallback), descriptionStates = WTFMove(descriptionStates), transceiverStates = WTFMove(transceiverStates), sctpBackend = WTFMove(sctpBackend), events = WTFMove(m_pendingTrackEvents)]() mutable {
+    m_peerConnection.queueTaskKeepingObjectAlive(m_peerConnection, TaskSource::Networking, [this, callback = WTFMove(m_setDescriptionCallback), descriptionStates = WTFMove(descriptionStates), transceiverStates = WTFMove(transceiverStates), sctpBackend = WTFMove(sctpBackend), maxMessageSize, events = WTFMove(m_pendingTrackEvents)]() mutable {
         if (m_peerConnection.isClosed())
             return;
 
@@ -343,7 +347,7 @@ void PeerConnectionBackend::setRemoteDescriptionSucceeded(std::optional<Descript
         }
 
         m_peerConnection.updateTransceiversAfterSuccessfulRemoteDescription();
-        m_peerConnection.updateSctpBackend(WTFMove(sctpBackend));
+        m_peerConnection.updateSctpBackend(WTFMove(sctpBackend), maxMessageSize);
 
         if (descriptionStates) {
             m_peerConnection.updateDescriptions(WTFMove(*descriptionStates));
@@ -500,12 +504,12 @@ void PeerConnectionBackend::addIceCandidate(RTCIceCandidate* iceCandidate, Funct
             return;
 
         auto& peerConnection = weakThis->m_peerConnection;
-        peerConnection.queueTaskKeepingObjectAlive(peerConnection, TaskSource::Networking, [&peerConnection, callback = WTFMove(callback), result = WTFMove(result)]() mutable {
+        peerConnection.queueTaskKeepingObjectAlive(peerConnection, TaskSource::Networking, [&peerConnection, callback = WTFMove(callback), result = std::forward<decltype(result)>(result)]() mutable {
             if (peerConnection.isClosed())
                 return;
 
             if (result.hasException()) {
-                RELEASE_LOG_ERROR(WebRTC, "Adding ice candidate failed %d", result.exception().code());
+                RELEASE_LOG_ERROR(WebRTC, "Adding ice candidate failed %hhu", enumToUnderlyingType(result.exception().code()));
                 callback(result.releaseException());
                 return;
             }
@@ -601,17 +605,17 @@ void PeerConnectionBackend::markAsNeedingNegotiation(uint32_t eventId)
 
 ExceptionOr<Ref<RTCRtpSender>> PeerConnectionBackend::addTrack(MediaStreamTrack&, FixedVector<String>&&)
 {
-    return Exception { NotSupportedError, "Not implemented"_s };
+    return Exception { ExceptionCode::NotSupportedError, "Not implemented"_s };
 }
 
 ExceptionOr<Ref<RTCRtpTransceiver>> PeerConnectionBackend::addTransceiver(const String&, const RTCRtpTransceiverInit&)
 {
-    return Exception { NotSupportedError, "Not implemented"_s };
+    return Exception { ExceptionCode::NotSupportedError, "Not implemented"_s };
 }
 
 ExceptionOr<Ref<RTCRtpTransceiver>> PeerConnectionBackend::addTransceiver(Ref<MediaStreamTrack>&&, const RTCRtpTransceiverInit&)
 {
-    return Exception { NotSupportedError, "Not implemented"_s };
+    return Exception { ExceptionCode::NotSupportedError, "Not implemented"_s };
 }
 
 void PeerConnectionBackend::generateCertificate(Document& document, const CertificateInformation& info, DOMPromiseDeferred<IDLInterface<RTCCertificate>>&& promise)
@@ -619,7 +623,7 @@ void PeerConnectionBackend::generateCertificate(Document& document, const Certif
 #if USE(LIBWEBRTC)
     auto* page = document.page();
     if (!page) {
-        promise.reject(InvalidStateError);
+        promise.reject(ExceptionCode::InvalidStateError);
         return;
     }
 
@@ -632,11 +636,11 @@ void PeerConnectionBackend::generateCertificate(Document& document, const Certif
     if (certificate.has_value())
         promise.resolve(*certificate);
     else
-        promise.reject(NotSupportedError);
+        promise.reject(ExceptionCode::NotSupportedError);
 #else
     UNUSED_PARAM(document);
     UNUSED_PARAM(info);
-    promise.reject(NotSupportedError);
+    promise.reject(ExceptionCode::NotSupportedError);
 #endif
 }
 
@@ -652,6 +656,55 @@ WTFLogChannel& PeerConnectionBackend::logChannel() const
 }
 #endif
 
+static Ref<JSON::Object> toJSONObject(const PeerConnectionBackend::TransceiverState& transceiverState)
+{
+    auto object = JSON::Object::create();
+    object->setString("mid"_s, transceiverState.mid);
+
+    auto receiverStreams = JSON::Array::create();
+    for (auto receiverStream : transceiverState.receiverStreams)
+        receiverStreams->pushString(receiverStream->id());
+    object->setArray("receiverStreams"_s, WTFMove(receiverStreams));
+
+    if (auto firedDirection = transceiverState.firedDirection)
+        object->setString("firedDirection"_s, convertEnumerationToString(*firedDirection));
+
+    return object;
+}
+
+static Ref<JSON::Array> toJSONArray(const PeerConnectionBackend::TransceiverStates& transceiverStates)
+{
+    auto array = JSON::Array::create();
+    for (auto transceiverState : transceiverStates)
+        array->pushObject(toJSONObject(transceiverState));
+
+    return array;
+}
+
+static String toJSONString(const PeerConnectionBackend::TransceiverState& transceiverState)
+{
+    return toJSONObject(transceiverState)->toJSONString();
+}
+
+static String toJSONString(const PeerConnectionBackend::TransceiverStates& transceiverStates)
+{
+    return toJSONArray(transceiverStates)->toJSONString();
+}
+
 } // namespace WebCore
+
+namespace WTF {
+
+String LogArgument<WebCore::PeerConnectionBackend::TransceiverState>::toString(const WebCore::PeerConnectionBackend::TransceiverState& transceiverState)
+{
+    return toJSONString(transceiverState);
+}
+
+String LogArgument<WebCore::PeerConnectionBackend::TransceiverStates>::toString(const WebCore::PeerConnectionBackend::TransceiverStates& transceiverStates)
+{
+    return toJSONString(transceiverStates);
+}
+
+}
 
 #endif // ENABLE(WEB_RTC)

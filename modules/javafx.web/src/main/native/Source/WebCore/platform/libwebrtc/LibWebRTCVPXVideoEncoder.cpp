@@ -96,7 +96,7 @@ void LibWebRTCVPXVideoEncoder::create(Type type, const VideoEncoder::Config& con
             callback(UniqueRef<VideoEncoder> { WTFMove(encoder) });
 
             VideoEncoder::ActiveConfiguration configuration;
-            configuration.colorSpace = PlatformVideoColorSpace { PlatformVideoColorPrimaries::Bt709, PlatformVideoTransferCharacteristics::Iec6196621, PlatformVideoMatrixCoefficients::Smpte170m, false };
+            configuration.colorSpace = PlatformVideoColorSpace { PlatformVideoColorPrimaries::Bt709, PlatformVideoTransferCharacteristics::Bt709, PlatformVideoMatrixCoefficients::Bt709, false };
             descriptionCallback(WTFMove(configuration));
         });
     });
@@ -147,6 +147,8 @@ static UniqueRef<webrtc::VideoEncoder> createInternalEncoder(LibWebRTCVPXVideoEn
         return makeUniqueRefFromNonNullUniquePtr(webrtc::VP8Encoder::Create());
     case LibWebRTCVPXVideoEncoder::Type::VP9:
         return makeUniqueRefFromNonNullUniquePtr(webrtc::VP9Encoder::Create());
+    case LibWebRTCVPXVideoEncoder::Type::VP9_P2:
+        return makeUniqueRefFromNonNullUniquePtr(webrtc::VP9Encoder::Create(cricket::CreateVideoCodec(webrtc::SdpVideoFormat { cricket::kVp9CodecName, { { "profile-id", "2" } } } )));
     case LibWebRTCVPXVideoEncoder::Type::AV1:
         return makeUniqueRefFromNonNullUniquePtr(webrtc::CreateLibaomAv1Encoder());
     }
@@ -208,6 +210,7 @@ int LibWebRTCVPXInternalVideoEncoder::initialize(LibWebRTCVPXVideoEncoder::Type 
         }
         break;
     case LibWebRTCVPXVideoEncoder::Type::VP9:
+    case LibWebRTCVPXVideoEncoder::Type::VP9_P2:
         videoCodec.codecType = webrtc::kVideoCodecVP9;
         videoCodec.VP9()->numberOfSpatialLayers = 1;
         break;

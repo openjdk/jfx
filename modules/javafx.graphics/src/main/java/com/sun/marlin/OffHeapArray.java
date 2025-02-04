@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,13 +27,14 @@ package com.sun.marlin;
 
 import static com.sun.marlin.MarlinConst.LOG_UNSAFE_MALLOC;
 import java.lang.reflect.Field;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import sun.misc.Unsafe;
 
 /**
  *
  */
+// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
+// memory access methods; see JDK-8334137
+@SuppressWarnings("removal")
 final class OffHeapArray  {
 
     // unsafe reference
@@ -42,22 +43,13 @@ final class OffHeapArray  {
     static final int SIZE_INT;
 
     static {
-        @SuppressWarnings("removal")
-        Unsafe tmp = AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
-            @Override
-            public Unsafe run() {
-                Unsafe ref = null;
-                try {
-                    final Field field = Unsafe.class.getDeclaredField("theUnsafe");
-                    field.setAccessible(true);
-                    ref = (Unsafe) field.get(null);
-                } catch (Exception e) {
-                    throw new InternalError("Unable to get sun.misc.Unsafe instance", e);
-                }
-                return ref;
-            }
-        });
-        UNSAFE = tmp;
+        try {
+            final Field field = Unsafe.class.getDeclaredField("theUnsafe");
+            field.setAccessible(true);
+            UNSAFE = (Unsafe) field.get(null);
+        } catch (Exception e) {
+            throw new InternalError("Unable to get sun.misc.Unsafe instance", e);
+        }
 
         SIZE_INT = Unsafe.ARRAY_INT_INDEX_SCALE;
     }

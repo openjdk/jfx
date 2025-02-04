@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,9 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
+import static com.sun.javafx.PlatformUtil.isMac;
+import static com.sun.javafx.PlatformUtil.isWindows;
+import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -39,6 +40,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -56,14 +58,12 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
-import javafx.scene.text.Text;
 import javafx.scene.text.HitInfo;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
-
-import java.util.List;
-
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
+import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
+import com.sun.javafx.scene.shape.TextHelper;
 /**
  * Default skin implementation for the {@link TextArea} control.
  *
@@ -90,9 +90,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
      **************************************************************************/
 
     final private TextArea textArea;
-
-    // *** NOTE: Multiple node mode is not yet fully implemented *** //
-    private static final boolean USE_MULTIPLE_NODES = false;
 
     private final TextAreaBehavior behavior;
 
@@ -163,12 +160,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     public TextAreaSkin(final TextArea control) {
         super(control);
 
+        this.textArea = control;
         // install default input map for the text area control
         this.behavior = new TextAreaBehavior(control);
         this.behavior.setTextAreaSkin(this);
-//        control.setInputMap(behavior.getInputMap());
-
-        this.textArea = control;
 
         caretPosition = new IntegerBinding() {
             { bind(control.caretPositionProperty()); }
@@ -181,6 +176,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             if (control.getWidth() > 0) {
                 setForwardBias(true);
             }
+            // restart caret blinking animation
+            setCaretAnimating(false);
+            setCaretAnimating(true);
         });
 
         forwardBiasProperty().addListener(observable -> {
@@ -188,8 +186,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 updateTextNodeCaretPos(control.getCaretPosition());
             }
         });
-
-//        setManaged(false);
 
         // Initialize content
         scrollPane = new ScrollPane();
@@ -218,7 +214,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         caretPath.setStrokeWidth(1);
         caretPath.fillProperty().bind(textFillProperty());
         caretPath.strokeProperty().bind(textFillProperty());
-        // modifying visibility of the caret forces a layout-pass (RT-32373), so
+        // modifying visibility of the caret forces a layout-pass (JDK-8123291), so
         // instead we modify the opacity.
         caretPath.opacityProperty().bind(new DoubleBinding() {
             { bind(caretVisibleProperty()); }
@@ -247,9 +243,24 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         scrollSelectionFrames.add(new KeyFrame(Duration.millis(350), scrollSelectionHandler));
 
         // Add initial text content
-        for (int i = 0, n = USE_MULTIPLE_NODES ? control.getParagraphs().size() : 1; i < n; i++) {
-            CharSequence paragraph = (n == 1) ? control.textProperty().getValueSafe() : control.getParagraphs().get(i);
-            addParagraphNode(i, paragraph.toString());
+        String s = control.textProperty().getValueSafe();
+        // used to be addParagraphNode, now we have a single paragraph node of type Text
+        // keeping paragraphNodes Group for compatibility
+        {
+            final TextArea textArea = getSkinnable();
+            Text paragraphNode = new Text(s);
+            paragraphNode.setTextOrigin(VPos.TOP);
+            paragraphNode.setManaged(false);
+            paragraphNode.getStyleClass().add("text");
+            paragraphNode.boundsTypeProperty().addListener((observable, oldValue, newValue) -> {
+                invalidateMetrics();
+                updateFontMetrics();
+            });
+            paragraphNodes.getChildren().add(paragraphNode);
+
+            paragraphNode.fontProperty().bind(textArea.fontProperty());
+            paragraphNode.fillProperty().bind(textFillProperty());
+            paragraphNode.selectionFillProperty().bind(highlightTextFillProperty());
         }
 
         registerChangeListener(control.selectionProperty(), e -> {
@@ -271,6 +282,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         registerChangeListener(control.prefRowCountProperty(), e -> {
             invalidateMetrics();
             updatePrefViewportHeight();
+        });
+
+        registerChangeListener(control.fontProperty(), e -> {
+            contentView.requestLayout();
         });
 
         updateFontMetrics();
@@ -314,40 +329,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             scrollPane.setHvalue(hValue);
         });
 
-        if (USE_MULTIPLE_NODES) {
-            registerListChangeListener(control.getParagraphs(), change -> {
-                while (change.next()) {
-                    int from = change.getFrom();
-                    int to = change.getTo();
-                    List<? extends CharSequence> removed = (List<? extends CharSequence>) change.getRemoved();
-                    if (from < to) {
-
-                        if (removed.isEmpty()) {
-                            // This is an add
-                            for (int i = from, n = to; i < n; i++) {
-                                addParagraphNode(i, change.getList().get(i).toString());
-                            }
-                        } else {
-                            // This is an update
-                            for (int i = from, n = to; i < n; i++) {
-                                Node node = paragraphNodes.getChildren().get(i);
-                                Text paragraphNode = (Text) node;
-                                paragraphNode.setText(change.getList().get(i).toString());
-                            }
-                        }
-                    } else {
-                        // This is a remove
-                        paragraphNodes.getChildren().subList(from, from + removed.size()).clear();
-                    }
-                }
-            });
-        } else {
-            registerInvalidationListener(control.textProperty(), e -> {
-                invalidateMetrics();
-                ((Text)paragraphNodes.getChildren().get(0)).setText(control.textProperty().getValueSafe());
-                contentView.requestLayout();
-            });
-        }
+        registerInvalidationListener(control.textProperty(), e -> {
+            invalidateMetrics();
+            getTextNode().setText(control.textProperty().getValueSafe());
+            contentView.requestLayout();
+        });
 
         usePromptText = new BooleanBinding() {
             { bind(control.textProperty(), control.promptTextProperty()); }
@@ -400,7 +386,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 Point2D tp = textNode.localToScene(0, 0);
                 Point2D p = new Point2D(e.getSceneX() - tp.getX() - pressX + caretHandle.getWidth() / 2,
                                         e.getSceneY() - tp.getY() - pressY - 6);
-                HitInfo hit = textNode.hitTest(translateCaretPosition(p));
+                HitInfo hit = hitTest(p);
                 positionCaret(hit, false);
                 e.consume();
             });
@@ -411,7 +397,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 Point2D tp = textNode.localToScene(0, 0);
                 Point2D p = new Point2D(e.getSceneX() - tp.getX() - pressX + selectionHandle1.getWidth() / 2,
                                         e.getSceneY() - tp.getY() - pressY + selectionHandle1.getHeight() + 5);
-                HitInfo hit = textNode.hitTest(translateCaretPosition(p));
+                HitInfo hit = hitTest(p);
                 if (control1.getAnchor() < control1.getCaretPosition()) {
                     // Swap caret and anchor
                     control1.selectRange(control1.getCaretPosition(), control1.getAnchor());
@@ -432,7 +418,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 Point2D tp = textNode.localToScene(0, 0);
                 Point2D p = new Point2D(e.getSceneX() - tp.getX() - pressX + selectionHandle2.getWidth() / 2,
                                         e.getSceneY() - tp.getY() - pressY - 6);
-                HitInfo hit = textNode.hitTest(translateCaretPosition(p));
+                HitInfo hit = hitTest(p);
                 if (control1.getAnchor() > control1.getCaretPosition()) {
                     // Swap caret and anchor
                     control1.selectRange(control1.getCaretPosition(), control1.getAnchor());
@@ -491,8 +477,20 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         // text content of the textInputControl
         Text textNode = getTextNode();
         Point2D p = new Point2D(x - textNode.getLayoutX(), y - getTextTranslateY());
-        HitInfo hit = textNode.hitTest(translateCaretPosition(p));
-        return hit;
+        return hitTest(p);
+    }
+
+    private HitInfo hitTest(Point2D p) {
+        Text textNode = getTextNode();
+        if (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            double w = textNode.getWrappingWidth();
+            if (w == 0.0) {
+                w = TextHelper.getVisualWidth(textNode);
+            }
+            double x = w - p.getX();
+            p = new Point2D(x, p.getY());
+        }
+        return textNode.hitTest(p);
     }
 
     /** {@inheritDoc} */
@@ -577,12 +575,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             // The caret is split
             // TODO: Find a better way to get the primary caret position
             // instead of depending on the internal implementation.
-            // See RT-25465.
+            // See JDK-8089958.
             caretBounds = new Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds();
         }
         double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
         double hitY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
-        HitInfo hit = textNode.hitTest(new Point2D(hitX, hitY));
+        HitInfo hit = hitTest(new Point2D(hitX, hitY));
         boolean leading = hit.isLeading();
         Path charShape = new Path(textNode.rangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
         if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
@@ -621,7 +619,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         double x = (targetCaretX >= 0) ? targetCaretX : (caretBounds.getMaxX());
 
         // Find a text position for the target x,y.
-        HitInfo hit = textNode.hitTest(translateCaretPosition(new Point2D(x, targetLineMidY)));
+        HitInfo hit = hitTest(new Point2D(x, targetLineMidY));
         int pos = hit.getCharIndex();
 
         // Save the old pos temporarily while testing the new one.
@@ -740,52 +738,24 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     }
 
     /** {@inheritDoc} */
-    @Override protected PathElement[] getUnderlineShape(int start, int end) {
-        int pStart = 0;
-        for (Node node : paragraphNodes.getChildren()) {
-            Text p = (Text)node;
-            int pEnd = pStart + p.textProperty().getValueSafe().length();
-            if (pEnd >= start) {
-                return p.underlineShape(start - pStart, end - pStart);
-            }
-            pStart = pEnd + 1;
-        }
-        return null;
+    @Override
+    protected PathElement[] getUnderlineShape(int start, int end) {
+        return getTextNode().underlineShape(start, end);
     }
 
     /** {@inheritDoc} */
-    @Override protected PathElement[] getRangeShape(int start, int end) {
-        int pStart = 0;
-        for (Node node : paragraphNodes.getChildren()) {
-            Text p = (Text)node;
-            int pEnd = pStart + p.textProperty().getValueSafe().length();
-            if (pEnd >= start) {
-                return p.rangeShape(start - pStart, end - pStart);
-            }
-            pStart = pEnd + 1;
-        }
-        return null;
+    @Override
+    protected PathElement[] getRangeShape(int start, int end) {
+        return getTextNode().rangeShape(start, end);
     }
 
     /** {@inheritDoc} */
-    @Override protected void addHighlight(List<? extends Node> nodes, int start) {
-        int pStart = 0;
-        Text paragraphNode = null;
-        for (Node node : paragraphNodes.getChildren()) {
-            Text p = (Text)node;
-            int pEnd = pStart + p.textProperty().getValueSafe().length();
-            if (pEnd >= start) {
-                paragraphNode = p;
-                break;
-            }
-            pStart = pEnd + 1;
-        }
-
-        if (paragraphNode != null) {
-            for (Node node : nodes) {
-                node.setLayoutX(paragraphNode.getLayoutX());
-                node.setLayoutY(paragraphNode.getLayoutY());
-            }
+    @Override
+    protected void addHighlight(List<? extends Node> nodes, int start) {
+        Text paragraphNode = getTextNode();
+        for (Node node : nodes) {
+            node.setLayoutX(paragraphNode.getLayoutX());
+            node.setLayoutY(paragraphNode.getLayoutY());
         }
         contentView.getChildren().addAll(nodes);
     }
@@ -842,76 +812,37 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     }
 
     /** {@inheritDoc} */
-    @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
-        Text firstParagraph = (Text) paragraphNodes.getChildren().get(0);
-        return Utils.getAscent(getSkinnable().getFont(), firstParagraph.getBoundsType())
+    @Override
+    public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
+        Text p = getTextNode();
+        return Utils.getAscent(getSkinnable().getFont(), p.getBoundsType())
                 + contentView.snappedTopInset() + textArea.snappedTopInset();
     }
 
     private char getCharacter(int index) {
-        int n = paragraphNodes.getChildren().size();
-
-        int paragraphIndex = 0;
-        int offset = index;
-
-        String paragraph = null;
-        while (paragraphIndex < n) {
-            Text paragraphNode = (Text)paragraphNodes.getChildren().get(paragraphIndex);
-            paragraph = paragraphNode.getText();
-            int count = paragraph.length() + 1;
-
-            if (offset < count) {
-                break;
-            }
-
-            offset -= count;
-            paragraphIndex++;
-        }
-
-        return offset == paragraph.length() ? '\n' : paragraph.charAt(offset);
+        String paragraph = getTextNode().getText();
+        return index == paragraph.length() ? '\n' : paragraph.charAt(index);
     }
 
     /** {@inheritDoc} */
-    @Override protected int getInsertionPoint(double x, double y) {
+    @Override
+    protected int getInsertionPoint(double x, double y) {
         TextArea textArea = getSkinnable();
+        Text n = getTextNode();
 
-        int n = paragraphNodes.getChildren().size();
-        int index = -1;
-
-        if (n > 0) {
-            if (y < contentView.snappedTopInset()) {
-                // Select the character at x in the first row
-                Text paragraphNode = (Text)paragraphNodes.getChildren().get(0);
-                index = getNextInsertionPoint(paragraphNode, x, -1, VerticalDirection.DOWN);
-            } else if (y > contentView.snappedTopInset() + contentView.getHeight()) {
-                // Select the character at x in the last row
-                int lastParagraphIndex = n - 1;
-                Text lastParagraphView = (Text)paragraphNodes.getChildren().get(lastParagraphIndex);
-
-                index = getNextInsertionPoint(lastParagraphView, x, -1, VerticalDirection.UP)
-                        + (textArea.getLength() - lastParagraphView.getText().length());
-            } else {
-                // Select the character at x in the row at y
-                int paragraphOffset = 0;
-                for (int i = 0; i < n; i++) {
-                    Text paragraphNode = (Text)paragraphNodes.getChildren().get(i);
-
-                    Bounds bounds = paragraphNode.getBoundsInLocal();
-                    double paragraphViewY = paragraphNode.getLayoutY() + bounds.getMinY();
-                    if (y >= paragraphViewY
-                            && y < paragraphViewY + paragraphNode.getBoundsInLocal().getHeight()) {
-                        index = getInsertionPoint(paragraphNode,
-                                x - paragraphNode.getLayoutX(),
-                                y - paragraphNode.getLayoutY()) + paragraphOffset;
-                        break;
-                    }
-
-                    paragraphOffset += paragraphNode.getText().length() + 1;
-                }
+        if (y < contentView.snappedTopInset()) {
+            return 0;
+        } else if (y > contentView.snappedTopInset() + contentView.getHeight()) {
+            return (textArea.getLength() - n.getText().length());
+        } else {
+            Bounds bounds = n.getBoundsInLocal();
+            double dy = n.getLayoutY() + bounds.getMinY();
+            if ((y >= dy) && (y < dy + n.getBoundsInLocal().getHeight())) {
+                Point2D p = new Point2D(x - n.getLayoutX(), y - n.getLayoutY());
+                return hitTest(p).getInsertionIndex();
             }
         }
-
-        return index;
+        return -1;
     }
 
     // Public for behavior
@@ -951,28 +882,19 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     }
 
     /** {@inheritDoc} */
-    @Override public Rectangle2D getCharacterBounds(int index) {
+    @Override
+    public Rectangle2D getCharacterBounds(int index) {
         TextArea textArea = getSkinnable();
-
-        int paragraphIndex = paragraphNodes.getChildren().size();
-        int paragraphOffset = textArea.getLength() + 1;
-
-        Text paragraphNode = null;
-        do {
-            paragraphNode = (Text)paragraphNodes.getChildren().get(--paragraphIndex);
-            paragraphOffset -= paragraphNode.getText().length() + 1;
-        } while (index < paragraphOffset);
-
-        int characterIndex = index - paragraphOffset;
+        Text paragraphNode = getTextNode();
         boolean terminator = false;
 
-        if (characterIndex == paragraphNode.getText().length()) {
-            characterIndex--;
+        if (index == paragraphNode.getText().length()) {
+            index--;
             terminator = true;
         }
 
         characterBoundingPath.getElements().clear();
-        characterBoundingPath.getElements().addAll(paragraphNode.rangeShape(characterIndex, characterIndex + 1));
+        characterBoundingPath.getElements().addAll(paragraphNode.rangeShape(index, index + 1));
         characterBoundingPath.setLayoutX(paragraphNode.getLayoutX());
         characterBoundingPath.setLayoutY(paragraphNode.getLayoutY());
 
@@ -1034,40 +956,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         }
     }
 
-    private void addParagraphNode(int i, String string) {
-        final TextArea textArea = getSkinnable();
-        Text paragraphNode = new Text(string);
-        paragraphNode.setTextOrigin(VPos.TOP);
-        paragraphNode.setManaged(false);
-        paragraphNode.getStyleClass().add("text");
-        paragraphNode.boundsTypeProperty().addListener((observable, oldValue, newValue) -> {
-            invalidateMetrics();
-            updateFontMetrics();
-        });
-        paragraphNodes.getChildren().add(i, paragraphNode);
-
-        paragraphNode.fontProperty().bind(textArea.fontProperty());
-        paragraphNode.fillProperty().bind(textFillProperty());
-        paragraphNode.selectionFillProperty().bind(highlightTextFillProperty());
-    }
-
     private double getScrollTopMax() {
         return Math.max(0, contentView.getHeight() - scrollPane.getViewportBounds().getHeight());
     }
 
     private double getScrollLeftMax() {
         return Math.max(0, contentView.getWidth() - scrollPane.getViewportBounds().getWidth());
-    }
-
-    private int getInsertionPoint(Text paragraphNode, double x, double y) {
-        HitInfo hitInfo = paragraphNode.hitTest(new Point2D(x, y));
-        return hitInfo.getInsertionIndex();
-    }
-
-    private int getNextInsertionPoint(Text paragraphNode, double x, int from,
-        VerticalDirection scrollDirection) {
-        // TODO
-        return 0;
     }
 
     private void scrollCaretToVisible() {
@@ -1147,8 +1041,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     }
 
     private void updateFontMetrics() {
-        Text firstParagraph = (Text)paragraphNodes.getChildren().get(0);
-        lineHeight = Utils.getLineHeight(getSkinnable().getFont(), firstParagraph.getBoundsType());
+        lineHeight = Utils.getLineHeight(getSkinnable().getFont(), getTextNode().getBoundsType());
         characterWidth = fontMetrics.get().getCharWidth('W');
     }
 
@@ -1160,19 +1053,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         return contentView.snappedTopInset();
     }
 
-    private double getTextLeft() {
-        return 0;
-    }
-
-    private Point2D translateCaretPosition(Point2D p) {
-        return p;
-    }
-
-    // package for testing only!
+    // package protected for testing
     Text getTextNode() {
-        if (USE_MULTIPLE_NODES) {
-            throw new IllegalArgumentException("Multiple node traversal is not yet implemented.");
-        }
         return (Text)paragraphNodes.getChildren().get(0);
     }
 
@@ -1311,23 +1193,17 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             final double topPadding = snappedTopInset();
             final double leftPadding = snappedLeftInset();
 
-            double wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0);
-
+            double wrappingWidth = textArea.isWrapText() ? Math.max(width - (leftPadding + snappedRightInset()), 0) : 0;
             double y = topPadding;
 
-            final List<Node> paragraphNodesChildren = paragraphNodes.getChildren();
+            Text paragraphNode = getTextNode();
+            paragraphNode.setWrappingWidth(wrappingWidth);
 
-            for (int i = 0; i < paragraphNodesChildren.size(); i++) {
-                Node node = paragraphNodesChildren.get(i);
-                Text paragraphNode = (Text)node;
-                paragraphNode.setWrappingWidth(wrappingWidth);
+            Bounds bounds = paragraphNode.getBoundsInLocal();
+            paragraphNode.setLayoutX(leftPadding);
+            paragraphNode.setLayoutY(y);
 
-                Bounds bounds = paragraphNode.getBoundsInLocal();
-                paragraphNode.setLayoutX(leftPadding);
-                paragraphNode.setLayoutY(y);
-
-                y += bounds.getHeight();
-            }
+            y += bounds.getHeight();
 
             if (promptNode != null) {
                 promptNode.setLayoutX(leftPadding);
@@ -1359,15 +1235,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 // Position the handle for the anchor. This could be handle1 or handle2.
                 // Do this before positioning the actual caret.
                 if (selection.getLength() > 0) {
-                    int paragraphIndex = paragraphNodesChildren.size();
-                    int paragraphOffset = textArea.getLength() + 1;
-                    Text paragraphNode = null;
-                    do {
-                        paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex);
-                        paragraphOffset -= paragraphNode.getText().length() + 1;
-                    } while (anchorPos < paragraphOffset);
-
-                    updateTextNodeCaretPos(anchorPos - paragraphOffset);
+                    updateTextNodeCaretPos(anchorPos);
                     caretPath.getElements().clear();
                     caretPath.getElements().addAll(paragraphNode.getCaretShape());
                     caretPath.setLayoutX(paragraphNode.getLayoutX());
@@ -1386,23 +1254,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
             {
                 // Position caret
-                int paragraphIndex = paragraphNodesChildren.size();
-                int paragraphOffset = textArea.getLength() + 1;
-
-                Text paragraphNode = null;
-                do {
-                    paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex);
-                    paragraphOffset -= paragraphNode.getText().length() + 1;
-                } while (caretPos < paragraphOffset);
-
-                updateTextNodeCaretPos(caretPos - paragraphOffset);
+                updateTextNodeCaretPos(caretPos);
 
                 caretPath.getElements().clear();
                 caretPath.getElements().addAll(paragraphNode.getCaretShape());
 
                 caretPath.setLayoutX(paragraphNode.getLayoutX());
 
-                // TODO: Remove this temporary workaround for RT-27533
+                // TODO: Remove this temporary workaround for JDK-8115242
                 paragraphNode.setLayoutX(2 * paragraphNode.getLayoutX() - paragraphNode.getBoundsInParent().getMinX());
 
                 caretPath.setLayoutY(paragraphNode.getLayoutY());
@@ -1414,33 +1273,27 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             // Update selection fg and bg
             int start = selection.getStart();
             int end = selection.getEnd();
-            for (int i = 0, max = paragraphNodesChildren.size(); i < max; i++) {
-                Node paragraphNode = paragraphNodesChildren.get(i);
-                Text textNode = (Text)paragraphNode;
-                int paragraphLength = textNode.getText().length() + 1;
-                if (end > start && start < paragraphLength) {
-                    textNode.setSelectionStart(start);
-                    textNode.setSelectionEnd(Math.min(end, paragraphLength));
+            int paragraphLength = paragraphNode.getText().length() + 1;
+            if (end > start && start < paragraphLength) {
+                paragraphNode.setSelectionStart(start);
+                paragraphNode.setSelectionEnd(Math.min(end, paragraphLength));
 
-                    Path selectionHighlightPath = new Path();
-                    selectionHighlightPath.setManaged(false);
-                    selectionHighlightPath.setStroke(null);
-                    PathElement[] selectionShape = textNode.getSelectionShape();
-                    if (selectionShape != null) {
-                        selectionHighlightPath.getElements().addAll(selectionShape);
-                    }
-                    selectionHighlightGroup.getChildren().add(selectionHighlightPath);
-                    selectionHighlightGroup.setVisible(true);
-                    selectionHighlightPath.setLayoutX(textNode.getLayoutX());
-                    selectionHighlightPath.setLayoutY(textNode.getLayoutY());
-                    updateHighlightFill();
-                } else {
-                    textNode.setSelectionStart(-1);
-                    textNode.setSelectionEnd(-1);
-                    selectionHighlightGroup.setVisible(false);
+                Path selectionHighlightPath = new Path();
+                selectionHighlightPath.setManaged(false);
+                selectionHighlightPath.setStroke(null);
+                PathElement[] selectionShape = paragraphNode.getSelectionShape();
+                if (selectionShape != null) {
+                    selectionHighlightPath.getElements().addAll(selectionShape);
                 }
-                start = Math.max(0, start - paragraphLength);
-                end   = Math.max(0, end   - paragraphLength);
+                selectionHighlightGroup.getChildren().add(selectionHighlightPath);
+                selectionHighlightGroup.setVisible(true);
+                selectionHighlightPath.setLayoutX(paragraphNode.getLayoutX());
+                selectionHighlightPath.setLayoutY(paragraphNode.getLayoutY());
+                updateHighlightFill();
+            } else {
+                paragraphNode.setSelectionStart(-1);
+                paragraphNode.setSelectionEnd(-1);
+                selectionHighlightGroup.setVisible(false);
             }
 
             if (SHOW_HANDLES) {
@@ -1472,7 +1325,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 }
             }
 
-            // RT-36454: Fit to width/height only if smaller than viewport.
+            // JDK-8097060 (JDK-8097060): Fit to width/height only if smaller than viewport.
             // That is, grow to fit but don't shrink to fit.
             Bounds viewportBounds = scrollPane.getViewportBounds();
             boolean wasFitToWidth = scrollPane.isFitToWidth();
@@ -1480,11 +1333,16 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             boolean setFitToWidth = textArea.isWrapText() || computePrefWidth(-1) <= viewportBounds.getWidth();
             boolean setFitToHeight = computePrefHeight(width) <= viewportBounds.getHeight();
             if (wasFitToWidth != setFitToWidth || wasFitToHeight != setFitToHeight) {
-                Platform.runLater(() -> {
-                    scrollPane.setFitToWidth(setFitToWidth);
-                    scrollPane.setFitToHeight(setFitToHeight);
-                });
+                scrollPane.setFitToWidth(setFitToWidth);
+                scrollPane.setFitToHeight(setFitToHeight);
                 getParent().requestLayout();
+
+                // if only there was a way to force a layout from within the layout!
+                // runlater causes flicker
+                Platform.runLater(() -> {
+                    scrollPane.layout();
+                    scrollCaretToVisible();
+                });
             }
         }
     }

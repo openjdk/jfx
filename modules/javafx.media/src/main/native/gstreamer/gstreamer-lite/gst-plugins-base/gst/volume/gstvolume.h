@@ -52,10 +52,10 @@ struct _GstVolume {
   gboolean current_mute;
   gdouble current_volume;
 
-  gint   current_vol_i32;
-  gint   current_vol_i24; /* the _i(nt) values get synchronized with the */
-  gint   current_vol_i16; /* the _i(nt) values get synchronized with the */
-  gint   current_vol_i8;   /* the _i(nt) values get synchronized with the */
+  gint64 current_vol_i32;
+  gint64 current_vol_i24; /* the _i(nt) values get synchronized with the */
+  gint64 current_vol_i16; /* the _i(nt) values get synchronized with the */
+  gint64 current_vol_i8;  /* the _i(nt) values get synchronized with the */
 
   GList *tracklist;
   gboolean negotiated;

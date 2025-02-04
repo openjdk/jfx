@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,6 @@ package com.sun.glass.ui;
 
 import com.sun.javafx.PlatformUtil;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Locale;
-
 final class Platform {
 
     public static final String MAC = "Mac";
@@ -44,9 +40,7 @@ final class Platform {
         if (type == null) {
 
             // Provide for a runtime override, allowing EGL for example
-            @SuppressWarnings("removal")
-            String userPlatform =
-                AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("glass.platform"));
+            String userPlatform = System.getProperty("glass.platform");
 
             if (userPlatform != null) {
                 if (userPlatform.equals("macosx"))

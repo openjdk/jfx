@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,8 +73,10 @@ import javafx.css.Styleable;
  * node in a Group.
  * <p>
  * ScrollPane sets focusTraversable to false.
- * </p>
- *
+ * <p>
+ * ScrollPane only acts on key presses when it has the focus ({@link #isFocused()}
+ * returns {@code true}) and won't respond to key events that bubble up from a
+ * focused child control.
  * <p>
  * This example creates a ScrollPane, which contains a Rectangle:
  * <pre><code> Rectangle rect = new Rectangle(200, 200, Color.RED);
@@ -212,7 +214,7 @@ public class ScrollPane extends Control {
     }
     /**
      * The current horizontal scroll position of the ScrollPane. This value
-     * may be set by the application to scroll the view programatically.
+     * may be set by the application to scroll the view programmatically.
      * The ScrollPane will update this value whenever the viewport is
      * scrolled or panned by the user. This value must always be within
      * the range of {@link #hminProperty hmin} to {@link #hmaxProperty hmax}. When {@link #hvalueProperty hvalue}
@@ -242,7 +244,7 @@ public class ScrollPane extends Control {
     }
     /**
      * The current vertical scroll position of the ScrollPane. This value
-     * may be set by the application to scroll the view programatically.
+     * may be set by the application to scroll the view programmatically.
      * The ScrollPane will update this value whenever the viewport is
      * scrolled or panned by the user. This value must always be within
      * the range of {@link #vminProperty vmin} to {@link #vmaxProperty vmax}. When {@link #vvalueProperty vvalue}

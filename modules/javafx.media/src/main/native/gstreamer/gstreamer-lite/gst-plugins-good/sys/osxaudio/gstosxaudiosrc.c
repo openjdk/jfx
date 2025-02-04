@@ -123,6 +123,8 @@ gst_osx_audio_src_do_init (GType type)
 #define gst_osx_audio_src_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstOsxAudioSrc, gst_osx_audio_src,
     GST_TYPE_AUDIO_BASE_SRC, gst_osx_audio_src_do_init (g_define_type_id));
+GST_ELEMENT_REGISTER_DEFINE (osxaudiosrc, "osxaudiosrc", GST_RANK_PRIMARY,
+    GST_TYPE_OSX_AUDIO_SRC);
 
 static void
 gst_osx_audio_src_class_init (GstOsxAudioSrcClass * klass)
@@ -208,6 +210,12 @@ gst_osx_audio_src_change_state (GstElement * element, GstStateChange transition)
   GstStateChangeReturn ret;
 
   switch (transition) {
+    case GST_STATE_CHANGE_READY_TO_NULL:{
+      GST_OBJECT_LOCK (osxsrc);
+      osxsrc->device_id = kAudioDeviceUnknown;
+      GST_OBJECT_UNLOCK (osxsrc);
+      break;
+    }
     default:
       break;
   }
@@ -222,7 +230,10 @@ gst_osx_audio_src_change_state (GstElement * element, GstStateChange transition)
       ringbuffer =
           GST_OSX_AUDIO_RING_BUFFER (GST_AUDIO_BASE_SRC (osxsrc)->ringbuffer);
       if (ringbuffer->core_audio->device_id != osxsrc->device_id) {
+        GST_OBJECT_LOCK (osxsrc);
         osxsrc->device_id = ringbuffer->core_audio->device_id;
+        GST_OBJECT_UNLOCK (osxsrc);
+
         g_object_notify (G_OBJECT (osxsrc), "device");
       }
       break;
@@ -339,6 +350,12 @@ gst_osx_audio_src_io_proc (GstOsxAudioRingBuffer * buf,
   gint remaining;
   UInt32 n;
   gint offset = 0;
+  guint64 sample_position;
+  GstAudioRingBufferSpec *spec = &GST_AUDIO_RING_BUFFER (buf)->spec;
+  guint bpf = GST_AUDIO_INFO_BPF (&spec->info);
+
+  GST_LOG_OBJECT (buf, "in sample position %f frames %u",
+      inTimeStamp->mSampleTime, inNumberFrames);
 
   /* Previous invoke of AudioUnitRender changed mDataByteSize into
    * number of bytes actually read. Reset the members. */
@@ -359,6 +376,7 @@ gst_osx_audio_src_io_proc (GstOsxAudioRingBuffer * buf,
    *       not just the first one. */
 
   remaining = buf->core_audio->recBufferList->mBuffers[0].mDataByteSize;
+  sample_position = inTimeStamp->mSampleTime;
 
   while (remaining) {
     if (!gst_audio_ring_buffer_prepare_read (GST_AUDIO_RING_BUFFER (buf),
@@ -377,10 +395,24 @@ gst_osx_audio_src_io_proc (GstOsxAudioRingBuffer * buf,
     buf->segoffset += len;
     offset += len;
     remaining -= len;
+    sample_position += len / bpf;
 
     if ((gint) buf->segoffset == GST_AUDIO_RING_BUFFER (buf)->spec.segsize) {
+      /* Calculate the timestamp corresponding to the first sample in the segment */
+      guint64 seg_sample_pos = sample_position - (spec->segsize / bpf);
+      GstClockTime ts = gst_util_uint64_scale_int (seg_sample_pos, GST_SECOND,
+          GST_AUDIO_INFO_RATE (&spec->info));
+      gst_audio_ring_buffer_set_timestamp (GST_AUDIO_RING_BUFFER (buf),
+          writeseg, ts);
+
       /* we wrote one segment */
+      CORE_AUDIO_TIMING_LOCK (buf->core_audio);
       gst_audio_ring_buffer_advance (GST_AUDIO_RING_BUFFER (buf), 1);
+      /* FIXME: Update the timestamp and reported frames in smaller increments
+       * when the segment size is larger than the total inNumberFrames */
+      gst_core_audio_update_timing (buf->core_audio, inTimeStamp,
+          inNumberFrames);
+      CORE_AUDIO_TIMING_UNLOCK (buf->core_audio);
 
       buf->segoffset = 0;
     }

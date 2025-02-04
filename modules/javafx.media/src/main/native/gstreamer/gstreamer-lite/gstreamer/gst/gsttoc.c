@@ -140,7 +140,7 @@ gst_toc_new (GstTocScope scope)
   g_return_val_if_fail (scope == GST_TOC_SCOPE_GLOBAL ||
       scope == GST_TOC_SCOPE_CURRENT, NULL);
 
-  toc = g_slice_new0 (GstToc);
+  toc = g_new0 (GstToc, 1);
 
   gst_mini_object_init (GST_MINI_OBJECT_CAST (toc), 0, GST_TYPE_TOC,
       (GstMiniObjectCopyFunction) gst_toc_copy, NULL,
@@ -269,7 +269,7 @@ gst_toc_entry_new_internal (GstTocEntryType type, const gchar * uid)
 {
   GstTocEntry *entry;
 
-  entry = g_slice_new0 (GstTocEntry);
+  entry = g_new0 (GstTocEntry, 1);
 
   gst_mini_object_init (GST_MINI_OBJECT_CAST (entry), 0, GST_TYPE_TOC_ENTRY,
       (GstMiniObjectCopyFunction) gst_toc_entry_copy, NULL,
@@ -313,7 +313,7 @@ gst_toc_free (GstToc * toc)
   memset (toc, 0xff, sizeof (GstToc));
 #endif
 
-  g_slice_free (GstToc, toc);
+  g_free (toc);
 }
 
 static void
@@ -333,7 +333,7 @@ gst_toc_entry_free (GstTocEntry * entry)
   memset (entry, 0xff, sizeof (GstTocEntry));
 #endif
 
-  g_slice_free (GstTocEntry, entry);
+  g_free (entry);
 }
 
 static GstTocEntry *

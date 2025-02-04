@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,16 +28,17 @@ package javafx.scene.control.skin;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
-
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
@@ -46,7 +47,6 @@ import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
-
 import com.sun.javafx.scene.control.IDisconnectable;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.TreeTableViewBackingList;
@@ -55,6 +55,7 @@ import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
 /**
  * Default skin implementation for the {@link TreeTableView} control.
  *
+ * @param <T> the tree table item type
  * @see TreeTableView
  * @since 9
  */
@@ -127,9 +128,11 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         behavior.setOnSelectRightCell(() -> onSelectRightCell());
         behavior.setOnFocusLeftCell(() -> onFocusLeftCell());
         behavior.setOnFocusRightCell(() -> onFocusRightCell());
+        behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
+        behavior.setOnVerticalUnitScroll(this::verticalUnitScroll);
 
         lh.addChangeListener(control.rootProperty(), (ev) -> {
-            // fix for RT-37853
+            // fix for JDK-8094887
             getSkinnable().edit(-1, null);
             setRoot(getSkinnable().getRoot());
         });
@@ -143,10 +146,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             }
             // update the item count in the flow and behavior instances
             updateItemCount();
-        });
-
-        lh.addChangeListener(control.rowFactoryProperty(), (ev) -> {
-            flow.recreateCells();
         });
 
         lh.addChangeListener(control.expandedItemCountProperty(), (ev) -> {
@@ -294,7 +293,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             // which would throw an NPE.  Perhaps we should simply use newRoot instance instead of getRoot().
             rootListener = ListenerHelper.get(this).addEventHandler(getRoot(), TreeItem.<T>treeNotificationEvent(), e -> {
                 if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
-                    // Fix for RT-14842, where the children of a TreeItem were changing,
+                    // Fix for JDK-8114432, where the children of a TreeItem were changing,
                     // but because the overall item count was staying the same, there was
                     // no event being fired to the skin to be informed that the items
                     // had changed. So, here we just watch for the case where the number
@@ -302,10 +301,10 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
                     markItemCountDirty();
                     getSkinnable().requestLayout();
                 } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
-                    // Fix for RT-14971 and RT-15338.
+                    // Fix for JDK-8114657 and JDK-8114610.
                     requestRebuildCells();
                 } else {
-                    // Fix for RT-20090. We are checking to see if the event coming
+                    // Fix for JDK-8115929. We are checking to see if the event coming
                     // from the TreeItem root is an event where the count has changed.
                     EventType<?> eventType = e.getEventType();
                     while (eventType != null) {
@@ -318,7 +317,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
                     }
                 }
 
-                // fix for RT-37853
+                // fix for JDK-8094887
                 getSkinnable().edit(-1, null);
             });
         }
@@ -361,6 +360,27 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             // requestRebuildCells();
         } else {
             needCellsReconfigured = true;
+        }
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            right = !right;
+        }
+        ScrollBar sb = flow.getHbar();
+        if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        ScrollBar sb = flow.getVbar();
+        if (down) {
+            sb.increment();
+        } else {
+            sb.decrement();
         }
     }
 }

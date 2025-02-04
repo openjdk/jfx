@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,18 +24,17 @@
  */
 package test.com.sun.javafx.scene.control;
 
-import com.sun.javafx.collections.ObservableListWrapper;
-import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.collections.ObservableListWrapper;
+import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 
 public class SelectedItemsReadOnlyObservableListTest {
 
@@ -44,7 +43,7 @@ public class SelectedItemsReadOnlyObservableListTest {
     TestObservableList<Integer> selectedIndices;
     List<String> changes;
 
-    @Before
+    @BeforeEach
     public void setup() {
         changes = new ArrayList<>();
         items = FXCollections.observableArrayList("foo", "bar", "baz", "qux", "quz");
@@ -102,7 +101,7 @@ public class SelectedItemsReadOnlyObservableListTest {
      * { [bar] replaced by [foo] at 1 }
      */
     @Test
-    @Ignore("JDK-8267951")
+    @Disabled("JDK-8267951")
     public void testReplaceTwoItems() {
         selectedIndices.addAll(0, 1);
         changes.clear();
@@ -120,7 +119,7 @@ public class SelectedItemsReadOnlyObservableListTest {
      * { [quz] replaced by [qux] at 4 }
      */
     @Test
-    @Ignore("JDK-8267951")
+    @Disabled("JDK-8267951")
     public void testReplaceDisjointRanges() {
         selectedIndices.addAll(0, 1, 2, 3, 4);
         changes.clear();

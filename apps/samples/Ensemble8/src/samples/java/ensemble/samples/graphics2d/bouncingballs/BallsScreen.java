@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,16 +31,13 @@
  */
 package ensemble.samples.graphics2d.bouncingballs;
 
-import javafx.scene.Group;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.BALL_RADIUS;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.HEIGHT;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.INFOPANEL_HEIGHT;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.WIDTH;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
-import javafx.scene.control.Button;
-import javafx.stage.Screen;
-import javafx.stage.Stage;
-
-import static ensemble.samples.graphics2d.bouncingballs.Constants.*;
 
 public class BallsScreen extends Parent {
 

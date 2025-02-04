@@ -54,6 +54,8 @@ CSSAtRuleID cssAtRuleID(StringView name)
         { "ornaments", CSSAtRuleOrnaments },
         { "page", CSSAtRulePage },
         { "property", CSSAtRuleProperty },
+        { "scope",                 CSSAtRuleScope },
+        { "starting-style",        CSSAtRuleStartingStyle },
         { "styleset", CSSAtRuleStyleset },
         { "stylistic", CSSAtRuleStylistic },
         { "supports", CSSAtRuleSupports },

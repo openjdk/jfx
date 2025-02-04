@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,9 +33,6 @@
 #include "../PrismES2Defs.h"
 #include "com_sun_prism_es2_X11GLDrawable.h"
 
-extern void initializeDrawableInfo(DrawableInfo *dInfo);
-extern void deleteDrawableInfo(DrawableInfo *dInfo);
-
 /*
  * Class:     com_sun_prism_es2_X11GLDrawable
  * Method:    nCreateDrawable
@@ -48,6 +45,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nCreateDrawable
     if (pfInfo == NULL) {
         return 0;
     }
+
     /* allocate the structure */
     dInfo = (DrawableInfo *) malloc(sizeof (DrawableInfo));
     if (dInfo == NULL) {
@@ -56,7 +54,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nCreateDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     // Use the dummyWin that was already created in the pfInfo
     // since this is an non-onscreen drawable.
@@ -88,7 +86,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nGetDummyDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     // Use the dummyWin that was already created in the pfInfo
     // since this is an non-onscreen drawable.
@@ -112,4 +110,19 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_X11GLDrawable_nSwapBuffers
     }
     glXSwapBuffers(dInfo->display, dInfo->win);
     return JNI_TRUE;
+}
+
+/*
+ * Class:     com_sun_prism_es2_X11GLDrawable
+ * Method:    nReleaseDrawable
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLDrawable_nReleaseDrawable
+(JNIEnv *env, jclass class, jlong nativeDInfo) {
+    DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
+    if (dInfo == NULL) {
+        return;
+    }
+
+    free(dInfo);
 }

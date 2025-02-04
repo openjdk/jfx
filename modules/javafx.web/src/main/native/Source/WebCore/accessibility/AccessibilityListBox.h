@@ -39,7 +39,8 @@ public:
 
     bool canSetSelectedChildren() const override;
     WEBCORE_EXPORT void setSelectedChildren(const AccessibilityChildrenVector&) override;
-    AccessibilityRole roleValue() const override { return AccessibilityRole::ListBox; }
+
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ListBox; }
 
     AccessibilityChildrenVector selectedChildren() final;
     AccessibilityChildrenVector visibleChildren() final;
@@ -51,7 +52,7 @@ private:
 
     bool isAccessibilityListBoxInstance() const override { return true; }
     AccessibilityObject* listBoxOptionAccessibilityObject(HTMLElement*) const;
-    AXCoreObject* elementAccessibilityHitTest(const IntPoint&) const override;
+    AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const final;
 };
 
 } // namespace WebCore

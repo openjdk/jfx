@@ -50,8 +50,8 @@ template<typename T> struct Converter<IDLPromise<T>> : DefaultConverter<IDLPromi
         auto* promise = JSC::JSPromise::resolvedPromise(globalObject, value);
         if (scope.exception()) {
             auto* scriptExecutionContext = globalObject->scriptExecutionContext();
-            if (is<WorkerGlobalScope>(scriptExecutionContext)) {
-                auto* scriptController = downcast<WorkerGlobalScope>(*scriptExecutionContext).script();
+            if (auto* globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext)) {
+                auto* scriptController = globalScope->script();
                 bool terminatorCausedException = vm.isTerminationException(scope.exception());
                 if (terminatorCausedException || (scriptController && scriptController->isTerminatingExecution())) {
                     scriptController->forbidExecution();
@@ -75,6 +75,11 @@ template<typename T> struct JSConverter<IDLPromise<T>> {
     static JSC::JSValue convert(JSC::JSGlobalObject&, JSDOMGlobalObject&, DOMPromise& promise)
     {
         return promise.promise();
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject&, JSDOMGlobalObject&, RefPtr<DOMPromise> promise)
+    {
+        return promise->promise();
     }
 
     template<template<typename> class U>

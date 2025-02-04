@@ -192,12 +192,14 @@ Structure::Structure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, co
     , m_classInfo(classInfo)
     , m_transitionWatchpointSet(IsWatched)
 {
+    bool hasStaticNonEnumerableProperty = m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::DontEnum));
     bool hasStaticNonConfigurableProperty = m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::DontDelete));
 
     setDictionaryKind(NoneDictionaryKind);
     setIsPinnedPropertyTable(false);
     setHasAnyKindOfGetterSetterProperties(classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::AccessorOrCustomAccessorOrValue)));
     setHasReadOnlyOrGetterSetterPropertiesExcludingProto(hasAnyKindOfGetterSetterProperties() || classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::ReadOnly)));
+    setHasNonEnumerableProperties(hasStaticNonEnumerableProperty || typeInfo.overridesGetOwnPropertySlot());
     setHasNonConfigurableProperties(hasStaticNonConfigurableProperty || typeInfo.overridesGetOwnPropertySlot());
     setHasNonConfigurableReadOnlyOrGetterSetterProperties(hasStaticNonConfigurableProperty || (typeInfo.overridesGetOwnPropertySlot() && typeInfo.type() != ArrayType));
     setHasUnderscoreProtoPropertyExcludingOriginalProto(false);
@@ -239,12 +241,14 @@ Structure::Structure(VM& vm, CreatingEarlyCellTag)
     , m_transitionWatchpointSet(IsWatched)
 {
     TypeInfo typeInfo { StructureType, StructureFlags };
+    bool hasStaticNonEnumerableProperty = m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::DontEnum));
     bool hasStaticNonConfigurableProperty = m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::DontDelete));
 
     setDictionaryKind(NoneDictionaryKind);
     setIsPinnedPropertyTable(false);
     setHasAnyKindOfGetterSetterProperties(m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::AccessorOrCustomAccessorOrValue)));
     setHasReadOnlyOrGetterSetterPropertiesExcludingProto(hasAnyKindOfGetterSetterProperties() || m_classInfo->hasStaticPropertyWithAnyOfAttributes(static_cast<uint8_t>(PropertyAttribute::ReadOnly)));
+    setHasNonEnumerableProperties(hasStaticNonEnumerableProperty || typeInfo.overridesGetOwnPropertySlot());
     setHasNonConfigurableProperties(hasStaticNonConfigurableProperty || typeInfo.overridesGetOwnPropertySlot());
     setHasNonConfigurableReadOnlyOrGetterSetterProperties(hasStaticNonConfigurableProperty || (typeInfo.overridesGetOwnPropertySlot() && typeInfo.type() != ArrayType));
     setHasUnderscoreProtoPropertyExcludingOriginalProto(false);
@@ -288,6 +292,7 @@ Structure::Structure(VM& vm, Structure* previous)
     setHasBeenFlattenedBefore(previous->hasBeenFlattenedBefore());
     setHasAnyKindOfGetterSetterProperties(previous->hasAnyKindOfGetterSetterProperties());
     setHasReadOnlyOrGetterSetterPropertiesExcludingProto(previous->hasReadOnlyOrGetterSetterPropertiesExcludingProto());
+    setHasNonEnumerableProperties(previous->hasNonEnumerableProperties());
     setHasNonConfigurableProperties(previous->hasNonConfigurableProperties());
     setHasNonConfigurableReadOnlyOrGetterSetterProperties(previous->hasNonConfigurableReadOnlyOrGetterSetterProperties());
     setHasUnderscoreProtoPropertyExcludingOriginalProto(previous->hasUnderscoreProtoPropertyExcludingOriginalProto());
@@ -672,7 +677,7 @@ Structure* Structure::changePrototypeTransition(VM& vm, Structure* structure, JS
     return transition;
 }
 
-Structure* Structure::attributeChangeTransitionToExistingStructure(Structure* structure, PropertyName propertyName, unsigned attributes, PropertyOffset& offset)
+Structure* Structure::attributeChangeTransitionToExistingStructureImpl(Structure* structure, PropertyName propertyName, unsigned attributes, PropertyOffset& offset)
 {
     ASSERT(structure->isObject());
 
@@ -688,6 +693,18 @@ Structure* Structure::attributeChangeTransitionToExistingStructure(Structure* st
     }
 
     return nullptr;
+}
+
+Structure* Structure::attributeChangeTransitionToExistingStructure(Structure* structure, PropertyName propertyName, unsigned attributes, PropertyOffset& offset)
+{
+    ASSERT(!isCompilationThread());
+    return attributeChangeTransitionToExistingStructureImpl(structure, propertyName, attributes, offset);
+}
+
+Structure* Structure::attributeChangeTransitionToExistingStructureConcurrently(Structure* structure, PropertyName propertyName, unsigned attributes, PropertyOffset& offset)
+{
+    ConcurrentJSLocker locker(structure->m_lock);
+    return attributeChangeTransitionToExistingStructureImpl(structure, propertyName, attributes, offset);
 }
 
 Structure* Structure::attributeChangeTransition(VM& vm, Structure* structure, PropertyName propertyName, unsigned attributes, DeferredStructureTransitionWatchpointFire* deferred)
@@ -830,6 +847,7 @@ Structure* Structure::nonPropertyTransitionSlow(VM& vm, Structure* structure, Tr
     transition->m_blob.setIndexingModeIncludingHistory(indexingModeIncludingHistory);
 
     if (changesIndexingType(transitionKind) && hasAnyArrayStorage(indexingModeIncludingHistory)) {
+        transition->setHasNonEnumerableProperties(true);
         transition->setHasNonConfigurableProperties(true);
         transition->setHasNonConfigurableReadOnlyOrGetterSetterProperties(true);
     }
@@ -840,8 +858,7 @@ Structure* Structure::nonPropertyTransitionSlow(VM& vm, Structure* structure, Tr
     if (transitionKind == TransitionKind::BecomePrototype)
         transition->setMayBePrototype(true);
 
-    if (setsDontDeleteOnAllProperties(transitionKind)
-        || setsReadOnlyOnNonAccessorProperties(transitionKind)) {
+    if (setsDontDeleteOnAllProperties(transitionKind) || setsReadOnlyOnNonAccessorProperties(transitionKind)) {
         // We pin the property table on transitions that do wholesale editing of the property
         // table, since our logic for walking the property transition chain to rematerialize the
         // table doesn't know how to take into account such wholesale edits.
@@ -859,6 +876,7 @@ Structure* Structure::nonPropertyTransitionSlow(VM& vm, Structure* structure, Tr
         else
             table->freeze();
 
+        transition->setHasNonEnumerableProperties(true);
         transition->setHasNonConfigurableProperties(true);
         transition->setHasNonConfigurableReadOnlyOrGetterSetterProperties(true);
     } else {

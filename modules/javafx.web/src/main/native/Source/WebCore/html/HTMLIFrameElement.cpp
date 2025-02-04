@@ -28,6 +28,8 @@
 #include "CSSPropertyNames.h"
 #include "CommonAtomStrings.h"
 #include "DOMTokenList.h"
+#include "Document.h"
+#include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
@@ -168,9 +170,7 @@ ReferrerPolicy HTMLIFrameElement::referrerPolicy() const
 {
     if (m_lazyLoadFrameObserver)
         return m_lazyLoadFrameObserver->referrerPolicy();
-    if (document().settings().referrerPolicyAttributeEnabled())
         return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
-    return ReferrerPolicy::EmptyString;
 }
 
 const FeaturePolicy& HTMLIFrameElement::featurePolicy() const

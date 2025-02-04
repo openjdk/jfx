@@ -653,9 +653,9 @@ void Graph::dump(PrintStream& out, DumpContext* context)
     prefix.clearBlockIndex();
 
     out.print(prefix, "GC Values:\n");
-    for (FrozenValue* value : m_frozenValues) {
-        if (value->pointsToHeap())
-            out.print(prefix, "    ", inContext(*value, &myContext), "\n");
+    for (FrozenValue& value : m_frozenValues) {
+        if (value.pointsToHeap())
+            out.print(prefix, "    ", inContext(value, &myContext), "\n");
     }
 
     out.print(inContext(watchpoints(), &myContext));
@@ -1341,12 +1341,39 @@ JSValue Graph::tryGetConstantProperty(
     // incompatible with the getDirect we're trying to do. The easiest way to do that is to
     // determine if the structure belongs to the proven set.
 
-    Locker cellLock { object->cellLock() };
-    Structure* structure = object->structure();
-    if (!structureSet.toStructureSet().contains(structure))
+    JSValue result;
+    auto set = structureSet.toStructureSet();
+    {
+        Locker cellLock { object->cellLock() };
+        Structure* structure = object->structure();
+        if (!set.contains(structure))
+            return JSValue();
+        result = object->getDirectConcurrently(cellLock, structure, offset);
+    }
+
+    if (!result)
         return JSValue();
 
-    return object->getDirectConcurrently(cellLock, structure, offset);
+    // If all structures are watched, we don't need to consider whether object transitions and changes the value.
+    // If the object gets transition while compiling, then it invalidates the code.
+    bool allAreWatched = true;
+    for (unsigned i = structureSet.size(); i--;) {
+        RegisteredStructure structure = structureSet[i];
+        if (!structure->dfgShouldWatch()) {
+            allAreWatched = false;
+            break;
+        }
+    }
+    if (allAreWatched)
+        return result;
+
+    // However, if structures transitions are not watched, then object can get to the one of the structures transitively while it is changing the value.
+    // But we can still optimize it if StructureSet is only one: in that case, there is no way to fulfill Structure requirement while changing the property
+    // and avoiding the replacement watchpoint firing.
+    if (structureSet.size() != 1)
+        return JSValue();
+
+    return result;
 }
 
 JSValue Graph::tryGetConstantProperty(JSValue base, Structure* structure, PropertyOffset offset)
@@ -1494,22 +1521,22 @@ void Graph::registerFrozenValues()
 {
     ConcurrentJSLocker locker(m_codeBlock->m_lock);
     m_codeBlock->constants().shrink(0);
-    for (FrozenValue* value : m_frozenValues) {
-        if (!value->pointsToHeap())
+    for (FrozenValue& value : m_frozenValues) {
+        if (!value.pointsToHeap())
             continue;
 
-        ASSERT(value->structure());
-        ASSERT(m_plan.weakReferences().contains(value->structure()));
+        ASSERT(value.structure());
+        ASSERT(m_plan.weakReferences().contains(value.structure()));
 
-        switch (value->strength()) {
+        switch (value.strength()) {
         case WeakValue: {
-            m_plan.weakReferences().addLazily(value->value().asCell());
+            m_plan.weakReferences().addLazily(value.value().asCell());
             break;
         }
         case StrongValue: {
             unsigned constantIndex = m_codeBlock->addConstantLazily(locker);
             // We already have a barrier on the code block.
-            m_codeBlock->constants()[constantIndex].setWithoutWriteBarrier(value->value());
+            m_codeBlock->constants()[constantIndex].setWithoutWriteBarrier(value.value());
             break;
         } }
     }
@@ -1519,9 +1546,9 @@ void Graph::registerFrozenValues()
 template<typename Visitor>
 ALWAYS_INLINE void Graph::visitChildrenImpl(Visitor& visitor)
 {
-    for (FrozenValue* value : m_frozenValues) {
-        visitor.appendUnbarriered(value->value());
-        visitor.appendUnbarriered(value->structure());
+    for (FrozenValue& value : m_frozenValues) {
+        visitor.appendUnbarriered(value.value());
+        visitor.appendUnbarriered(value.structure());
     }
 }
 
@@ -1530,6 +1557,7 @@ void Graph::visitChildren(SlotVisitor& visitor) { visitChildrenImpl(visitor); }
 
 FrozenValue* Graph::freeze(JSValue value)
 {
+    RELEASE_ASSERT(!m_frozenValuesAreFinalized);
     if (UNLIKELY(!value))
         return FrozenValue::emptySingleton();
 
@@ -1550,7 +1578,7 @@ FrozenValue* Graph::freeze(JSValue value)
     if (Structure* structure = frozenValue.structure())
         registerStructure(structure);
 
-    return result.iterator->value = m_frozenValues.add(frozenValue);
+    return result.iterator->value = &m_frozenValues.alloc(frozenValue);
 }
 
 FrozenValue* Graph::freezeStrong(JSValue value)
@@ -1953,6 +1981,24 @@ bool Graph::canDoFastSpread(Node* node, const AbstractValue& value)
     });
 
     return allGood;
+}
+
+bool Graph::isNeverResizableOrGrowableSharedTypedArrayIncludingDataView(const AbstractValue& value)
+{
+    auto& structureSet = value.m_structure;
+    if (!structureSet.isFinite())
+        return false;
+
+    if (structureSet.isClear())
+        return false;
+
+    bool allAreNonResizable = true;
+    structureSet.forEach(
+        [&](RegisteredStructure structure) {
+            if (isResizableOrGrowableSharedTypedArrayIncludingDataView(structure->classInfoForCells()))
+                allAreNonResizable = false;
+        });
+    return allAreNonResizable;
 }
 
 void Graph::clearCPSCFGData()

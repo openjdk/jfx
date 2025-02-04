@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,13 +31,17 @@
  */
 package ensemble.samples.graphics2d.bouncingballs;
 
-import static ensemble.samples.graphics2d.bouncingballs.Constants.*;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.BALL_GRADIENT;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.BALL_RADIUS;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.HEIGHT;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.HEIGHT_CORRECTION;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.INFOPANEL_HEIGHT;
+import static ensemble.samples.graphics2d.bouncingballs.Constants.SPACE_X;
 import javafx.animation.Animation.Status;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Circle;
 import javafx.util.Duration;

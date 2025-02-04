@@ -38,7 +38,7 @@
 namespace WebCore {
 namespace Style {
 
-PropertyCascade::PropertyCascade(const MatchResult& matchResult, CascadeLevel maximumCascadeLevel, OptionSet<PropertyType> includedProperties, const HashSet<AnimatableProperty>* animatedProperties)
+PropertyCascade::PropertyCascade(const MatchResult& matchResult, CascadeLevel maximumCascadeLevel, OptionSet<PropertyType> includedProperties, const HashSet<AnimatableCSSProperty>* animatedProperties)
     : m_matchResult(matchResult)
     , m_includedProperties(includedProperties)
     , m_maximumCascadeLevel(maximumCascadeLevel)
@@ -60,7 +60,7 @@ PropertyCascade::PropertyCascade(const PropertyCascade& parent, CascadeLevel max
 
 PropertyCascade::~PropertyCascade() = default;
 
-PropertyCascade::AnimationLayer::AnimationLayer(const HashSet<AnimatableProperty>& properties)
+PropertyCascade::AnimationLayer::AnimationLayer(const HashSet<AnimatableCSSProperty>& properties)
     : properties(properties)
 {
     hasCustomProperties = std::find_if(properties.begin(), properties.end(), [](auto& property) {
@@ -114,26 +114,22 @@ void PropertyCascade::set(CSSPropertyID id, CSSValue& cssValue, const MatchedPro
     ASSERT(!CSSProperty::isInLogicalPropertyGroup(id));
     ASSERT(id < firstDeferredProperty);
 
-    auto& property = m_properties[id];
     ASSERT(id < m_propertyIsPresent.size());
     if (id == CSSPropertyCustom) {
         m_propertyIsPresent.set(id);
         const auto& customValue = downcast<CSSCustomPropertyValue>(cssValue);
-        bool hasValue = m_customProperties.contains(customValue.name());
-        if (!hasValue) {
+        auto result = m_customProperties.ensure(customValue.name(), [&]() {
             Property property;
-            property.id = id;
             property.cssValue = { };
             setPropertyInternal(property, id, cssValue, matchedProperties, cascadeLevel);
-            m_customProperties.set(customValue.name(), property);
-        } else {
-            Property property = customProperty(customValue.name());
-            setPropertyInternal(property, id, cssValue, matchedProperties, cascadeLevel);
-            m_customProperties.set(customValue.name(), property);
-        }
+            return property;
+        });
+        if (!result.isNewEntry)
+            setPropertyInternal(result.iterator->value, id, cssValue, matchedProperties, cascadeLevel);
         return;
     }
 
+    auto& property = m_properties[id];
     if (!m_propertyIsPresent[id])
         property.cssValue = { };
     m_propertyIsPresent.set(id);
@@ -200,6 +196,9 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
     if (m_maximumCascadeLayerPriorityForRollback && !includePropertiesForRollback())
         return false;
 
+    if (matchedProperties.isStartingStyle == IsStartingStyle::Yes && !m_includedProperties.contains(PropertyType::StartingStyle))
+        return false;
+
     auto propertyAllowlist = matchedProperties.allowlistType;
     bool hasImportantProperties = false;
 
@@ -219,30 +218,31 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
         if (propertyAllowlist == PropertyAllowlist::Marker && !isValidMarkerStyleProperty(propertyID))
                 return false;
 
-            if (m_includedProperties.containsAll(allProperties()))
-                return true;
-            if (m_includedProperties.contains(PropertyType::Inherited) && current.isInherited())
-                return true;
-            if (m_includedProperties.contains(PropertyType::NonInherited) && !current.isInherited())
+            if (m_includedProperties.containsAll(normalProperties()))
                 return true;
 
             // If we have applied this property for some reason already we must apply anything that overrides it.
             if (hasProperty(propertyID, *current.value()))
                 return true;
 
-            if (m_includedProperties.contains(PropertyType::VariableReference)) {
-                if (current.value()->hasVariableReferences())
-                    return true;
-                // Apply all deferred properties if we have applied any. They may override the ones we already applied.
-                if (propertyID >= firstDeferredProperty && m_lastIndexForDeferred)
-                    return true;
-            }
             if (m_includedProperties.containsAny({ PropertyType::AfterAnimation, PropertyType::AfterTransition })) {
                 if (shouldApplyAfterAnimation(current)) {
                     m_animationLayer->overriddenProperties.add(propertyID);
                     return true;
                 }
+                return false;
             }
+
+            if (m_includedProperties.contains(PropertyType::Inherited) && current.isInherited())
+                return true;
+            if (m_includedProperties.contains(PropertyType::ExplicitlyInherited) && isValueID(*current.value(), CSSValueInherit))
+                return true;
+            if (m_includedProperties.contains(PropertyType::NonInherited) && !current.isInherited())
+                return true;
+
+            // Apply all deferred properties if we have applied any. They may override the ones we already applied.
+            if (propertyID >= firstDeferredProperty && m_lastIndexForDeferred)
+                return true;
 
             return false;
         }();
@@ -388,7 +388,7 @@ void PropertyCascade::sortDeferredPropertyIDs()
     });
 }
 
-const HashSet<AnimatableProperty> PropertyCascade::overriddenAnimatedProperties() const
+const HashSet<AnimatableCSSProperty> PropertyCascade::overriddenAnimatedProperties() const
 {
     if (m_animationLayer)
         return m_animationLayer->overriddenProperties;

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -127,13 +127,13 @@ void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promi
     auto videoConstraints = createMediaConstraints(constraints.video);
 
     if (!audioConstraints.isValid && !videoConstraints.isValid) {
-        promise.reject(TypeError, "No constraints provided"_s);
+        promise.reject(ExceptionCode::TypeError, "No constraints provided"_s);
         return;
     }
 
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document || !document->isFullyActive()) {
-        promise.reject(Exception { InvalidStateError, "Document is not fully active"_s });
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Document is not fully active"_s });
         return;
     }
 
@@ -141,7 +141,7 @@ void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promi
     if (audioConstraints.isValid) {
         auto categoryOverride = AudioSession::sharedSession().categoryOverride();
         if (categoryOverride != AudioSessionCategory::None && categoryOverride != AudioSessionCategory::PlayAndRecord)  {
-            promise.reject(Exception { InvalidStateError, "AudioSession category is not compatible with audio capture."_s });
+            promise.reject(Exception { ExceptionCode::InvalidStateError, "AudioSession category is not compatible with audio capture."_s });
             return;
         }
     }
@@ -188,8 +188,8 @@ static bool hasInvalidGetDisplayMediaConstraint(const MediaConstraints& constrai
         return true;
 
     bool invalid = false;
-    constraints.mandatoryConstraints.filter([&invalid] (const MediaConstraint& constraint) mutable {
-        switch (constraint.constraintType()) {
+    constraints.mandatoryConstraints.filter([&invalid] (auto constraintType, const MediaConstraint& constraint) mutable {
+        switch (constraintType) {
         case MediaConstraintType::Width:
         case MediaConstraintType::Height: {
             auto& intConstraint = downcast<IntConstraint>(constraint);
@@ -228,7 +228,9 @@ static bool hasInvalidGetDisplayMediaConstraint(const MediaConstraints& constrai
         case MediaConstraintType::Volume:
         case MediaConstraintType::EchoCancellation:
         case MediaConstraintType::FocusDistance:
+        case MediaConstraintType::WhiteBalanceMode:
         case MediaConstraintType::Zoom:
+        case MediaConstraintType::Torch:
             // Ignored.
             break;
 
@@ -245,25 +247,25 @@ static bool hasInvalidGetDisplayMediaConstraint(const MediaConstraints& constrai
 
 void MediaDevices::getDisplayMedia(DisplayMediaStreamConstraints&& constraints, Promise&& promise)
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document)
         return;
 
     bool isUserGesturePriviledged = computeUserGesturePriviledge(GestureAllowedRequest::Display);
     if (!isUserGesturePriviledged) {
-        promise.reject(Exception { InvalidAccessError, "getDisplayMedia must be called from a user gesture handler."_s });
+        promise.reject(Exception { ExceptionCode::InvalidAccessError, "getDisplayMedia must be called from a user gesture handler."_s });
         return;
     }
 
     auto videoConstraints = createMediaConstraints(constraints.video);
     if (hasInvalidGetDisplayMediaConstraint(videoConstraints)) {
-        promise.reject(Exception { TypeError, "getDisplayMedia must be called with valid constraints."_s });
+        promise.reject(Exception { ExceptionCode::TypeError, "getDisplayMedia must be called with valid constraints."_s });
         return;
     }
 
     // FIXME: We use hidden while the spec is using focus, let's revisit when when spec is made clearer.
     if (!document->isFullyActive() || document->topDocument().hidden()) {
-        promise.reject(Exception { InvalidStateError, "Document is not fully active or does not have focus"_s });
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Document is not fully active or does not have focus"_s });
         return;
     }
 
@@ -335,7 +337,7 @@ String MediaDevices::hashedGroupId(const String& groupId)
 
 void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document)
         return;
 
@@ -351,7 +353,7 @@ void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
         return;
     }
 
-    controller->enumerateMediaDevices(*document, [this, weakThis = WeakPtr { *this }, promise = WTFMove(promise)](auto&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
+    controller->enumerateMediaDevices(*document, [this, weakThis = WeakPtr { *this }, promise = WTFMove(promise)](Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
         if (!weakThis)
             return;
         exposeDevices(WTFMove(newDevices), WTFMove(deviceIDHashSalts), WTFMove(promise));
@@ -367,6 +369,7 @@ MediaTrackSupportedConstraints MediaDevices::getSupportedConstraints()
     result.aspectRatio = supported.supportsAspectRatio();
     result.frameRate = supported.supportsFrameRate();
     result.facingMode = supported.supportsFacingMode();
+    result.whiteBalanceMode = supported.supportsWhiteBalanceMode();
     result.volume = supported.supportsVolume();
     result.sampleRate = supported.supportsSampleRate();
     result.sampleSize = supported.supportsSampleSize();
@@ -381,8 +384,13 @@ MediaTrackSupportedConstraints MediaDevices::getSupportedConstraints()
 
 void MediaDevices::scheduledEventTimerFired()
 {
-    ASSERT(!isContextStopped());
-    dispatchEvent(Event::create(eventNames().devicechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    RefPtr document = this->document();
+    if (!document)
+        return;
+
+    document->whenVisible([protectedThis = makePendingActivity(*this), this] {
+        queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().devicechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    });
 }
 
 bool MediaDevices::virtualHasPendingActivity() const
@@ -397,7 +405,7 @@ const char* MediaDevices::activeDOMObjectName() const
 
 void MediaDevices::listenForDeviceChanges()
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     auto* controller = document ? UserMediaController::from(document->page()) : nullptr;
     if (!controller)
         return;

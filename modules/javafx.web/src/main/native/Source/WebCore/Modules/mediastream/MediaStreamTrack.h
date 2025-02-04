@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2011, 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,13 +30,17 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "ActiveDOMObject.h"
-#include "DoubleRange.h"
+#include "Blob.h"
 #include "EventTarget.h"
-#include "LongRange.h"
+#include "IDLTypes.h"
+#include "JSDOMPromiseDeferred.h"
 #include "MediaProducer.h"
+#include "MediaStreamTrackDataHolder.h"
 #include "MediaStreamTrackPrivate.h"
 #include "MediaTrackCapabilities.h"
 #include "MediaTrackConstraints.h"
+#include "PhotoCapabilities.h"
+#include "PhotoSettings.h"
 #include "PlatformMediaSession.h"
 #include <wtf/LoggerHelper.h>
 
@@ -46,8 +50,6 @@ class AudioSourceProvider;
 class Document;
 
 struct MediaTrackConstraints;
-
-template<typename IDLType> class DOMPromiseDeferred;
 
 class MediaStreamTrack
     : public RefCounted<MediaStreamTrack>
@@ -67,13 +69,12 @@ public:
         virtual void trackDidEnd() = 0;
     };
 
-    static Ref<MediaStreamTrack> create(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
+    enum class RegisterCaptureTrackToOwner : bool { No, Yes };
+    static Ref<MediaStreamTrack> create(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&, RegisterCaptureTrackToOwner = RegisterCaptureTrackToOwner::Yes);
+    static Ref<MediaStreamTrack> create(ScriptExecutionContext&, UniqueRef<MediaStreamTrackDataHolder>&&);
     virtual ~MediaStreamTrack();
 
-    static void endCapture(Document&, MediaProducerMediaCaptureKind);
-
-    static MediaProducerMediaStateFlags captureState(Document&);
-    static void updateCaptureAccordingToMutedState(Document&);
+    static MediaProducerMediaStateFlags captureState(const RealtimeMediaSource&);
 
     virtual bool isCanvas() const { return false; }
 
@@ -117,22 +118,38 @@ public:
         String displaySurface;
         String deviceId;
         String groupId;
+
+        String whiteBalanceMode;
         std::optional<double> zoom;
+        std::optional<bool> torch;
     };
     TrackSettings getSettings() const;
 
     using TrackCapabilities = MediaTrackCapabilities;
     TrackCapabilities getCapabilities() const;
 
+    using TakePhotoPromise = NativePromise<std::pair<Vector<uint8_t>, String>, Exception>;
+    Ref<TakePhotoPromise> takePhoto(PhotoSettings&&);
+
+    using PhotoCapabilitiesPromise = NativePromise<PhotoCapabilities, Exception>;
+    Ref<PhotoCapabilitiesPromise> getPhotoCapabilities();
+
+    using PhotoSettingsPromise = NativePromise<PhotoSettings, Exception>;
+    Ref<PhotoSettingsPromise> getPhotoSettings();
+
     const MediaTrackConstraints& getConstraints() const { return m_constraints; }
     void setConstraints(MediaTrackConstraints&& constraints) { m_constraints = WTFMove(constraints); }
+
     void applyConstraints(const std::optional<MediaTrackConstraints>&, DOMPromiseDeferred<void>&&);
 
     RealtimeMediaSource& source() const { return m_private->source(); }
+    RealtimeMediaSource& sourceForProcessor() const { return m_private->sourceForProcessor(); }
     MediaStreamTrackPrivate& privateTrack() { return m_private.get(); }
     const MediaStreamTrackPrivate& privateTrack() const { return m_private.get(); }
 
+#if ENABLE(WEB_AUDIO)
     RefPtr<WebAudioSourceProvider> createAudioSourceProvider();
+#endif
 
     MediaProducerMediaStateFlags mediaState() const;
 
@@ -151,6 +168,18 @@ public:
 
     void setShouldFireMuteEventImmediately(bool value) { m_shouldFireMuteEventImmediately = value; }
 
+    struct Storage {
+        bool enabled { false };
+        bool ended { false };
+        bool muted { false };
+        RealtimeMediaSourceSettings settings;
+        RealtimeMediaSourceCapabilities capabilities;
+        RefPtr<RealtimeMediaSource> source;
+    };
+
+    bool isDetached() const { return m_isDetached; }
+    UniqueRef<MediaStreamTrackDataHolder> detach();
+
 protected:
     MediaStreamTrack(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
 
@@ -162,7 +191,6 @@ private:
     explicit MediaStreamTrack(MediaStreamTrack&);
 
     void configureTrackRendering();
-    void updateToPageMutedState();
 
     // ActiveDOMObject API.
     void stop() final { stopTrack(); }
@@ -185,8 +213,7 @@ private:
 
     // PlatformMediaSession::AudioCaptureSource
     bool isCapturingAudio() const final;
-
-    void updateVideoCaptureAccordingMicrophoneInterruption(Document&, bool);
+    bool wantsToCaptureAudio() const final;
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const final { return "MediaStreamTrack"; }
@@ -204,6 +231,9 @@ private:
     const bool m_isCaptureTrack { false };
     bool m_isInterrupted { false };
     bool m_shouldFireMuteEventImmediately { false };
+    bool m_isDetached { false };
+    mutable AtomString m_kind;
+    mutable AtomString m_contentHint;
 };
 
 typedef Vector<Ref<MediaStreamTrack>> MediaStreamTrackVector;

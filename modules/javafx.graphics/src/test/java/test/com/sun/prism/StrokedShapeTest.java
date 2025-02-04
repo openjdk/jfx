@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,16 +29,17 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.BasicStrokeShim;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class StrokedShapeTest {
 
     BasicStroke stroke;
     Path2D path;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         stroke = new BasicStroke();
         BasicStrokeShim.set_width(stroke, 10);

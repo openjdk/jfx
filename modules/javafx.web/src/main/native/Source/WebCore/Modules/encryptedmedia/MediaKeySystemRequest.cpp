@@ -63,13 +63,13 @@ MediaKeySystemRequest::~MediaKeySystemRequest()
 
 SecurityOrigin* MediaKeySystemRequest::topLevelDocumentOrigin() const
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     return context ? &context->topOrigin() : nullptr;
 }
 
 void MediaKeySystemRequest::start()
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     ASSERT(context);
     if (!context) {
         deny();
@@ -86,12 +86,14 @@ void MediaKeySystemRequest::start()
     controller->requestMediaKeySystem(*this);
 }
 
-void MediaKeySystemRequest::allow(CompletionHandler<void()>&& completionHandler)
+void MediaKeySystemRequest::allow()
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, handler = WTFMove(completionHandler)]() mutable {
-        auto completionHandler = WTFMove(m_allowCompletionHandler);
-        completionHandler(WTFMove(m_promise));
-        handler();
+    if (!scriptExecutionContext())
+        return;
+
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+        if (auto allowCompletionHandler = std::exchange(m_allowCompletionHandler, { }))
+            allowCompletionHandler(WTFMove(m_promise));
     });
 }
 
@@ -100,7 +102,7 @@ void MediaKeySystemRequest::deny(const String& message)
     if (!scriptExecutionContext())
         return;
 
-    ExceptionCode code = NotSupportedError;
+    ExceptionCode code = ExceptionCode::NotSupportedError;
     if (!message.isEmpty())
         m_promise->reject(code, message);
     else

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010-2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,10 +50,10 @@ inline DelayNode::DelayNode(BaseAudioContext& context, double maxDelayTime)
 ExceptionOr<Ref<DelayNode>> DelayNode::create(BaseAudioContext& context, const DelayOptions& options)
 {
     if (options.maxDelayTime <= 0)
-        return Exception { NotSupportedError, "maxDelayTime should be a positive value"_s };
+        return Exception { ExceptionCode::NotSupportedError, "maxDelayTime should be a positive value"_s };
 
-    if (options.maxDelayTime >= maximumAllowedDelayTime)
-        return Exception { NotSupportedError, makeString("maxDelayTime should be less than ", maximumAllowedDelayTime) };
+    if (options.maxDelayTime >= maximumAllowedDelayTime || std::isnan(options.maxDelayTime))
+        return Exception { ExceptionCode::NotSupportedError, makeString("maxDelayTime should be less than ", maximumAllowedDelayTime) };
 
     auto delayNode = adoptRef(*new DelayNode(context, options.maxDelayTime));
 

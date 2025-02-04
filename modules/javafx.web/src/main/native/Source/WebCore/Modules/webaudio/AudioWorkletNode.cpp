@@ -62,25 +62,25 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(AudioWorkletNode);
 ExceptionOr<Ref<AudioWorkletNode>> AudioWorkletNode::create(JSC::JSGlobalObject& globalObject, BaseAudioContext& context, String&& name, AudioWorkletNodeOptions&& options)
 {
     if (!options.numberOfInputs && !options.numberOfOutputs)
-        return Exception { NotSupportedError, "Number of inputs and outputs cannot both be 0"_s };
+        return Exception { ExceptionCode::NotSupportedError, "Number of inputs and outputs cannot both be 0"_s };
 
     if (options.outputChannelCount) {
         if (options.numberOfOutputs != options.outputChannelCount->size())
-            return Exception { IndexSizeError, "Length of specified outputChannelCount does not match the given number of outputs"_s };
+            return Exception { ExceptionCode::IndexSizeError, "Length of specified outputChannelCount does not match the given number of outputs"_s };
 
         for (auto& channelCount : *options.outputChannelCount) {
             if (channelCount < 1 || channelCount > AudioContext::maxNumberOfChannels)
-                return Exception { NotSupportedError, "Provided number of channels for output is outside supported range"_s };
+                return Exception { ExceptionCode::NotSupportedError, "Provided number of channels for output is outside supported range"_s };
         }
     }
 
     auto it = context.parameterDescriptorMap().find(name);
     if (it == context.parameterDescriptorMap().end())
-        return Exception { InvalidStateError, "No ScriptProcessor was registered with this name"_s };
+        return Exception { ExceptionCode::InvalidStateError, "No ScriptProcessor was registered with this name"_s };
     auto& parameterDescriptors = it->value;
 
     if (!context.scriptExecutionContext())
-        return Exception { InvalidStateError, "Audio context's frame is detached"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Audio context's frame is detached"_s };
 
     auto messageChannel = MessageChannel::create(*context.scriptExecutionContext());
     auto& nodeMessagePort = messageChannel->port1();
@@ -127,6 +127,8 @@ AudioWorkletNode::AudioWorkletNode(BaseAudioContext& context, const String& name
     , m_name(name)
     , m_parameters(AudioParamMap::create())
     , m_port(WTFMove(port))
+    , m_inputs(options.numberOfInputs)
+    , m_outputs(options.numberOfOutputs)
     , m_wasOutputChannelCountGiven(!!options.outputChannelCount)
 {
     ASSERT(isMainThread());
@@ -134,9 +136,6 @@ AudioWorkletNode::AudioWorkletNode(BaseAudioContext& context, const String& name
         addInput();
     for (unsigned i = 0; i < options.numberOfOutputs; ++i)
         addOutput(options.outputChannelCount ? options.outputChannelCount->at(i): 1);
-
-    m_inputs.resize(options.numberOfInputs);
-    m_outputs.resize(options.numberOfOutputs);
 
     initialize();
 }
@@ -147,7 +146,7 @@ AudioWorkletNode::~AudioWorkletNode()
     {
         Locker locker { m_processLock };
         if (m_processor) {
-            if (auto* workletProxy = context().audioWorklet().proxy()) {
+            if (RefPtr workletProxy = context().audioWorklet().proxy()) {
                 workletProxy->postTaskForModeToWorkletGlobalScope([processor = WTFMove(m_processor)](ScriptExecutionContext& context) {
                     downcast<AudioWorkletGlobalScope>(context).processorIsNoLongerNeeded(*processor);
                 }, WorkerRunLoop::defaultMode());
@@ -171,7 +170,7 @@ void AudioWorkletNode::initializeAudioParameters(const Vector<AudioParamDescript
 
     if (paramValues) {
         for (auto& paramValue : *paramValues) {
-            if (auto* audioParam = m_parameters->map().get(paramValue.key))
+            if (RefPtr audioParam = m_parameters->map().get(paramValue.key))
                 audioParam->setValue(paramValue.value);
         }
     }
@@ -222,7 +221,7 @@ void AudioWorkletNode::process(size_t framesToProcess)
             if (auto& input = m_inputs[inputIndex]) {
                 for (unsigned channelIndex = 0; channelIndex < input->numberOfChannels(); ++channelIndex) {
                     auto* channel = input->channel(channelIndex);
-                    AudioUtilities::applyNoise(channel->mutableData(), channel->length(), 0.001);
+                    AudioUtilities::applyNoise(channel->mutableData(), channel->length(), 0.01);
                 }
             }
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,13 +88,14 @@ protected:
     bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
     bool paintMediaSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
 #endif
+    void adjustSwitchStyle(RenderStyle& style, const Element*) const override;
 
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const override;
-    Seconds animationDurationForProgressBar(const RenderProgress&) const override;
+    Seconds animationDurationForProgressBar() const override;
     void adjustProgressBarStyle(RenderStyle&, const Element*) const override;
     bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
-    bool supportsMeter(StyleAppearance, const HTMLMeterElement&) const override;
+    bool supportsMeter(StyleAppearance) const override;
     bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
 #if ENABLE(DATALIST_ELEMENT)

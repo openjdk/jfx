@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,11 @@ import com.sun.webkit.network.CookieShim;
 import com.sun.webkit.network.ExtendedTimeShim;
 import java.net.URI;
 import java.net.URISyntaxException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static java.lang.System.currentTimeMillis;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A test for the {@link Cookie} class.
@@ -443,33 +443,25 @@ public class CookieTest {
     }
 
     private static void assertAsExpected(String testString,
-            CookieModel expected, CookieShim actual)
+                                         CookieModel expected, CookieShim actual)
     {
         String s = ", test string: [" + testString + "],";
         if (expected == null) {
-            assertEquals("Unexpected cookie" + s, expected, actual);
+            assertEquals(expected, actual,"Unexpected cookie" + s);
             return;
         }
 
-        assertEquals("Unexpected name" + s, expected.name, actual.getName());
-        assertEquals("Unexpected value" + s, expected.value, actual.getValue());
-        assertEquals("Unexpected expiryTime" + s,
-                expected.expiryTime, actual.getExpiryTime());
-        assertEquals("Unexpected domain" + s,
-                expected.domain, actual.getDomain());
-        assertEquals("Unexpected path" + s, expected.path, actual.getPath());
-        assertTrue("Unexpected creationTime" + s,
-                expected.creationTime.equals(actual.getCreationTime()));
-        assertEquals("Unexpected lastAccessTime" + s,
-                expected.creationTime.baseTime(), actual.getLastAccessTime());
-        assertEquals("Unexpected persistent flag" + s,
-                expected.persistent, actual.getPersistent());
-        assertEquals("Unexpected hostOnly flag" + s,
-                false, actual.getHostOnly());
-        assertEquals("Unexpected secureOnly flag" + s,
-                expected.secureOnly, actual.getSecureOnly());
-        assertEquals("Unexpected httpOnly flag" + s,
-                expected.httpOnly, actual.getHttpOnly());
+        assertEquals(expected.name, actual.getName(), "Unexpected name" + s);
+        assertEquals(expected.value, actual.getValue(), "Unexpected value" + s);
+        assertEquals(expected.expiryTime, actual.getExpiryTime(), "Unexpected expiryTime" + s);
+        assertEquals(expected.domain, actual.getDomain(), "Unexpected domain" + s);
+        assertEquals(expected.path, actual.getPath(), "Unexpected path" + s);
+        assertTrue(expected.creationTime.equals(actual.getCreationTime()), "Unexpected creationTime" + s);
+        assertEquals(expected.creationTime.baseTime(), actual.getLastAccessTime(), "Unexpected lastAccessTime" + s);
+        assertEquals(expected.persistent, actual.getPersistent(), "Unexpected persistent flag" + s);
+        assertEquals(false, actual.getHostOnly(), "Unexpected hostOnly flag" + s);
+        assertEquals(expected.secureOnly, actual.getSecureOnly(), "Unexpected secureOnly flag" + s);
+        assertEquals(expected.httpOnly, actual.getHttpOnly(), "Unexpected httpOnly flag" + s);
     }
 
     /**
@@ -583,14 +575,10 @@ public class CookieTest {
      */
     @Test
     public void testDefaultPath() {
-        assertEquals("/foo",
-                CookieShim.defaultPath(uri("http://hostname/foo/bar")));
-        assertEquals("/foo",
-                CookieShim.defaultPath(uri("http://hostname/foo/bar?")));
-        assertEquals("/foo",
-                CookieShim.defaultPath(uri("http://hostname/foo/bar?query")));
-        assertEquals("/foo",
-                CookieShim.defaultPath(uri("http://hostname/foo/bar?query=push")));
+        assertEquals("/foo", CookieShim.defaultPath(uri("http://hostname/foo/bar")));
+        assertEquals("/foo", CookieShim.defaultPath(uri("http://hostname/foo/bar?")));
+        assertEquals("/foo", CookieShim.defaultPath(uri("http://hostname/foo/bar?query")));
+        assertEquals("/foo", CookieShim.defaultPath(uri("http://hostname/foo/bar?query=push")));
 
         assertEquals("/", CookieShim.defaultPath(uri("http://hostname")));
 

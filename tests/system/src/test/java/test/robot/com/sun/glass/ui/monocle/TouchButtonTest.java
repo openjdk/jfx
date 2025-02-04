@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,37 +25,29 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
+import java.util.Collection;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
-
-import java.util.Collection;
-import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
-public class TouchButtonTest extends ParameterizedTestBase {
+public final class TouchButtonTest extends ParameterizedTestBase {
 
     private Node button1;
     private Node button2;
     private Node button3;
 
-    public TouchButtonTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
@@ -77,8 +69,11 @@ public class TouchButtonTest extends ParameterizedTestBase {
         return button;
     }
 
-    @Before
-    public void createButtons() throws Exception {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void init(TestTouchDevice device) throws Exception {
+        this.device = device;
+        createDevice(device, null);
         TestRunnable.invokeAndWait(() -> {
             int X = (int) width / 2;
             int Y = (int) height / 2;
@@ -100,16 +95,20 @@ public class TouchButtonTest extends ParameterizedTestBase {
      * Tests
      */
 
-    @Test
-    public void tapOnButton() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapOnButton(TestTouchDevice device) throws Exception {
+        init(device);
         Point2D clickAt = tapInsideButton(button1);
         waitForFocusGainOn("button1");
         waitForMouseEnteredAt(clickAt);
         waitForMouseClickAt(clickAt);
     }
 
-    @Test
-    public void tapOn2Buttons() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapOn2Buttons(TestTouchDevice device) throws Exception {
+        init(device);
         Point2D clickAt = tapInsideButton(button1);
         waitForFocusGainOn("button1");
         waitForMouseEnteredAt(clickAt);
@@ -122,8 +121,10 @@ public class TouchButtonTest extends ParameterizedTestBase {
         waitForMouseClickAt(clickAt);
     }
 
-    @Test
-    public void tapOutAndInButton() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapOutAndInButton(TestTouchDevice device) throws Exception {
+        init(device);
         tapOutSideButton();
         TestLogShim.reset();
         Point2D clickAt = tapInsideButton(button1);
@@ -131,8 +132,10 @@ public class TouchButtonTest extends ParameterizedTestBase {
         waitForFocusGainOn("button1");
     }
 
-    @Test
-    public void tapOutInAndOutButton() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapOutInAndOutButton(TestTouchDevice device) throws Exception {
+        init(device);
         tapOutSideButton();
         TestLogShim.reset();
         Point2D clickAt = tapInsideButton(button1);
@@ -144,8 +147,10 @@ public class TouchButtonTest extends ParameterizedTestBase {
         waitForFocusLostOn("button1");
     }
 
-    @Test
-    public void tapInAndOutLoop() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapInAndOutLoop(TestTouchDevice device) throws Exception {
+        init(device);
         tapOutSideButton();
         TestLogShim.reset();
         for (int i = 0 ; i < 2 ; i++) {
@@ -175,18 +180,20 @@ public class TouchButtonTest extends ParameterizedTestBase {
     }
 
     /**
-     * RT-34625 - we should get a click when tapping on a control, dragging the
+     * JDK-8097082 - we should get a click when tapping on a control, dragging the
      * finger and release the finger inside the control
      */
-    @Test
-    public void tapAndDrag() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapAndDrag(TestTouchDevice device) throws Exception {
+        init(device);
         Bounds buttonBounds = getButtonBounds(button2);
 
         //start at right most x and center y
         int x = (int) buttonBounds.getMaxX() - 1;
         int y = (int) (buttonBounds.getMinY() + buttonBounds.getMaxY()) / 2;
 
-        ///tap
+        //tap
         int p = device.addPoint(x, y);
         device.sync();
 
@@ -206,7 +213,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
     }
 
     /**
-     * RT-34625 - Currently a control will not generate a click when tapping on
+     * JDK-8097082 - Currently a control will not generate a click when tapping on
      * it, drag the finger outside the control and release the finger.
      * This might be a desired behavior, but sometime there are small
      * unintentional drags that resulting in a finger release outside the
@@ -215,16 +222,18 @@ public class TouchButtonTest extends ParameterizedTestBase {
      * This test should fail and throw RuntimeException
      *
      */
-    @Ignore("RT-34625")
-    @Test
-    public void tapAndDrag_fail() throws Exception {
+    @Disabled("JDK-8097082")
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapAndDrag_fail(TestTouchDevice device) throws Exception {
+        init(device);
         Bounds buttonBounds = getButtonBounds(button2);
 
         //start at right most x and center y
         int x = (int) buttonBounds.getMaxX() - 1;
         int y = (int) (buttonBounds.getMinY() + buttonBounds.getMaxY()) / 2;
 
-        ///tap
+        //tap
         int p = device.addPoint(x, y);
         device.sync();
 
@@ -242,8 +251,10 @@ public class TouchButtonTest extends ParameterizedTestBase {
         TestLogShim.waitForLogContaining("MOUSE_CLICKED:", 3000l);
     }
 
-    @Test
-    public void tapping_oneButtonOnScreen () throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapping_oneButtonOnScreen(TestTouchDevice device) throws Exception {
+        init(device);
         AtomicReference<Node> buttonRef = new AtomicReference<>();
         TestRunnable.invokeAndWait(() -> {
             Node button4 = createButton("button4", 0, 0, true);
@@ -295,7 +306,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
 
     public void tapOutSideButton() throws Exception {
         Bounds buttonBounds = getButtonBounds(button3);
-        ///tap
+        //tap
         double x = buttonBounds.getMaxX() + device.getTapRadius() + 10;
         double y = buttonBounds.getMaxY() + device.getTapRadius() + 10;
         int p = device.addPoint(x, y);
@@ -329,5 +340,4 @@ public class TouchButtonTest extends ParameterizedTestBase {
     public void waitForFocusLostOn(String id) throws Exception{
         waitForFocus(id, false);
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -509,7 +509,7 @@ class Loader {
             mv.setId(n.getName());
             mv.setMaterial(material);
 
-//            // TODO HACK for [JIRA] (RT-30449) FX 8 3D: Need to handle mirror transformation (flip culling);
+//            // TODO HACK for [JIRA] (JDK-8120494) FX 8 3D: Need to handle mirror transformation (flip culling);
 //            mv.setCullFace(CullFace.FRONT);
 
             mv.setMesh((TriangleMesh) mesh);

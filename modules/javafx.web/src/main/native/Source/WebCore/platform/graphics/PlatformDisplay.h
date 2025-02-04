@@ -36,8 +36,10 @@ typedef void *EGLContext;
 typedef void *EGLDisplay;
 typedef void *EGLImage;
 typedef unsigned EGLenum;
-#if USE(GBM)
+#if USE(LIBDRM)
 typedef void *EGLDeviceEXT;
+#endif
+#if USE(GBM)
 struct gbm_device;
 #endif
 #endif
@@ -113,10 +115,17 @@ public:
 
     EGLImage createEGLImage(EGLContext, EGLenum target, EGLClientBuffer, const Vector<EGLAttrib>&) const;
     bool destroyEGLImage(EGLImage) const;
-#if USE(GBM)
+#if USE(LIBDRM)
     const String& drmDeviceFile();
     const String& drmRenderNodeFile();
+#endif
+#if USE(GBM)
     struct gbm_device* gbmDevice();
+    struct DMABufFormat {
+        uint32_t fourcc { 0 };
+        Vector<uint64_t, 1> modifiers;
+    };
+    const Vector<DMABufFormat>& dmabufFormats();
 #endif
 
 #if PLATFORM(GTK)
@@ -132,6 +141,7 @@ public:
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
     GstGLDisplay* gstGLDisplay() const;
     GstGLContext* gstGLContext() const;
+    void clearGStreamerGLState();
 #endif
 
 #if USE(LCMS)
@@ -140,6 +150,10 @@ public:
 
 #if USE(ATSPI)
     const String& accessibilityBusAddress() const;
+#endif
+
+#if PLATFORM(WPE)
+    static void setUseDMABufForRendering(bool useDMABufForRendering) { s_useDMABufForRendering = useDMABufForRendering; }
 #endif
 
 protected:
@@ -163,7 +177,7 @@ protected:
     bool m_eglDisplayOwned { true };
     std::unique_ptr<GLContext> m_sharingGLContext;
 
-#if USE(GBM)
+#if USE(LIBDRM)
     std::optional<String> m_drmDeviceFile;
     std::optional<String> m_drmRenderNodeFile;
 #endif
@@ -193,7 +207,7 @@ private:
 
 #if USE(EGL)
     void terminateEGLDisplay();
-#if USE(GBM)
+#if USE(LIBDRM)
     EGLDeviceEXT eglDevice();
 #endif
 
@@ -205,13 +219,18 @@ private:
     mutable EGLDisplay m_angleEGLDisplay { nullptr };
     EGLContext m_angleSharingGLContext { nullptr };
 #endif
+#if USE(GBM)
+    Vector<DMABufFormat> m_dmabufFormats;
+#endif
 #endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
-    bool tryEnsureGstGLContext() const;
-
     mutable GRefPtr<GstGLDisplay> m_gstGLDisplay;
     mutable GRefPtr<GstGLContext> m_gstGLContext;
+#endif
+
+#if PLATFORM(WPE)
+    static bool s_useDMABufForRendering;
 #endif
 };
 

@@ -35,6 +35,9 @@
 #include "AccessibilityNodeObject.h"
 #include "AddEventListenerOptions.h"
 #include "Attr.h"
+#include "AudioTrack.h"
+#include "AudioTrackConfiguration.h"
+#include "AudioTrackList.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
@@ -46,6 +49,7 @@
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
 #include "CharacterData.h"
+#include "CodecUtilities.h"
 #include "CommandLineAPIHost.h"
 #include "ComposedTreeIterator.h"
 #include "ContainerNode.h"
@@ -83,7 +87,11 @@
 #include "JSDOMBindingSecurity.h"
 #include "JSEventListener.h"
 #include "JSLocalDOMWindowCustom.h"
+#include "JSMediaControlsHost.h"
 #include "JSNode.h"
+#include "JSVideoColorPrimaries.h"
+#include "JSVideoMatrixCoefficients.h"
+#include "JSVideoTransferCharacteristics.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
@@ -109,6 +117,9 @@
 #include "TextNodeTraversal.h"
 #include "Timer.h"
 #include "VideoPlaybackQuality.h"
+#include "VideoTrack.h"
+#include "VideoTrackConfiguration.h"
+#include "VideoTrackList.h"
 #include "WebInjectedScriptManager.h"
 #include "XPathResult.h"
 #include "markup.h"
@@ -243,11 +254,11 @@ public:
 
     void handleEvent(ScriptExecutionContext&, Event& event) final
     {
-        if (!is<Node>(event.target()) || m_domAgent.m_dispatchedEvents.contains(&event))
+        RefPtr node = dynamicDowncast<Node>(event.target());
+        if (!node || m_domAgent.m_dispatchedEvents.contains(&event))
             return;
 
-        auto* node = downcast<Node>(event.target());
-        auto nodeId = m_domAgent.pushNodePathToFrontend(node);
+        auto nodeId = m_domAgent.pushNodePathToFrontend(node.get());
         if (!nodeId)
             return;
 
@@ -276,7 +287,7 @@ private:
 
 String InspectorDOMAgent::toErrorString(ExceptionCode ec)
 {
-    return ec ? String(DOMException::name(ec)) : emptyString();
+    return static_cast<bool>(ec) ? String(DOMException::name(ec)) : emptyString();
 }
 
 String InspectorDOMAgent::toErrorString(Exception&& exception)
@@ -421,19 +432,17 @@ void InspectorDOMAgent::unbind(Node& node)
 
     m_idToNode.remove(id);
 
-    if (node.isFrameOwnerElement()) {
-        const HTMLFrameOwnerElement* frameOwner = static_cast<const HTMLFrameOwnerElement*>(&node);
-        if (Document* contentDocument = frameOwner->contentDocument())
+    if (auto* frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(node)) {
+        if (RefPtr contentDocument = frameOwner->contentDocument())
             unbind(*contentDocument);
     }
 
-    if (is<Element>(node)) {
-        Element& element = downcast<Element>(node);
-        if (ShadowRoot* root = element.shadowRoot())
+    if (RefPtr element = dynamicDowncast<Element>(node)) {
+        if (RefPtr root = element->shadowRoot())
             unbind(*root);
-        if (PseudoElement* beforeElement = element.beforePseudoElement())
+        if (RefPtr beforeElement = element->beforePseudoElement())
             unbind(*beforeElement);
-        if (PseudoElement* afterElement = element.afterPseudoElement())
+        if (RefPtr afterElement = element->afterPseudoElement())
             unbind(*afterElement);
     }
 
@@ -449,41 +458,39 @@ void InspectorDOMAgent::unbind(Node& node)
 
 Node* InspectorDOMAgent::assertNode(Protocol::ErrorString& errorString, Protocol::DOM::NodeId nodeId)
 {
-    Node* node = nodeForId(nodeId);
+    RefPtr node = nodeForId(nodeId);
     if (!node) {
         errorString = "Missing node for given nodeId"_s;
         return nullptr;
     }
-    return node;
+    return node.get();
 }
 
 Document* InspectorDOMAgent::assertDocument(Protocol::ErrorString& errorString, Protocol::DOM::NodeId nodeId)
 {
-    Node* node = assertNode(errorString, nodeId);
+    RefPtr node = assertNode(errorString, nodeId);
     if (!node)
         return nullptr;
-    if (!is<Document>(node)) {
+    RefPtr document = dynamicDowncast<Document>(*node);
+    if (!document)
         errorString = "Node for given nodeId is not a document"_s;
-        return nullptr;
-    }
-    return downcast<Document>(node);
+    return document.get();
 }
 
 Element* InspectorDOMAgent::assertElement(Protocol::ErrorString& errorString, Protocol::DOM::NodeId nodeId)
 {
-    Node* node = assertNode(errorString, nodeId);
+    RefPtr node = assertNode(errorString, nodeId);
     if (!node)
         return nullptr;
-    if (!is<Element>(node)) {
+    RefPtr element = dynamicDowncast<Element>(*node);
+    if (!element)
         errorString = "Node for given nodeId is not an element"_s;
-        return nullptr;
-    }
-    return downcast<Element>(node);
+    return element.get();
 }
 
 Node* InspectorDOMAgent::assertEditableNode(Protocol::ErrorString& errorString, Protocol::DOM::NodeId nodeId)
 {
-    Node* node = assertNode(errorString, nodeId);
+    RefPtr node = assertNode(errorString, nodeId);
     if (!node)
         return nullptr;
     if (node->isInUserAgentShadowTree() && !m_allowEditingUserAgentShadowTrees) {
@@ -494,19 +501,18 @@ Node* InspectorDOMAgent::assertEditableNode(Protocol::ErrorString& errorString, 
         errorString = "Node for given nodeId is a pseudo-element"_s;
         return nullptr;
     }
-    return node;
+    return node.get();
 }
 
 Element* InspectorDOMAgent::assertEditableElement(Protocol::ErrorString& errorString, Protocol::DOM::NodeId nodeId)
 {
-    Node* node = assertEditableNode(errorString, nodeId);
+    RefPtr node = assertEditableNode(errorString, nodeId);
     if (!node)
         return nullptr;
-    if (!is<Element>(node)) {
+    RefPtr element = dynamicDowncast<Element>(node);
+    if (!element)
         errorString = "Node for given nodeId is not an element"_s;
-        return nullptr;
-    }
-    return downcast<Element>(node);
+    return element.get();
 }
 
 Protocol::ErrorStringOr<Ref<Protocol::DOM::Node>> InspectorDOMAgent::getDocument()
@@ -636,13 +642,14 @@ Protocol::ErrorStringOr<std::optional<Protocol::DOM::NodeId>> InspectorDOMAgent:
 {
     Protocol::ErrorString errorString;
 
-    Node* node = assertNode(errorString, nodeId);
+    RefPtr node = assertNode(errorString, nodeId);
     if (!node)
         return makeUnexpected(errorString);
-    if (!is<ContainerNode>(*node))
+    RefPtr containerNode = dynamicDowncast<ContainerNode>(*node);
+    if (!containerNode)
         return makeUnexpected("Node for given nodeId is not a container node"_s);
 
-    auto queryResult = downcast<ContainerNode>(*node).querySelector(selector);
+    auto queryResult = containerNode->querySelector(selector);
     if (queryResult.hasException())
         return makeUnexpected(InspectorDOMAgent::toErrorString(queryResult.releaseException()));
 
@@ -661,13 +668,14 @@ Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::DOM::NodeId>>> InspectorDOMA
 {
     Protocol::ErrorString errorString;
 
-    Node* node = assertNode(errorString, nodeId);
+    RefPtr node = assertNode(errorString, nodeId);
     if (!node)
         return makeUnexpected(errorString);
-    if (!is<ContainerNode>(*node))
+    RefPtr containerNode = dynamicDowncast<ContainerNode>(*node);
+    if (!containerNode)
         return makeUnexpected("Node for given nodeId is not a container node"_s);
 
-    auto queryResult = downcast<ContainerNode>(*node).querySelectorAll(selector);
+    auto queryResult = containerNode->querySelectorAll(selector);
     if (queryResult.hasException())
         return makeUnexpected(InspectorDOMAgent::toErrorString(queryResult.releaseException()));
 
@@ -829,11 +837,11 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::removeNode(Protocol::DOM::NodeI
 {
     Protocol::ErrorString errorString;
 
-    Node* node = assertEditableNode(errorString, nodeId);
+    RefPtr node = assertEditableNode(errorString, nodeId);
     if (!node)
         return makeUnexpected(errorString);
 
-    ContainerNode* parentNode = node->parentNode();
+    RefPtr parentNode = node->parentNode();
     if (!parentNode)
         return makeUnexpected("Cannot remove detached node"_s);
 
@@ -901,7 +909,7 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::setOuterHTML(Protocol::DOM::Nod
         return { };
     }
 
-    Node* node = assertEditableNode(errorString, nodeId);
+    RefPtr node = assertEditableNode(errorString, nodeId);
     if (!node)
         return makeUnexpected(errorString);
 
@@ -931,14 +939,15 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::insertAdjacentHTML(Protocol::DO
 {
     Protocol::ErrorString errorString;
 
-    Node* node = assertEditableNode(errorString, nodeId);
+    RefPtr node = assertEditableNode(errorString, nodeId);
     if (!node)
         return makeUnexpected(errorString);
 
-    if (!is<Element>(node))
+    RefPtr element = dynamicDowncast<Element>(*node);
+    if (!element)
         return makeUnexpected("Node for given nodeId is not an element"_s);
 
-    if (!m_domEditor->insertAdjacentHTML(downcast<Element>(*node), position, html, errorString))
+    if (!m_domEditor->insertAdjacentHTML(*element, position, html, errorString))
         return makeUnexpected(errorString);
 
     return { };
@@ -948,14 +957,15 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::setNodeValue(Protocol::DOM::Nod
 {
     Protocol::ErrorString errorString;
 
-    Node* node = assertEditableNode(errorString, nodeId);
+    RefPtr node = assertEditableNode(errorString, nodeId);
     if (!node)
         return makeUnexpected(errorString);
 
-    if (!is<Text>(*node))
+    RefPtr text = dynamicDowncast<Text>(*node);
+    if (!text)
         return makeUnexpected("Node for given nodeId is not text"_s);
 
-    if (!m_domEditor->replaceWholeText(downcast<Text>(*node), value, errorString))
+    if (!m_domEditor->replaceWholeText(*text, value, errorString))
         return makeUnexpected(errorString);
 
     return { };
@@ -963,13 +973,12 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::setNodeValue(Protocol::DOM::Nod
 
 Protocol::ErrorStringOr<Ref<JSON::ArrayOf<String>>> InspectorDOMAgent::getSupportedEventNames()
 {
-    auto eventNames = JSON::ArrayOf<String>::create();
+    auto list = JSON::ArrayOf<String>::create();
 
-#define DOM_EVENT_NAMES_ADD(name) eventNames->addItem(#name""_s);
-    DOM_EVENT_NAMES_FOR_EACH(DOM_EVENT_NAMES_ADD)
-#undef DOM_EVENT_NAMES_ADD
+    for (auto& event : eventNames().allEventNames())
+        list->addItem(event);
 
-    return eventNames;
+    return list;
 }
 
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
@@ -988,15 +997,15 @@ Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::DOM::EventListener>>> Inspec
 {
     Protocol::ErrorString errorString;
 
-    auto* node = assertNode(errorString, nodeId);
+    RefPtr node = assertNode(errorString, nodeId);
     if (!node)
         return makeUnexpected(errorString);
 
     Vector<RefPtr<EventTarget>> ancestors;
-    ancestors.append(node);
+    ancestors.append(node.get());
     if (includeAncestors.value_or(true)) {
-    for (auto* ancestor = node->parentOrShadowHostNode(); ancestor; ancestor = ancestor->parentOrShadowHostNode())
-        ancestors.append(ancestor);
+        for (RefPtr ancestor = node->parentOrShadowHostNode(); ancestor; ancestor = ancestor->parentOrShadowHostNode())
+            ancestors.append(ancestor.get());
     if (auto* window = node->document().domWindow())
         ancestors.append(window);
     }
@@ -1457,7 +1466,7 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(const String&
         return makeUnexpected("Missing document of frame for given frameId"_s);
 
     CSSParser parser(*document);
-    auto selectorList = parser.parseSelector(selectorString);
+    auto selectorList = parser.parseSelectorList(selectorString);
     if (!selectorList)
         return { };
 
@@ -1467,25 +1476,23 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(const String&
     HashSet<Ref<Node>> seenNodes;
 
     for (auto& descendant : composedTreeDescendants(*document)) {
-        if (!is<Element>(descendant))
+        RefPtr descendantElement = dynamicDowncast<Element>(descendant);
+        if (!descendantElement)
             continue;
 
-        auto& descendantElement = downcast<Element>(descendant);
-
-        auto isInUserAgentShadowTree = descendantElement.isInUserAgentShadowTree();
-        auto pseudoId = descendantElement.pseudoId();
-        auto& pseudo = descendantElement.pseudo();
+        auto isInUserAgentShadowTree = descendantElement->isInUserAgentShadowTree();
+        auto pseudoId = descendantElement->pseudoId();
 
         for (const auto* selector = selectorList->first(); selector; selector = CSSSelectorList::next(selector)) {
-            if (isInUserAgentShadowTree && (selector->match() != CSSSelector::Match::PseudoElement || selector->value() != pseudo))
+            if (isInUserAgentShadowTree && (selector->match() != CSSSelector::Match::PseudoElement || selector->value() != descendantElement->userAgentPart()))
                 continue;
 
             SelectorChecker::CheckingContext context(SelectorChecker::Mode::ResolvingStyle);
             context.pseudoId = pseudoId;
 
-            if (selectorChecker.match(*selector, descendantElement, context)) {
-                if (seenNodes.add(descendantElement))
-                    nodeList.append(descendantElement);
+            if (selectorChecker.match(*selector, *descendantElement, context)) {
+                if (seenNodes.add(*descendantElement))
+                    nodeList.append(*descendantElement);
             }
 
             if (context.pseudoIDSet) {
@@ -1493,7 +1500,7 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(const String&
 
                 if (pseudoIDs.has(PseudoId::Before)) {
                     pseudoIDs.remove(PseudoId::Before);
-                    if (auto* beforePseudoElement = descendantElement.beforePseudoElement()) {
+                    if (RefPtr beforePseudoElement = descendantElement->beforePseudoElement()) {
                         if (seenNodes.add(*beforePseudoElement))
                             nodeList.append(*beforePseudoElement);
                     }
@@ -1501,15 +1508,15 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(const String&
 
                 if (pseudoIDs.has(PseudoId::After)) {
                     pseudoIDs.remove(PseudoId::After);
-                    if (auto* afterPseudoElement = descendantElement.afterPseudoElement()) {
+                    if (RefPtr afterPseudoElement = descendantElement->afterPseudoElement()) {
                         if (seenNodes.add(*afterPseudoElement))
                             nodeList.append(*afterPseudoElement);
                     }
                 }
 
                 if (pseudoIDs) {
-                    if (seenNodes.add(descendantElement))
-                        nodeList.append(descendantElement);
+                    if (seenNodes.add(*descendantElement))
+                        nodeList.append(*descendantElement);
                 }
             }
         }
@@ -1935,7 +1942,7 @@ Ref<Protocol::DOM::Node> InspectorDOMAgent::buildObjectForNode(Node* node, int d
 
     auto value = Protocol::DOM::Node::create()
         .setNodeId(id)
-        .setNodeType(static_cast<int>(node->nodeType()))
+        .setNodeType(enumToUnderlyingType(node->nodeType()))
         .setNodeName(nodeName)
         .setLocalName(localName)
         .setNodeValue(nodeValue)
@@ -1957,60 +1964,54 @@ Ref<Protocol::DOM::Node> InspectorDOMAgent::buildObjectForNode(Node* node, int d
     auto* pageAgent = m_instrumentingAgents.enabledPageAgent();
     if (pageAgent) {
         if (auto* frameView = node->document().view())
-            value->setFrameId(pageAgent->frameId(dynamicDowncast<LocalFrame>(frameView->frame())));
+            value->setFrameId(pageAgent->frameId(&frameView->frame()));
     }
 
-    if (is<Element>(*node)) {
-        Element& element = downcast<Element>(*node);
-        value->setAttributes(buildArrayForElementAttributes(&element));
-        if (is<HTMLFrameOwnerElement>(element)) {
-            if (auto* document = downcast<HTMLFrameOwnerElement>(element).contentDocument())
-                value->setContentDocument(buildObjectForNode(document, 0));
+    if (RefPtr element = dynamicDowncast<Element>(*node)) {
+        value->setAttributes(buildArrayForElementAttributes(element.get()));
+        if (RefPtr frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(*element)) {
+            if (RefPtr document = frameOwner->contentDocument())
+                value->setContentDocument(buildObjectForNode(document.get(), 0));
         }
 
-        if (ShadowRoot* root = element.shadowRoot()) {
+        if (RefPtr root = element->shadowRoot()) {
             auto shadowRoots = JSON::ArrayOf<Protocol::DOM::Node>::create();
-            shadowRoots->addItem(buildObjectForNode(root, 0));
+            shadowRoots->addItem(buildObjectForNode(root.get(), 0));
             value->setShadowRoots(WTFMove(shadowRoots));
         }
 
-        if (is<HTMLTemplateElement>(element))
-            value->setTemplateContent(buildObjectForNode(&downcast<HTMLTemplateElement>(element).content(), 0));
+        if (RefPtr templateElement = dynamicDowncast<HTMLTemplateElement>(*element))
+            value->setTemplateContent(buildObjectForNode(&templateElement->content(), 0));
 
-        if (is<HTMLStyleElement>(element) || (is<HTMLScriptElement>(element) && !element.hasAttributeWithoutSynchronization(HTMLNames::srcAttr)))
-            value->setContentSecurityPolicyHash(computeContentSecurityPolicySHA256Hash(element));
+        if (is<HTMLStyleElement>(element) || (is<HTMLScriptElement>(element) && !element->hasAttributeWithoutSynchronization(HTMLNames::srcAttr)))
+            value->setContentSecurityPolicyHash(computeContentSecurityPolicySHA256Hash(*element));
 
-        auto state = customElementState(element);
+        auto state = customElementState(*element);
         if (state != Protocol::DOM::CustomElementState::Builtin)
             value->setCustomElementState(state);
 
-        if (element.pseudoId() != PseudoId::None) {
+        if (element->pseudoId() != PseudoId::None) {
             Protocol::DOM::PseudoType pseudoType;
-            if (pseudoElementType(element.pseudoId(), &pseudoType))
+            if (pseudoElementType(element->pseudoId(), &pseudoType))
                 value->setPseudoType(pseudoType);
         } else {
-            if (auto pseudoElements = buildArrayForPseudoElements(element))
+            if (auto pseudoElements = buildArrayForPseudoElements(*element))
                 value->setPseudoElements(pseudoElements.releaseNonNull());
         }
-    } else if (is<Document>(*node)) {
-        Document& document = downcast<Document>(*node);
+    } else if (RefPtr document = dynamicDowncast<Document>(*node)) {
         if (pageAgent)
-            value->setFrameId(pageAgent->frameId(document.frame()));
-        value->setDocumentURL(documentURLString(&document));
-        value->setBaseURL(documentBaseURLString(&document));
-        value->setXmlVersion(document.xmlVersion());
-    } else if (is<DocumentType>(*node)) {
-        DocumentType& docType = downcast<DocumentType>(*node);
-        value->setPublicId(docType.publicId());
-        value->setSystemId(docType.systemId());
-    } else if (is<Attr>(*node)) {
-        Attr& attribute = downcast<Attr>(*node);
-        value->setName(attribute.name());
-        value->setValue(attribute.value());
-    } else if (is<ShadowRoot>(*node)) {
-        ShadowRoot& shadowRoot = downcast<ShadowRoot>(*node);
-        value->setShadowRootType(shadowRootType(shadowRoot.mode()));
-    }
+            value->setFrameId(pageAgent->frameId(document->frame()));
+        value->setDocumentURL(documentURLString(document.get()));
+        value->setBaseURL(documentBaseURLString(document.get()));
+        value->setXmlVersion(document->xmlVersion());
+    } else if (RefPtr doctype = dynamicDowncast<DocumentType>(*node)) {
+        value->setPublicId(doctype->publicId());
+        value->setSystemId(doctype->systemId());
+    } else if (RefPtr attribute = dynamicDowncast<Attr>(*node)) {
+        value->setName(attribute->name());
+        value->setValue(attribute->value());
+    } else if (RefPtr shadowRoot = dynamicDowncast<ShadowRoot>(*node))
+        value->setShadowRootType(shadowRootType(shadowRoot->mode()));
 
     return value;
 }
@@ -2055,16 +2056,16 @@ Ref<JSON::ArrayOf<Protocol::DOM::Node>> InspectorDOMAgent::buildArrayForContaine
 
 RefPtr<JSON::ArrayOf<Protocol::DOM::Node>> InspectorDOMAgent::buildArrayForPseudoElements(const Element& element)
 {
-    PseudoElement* beforeElement = element.beforePseudoElement();
-    PseudoElement* afterElement = element.afterPseudoElement();
+    RefPtr beforeElement = element.beforePseudoElement();
+    RefPtr afterElement = element.afterPseudoElement();
     if (!beforeElement && !afterElement)
         return nullptr;
 
     auto pseudoElements = JSON::ArrayOf<Protocol::DOM::Node>::create();
     if (beforeElement)
-        pseudoElements->addItem(buildObjectForNode(beforeElement, 0));
+        pseudoElements->addItem(buildObjectForNode(beforeElement.get(), 0));
     if (afterElement)
-        pseudoElements->addItem(buildObjectForNode(afterElement, 0));
+        pseudoElements->addItem(buildObjectForNode(afterElement.get(), 0));
     return pseudoElements;
 }
 
@@ -2077,12 +2078,11 @@ Ref<Protocol::DOM::EventListener> InspectorDOMAgent::buildObjectForEventListener
     int columnNumber = 0;
     String scriptID;
     if (auto* scriptListener = dynamicDowncast<JSEventListener>(eventListener.get()); scriptListener && scriptListener->isolatedWorld()) {
-        Document* document = nullptr;
-        if (auto* scriptExecutionContext = eventTarget.scriptExecutionContext()) {
-            if (is<Document>(scriptExecutionContext))
-                document = downcast<Document>(scriptExecutionContext);
-        } else if (is<Node>(eventTarget))
-            document = &downcast<Node>(eventTarget).document();
+        RefPtr<Document> document;
+        if (auto* scriptExecutionContext = eventTarget.scriptExecutionContext())
+            document = dynamicDowncast<Document>(*scriptExecutionContext);
+        else if (RefPtr node = dynamicDowncast<Node>(eventTarget))
+            document = &node->document();
 
         JSC::JSObject* handlerObject = nullptr;
         JSC::JSGlobalObject* globalObject = nullptr;
@@ -2138,8 +2138,8 @@ Ref<Protocol::DOM::EventListener> InspectorDOMAgent::buildObjectForEventListener
         .setUseCapture(registeredEventListener.useCapture())
         .setIsAttribute(eventListener->isAttribute())
         .release();
-    if (is<Node>(eventTarget))
-        value->setNodeId(pushNodePathToFrontend(&downcast<Node>(eventTarget)));
+    if (RefPtr node = dynamicDowncast<Node>(eventTarget))
+        value->setNodeId(pushNodePathToFrontend(node.get()));
     else if (is<LocalDOMWindow>(eventTarget))
         value->setOnWindow(true);
     if (!scriptID.isNull()) {
@@ -2253,8 +2253,8 @@ Ref<Protocol::DOM::AccessibilityProperties> InspectorDOMAgent::buildObjectForAcc
             auto controlledElements = axObject->elementsFromAttribute(aria_controlsAttr);
             if (controlledElements.size()) {
                 controlledNodeIds = JSON::ArrayOf<Protocol::DOM::NodeId>::create();
-                for (Element* controlledElement : controlledElements) {
-                    if (auto controlledElementId = pushNodePathToFrontend(controlledElement))
+                for (auto& controlledElement : controlledElements) {
+                    if (auto controlledElementId = pushNodePathToFrontend(controlledElement.ptr()))
                         controlledNodeIds->addItem(controlledElementId);
                 }
             }
@@ -2293,8 +2293,8 @@ Ref<Protocol::DOM::AccessibilityProperties> InspectorDOMAgent::buildObjectForAcc
             auto flowedElements = axObject->elementsFromAttribute(aria_flowtoAttr);
             if (flowedElements.size()) {
                 flowedNodeIds = JSON::ArrayOf<Protocol::DOM::NodeId>::create();
-                for (Element* flowedElement : flowedElements) {
-                    if (auto flowedElementId = pushNodePathToFrontend(flowedElement))
+                for (auto& flowedElement : flowedElements) {
+                    if (auto flowedElementId = pushNodePathToFrontend(flowedElement.ptr()))
                         flowedNodeIds->addItem(flowedElementId);
                 }
             }
@@ -2358,15 +2358,15 @@ Ref<Protocol::DOM::AccessibilityProperties> InspectorDOMAgent::buildObjectForAcc
                     liveRegionStatus = Protocol::DOM::AccessibilityProperties::LiveRegionStatus::Polite;
             }
 
-            if (is<AccessibilityNodeObject>(*axObject))
-                mouseEventNode = downcast<AccessibilityNodeObject>(*axObject).mouseButtonListener(MouseButtonListenerResultFilter::IncludeBodyElement);
+            if (auto* accessibilityNodeObject = dynamicDowncast<AccessibilityNodeObject>(*axObject))
+                mouseEventNode = accessibilityNodeObject->mouseButtonListener(MouseButtonListenerResultFilter::IncludeBodyElement);
 
             if (axObject->supportsARIAOwns()) {
                 auto ownedElements = axObject->elementsFromAttribute(aria_ownsAttr);
                 if (ownedElements.size()) {
                     ownedNodeIds = JSON::ArrayOf<Protocol::DOM::NodeId>::create();
-                    for (Element* ownedElement : ownedElements) {
-                        if (auto ownedElementId = pushNodePathToFrontend(ownedElement))
+                    for (auto& ownedElement : ownedElements) {
+                        if (auto ownedElementId = pushNodePathToFrontend(ownedElement.ptr()))
                             ownedNodeIds->addItem(ownedElementId);
                     }
                 }
@@ -2491,7 +2491,9 @@ Ref<Protocol::DOM::AccessibilityProperties> InspectorDOMAgent::buildObjectForAcc
 static bool containsOnlyASCIIWhitespace(Node* node)
 {
     // FIXME: Respect ignoreWhitespace setting from inspector front end?
-    return is<Text>(node) && downcast<Text>(*node).data().containsOnly<isASCIIWhitespace>();
+    // This static is invoked during node deletion so cannot use RefPtr.
+    auto* text = dynamicDowncast<Text>(node);
+    return text && text->containsOnlyASCIIWhitespace();
 }
 
 Node* InspectorDOMAgent::innerFirstChild(Node* node)
@@ -2529,10 +2531,10 @@ unsigned InspectorDOMAgent::innerChildNodeCount(Node* node)
 Node* InspectorDOMAgent::innerParentNode(Node* node)
 {
     ASSERT(node);
-    if (is<Document>(*node))
-        return downcast<Document>(*node).ownerElement();
-    if (is<ShadowRoot>(*node))
-        return downcast<ShadowRoot>(*node).host();
+    if (RefPtr document = dynamicDowncast<Document>(*node))
+        return document->ownerElement();
+    if (RefPtr shadowRoot = dynamicDowncast<ShadowRoot>(*node))
+        return shadowRoot->host();
     return node->parentNode();
 }
 
@@ -2846,14 +2848,14 @@ void InspectorDOMAgent::pseudoElementDestroyed(PseudoElement& pseudoElement)
 
 void InspectorDOMAgent::didAddEventListener(EventTarget& target)
 {
-    if (!is<Node>(target))
+    RefPtr node = dynamicDowncast<Node>(target);
+    if (!node)
         return;
 
-    auto& node = downcast<Node>(target);
-    if (!node.contains(m_inspectedNode.get()))
+    if (!node->contains(m_inspectedNode.get()))
         return;
 
-    auto nodeId = boundNodeId(&node);
+    auto nodeId = boundNodeId(node.get());
     if (!nodeId)
         return;
 
@@ -2867,19 +2869,19 @@ void InspectorDOMAgent::didAddEventListener(EventTarget& target)
 
 void InspectorDOMAgent::willRemoveEventListener(EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
 {
-    if (!is<Node>(target))
+    RefPtr node = dynamicDowncast<Node>(target);
+    if (!node)
         return;
 
-    auto& node = downcast<Node>(target);
-    if (!node.contains(m_inspectedNode.get()))
+    if (!node->contains(m_inspectedNode.get()))
         return;
 
-    auto nodeId = boundNodeId(&node);
+    auto nodeId = boundNodeId(node.get());
     if (!nodeId)
         return;
 
     bool listenerExists = false;
-    for (auto& item : node.eventListeners(eventType)) {
+    for (auto& item : node->eventListeners(eventType)) {
         if (item->callback() == listener && item->useCapture() == capture) {
             listenerExists = true;
             break;
@@ -3015,10 +3017,9 @@ Node* InspectorDOMAgent::nodeForPath(const String& path)
             return nullptr;
 
         Node* child;
-        if (is<HTMLFrameOwnerElement>(*node)) {
+        if (RefPtr frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(*node)) {
             ASSERT(!*childNumber);
-            auto& frameOwner = downcast<HTMLFrameOwnerElement>(*node);
-            child = frameOwner.contentDocument();
+            child = frameOwner->contentDocument();
         } else {
             if (*childNumber >= innerChildNodeCount(node))
                 return nullptr;
@@ -3093,6 +3094,91 @@ Protocol::ErrorStringOr<void> InspectorDOMAgent::setAllowEditingUserAgentShadowT
     m_allowEditingUserAgentShadowTrees = allow;
 
     return { };
+}
+
+Protocol::ErrorStringOr<Ref<Protocol::DOM::MediaStats>> InspectorDOMAgent::getMediaStats(Protocol::DOM::NodeId nodeId)
+{
+#if ENABLE(VIDEO)
+    Protocol::ErrorString errorString;
+
+    auto* element = assertElement(errorString, nodeId);
+    if (!element)
+        return makeUnexpected(errorString);
+
+    auto* mediaElement = dynamicDowncast<HTMLMediaElement>(element);
+    if (!mediaElement)
+        return makeUnexpected("Node for given nodeId is not a media element"_s);
+
+    auto stats = Inspector::Protocol::DOM::MediaStats::create().release();
+
+    if (auto quality = mediaElement->getVideoPlaybackQuality()) {
+        auto jsonQuality = Inspector::Protocol::DOM::VideoPlaybackQuality::create()
+            .setTotalVideoFrames(quality->totalVideoFrames())
+            .setDroppedVideoFrames(quality->droppedVideoFrames())
+            .setDisplayCompositedVideoFrames(quality->displayCompositedVideoFrames())
+            .release();
+        stats->setQuality(WTFMove(jsonQuality));
+    }
+
+    auto sourceType = mediaElement->localizedSourceType();
+    if (!sourceType.isEmpty())
+        stats->setSource(sourceType);
+
+    auto* videoTrack = mediaElement->videoTracks() ? mediaElement->videoTracks()->selectedItem() : nullptr;
+    auto* audioTrack = mediaElement->audioTracks() ? mediaElement->audioTracks()->firstEnabled() : nullptr;
+
+    auto viewport = mediaElement->contentBoxRect().size();
+    auto viewportJSON = Inspector::Protocol::DOM::ViewportSize::create()
+        .setWidth(viewport.width())
+        .setHeight(viewport.height())
+        .release();
+    stats->setViewport(WTFMove(viewportJSON));
+
+    if (auto* window = mediaElement->document().domWindow())
+        stats->setDevicePixelRatio(window->devicePixelRatio());
+
+    if (videoTrack) {
+        auto& configuration = videoTrack->configuration();
+        auto colorSpace = configuration.colorSpace();
+        auto colorSpaceJSON = Inspector::Protocol::DOM::VideoColorSpace::create().release();
+        if (auto fullRange = colorSpace->fullRange())
+            colorSpaceJSON->setFullRange(*fullRange);
+        if (auto matrix = colorSpace->matrix())
+            colorSpaceJSON->setMatrix(convertEnumerationToString(*matrix));
+        if (auto primaries = colorSpace->primaries())
+            colorSpaceJSON->setPrimaries(convertEnumerationToString(*primaries));
+        if (auto transfer = colorSpace->transfer())
+            colorSpaceJSON->setTransfer(convertEnumerationToString(*transfer));
+
+        auto videoJSON = Inspector::Protocol::DOM::VideoMediaStats::create()
+            .setBitrate(configuration.bitrate())
+            .setCodec(configuration.codec())
+            .setHumanReadableCodecString(humanReadableStringFromCodecString(configuration.codec()))
+            .setColorSpace(WTFMove(colorSpaceJSON))
+            .setFramerate(configuration.framerate())
+            .setHeight(configuration.height())
+            .setWidth(configuration.width())
+            .release();
+        stats->setVideo(WTFMove(videoJSON));
+    }
+
+    if (audioTrack) {
+        auto& configuration = audioTrack->configuration();
+        auto audioJSON = Inspector::Protocol::DOM::AudioMediaStats::create()
+            .setBitrate(configuration.bitrate())
+            .setCodec(configuration.codec())
+            .setHumanReadableCodecString(humanReadableStringFromCodecString(configuration.codec()))
+            .setNumberOfChannels(configuration.numberOfChannels())
+            .setSampleRate(configuration.sampleRate())
+            .release();
+        stats->setAudio(WTFMove(audioJSON));
+    }
+
+    return stats;
+#else
+    UNUSED_PARAM(nodeId);
+    return makeUnexpected("no media support"_s);
+#endif
 }
 
 } // namespace WebCore

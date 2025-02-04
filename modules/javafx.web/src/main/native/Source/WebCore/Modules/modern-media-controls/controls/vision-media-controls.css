@@ -40,6 +40,11 @@
     --center-controls-bar-button-zoom: 2;
 }
 
+.media-controls.vision.fullscreen .controls-bar .slider.volume,
+.media-controls.vision.fullscreen .controls-bar .slider.volume * {
+    --slider-height: 10px;
+}
+
 /* Size class 2 */
 
 @container (min-width: 262px) {
@@ -159,12 +164,10 @@
 .media-controls.vision:not(.audio) .volume-container > .background-tint > .blur,
 .media-controls.vision:not(.audio) button > .background-tint > .blur {
     background-color: rgba(255, 255, 255, 0.15);
-    -webkit-backdrop-filter: saturate(20%) blur(50px);
 }
 
 .media-controls.vision:not(.audio) > .controls-bar > .background-tint > .blur {
     background-color: rgba(149, 149, 149, 0.25);
-    -webkit-backdrop-filter: saturate(64%) blur(50px);
 }
 
 .media-controls.vision:not(.audio) button:active > .background-tint > .tint {
@@ -309,22 +312,33 @@
 
 /* Make the slider grow taller when active */
 
+.media-controls.vision:not(.audio) .slider {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
 .media-controls.vision:not(.audio) > .bottom.controls-bar .slider:active,
 .media-controls.vision:not(.audio) > .bottom.controls-bar .slider:active * {
     --slider-height: 20px;
 }
 
-.media-controls.vision:not(.audio) > .bottom.controls-bar,
-.media-controls.vision:not(.audio) > .bottom.controls-bar * {
+.media-controls.vision:not(.audio) .slider,
+.media-controls.vision:not(.audio) .slider * {
     transition: all 350ms;
 }
 
-.media-controls.vision:not(.audio) > .bottom.controls-bar * {
+.media-controls.vision:not(.audio) > .controls-bar:is(.top-right, .bottom) * {
     transition-property: min-width, height, border-radius !important;
+}
+
+.media-controls.vision:not(.audio) > .top-right.controls-bar .fill:after {
+    --progress-bar-knob-margin: 1px;
 }
 
 .media-controls.vision:not(.audio) > .bottom.controls-bar .fill:after {
     --progress-bar-knob-margin: 3px;
+}
+
+.media-controls.vision:not(.audio) > .controls-bar:is(.bottom, .top-right) .fill:after {
     --progress-bar-knob-size: calc(var(--slider-height) - 2 * var(--progress-bar-knob-margin) - 2 * var(--slider-fill-recessed-margin));
 
     content: "";
@@ -341,7 +355,7 @@
     transition-duration: inherit;
 }
 
-.media-controls.vision:not(.audio) > .bottom.controls-bar .slider:active .fill:after {
+.media-controls.vision:not(.audio) > .controls-bar:is(.bottom, .top-right) .slider:active .fill:after {
     opacity: 1;
 }
 

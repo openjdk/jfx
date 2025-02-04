@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,9 +32,9 @@ import java.util.List;
 import javafx.collections.ListChangeBuilderShim;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableListWrapperShim;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ListChangeBuilderTest {
 
@@ -43,7 +43,7 @@ public class ListChangeBuilderTest {
     private ArrayList<String> list;
     private MockListObserver<String> observer;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         observer = new MockListObserver<>();
         list = new ArrayList<>(Arrays.asList("a", "b", "c", "d"));
@@ -137,7 +137,7 @@ public class ListChangeBuilderTest {
         observer.checkAddRemove(1, observableList, Collections.EMPTY_LIST, 4, 5);
     }
 
-    //RT-37089
+    //JDK-8095966
     @Test
     public void testAddRemove_5() {
         builder.beginChange();
@@ -344,7 +344,7 @@ public class ListChangeBuilderTest {
         builder.nextPermutation(0, 3, new int[] { 2, 0, 1}); // new order is "b", "c", "a", "d"
 
         builder.endChange();
-         // "c", "a", "d" before "b" was added
+        // "c", "a", "d" before "b" was added
         observer.checkPermutation(0, observableList, 0, 3, new int[] {1, 0, 2});
 
         observer.checkAddRemove(1, observableList, Collections.EMPTY_LIST, 0, 1);
@@ -429,35 +429,53 @@ public class ListChangeBuilderTest {
         observer.checkAddRemove(1, observableList, removed, 0, 2);
     }
 
-    @Test(expected=IllegalStateException.class)
+    @Test
     public void testNextAddWithoutBegin() {
-        builder.nextAdd(0, 1);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextAdd(0, 1);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextRemoveWithoutBegin() {
-        builder.nextRemove(0, (String)null);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextRemove(0, (String)null);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextRemove2WithoutBegin() {
-        builder.nextRemove(0, Collections.EMPTY_LIST);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextRemove(0, Collections.EMPTY_LIST);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextUpdateWithoutBegin() {
-        builder.nextUpdate(0);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextUpdate(0);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextSetWithoutBegin() {
-        builder.nextSet(0, null);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextSet(0, null);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextReplaceWithoutBegin() {
-        builder.nextReplace(0, 1, Collections.EMPTY_LIST);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextReplace(0, 1, Collections.EMPTY_LIST);
+        });
     }
+
 
     @Test
     public void testEmpty() {

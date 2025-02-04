@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,7 +67,6 @@ void D3DPipelineManager::DeleteInstance() {
 D3DPipelineManager::D3DPipelineManager(IConfig &cfg)
 {
     pd3d9 = NULL;
-    pd3d9Ex = NULL;
     pAdapters = NULL;
     adapterCount = 0;
     isVsyncEnabled = cfg.getBool("isVsyncEnabled");
@@ -83,7 +82,6 @@ HRESULT D3DPipelineManager::ReleaseD3D()
     ReleaseAdapters();
 
     SAFE_RELEASE(pd3d9);
-    SAFE_RELEASE(pd3d9Ex);
 
     return S_OK;
 }
@@ -92,21 +90,13 @@ HRESULT D3DPipelineManager::ReleaseD3D()
 // If succeeded, returns S_OK, otherwise returns the error code.
 HRESULT D3DPipelineManager::InitD3D(IConfig &cfg)
 {
-    bool useD3D9Ex = !cfg.getBool("disableD3D9Ex");
     bool verbose = cfg.getBool("verbose");
 
-    pd3d9Ex = 0;
-    if (useD3D9Ex && OS::isWindows7orNewer()) {
-        pd3d9Ex = Direct3DCreate9Ex();
-    }
-
-    pd3d9 = pd3d9Ex ? addRef<IDirect3D9>(pd3d9Ex) : Direct3DCreate9();
+    pd3d9 = Direct3DCreate9Ex();
 
     if (verbose) {
-        if (pd3d9Ex) {
+        if (pd3d9) {
             fprintf(stderr, "D3DPipelineManager: Created D3D9Ex device\n");
-        } else if (pd3d9) {
-            fprintf(stderr, "D3DPipelineManager: Created D3D9 device\n");
         } else {
             fprintf(stderr, "D3DPipelineManager: Unable to create D3D9 device\n");
         }
@@ -114,7 +104,7 @@ HRESULT D3DPipelineManager::InitD3D(IConfig &cfg)
     }
 
     if (pd3d9 == NULL) {
-        SetErrorMessage("InitD3D: unable to create IDirect3D9 object");
+        SetErrorMessage("InitD3D: unable to create IDirect3D9Ex object");
         RlsTraceLn(NWT_TRACE_ERROR, GetErrorMessage());
         return E_FAIL;
     }
@@ -611,7 +601,7 @@ HRESULT D3DPipelineManager::GetD3DContext(UINT adapterOrdinal,
                         "  initializing context for adapter %d",adapterOrdinal);
 
             if (SUCCEEDED(res = D3DEnabledOnAdapter(adapterOrdinal))) {
-                res = D3DContext::CreateInstance(pd3d9, pd3d9Ex, adapterOrdinal, isVsyncEnabled, &pCtx);
+                res = D3DContext::CreateInstance(pd3d9, adapterOrdinal, isVsyncEnabled, &pCtx);
                 if (FAILED(res)) {
                     RlsTraceLn1(NWT_TRACE_ERROR,
                         "D3DPPLM::GetD3DContext: failed to create context "\

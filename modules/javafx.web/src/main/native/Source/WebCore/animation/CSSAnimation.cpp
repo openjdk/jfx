@@ -48,14 +48,14 @@ Ref<CSSAnimation> CSSAnimation::create(const Styleable& owningElement, const Ani
 }
 
 CSSAnimation::CSSAnimation(const Styleable& element, const Animation& backingAnimation)
-    : DeclarativeAnimation(element, backingAnimation)
-    , m_animationName(backingAnimation.name().string)
+    : StyleOriginatedAnimation(element, backingAnimation)
+    , m_animationName(backingAnimation.name().name)
 {
 }
 
 void CSSAnimation::syncPropertiesWithBackingAnimation()
 {
-    DeclarativeAnimation::syncPropertiesWithBackingAnimation();
+    StyleOriginatedAnimation::syncPropertiesWithBackingAnimation();
 
     if (!effect())
         return;
@@ -136,7 +136,7 @@ ExceptionOr<void> CSSAnimation::bindingsPlay()
     // After a successful call to play() or pause() on a CSSAnimation, any subsequent change to the animation-play-state will
     // no longer cause the CSSAnimation to be played or paused.
 
-    auto retVal = DeclarativeAnimation::bindingsPlay();
+    auto retVal = StyleOriginatedAnimation::bindingsPlay();
     if (!retVal.hasException())
         m_overriddenProperties.add(Property::PlayState);
     return retVal;
@@ -149,7 +149,7 @@ ExceptionOr<void> CSSAnimation::bindingsPause()
     // After a successful call to play() or pause() on a CSSAnimation, any subsequent change to the animation-play-state will
     // no longer cause the CSSAnimation to be played or paused.
 
-    auto retVal = DeclarativeAnimation::bindingsPause();
+    auto retVal = StyleOriginatedAnimation::bindingsPause();
     if (!retVal.hasException())
         m_overriddenProperties.add(Property::PlayState);
     return retVal;
@@ -165,7 +165,7 @@ void CSSAnimation::setBindingsEffect(RefPtr<AnimationEffect>&& newEffect)
     // matching @keyframes rule is removed the animation must still be canceled.
 
     auto* previousEffect = effect();
-    DeclarativeAnimation::setBindingsEffect(WTFMove(newEffect));
+    StyleOriginatedAnimation::setBindingsEffect(WTFMove(newEffect));
     if (effect() != previousEffect) {
         m_overriddenProperties.add(Property::Duration);
         m_overriddenProperties.add(Property::TimingFunction);
@@ -187,7 +187,7 @@ ExceptionOr<void> CSSAnimation::setBindingsStartTime(const std::optional<CSSNumb
     // change to the animation-play-state will no longer cause the CSSAnimation to be played or paused.
 
     auto previousPlayState = playState();
-    auto result = DeclarativeAnimation::setBindingsStartTime(startTime);
+    auto result = StyleOriginatedAnimation::setBindingsStartTime(startTime);
     if (result.hasException())
         return result.releaseException();
     auto currentPlayState = playState();
@@ -206,7 +206,7 @@ ExceptionOr<void> CSSAnimation::bindingsReverse()
     // change to the animation-play-state will no longer cause the CSSAnimation to be played or paused.
 
     auto previousPlayState = playState();
-    auto retVal = DeclarativeAnimation::bindingsReverse();
+    auto retVal = StyleOriginatedAnimation::bindingsReverse();
     if (!retVal.hasException()) {
         auto currentPlayState = playState();
         if (currentPlayState != previousPlayState && (currentPlayState == PlayState::Paused || previousPlayState == PlayState::Paused))
@@ -260,28 +260,35 @@ void CSSAnimation::effectCompositeOperationWasSetUsingBindings()
 
 void CSSAnimation::keyframesRuleDidChange()
 {
-    if (m_overriddenProperties.contains(Property::Keyframes) || !is<KeyframeEffect>(effect()))
+    if (m_overriddenProperties.contains(Property::Keyframes))
+        return;
+
+    auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(effect());
+    if (!keyframeEffect)
         return;
 
     auto owningElement = this->owningElement();
     if (!owningElement)
         return;
 
-    downcast<KeyframeEffect>(*effect()).keyframesRuleDidChange();
+    keyframeEffect->keyframesRuleDidChange();
     owningElement->keyframesRuleDidChange();
 }
 
 void CSSAnimation::updateKeyframesIfNeeded(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext& resolutionContext)
 {
-    if (m_overriddenProperties.contains(Property::Keyframes) || !is<KeyframeEffect>(effect()))
+    if (m_overriddenProperties.contains(Property::Keyframes))
         return;
 
-    auto& keyframeEffect = downcast<KeyframeEffect>(*effect());
-    if (keyframeEffect.blendingKeyframes().isEmpty())
-        keyframeEffect.computeDeclarativeAnimationBlendingKeyframes(oldStyle, newStyle, resolutionContext);
+    auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(effect());
+    if (!keyframeEffect)
+        return;
+
+    if (keyframeEffect->blendingKeyframes().isEmpty())
+        keyframeEffect->computeStyleOriginatedAnimationBlendingKeyframes(oldStyle, newStyle, resolutionContext);
 }
 
-Ref<DeclarativeAnimationEvent> CSSAnimation::createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId pseudoId)
+Ref<StyleOriginatedAnimationEvent> CSSAnimation::createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId pseudoId)
 {
     return CSSAnimationEvent::create(eventType, this, scheduledTime, elapsedTime, pseudoId, m_animationName);
 }

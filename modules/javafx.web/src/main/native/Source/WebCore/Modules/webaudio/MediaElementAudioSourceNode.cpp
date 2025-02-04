@@ -36,6 +36,7 @@
 #include "Logging.h"
 #include "MediaElementAudioSourceOptions.h"
 #include "MediaPlayer.h"
+#include "SecurityOrigin.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Locker.h>
 
@@ -52,7 +53,7 @@ ExceptionOr<Ref<MediaElementAudioSourceNode>> MediaElementAudioSourceNode::creat
     RELEASE_ASSERT(options.mediaElement);
 
     if (options.mediaElement->audioSourceNode())
-        return Exception { InvalidStateError, "Media element is already associated with an audio source node"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Media element is already associated with an audio source node"_s };
 
     auto node = adoptRef(*new MediaElementAudioSourceNode(context, *options.mediaElement));
 
@@ -133,7 +134,7 @@ void MediaElementAudioSourceNode::provideInput(AudioBus* bus, size_t framesToPro
 
 bool MediaElementAudioSourceNode::wouldTaintOrigin()
 {
-    if (auto* origin = context().origin())
+    if (RefPtr origin = context().origin())
         return m_mediaElement->taintsOrigin(*origin);
 
     return true;

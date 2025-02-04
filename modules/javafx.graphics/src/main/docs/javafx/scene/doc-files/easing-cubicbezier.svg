@@ -1,0 +1,20 @@
+<svg viewBox="-120 -25 660 660" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="512" height="512" style="fill: #e3e3e3; stroke: rgb(100, 100, 100); stroke-width: 6px;"></rect>
+  <ellipse style="stroke: #000; paint-order: stroke; stroke-width: 0px; fill: #06c;" cx="512" cy="0" rx="20" ry="20"></ellipse>
+  <line style="fill: none; stroke: rgb(200, 0, 255); stroke-width: 8px;" x1="-1.607" y1="511.412" x2="315.63" y2="452.116"></line>
+  <ellipse style="paint-order: stroke; stroke-width: 0px; fill: rgb(200, 0, 255);" cy="452" rx="20" cx="315"></ellipse>
+  <ellipse style="stroke: #000; paint-order: stroke; stroke-width: 0px; fill: #06c;" cx="0" cy="512" rx="20"></ellipse>
+  <line style="fill: none; stroke-width: 8px; stroke: rgb(200, 0, 255);" x1="511.309" y1="-0.021" x2="109.574" y2="151.185"></line>
+  <path style="stroke: #06c; stroke-width: 12px; fill: none;" d="M 0 512 C 307.2 460.8 102.4 153.6 512 0"></path>
+  <text style="font-family: sans-serif; font-size: 40px; text-anchor: middle; white-space: pre;" x="256" y="620">input progress</text>
+  <text style="font-family: sans-serif; font-size: 40px; white-space: pre;" x="-7" y="580">0</text>
+  <text style="font-family: sans-serif; font-size: 40px; white-space: pre;" x="500.144" y="580">1</text>
+  <text style="font-family: sans-serif; font-size: 40px; white-space: pre;" x="-55" y="522">0</text>
+  <text style="font-family: sans-serif; font-size: 40px; white-space: pre;" x="-55" y="15">1</text>
+  <text style="font-family: sans-serif; font-size: 40px; text-anchor: middle; white-space: pre;" x="-95" y="256" transform="matrix(0, -1, 1, 0, -337.415588, 147.415619)">output progress</text>
+  <ellipse style="paint-order: stroke; stroke-width: 0px; fill: rgb(200, 0, 255);" cy="149" rx="20" cx="113"></ellipse>
+  <text style="font-family: sans-serif; font-size: 50px; font-weight: 700; white-space: pre;" x="7.287" y="469.082">P0</text>
+  <text style="font-family: sans-serif; font-size: 50px; font-weight: 700; white-space: pre;" x="345.278" y="469.082">P1</text>
+  <text style="font-family: sans-serif; font-size: 50px; font-weight: 700; white-space: pre;" x="25.076" y="169.634">P2</text>
+  <text style="font-family: sans-serif; font-size: 50px; font-weight: 700; white-space: pre;" x="440.152" y="82.171">P3</text>
+</svg>

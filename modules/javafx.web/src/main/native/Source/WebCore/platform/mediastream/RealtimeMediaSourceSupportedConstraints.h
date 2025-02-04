@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,28 +32,9 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include <wtf/text/WTFString.h>
+#include "MediaConstraintType.h"
 
 namespace WebCore {
-
-enum class MediaConstraintType : uint8_t {
-    Unknown,
-    Width,
-    Height,
-    AspectRatio,
-    FrameRate,
-    FacingMode,
-    Volume,
-    SampleRate,
-    SampleSize,
-    EchoCancellation,
-    DeviceId,
-    GroupId,
-    DisplaySurface,
-    LogicalSurface,
-    FocusDistance,
-    Zoom,
-};
 
 class RealtimeMediaSourceSupportedConstraints {
 public:
@@ -61,7 +42,7 @@ public:
     {
     }
 
-    RealtimeMediaSourceSupportedConstraints(bool supportsWidth, bool supportsHeight, bool supportsAspectRatio, bool supportsFrameRate, bool supportsFacingMode, bool supportsVolume, bool supportsSampleRate, bool supportsSampleSize, bool supportsEchoCancellation, bool supportsDeviceId, bool supportsGroupId, bool supportsDisplaySurface, bool supportsLogicalSurface, bool supportsFocusDistance, bool supportsZoom)
+    RealtimeMediaSourceSupportedConstraints(bool supportsWidth, bool supportsHeight, bool supportsAspectRatio, bool supportsFrameRate, bool supportsFacingMode, bool supportsVolume, bool supportsSampleRate, bool supportsSampleSize, bool supportsEchoCancellation, bool supportsDeviceId, bool supportsGroupId, bool supportsDisplaySurface, bool supportsLogicalSurface, bool supportsFocusDistance, bool supportsWhiteBalanceMode, bool supportsZoom, bool supportsTorch)
         : m_supportsWidth(supportsWidth)
         , m_supportsHeight(supportsHeight)
         , m_supportsAspectRatio(supportsAspectRatio)
@@ -76,7 +57,9 @@ public:
         , m_supportsDisplaySurface(supportsDisplaySurface)
         , m_supportsLogicalSurface(supportsLogicalSurface)
         , m_supportsFocusDistance(supportsFocusDistance)
+        , m_supportsWhiteBalanceMode(supportsWhiteBalanceMode)
         , m_supportsZoom(supportsZoom)
+        , m_supportsTorch(supportsTorch)
     {
     }
 
@@ -124,8 +107,14 @@ public:
     bool supportsFocusDistance() const { return m_supportsFocusDistance; }
     void setSupportsFocusDistance(bool value) { m_supportsFocusDistance = value; }
 
+    bool supportsWhiteBalanceMode() const { return m_supportsWhiteBalanceMode; }
+    void setSupportsWhiteBalanceMode(bool value) { m_supportsWhiteBalanceMode = value; }
+
     bool supportsZoom() const { return m_supportsZoom; }
     void setSupportsZoom(bool value) { m_supportsZoom = value; }
+
+    bool supportsTorch() const { return m_supportsTorch; }
+    void setSupportsTorch(bool value) { m_supportsTorch = value; }
 
 private:
     bool m_supportsWidth { false };
@@ -142,7 +131,9 @@ private:
     bool m_supportsDisplaySurface { false };
     bool m_supportsLogicalSurface { false };
     bool m_supportsFocusDistance { false };
+    bool m_supportsWhiteBalanceMode { false };
     bool m_supportsZoom { false };
+    bool m_supportsTorch { false };
 };
 
 } // namespace WebCore

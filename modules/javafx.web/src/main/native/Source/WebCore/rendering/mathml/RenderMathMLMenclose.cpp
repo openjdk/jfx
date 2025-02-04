@@ -49,8 +49,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLMenclose);
 const unsigned short longDivLeftSpace = 10;
 
 RenderMathMLMenclose::RenderMathMLMenclose(MathMLMencloseElement& element, RenderStyle&& style)
-    : RenderMathMLRow(element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLMenclose, element, WTFMove(style))
 {
+    ASSERT(isRenderMathMLMenclose());
 }
 
 // This arbitrary thickness value is used for the parameter \xi_8 from the MathML in HTML5 implementation note.

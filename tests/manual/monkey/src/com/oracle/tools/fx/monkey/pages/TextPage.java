@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,163 +25,121 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import javafx.geometry.Point2D;
+import javafx.geometry.VPos;
 import javafx.scene.Group;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
-import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
 import javafx.scene.layout.Border;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Path;
-import javafx.scene.shape.PathElement;
-import javafx.scene.text.Font;
+import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
-import com.oracle.tools.fx.monkey.util.EnterTextDialog;
+import javafx.scene.text.TextAlignment;
+import javafx.scene.text.TextBoundsType;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.EnumOption;
+import com.oracle.tools.fx.monkey.options.FontOption;
+import com.oracle.tools.fx.monkey.options.IntOption;
+import com.oracle.tools.fx.monkey.options.PaintOption;
+import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.sheets.ShapePropertySheet;
+import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
 import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.FontSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
-import com.oracle.tools.fx.monkey.util.Templates;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import com.oracle.tools.fx.monkey.util.TextSelector;
-import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
- * Text Page
+ * Text Page.
  */
 public class TextPage extends TestPaneBase {
-    private final TextSelector textSelector;
-    private final TextField styleField;
-    private final FontSelector fontSelector;
-    private final CheckBox showChars;
+    private final Text text;
     private final ScrollPane scroll;
-    private final CheckBox wrap;
-    private final Path caretPath;
-    private Text control;
-    private String currentText;
+    private final BooleanOption showChars;
+    private final BooleanOption wrap;
+    private final Label hitInfo;
 
     public TextPage() {
-        FX.name(this, "TextPage");
+        super("TextPage");
 
-        styleField = new TextField();
-        styleField.setOnAction((ev) -> {
-            String s = styleField.getText();
-            if (Utils.isBlank(s)) {
-                s = null;
-            }
-            control.setStyle(s);
-        });
+        text = new Text();
+        text.addEventHandler(MouseEvent.ANY, this::handleMouseEvent);
+        FX.setPopupMenu(text, this::createPopupMenu);
 
-        caretPath = new Path();
-        caretPath.setStrokeWidth(1);
-        caretPath.setStroke(Color.RED);
-        caretPath.setManaged(false);
+        hitInfo = new Label();
 
-        textSelector = TextSelector.fromPairs(
-            "textSelector",
-            (t) -> updateText(),
-            Templates.multiLineTextPairs()
-        );
+        showChars = new BooleanOption("showChars", "show characters", (v) -> updateShowCharacters(v));
 
-        fontSelector = new FontSelector("font", (f) -> updateControl());
-
-        Button editButton = new Button("Enter Text");
-        editButton.setOnAction((ev) -> {
-            new EnterTextDialog(this, (s) -> {
-                currentText = s;
-                updateControl();
-            }).show();
-        });
-
-        showChars = new CheckBox("show characters");
-        FX.name(showChars, "showChars");
-        showChars.selectedProperty().addListener((p) -> {
-            updateControl();
-        });
-
-        wrap = new CheckBox("wrap width");
-        FX.name(wrap, "wrap");
-        wrap.selectedProperty().addListener((p) -> {
-            updateWrap(wrap.selectedProperty().get());
-        });
+        wrap = new BooleanOption("wrap", "wrap width", (v) -> updateWrap(v));
 
         OptionPane op = new OptionPane();
-        op.label("Text:");
-        op.option(textSelector.node());
-        op.option(editButton);
-        op.label("Font:");
-        op.option(fontSelector.fontNode());
-        op.label("Font Size:");
-        op.option(fontSelector.sizeNode());
+        op.section("Text");
+        op.option("Bounds Type:", new EnumOption<>("boundsType", TextBoundsType.class, text.boundsTypeProperty()));
+        op.option(new BooleanOption("caretBias", "caret bias (leading)", text.caretBiasProperty()));
+        op.option("Caret Position:", new IntOption("caretPosition", -1, Integer.MAX_VALUE, text.caretPositionProperty()));
+        op.option("Font:", new FontOption("font", false, text.fontProperty()));
+        op.option("Font Smoothing:", new EnumOption<>("fontSmoothing", FontSmoothingType.class, text.fontSmoothingTypeProperty()));
+        op.option("Line Spacing:", Options.lineSpacing("lineSpacing", text.lineSpacingProperty()));
+        op.option("Selection Start:", new IntOption("selectionStart", -1, Integer.MAX_VALUE, text.selectionStartProperty()));
+        op.option("Selection End:", new IntOption("selectionEnd", -1, Integer.MAX_VALUE, text.selectionEndProperty()));
+        op.option("Selection Fill:", new PaintOption("selectionFill", text.selectionFillProperty()));
+        op.option(new BooleanOption("strikeThrough", "strike through", text.strikethroughProperty()));
+        op.option("Tab Size:", Options.tabSize("tabSize", text.tabSizeProperty()));
+        op.option("Text:", Options.textOption("textSelector", true, true, text.textProperty()));
+        op.option("Text Alignment:", new EnumOption<>("textAlignment", TextAlignment.class, text.textAlignmentProperty()));
+        op.option("Text Origin:", new EnumOption<VPos>("textOrigin", VPos.class, text.textOriginProperty()));
+        op.option(new BooleanOption("underline", "underline", text.underlineProperty()));
+
+        op.separator();
         op.option(wrap);
         op.option(showChars);
-        op.label("Note: " + (FX.isMac() ? "⌘" : "ctrl") + "-click for caret shape");
-        op.label("Direct Style:");
-        op.option(styleField);
+        op.option("Text.hitTest:", hitInfo);
+
+        ShapePropertySheet.appendTo(op, text);
 
         scroll = new ScrollPane();
         scroll.setBorder(Border.EMPTY);
         scroll.setHbarPolicy(ScrollBarPolicy.AS_NEEDED);
         scroll.setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
         scroll.setFitToWidth(false);
+        scroll.setContent(new Group(text));
 
         setContent(scroll);
         setOptions(op);
 
-        textSelector.selectFirst();
-        fontSelector.selectSystemFont();
+        updateWrap(false);
+        updateShowCharacters(false);
     }
 
-    private void updateText() {
-        currentText = textSelector.getSelectedText();
-        updateControl();
-    }
-
-    private void updateControl() {
-        Font f = fontSelector.getFont();
-
-        control = new Text(currentText);
-        control.setFont(f);
-
-        Group group = new Group(control, caretPath);
-        scroll.setContent(group);
-
-        updateWrap(wrap.isSelected());
-
-        if (showChars.isSelected()) {
-            Group g = ShowCharacterRuns.createFor(control);
-            group.getChildren().add(g);
+    private void updateShowCharacters(boolean on) {
+        if (on) {
+            ShowCharacterRuns.createFor(text);
+        } else {
+            ShowCharacterRuns.remove(text);
         }
-
-        control.addEventHandler(MouseEvent.MOUSE_PRESSED, (ev) -> {
-            PickResult p = ev.getPickResult();
-            //System.out.println(p);
-        });
-
-        control.addEventHandler(MouseEvent.MOUSE_CLICKED, (ev) -> {
-            if(ev.isShortcutDown()) {
-                showCaretShape(new Point2D(ev.getX(), ev.getY()));
-            }
-        });
     }
 
     private void updateWrap(boolean on) {
         if (on) {
-            control.wrappingWidthProperty().bind(scroll.viewportBoundsProperty().map((b) -> b.getWidth()));
+            text.wrappingWidthProperty().bind(scroll.viewportBoundsProperty().map((b) -> b.getWidth()));
         } else {
-            control.wrappingWidthProperty().unbind();
-            control.setWrappingWidth(0);
+            text.wrappingWidthProperty().unbind();
+            text.setWrappingWidth(0);
         }
     }
 
-    private void showCaretShape(Point2D p) {
-        HitInfo h = control.hitTest(p);
-        System.out.println("hit=" + h);
-        PathElement[] pe = control.caretShape(h.getCharIndex(), h.isLeading());
-        caretPath.getElements().setAll(pe);
+    private void handleMouseEvent(MouseEvent ev) {
+        Point2D p = new Point2D(ev.getX(), ev.getY());
+        HitInfo h = text.hitTest(p);
+        hitInfo.setText(String.valueOf(h));
+    }
+
+    private ContextMenu createPopupMenu(PickResult pick) {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Accessibility Attributes", () -> AccessibilityPropertyViewer.open(pick));
+        return m;
     }
 }

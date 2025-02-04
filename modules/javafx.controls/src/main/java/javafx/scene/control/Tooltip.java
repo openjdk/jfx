@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,11 +109,11 @@ import javafx.util.Duration;
 public class Tooltip extends PopupControl {
     private static String TOOLTIP_PROP_KEY = "javafx.scene.control.Tooltip";
 
-    // RT-31134 : the tooltip style includes a shadow around the tooltip with a
+    // JDK-8123248 : the tooltip style includes a shadow around the tooltip with a
     // width of 9 and height of 5. This causes mouse events to not reach the control
     // underneath resulting in losing hover state on the control while the tooltip is showing.
     // Displaying the tooltip at an offset indicated below resolves this issue.
-    // RT-37107: The y-offset was upped to 7 to ensure no overlaps when the tooltip
+    // JDK-8094371: The y-offset was upped to 7 to ensure no overlaps when the tooltip
     // is shown near the right edge of the screen.
     private static int TOOLTIP_XOFFSET = 10;
     private static int TOOLTIP_YOFFSET = 7;
@@ -272,7 +272,7 @@ public class Tooltip extends PopupControl {
         private boolean fontSetByCss = false;
 
         @Override public void applyStyle(StyleOrigin newOrigin, Font value) {
-            // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
+            // JDK-8127428 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
             try {
                 // super.applyStyle calls set which might throw if value is bound.
                 // Have to make sure fontSetByCss is reset.
@@ -294,7 +294,7 @@ public class Tooltip extends PopupControl {
         }
 
         @Override protected void invalidated() {
-            // RT-20727 - if font is changed by calling setFont, then
+            // JDK-8127428 - if font is changed by calling setFont, then
             // css might need to be reapplied since font size affects
             // calculated values for styles with relative values
             if(fontSetByCss == false) {
@@ -420,7 +420,7 @@ public class Tooltip extends PopupControl {
         if (imageUrl == null) {
             imageUrl = new StyleableStringProperty() {
                 // If imageUrlProperty is invalidated, this is the origin of the style that
-                // triggered the invalidation. This is used in the invaildated() method where the
+                // triggered the invalidation. This is used in the invalidated() method where the
                 // value of super.getStyleOrigin() is not valid until after the call to set(v) returns,
                 // by which time invalidated will have been called.
                 // This value is initialized to USER in case someone calls set on the imageUrlProperty, which
@@ -451,7 +451,7 @@ public class Tooltip extends PopupControl {
                     if (url == null) {
                         ((StyleableProperty<Node>)(WritableValue<Node>)graphicProperty()).applyStyle(origin, null);
                     } else {
-                        // RT-34466 - if graphic's url is the same as this property's value, then don't overwrite.
+                        // JDK-8095575 - if graphic's url is the same as this property's value, then don't overwrite.
                         final Node graphicNode = Tooltip.this.getGraphic();
                         if (graphicNode instanceof ImageView) {
                             final ImageView imageView = (ImageView)graphicNode;
@@ -859,7 +859,6 @@ public class Tooltip extends PopupControl {
         private double lastMouseY;
 
         private boolean hideOnExit;
-        private boolean cssForced = false;
 
         TooltipBehavior(final boolean hideOnExit) {
             this.hideOnExit = hideOnExit;
@@ -887,7 +886,7 @@ public class Tooltip extends PopupControl {
                     double y = lastMouseY;
 
                     // The tooltip always inherits the nodeOrientation of
-                    // the Node that it is attached to (see RT-26147). It
+                    // the Node that it is attached to (see JDK-8117558). It
                     // is possible to override this for the Tooltip content
                     // (but not the popup placement) by setting the
                     // nodeOrientation on tooltip.getScene().getRoot().
@@ -899,7 +898,7 @@ public class Tooltip extends PopupControl {
 
                     activatedTooltip.show(owner, x+TOOLTIP_XOFFSET, y+TOOLTIP_YOFFSET);
 
-                    // RT-37107: Ensure the tooltip is displayed in a position
+                    // JDK-8094371: Ensure the tooltip is displayed in a position
                     // where it will not be under the mouse, even when the tooltip
                     // is near the edge of the screen
                     if ((y+TOOLTIP_YOFFSET) > activatedTooltip.getAnchorY()) {
@@ -996,16 +995,13 @@ public class Tooltip extends PopupControl {
                         }
                         hideTimer.playFromStart();
                     } else {
-                        // Force the CSS to be processed for the tooltip so that it uses the
-                        // appropriate timings for showDelay, showDuration, and hideDelay.
-                        if (!cssForced) {
-                            double opacity = t.getOpacity();
-                            t.setOpacity(0);
-                            t.show(owner);
-                            t.hide();
-                            t.setOpacity(opacity);
-                            cssForced = true;
-                        }
+                        // We need to copy the stylesheet from the owner so that we get all the defined tooltip styles.
+                        // Note that this is normally done when showing the tooltip,
+                        // which is too late for some properties.
+                        PopupWindowHelper.applyStylesheetFromOwner(t, owner);
+                        // Force the CSS to be processed for the tooltip so that it uses the appropriate timings for
+                        // showDelay, showDuration, and hideDelay.
+                        t.bridge.applyCss();
 
                         // Start / restart the timer and make sure the tooltip
                         // is marked as activated.

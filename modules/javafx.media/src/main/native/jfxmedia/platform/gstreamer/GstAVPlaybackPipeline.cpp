@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,8 @@
 #include <Common/VSMemory.h>
 #include <Utils/LowLevelPerf.h>
 #include <fxplugins_common.h>
+
+#include <string.h>
 
 #define MAX_SIZE_BUFFERS_LIMIT 25
 #define MAX_SIZE_BUFFERS_INC   5
@@ -86,6 +88,19 @@ uint32_t CGstAVPlaybackPipeline::Init()
 {
     g_signal_connect(m_Elements[AV_DEMUXER], "pad-added", G_CALLBACK (on_pad_added), this);
     g_signal_connect(m_Elements[AV_DEMUXER], "no-more-pads", G_CALLBACK (no_more_pads), this);
+    if (m_Elements[AUDIO_PARSER])
+    {
+        GstPad *src_pad = gst_element_get_static_pad(m_Elements[AUDIO_PARSER], "src");
+        if (src_pad == NULL)
+        {
+            g_signal_connect(m_Elements[AUDIO_PARSER], "pad-added", G_CALLBACK (on_pad_added), this);
+            g_signal_connect(m_Elements[AUDIO_PARSER], "no-more-pads", G_CALLBACK (no_more_pads), this);
+        }
+        else
+        {
+            gst_object_unref(src_pad);
+        }
+    }
     g_signal_connect(m_Elements[AUDIO_QUEUE], "overrun", G_CALLBACK (queue_overrun), this);
     g_signal_connect(m_Elements[VIDEO_QUEUE], "overrun", G_CALLBACK (queue_overrun), this);
     g_signal_connect(m_Elements[AUDIO_QUEUE], "underrun", G_CALLBACK (queue_underrun), this);
@@ -878,8 +893,10 @@ GstPadProbeReturn CGstAVPlaybackPipeline::VideoDecoderSrcProbe(GstPad* pPad, Gst
             enabled = TRUE; // treat as enabled if field is not present
         }
 
-        if (!gst_structure_get_int(pStructure, "track_id", &trackID)) {
-            trackID = 1; // default to 1 for video track, in case container doesn't have track IDs
+        if (pPipeline->m_pOptions->ForceDefaultTrackID() ||
+                !gst_structure_get_int(pStructure, "track_id", &trackID)) {
+             // Use default ID in case container doesn't have track IDs
+            trackID = DEFAULT_VIDEO_TRACK_ID;
         }
 
         // Create the video track.

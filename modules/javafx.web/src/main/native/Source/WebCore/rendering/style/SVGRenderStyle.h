@@ -50,7 +50,7 @@ public:
     bool operator==(const SVGRenderStyle&) const;
 
     // Initial values for all the properties
-    static AlignmentBaseline initialAlignmentBaseline() { return AlignmentBaseline::Auto; }
+    static AlignmentBaseline initialAlignmentBaseline() { return AlignmentBaseline::Baseline; }
     static DominantBaseline initialDominantBaseline() { return DominantBaseline::Auto; }
     static BaselineShift initialBaselineShift() { return BaselineShift::Baseline; }
     static VectorEffect initialVectorEffect() { return VectorEffect::None; }
@@ -182,6 +182,8 @@ public:
     bool hasStroke() const { return strokePaintType() != SVGPaintType::None; }
     bool hasFill() const { return fillPaintType() != SVGPaintType::None; }
 
+    void conservativelyCollectChangedAnimatableProperties(const SVGRenderStyle&, CSSPropertiesBitSet&) const;
+
 private:
     SVGRenderStyle();
     SVGRenderStyle(const SVGRenderStyle&);
@@ -192,7 +194,7 @@ private:
     void setBitDefaults();
 
     struct InheritedFlags {
-        bool operator==(const InheritedFlags&) const;
+        friend bool operator==(const InheritedFlags&, const InheritedFlags&) = default;
 
         unsigned shapeRendering : 2; // ShapeRendering
         unsigned clipRule : 1; // WindRule
@@ -213,9 +215,9 @@ private:
                 unsigned alignmentBaseline : 4; // AlignmentBaseline
                 unsigned dominantBaseline : 4; // DominantBaseline
                 unsigned baselineShift : 2; // BaselineShift
-                unsigned vectorEffect: 1; // VectorEffect
-                unsigned bufferedRendering: 2; // BufferedRendering
-                unsigned maskType: 1; // MaskType
+                unsigned vectorEffect : 1; // VectorEffect
+                unsigned bufferedRendering : 2; // BufferedRendering
+                unsigned maskType : 1; // MaskType
                 // 18 bits unused
             } flagBits;
             uint32_t flags;
@@ -472,18 +474,6 @@ inline void SVGRenderStyle::setBitDefaults()
     m_nonInheritedFlags.flagBits.vectorEffect = static_cast<unsigned>(initialVectorEffect());
     m_nonInheritedFlags.flagBits.bufferedRendering = static_cast<unsigned>(initialBufferedRendering());
     m_nonInheritedFlags.flagBits.maskType = static_cast<unsigned>(initialMaskType());
-}
-
-inline bool SVGRenderStyle::InheritedFlags::operator==(const InheritedFlags& other) const
-{
-    return shapeRendering == other.shapeRendering
-        && clipRule == other.clipRule
-        && fillRule == other.fillRule
-        && textAnchor == other.textAnchor
-        && colorInterpolation == other.colorInterpolation
-        && colorInterpolationFilters == other.colorInterpolationFilters
-        && glyphOrientationHorizontal == other.glyphOrientationHorizontal
-        && glyphOrientationVertical == other.glyphOrientationVertical;
 }
 
 } // namespace WebCore

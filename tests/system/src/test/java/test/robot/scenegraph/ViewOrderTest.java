@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.robot.scenegraph;
 
+import java.util.concurrent.TimeUnit;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
@@ -32,12 +33,14 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
 
 /**
  * Test view order of Node in the scene graph.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class ViewOrderTest extends VisualTestBase {
 
     private Stage testStage;
@@ -45,7 +48,7 @@ public class ViewOrderTest extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
 
-    @Test(timeout = 15000)
+    @Test
     public void testViewOrder() {
         final int WIDTH = 300;
         final int HEIGHT = 300;
@@ -103,7 +106,7 @@ public class ViewOrderTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testViewOrderHBox() {
         final int WIDTH = 500;
         final int HEIGHT = 200;

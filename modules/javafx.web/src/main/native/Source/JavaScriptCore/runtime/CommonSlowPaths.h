@@ -108,9 +108,6 @@ inline bool opInByVal(JSGlobalObject* globalObject, JSValue baseVal, JSValue pro
     }
 
     JSObject* baseObj = asObject(baseVal);
-    if (arrayProfile)
-        arrayProfile->observeStructure(baseObj->structure());
-
     uint32_t i;
     if (propName.getUInt32(i)) {
         if (arrayProfile)
@@ -183,7 +180,15 @@ static ALWAYS_INLINE void putDirectWithReify(VM& vm, JSGlobalObject* globalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
     bool isJSFunction = baseObject->inherits<JSFunction>();
     if (isJSFunction) {
-        jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded(vm, globalObject, propertyName);
+        JSFunction* jsFunction = jsCast<JSFunction*>(baseObject);
+
+        if (propertyName == vm.propertyNames->prototype) {
+            slot.disableCaching();
+            if (FunctionRareData* rareData = jsFunction->rareData())
+                rareData->clear("Store to prototype property of a function");
+        }
+
+        jsFunction->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
         RETURN_IF_EXCEPTION(scope, void());
     }
 
@@ -204,16 +209,18 @@ static ALWAYS_INLINE void putDirectWithReify(VM& vm, JSGlobalObject* globalObjec
 
 static ALWAYS_INLINE void putDirectAccessorWithReify(VM& vm, JSGlobalObject* globalObject, JSObject* baseObject, PropertyName propertyName, GetterSetter* accessor, unsigned attribute)
 {
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    bool isJSFunction = baseObject->inherits<JSFunction>();
-    if (isJSFunction) {
-        jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded(vm, globalObject, propertyName);
-        RETURN_IF_EXCEPTION(scope, void());
-    }
-
     // baseObject is either JSFinalObject during object literal construction, or a userland JSFunction class
     // constructor, both of which are guaranteed to be extensible and without non-configurable |propertyName|.
     // Please also note that static "prototype" accessor in a `class` literal is a syntax error.
+
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    bool isJSFunction = baseObject->inherits<JSFunction>();
+    if (isJSFunction) {
+        ASSERT(propertyName != vm.propertyNames->prototype);
+        jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
+        RETURN_IF_EXCEPTION(scope, void());
+    }
+
     ASSERT(canPutDirectFast(vm, originalStructureBeforePut(baseObject), propertyName, isJSFunction));
     scope.release();
     baseObject->putDirectAccessor(globalObject, propertyName, accessor, attribute);

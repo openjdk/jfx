@@ -31,17 +31,16 @@ class RenderSVGTSpan final : public RenderSVGInline {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGTSpan);
 public:
     explicit RenderSVGTSpan(SVGTextPositioningElement& element, RenderStyle&& style)
-        : RenderSVGInline(element, WTFMove(style))
+        : RenderSVGInline(Type::SVGTSpan, element, WTFMove(style))
     {
+        ASSERT(isRenderSVGTSpan());
     }
-
 
 private:
     void graphicsElement() const = delete;
     ASCIILiteral renderName() const override { return "RenderSVGTSpan"_s; }
-    bool isSVGTSpan() const override { return true; }
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTSpan, isSVGTSpan())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTSpan, isRenderSVGTSpan())

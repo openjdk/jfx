@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,17 @@
 
 package test.javafx.scene.lighting3D;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.geometry.Point3D;
 import javafx.scene.DirectionalLight;
 import javafx.scene.paint.Color;
-
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class DirectionalLightTest extends LightingTest {
@@ -52,7 +48,7 @@ public class DirectionalLightTest extends LightingTest {
         initFX();
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
         LightingTest.light = LIGHT;
@@ -60,7 +56,7 @@ public class DirectionalLightTest extends LightingTest {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @Before
+    @BeforeEach
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
@@ -71,7 +67,7 @@ public class DirectionalLightTest extends LightingTest {
             for (Point3D direction : DIRECTIONS) {
                 LIGHT.setDirection(direction);
                 double sampledBlue = snapshot().getPixelReader().getColor(0, 0).getBlue();
-                assertEquals(FAIL_MESSAGE, dotProduct(direction), sampledBlue, DELTA);
+                assertEquals(dotProduct(direction), sampledBlue, DELTA, FAIL_MESSAGE);
             }
         });
     }

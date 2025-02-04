@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package javafx.scene.control.skin;
 
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -36,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javafx.beans.InvalidationListener;
@@ -81,7 +78,6 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Pair;
 
-import com.sun.javafx.FXPermissions;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
@@ -103,17 +99,9 @@ import com.sun.javafx.tk.Toolkit;
  */
 public class MenuBarSkin extends SkinBase<MenuBar> {
 
-    private static final ObservableList<Window> stages;
-
-    static {
-        final Predicate<Window> findStage = (w) -> w instanceof Stage;
-        @SuppressWarnings("removal")
-        ObservableList<Window> windows = AccessController.doPrivileged(
-            (PrivilegedAction<ObservableList<Window>>) () -> Window.getWindows(),
-            null,
-            FXPermissions.ACCESS_WINDOW_LIST_PERMISSION);
-        stages = windows.filtered(findStage);
-    }
+    private static final ObservableList<Window> stages = Window.getWindows().filtered((w) -> {
+        return w instanceof Stage;
+    });
 
     /* *************************************************************************
      *                                                                         *
@@ -121,16 +109,14 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      *                                                                         *
      **************************************************************************/
 
+    /** contains MenuBarButton's children only */
     private final HBox container;
+    /** index of *focused* MenuBarButton */
+    private int focusedMenuIndex = -1;
 
     // represents the currently _open_ menu
     private Menu openMenu;
     private MenuBarButton openMenuButton;
-
-    // represents the currently _focused_ menu. If openMenu is non-null, this should equal
-    // openMenu. If openMenu is null, this can be any menu in the menu bar.
-    private Menu focusedMenu;
-    private int focusedMenuIndex = -1;
 
     private static WeakHashMap<Stage, Reference<MenuBarSkin>> systemMenuMap;
     private static List<MenuBase> wrappedDefaultMenus = new ArrayList<>();
@@ -155,10 +141,10 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      *                                                                         *
      **************************************************************************/
 
-    // RT-20411 : reset menu selected/focused state
+    // JDK-8127045 : reset menu selected/focused state
     private EventHandler<ActionEvent> menuActionEventHandler = t -> {
         if (t.getSource() instanceof CustomMenuItem) {
-            // RT-29614 If CustomMenuItem hideOnClick is false, dont hide
+            // JDK-8124120 If CustomMenuItem hideOnClick is false, dont hide
             CustomMenuItem cmi = (CustomMenuItem)t.getSource();
             if (!cmi.isHideOnClick()) return;
         }
@@ -226,7 +212,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         menuBarFocusedPropertyListener = (ov, t, t1) -> {
             unSelectMenus();
             if (t1 && !container.getChildren().isEmpty()) {
-                // RT-23147 when MenuBar's focusTraversable is true the first
+                // JDK-8126368 when MenuBar's focusTraversable is true the first
                 // menu will visually indicate focus
                 menuModeStart(0);
                 openMenuButton = ((MenuBarButton)container.getChildren().get(0));
@@ -257,7 +243,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         // When the mouse leaves the menu, the last hovered item should lose
         // it's focus so that it is no longer selected. This code returns focus
         // to the MenuBar itself, such that keyboard navigation can continue.
-          // fix RT-12254 : menu bar should not request focus on mouse exit.
+          // fix JDK-8112401 : menu bar should not request focus on mouse exit.
 //        addEventFilter(MouseEvent.MOUSE_EXITED, new EventHandler<MouseEvent>() {
 //            @Override
 //            public void handle(MouseEvent event) {
@@ -295,7 +281,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 // Key navigation
                 sceneListenerHelper.addEventFilter(scene, KeyEvent.KEY_PRESSED, (ev) -> {
                     // process right left and may be tab key events
-                    if (focusedMenu != null) {
+                    if (focusedMenuIndex >= 0) {
                         switch (ev.getCode()) {
                         case LEFT: {
                             boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
@@ -342,7 +328,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                         case DOWN:
                             // case SPACE:
                             // case ENTER:
-                            // RT-18859: Doing nothing for space and enter
+                            // JDK-8127205: Doing nothing for space and enter
                             if (control.getScene().getWindow().isFocused()) {
                                 if (focusedMenuIndex != -1) {
                                     Menu menuToOpen = getSkinnable().getMenus().get(focusedMenuIndex);
@@ -369,7 +355,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                     }
                 });
 
-                // When the parent window looses focus - menu selection should be cleared
+                // When the parent window loses focus - menu selection should be cleared
                 sceneListenerHelper.addChangeListener(scene.windowProperty(), true, (w) -> {
                     if (windowFocusHelper != null) {
                         windowFocusHelper.disconnect();
@@ -429,7 +415,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         if (!menu.isShowing() && !isMenuEmpty(menu)) {
             if (selectFirstItem) {
                 // put selection / focus on first item in menu
-                MenuButton menuButton = getNodeForMenu(focusedMenuIndex);
+                MenuButton menuButton = menuBarButtonAt(focusedMenuIndex);
                 Skin<?> skin = menuButton.getSkin();
                 if (skin instanceof MenuButtonSkinBase) {
                     ((MenuButtonSkinBase)skin).requestFocusOnFirstMenuItem();
@@ -445,7 +431,6 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      */
     void setFocusedMenuIndex(int index) {
         focusedMenuIndex = (index >= -1 && index < getSkinnable().getMenus().size()) ? index : -1;
-        focusedMenu = (focusedMenuIndex != -1) ? getSkinnable().getMenus().get(index) : null;
 
         if (focusedMenuIndex != -1) {
             openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
@@ -461,8 +446,8 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      *                                                                         *
      **************************************************************************/
 
-    // RT-22480: This is intended as private API for SceneBuilder,
-    // pending fix for RT-19857: Keeping menu in the Mac menu bar when
+    // JDK-8102072: This is intended as private API for SceneBuilder,
+    // pending fix for JDK-8090562: Keeping menu in the Mac menu bar when
     // there is no more stage
     /**
      * Set the default system menu bar. This allows an application to keep menu
@@ -733,12 +718,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      *                                                                         *
      **************************************************************************/
 
-    // For testing purpose only.
-    MenuButton getNodeForMenu(int i) {
-        if (i < container.getChildren().size()) {
-            return (MenuBarButton)container.getChildren().get(i);
-        }
-        return null;
+    // package protected for testing purposes
+    MenuBarButton menuBarButtonAt(int i) {
+        return (MenuBarButton)container.getChildren().get(i);
     }
 
     int getFocusedMenuIndex() {
@@ -823,7 +805,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
             menuButton.dispose();
 
-            // RT-29729 : old instance of context menu window/popup for this MenuButton needs
+            // JDK-8118781 : old instance of context menu window/popup for this MenuButton needs
             // to be cleaned up. Setting the skin to null - results in a call to dispose()
             // on the skin which in this case MenuButtonSkinBase - does the subsequent
             // clean up to ContextMenu/popup window.
@@ -840,7 +822,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
             final Scene scene = getSkinnable().getScene();
             if (scene != null) {
-                // RT-36554 - make sure system menu is updated when this MenuBar's scene changes.
+                // JDK-8094110 - make sure system menu is updated when this MenuBar's scene changes.
                 if (sceneChangeListener == null) {
                     sceneChangeListener = (observable, oldValue, newValue) -> {
 
@@ -1083,6 +1065,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     }
 
     private void moveToMenu(Direction dir, boolean doShow) {
+        Menu focusedMenu = menuBarButtonAt(focusedMenuIndex).menu;
         boolean showNextMenu = doShow && focusedMenu.isShowing();
         findSibling(dir, focusedMenuIndex).ifPresent(p -> {
             setFocusedMenuIndex(p.getValue());

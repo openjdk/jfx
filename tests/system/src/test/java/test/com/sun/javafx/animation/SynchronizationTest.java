@@ -64,7 +64,7 @@ public class SynchronizationTest {
 
     @AfterAll
     public static void shutdown() {
-        Util.shutdown(primaryStage);
+        Util.shutdown();
     }
 
     /**

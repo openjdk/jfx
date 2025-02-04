@@ -45,7 +45,7 @@ public:
         double value;
         CSSUnitType unitType;
 
-        bool operator==(const NumericSyntaxValue& other) const { return value == other.value && unitType == other.unitType; }
+        friend bool operator==(const NumericSyntaxValue&, const NumericSyntaxValue&) = default;
     };
 
     struct TransformSyntaxValue {
@@ -59,21 +59,16 @@ public:
         Vector<SyntaxValue> values;
         ValueSeparator separator;
 
-        bool operator==(const SyntaxValueList& other) const { return values == other.values && separator == other.separator; }
+        friend bool operator==(const SyntaxValueList&, const SyntaxValueList&) = default;
     };
 
-    using VariantValue = std::variant<std::monostate, Ref<CSSVariableReferenceValue>, CSSValueID, Ref<CSSVariableData>, SyntaxValue, SyntaxValueList>;
+    using VariantValue = std::variant<Ref<CSSVariableReferenceValue>, CSSValueID, Ref<CSSVariableData>, SyntaxValue, SyntaxValueList>;
 
     static Ref<CSSCustomPropertyValue> createEmpty(const AtomString& name);
 
     static Ref<CSSCustomPropertyValue> createUnresolved(const AtomString& name, Ref<CSSVariableReferenceValue>&& value)
     {
         return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { std::in_place_type<Ref<CSSVariableReferenceValue>>, WTFMove(value) }));
-    }
-
-    static Ref<CSSCustomPropertyValue> createUnresolved(const AtomString& name, CSSValueID value)
-    {
-        return adoptRef(*new CSSCustomPropertyValue(name, { value }));
     }
 
     static Ref<CSSCustomPropertyValue> createWithID(const AtomString& name, CSSValueID);
@@ -102,6 +97,7 @@ public:
     bool isInherit() const { return std::holds_alternative<CSSValueID>(m_value) && std::get<CSSValueID>(m_value) == CSSValueInherit; }
     bool isCurrentColor() const;
     bool containsCSSWideKeyword() const;
+    bool isAnimatable() const;
 
     const VariantValue& value() const { return m_value; }
 

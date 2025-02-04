@@ -79,12 +79,9 @@ enum class BlendMode : uint8_t {
 struct CompositeMode {
     CompositeOperator operation;
     BlendMode blendMode;
-};
 
-inline bool operator==(const CompositeMode& a, const CompositeMode& b)
-{
-    return a.operation == b.operation && a.blendMode == b.blendMode;
-}
+    friend bool operator==(const CompositeMode&, const CompositeMode&) = default;
+};
 
 enum class DocumentMarkerLineStyleMode : uint8_t {
         TextCheckingDictationPhraseWithAlternatives,
@@ -105,6 +102,18 @@ enum class GradientSpreadMethod : uint8_t {
     Repeat
 };
 
+// InterpolationQuality::Default
+// For ImagePaintingOptions, it means:
+//  - Use context image interpolation quality.
+// For GraphicsContext CG it means:
+//  - If the CGImage has shouldInterpolate == true, use High
+//  - Else use None
+// For GraphicsContext Cairo it means:
+//  - Use Medium
+//
+// FIXME: Remove InterpolationQuality::Default since it does not mean what it should
+// obviously mean and because the CG context behavior is unusable in general case where
+// the draw call sites cannot track where the native images are generated from.
 enum class InterpolationQuality : uint8_t {
     Default,
     DoNotInterpolate,

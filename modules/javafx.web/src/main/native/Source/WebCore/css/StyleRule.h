@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "CSSSelector.h"
 #include "CSSSelectorList.h"
 #include "CSSVariableData.h"
 #include "CompiledSelector.h"
@@ -45,6 +46,7 @@ class CSSStyleSheet;
 class MutableStyleProperties;
 class StyleRuleKeyframe;
 class StyleProperties;
+class StyleSheetContents;
 
 using CascadeLayerName = Vector<AtomString>;
 
@@ -67,12 +69,14 @@ public:
     bool isPageRule() const { return type() == StyleRuleType::Page; }
     bool isStyleRule() const { return type() == StyleRuleType::Style || type() == StyleRuleType::StyleWithNesting; }
     bool isStyleRuleWithNesting() const { return type() == StyleRuleType::StyleWithNesting; }
-    bool isGroupRule() const { return type() == StyleRuleType::Media || type() == StyleRuleType::Supports || type() == StyleRuleType::LayerBlock || type() == StyleRuleType::Container; }
+    bool isGroupRule() const { return type() == StyleRuleType::Media || type() == StyleRuleType::Supports || type() == StyleRuleType::LayerBlock || type() == StyleRuleType::Container || type() == StyleRuleType::Scope || type() == StyleRuleType::StartingStyle; }
     bool isSupportsRule() const { return type() == StyleRuleType::Supports; }
     bool isImportRule() const { return type() == StyleRuleType::Import; }
     bool isLayerRule() const { return type() == StyleRuleType::LayerBlock || type() == StyleRuleType::LayerStatement; }
     bool isContainerRule() const { return type() == StyleRuleType::Container; }
     bool isPropertyRule() const { return type() == StyleRuleType::Property; }
+    bool isScopeRule() const { return type() == StyleRuleType::Scope; }
+    bool isStartingStyleRule() const { return type() == StyleRuleType::StartingStyle; }
 
     Ref<StyleRuleBase> copy() const;
 
@@ -196,10 +200,10 @@ private:
 
 class StyleRuleFontPaletteValues final : public StyleRuleBase {
 public:
-    static Ref<StyleRuleFontPaletteValues> create(const AtomString& name, const AtomString& fontFamily, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&&);
+    static Ref<StyleRuleFontPaletteValues> create(const AtomString& name, Vector<AtomString>&& fontFamilies, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&&);
 
     const AtomString& name() const { return m_name; }
-    const AtomString& fontFamily() const { return m_fontFamily; }
+    const Vector<AtomString>& fontFamilies() const { return m_fontFamilies; }
     const FontPaletteValues& fontPaletteValues() const { return m_fontPaletteValues; }
     std::optional<FontPaletteIndex> basePalette() const { return m_fontPaletteValues.basePalette(); }
     const Vector<FontPaletteValues::OverriddenColor>& overrideColors() const { return m_fontPaletteValues.overrideColors(); }
@@ -207,11 +211,11 @@ public:
     Ref<StyleRuleFontPaletteValues> copy() const { return adoptRef(*new StyleRuleFontPaletteValues(*this)); }
 
 private:
-    StyleRuleFontPaletteValues(const AtomString& name, const AtomString& fontFamily, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&& overrideColors);
+    StyleRuleFontPaletteValues(const AtomString& name, Vector<AtomString>&& fontFamilies, std::optional<FontPaletteIndex> basePalette, Vector<FontPaletteValues::OverriddenColor>&& overrideColors);
     StyleRuleFontPaletteValues(const StyleRuleFontPaletteValues&) = default;
 
     AtomString m_name;
-    AtomString m_fontFamily;
+    Vector<AtomString> m_fontFamilies;
     FontPaletteValues m_fontPaletteValues;
 };
 
@@ -381,6 +385,45 @@ private:
     Descriptor m_descriptor;
 };
 
+class StyleRuleScope final : public StyleRuleGroup {
+public:
+    static Ref<StyleRuleScope> create(CSSSelectorList&&, CSSSelectorList&&, Vector<Ref<StyleRuleBase>>&&);
+    ~StyleRuleScope();
+    Ref<StyleRuleScope> copy() const;
+
+    const CSSSelectorList& scopeStart() const { return m_scopeStart; }
+    const CSSSelectorList& scopeEnd() const { return m_scopeEnd; }
+    const CSSSelectorList& originalScopeStart() const { return m_originalScopeStart; }
+    const CSSSelectorList& originalScopeEnd() const { return m_originalScopeEnd; }
+    void setScopeStart(CSSSelectorList&& scopeStart) { m_scopeStart = WTFMove(scopeStart); }
+    void setScopeEnd(CSSSelectorList&& scopeEnd) { m_scopeEnd = WTFMove(scopeEnd); }
+    WeakPtr<const StyleSheetContents> styleSheetContents() const;
+    void setStyleSheetContents(const StyleSheetContents&);
+
+private:
+    StyleRuleScope(CSSSelectorList&&, CSSSelectorList&&, Vector<Ref<StyleRuleBase>>&&);
+    StyleRuleScope(const StyleRuleScope&);
+
+    // Resolved selector lists
+    CSSSelectorList m_scopeStart;
+    CSSSelectorList m_scopeEnd;
+    // Author written selector lists
+    CSSSelectorList m_originalScopeStart;
+    CSSSelectorList m_originalScopeEnd;
+    // Pointer to the owner StyleSheetContent to find the implicit scope (when there is no <scope-start>)
+    WeakPtr<const StyleSheetContents> m_styleSheetOwner;
+};
+
+class StyleRuleStartingStyle final : public StyleRuleGroup {
+public:
+    static Ref<StyleRuleStartingStyle> create(Vector<Ref<StyleRuleBase>>&&);
+    Ref<StyleRuleStartingStyle> copy() const { return adoptRef(*new StyleRuleStartingStyle(*this)); }
+
+private:
+    StyleRuleStartingStyle(Vector<Ref<StyleRuleBase>>&&);
+    StyleRuleStartingStyle(const StyleRuleStartingStyle&) = default;
+};
+
 // This is only used by the CSS parser.
 class StyleRuleCharset final : public StyleRuleBase {
 public:
@@ -518,3 +561,10 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleProperty)
     static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isPropertyRule(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleScope)
+    static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isScopeRule(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleStartingStyle)
+    static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isStartingStyleRule(); }
+SPECIALIZE_TYPE_TRAITS_END()

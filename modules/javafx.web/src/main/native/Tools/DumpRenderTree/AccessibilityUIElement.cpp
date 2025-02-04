@@ -25,8 +25,7 @@
 
 #include "config.h"
 
-#if ENABLE(ACCESSIBILITY)
-
+#if !PLATFORM(JAVA)
 #include "AccessibilityUIElement.h"
 
 #include <JavaScriptCore/JSObjectRef.h>
@@ -1494,18 +1493,6 @@ static JSValueRef getAccessibilityValueCallback(JSContextRef context, JSObjectRe
     return JSValueMakeString(context, accessibilityValue.get());
 }
 
-static JSValueRef getDocumentEncodingCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
-{
-    auto documentEncoding = toAXElement(thisObject)->documentEncoding();
-    return JSValueMakeString(context, documentEncoding.get());
-}
-
-static JSValueRef getDocumentURICallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
-{
-    auto documentURI = toAXElement(thisObject)->documentURI();
-    return JSValueMakeString(context, documentURI.get());
-}
-
 static JSValueRef getURLCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
     auto url = toAXElement(thisObject)->url();
@@ -1685,6 +1672,11 @@ static JSValueRef getIsLastItemInSuggestionCallback(JSContextRef context, JSObje
 static JSValueRef getIsMarkAnnotationCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
     return JSValueMakeBoolean(context, toAXElement(thisObject)->isMarkAnnotation());
+}
+
+static JSValueRef getIsInNonNativeTextControlCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+{
+    return JSValueMakeBoolean(context, toAXElement(thisObject)->isInNonNativeTextControl());
 }
 
 #endif // PLATFORM(IOS_FAMILY)
@@ -2026,8 +2018,6 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "popupValue", getPopupValueCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "valueDescription", getValueDescriptionCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "hierarchicalLevel", hierarchicalLevelCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "documentEncoding", getDocumentEncodingCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "documentURI", getDocumentURICallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "url", getURLCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isValid", getIsValidCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "liveRegionRelevant", getLiveRegionRelevantCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2064,6 +2054,7 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "isFirstItemInSuggesiton", getIsFirstItemInSuggestionCallback, 0 , kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isLastItemInSuggesiton", getIsLastItemInSuggestionCallback, 0 , kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isMarkAnnotation", getIsMarkAnnotationCallback, 0 , kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "isInNonNativeTextControl", getIsInNonNativeTextControlCallback, 0 , kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
 #endif // PLATFORM(IOS_FAMILY)
 #if PLATFORM(MAC) && !PLATFORM(IOS_FAMILY)
         { "supportedActions", supportedActionsCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

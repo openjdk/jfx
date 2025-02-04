@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,10 +61,8 @@ jmethodID jViewNotifyDragOver;
 jmethodID jViewNotifyDragDrop;
 jmethodID jViewNotifyDragLeave;
 jmethodID jViewNotifyScroll;
-jmethodID jViewNotifyInputMethod;
-jmethodID jViewNotifyInputMethodDraw;
-jmethodID jViewNotifyInputMethodCaret;
-jmethodID jViewNotifyPreeditMode;
+jmethodID jViewNotifyInputMethodLinux;
+jmethodID jViewNotifyInputMethodCandidateRelativePosRequest;
 jmethodID jViewNotifyMenu;
 jfieldID  jViewPtr;
 
@@ -229,8 +227,6 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyScroll = env->GetMethodID(clazz, "notifyScroll", "(IIIIDDIIIIIDD)V");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethod = env->GetMethodID(clazz, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyMenu = env->GetMethodID(clazz, "notifyMenu", "(IIIIZ)V");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewPtr = env->GetFieldID(clazz, "ptr", "J");
@@ -238,11 +234,10 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethodDraw = env->GetMethodID(clazz, "notifyInputMethodDraw", "(Ljava/lang/String;III[B)V");
+    jViewNotifyInputMethodLinux = env->GetMethodID(clazz, "notifyInputMethodLinux", "(Ljava/lang/String;IIB)V");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethodCaret = env->GetMethodID(clazz, "notifyInputMethodCaret", "(III)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyPreeditMode = env->GetMethodID(clazz, "notifyPreeditMode", "(Z)V");
+    jViewNotifyInputMethodCandidateRelativePosRequest
+        = env->GetMethodID(clazz, "notifyInputMethodCandidateRelativePosRequest", "(I)[D");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Window");
@@ -410,7 +405,15 @@ glass_throw_oom(JNIEnv * env, const char * message) {
 
 
 guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height) {
+  if (stride <= 0 || height <= 0 || (height > INT_MAX / stride)) {
+    return NULL;
+  }
+
   guint8* new_pixels = (guint8*) g_malloc(height * stride);
+  if (!new_pixels) {
+    return NULL;
+  }
+
   int i = 0;
 
   for (i = 0; i < height * stride; i += 4) {
@@ -605,7 +608,8 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
                                                 | GDK_BUTTON2_MOTION_MASK
                                                 | GDK_BUTTON3_MOTION_MASK
                                                 | GDK_BUTTON_PRESS_MASK
-                                                | GDK_BUTTON_RELEASE_MASK),
+                                                | GDK_BUTTON_RELEASE_MASK
+                                                | GDK_TOUCH_MASK),
                                             NULL, cursor, GDK_CURRENT_TIME);
 
     return (status == GDK_GRAB_SUCCESS) ? TRUE : FALSE;

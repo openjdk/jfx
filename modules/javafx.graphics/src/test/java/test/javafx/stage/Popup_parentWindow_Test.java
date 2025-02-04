@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,28 +26,22 @@
 package test.javafx.stage;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.stream.Stream;
 import javafx.stage.Popup;
 
-import org.junit.Ignore;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.provider.Arguments;
 import test.com.sun.javafx.test.PropertiesTestBase;
 import test.com.sun.javafx.test.objects.TestGroup;
 import test.com.sun.javafx.test.objects.TestNode;
 import test.com.sun.javafx.test.objects.TestScene;
 import test.com.sun.javafx.test.objects.TestStage;
 
-@Ignore("JDK-8234153") // test needs to be rewritten.
-@RunWith(Parameterized.class)
+@Disabled("JDK-8234153") // test needs to be rewritten.
 public final class Popup_parentWindow_Test extends PropertiesTestBase {
 
-    @Parameters
-    public static Collection<Object> data() {
-        final List<Object> configurations = new ArrayList<>();
+    public static Stream<Arguments> data() {
+        ArrayList<Arguments> configurations = new ArrayList<>();
 
         TestObjects to;
 
@@ -109,12 +103,7 @@ public final class Popup_parentWindow_Test extends PropertiesTestBase {
 //        extcfg.setAllowMultipleNotifications(true);
 //        configurations.add(new Object[] { extcfg });
 
-        return configurations;
-    }
-
-    public Popup_parentWindow_Test(final Configuration configuration) {
-        super(configuration);
-
+        return configurations.stream();
     }
 
     private static final class TestObjects {

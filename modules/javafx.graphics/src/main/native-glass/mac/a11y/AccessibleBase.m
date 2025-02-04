@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,9 +36,11 @@ static NSMutableDictionary * rolesMap;
 
 + (void) initializeRolesMap {
     /*
-     * Here we should keep all the mapping between the accessibility roles and implementing classes
+     * Here we should keep all the mapping between the accessibility roles and implementing classes.
+     * All JavaFX roles and corresponding available properties are defined in
+     * enum javafx.scene.AccessibleRole
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:8];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:9];
 
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
@@ -50,6 +52,7 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"PAGE_ITEM"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"CHECK_BOX"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
+    [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
 
 }
 
@@ -241,7 +244,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1invalidateParen
 (JNIEnv *env, jobject jAccessible, long macAccessible)
 {
     NSObject* accessible = (NSObject*)jlong_to_ptr(macAccessible);
-    if ([accessible respondsToSelector:@selector(clearParent)]) {
-        [accessible clearParent];
+    if ([accessible isKindOfClass: [AccessibleBase class]]) {
+        [((AccessibleBase*) accessible) clearParent];
     }
 }

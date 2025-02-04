@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,24 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import com.sun.glass.ui.monocle.TestLogShim;
 
 public class TouchLagTest {
 
     private UInput ui;
-    @Rule public TestName name = new TestName();
 
-    @Before public void setUpScreen() throws Exception {
+    @BeforeEach
+    public void setUpScreen(TestInfo t) throws Exception {
         TestLogShim.reset();
-        TestLogShim.log(name.getMethodName());
+        // get test name from the junit5
+        TestLogShim.log(t.getDisplayName());
         TestApplication.showFullScreenScene();
         TestApplication.addTouchListeners();
         TestApplication.addMouseListeners();
@@ -83,7 +82,8 @@ public class TouchLagTest {
         ui.processLine("CREATE");
     }
 
-    @After public void destroyDevice() throws Exception {
+    @AfterEach
+    public void destroyDevice() throws Exception {
         if (ui != null) {
             ui.waitForQuiet();
             try {
@@ -146,8 +146,7 @@ public class TouchLagTest {
         }
         long t = System.currentTimeMillis() - startTime;
         // Make sure events could be sent in the required time
-        Assert.assertTrue("Took " + t + "ms to send 3000 events",
-                          t < (long) (3000l * TestApplication.getTimeScale()));
+        Assertions.assertTrue(t < (long) (3000l * TestApplication.getTimeScale()), "Took " + t + "ms to send 3000 events");
         TestLogShim.log("Sent 3000 events in " + t + "ms");
         // move to 400, 410
         ui.writeValue(b, xs[0], 400);
@@ -225,8 +224,7 @@ public class TouchLagTest {
         }
         long t = System.currentTimeMillis() - startTime;
         // Make sure events could be sent in the required time
-        Assert.assertTrue("Took " + t + "ms to send 3000 events",
-                          t < (long) (3000l * TestApplication.getTimeScale()));
+        Assertions.assertTrue(t < (long) (3000l * TestApplication.getTimeScale()), "Took " + t + "ms to send 3000 events");
         TestLogShim.log("Sent 3000 events in " + t + "ms");
         // move to (400, 410), (350, 360);
         ui.writeValue(b, baseX, 400);

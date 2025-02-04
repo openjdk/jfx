@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,8 @@ public class CSSValueImpl implements CSSValue {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             CSSValueImpl.dispose(peer);
         }
@@ -88,16 +90,19 @@ public class CSSValueImpl implements CSSValue {
     public static final int CSS_CUSTOM = 3;
 
 // Attributes
+    @Override
     public String getCssText() {
         return getCssTextImpl(getPeer());
     }
     native static String getCssTextImpl(long peer);
 
+    @Override
     public void setCssText(String value) throws DOMException {
         setCssTextImpl(getPeer(), value);
     }
     native static void setCssTextImpl(long peer, String value);
 
+    @Override
     public short getCssValueType() {
         return getCssValueTypeImpl(getPeer());
     }

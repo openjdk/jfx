@@ -27,6 +27,7 @@
 
 #import "CommandsMixin.h"
 #import <wtf/FastMalloc.h>
+#import <wtf/HashMap.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 #import <wtf/Vector.h>
@@ -38,33 +39,35 @@ namespace WebGPU {
 
 class BindGroup;
 class Buffer;
+class CommandEncoder;
 class ComputePipeline;
 class Device;
 class QuerySet;
+
+struct BindableResources;
 
 // https://gpuweb.github.io/gpuweb/#gpucomputepassencoder
 class ComputePassEncoder : public WGPUComputePassEncoderImpl, public RefCounted<ComputePassEncoder>, public CommandsMixin {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<ComputePassEncoder> create(id<MTLComputeCommandEncoder> computeCommandEncoder, const WGPUComputePassDescriptor& descriptor, Device& device)
+    static Ref<ComputePassEncoder> create(id<MTLComputeCommandEncoder> computeCommandEncoder, const WGPUComputePassDescriptor& descriptor, CommandEncoder& parentEncoder, Device& device)
     {
-        return adoptRef(*new ComputePassEncoder(computeCommandEncoder, descriptor, device));
+        return adoptRef(*new ComputePassEncoder(computeCommandEncoder, descriptor, parentEncoder, device));
     }
-    static Ref<ComputePassEncoder> createInvalid(Device& device)
+    static Ref<ComputePassEncoder> createInvalid(CommandEncoder& parentEncoder, Device& device, NSString* errorString)
     {
-        return adoptRef(*new ComputePassEncoder(device));
+        return adoptRef(*new ComputePassEncoder(parentEncoder, device, errorString));
     }
 
     ~ComputePassEncoder();
 
-    void beginPipelineStatisticsQuery(const QuerySet&, uint32_t queryIndex);
     void dispatch(uint32_t x, uint32_t y, uint32_t z);
     void dispatchIndirect(const Buffer& indirectBuffer, uint64_t indirectOffset);
     void endPass();
-    void endPipelineStatisticsQuery();
     void insertDebugMarker(String&& markerLabel);
     void popDebugGroup();
     void pushDebugGroup(String&& groupLabel);
+
     void setBindGroup(uint32_t groupIndex, const BindGroup&, uint32_t dynamicOffsetCount, const uint32_t* dynamicOffsets);
     void setPipeline(const ComputePipeline&);
     void setLabel(String&&);
@@ -74,12 +77,14 @@ public:
     bool isValid() const { return m_computeCommandEncoder; }
 
 private:
-    ComputePassEncoder(id<MTLComputeCommandEncoder>, const WGPUComputePassDescriptor&, Device&);
-    ComputePassEncoder(Device&);
+    ComputePassEncoder(id<MTLComputeCommandEncoder>, const WGPUComputePassDescriptor&, CommandEncoder&, Device&);
+    ComputePassEncoder(CommandEncoder&, Device&, NSString*);
 
     bool validatePopDebugGroup() const;
 
-    void makeInvalid();
+    void makeInvalid(NSString* = nil);
+    void executePreDispatchCommands(id<MTLBuffer> = nil);
+    id<MTLBuffer> runPredispatchIndirectCallValidation(const Buffer&, uint64_t);
 
     id<MTLComputeCommandEncoder> m_computeCommandEncoder { nil };
 
@@ -92,6 +97,14 @@ private:
 
     const Ref<Device> m_device;
     MTLSize m_threadsPerThreadgroup;
+    Vector<uint32_t> m_computeDynamicOffsets;
+    const ComputePipeline* m_pipeline { nullptr };
+    Ref<CommandEncoder> m_parentEncoder;
+    HashMap<uint32_t, Vector<uint32_t>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupDynamicOffsets;
+    HashMap<uint32_t, Vector<const BindableResources*>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupResources;
+    HashMap<uint32_t, WeakPtr<BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
+    NSString *m_lastErrorString { nil };
+    bool m_passEnded { false };
 };
 
 } // namespace WebGPU

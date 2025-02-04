@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,14 +40,19 @@
 #include "MediaAccessDenialReason.h"
 #include "MediaConstraints.h"
 #include "MediaDeviceHashSalts.h"
+#include "PhotoCapabilities.h"
+#include "PhotoSettings.h"
 #include "PlatformLayer.h"
 #include "RealtimeMediaSourceCapabilities.h"
 #include "RealtimeMediaSourceFactory.h"
 #include "RealtimeMediaSourceIdentifier.h"
 #include "VideoFrameTimeMetadata.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Forward.h>
 #include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/NativePromise.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
@@ -98,11 +103,11 @@ public:
         virtual void sourceConfigurationChanged() { }
 
         // Observer state queries.
-        virtual bool preventSourceFromStopping() { return false; }
+        virtual bool preventSourceFromEnding() { return false; }
 
         virtual void hasStartedProducingData() { }
     };
-    class AudioSampleObserver {
+    class AudioSampleObserver : public CanMakeCheckedPtr {
     public:
         virtual ~AudioSampleObserver() = default;
 
@@ -123,9 +128,10 @@ public:
 
     virtual ~RealtimeMediaSource();
 
+    // Can be called in worker threads.
     virtual Ref<RealtimeMediaSource> clone() { return *this; }
 
-    const AtomString& hashedId() const;
+    const String& hashedId() const;
     const MediaDeviceHashSalts& deviceIDHashSalts() const;
 
     const String& persistentID() const { return m_device.persistentId(); }
@@ -151,7 +157,7 @@ public:
 
     virtual bool interrupted() const { return false; }
 
-    const AtomString& name() const { return m_name; }
+    const String& name() const { return m_name; }
 
     double fitnessScore() const { return m_fitnessScore; }
 
@@ -174,14 +180,20 @@ public:
     double frameRate() const { return m_frameRate; }
     void setFrameRate(double);
 
-    double zoom() const { return m_zoom; }
-    void setZoom(double);
-
     VideoFacingMode facingMode() const { return m_facingMode; }
     void setFacingMode(VideoFacingMode);
 
+    MeteringMode whiteBalanceMode() const { return m_whiteBalanceMode; }
+    void setWhiteBalanceMode(MeteringMode);
+
     double volume() const { return m_volume; }
     void setVolume(double);
+
+    double zoom() const { return m_zoom; }
+    void setZoom(double);
+
+    double torch() const { return m_torch; }
+    void setTorch(bool);
 
     int sampleRate() const { return m_sampleRate; }
     void setSampleRate(int);
@@ -200,9 +212,19 @@ public:
     virtual void deref() const = 0;
     virtual ThreadSafeWeakPtrControlBlock& controlBlock() const = 0;
 
+    using TakePhotoNativePromise = NativePromise<std::pair<Vector<uint8_t>, String>, String>;
+    virtual Ref<TakePhotoNativePromise> takePhoto(PhotoSettings&&);
+
+    using PhotoCapabilitiesNativePromise = NativePromise<PhotoCapabilities, String>;
+    virtual Ref<PhotoCapabilitiesNativePromise> getPhotoCapabilities();
+
+    using PhotoSettingsNativePromise = NativePromise<PhotoSettings, String>;
+    virtual Ref<PhotoSettingsNativePromise> getPhotoSettings();
+
     struct ApplyConstraintsError {
-        String badConstraint;
+        MediaConstraintType invalidConstraint;
         String message;
+        ApplyConstraintsError isolatedCopy() && { return { invalidConstraint, WTFMove(message).isolatedCopy() }; }
     };
     using ApplyConstraintsHandler = CompletionHandler<void(std::optional<ApplyConstraintsError>&&)>;
     virtual void applyConstraints(const MediaConstraints&, ApplyConstraintsHandler&&);
@@ -215,13 +237,12 @@ public:
     };
     WEBCORE_EXPORT VideoFrameSizeConstraints extractVideoFrameSizeConstraints(const MediaConstraints&);
 
-    bool supportsConstraints(const MediaConstraints&, String&);
-    bool supportsConstraint(const MediaConstraint&);
+    std::optional<MediaConstraintType> hasAnyInvalidConstraint(const MediaConstraints&);
+    bool supportsConstraint(MediaConstraintType);
 
     virtual bool isMockSource() const { return false; }
     virtual bool isCaptureSource() const { return false; }
     virtual CaptureDevice::DeviceType deviceType() const { return CaptureDevice::DeviceType::Unknown; }
-    virtual bool isVideoSource() const;
     WEBCORE_EXPORT virtual VideoFrameRotation videoFrameRotation() const;
     WEBCORE_EXPORT virtual IntSize computeResizedVideoFrameSize(IntSize desiredSize, IntSize actualSize);
 
@@ -256,20 +277,29 @@ public:
 
     virtual double facingModeFitnessScoreAdjustment() const { return 0; }
 
+    using OwnerCallback = std::function<void(RealtimeMediaSource&, bool isNewClonedSource)>;
+    void registerOwnerCallback(OwnerCallback&&);
+
 protected:
     RealtimeMediaSource(const CaptureDevice&, MediaDeviceHashSalts&& hashSalts = { }, PageIdentifier = { });
 
     void scheduleDeferredTask(Function<void()>&&);
 
-    virtual void beginConfiguration() { }
-    virtual void commitConfiguration() { }
+    virtual void startApplyingConstraints() { }
+    virtual void endApplyingConstraints() { }
 
-    bool selectSettings(const MediaConstraints&, FlattenedConstraint&, String&);
-    double fitnessDistance(const MediaConstraint&);
-    void applyConstraint(const MediaConstraint&);
-    void applyConstraints(const FlattenedConstraint&);
-    VideoFrameSizeConstraints extractVideoFrameSizeConstraints(const FlattenedConstraint&);
-    bool supportsSizeFrameRateAndZoom(std::optional<IntConstraint> width, std::optional<IntConstraint> height, std::optional<DoubleConstraint>, std::optional<DoubleConstraint>, String&, double& fitnessDistance);
+    std::optional<MediaConstraintType> selectSettings(const MediaConstraints&, MediaTrackConstraintSetMap&);
+
+    double fitnessDistance(MediaConstraintType, const IntConstraint&);
+    double fitnessDistance(MediaConstraintType, const DoubleConstraint&);
+    double fitnessDistance(MediaConstraintType, const StringConstraint&);
+    double fitnessDistance(MediaConstraintType, const BooleanConstraint&);
+    double fitnessDistance(MediaConstraintType, const MediaConstraint&);
+
+    void applyConstraint(MediaConstraintType, const MediaConstraint&);
+    void applyConstraints(const MediaTrackConstraintSetMap&);
+    VideoFrameSizeConstraints extractVideoFrameSizeConstraints(const MediaTrackConstraintSetMap&);
+    std::optional<MediaConstraintType> hasInvalidSizeFrameRateAndZoomConstraints(std::optional<IntConstraint> width, std::optional<IntConstraint> height, std::optional<DoubleConstraint>, std::optional<DoubleConstraint>, double& fitnessDistance);
 
     virtual bool supportsSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>);
     virtual void setSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>);
@@ -292,10 +322,12 @@ protected:
 
     void setType(Type);
 
-    void setName(const AtomString&);
+    void setName(const String&);
     void setPersistentId(const String&);
 
     bool hasSeveralVideoFrameObserversWithAdaptors() const { return m_videoFrameObserversWithAdaptors > 1; }
+
+    OwnerCallback m_registerOwnerCallback;
 
 private:
     virtual void startProducingData() { }
@@ -320,14 +352,14 @@ private:
 
     PageIdentifier m_pageIdentifier;
     MediaDeviceHashSalts m_idHashSalts;
-    AtomString m_hashedID;
-    AtomString m_ephemeralHashedID;
+    String m_hashedID;
+    String m_ephemeralHashedID;
     Type m_type;
-    AtomString m_name;
+    String m_name;
     WeakHashSet<Observer> m_observers;
 
     mutable Lock m_audioSampleObserversLock;
-    HashSet<AudioSampleObserver*> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
+    HashSet<CheckedPtr<AudioSampleObserver>> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
 
     mutable Lock m_videoFrameObserversLock;
     HashMap<VideoFrameObserver*, std::unique_ptr<VideoFrameAdaptor>> m_videoFrameObservers WTF_GUARDED_BY_LOCK(m_videoFrameObserversLock);
@@ -339,12 +371,15 @@ private:
     // Set on sample generation thread.
     IntSize m_intrinsicSize;
     double m_frameRate { 30 };
-    double m_zoom { 1 };
     double m_volume { 1 };
     double m_sampleRate { 0 };
     double m_sampleSize { 0 };
     double m_fitnessScore { 0 };
     VideoFacingMode m_facingMode { VideoFacingMode::User };
+
+    MeteringMode m_whiteBalanceMode { MeteringMode::None };
+    double m_zoom { 1 };
+    bool m_torch { false };
 
     bool m_muted { false };
     bool m_pendingSettingsDidChangeNotification { false };
@@ -359,15 +394,23 @@ private:
 
 struct CaptureSourceError {
     CaptureSourceError() = default;
-    CaptureSourceError(String&& message, MediaAccessDenialReason reason)
-        : errorMessage(WTFMove(message))
-        , denialReason(reason)
+    CaptureSourceError(String&& errorMessage, MediaAccessDenialReason denialReason, MediaConstraintType invalidConstraint = MediaConstraintType::Unknown)
+        : errorMessage(WTFMove(errorMessage))
+        , denialReason(denialReason)
+        , invalidConstraint(invalidConstraint)
+    {
+    }
+
+    explicit CaptureSourceError(MediaConstraintType invalidConstraint)
+        : denialReason(MediaAccessDenialReason::InvalidConstraint)
+        , invalidConstraint(invalidConstraint)
     { }
 
     operator bool() const { return denialReason != MediaAccessDenialReason::NoReason; }
 
     String errorMessage;
-    MediaAccessDenialReason denialReason = MediaAccessDenialReason::NoReason;
+    MediaAccessDenialReason denialReason { MediaAccessDenialReason::NoReason };
+    MediaConstraintType invalidConstraint { MediaConstraintType::Unknown };
 };
 
 struct CaptureSourceOrError {
@@ -384,7 +427,7 @@ struct CaptureSourceOrError {
 
 String convertEnumerationToString(RealtimeMediaSource::Type);
 
-inline void RealtimeMediaSource::setName(const AtomString& name)
+inline void RealtimeMediaSource::setName(const String& name)
 {
     m_name = name;
 }
@@ -392,11 +435,6 @@ inline void RealtimeMediaSource::setName(const AtomString& name)
 inline void RealtimeMediaSource::whenReady(CompletionHandler<void(CaptureSourceError&&)>&& callback)
 {
     callback({ });
-}
-
-inline bool RealtimeMediaSource::isVideoSource() const
-{
-    return false;
 }
 
 inline bool RealtimeMediaSource::isProducingData() const

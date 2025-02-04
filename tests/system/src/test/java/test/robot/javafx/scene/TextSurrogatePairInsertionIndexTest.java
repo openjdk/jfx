@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,10 +38,10 @@ import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
@@ -78,8 +78,8 @@ public class TextSurrogatePairInsertionIndexTest {
 
         Util.runAndWait(() -> {
             Bounds b = control.getLayoutBounds();
-            Assert.assertTrue(b.getWidth() > 10);
-            Assert.assertTrue(b.getHeight() > 10);
+            Assertions.assertTrue(b.getWidth() > 10);
+            Assertions.assertTrue(b.getHeight() > 10);
 
             int max = 1_000_000;
             for (int i = 0; i < max; i++) {
@@ -87,14 +87,14 @@ public class TextSurrogatePairInsertionIndexTest {
                 double y = random.nextDouble() * b.getHeight();
                 HitInfo h = control.hitTest(new Point2D(x, y));
 
-                Assert.assertTrue(h.getInsertionIndex() >= 0);
+                Assertions.assertTrue(h.getInsertionIndex() >= 0);
                 String s = h.toString();
-                Assert.assertTrue(s != null);
+                Assertions.assertTrue(s != null);
             }
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         long seed = new Random().nextLong();
         // if any test fails, we can use the seed found in the log to reproduce exact sequence of events
@@ -104,9 +104,9 @@ public class TextSurrogatePairInsertionIndexTest {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     public static class TestApp extends Application {

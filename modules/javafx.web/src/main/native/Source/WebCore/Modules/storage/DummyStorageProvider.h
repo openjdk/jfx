@@ -57,12 +57,12 @@ private:
 
         void fileSystemGetDirectory(ClientOrigin&&, StorageConnection::GetDirectoryCallback&& completionHandler) final
         {
-            completionHandler(Exception { NotSupportedError });
+            completionHandler(Exception { ExceptionCode::NotSupportedError });
         }
 
         void getEstimate(ClientOrigin&&, GetEstimateCallback&& completionHandler) final
         {
-            completionHandler(Exception { NotSupportedError });
+            completionHandler(Exception { ExceptionCode::NotSupportedError });
         }
     };
 
@@ -74,7 +74,23 @@ private:
         return *m_connection;
     }
 
+    String ensureMediaKeysStorageDirectoryForOrigin(const SecurityOriginData& origin) final
+    {
+        if (m_mediaKeysStorageDirectory.isEmpty())
+            return emptyString();
+
+        auto originDirectory = FileSystem::pathByAppendingComponent(m_mediaKeysStorageDirectory, origin.databaseIdentifier());
+        FileSystem::makeAllDirectories(originDirectory);
+        return originDirectory;
+    }
+
+    void setMediaKeysStorageDirectory(const String& directory) final
+    {
+        m_mediaKeysStorageDirectory = directory;
+    }
+
     RefPtr<DummyStorageConnection> m_connection;
+    String m_mediaKeysStorageDirectory;
 };
 
 } // namespace WebCore

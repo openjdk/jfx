@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 package javafx.scene.control.skin;
 
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -94,6 +92,7 @@ import javafx.util.Duration;
 /**
  * Abstract base class for text input skins.
  *
+ * @param <T> the type of the text input control
  * @since 9
  * @see TextFieldSkin
  * @see TextAreaSkin
@@ -144,18 +143,16 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         END
     }
 
-    static boolean preload = false;
-    static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
-            if (s != null) {
-                if (s.equalsIgnoreCase("PRERENDER")) {
-                    preload = true;
-                }
+    private static final boolean preload = initPreload();
+
+    private static boolean initPreload() {
+        String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
+        if (s != null) {
+            if (s.equalsIgnoreCase("PRERENDER")) {
+                return true;
             }
-            return null;
-        });
+        }
+        return false;
     }
 
     /**
@@ -233,7 +230,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             { bind(control.focusedProperty(), control.anchorProperty(), control.caretPositionProperty(),
                     control.disabledProperty(), control.editableProperty(), displayCaret, blinkProperty());}
             @Override protected boolean computeValue() {
-                // RT-10682: On Windows, we show the caret during selection, but on others we hide it
+                // JDK-8111037: On Windows, we show the caret during selection, but on others we hide it
                 return !blinkProperty().get() && displayCaret.get() && control.isFocused() &&
                         (isWindows() || (control.getCaretPosition() == control.getAnchor())) &&
                         !control.isDisabled() &&

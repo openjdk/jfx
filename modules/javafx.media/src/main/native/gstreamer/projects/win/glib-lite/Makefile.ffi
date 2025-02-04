@@ -23,7 +23,7 @@ COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
 INCLUDES = -I$(SRCBASE_DIR)/include \
            -I$(SRCBASE_DIR)/src/x86
 
-CFLAGS = -DFFI_BUILDING \
+CFLAGS = -DFFI_STATIC_BUILD \
          -DGSTREAMER_LITE \
 	 $(INCLUDES) \
 	 $(COMPILER_FLAGS)
@@ -69,7 +69,7 @@ OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES)) \
 default: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(AR) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) 
+	$(AR) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
 
 $(OBJECTS): | $(DEP_DIRS)
 

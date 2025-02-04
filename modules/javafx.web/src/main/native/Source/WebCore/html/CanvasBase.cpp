@@ -52,14 +52,7 @@ static std::atomic<size_t> s_activePixelMemory { 0 };
 
 namespace WebCore {
 
-#if USE(CG)
-// FIXME: It seems strange that the default quality is not the one that is literally named "default".
-// Should fix names to make this easier to understand, or write an excellent comment here explaining why not.
-const InterpolationQuality defaultInterpolationQuality = InterpolationQuality::Low;
-#else
-const InterpolationQuality defaultInterpolationQuality = InterpolationQuality::Default;
-#endif
-
+constexpr InterpolationQuality defaultInterpolationQuality = InterpolationQuality::Low;
 static std::optional<size_t> maxCanvasAreaForTesting;
 
 CanvasBase::CanvasBase(IntSize size, const std::optional<NoiseInjectionHashSalt>& noiseHashSalt)
@@ -106,12 +99,12 @@ AffineTransform CanvasBase::baseTransform() const
     return m_imageBuffer->baseTransform();
 }
 
-void CanvasBase::makeRenderingResultsAvailable()
+void CanvasBase::makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect shouldApplyPostProcessingToDirtyRect)
 {
     if (auto* context = renderingContext()) {
-        context->paintRenderingResultsToCanvas();
-        if (m_canvasNoiseHashSalt)
-            m_canvasNoiseInjection.postProcessDirtyCanvasBuffer(buffer(), *m_canvasNoiseHashSalt);
+        context->drawBufferToCanvas(CanvasRenderingContext::SurfaceBuffer::DrawingBuffer);
+        if (m_canvasNoiseHashSalt && shouldApplyPostProcessingToDirtyRect == ShouldApplyPostProcessingToDirtyRect::Yes)
+            m_canvasNoiseInjection.postProcessDirtyCanvasBuffer(buffer(), *m_canvasNoiseHashSalt, context->is2d() ? CanvasNoiseInjectionPostProcessArea::DirtyRect : CanvasNoiseInjectionPostProcessArea::FullBuffer);
     }
 }
 
@@ -178,7 +171,7 @@ bool CanvasBase::hasObserver(CanvasObserver& observer) const
     return m_observers.contains(observer);
 }
 
-void CanvasBase::notifyObserversCanvasChanged(const std::optional<FloatRect>& rect)
+void CanvasBase::notifyObserversCanvasChanged(const FloatRect& rect)
 {
     for (auto& observer : m_observers)
         observer.canvasChanged(*this, rect);
@@ -186,12 +179,18 @@ void CanvasBase::notifyObserversCanvasChanged(const std::optional<FloatRect>& re
 
 void CanvasBase::didDraw(const std::optional<FloatRect>& rect, ShouldApplyPostProcessingToDirtyRect shouldApplyPostProcessingToDirtyRect)
 {
-    // FIXME: We should exclude rects with ShouldApplyPostProcessingToDirtyRect::No
-    if (shouldInjectNoiseBeforeReadback() && shouldApplyPostProcessingToDirtyRect == ShouldApplyPostProcessingToDirtyRect::Yes) {
+    addCanvasNeedingPreparationForDisplayOrFlush();
+    IntRect dirtyRect { { }, size() };
         if (rect)
-            m_canvasNoiseInjection.updateDirtyRect(intersection(enclosingIntRect(*rect), { { }, size() }));
-        else
-            m_canvasNoiseInjection.updateDirtyRect({ { }, size() });
+        dirtyRect.intersect(enclosingIntRect(*rect));
+    notifyObserversCanvasChanged(dirtyRect);
+
+    // FIXME: We should exclude rects with ShouldApplyPostProcessingToDirtyRect::No
+    if (shouldInjectNoiseBeforeReadback()) {
+        if (shouldApplyPostProcessingToDirtyRect == ShouldApplyPostProcessingToDirtyRect::Yes) {
+            m_canvasNoiseInjection.updateDirtyRect(dirtyRect);
+        } else if (!rect)
+            m_canvasNoiseInjection.clearDirtyRect();
     }
 }
 
@@ -233,10 +232,11 @@ HashSet<Element*> CanvasBase::cssCanvasClients() const
 {
     HashSet<Element*> cssCanvasClients;
     for (auto& observer : m_observers) {
-        if (!is<StyleCanvasImage>(observer))
+        auto* image = dynamicDowncast<StyleCanvasImage>(observer);
+        if (!image)
             continue;
 
-        for (auto entry : downcast<StyleCanvasImage>(observer).clients()) {
+        for (auto entry : image->clients()) {
             auto& client = entry.key;
             if (auto element = client.element())
                 cssCanvasClients.add(element);
@@ -251,6 +251,17 @@ bool CanvasBase::hasActiveInspectorCanvasCallTracer() const
     return context && context->hasActiveInspectorCanvasCallTracer();
 }
 
+void CanvasBase::setSize(const IntSize& size)
+{
+    if (size == m_size)
+        return;
+
+    m_size = size;
+
+    if (auto* context = renderingContext())
+        InspectorInstrumentation::didChangeCanvasSize(*context);
+}
+
 RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) const
 {
     RefPtr<ImageBuffer> returnBuffer;
@@ -260,14 +271,19 @@ RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) con
         returnBuffer = std::exchange(m_imageBuffer, WTFMove(buffer));
     }
 
-    if (m_imageBuffer && m_size != m_imageBuffer->truncatedLogicalSize())
+    auto* context = renderingContext();
+
+    if (m_imageBuffer && m_size != m_imageBuffer->truncatedLogicalSize()) {
         m_size = m_imageBuffer->truncatedLogicalSize();
+
+        if (context)
+            InspectorInstrumentation::didChangeCanvasSize(*context);
+    }
 
     size_t previousMemoryCost = m_imageBufferCost;
     m_imageBufferCost = memoryCost();
     s_activePixelMemory += m_imageBufferCost - previousMemoryCost;
 
-    auto* context = renderingContext();
     if (context && m_imageBuffer && previousMemoryCost != m_imageBufferCost)
         InspectorInstrumentation::didChangeCanvasMemory(*context);
 
@@ -278,73 +294,56 @@ RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) con
         m_contextStateSaver = makeUnique<GraphicsContextStateSaver>(m_imageBuffer->context());
 
         JSC::JSLockHolder lock(scriptExecutionContext()->vm());
-        scriptExecutionContext()->vm().heap.reportExtraMemoryAllocated(memoryCost());
+        scriptExecutionContext()->vm().heap.reportExtraMemoryAllocated(static_cast<JSCell*>(nullptr), memoryCost());
     }
 
     return returnBuffer;
 }
 
-GraphicsClient* CanvasBase::graphicsClient() const
-{
-    if (scriptExecutionContext()->isDocument() && downcast<Document>(scriptExecutionContext())->page())
-        return &downcast<Document>(scriptExecutionContext())->page()->chrome();
-    if (is<WorkerGlobalScope>(scriptExecutionContext()))
-        return downcast<WorkerGlobalScope>(scriptExecutionContext())->workerClient();
-
-    return nullptr;
-}
-
 bool CanvasBase::shouldAccelerate(const IntSize& size) const
 {
-    auto checkedArea = size.area<RecordOverflow>();
-    if (checkedArea.hasOverflowed())
-        return false;
-
-    return shouldAccelerate(checkedArea.value());
+    return shouldAccelerate(size.unclampedArea());
 }
 
-bool CanvasBase::shouldAccelerate(unsigned area) const
+bool CanvasBase::shouldAccelerate(uint64_t area) const
 {
-    if (area > scriptExecutionContext()->settingsValues().maximumAccelerated2dCanvasSize)
-        return false;
-
 #if USE(IOSURFACE_CANVAS_BACKING_STORE)
-    return scriptExecutionContext()->settingsValues().canvasUsesAcceleratedDrawing;
+    if (!scriptExecutionContext()->settingsValues().canvasUsesAcceleratedDrawing)
+        return false;
+    if (area < scriptExecutionContext()->settingsValues().minimumAccelerated2DContextArea)
+        return false;
+    return true;
 #else
+    UNUSED_PARAM(area);
     return false;
 #endif
 }
 
-RefPtr<ImageBuffer> CanvasBase::allocateImageBuffer(bool usesDisplayListDrawing, bool avoidBackendSizeCheckForTesting) const
+RefPtr<ImageBuffer> CanvasBase::allocateImageBuffer() const
 {
-    auto checkedArea = size().area<RecordOverflow>();
-
-    if (checkedArea.hasOverflowed() || checkedArea > maxCanvasArea()) {
+    uint64_t area = size().unclampedArea();
+    if (!area)
+        return nullptr;
+    if (area > maxCanvasArea()) {
         auto message = makeString("Canvas area exceeds the maximum limit (width * height > ", maxCanvasArea(), ").");
         scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
         return nullptr;
     }
 
-    unsigned area = checkedArea.value();
-    if (!area)
-        return nullptr;
-
     OptionSet<ImageBufferOptions> bufferOptions;
     if (shouldAccelerate(area))
         bufferOptions.add(ImageBufferOptions::Accelerated);
-    // FIXME: Add a new setting for DisplayList drawing on canvas.
-    if (usesDisplayListDrawing || scriptExecutionContext()->settingsValues().displayListDrawingEnabled)
-        bufferOptions.add(ImageBufferOptions::UseDisplayList);
 
-    auto [colorSpace, pixelFormat] = [&] {
-        if (renderingContext())
-            return std::pair { renderingContext()->colorSpace(), renderingContext()->pixelFormat() };
-        return std::pair { DestinationColorSpace::SRGB(), PixelFormat::BGRA8 };
-    }();
-    ImageBufferCreationContext context = { };
-    context.graphicsClient = graphicsClient();
-    context.avoidIOSurfaceSizeCheckInWebProcessForTesting = avoidBackendSizeCheckForTesting;
-    return ImageBuffer::create(size(), RenderingPurpose::Canvas, 1, colorSpace, pixelFormat, bufferOptions, context);
+    auto colorSpace = DestinationColorSpace::SRGB();
+    auto pixelFormat = PixelFormat::BGRA8;
+
+    if (auto* context = renderingContext()) {
+        bufferOptions = context->adjustImageBufferOptionsForTesting(bufferOptions);
+        colorSpace = context->colorSpace();
+        pixelFormat = context->pixelFormat();
+    }
+
+    return ImageBuffer::create(size(), RenderingPurpose::Canvas, 1, colorSpace, pixelFormat, bufferOptions, scriptExecutionContext()->graphicsClient());
 }
 
 bool CanvasBase::shouldInjectNoiseBeforeReadback() const
@@ -358,6 +357,30 @@ void CanvasBase::recordLastFillText(const String& text)
     if (!shouldInjectNoiseBeforeReadback())
         return;
     m_lastFillText = text;
+}
+
+void CanvasBase::addCanvasNeedingPreparationForDisplayOrFlush()
+{
+    auto* context = renderingContext();
+    if (!context)
+        return;
+    if (context->isInPreparationForDisplayOrFlush())
+        return;
+    if (auto* document = dynamicDowncast<Document>(scriptExecutionContext()))
+        document->addCanvasNeedingPreparationForDisplayOrFlush(*context);
+    // FIXME: WorkerGlobalContext does not have prepare phase yet.
+}
+
+void CanvasBase::removeCanvasNeedingPreparationForDisplayOrFlush()
+{
+    auto* context = renderingContext();
+    if (!context)
+        return;
+    if (!context->isInPreparationForDisplayOrFlush())
+        return;
+    if (auto* document = dynamicDowncast<Document>(scriptExecutionContext()))
+        document->removeCanvasNeedingPreparationForDisplayOrFlush(*context);
+    // FIXME: WorkerGlobalContext does not have prepare phase yet.
 }
 
 bool CanvasBase::postProcessPixelBufferResults(Ref<PixelBuffer>&& pixelBuffer) const

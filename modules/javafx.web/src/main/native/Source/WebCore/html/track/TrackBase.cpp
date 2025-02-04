@@ -26,11 +26,13 @@
 #include "config.h"
 #include "TrackBase.h"
 
+#include "ContextDestructionObserverInlines.h"
+#include "Document.h"
 #include "Logging.h"
-#include "ScriptExecutionContext.h"
 #include "TrackListBase.h"
 #include <wtf/Language.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 #if ENABLE(VIDEO)
 
@@ -48,10 +50,11 @@ static RefPtr<Logger>& nullLogger()
 }
 #endif
 
-TrackBase::TrackBase(ScriptExecutionContext* context, Type type, const AtomString& id, const AtomString& label, const AtomString& language)
+TrackBase::TrackBase(ScriptExecutionContext* context, Type type, const std::optional<AtomString>& id, TrackID trackId, const AtomString& label, const AtomString& language)
     : ContextDestructionObserver(context)
     , m_uniqueId(++s_uniqueId)
-    , m_id(id)
+    , m_id(id ? *id : AtomString::number(trackId))
+    , m_trackId(trackId)
     , m_label(label)
     , m_language(language)
 {
@@ -69,6 +72,11 @@ TrackBase::TrackBase(ScriptExecutionContext* context, Type type, const AtomStrin
 
     m_logger = nullLogger().get();
 #endif
+}
+
+void TrackBase::didMoveToNewDocument(Document& newDocument)
+{
+    observeContext(&newDocument.contextDocument());
 }
 
 void TrackBase::setTrackList(TrackListBase& trackList)
@@ -180,8 +188,8 @@ WTFLogChannel& TrackBase::logChannel() const
 }
 #endif
 
-MediaTrackBase::MediaTrackBase(ScriptExecutionContext* context, Type type, const AtomString& id, const AtomString& label, const AtomString& language)
-    : TrackBase(context, type, id, label, language)
+MediaTrackBase::MediaTrackBase(ScriptExecutionContext* context, Type type, const std::optional<AtomString>& id, TrackID trackId, const AtomString& label, const AtomString& language)
+    : TrackBase(context, type, id, trackId, label, language)
 {
 }
 

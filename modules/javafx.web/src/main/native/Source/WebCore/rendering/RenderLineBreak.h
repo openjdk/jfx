@@ -36,9 +36,7 @@ public:
     virtual ~RenderLineBreak();
 
     // FIXME: The lies here keep render tree dump based test results unchanged.
-    ASCIILiteral renderName() const final { return m_isWBR ? "RenderWordBreak"_s : "RenderBR"_s; }
-
-    bool isWBR() const final { return m_isWBR; }
+    ASCIILiteral renderName() const final { return isWBR() ? "RenderWordBreak"_s : "RenderBR"_s; }
 
     std::unique_ptr<LegacyInlineElementBox> createInlineBox();
     LegacyInlineElementBox* inlineBoxWrapper() const { return m_inlineBoxWrapper; }
@@ -80,17 +78,16 @@ private:
     LayoutUnit offsetWidth() const final { return linesBoundingBox().width(); }
     LayoutUnit offsetHeight() const final { return linesBoundingBox().height(); }
     LayoutRect borderBoundingBox() const final { return LayoutRect(LayoutPoint(), linesBoundingBox().size()); }
-    LayoutRect frameRectForStickyPositioning() const final { ASSERT_NOT_REACHED(); return LayoutRect(); }
-    LayoutRect clippedOverflowRect(const RenderLayerModelObject*, VisibleRectContext) const final { return LayoutRect(); }
+    LayoutRect frameRectForStickyPositioning() const final { ASSERT_NOT_REACHED(); return { }; }
+    RepaintRects localRectsForRepaint(RepaintOutlineBounds) const final { return { }; }
 
     void updateFromStyle() final;
     bool requiresLayer() const final { return false; }
 
     LegacyInlineElementBox* m_inlineBoxWrapper;
     mutable int m_cachedLineHeight;
-    bool m_isWBR;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderLineBreak, isLineBreak())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderLineBreak, isRenderLineBreak())

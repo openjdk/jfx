@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package hello;
 
+import java.util.List;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.application.Application;
@@ -34,7 +35,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -58,8 +58,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-
-import java.util.List;
 
 public class HelloCSS extends Application {
     /**

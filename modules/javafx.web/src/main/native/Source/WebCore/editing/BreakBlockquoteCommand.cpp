@@ -41,8 +41,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-BreakBlockquoteCommand::BreakBlockquoteCommand(Document& document)
-    : CompositeEditCommand(document)
+BreakBlockquoteCommand::BreakBlockquoteCommand(Ref<Document>&& document)
+    : CompositeEditCommand(WTFMove(document))
 {
 }
 
@@ -70,8 +70,8 @@ void BreakBlockquoteCommand::doApply()
     Position pos = endingSelection().start().downstream();
 
     // Find the top-most blockquote from the start.
-    RefPtr topBlockquote = highestEnclosingNodeOfType(pos, isMailBlockquote);
-    if (!topBlockquote || !topBlockquote->parentNode() || !topBlockquote->isElementNode())
+    RefPtr topBlockquote = dynamicDowncast<Element>(highestEnclosingNodeOfType(pos, isMailBlockquote));
+    if (!topBlockquote || !topBlockquote->parentNode())
         return;
 
     auto breakNode = [&]() -> Ref<HTMLElement> {
@@ -120,40 +120,39 @@ void BreakBlockquoteCommand::doApply()
         pos = pos.next();
 
     // Adjust the position so we don't split at the beginning of a quote.
-    while (isFirstVisiblePositionInNode(VisiblePosition(pos), enclosingNodeOfType(pos, isMailBlockquote)))
+    while (isFirstVisiblePositionInNode(VisiblePosition(pos), enclosingNodeOfType(pos, isMailBlockquote).get()))
         pos = pos.previous();
 
     // startNode is the first node that we need to move to the new blockquote.
-    Node* startNode = pos.deprecatedNode();
+    auto startNode = pos.protectedDeprecatedNode();
     ASSERT(startNode);
     // Split at pos if in the middle of a text node.
-    if (is<Text>(*startNode)) {
-        Text& textNode = downcast<Text>(*startNode);
-        if ((unsigned)pos.deprecatedEditingOffset() >= textNode.length()) {
-            if (auto* nextNode = NodeTraversal::next(*startNode))
-                startNode = nextNode;
+    if (RefPtr textNode = dynamicDowncast<Text>(*startNode)) {
+        if (static_cast<unsigned>(pos.deprecatedEditingOffset()) >= textNode->length()) {
+            if (RefPtr nextNode = NodeTraversal::next(*startNode))
+                startNode = WTFMove(nextNode);
         } else if (pos.deprecatedEditingOffset() > 0)
-            splitTextNode(textNode, pos.deprecatedEditingOffset());
+            splitTextNode(*textNode, pos.deprecatedEditingOffset());
     } else if (pos.deprecatedEditingOffset() > 0) {
-        if (auto* child = startNode->traverseToChildAt(pos.deprecatedEditingOffset()))
-            startNode = child;
-        else if (auto* next = NodeTraversal::next(*startNode))
-            startNode = next;
+        if (RefPtr child = startNode->traverseToChildAt(pos.deprecatedEditingOffset()))
+            startNode = WTFMove(child);
+        else if (RefPtr next = NodeTraversal::next(*startNode))
+            startNode = WTFMove(next);
     }
 
     // If there's nothing inside topBlockquote to move, we're finished.
     if (!startNode->isDescendantOf(*topBlockquote)) {
-        setEndingSelection(VisibleSelection(VisiblePosition(firstPositionInOrBeforeNode(startNode)), endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(VisiblePosition(firstPositionInOrBeforeNode(startNode.get())), endingSelection().isDirectional()));
         return;
     }
 
     // Build up list of ancestors in between the start node and the top blockquote.
     Vector<RefPtr<Element>> ancestors;
-    for (Element* node = startNode->parentElement(); node && node != topBlockquote; node = node->parentElement())
-        ancestors.append(node);
+    for (RefPtr node = startNode->parentElement(); node && node != topBlockquote; node = node->parentElement())
+        ancestors.append(node.copyRef());
 
     // Insert a clone of the top blockquote after the break.
-    auto clonedBlockquote = downcast<Element>(*topBlockquote).cloneElementWithoutChildren(document());
+    auto clonedBlockquote = topBlockquote->cloneElementWithoutChildren(document());
     insertNodeAfter(clonedBlockquote.copyRef(), breakNode);
 
     // Clone startNode's ancestors into the cloned blockquote.
@@ -165,20 +164,22 @@ void BreakBlockquoteCommand::doApply()
         auto clonedChild = ancestors[i - 1]->cloneElementWithoutChildren(document());
         // Preserve list item numbering in cloned lists.
         if (clonedChild->isElementNode() && clonedChild->hasTagName(olTag)) {
-            Node* listChildNode = i > 1 ? ancestors[i - 2].get() : startNode;
+            RefPtr<Node> listChildNode = i > 1 ? ancestors[i - 2].get() : startNode.get();
             // The first child of the cloned list might not be a list item element,
             // find the first one so that we know where to start numbering.
             while (listChildNode && !listChildNode->hasTagName(liTag))
                 listChildNode = listChildNode->nextSibling();
-            if (listChildNode && is<RenderListItem>(listChildNode->renderer()))
-                setNodeAttribute(clonedChild, startAttr, AtomString::number(downcast<RenderListItem>(*listChildNode->renderer()).value()));
+            if (listChildNode) {
+                if (auto* listItemRenderer = dynamicDowncast<RenderListItem>(listChildNode->renderer()))
+                    setNodeAttribute(clonedChild, startAttr, AtomString::number(listItemRenderer->value()));
+        }
         }
 
         appendNode(clonedChild.copyRef(), clonedAncestor.releaseNonNull());
         clonedAncestor = WTFMove(clonedChild);
     }
 
-    moveRemainingSiblingsToNewParent(startNode, 0, *clonedAncestor);
+    moveRemainingSiblingsToNewParent(startNode.get(), nullptr, *clonedAncestor);
 
     if (!ancestors.isEmpty()) {
         // Split the tree up the ancestor chain until the topBlockquote
@@ -196,7 +197,7 @@ void BreakBlockquoteCommand::doApply()
         }
 
         // If the startNode's original parent is now empty, remove it
-        Node* originalParent = ancestors.first().get();
+        RefPtr originalParent = ancestors.first().get();
         if (!originalParent->hasChildNodes())
             removeNode(*originalParent);
     }

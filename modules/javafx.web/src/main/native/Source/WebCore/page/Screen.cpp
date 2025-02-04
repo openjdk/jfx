@@ -31,6 +31,7 @@
 #include "Screen.h"
 
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "FloatRect.h"
 #include "LocalDOMWindow.h"
@@ -92,7 +93,7 @@ unsigned Screen::colorDepth() const
 {
     RefPtr frame = this->frame();
     if (!frame)
-        return 0;
+        return 24;
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::ColorDepth);
     return static_cast<unsigned>(screenDepth(frame->view()));

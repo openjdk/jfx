@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,18 +40,22 @@ public class RgfPseudoCompiledScript extends CompiledScript {
         this.scriptEngine = scriptEngine;
     }
 
+    @Override
     public Object eval(Bindings bindings) throws ScriptException {
         return scriptEngine.eval("RgfPseudoCompiledScript.eval(Bindings bindings): " + code, bindings);
     }
 
+    @Override
     public Object eval(ScriptContext context) throws ScriptException {
         return scriptEngine.eval("RgfPseudoCompiledScript.eval(ScriptContext context): " + code, context);
     }
 
+    @Override
     public Object eval() throws ScriptException {
         return scriptEngine.eval("RgfPseudoCompiledScript.eval(): " + code );
     }
 
+    @Override
     public ScriptEngine getEngine() {
         return scriptEngine;
     }

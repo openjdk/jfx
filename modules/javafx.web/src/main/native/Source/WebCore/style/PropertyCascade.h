@@ -42,13 +42,15 @@ public:
     enum class PropertyType : uint8_t {
         NonInherited = 1 << 0,
         Inherited = 1 << 1,
-        VariableReference = 1 << 2,
+        ExplicitlyInherited = 1 << 2,
         AfterAnimation = 1 << 3,
-        AfterTransition = 1 << 4
+        AfterTransition = 1 << 4,
+        StartingStyle = 1 << 5,
     };
-    static constexpr OptionSet<PropertyType> allProperties() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
+    static constexpr OptionSet<PropertyType> normalProperties() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
+    static constexpr OptionSet<PropertyType> startingStyleProperties() { return normalProperties() | PropertyType::StartingStyle; }
 
-    PropertyCascade(const MatchResult&, CascadeLevel, OptionSet<PropertyType> includedProperties, const HashSet<AnimatableProperty>* = nullptr);
+    PropertyCascade(const MatchResult&, CascadeLevel, OptionSet<PropertyType> includedProperties, const HashSet<AnimatableCSSProperty>* = nullptr);
     PropertyCascade(const PropertyCascade&, CascadeLevel, std::optional<ScopeOrdinal> rollbackScope = { }, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback = { });
 
     ~PropertyCascade();
@@ -77,7 +79,7 @@ public:
     std::span<const CSSPropertyID> deferredPropertyIDs() const;
     const HashMap<AtomString, Property>& customProperties() const { return m_customProperties; }
 
-    const HashSet<AnimatableProperty> overriddenAnimatedProperties() const;
+    const HashSet<AnimatableCSSProperty> overriddenAnimatedProperties() const;
 
 private:
     void buildCascade();
@@ -103,10 +105,10 @@ private:
     const std::optional<CascadeLayerPriority> m_maximumCascadeLayerPriorityForRollback;
 
     struct AnimationLayer {
-        AnimationLayer(const HashSet<AnimatableProperty>&);
+        AnimationLayer(const HashSet<AnimatableCSSProperty>&);
 
-        const HashSet<AnimatableProperty>& properties;
-        HashSet<AnimatableProperty> overriddenProperties;
+        const HashSet<AnimatableCSSProperty>& properties;
+        HashSet<AnimatableCSSProperty> overriddenProperties;
         bool hasCustomProperties { false };
         bool hasFontSize { false };
         bool hasLineHeight { false };

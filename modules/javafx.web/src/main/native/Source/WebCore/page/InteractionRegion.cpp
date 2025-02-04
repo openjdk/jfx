@@ -43,7 +43,6 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Page.h"
-#include "PathUtilities.h"
 #include "PlatformMouseEvent.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderAncestorIterator.h"
@@ -77,6 +76,9 @@ static bool shouldAllowElement(const Element& element)
         return false;
 
     if (auto* input = dynamicDowncast<HTMLInputElement>(element)) {
+        if (input->isDisabledFormControl())
+            return false;
+
         // Do not allow regions for the <input type='range'>, because we make one for the thumb.
         if (input->isRangeControl())
             return false;
@@ -93,8 +95,7 @@ static bool shouldAllowAccessibilityRoleAsPointerCursorReplacement(const Element
 {
     switch (AccessibilityObject::ariaRoleToWebCoreRole(element.attributeWithoutSynchronization(HTMLNames::roleAttr))) {
     case AccessibilityRole::Button:
-    case AccessibilityRole::CheckBox:
-    case AccessibilityRole::DisclosureTriangle:
+    case AccessibilityRole::Checkbox:
     case AccessibilityRole::ImageMapLink:
     case AccessibilityRole::Link:
     case AccessibilityRole::WebCoreLink:
@@ -105,6 +106,8 @@ static bool shouldAllowAccessibilityRoleAsPointerCursorReplacement(const Element
     case AccessibilityRole::MenuItemRadio:
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::RadioButton:
+    case AccessibilityRole::Switch:
+    case AccessibilityRole::TextField:
     case AccessibilityRole::ToggleButton:
         return true;
     default:
@@ -117,7 +120,7 @@ bool elementMatchesHoverRules(Element& element)
     bool foundHoverRules = false;
     bool initialValue = element.isUserActionElement() && element.document().userActionElements().isHovered(element);
 
-    for (auto key : Style::makePseudoClassInvalidationKeys(CSSSelector::PseudoClassType::Hover, element)) {
+    for (auto key : Style::makePseudoClassInvalidationKeys(CSSSelector::PseudoClass::Hover, element)) {
         auto& ruleSets = element.styleResolver().ruleSets();
         auto* invalidationRuleSets = ruleSets.pseudoClassInvalidationRuleSets(key);
         if (!invalidationRuleSets)
@@ -157,61 +160,45 @@ static bool shouldAllowNonPointerCursorForElement(const Element& element)
     if (is<SliderThumbElement>(element))
         return true;
 
+    if (is<HTMLAnchorElement>(element))
+        return true;
+
     if (shouldAllowAccessibilityRoleAsPointerCursorReplacement(element))
         return true;
 
     return false;
 }
 
-static bool isOverlay(const RenderElement& renderer)
+static bool shouldGetOcclusion(const RenderElement& renderer)
 {
+    if (auto* renderLayerModelObject = dynamicDowncast<RenderBox>(renderer)) {
+        if (renderLayerModelObject->hasLayer() && renderLayerModelObject->layer()->isComposited())
+            return false;
+    }
+
     if (renderer.style().specifiedZIndex() > 0)
         return true;
 
     if (renderer.isFixedPositioned())
         return true;
 
-    if (auto* renderBox = dynamicDowncast<RenderBox>(renderer)) {
-        auto refContentBox = renderBox->absoluteContentBox();
-        auto lastRenderer = renderBox;
-        for (auto& ancestor : ancestorsOfType<RenderBox>(renderer)) {
-            // We don't want to occlude any previous siblings.
-            if (ancestor.firstChild() != lastRenderer)
                 return false;
-            lastRenderer = &ancestor;
-            if (ancestor.absoluteContentBox() != refContentBox)
-                return false;
-            if (ancestor.isFixedPositioned())
-                return true;
-        }
-    }
-
-    return false;
 }
 
-std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject& regionRenderer, const Region& region)
+std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject& regionRenderer, const FloatRect& bounds)
 {
-    if (!regionRenderer.node())
-        return std::nullopt;
-
-    auto bounds = region.bounds();
     if (bounds.isEmpty())
         return std::nullopt;
 
-    auto* localFrame = dynamicDowncast<LocalFrame>(regionRenderer.document().frame()->mainFrame());
-    if (!localFrame)
+    if (!regionRenderer.node())
         return std::nullopt;
 
-    auto& mainFrameView = *localFrame->view();
+    Ref mainFrameView = *regionRenderer.document().frame()->mainFrame().virtualView();
 
-    FloatSize frameViewSize = mainFrameView.size();
-    auto scale = 1 / mainFrameView.visibleContentScaleFactor();
+    FloatSize frameViewSize = mainFrameView->size();
+    auto scale = 1 / mainFrameView->visibleContentScaleFactor();
     frameViewSize.scale(scale, scale);
     auto frameViewArea = frameViewSize.area();
-
-    auto checkedRegionArea = bounds.area<RecordOverflow>();
-    if (checkedRegionArea.hasOverflowed())
-        return std::nullopt;
 
     auto originalElement = dynamicDowncast<Element>(regionRenderer.node());
     if (originalElement && originalElement->isPseudoElement())
@@ -225,11 +212,14 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
 
     bool isLabelable = is<HTMLElement>(matchedElement) && downcast<HTMLElement>(matchedElement)->isLabelable();
     for (Node* node = matchedElement; node; node = node->parentInComposedTree()) {
-        bool matchedButton = is<HTMLButtonElement>(node);
-        bool matchedLabel = isLabelable && is<HTMLLabelElement>(node);
-        bool matchedLink = node->isLink();
+        auto* element = dynamicDowncast<Element>(node);
+        if (!element)
+            continue;
+        bool matchedButton = is<HTMLButtonElement>(*element);
+        bool matchedLabel = isLabelable && is<HTMLLabelElement>(*element);
+        bool matchedLink = element->isLink();
         if (matchedButton || matchedLabel || matchedLink) {
-            matchedElement = downcast<Element>(node);
+            matchedElement = element;
             break;
         }
     }
@@ -249,7 +239,8 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     // FIXME: Consider also allowing elements that only receive touch events.
     bool hasListener = renderer.style().eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick);
     bool hasPointer = cursorTypeForElement(*matchedElement) == CursorType::Pointer || shouldAllowNonPointerCursorForElement(*matchedElement);
-    bool isTooBigForInteraction = checkedRegionArea.value() > frameViewArea / 2;
+    bool isTooBigForInteraction = bounds.area() > frameViewArea / 3;
+    bool isTooBigForOcclusion = bounds.area() > frameViewArea * 3;
 
     auto elementIdentifier = matchedElement->identifier();
 
@@ -257,7 +248,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         // Could be a `<label for="...">` or a label with a descendant.
         // In cases where both elements get a region we want to group them by the same `elementIdentifier`.
         auto associatedElement = downcast<HTMLLabelElement>(matchedElement)->control();
-        if (associatedElement) {
+        if (associatedElement && !associatedElement->isDisabledFormControl()) {
             hasPointer = true;
             elementIdentifier = associatedElement->identifier();
         }
@@ -273,7 +264,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     }
 
     if (!hasListener || !(hasPointer || detectedHoverRules) || isTooBigForInteraction) {
-        if (isOriginalMatch && isOverlay(renderer)) {
+        if (isOriginalMatch && shouldGetOcclusion(renderer) && !isTooBigForOcclusion) {
             return { {
                 InteractionRegion::Type::Occlusion,
                 elementIdentifier,
@@ -290,17 +281,31 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     if (!isOriginalMatch && !isInlineNonBlock && !renderer.style().isDisplayTableOrTablePart())
         return std::nullopt;
 
-    float borderRadius = 0;
-    OptionSet<InteractionRegion::CornerMask> maskedCorners;
+    auto rect = bounds;
+    float cornerRadius = 0;
+    OptionSet<InteractionRegion::CornerMask> maskedCorners { };
+    std::optional<Path> clipPath = std::nullopt;
 
-    if (auto* renderBox = dynamicDowncast<RenderBox>(regionRenderer)) {
-        auto borderRadii = renderBox->borderRadii();
+    if (const auto& renderBox = dynamicDowncast<RenderBox>(regionRenderer)) {
+        auto roundedRect = renderBox->borderRoundedRect();
+        auto borderRadii = roundedRect.radii();
         auto minRadius = borderRadii.minimumRadius();
         auto maxRadius = borderRadii.maximumRadius();
 
-        if (minRadius != maxRadius && !minRadius) {
-            // We apply the maximum radius to specific corners.
-            borderRadius = maxRadius;
+        bool needsClipPath = false;
+        auto checkIfClipPathNeeded = [&](auto radius) {
+            if (radius != minRadius && radius != maxRadius)
+                needsClipPath = true;
+        };
+        checkIfClipPathNeeded(borderRadii.topLeft().minDimension());
+        checkIfClipPathNeeded(borderRadii.topRight().minDimension());
+        checkIfClipPathNeeded(borderRadii.bottomLeft().minDimension());
+        checkIfClipPathNeeded(borderRadii.bottomRight().minDimension());
+
+        if (minRadius == maxRadius)
+            cornerRadius = minRadius;
+        else if (!minRadius && !needsClipPath) {
+            cornerRadius = maxRadius;
             if (borderRadii.topLeft().minDimension() == maxRadius)
                 maskedCorners.add(InteractionRegion::CornerMask::MinXMinYCorner);
             if (borderRadii.topRight().minDimension() == maxRadius)
@@ -310,32 +315,35 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
             if (borderRadii.bottomRight().minDimension() == maxRadius)
                 maskedCorners.add(InteractionRegion::CornerMask::MaxXMaxYCorner);
         } else {
-            // We default to the minimum radius applied uniformly to all corners.
-            borderRadius = minRadius;
+            Path path;
+            path.addRoundedRect(roundedRect);
+            clipPath = path;
+        }
         }
 
-        auto* input = dynamicDowncast<HTMLInputElement>(matchedElement);
-        if (input && input->containerElement()) {
-            auto borderBoxRect = renderBox->borderBoxRect();
-            auto contentBoxRect = renderBox->contentBoxRect();
-            bounds.move(IntSize(borderBoxRect.location() - contentBoxRect.location()));
-            bounds.expand(IntSize(borderBoxRect.size() - contentBoxRect.size()));
-        }
-    }
+    auto& style = regionRenderer.style();
+    bool canTweakShape = !style.hasBackground()
+        && !style.hasOutline()
+        && !style.boxShadow()
+        && !style.hasExplicitlySetBorderRadius()
+        // No visible borders or borders that do not create a complete box.
+        && (!style.hasVisibleBorder()
+            || !(style.borderTopWidth() && style.borderRightWidth() && style.borderBottomWidth() && style.borderLeftWidth()));
 
-    if (!regionRenderer.hasVisibleBoxDecorations() && !renderer.hasVisibleBoxDecorations()) {
+    if (canTweakShape) {
         // We can safely tweak the bounds and radius without causing visual mismatch.
-        borderRadius = std::max<float>(borderRadius, regionRenderer.document().settings().interactionRegionMinimumCornerRadius());
+        cornerRadius = std::max<float>(cornerRadius, regionRenderer.document().settings().interactionRegionMinimumCornerRadius());
         if (isInlineNonBlock)
-            bounds.inflate(regionRenderer.document().settings().interactionRegionInlinePadding());
+            rect.inflate(regionRenderer.document().settings().interactionRegionInlinePadding());
     }
 
     return { {
         InteractionRegion::Type::Interaction,
         elementIdentifier,
-        bounds,
-        borderRadius,
-        maskedCorners
+        rect,
+        cornerRadius,
+        maskedCorners,
+        clipPath
     } };
 }
 
@@ -345,18 +353,22 @@ TextStream& operator<<(TextStream& ts, const InteractionRegion& interactionRegio
         ? "interaction"
         : (interactionRegion.type == InteractionRegion::Type::Occlusion ? "occlusion" : "guard");
     ts.dumpProperty(regionName, interactionRegion.rectInLayerCoordinates);
-    auto radius = interactionRegion.borderRadius;
+    auto radius = interactionRegion.cornerRadius;
+    if (radius > 0) {
     if (interactionRegion.maskedCorners.isEmpty())
-        ts.dumpProperty("borderRadius", radius);
+            ts.dumpProperty("cornerRadius", radius);
     else {
         auto mask = interactionRegion.maskedCorners;
-        ts.dumpProperty("borderRadius", makeString(
+            ts.dumpProperty("cornerRadius", makeString(
             mask.contains(InteractionRegion::CornerMask::MinXMinYCorner) ? radius : 0, ' ',
             mask.contains(InteractionRegion::CornerMask::MaxXMinYCorner) ? radius : 0, ' ',
             mask.contains(InteractionRegion::CornerMask::MaxXMaxYCorner) ? radius : 0, ' ',
             mask.contains(InteractionRegion::CornerMask::MinXMaxYCorner) ? radius : 0
         ));
     }
+    }
+    if (interactionRegion.clipPath)
+        ts.dumpProperty("clipPath", interactionRegion.clipPath.value());
 
     return ts;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,8 +62,13 @@ String errorDescriptionForValue(JSGlobalObject* globalObject, JSValue v)
         return tryMakeString('"', string, '"');
     }
 
-    if (v.isSymbol())
-        return asSymbol(v)->descriptiveString();
+    if (v.isSymbol()) {
+        auto expectedDescription = asSymbol(v)->tryGetDescriptiveString();
+        if (expectedDescription)
+            return expectedDescription.value();
+        ASSERT(expectedDescription.error() == ErrorTypeWithExtension::OutOfMemoryError);
+        return String("Symbol"_s);
+    }
     if (v.isObject()) {
         VM& vm = globalObject->vm();
         JSObject* object = asObject(v);
@@ -153,7 +158,7 @@ static StringView functionCallBase(StringView sourceText)
     return sourceText.left(idx + 1);
 }
 
-static String notAFunctionSourceAppender(const String& originalMessage, StringView sourceText, RuntimeType type, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
+String notAFunctionSourceAppender(const String& originalMessage, StringView sourceText, RuntimeType type, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
 {
     ASSERT(type != TypeFunction);
 
@@ -253,13 +258,23 @@ static String invalidPrototypeSourceAppender(const String& originalMessage, Stri
     return "The value of the superclass's prototype property is not an object or null."_s;
 }
 
+String constructErrorMessage(JSGlobalObject* globalObject, JSValue value, const String& message)
+{
+    auto scope = DECLARE_THROW_SCOPE(globalObject->vm());
+    String valueDescription = errorDescriptionForValue(globalObject, value);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (!valueDescription)
+        return valueDescription;
+    return tryMakeString(valueDescription, ' ', message);
+}
+
 JSObject* createError(JSGlobalObject* globalObject, JSValue value, const String& message, ErrorInstance::SourceAppender appender)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    String valueDescription = errorDescriptionForValue(globalObject, value);
-    if (scope.exception() || !valueDescription) {
+    auto errorMessage = constructErrorMessage(globalObject, value, message);
+    if (UNLIKELY(scope.exception() || !errorMessage)) {
         // When we see an exception, we're not returning immediately because
         // we're in a CatchScope, i.e. no exceptions are thrown past this scope.
         // We're using a CatchScope because the contract for createError() is
@@ -267,13 +282,9 @@ JSObject* createError(JSGlobalObject* globalObject, JSValue value, const String&
         scope.clearException();
         return createOutOfMemoryError(globalObject);
     }
-    String errorMessage = tryMakeString(valueDescription, ' ', message);
-    if (!errorMessage)
-        return createOutOfMemoryError(globalObject);
     scope.assertNoException();
     JSObject* exception = createTypeError(globalObject, errorMessage, appender, runtimeTypeForValue(value));
     ASSERT(exception->isErrorInstance());
-
     return exception;
 }
 
@@ -317,9 +328,19 @@ JSObject* createInvalidPrototypeError(JSGlobalObject* globalObject, JSValue valu
     return createError(globalObject, value, "is not an object or null"_s, invalidPrototypeSourceAppender);
 }
 
-JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject* globalObject, const String& propertyName)
+JSObject* createErrorForDuplicateGlobalVariableDeclaration(JSGlobalObject* globalObject, UniquedStringImpl* key)
 {
-    return createReferenceError(globalObject, makeString("Strict mode forbids implicit creation of global property '"_s, propertyName, '\''));
+    return createSyntaxError(globalObject, makeString("Can't create duplicate variable: '"_s, StringView(key), '\''));
+}
+
+JSObject* createErrorForInvalidGlobalFunctionDeclaration(JSGlobalObject* globalObject, const Identifier& ident)
+{
+    return createTypeError(globalObject, makeString("Can't declare global function '", ident.string(), "': property must be either configurable or both writable and enumerable"));
+}
+
+JSObject* createErrorForInvalidGlobalVarDeclaration(JSGlobalObject* globalObject, const Identifier& ident)
+{
+    return createTypeError(globalObject, makeString("Can't declare global variable '", ident.string(), "': global object must be extensible"));
 }
 
 JSObject* createTDZError(JSGlobalObject* globalObject)

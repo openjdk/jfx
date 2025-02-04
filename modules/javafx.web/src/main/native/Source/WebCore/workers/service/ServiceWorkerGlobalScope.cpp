@@ -26,8 +26,6 @@
 #include "config.h"
 #include "ServiceWorkerGlobalScope.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "Document.h"
 #include "EventLoop.h"
 #include "EventNames.h"
@@ -38,6 +36,7 @@
 #include "LocalFrameLoaderClient.h"
 #include "NotificationEvent.h"
 #include "PushEvent.h"
+#include "PushNotificationEvent.h"
 #include "SWContextManager.h"
 #include "SWServer.h"
 #include "ServiceWorker.h"
@@ -86,12 +85,33 @@ ServiceWorkerGlobalScope::~ServiceWorkerGlobalScope()
 
 void ServiceWorkerGlobalScope::dispatchPushEvent(PushEvent& pushEvent)
 {
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    ASSERT(!m_pushNotificationEvent && !m_pushEvent);
+#else
     ASSERT(!m_pushEvent);
+#endif
+
     m_pushEvent = &pushEvent;
     m_lastPushEventTime = MonotonicTime::now();
     dispatchEvent(pushEvent);
     m_pushEvent = nullptr;
 }
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+void ServiceWorkerGlobalScope::dispatchPushNotificationEvent(PushNotificationEvent& event)
+{
+    ASSERT(!m_pushNotificationEvent && !m_pushEvent);
+    m_pushNotificationEvent = &event;
+    m_lastPushEventTime = MonotonicTime::now();
+    dispatchEvent(event);
+}
+
+void ServiceWorkerGlobalScope::clearPushNotificationEvent()
+{
+    ASSERT(m_pushNotificationEvent);
+    m_pushNotificationEvent = nullptr;
+}
+#endif
 
 void ServiceWorkerGlobalScope::notifyServiceWorkerPageOfCreationIfNecessary()
 {
@@ -244,6 +264,11 @@ void ServiceWorkerGlobalScope::addConsoleMessage(MessageSource source, MessageLe
     WorkerGlobalScope::addConsoleMessage(source, level, message, requestIdentifier);
 }
 
-} // namespace WebCore
+CookieStore& ServiceWorkerGlobalScope::cookieStore()
+{
+    if (!m_cookieStore)
+        m_cookieStore = CookieStore::create(this);
+    return *m_cookieStore;
+}
 
-#endif // ENABLE(SERVICE_WORKER)
+} // namespace WebCore

@@ -121,6 +121,8 @@ static inline bool checkFrameAncestors(ContentSecurityPolicySourceListDirective*
         return true;
     bool didReceiveRedirectResponse = false;
     for (auto& origin : ancestorOrigins) {
+        if (!origin)
+            continue;
         URL originURL = urlFromOrigin(*origin);
         if (!originURL.isValid() || !directive->allows(originURL, didReceiveRedirectResponse, ContentSecurityPolicySourceListDirective::ShouldAllowEmptyURLIfSourceListIsNotNone::No))
             return false;
@@ -170,7 +172,7 @@ ContentSecurityPolicySourceListDirective* ContentSecurityPolicyDirectiveList::op
     }
 
     if (m_childSrc.get()) {
-        m_childSrc.get()->setNameForReporting(nameForReporting);
+        m_childSrc->setNameForReporting(nameForReporting);
         return m_childSrc.get();
     }
 
@@ -185,7 +187,7 @@ ContentSecurityPolicySourceListDirective* ContentSecurityPolicyDirectiveList::op
     }
 
     if (m_defaultSrc.get())
-        m_defaultSrc.get()->setNameForReporting(nameForReporting);
+        m_defaultSrc->setNameForReporting(nameForReporting);
 
     return m_defaultSrc.get();
 }
@@ -441,6 +443,14 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
     return operativeDirective;
 }
 
+const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForTrustedTypesPolicy(const String& value, bool isDuplicate, AllowTrustedTypePolicy& details) const
+{
+    auto* directive = m_trustedTypes.get();
+    if (!directive || directive->allows(value, isDuplicate, details))
+        return nullptr;
+    return directive;
+}
+
 // policy            = directive-list
 // directive-list    = [ directive *( ";" [ directive ] ) ]
 //
@@ -583,6 +593,32 @@ void ContentSecurityPolicyDirectiveList::parseReportTo(ParsedDirective&& directi
     });
 }
 
+void ContentSecurityPolicyDirectiveList::parseRequireTrustedTypesFor(ParsedDirective&& directive)
+{
+    if (m_requireTrustedTypesForScript) {
+        m_policy.reportDuplicateDirective(directive.name);
+        return;
+    }
+
+    readCharactersForParsing(directive.value, [&](auto buffer) {
+        while (buffer.hasCharactersRemaining()) {
+            skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
+            if (buffer.atEnd()) {
+                policy().reportEmptyRequireTrustedTypesForDirective();
+                continue;
+            }
+
+            auto begin = buffer.position();
+            if (skipExactlyIgnoringASCIICase(buffer, "'script'"_s))
+                m_requireTrustedTypesForScript = true;
+            else
+                policy().reportInvalidTrustedTypesSinkGroup(String(begin, buffer.position() - begin));
+
+            ASSERT(buffer.atEnd() || isUnicodeCompatibleASCIIWhitespace(*buffer));
+        }
+    });
+}
+
 template<class CSPDirectiveType>
 void ContentSecurityPolicyDirectiveList::setCSPDirective(ParsedDirective&& directive, std::unique_ptr<CSPDirectiveType>& existingDirective)
 {
@@ -705,6 +741,10 @@ void ContentSecurityPolicyDirectiveList::addDirective(ParsedDirective&& directiv
         setUpgradeInsecureRequests(WTFMove(directive));
     else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::blockAllMixedContent))
         setBlockAllMixedContentEnabled(WTFMove(directive));
+    else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::trustedTypes))
+        setCSPDirective<ContentSecurityPolicyTrustedTypesDirective>(WTFMove(directive), m_trustedTypes);
+    else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::requireTrustedTypesFor))
+        parseRequireTrustedTypesFor(WTFMove(directive));
     else
         m_policy.reportUnsupportedDirective(WTFMove(directive.name));
 }
@@ -722,6 +762,8 @@ bool ContentSecurityPolicyDirectiveList::shouldReportSample(const String& violat
         directive = m_styleSrc.get();
     else if (violatedDirective.startsWith(StringView { ContentSecurityPolicyDirectiveNames::scriptSrc }))
         directive = m_scriptSrc.get();
+    else if (violatedDirective.startsWith(StringView { ContentSecurityPolicyDirectiveNames::trustedTypes }))
+        return true;
 
     return directive && directive->shouldReportSample();
 }

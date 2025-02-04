@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,9 @@ import javafx.scene.text.Font;
  * A ParsedValue is meaningful to the code that calculates actual values from
  * parsed CSS values. Elsewhere the value returned by
  * {@link #getValue()} is likely to be obscure, abstruse and perplexing.
+ *
+ * @param <V> the type of the parsed value
+ * @param <T> the type of the converted value
  * @since JavaFX 8.0
  */
 public class ParsedValue<V, T> {

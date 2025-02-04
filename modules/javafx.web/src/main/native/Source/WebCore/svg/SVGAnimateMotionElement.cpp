@@ -26,9 +26,9 @@
 #include "AffineTransform.h"
 #include "CommonAtomStrings.h"
 #include "ElementChildIteratorInlines.h"
+#include "LegacyRenderSVGResource.h"
 #include "PathTraversalState.h"
 #include "RenderLayerModelObject.h"
-#include "RenderSVGResource.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
 #include "SVGMPathElement.h"
@@ -128,7 +128,7 @@ void SVGAnimateMotionElement::updateAnimationPath()
     for (auto& mPath : childrenOfType<SVGMPathElement>(*this)) {
         auto pathElement = mPath.pathElement();
         if (pathElement) {
-            m_animationPath = pathFromGraphicsElement(pathElement.get());
+            m_animationPath = pathFromGraphicsElement(*pathElement);
             foundMPath = true;
             break;
         }
@@ -302,6 +302,25 @@ void SVGAnimateMotionElement::updateAnimationMode()
         setAnimationMode(AnimationMode::Path);
     else
         SVGAnimationElement::updateAnimationMode();
+}
+
+void SVGAnimateMotionElement::childrenChanged(const ChildChange& change)
+{
+    SVGElement::childrenChanged(change);
+    switch (change.type) {
+    case ChildChange::Type::ElementRemoved:
+    case ChildChange::Type::AllChildrenRemoved:
+    case ChildChange::Type::AllChildrenReplaced:
+        updateAnimationPath();
+        break;
+    case ChildChange::Type::ElementInserted:
+    case ChildChange::Type::TextInserted:
+    case ChildChange::Type::TextRemoved:
+    case ChildChange::Type::TextChanged:
+    case ChildChange::Type::NonContentsChildInserted:
+    case ChildChange::Type::NonContentsChildRemoved:
+        break;
+    }
 }
 
 }

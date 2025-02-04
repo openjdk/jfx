@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,8 +42,21 @@ import javafx.beans.value.WritableValue;
  * or {@link javafx.scene.Parent#getStylesheets()}</li>
  * <li>a style from {@link javafx.scene.Node#setStyle(java.lang.String)}</li>
  * </ol>
- * <p>The {@link javafx.css.StyleablePropertyFactory StyleablePropertyFactory}
- * greatly simplifies creating a StyleableProperty and its corresponding CssMetaData.</p>
+ * In addition to being styleable via CSS, a {@code StyleableProperty} implementation can opt to
+ * support implicit CSS transitions by extending one of the following classes:
+ * <ul>
+ *     <li>{@link StyleableBooleanProperty}
+ *     <li>{@link StyleableDoubleProperty}
+ *     <li>{@link StyleableFloatProperty}
+ *     <li>{@link StyleableIntegerProperty}
+ *     <li>{@link StyleableLongProperty}
+ *     <li>{@link StyleableObjectProperty}
+ * </ul>
+ *
+ * <p>{@link StyleablePropertyFactory} greatly simplifies creating a {@code StyleableProperty} and
+ * its corresponding {@link CssMetaData}. All properties created using {@code StyleablePropertyFactory}
+ * support implicit CSS transitions.
+ *
  * @param <T> the specific property
  * @since JavaFX 8.0
  * @see javafx.css.StyleablePropertyFactory

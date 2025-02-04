@@ -28,6 +28,7 @@
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Element.h"
 #include "Event.h"
 #include "EventLoop.h"
@@ -138,7 +139,7 @@ void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
         setNeedsSiteSpecificQuirks(true);
 
     if (m_wrapped && ((m_wrapped->frame() && m_wrapped->frame()->settings().showModalDialogEnabled()) || (m_wrapped->document() && m_wrapped->document()->quirks().shouldExposeShowModalDialog())))
-    putDirectCustomAccessor(vm, builtinNames(vm).showModalDialogPublicName(), CustomGetterSetter::create(vm, showModalDialogGetter, nullptr), static_cast<unsigned>(PropertyAttribute::CustomValue));
+        putDirectCustomAccessor(vm, builtinNames(vm).showModalDialogPublicName(), CustomGetterSetter::create(vm, showModalDialogGetter, nullptr), enumToUnderlyingType(PropertyAttribute::CustomValue));
 }
 
 void JSDOMWindowBase::destroy(JSCell* cell)
@@ -271,12 +272,12 @@ JSC::ScriptExecutionStatus JSDOMWindowBase::scriptExecutionStatus(JSC::JSGlobalO
 void JSDOMWindowBase::reportViolationForUnsafeEval(JSGlobalObject* object, JSString* source)
 {
     const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
-    ContentSecurityPolicy* contentSecurityPolicy = nullptr;
+    CheckedPtr<ContentSecurityPolicy> contentSecurityPolicy;
     if (auto* element = thisObject->wrapped().frameElement())
         contentSecurityPolicy = element->document().contentSecurityPolicy();
 
     if (!contentSecurityPolicy) {
-        if (auto *document = thisObject->wrapped().document())
+        if (auto* document = thisObject->wrapped().document())
             contentSecurityPolicy = document->contentSecurityPolicy();
     }
 

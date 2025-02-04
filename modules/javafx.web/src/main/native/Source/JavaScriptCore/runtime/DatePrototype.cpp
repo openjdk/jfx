@@ -28,6 +28,7 @@
 #include "DateInstance.h"
 #include "Error.h"
 #include "IntegrityInlines.h"
+#include "IntlDateTimeFormat.h"
 #include "JSCBuiltins.h"
 #include "JSCInlines.h"
 #include "JSDateMath.h"
@@ -47,6 +48,7 @@ static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncGetMilliSeconds);
 static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncGetMinutes);
 static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncGetMonth);
 static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncGetSeconds);
+static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncGetTime);
 static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncGetTimezoneOffset);
 static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncGetUTCDate);
 static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncGetUTCDay);
@@ -81,6 +83,9 @@ static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncToUTCString);
 static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncToISOString);
 static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncToJSON);
 static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncToTemporalInstant);
+static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncToLocaleString);
+static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncToLocaleDateString);
+static JSC_DECLARE_HOST_FUNCTION(dateProtoFuncToLocaleTimeString);
 
 }
 
@@ -218,9 +223,9 @@ const ClassInfo DatePrototype::s_info = { "Object"_s, &Base::s_info, &dateProtot
   toISOString           dateProtoFuncToISOString             DontEnum|Function       0
   toDateString          dateProtoFuncToDateString            DontEnum|Function       0
   toTimeString          dateProtoFuncToTimeString            DontEnum|Function       0
-  toLocaleString        JSBuiltin                            DontEnum|Function       0
-  toLocaleDateString    JSBuiltin                            DontEnum|Function       0
-  toLocaleTimeString    JSBuiltin                            DontEnum|Function       0
+  toLocaleString        dateProtoFuncToLocaleString          DontEnum|Function       0
+  toLocaleDateString    dateProtoFuncToLocaleDateString      DontEnum|Function       0
+  toLocaleTimeString    dateProtoFuncToLocaleTimeString      DontEnum|Function       0
   valueOf               dateProtoFuncGetTime                 DontEnum|Function       0  DatePrototypeGetTimeIntrinsic
   getTime               dateProtoFuncGetTime                 DontEnum|Function       0  DatePrototypeGetTimeIntrinsic
   getFullYear           dateProtoFuncGetFullYear             DontEnum|Function       0  DatePrototypeGetFullYearIntrinsic
@@ -328,9 +333,11 @@ JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToISOString, (JSGlobalObject* globalObject
         ms += msPerSecond;
 
     int charactersWritten;
-    if (gregorianDateTime->year() > 9999 || gregorianDateTime->year() < 0)
+    if (gregorianDateTime->year() > 9999 || gregorianDateTime->year() < 0) {
+        IGNORE_CLANG_WARNINGS_BEGIN("format-truncation"); // for Clang 18
         charactersWritten = snprintf(buffer, sizeof(buffer), "%+07d-%02d-%02dT%02d:%02d:%02d.%03dZ", gregorianDateTime->year(), gregorianDateTime->month() + 1, gregorianDateTime->monthDay(), gregorianDateTime->hour(), gregorianDateTime->minute(), gregorianDateTime->second(), ms);
-    else
+        IGNORE_CLANG_WARNINGS_END;
+    } else
         charactersWritten = snprintf(buffer, sizeof(buffer), "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", gregorianDateTime->year(), gregorianDateTime->month() + 1, gregorianDateTime->monthDay(), gregorianDateTime->hour(), gregorianDateTime->minute(), gregorianDateTime->second(), ms);
 
     ASSERT(charactersWritten > 0 && static_cast<unsigned>(charactersWritten) < sizeof(buffer));
@@ -934,6 +941,64 @@ JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToTemporalInstant, (JSGlobalObject* global
     ASSERT(epochMilliseconds >= std::numeric_limits<int64_t>::min() && epochMilliseconds <= static_cast<double>(std::numeric_limits<int64_t>::max()));
     ISO8601::ExactTime exactTime = ISO8601::ExactTime::fromEpochMilliseconds(epochMilliseconds);
     return JSValue::encode(TemporalInstant::create(vm, globalObject->instantStructure(), exactTime));
+}
+
+// https://tc39.es/ecma402/#sup-date.prototype.tolocalestring
+JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToLocaleString, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSValue thisValue = callFrame->thisValue();
+    auto* thisDateObj = jsDynamicCast<DateInstance*>(thisValue);
+    if (UNLIKELY(!thisDateObj))
+        return throwVMTypeError(globalObject, scope);
+
+    double milli = thisDateObj->internalNumber();
+    if (std::isnan(milli))
+        return JSValue::encode(jsNontrivialString(vm, String("Invalid Date"_s)));
+
+    auto* dateTimeFormat = IntlDateTimeFormat::create(vm, globalObject->dateTimeFormatStructure());
+    dateTimeFormat->initializeDateTimeFormat(globalObject, callFrame->argument(0), callFrame->argument(1), IntlDateTimeFormat::RequiredComponent::Any, IntlDateTimeFormat::Defaults::All);
+    RETURN_IF_EXCEPTION(scope, { });
+    RELEASE_AND_RETURN(scope, JSValue::encode(dateTimeFormat->format(globalObject, milli)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToLocaleDateString, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSValue thisValue = callFrame->thisValue();
+    auto* thisDateObj = jsDynamicCast<DateInstance*>(thisValue);
+    if (UNLIKELY(!thisDateObj))
+        return throwVMTypeError(globalObject, scope);
+
+    double milli = thisDateObj->internalNumber();
+    if (std::isnan(milli))
+        return JSValue::encode(jsNontrivialString(vm, String("Invalid Date"_s)));
+
+    auto* dateTimeFormat = IntlDateTimeFormat::create(vm, globalObject->dateTimeFormatStructure());
+    dateTimeFormat->initializeDateTimeFormat(globalObject, callFrame->argument(0), callFrame->argument(1), IntlDateTimeFormat::RequiredComponent::Date, IntlDateTimeFormat::Defaults::Date);
+    RETURN_IF_EXCEPTION(scope, { });
+    RELEASE_AND_RETURN(scope, JSValue::encode(dateTimeFormat->format(globalObject, milli)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToLocaleTimeString, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSValue thisValue = callFrame->thisValue();
+    auto* thisDateObj = jsDynamicCast<DateInstance*>(thisValue);
+    if (UNLIKELY(!thisDateObj))
+        return throwVMTypeError(globalObject, scope);
+
+    double milli = thisDateObj->internalNumber();
+    if (std::isnan(milli))
+        return JSValue::encode(jsNontrivialString(vm, String("Invalid Date"_s)));
+
+    auto* dateTimeFormat = IntlDateTimeFormat::create(vm, globalObject->dateTimeFormatStructure());
+    dateTimeFormat->initializeDateTimeFormat(globalObject, callFrame->argument(0), callFrame->argument(1), IntlDateTimeFormat::RequiredComponent::Time, IntlDateTimeFormat::Defaults::Time);
+    RETURN_IF_EXCEPTION(scope, { });
+    RELEASE_AND_RETURN(scope, JSValue::encode(dateTimeFormat->format(globalObject, milli)));
 }
 
 } // namespace JSC

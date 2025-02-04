@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,39 +24,28 @@
  */
 package test.javafx.scene.shape;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-import test.com.sun.javafx.test.PropertiesTestBase;
+import java.util.stream.Stream;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.Shape3D;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.params.provider.Arguments;
+import test.com.sun.javafx.test.PropertiesTestBase;
+
 public final class Shape3D_properties_Test extends PropertiesTestBase {
 
-    @Parameters
-    public static Collection data() {
-        ArrayList array = new ArrayList();
-
+    public static Stream<Arguments> data() {
         // simple property tests
         Shape3D testShape = createTestBox();
         PhongMaterial DEFAULT_MATERIAL = new PhongMaterial();
 
-        array.add(config(testShape, "cullFace", CullFace.BACK, CullFace.FRONT));
-        array.add(config(testShape, "drawMode", DrawMode.FILL, DrawMode.LINE));
-        array.add(config(testShape, "material", DEFAULT_MATERIAL, null));
-
-        return array;
-    }
-
-    public Shape3D_properties_Test(final Configuration configuration) {
-        super(configuration);
+        return Stream.of(
+            config(testShape, "cullFace", CullFace.BACK, CullFace.FRONT),
+            config(testShape, "drawMode", DrawMode.FILL, DrawMode.LINE),
+            config(testShape, "material", DEFAULT_MATERIAL, null)
+        );
     }
 
     private static Box createTestBox() {

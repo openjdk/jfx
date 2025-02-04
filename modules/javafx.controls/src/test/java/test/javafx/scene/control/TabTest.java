@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,12 @@
 
 package test.javafx.scene.control;
 
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -43,25 +45,25 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabShim;
 import javafx.scene.control.Tooltip;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.layout.VBox;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Test;
+import javafx.scene.shape.Rectangle;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  *
  * @author srikalyc
  */
 public class TabTest {
-    private TabShim tab;//Empty string
-    private TabShim tabWithStr;//
+    private TabShim tab;
+    private TabShim tabWithStr;
     private TabPane dummyTabPane;
     EventHandler eh;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
 
         tab = new TabShim();
@@ -152,85 +154,85 @@ public class TabTest {
     @Test public void checkIdPropertyBind() {
         StringProperty objPr = new SimpleStringProperty("one");
         tab.idProperty().bind(objPr);
-        assertEquals("idProperty cannot be bound", tab.idProperty().getValue(), "one");
+        assertEquals(tab.idProperty().getValue(), "one", "idProperty cannot be bound");
         objPr.setValue("another");
-        assertEquals("idProperty cannot be bound", tab.idProperty().getValue(), "another");
+        assertEquals(tab.idProperty().getValue(), "another", "idProperty cannot be bound");
     }
 
     @Test public void checkStylePropertyBind() {
         StringProperty objPr = new SimpleStringProperty("one");
         tab.styleProperty().bind(objPr);
-        assertEquals("styleProperty cannot be bound", tab.styleProperty().getValue(), "one");
+        assertEquals(tab.styleProperty().getValue(), "one", "styleProperty cannot be bound");
         objPr.setValue("another");
-        assertEquals("styleProperty cannot be bound", tab.styleProperty().getValue(), "another");
+        assertEquals(tab.styleProperty().getValue(), "another", "styleProperty cannot be bound");
     }
 
     @Test public void checkTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         tab.textProperty().bind(strPr);
-        assertEquals("Text cannot be bound", tab.textProperty().getValue(), "value");
+        assertEquals(tab.textProperty().getValue(), "value", "Text cannot be bound");
         strPr.setValue("newvalue");
-        assertEquals("Text cannot be bound", tab.textProperty().getValue(), "newvalue");
+        assertEquals(tab.textProperty().getValue(), "newvalue", "Text cannot be bound");
     }
 
     @Test public void checkGraphicPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Node>(null);
         Rectangle rect = new Rectangle(10, 20);
         tab.graphicProperty().bind(objPr);
-        assertNull("Graphic cannot be bound", tab.graphicProperty().getValue());
+        assertNull(tab.graphicProperty().getValue(), "Graphic cannot be bound");
         objPr.setValue(rect);
-        assertSame("Graphic cannot be bound", tab.graphicProperty().getValue(), rect);
+        assertSame(tab.graphicProperty().getValue(), rect, "Graphic cannot be bound");
     }
 
     @Test public void checkContentPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Node>(null);
         Rectangle rect = new Rectangle(10, 20);
         tab.contentProperty().bind(objPr);
-        assertNull("content cannot be bound", tab.contentProperty().getValue());
+        assertNull(tab.contentProperty().getValue(), "content cannot be bound");
         objPr.setValue(rect);
-        assertSame("content cannot be bound", tab.contentProperty().getValue(), rect);
+        assertSame(tab.contentProperty().getValue(), rect, "content cannot be bound");
     }
 
     @Test public void checkContextMenuPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<ContextMenu>(null);
         ContextMenu mnu = new ContextMenu();
         tab.contextMenuProperty().bind(objPr);
-        assertNull("contextMenu cannot be bound", tab.contextMenuProperty().getValue());
+        assertNull(tab.contextMenuProperty().getValue(), "contextMenu cannot be bound");
         objPr.setValue(mnu);
-        assertSame("contextMenu cannot be bound", tab.contextMenuProperty().getValue(), mnu);
+        assertSame(tab.contextMenuProperty().getValue(), mnu, "contextMenu cannot be bound");
     }
 
     @Test public void checkClosablePropertyBind() {
         BooleanProperty pr = new SimpleBooleanProperty(true);
         tab.closableProperty().bind(pr);
-        assertTrue("closable cannot be bound", tab.closableProperty().getValue());
+        assertTrue(tab.closableProperty().getValue(), "closable cannot be bound");
         pr.setValue(false);
-        assertFalse("closable cannot be bound", tab.closableProperty().getValue());
+        assertFalse(tab.closableProperty().getValue(), "closable cannot be bound");
     }
 
     @Test public void checkOnSelectionChangedPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<EventHandler<Event>>(null);
         tab.onSelectionChangedProperty().bind(objPr);
-        assertNull("onSelectionChanged cannot be bound", tab.onSelectionChangedProperty().getValue());
+        assertNull(tab.onSelectionChangedProperty().getValue(), "onSelectionChanged cannot be bound");
         objPr.setValue(eh);
-        assertSame("onSelectionChanged cannot be bound", tab.onSelectionChangedProperty().getValue(), eh);
+        assertSame(tab.onSelectionChangedProperty().getValue(), eh, "onSelectionChanged cannot be bound");
     }
 
     @Test public void checkOnClosedPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<EventHandler<Event>>(null);
         tab.onClosedProperty().bind(objPr);
-        assertNull("onSelectionChanged cannot be bound", tab.onClosedProperty().getValue());
+        assertNull(tab.onClosedProperty().getValue(), "onSelectionChanged cannot be bound");
         objPr.setValue(eh);
-        assertSame("onSelectionChanged cannot be bound", tab.onClosedProperty().getValue(), eh);
+        assertSame(tab.onClosedProperty().getValue(), eh, "onSelectionChanged cannot be bound");
     }
 
     @Test public void checkTooltipPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Tooltip>(null);
         tab.tooltipProperty().bind(objPr);
-        assertNull("tooltip cannot be bound", tab.tooltipProperty().getValue());
+        assertNull(tab.tooltipProperty().getValue(), "tooltip cannot be bound");
         Tooltip tt = new Tooltip();
         objPr.setValue(tt);
-        assertSame("tooltip cannot be bound", tab.tooltipProperty().getValue(), tt);
+        assertSame(tab.tooltipProperty().getValue(), tt, "tooltip cannot be bound");
     }
 
     @Test public void textPropertyHasBeanReference() {

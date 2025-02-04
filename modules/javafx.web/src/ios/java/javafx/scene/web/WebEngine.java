@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,9 +49,6 @@ import org.xml.sax.InputSource;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import java.io.StringReader;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javafx.beans.property.*;
 import javafx.geometry.Rectangle2D;
 
@@ -517,7 +514,6 @@ final public class WebEngine {
      * Creates a new engine and loads a Web page into it.
      */
     public WebEngine(String url) {
-        accessControlContext = AccessController.getContext();
         js2javaBridge = new JS2JavaBridge(this);
         load(url);
     }
@@ -659,7 +655,7 @@ final public class WebEngine {
      */
     private static final class PulseTimer {
 
-        // Used just to guarantee constant pulse activity. See RT-14433.
+        // Used just to guarantee constant pulse activity. See JDK-8114603.
         private static final AnimationTimer animation =
             new AnimationTimer() {
                 @Override public void handle(long l) {}
@@ -834,9 +830,9 @@ final public class WebEngine {
         }
     }
 
-    ///////////////////////////////////////////////
+    //---------------------------------------------
     // JavaScript to Java bridge
-    ///////////////////////////////////////////////
+    //---------------------------------------------
 
     private JS2JavaBridge js2javaBridge = null;
 
@@ -947,20 +943,8 @@ final public class WebEngine {
         }
     }
 
-    final private AccessControlContext accessControlContext;
-
-    AccessControlContext getAccessControlContext() {
-        return accessControlContext;
-    }
-
     private void dispatchWebEvent(final EventHandler handler, final WebEvent ev) {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                handler.handle(ev);
-                return null;
-            }
-        }, getAccessControlContext());
+        handler.handle(ev);
     }
 
     private class DebuggerImpl implements Debugger {

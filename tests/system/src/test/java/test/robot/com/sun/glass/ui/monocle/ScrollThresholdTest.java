@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import test.robot.com.sun.glass.ui.monocle.ScrollTestBase;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 /**
  * Scroll tests that are checking scroll threshold
@@ -39,31 +38,31 @@ public class ScrollThresholdTest extends ScrollTestBase {
 
     private int delta;
 
-    public ScrollThresholdTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @BeforeClass
+    @BeforeAll
     public static void beforeInit() {
         int threshold =
                 Integer.getInteger("com.sun.javafx.gestures.scroll.threshold", 10);
-        Assume.assumeTrue(threshold > 1);
+        Assumptions.assumeTrue(threshold > 1);
         System.setProperty("monocle.input.touchRadius",
                 Integer.toString(threshold - 2));
     }
 
-    @Before
-    public void init() {
-        super.init();
-        Assume.assumeTrue(device.getTapRadius() < getScrollThreshold());
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    @Override
+    public void init(TestTouchDevice device) throws Exception {
+        super.init(device);
+        Assumptions.assumeTrue(device.getTapRadius() < getScrollThreshold());
         delta = getScrollThreshold() - 1;
     }
 
     /**
      * Tap one finger, drag it less then threshold, scroll shouldn't happen
      */
-    @Test
-    public void testMoveUpCheckThreshold() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMoveUpCheckThreshold(TestTouchDevice device) throws Exception {
+        init(device);
         pressFirstFinger();
         moveOneFinger(0, -delta , 1, true);
         releaseFirstFinger();
@@ -74,8 +73,10 @@ public class ScrollThresholdTest extends ScrollTestBase {
      * Tap one finger, drag it less then threshold - scroll shouldn't happen,
      * drag it again (pass the threshold) - verify scrolling
      */
-    @Test
-    public void testMoveDownCheckThreshold() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMoveDownCheckThreshold(TestTouchDevice device) throws Exception {
+        init(device);
         pressFirstFinger();
         moveOneFinger(0, delta , 3, true);
         releaseFirstFinger();

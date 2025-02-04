@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,6 @@
 
 package test.javafx.scene.text;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeTrue;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.layout.HBox;
@@ -39,11 +34,17 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 
 import com.sun.javafx.tk.Toolkit;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TextTest {
 
-    @Test public void testCtors() {
+    @Test
+    public void testCtors() {
         Text t1 = new Text();
         assertEquals("", t1.getText());
         Text t2 = new Text("test content");
@@ -54,7 +55,8 @@ public class TextTest {
         assertEquals("2", t3.getText());
     }
 
-    @Test public void testSettingNullText() {
+    @Test
+    public void testSettingNullText() {
         Text t = new Text();
         t.setText(null);
         assertEquals("", t.getText());
@@ -69,13 +71,15 @@ public class TextTest {
         assertEquals("", t.getText());
     }
 
-    @Test public void testDefaultTextNotNull() {
+    @Test
+    public void testDefaultTextNotNull() {
         Text t = new Text();
         assertEquals("", t.getText());
         assertEquals("", t.textProperty().get());
     }
 
-    @Test public void testStoreFont() {
+    @Test
+    public void testStoreFont() {
         Text t = new Text();
         Font f = new Font(44);
         assertEquals(Font.getDefault(), t.getFont());
@@ -87,13 +91,15 @@ public class TextTest {
  // also not a given that the Font.getDefault() matches the default font
  // on a Text node anyway, as CSS defaults are applied to the Text node.
 /*
-    @Test public void testPropertyPropagation_font() throws Exception {
+    @Test
+    public void testPropertyPropagation_font() throws Exception {
         final Text node = new Text();
         NodeTest.testObjectPropertyPropagation(node, "font", Font.getDefault(), new Font(44));
     }
 */
 
-//     @Test public void testPropertyPropagation_textOrigin() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_textOrigin() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testObjectPropertyPropagation(node, "textOrigin", "textOrigin",
 //                 VPos.BASELINE, VPos.TOP, new NodeTest.ObjectValueConvertor() {
@@ -104,7 +110,8 @@ public class TextTest {
 //                 });
 //     }
 
-//     @Test public void testPropertyPropagation_boundsType() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_boundsType() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testObjectPropertyPropagation(node, "boundsType", "textBoundsType",
 //                 TextBoundsType.LOGICAL, TextBoundsType.VISUAL, new NodeTest.ObjectValueConvertor() {
@@ -115,7 +122,8 @@ public class TextTest {
 //                 });
 //     }
 
-//     @Test public void testPropertyPropagation_textAlignment() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_textAlignment() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testObjectPropertyPropagation(node, "textAlignment", "textAlignment",
 //                 TextAlignment.LEFT, TextAlignment.CENTER, new NodeTest.ObjectValueConvertor() {
@@ -126,54 +134,64 @@ public class TextTest {
 //                 });
 //     }
 
-//     @Test public void testPropertyPropagation_visible() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_visible() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testBooleanPropertyPropagation(node, "visible", false, true);
 //     }
 
-//     @Test public void testPropertyPropagation_text() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_text() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testObjectPropertyPropagation(node, "text", "text", "Hello", "World");
 //     }
 
-//     @Test public void testPropertyPropagation_strikethrough() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_strikethrough() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testBooleanPropertyPropagation(node, "strikethrough", false, true);
 //     }
 
-//     @Test public void testPropertyPropagation_underline() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_underline() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testBooleanPropertyPropagation(node, "underline", false, true);
 //     }
 
-//     @Test public void testPropertyPropagation_x() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_x() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testDoublePropertyPropagation(node, "x", 100, 200);
 //     }
 
-//     @Test public void testPropertyPropagation_y() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_y() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testDoublePropertyPropagation(node, "y", 100, 200);
 //     }
 
-//     @Test public void testPropertyPropagation_wrappingWidth() throws Exception {
+//     @Test
+//     public void testPropertyPropagation_wrappingWidth() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testDoublePropertyPropagation(node, "wrappingWidth", 100, 200);
 //     }
 
-//     @Test public void testBoundPropertySync_X() throws Exception {
+//     @Test
+//     public void testBoundPropertySync_X() throws Exception {
 //         NodeTest.assertDoublePropertySynced(
 //                 new Text(1.0, 2.0, "The Text"),
 //                 "x", "x", 10.0);
 //     }
 
-//     @Test public void testBoundPropertySync_Y() throws Exception {
+//     @Test
+//     public void testBoundPropertySync_Y() throws Exception {
 //         NodeTest.assertDoublePropertySynced(
 //                 new Text(1.0, 2.0, "The Text"),
 //                 "y", "y", 20.0);
 //     }
 
-//     @Test public void testBoundPropertySync_Text() throws Exception {
+//     @Test
+//     public void testBoundPropertySync_Text() throws Exception {
 //         NodeTest.assertStringPropertySynced(
 //                 new Text(1.0, 2.0, "The Text"),
 //                 "text", "text", "The Changed Text");
@@ -185,7 +203,8 @@ public class TextTest {
 //     // and it sets null on the PGText node. StubFontLoader needs to be
 //     // replaced with the real font loader.
 // /*
-//     @Test public void testBoundPropertySync_Font() throws Exception {
+//     @Test
+//     public void testBoundPropertySync_Font() throws Exception {
 //         List<String> fontNames = Font.getFontNames();
 //         String fontName = fontNames.get(fontNames.size() - 1);
 //         NodeTest.assertObjectPropertySynced(
@@ -194,46 +213,53 @@ public class TextTest {
 //     }
 // */
 
-//     @Test public void testBoundPropertySync_BoundsType() throws Exception {
+//     @Test
+//     public void testBoundPropertySync_BoundsType() throws Exception {
 //         NodeTest.assertObjectPropertySynced(
 //                 new Text(1.0, 2.0, "The Text"),
 //                 "boundsType", "textBoundsType", TextBoundsType.VISUAL);
 //     }
 
 
-//     @Test public void testBoundPropertySync_WrappingWidth() throws Exception {
+//     @Test
+//     public void testBoundPropertySync_WrappingWidth() throws Exception {
 //         NodeTest.assertDoublePropertySynced(
 //                 new Text(1.0, 2.0, "The Text"),
 //                 "wrappingWidth", "wrappingWidth", 50);
 //     }
 
 
-//     @Test public void testBoundPropertySync_Underline() throws Exception {
+//     @Test
+//     public void testBoundPropertySync_Underline() throws Exception {
 //         NodeTest.assertBooleanPropertySynced(
 //                 new Text(1.0, 2.0, "The Text"),
 //                 "underline", "underline", true);
 //     }
 
-//     @Test public void testBoundPropertySync_Strikethrough() throws Exception {
+//     @Test
+//     public void testBoundPropertySync_Strikethrough() throws Exception {
 //         NodeTest.assertBooleanPropertySynced(
 //                 new Text(1.0, 2.0, "The Text"),
 //                 "strikethrough", "strikethrough", true);
 //     }
 
-//     @Test public void testBoundPropertySync_TextAlignment() throws Exception {
+//     @Test
+//     public void testBoundPropertySync_TextAlignment() throws Exception {
 //         NodeTest.assertObjectPropertySynced(
 //                 new Text(1.0, 2.0, "The Text"),
 //                 "textAlignment", "textAlignment", TextAlignment.RIGHT);
 //     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new Text().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
     }
 
     // Test for JDK-8130738
-    @Test public void testTabSize() {
+    @Test
+    public void testTabSize() {
         // Test is unstable until JDK-8236728 is fixed
         assumeTrue(Boolean.getBoolean("unstable.test"));
 

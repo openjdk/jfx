@@ -185,7 +185,7 @@ static inline void notifyObserverWillExitObject(Observer* observer, RenderObject
 static inline bool isIteratorTarget(RenderObject* object)
 {
     ASSERT(object); // The iterator will of course return 0, but its not an expected argument to this function.
-    return object->isTextOrLineBreak() || object->isFloating() || object->isOutOfFlowPositioned() || object->isReplacedOrInlineBlock();
+    return object->isRenderTextOrLineBreak() || object->isFloating() || object->isOutOfFlowPositioned() || object->isReplacedOrInlineBlock();
 }
 
 template <class Observer>
@@ -217,8 +217,13 @@ static inline RenderObject* nextInlineRendererSkippingEmpty(RenderElement& root,
         if (!next)
             break;
 
-        if (isIteratorTarget(next) || (is<RenderInline>(*next) && isEmptyInline(downcast<RenderInline>(*next))))
+        if (isIteratorTarget(next))
             break;
+
+        auto* renderInline = dynamicDowncast<RenderInline>(*next);
+        if (renderInline && isEmptyInline(*renderInline))
+            break;
+
         current = next;
     }
 
@@ -238,9 +243,9 @@ static inline RenderObject* firstInlineRendererSkippingEmpty(RenderElement& root
     if (!renderer)
         return nullptr;
 
-    if (is<RenderInline>(*renderer)) {
+    if (auto* renderInline = dynamicDowncast<RenderInline>(*renderer)) {
         notifyObserverEnteredObject(resolver, renderer);
-        if (!isEmptyInline(downcast<RenderInline>(*renderer)))
+        if (!isEmptyInline(*renderInline))
             renderer = nextInlineRendererSkippingEmpty(root, renderer, resolver);
         else {
             // Never skip empty inlines.
@@ -275,7 +280,7 @@ inline void LegacyInlineIterator::incrementByCodePointInTextNode()
         ++m_pos;
         return;
     }
-    UChar32 character;
+    char32_t character;
     U16_NEXT(text.characters16(), m_pos, text.length(), character);
 }
 
@@ -297,9 +302,9 @@ inline void LegacyInlineIterator::increment(InlineBidiResolver* resolver)
 {
     if (!m_renderer)
         return;
-    if (is<RenderText>(*m_renderer)) {
+    if (auto* textRenderer = dynamicDowncast<RenderText>(*m_renderer)) {
         fastIncrementInTextNode();
-        if (m_pos < downcast<RenderText>(*m_renderer).text().length())
+        if (m_pos < textRenderer->text().length())
             return;
     }
     // next can return nullptr
@@ -326,10 +331,10 @@ inline bool LegacyInlineIterator::atEnd() const
 
 inline UChar LegacyInlineIterator::characterAt(unsigned index) const
 {
-    if (!is<RenderText>(m_renderer))
+    auto* textRenderer = dynamicDowncast<RenderText>(m_renderer);
+    if (!textRenderer)
         return 0;
-
-    return downcast<RenderText>(*m_renderer).characterAt(index);
+    return textRenderer->characterAt(index);
 }
 
 inline UChar LegacyInlineIterator::current() const
@@ -347,14 +352,14 @@ ALWAYS_INLINE UCharDirection LegacyInlineIterator::direction() const
     if (UNLIKELY(!m_renderer))
         return U_OTHER_NEUTRAL;
 
-    if (LIKELY(is<RenderText>(*m_renderer))) {
-        UChar codeUnit = downcast<RenderText>(*m_renderer).characterAt(m_pos);
+    if (auto* textRenderer = dynamicDowncast<RenderText>(*m_renderer); LIKELY(textRenderer)) {
+        UChar codeUnit = textRenderer->characterAt(m_pos);
         if (LIKELY(U16_IS_SINGLE(codeUnit)))
             return u_charDirection(codeUnit);
         return surrogateTextDirection(codeUnit);
     }
 
-    if (m_renderer->isListMarker())
+    if (m_renderer->isRenderListMarker())
         return m_renderer->style().isLeftToRightDirection() ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
 
     return U_OTHER_NEUTRAL;

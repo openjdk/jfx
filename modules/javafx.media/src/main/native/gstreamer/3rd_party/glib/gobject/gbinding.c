@@ -21,36 +21,33 @@
  */
 
 /**
- * SECTION:gbinding
- * @Title: GBinding
- * @Short_Description: Bind two object properties
+ * GBinding:
  *
- * #GBinding is the representation of a binding between a property on a
- * #GObject instance (or source) and another property on another #GObject
+ * `GObject` instance (or source) and another property on another `GObject`
  * instance (or target).
  *
  * Whenever the source property changes, the same value is applied to the
  * target property; for instance, the following binding:
  *
- * |[<!-- language="C" -->
+ * ```c
  *   g_object_bind_property (object1, "property-a",
  *                           object2, "property-b",
  *                           G_BINDING_DEFAULT);
- * ]|
+ * ```
  *
  * will cause the property named "property-b" of @object2 to be updated
- * every time g_object_set() or the specific accessor changes the value of
+ * every time [method@GObject.set] or the specific accessor changes the value of
  * the property "property-a" of @object1.
  *
  * It is possible to create a bidirectional binding between two properties
- * of two #GObject instances, so that if either property changes, the
+ * of two `GObject` instances, so that if either property changes, the
  * other is updated as well, for instance:
  *
- * |[<!-- language="C" -->
+ * ```c
  *   g_object_bind_property (object1, "property-a",
  *                           object2, "property-b",
  *                           G_BINDING_BIDIRECTIONAL);
- * ]|
+ * ```
  *
  * will keep the two properties in sync.
  *
@@ -59,14 +56,14 @@
  * transformation from the source value to the target value before
  * applying it; for instance, the following binding:
  *
- * |[<!-- language="C" -->
+ * ```c
  *   g_object_bind_property_full (adjustment1, "value",
  *                                adjustment2, "value",
  *                                G_BINDING_BIDIRECTIONAL,
  *                                celsius_to_fahrenheit,
  *                                fahrenheit_to_celsius,
  *                                NULL, NULL);
- * ]|
+ * ```
  *
  * will keep the "value" property of the two adjustments in sync; the
  * @celsius_to_fahrenheit function will be called whenever the "value"
@@ -80,29 +77,29 @@
  *
  * Note that #GBinding does not resolve cycles by itself; a cycle like
  *
- * |[
+ * ```
  *   object1:propertyA -> object2:propertyB
  *   object2:propertyB -> object3:propertyC
  *   object3:propertyC -> object1:propertyA
- * ]|
+ * ```
  *
  * might lead to an infinite loop. The loop, in this particular case,
- * can be avoided if the objects emit the #GObject::notify signal only
+ * can be avoided if the objects emit the `GObject::notify` signal only
  * if the value has effectively been changed. A binding is implemented
- * using the #GObject::notify signal, so it is susceptible to all the
- * various ways of blocking a signal emission, like g_signal_stop_emission()
- * or g_signal_handler_block().
+ * using the `GObject::notify` signal, so it is susceptible to all the
+ * various ways of blocking a signal emission, like [func@GObject.signal_stop_emission]
+ * or [func@GObject.signal_handler_block].
  *
  * A binding will be severed, and the resources it allocates freed, whenever
- * either one of the #GObject instances it refers to are finalized, or when
+ * either one of the `GObject` instances it refers to are finalized, or when
  * the #GBinding instance loses its last reference.
  *
  * Bindings for languages with garbage collection can use
- * g_binding_unbind() to explicitly release a binding between the source
+ * [method@GObject.Binding.unbind] to explicitly release a binding between the source
  * and target properties, instead of relying on the last reference on the
  * binding, source, and target instances to drop.
  *
- * #GBinding is available since GObject 2.26
+ * Since: 2.26
  */
 
 #include "config.h"
@@ -123,9 +120,9 @@
 GType
 g_binding_flags_get_type (void)
 {
-  static gsize static_g_define_type_id = 0;
+  static GType static_g_define_type_id = 0;
 
-  if (g_once_init_enter (&static_g_define_type_id))
+  if (g_once_init_enter_pointer (&static_g_define_type_id))
     {
       static const GFlagsValue values[] = {
         { G_BINDING_DEFAULT, "G_BINDING_DEFAULT", "default" },
@@ -136,7 +133,7 @@ g_binding_flags_get_type (void)
       };
       GType g_define_type_id =
         g_flags_register_static (g_intern_static_string ("GBindingFlags"), values);
-      g_once_init_leave (&static_g_define_type_id, g_define_type_id);
+      g_once_init_leave_pointer (&static_g_define_type_id, g_define_type_id);
     }
 
   return static_g_define_type_id;
@@ -889,9 +886,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_SOURCE,
-                                   g_param_spec_object ("source",
-                                                        P_("Source"),
-                                                        P_("The source of the binding"),
+                                   g_param_spec_object ("source", NULL, NULL,
                                                         G_TYPE_OBJECT,
                                                         G_PARAM_CONSTRUCT_ONLY |
                                                         G_PARAM_READWRITE |
@@ -904,9 +899,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_TARGET,
-                                   g_param_spec_object ("target",
-                                                        P_("Target"),
-                                                        P_("The target of the binding"),
+                                   g_param_spec_object ("target", NULL, NULL,
                                                         G_TYPE_OBJECT,
                                                         G_PARAM_CONSTRUCT_ONLY |
                                                         G_PARAM_READWRITE |
@@ -923,9 +916,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_SOURCE_PROPERTY,
-                                   g_param_spec_string ("source-property",
-                                                        P_("Source Property"),
-                                                        P_("The property on the source to bind"),
+                                   g_param_spec_string ("source-property", NULL, NULL,
                                                         NULL,
                                                         G_PARAM_CONSTRUCT_ONLY |
                                                         G_PARAM_READWRITE |
@@ -942,9 +933,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_TARGET_PROPERTY,
-                                   g_param_spec_string ("target-property",
-                                                        P_("Target Property"),
-                                                        P_("The property on the target to bind"),
+                                   g_param_spec_string ("target-property", NULL, NULL,
                                                         NULL,
                                                         G_PARAM_CONSTRUCT_ONLY |
                                                         G_PARAM_READWRITE |
@@ -957,9 +946,7 @@ g_binding_class_init (GBindingClass *klass)
    * Since: 2.26
    */
   g_object_class_install_property (gobject_class, PROP_FLAGS,
-                                   g_param_spec_flags ("flags",
-                                                       P_("Flags"),
-                                                       P_("The binding flags"),
+                                   g_param_spec_flags ("flags", NULL, NULL,
                                                        G_TYPE_BINDING_FLAGS,
                                                        G_BINDING_DEFAULT,
                                                        G_PARAM_CONSTRUCT_ONLY |

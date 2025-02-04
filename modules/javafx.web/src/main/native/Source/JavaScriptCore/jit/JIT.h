@@ -39,6 +39,7 @@
 #include "JSInterfaceJIT.h"
 #include "LLIntData.h"
 #include "PCToCodeOriginMap.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace JSC {
@@ -149,6 +150,8 @@ namespace JSC {
     };
 
     class JIT final : public JSInterfaceJIT {
+        WTF_MAKE_TZONE_ALLOCATED(JIT);
+
         friend class JITSlowPathCall;
         friend class JITStubCall;
         friend class JITThunks;
@@ -185,7 +188,6 @@ namespace JSC {
 
         static constexpr GPRReg s_metadataGPR = LLInt::Registers::metadataTableGPR;
         static constexpr GPRReg s_constantsGPR = LLInt::Registers::pbGPR;
-        static constexpr JITConstantPool::Constant s_globalObjectConstant { 0 };
 
     private:
         void privateCompileMainPass();
@@ -236,12 +238,15 @@ namespace JSC {
 
     public:
         void loadConstant(unsigned constantIndex, GPRReg);
+        void loadStructureStubInfo(StructureStubInfoIndex, GPRReg);
+        static void emitMaterializeMetadataAndConstantPoolRegisters(CCallHelpers&);
     private:
         void loadGlobalObject(GPRReg);
 
         // Assuming s_constantsGPR is available.
         static void loadGlobalObject(CCallHelpers&, GPRReg);
         static void loadConstant(CCallHelpers&, unsigned constantIndex, GPRReg);
+        static void loadStructureStubInfo(CCallHelpers&, StructureStubInfoIndex, GPRReg);
 
         void loadCodeBlockConstant(VirtualRegister, JSValueRegs);
         void loadCodeBlockConstantPayload(VirtualRegister, RegisterID);
@@ -249,15 +254,9 @@ namespace JSC {
         void loadCodeBlockConstantTag(VirtualRegister, RegisterID);
 #endif
 
-        void exceptionCheck(Jump jumpToHandler)
-        {
-            m_exceptionChecks.append(jumpToHandler);
-        }
-
-        void exceptionCheck()
-        {
-            m_exceptionChecks.append(emitExceptionCheck(vm()));
-        }
+        void exceptionCheck(Jump jumpToHandler);
+        void exceptionCheck();
+        void exceptionChecksWithCallFrameRollback(Jump jumpToHandler);
 
         void advanceToNextCheckpoint();
         void emitJumpSlowToHotForCheckpoint(Jump);
@@ -272,21 +271,10 @@ namespace JSC {
         void emitJumpSlowToHot(Jump, int);
 
         template<typename Op>
-        void compileOpCall(const JSInstruction*, unsigned callLinkInfoIndex);
-        template<typename Op>
-        void compileOpCallSlowCase(const JSInstruction*, Vector<SlowCaseEntry>::iterator&, unsigned callLinkInfoIndex);
+        void compileOpCall(const JSInstruction*);
 
         template<typename Op>
-        std::enable_if_t<
-            Op::opcodeID != op_call_varargs && Op::opcodeID != op_construct_varargs
-            && Op::opcodeID != op_tail_call_varargs && Op::opcodeID != op_tail_call_forward_arguments
-        , void> compileSetupFrame(const Op&);
-
-        template<typename Op>
-        std::enable_if_t<
-            Op::opcodeID == op_call_varargs || Op::opcodeID == op_construct_varargs
-            || Op::opcodeID == op_tail_call_varargs || Op::opcodeID == op_tail_call_forward_arguments
-        , void> compileSetupFrame(const Op&);
+        void compileSetupFrame(const Op&);
 
         template<typename Op>
         bool compileTailCall(const Op&, BaselineUnlinkedCallLinkInfo*, unsigned callLinkInfoIndex);
@@ -314,6 +302,7 @@ namespace JSC {
         void emitWriteBarrier(GPRReg owner);
 
         template<typename Bytecode> void emitValueProfilingSite(const Bytecode&, JSValueRegs);
+        template<typename Bytecode> void emitValueProfilingSite(const Bytecode&, BytecodeIndex, JSValueRegs);
 
         template<typename Op>
         static inline constexpr bool isProfiledOp = std::is_same_v<decltype(Op::Metadata::m_profile), ValueProfile>;
@@ -331,6 +320,8 @@ namespace JSC {
         void emitArrayProfilingSiteWithCell(const Bytecode&, RegisterID cellGPR, RegisterID scratchGPR);
         template <typename Bytecode>
         void emitArrayProfilingSiteWithCell(const Bytecode&, ptrdiff_t, RegisterID cellGPR, RegisterID scratchGPR);
+
+        void emitArrayProfilingSiteWithCellAndProfile(RegisterID cellGPR, RegisterID profileGPR, RegisterID scratchGPR);
 
         template<typename Op>
         ECMAMode ecmaMode(Op);
@@ -430,6 +421,7 @@ namespace JSC {
         void emit_op_instanceof(const JSInstruction*);
         void emit_op_is_empty(const JSInstruction*);
         void emit_op_typeof_is_undefined(const JSInstruction*);
+        void emit_op_typeof_is_function(const JSInstruction*);
         void emit_op_is_undefined_or_null(const JSInstruction*);
         void emit_op_is_boolean(const JSInstruction*);
         void emit_op_is_number(const JSInstruction*);
@@ -553,15 +545,7 @@ namespace JSC {
         void emitSlow_op_enumerator_put_by_val(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
 
         void emitSlow_op_add(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_call(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_call_ignore_result(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_tail_call(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_call_direct_eval(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_call_varargs(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_tail_call_varargs(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_tail_call_forward_arguments(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_construct_varargs(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_construct(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_eq(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_callee(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_try_get_by_id(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
@@ -625,7 +609,7 @@ namespace JSC {
         void emitSlow_op_iterator_next(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
 
         void emitHasPrivate(VirtualRegister dst, VirtualRegister base, VirtualRegister propertyOrBrand, AccessType);
-        void emitHasPrivateSlow(AccessType);
+        void emitHasPrivateSlow(AccessType, Vector<SlowCaseEntry>::iterator&);
 
         template<typename Op>
         void emitNewFuncCommon(const JSInstruction*);
@@ -659,25 +643,10 @@ namespace JSC {
         template <typename Op, typename Generator, typename ProfiledRepatchFunction, typename ProfiledFunction, typename RepatchFunction>
         void emitMathICSlow(JITUnaryMathIC<Generator>*, const JSInstruction*, ProfiledRepatchFunction, ProfiledFunction, RepatchFunction);
 
-    public:
-        static MacroAssemblerCodeRef<JITThunkPtrTag> returnFromBaselineGenerator(VM&);
-
     private:
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_by_id_with_this_callSlowOperationThenCheckExceptionGenerator(VM&);
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_del_by_id_callSlowOperationThenCheckExceptionGenerator(VM&);
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_del_by_val_callSlowOperationThenCheckExceptionGenerator(VM&);
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_put_by_val_callSlowOperationThenCheckExceptionGenerator(VM&);
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_put_private_name_callSlowOperationThenCheckExceptionGenerator(VM&);
-
         static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_put_to_scopeGenerator(VM&);
         static MacroAssemblerCodeRef<JITThunkPtrTag> op_throw_handlerGenerator(VM&);
         static MacroAssemblerCodeRef<JITThunkPtrTag> op_check_traps_handlerGenerator(VM&);
-
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_by_id_callSlowOperationThenCheckExceptionGenerator(VM&);
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_put_by_id_callSlowOperationThenCheckExceptionGenerator(VM&);
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_by_val_callSlowOperationThenCheckExceptionGenerator(VM&);
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_by_val_with_this_callSlowOperationThenCheckExceptionGenerator(VM&);
-        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_private_name_callSlowOperationThenCheckExceptionGenerator(VM&);
         static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_from_scopeGenerator(VM&);
         static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_resolve_scopeGenerator(VM&);
         template <ResolveType>
@@ -832,7 +801,7 @@ namespace JSC {
             setupArguments<OperationType>(args...);
             updateTopCallFrame(); // The callee is responsible for setting topCallFrame to their caller
             MacroAssembler::Call call = appendCall(operation);
-            m_exceptionChecksWithCallFrameRollback.append(jump());
+            exceptionChecksWithCallFrameRollback(jump());
             return call;
         }
 
@@ -848,10 +817,6 @@ namespace JSC {
         void emitRightShiftFastPath(const JSInstruction* currentInstruction, JITRightShiftGenerator::ShiftType);
 
         void updateTopCallFrame();
-
-        Call emitNakedNearCall(CodePtr<NoPtrTag> function = { });
-        Call emitNakedNearTailCall(CodePtr<NoPtrTag> function = { });
-        Jump emitNakedNearJump(CodePtr<JITThunkPtrTag> function = { });
 
         // Loads the character value of a single character string into dst.
         void emitLoadCharacterString(RegisterID src, RegisterID dst, JumpList& failures);
@@ -903,12 +868,10 @@ namespace JSC {
         void resetSP();
 
         JITConstantPool::Constant addToConstantPool(JITConstantPool::Type, void* payload = nullptr);
-        std::tuple<BaselineUnlinkedStructureStubInfo*, JITConstantPool::Constant> addUnlinkedStructureStubInfo();
+        std::tuple<BaselineUnlinkedStructureStubInfo*, StructureStubInfoIndex> addUnlinkedStructureStubInfo();
         BaselineUnlinkedCallLinkInfo* addUnlinkedCallLinkInfo();
 
         Vector<FarCallRecord> m_farCalls;
-        Vector<NearCallRecord> m_nearCalls;
-        Vector<NearJumpRecord> m_nearJumps;
         Vector<Label> m_labels;
         HashMap<BytecodeIndex, Label> m_checkpointLabels;
         HashMap<BytecodeIndex, Label> m_fastPathResumeLabels;
@@ -931,8 +894,6 @@ namespace JSC {
         Vector<SlowCaseEntry> m_slowCases;
         Vector<SwitchRecord> m_switches;
 
-        JumpList m_exceptionChecks;
-        JumpList m_exceptionChecksWithCallFrameRollback;
 #if ASSERT_ENABLED
         Label m_consistencyCheckLabel;
         Vector<Call> m_consistencyCheckCalls;
@@ -950,7 +911,6 @@ namespace JSC {
         unsigned m_delByIdIndex { UINT_MAX };
         unsigned m_instanceOfIndex { UINT_MAX };
         unsigned m_privateBrandAccessIndex { UINT_MAX };
-        unsigned m_callLinkInfoIndex { UINT_MAX };
         unsigned m_bytecodeCountHavingSlowCase { 0 };
 
         Label m_arityCheck;

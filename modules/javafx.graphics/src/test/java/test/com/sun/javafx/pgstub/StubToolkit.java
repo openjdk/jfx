@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,6 @@ import javafx.util.Pair;
 
 import java.io.File;
 import java.io.InputStream;
-import java.security.AccessControlContext;
 import java.util.*;
 import java.util.concurrent.Future;
 
@@ -120,18 +119,18 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
 
         return new StubStage();
     }
 
     @Override
-    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         return new StubPopupStage();
     }
 
     @Override
-    public TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKEmbeddedStage(HostInterface host) {
         return new StubStage();
     }
 
@@ -376,10 +375,6 @@ public class StubToolkit extends Toolkit {
         private double offsetX;
         private double offsetY;
 
-        @Override
-        public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext ctx) {
-        }
-
         @Override public Set<DataFormat> getContentTypes() {
             return map.keySet();
         }
@@ -606,7 +601,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public int getKeyCodeForChar(String character) {
+    public int getKeyCodeForChar(String character, int hint) {
         if (charToKeyCodeMap != null) {
             final KeyCode keyCode = charToKeyCodeMap.get(character);
             if (keyCode != null) {
@@ -668,8 +663,22 @@ public class StubToolkit extends Toolkit {
                                           .contains((int) x, (int) y);
     }
 
+    /**
+     * Sets the current time of the {@link StubPrimaryTimer}.
+     *
+     * @param millis the time in milliseconds
+     */
     public void setCurrentTime(long millis) {
         primaryTimer.setCurrentTime(millis);
+    }
+
+    /**
+     * Returns the current time of the {@link StubPrimaryTimer}.
+     *
+     * @return the time in milliseconds
+     */
+    public long getCurrentTime() {
+        return primaryTimer.getCurrentTime();
     }
 
     public void handleAnimation() {
@@ -686,6 +695,12 @@ public class StubToolkit extends Toolkit {
         return imageLoaderFactory;
     }
 
+    /**
+     * Sets the current time of the {@link StubPrimaryTimer} and handles all pending animations.
+     * Useful for unit-testing things that involves animations (e.g. Timeline).
+     *
+     * @param millis the time in milliseconds
+     */
     public void setAnimationTime(final long millis) {
         setCurrentTime(millis);
         handleAnimation();

@@ -33,8 +33,8 @@ class RenderFragmentContainer;
 class RenderInline : public RenderBoxModelObject {
     WTF_MAKE_ISO_ALLOCATED(RenderInline);
 public:
-    RenderInline(Element&, RenderStyle&&);
-    RenderInline(Document&, RenderStyle&&);
+    RenderInline(Type, Element&, RenderStyle&&);
+    RenderInline(Type, Document&, RenderStyle&&);
 
     LayoutUnit marginLeft() const final;
     LayoutUnit marginRight() const final;
@@ -118,10 +118,11 @@ private:
 
 protected:
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
+    RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const override;
     LayoutRect rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const final;
 
-    std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
-    LayoutRect computeVisibleRectUsingPaintOffset(const LayoutRect&) const;
+    std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const final;
+    RepaintRects computeVisibleRectsUsingPaintOffset(const RepaintRects&) const;
 
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;

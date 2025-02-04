@@ -129,7 +129,7 @@ public:
     bool isFirstOrLastCellInRow() const { return !table()->cellAfter(this) || !table()->cellBefore(this); }
 #endif
 
-    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
+    RepaintRects localRectsForRepaint(RepaintOutlineBounds) const override;
 
     void invalidateHasEmptyCollapsedBorders();
     void setHasEmptyCollapsedBorder(CollapsedBorderSide, bool empty) const;
@@ -144,8 +144,6 @@ private:
 
     ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)"_s : "RenderTableCell"_s; }
 
-    bool isTableCell() const override { return true; }
-
     void willBeRemovedFromTree(IsInternalMove) override;
 
     void updateLogicalWidth() override;
@@ -154,7 +152,7 @@ private:
     void paintMask(PaintInfo&, const LayoutPoint&) override;
 
     LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = 0) const override;
-    std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
+    std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const override;
 
     LayoutUnit borderHalfLeft(bool outer) const;
     LayoutUnit borderHalfRight(bool outer) const;
@@ -275,6 +273,9 @@ inline unsigned RenderTableCell::rowIndex() const
 
 inline bool RenderTableCell::isBaselineAligned() const
 {
+    if (auto alignContent = style().alignContent(); !alignContent.isNormal())
+        return alignContent.position() == ContentPosition::Baseline;
+
     VerticalAlign va = style().verticalAlign();
     return va == VerticalAlign::Baseline || va == VerticalAlign::TextBottom || va == VerticalAlign::TextTop || va == VerticalAlign::Super || va == VerticalAlign::Sub || va == VerticalAlign::Length;
 }
@@ -328,4 +329,4 @@ inline RenderPtr<RenderBox> RenderTableCell::createAnonymousBoxWithSameTypeAs(co
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableCell, isTableCell())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableCell, isRenderTableCell())

@@ -52,13 +52,12 @@ private:
     void element() const = delete;
 
     ASCIILiteral renderName() const final { return "RenderSVGImage"_s; }
-    bool isSVGImage() const final { return true; }
     bool canHaveChildren() const final { return false; }
 
     FloatRect calculateObjectBoundingBox() const;
     FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
     FloatRect strokeBoundingBox() const final { return m_objectBoundingBox; }
-    FloatRect repaintRectInLocalCoordinates() const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
 
     void imageChanged(WrappedImagePtr, const IntRect* = nullptr) final;
 
@@ -87,6 +86,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGImage, isSVGImage())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGImage, isRenderSVGImage())
 
 #endif // ENABLE(LAYER_BASED_SVG_ENGINE)

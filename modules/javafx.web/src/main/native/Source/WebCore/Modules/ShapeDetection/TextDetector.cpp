@@ -41,23 +41,22 @@ namespace WebCore {
 
 ExceptionOr<Ref<TextDetector>> TextDetector::create(ScriptExecutionContext& scriptExecutionContext)
 {
-    if (is<Document>(scriptExecutionContext)) {
-        const auto& document = downcast<Document>(scriptExecutionContext);
-        const auto* page = document.page();
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
+        RefPtr page = document->page();
         if (!page)
-            return Exception { AbortError };
+            return Exception { ExceptionCode::AbortError };
         auto backing = page->chrome().createTextDetector();
         if (!backing)
-            return Exception { AbortError };
+            return Exception { ExceptionCode::AbortError };
         return adoptRef(*new TextDetector(backing.releaseNonNull()));
     }
 
     if (is<WorkerGlobalScope>(scriptExecutionContext)) {
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=255380 Make the Shape Detection API work in Workers
-        return Exception { AbortError };
+        return Exception { ExceptionCode::AbortError };
     }
 
-    return Exception { AbortError };
+    return Exception { ExceptionCode::AbortError };
 }
 
 TextDetector::TextDetector(Ref<ShapeDetection::TextDetector>&& backing)

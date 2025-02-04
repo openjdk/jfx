@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.prism.impl.ps;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
@@ -534,8 +532,7 @@ public abstract class BaseShaderGraphics
 
     private static final float FRINGE_FACTOR;
     static {
-        @SuppressWarnings("removal")
-        String v = (String) AccessController.doPrivileged((PrivilegedAction) () -> System.getProperty("prism.primshaderpad"));
+        String v = System.getProperty("prism.primshaderpad");
         if (v == null) {
             FRINGE_FACTOR = -0.5f;
         } else {
@@ -1649,7 +1646,7 @@ public abstract class BaseShaderGraphics
 
     private static final double SQRT_2 = Math.sqrt(2.0);
     private static boolean canUseStrokeShader(BasicStroke bs) {
-        // RT-27378
+        // JDK-8090624
         // TODO: Expand the cases that renderGeneralRoundRect() can handle...
         return (!bs.isDashed() &&
                 (bs.getType() == BasicStroke.TYPE_INNER ||
@@ -1711,7 +1708,7 @@ public abstract class BaseShaderGraphics
         // otherwise it will not be approximated by a "parallel ellipse"
         // very well and we should just use shape rendering.
 
-        // RT-27378
+        // JDK-8090624
         // TODO: Implement better "distance to ellipse" formulas in the shaders
         float inset = stroke.getLineWidth() *
             (1f - getStrokeExpansionFactor(stroke));
@@ -1779,7 +1776,7 @@ public abstract class BaseShaderGraphics
             bh = y1 - y2;
         }
 
-        // RT-27378
+        // JDK-8090624
         // TODO: casting down to floats everywhere here; evaluate later
         // to see if this is enough precision...
         // TODO: stroke normalization control?
@@ -2016,9 +2013,10 @@ public abstract class BaseShaderGraphics
 
         CompositeMode blendMode = getCompositeMode();
         // LCD support requires several attributes to function:
-        // FontStrike supports LCD, SRC_OVER CompositeMode and Paint is a COLOR
+        // FontStrike supports LCD, SRC_OVER CompositeMode and Paint is an opaque COLOR
         boolean lcdSupported = blendMode == CompositeMode.SRC_OVER &&
                                textColor != null &&
+                               textColor.getAlpha() == 1.0 &&
                                xform.is2D() &&
                                !getRenderTarget().isMSAA();
 
@@ -2193,7 +2191,7 @@ public abstract class BaseShaderGraphics
     @Override
     public void releaseReadBackBuffer(RTTexture rtt) {
         // This will be needed when we track LCD buffer locks and uses.
-        // (See RT-29488)
+        // (See JDK-8091015)
 //        context.releaseLCDBuffer();
     }
 

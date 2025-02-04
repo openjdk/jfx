@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -369,7 +369,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         } else {
 
-            // RT-24614 - "CENTER" should equal "center"
+            // JDK-8095337 - "CENTER" should equal "center"
             if (this.value instanceof String && other.value instanceof String) {
                 return this.value.toString().equalsIgnoreCase(other.value.toString());
             }
@@ -640,7 +640,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
             // Note: this block should be entered _only_ if version 2
             if (bssVersion == 2) {
-                // RT-31022
+                // JDK-8116809
                 // Once upon a time, the enum's class name was added to the
                 // StringStore and the class name's index was written to the
                 // stream. Then the writeShort of the class name's index was

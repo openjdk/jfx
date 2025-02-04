@@ -54,6 +54,7 @@ public:
         virtual bool focusOnPreviousField(const DateTimeFieldElement&) = 0;
         virtual bool isFieldOwnerDisabled() const = 0;
         virtual bool isFieldOwnerReadOnly() const = 0;
+        virtual bool isFieldOwnerHorizontal() const = 0;
         virtual AtomString localeIdentifier() const = 0;
         virtual const GregorianDateTime& placeholderDate() const = 0;
     };
@@ -74,9 +75,7 @@ public:
     virtual String placeholderValue() const = 0;
 
 protected:
-    constexpr static auto CreateDateTimeFieldElement = CreateHTMLDivElement | NodeFlag::HasCustomStyleResolveCallbacks;
     DateTimeFieldElement(Document&, FieldOwner&);
-    void initialize(const AtomString& pseudo);
     Locale& localeForOwner() const;
     AtomString localeIdentifier() const;
     void updateVisibleValue(EventBehavior);
@@ -93,6 +92,7 @@ private:
     void defaultKeyboardEventHandler(KeyboardEvent&);
     bool isFieldOwnerDisabled() const;
     bool isFieldOwnerReadOnly() const;
+    bool isFieldOwnerHorizontal() const;
 
     WeakPtr<FieldOwner> m_fieldOwner;
 };

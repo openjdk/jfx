@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,6 +93,8 @@ import javafx.css.converter.BooleanConverter;
  *  Tooltip.install(item.getNode(), new Tooltip("Symbol-0"));
  * </code></pre>
  *
+ * @param <X> the X axis value type
+ * @param <Y> the Y axis value type
  * @since JavaFX 2.0
  */
 public abstract class XYChart<X,Y> extends Chart {
@@ -124,7 +126,7 @@ public abstract class XYChart<X,Y> extends Chart {
     private final ListChangeListener<Series<X,Y>> seriesChanged = c -> {
         ObservableList<? extends Series<X, Y>> series = c.getList();
         while (c.next()) {
-            // RT-12069, linked list pointers should update when list is permutated.
+            // JDK-8112081, linked list pointers should update when list is permutated.
             if (c.wasPermutated()) {
                 displayedSeries.sort((o1, o2) -> series.indexOf(o2) - series.indexOf(o1));
 
@@ -180,7 +182,7 @@ public abstract class XYChart<X,Y> extends Chart {
     private ReadOnlyObjectProperty<Axis<X>> xAxisProperty = new ReadOnlyObjectPropertyBase<Axis<X>>() {
         @Override
         public Object getBean() {
-            return this;
+            return XYChart.this;
         }
 
         @Override
@@ -209,7 +211,7 @@ public abstract class XYChart<X,Y> extends Chart {
     private ReadOnlyObjectProperty<Axis<Y>> yAxisProperty = new ReadOnlyObjectPropertyBase<Axis<Y>>() {
         @Override
         public Object getBean() {
-            return this;
+            return XYChart.this;
         }
 
         @Override
@@ -244,8 +246,8 @@ public abstract class XYChart<X,Y> extends Chart {
             if(old != null) {
                 old.removeListener(seriesChanged);
                 // Set animated to false so we don't animate both remove and add
-                // at the same time. RT-14163
-                // RT-21295 - disable animated only when current is also not null.
+                // at the same time. JDK-8113301
+                // JDK-8127526 - disable animated only when current is also not null.
                 if (current != null && old.size() > 0) {
                     saveAnimationState = (old.get(0).getChart().getAnimated()) ? 1 : 2;
                     old.get(0).getChart().setAnimated(false);
@@ -488,7 +490,7 @@ public abstract class XYChart<X,Y> extends Chart {
         this.yAxis = yAxis;
         if (yAxis.getSide() == null) yAxis.setSide(Side.LEFT);
         yAxis.setEffectiveOrientation(Orientation.VERTICAL);
-        // RT-23123 autoranging leads to charts incorrect appearance.
+        // JDK-8118001 autoranging leads to charts incorrect appearance.
         xAxis.autoRangingProperty().addListener((ov, t, t1) -> {
             updateAxisRange();
         });
@@ -1253,6 +1255,9 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * A single data item with data for 2 axis charts
+     *
+     * @param <X> the data X value type
+     * @param <Y> the data Y value type
      * @since JavaFX 2.0
      */
     public final static class Data<X,Y> {
@@ -1490,6 +1495,9 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * A named series of data items
+     *
+     * @param <X> the series X value type
+     * @param <Y> the series Y value type
      * @since JavaFX 2.0
      */
     public static final class Series<X,Y> {
@@ -1508,7 +1516,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 final XYChart<X, Y> chart = getChart();
                 while (c.next()) {
                     if (chart != null) {
-                        // RT-25187 Probably a sort happened, just reorder the pointers and return.
+                        // JDK-8125209 Probably a sort happened, just reorder the pointers and return.
                         if (c.wasPermutated()) {
                             displayedData.sort((o1, o2) -> data.indexOf(o2) - data.indexOf(o1));
                             return;

@@ -132,7 +132,7 @@ public:
     explicit ${objectName}BuiltinsWrapper(JSC::VM& vm)
         : m_vm(vm)
         ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_FUNCTION_NAME(INITIALIZE_BUILTIN_NAMES)
-#define INITIALIZE_BUILTIN_SOURCE_MEMBERS(name, functionName, overriddenName, length) , m_##name##Source(JSC::makeSource(StringImpl::createWithoutCopying(s_##name, length), { }))
+#define INITIALIZE_BUILTIN_SOURCE_MEMBERS(name, functionName, overriddenName, length) , m_##name##Source(JSC::makeSource(StringImpl::createWithoutCopying(s_##name, length), { }, JSC::SourceTaintedOrigin::Untainted))
         ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_CODE(INITIALIZE_BUILTIN_SOURCE_MEMBERS)
 #undef INITIALIZE_BUILTIN_SOURCE_MEMBERS
     {
@@ -168,7 +168,7 @@ inline JSC::UnlinkedFunctionExecutable* ${objectName}BuiltinsWrapper::name##Exec
         JSC::Identifier executableName = functionName##PublicName();\\
         if (overriddenName)\\
             executableName = JSC::Identifier::fromString(m_vm, overriddenName);\\
-        m_##name##Executable = JSC::Weak<JSC::UnlinkedFunctionExecutable>(JSC::createBuiltinExecutable(m_vm, m_##name##Source, executableName, s_##name##ImplementationVisibility, s_##name##ConstructorKind, s_##name##ConstructAbility), this, &m_##name##Executable);\\
+        m_##name##Executable = JSC::Weak<JSC::UnlinkedFunctionExecutable>(JSC::createBuiltinExecutable(m_vm, m_##name##Source, executableName, s_##name##ImplementationVisibility, s_##name##ConstructorKind, s_##name##ConstructAbility, s_##name##InlineAttribute), this, &m_##name##Executable);\\
     }\\
     return m_##name##Executable.get();\\
 }

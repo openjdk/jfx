@@ -43,17 +43,15 @@ Ref<WebXRHand> WebXRHand::create(const WebXRInputSource& inputSource)
 WebXRHand::WebXRHand(const WebXRInputSource& inputSource)
     : m_inputSource(inputSource)
 {
-    auto* session = this->session();
-    auto* document = session ? downcast<Document>(session->scriptExecutionContext()) : nullptr;
+    RefPtr session = this->session();
+    RefPtr document = session ? downcast<Document>(session->scriptExecutionContext()) : nullptr;
     if (!document)
         return;
 
     size_t jointCount = static_cast<size_t>(XRHandJoint::Count);
-    Vector<Ref<WebXRJointSpace>> joints;
-    joints.reserveInitialCapacity(jointCount);
-    for (size_t i = 0; i < jointCount; ++i)
-        joints.uncheckedAppend(WebXRJointSpace::create(*document, *this, static_cast<XRHandJoint>(i)));
-    m_joints = WTFMove(joints);
+    m_joints = Vector<Ref<WebXRJointSpace>>(jointCount, [&](size_t i) {
+        return WebXRJointSpace::create(*document, *this, static_cast<XRHandJoint>(i));
+    });
 }
 
 WebXRHand::~WebXRHand() = default;
@@ -86,10 +84,10 @@ WebXRSession* WebXRHand::session()
     if (!m_inputSource)
         return nullptr;
 
-    return m_inputSource.get()->session();
+    return m_inputSource->session();
 }
 
-void WebXRHand::updateFromInputSource(const PlatformXR::Device::FrameData::InputSource& inputSource)
+void WebXRHand::updateFromInputSource(const PlatformXR::FrameData::InputSource& inputSource)
 {
     if (!inputSource.handJoints) {
         m_hasMissingPoses = true;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -78,7 +78,7 @@ public class PillButtonApp extends Application {
 
         // enforce rule that one of the ToggleButtons must be selected at any
         // time (that is, it is not valid to have zero ToggleButtons selected).
-        // (Fix for RT-34920 that considered this to be a bug)
+        // (Fix for JDK-8097504 that considered this to be a bug)
         final ChangeListener<Toggle> listener =
             (ObservableValue<? extends Toggle> observable,
              Toggle old, Toggle now) -> {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,40 +25,38 @@
 
 package test.javafx.scene.control.skin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.AbstractList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
-
+import java.util.List;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 import javafx.beans.InvalidationListener;
 import javafx.event.Event;
-import javafx.scene.control.IndexedCell;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.shape.Circle;
-
-import test.javafx.scene.control.SkinStub;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.layout.HBox;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-
-import java.util.List;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.IndexedCellShim;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.skin.VirtualFlowShim;
 import javafx.scene.control.skin.VirtualFlowShim.ArrayLinkedListShim;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.shape.Circle;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.javafx.scene.control.SkinStub;
 
 /**
  * Tests for the VirtualFlow class. VirtualFlow is the guts of the ListView,
@@ -78,7 +76,8 @@ public class VirtualFlowTest {
     private VirtualFlowShim<IndexedCell> flow;
 
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         prefSizeCounter = 0;
         list = new ArrayLinkedListShim<>();
         a = new CellStub(flow, "A");
@@ -138,17 +137,19 @@ public class VirtualFlowTest {
      * list are exactly the same.
      */
     private void assertMatch(List<IndexedCell> control, AbstractList<IndexedCell> list) {
-        assertEquals("The control and list did not have the same sizes. " +
-                     "Expected " + control.size() + " but was " + list.size(),
-                     control.size(), list.size());
+        assertEquals(
+                     control.size(), list.size(),
+                     "The control and list did not have the same sizes. " +
+                     "Expected " + control.size() + " but was " + list.size());
         int index = 0;
         Iterator<IndexedCell> itr = control.iterator();
         while (itr.hasNext()) {
             IndexedCell cell = itr.next();
             IndexedCell cell2 = list.get(index);
-            assertSame("The control and list did not have the same item at " +
-                       "index " + index + ". Expected " + cell + " but was " + cell2,
-                       cell, cell2);
+            assertSame(
+                       cell, cell2,
+                       "The control and list did not have the same item at " +
+                       "index " + index + ". Expected " + cell + " but was " + cell2);
             index++;
         }
     }
@@ -162,39 +163,47 @@ public class VirtualFlowTest {
         IndexedCell lastCell = VirtualFlowShim.<T>cells_getLast(flow.cells);
         if (flow.isVertical()) {
             // First make sure that enough cells were created
-            assertTrue("There is a gap between the top of the viewport and the first cell",
-                       firstCell.getLayoutY() <= 0);
-            assertTrue("There is a gap between the bottom of the last cell and the bottom of the viewport",
-                       lastCell.getLayoutY() + lastCell.getHeight() >= flow.getViewportLength());
+            assertTrue(
+                       firstCell.getLayoutY() <= 0,
+                       "There is a gap between the top of the viewport and the first cell");
+            assertTrue(
+                       lastCell.getLayoutY() + lastCell.getHeight() >= flow.getViewportLength(),
+                       "There is a gap between the bottom of the last cell and the bottom of the viewport");
 
             // Now make sure that no extra cells were created.
             if (VirtualFlowShim.cells_size(flow.cells) > 3) {
                 IndexedCell secondLastCell = VirtualFlowShim.<T>cells_get(flow.cells, VirtualFlowShim.cells_size(flow.cells) - 2);
                 IndexedCell secondCell = VirtualFlowShim.<T>cells_get(flow.cells, 1);
-                assertFalse("There are more cells created before the start of " +
-                            "the flow than necessary",
-                            secondCell.getLayoutY() <= 0);
-                assertFalse("There are more cells created after the end of the " +
-                            "flow than necessary",
-                            secondLastCell.getLayoutY() + secondLastCell.getHeight() >= flow.getViewportLength());
+                assertFalse(
+                            secondCell.getLayoutY() <= 0,
+                            "There are more cells created before the start of " +
+                            "the flow than necessary");
+                assertFalse(
+                            secondLastCell.getLayoutY() + secondLastCell.getHeight() >= flow.getViewportLength(),
+                            "There are more cells created after the end of the " +
+                            "flow than necessary");
             }
         } else {
             // First make sure that enough cells were created
-            assertTrue("There is a gap between the left of the viewport and the first cell",
-                       firstCell.getLayoutX() <= 0);
-            assertTrue("There is a gap between the right of the last cell and the right of the viewport",
-                       lastCell.getLayoutX() + lastCell.getWidth() >= flow.getViewportLength());
+            assertTrue(
+                       firstCell.getLayoutX() <= 0,
+                       "There is a gap between the left of the viewport and the first cell");
+            assertTrue(
+                       lastCell.getLayoutX() + lastCell.getWidth() >= flow.getViewportLength(),
+                       "There is a gap between the right of the last cell and the right of the viewport");
 
             // Now make sure that no extra cells were created.
             if (VirtualFlowShim.cells_size(flow.cells) > 3) {
                 IndexedCell secondLastCell = VirtualFlowShim.<T>cells_get(flow.cells, VirtualFlowShim.cells_size(flow.cells) - 2);
                 IndexedCell secondCell = VirtualFlowShim.<T>cells_get(flow.cells, 1);
-                assertFalse("There are more cells created before the start of " +
-                            "the flow than necessary",
-                            secondCell.getLayoutX() <= 0);
-                assertFalse("There are more cells created after the end of the " +
-                            "flow than necessary",
-                            secondLastCell.getLayoutX() + secondLastCell.getWidth() >= flow.getViewportLength());
+                assertFalse(
+                            secondCell.getLayoutX() <= 0,
+                            "There are more cells created before the start of " +
+                            "the flow than necessary");
+                assertFalse(
+                            secondLastCell.getLayoutX() + secondLastCell.getWidth() >= flow.getViewportLength(),
+                            "There are more cells created after the end of the " +
+                            "flow than necessary");
             }
         }
     }
@@ -230,11 +239,11 @@ public class VirtualFlowTest {
      *                                                                         *
      **************************************************************************/
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  General Layout
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /**
      * In this test there are no cells. The VirtualFlow should be laid out such
@@ -244,18 +253,18 @@ public class VirtualFlowTest {
     @Test public void testGeneralLayout_NoCells() {
         flow.setCellCount(0);
         pulse();
-        assertFalse("The hbar should have been invisible", flow.shim_getHbar().isVisible());
-        assertFalse("The vbar should have been invisible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertFalse(flow.shim_getHbar().isVisible(), "The hbar should have been invisible");
+        assertFalse(flow.shim_getVbar().isVisible(), "The vbar should have been invisible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight(), 0.0);
         assertMinimalNumberOfCellsAreUsed(flow);
 
         flow.setVertical(false);
         pulse();
-        assertFalse("The hbar should have been invisible", flow.shim_getHbar().isVisible());
-        assertFalse("The vbar should have been invisible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertFalse(flow.shim_getHbar().isVisible(), "The hbar should have been invisible");
+        assertFalse(flow.shim_getVbar().isVisible(), "The vbar should have been invisible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
 //        assertEquals(flow.getWidth(), flow.get_clipView_getWidth(), 0.0);
         assertEquals(flow.getWidth(),
                 flow.get_clipView_getWidth(), 0.0);
@@ -271,9 +280,9 @@ public class VirtualFlowTest {
     @Test public void testGeneralLayout_FewCells() {
         flow.setCellCount(3);
         pulse();
-        assertFalse("The hbar should have been invisible", flow.shim_getHbar().isVisible());
-        assertFalse("The vbar should have been invisible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertFalse(flow.shim_getHbar().isVisible(), "The hbar should have been invisible");
+        assertFalse(flow.shim_getVbar().isVisible(), "The vbar should have been invisible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight(), 0.0);
         assertEquals(12, VirtualFlowShim.cells_size(flow.cells)); // we stil have 12 cells (300px / 25px), even if only three filled cells exist
@@ -281,9 +290,9 @@ public class VirtualFlowTest {
 
         flow.setVertical(false);
         pulse();
-        assertFalse("The hbar should have been invisible", flow.shim_getHbar().isVisible());
-        assertFalse("The vbar should have been invisible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertFalse(flow.shim_getHbar().isVisible(), "The hbar should have been invisible");
+        assertFalse(flow.shim_getVbar().isVisible(), "The vbar should have been invisible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight(), 0.0);
 //        assertEquals(3, VirtualFlowShim.cells_size(flow.cells));
@@ -299,9 +308,9 @@ public class VirtualFlowTest {
         flow.setCellCount(3);
         flow.resize(50, flow.getHeight());
         pulse();
-        assertTrue("The hbar should have been visible", flow.shim_getHbar().isVisible());
-        assertFalse("The vbar should have been invisible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertTrue(flow.shim_getHbar().isVisible(), "The hbar should have been visible");
+        assertFalse(flow.shim_getVbar().isVisible(), "The vbar should have been invisible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight() + flow.shim_getHbar().getHeight(), 0.0);
         assertEquals(flow.shim_getHbar().getLayoutY(), flow.getHeight() - flow.shim_getHbar().getHeight(), 0.0);
@@ -310,9 +319,9 @@ public class VirtualFlowTest {
         flow.setVertical(false);
         flow.resize(300, 50);
         pulse();
-        assertFalse("The hbar should have been invisible", flow.shim_getHbar().isVisible());
-        assertTrue("The vbar should have been visible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertFalse(flow.shim_getHbar().isVisible(), "The hbar should have been invisible");
+        assertTrue(flow.shim_getVbar().isVisible(), "The vbar should have been visible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth() + flow.shim_getVbar().getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight(), 0.0);
         assertEquals(flow.shim_getVbar().getLayoutX(), flow.getWidth() - flow.shim_getVbar().getWidth(), 0.0);
@@ -330,9 +339,9 @@ public class VirtualFlowTest {
         pulse();
         flow.resize(300, flow.getHeight());
         pulse();
-        assertFalse("The hbar should have been invisible", flow.shim_getHbar().isVisible());
-        assertFalse("The vbar should have been invisible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertFalse(flow.shim_getHbar().isVisible(), "The hbar should have been invisible");
+        assertFalse(flow.shim_getVbar().isVisible(), "The vbar should have been invisible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight(), 0.0);
         assertMinimalNumberOfCellsAreUsed(flow);
@@ -342,9 +351,9 @@ public class VirtualFlowTest {
         pulse();
         flow.resize(flow.getWidth(), 300);
         pulse();
-        assertFalse("The hbar should have been invisible", flow.shim_getHbar().isVisible());
-        assertFalse("The vbar should have been invisible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertFalse(flow.shim_getHbar().isVisible(), "The hbar should have been invisible");
+        assertFalse(flow.shim_getVbar().isVisible(), "The vbar should have been invisible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight(), 0.0);
         assertMinimalNumberOfCellsAreUsed(flow);
@@ -359,9 +368,9 @@ public class VirtualFlowTest {
      * Be sure to test for this explicitly some time!
      */
     @Test public void testGeneralLayout_ManyCells() {
-        assertFalse("The hbar should have been invisible", flow.shim_getHbar().isVisible());
-        assertTrue("The vbar should have been visible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertFalse(flow.shim_getHbar().isVisible(), "The hbar should have been invisible");
+        assertTrue(flow.shim_getVbar().isVisible(), "The vbar should have been visible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth() + flow.shim_getVbar().getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight(), 0.0);
         assertEquals(flow.shim_getVbar().getLayoutX(), flow.getWidth() - flow.shim_getVbar().getWidth(), 0.0);
@@ -369,9 +378,9 @@ public class VirtualFlowTest {
 
         flow.setVertical(false);
         pulse();
-        assertTrue("The hbar should have been visible", flow.shim_getHbar().isVisible());
-        assertFalse("The vbar should have been invisible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertTrue(flow.shim_getHbar().isVisible(), "The hbar should have been visible");
+        assertFalse(flow.shim_getVbar().isVisible(), "The vbar should have been invisible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight() + flow.shim_getHbar().getHeight(), 0.0);
         assertEquals(flow.shim_getHbar().getLayoutY(), flow.getHeight() - flow.shim_getHbar().getHeight(), 0.0);
@@ -387,9 +396,9 @@ public class VirtualFlowTest {
         pulse();
         flow.setCellCount(100);
         pulse();
-        assertFalse("The hbar should have been invisible", flow.shim_getHbar().isVisible());
-        assertTrue("The vbar should have been visible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertFalse(flow.shim_getHbar().isVisible(), "The hbar should have been invisible");
+        assertTrue(flow.shim_getVbar().isVisible(), "The vbar should have been visible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth() + flow.shim_getVbar().getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight(), 0.0);
         assertEquals(flow.shim_getVbar().getLayoutX(), flow.getWidth() - flow.shim_getVbar().getWidth(), 0.0);
@@ -400,9 +409,9 @@ public class VirtualFlowTest {
         pulse();
         flow.setCellCount(100);
         pulse();
-        assertTrue("The hbar should have been visible", flow.shim_getHbar().isVisible());
-        assertFalse("The vbar should have been invisible", flow.shim_getVbar().isVisible());
-        assertFalse("The corner should have been invisible", flow.get_corner().isVisible());
+        assertTrue(flow.shim_getHbar().isVisible(), "The hbar should have been visible");
+        assertFalse(flow.shim_getVbar().isVisible(), "The vbar should have been invisible");
+        assertFalse(flow.get_corner().isVisible(), "The corner should have been invisible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight() + flow.shim_getHbar().getHeight(), 0.0);
         assertEquals(flow.shim_getHbar().getLayoutY(), flow.getHeight() - flow.shim_getHbar().getHeight(), 0.0);
@@ -416,9 +425,9 @@ public class VirtualFlowTest {
     @Test public void testGeneralLayout_ManyCellsAndWide() {
         flow.resize(50, flow.getHeight());
         pulse();
-        assertTrue("The hbar should have been visible", flow.shim_getHbar().isVisible());
-        assertTrue("The vbar should have been visible", flow.shim_getVbar().isVisible());
-        assertTrue("The corner should have been visible", flow.get_corner().isVisible());
+        assertTrue(flow.shim_getHbar().isVisible(), "The hbar should have been visible");
+        assertTrue(flow.shim_getVbar().isVisible(), "The vbar should have been visible");
+        assertTrue(flow.get_corner().isVisible(), "The corner should have been visible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth() + flow.shim_getVbar().getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight() + flow.shim_getHbar().getHeight(), 0.0);
         assertEquals(flow.shim_getVbar().getLayoutX(), flow.getWidth() - flow.shim_getVbar().getWidth(), 0.0);
@@ -433,9 +442,9 @@ public class VirtualFlowTest {
         flow.setVertical(false);
         flow.resize(300, 50);
         pulse();
-        assertTrue("The hbar should have been visible", flow.shim_getHbar().isVisible());
-        assertTrue("The vbar should have been visible", flow.shim_getVbar().isVisible());
-        assertTrue("The corner should have been visible", flow.get_corner().isVisible());
+        assertTrue(flow.shim_getHbar().isVisible(), "The hbar should have been visible");
+        assertTrue(flow.shim_getVbar().isVisible(), "The vbar should have been visible");
+        assertTrue(flow.get_corner().isVisible(), "The corner should have been visible");
         assertEquals(flow.getWidth(), flow.get_clipView_getWidth() + flow.shim_getVbar().getWidth(), 0.0);
         assertEquals(flow.getHeight(), flow.get_clipView_getHeight() + flow.shim_getHbar().getHeight(), 0.0);
         assertEquals(flow.shim_getVbar().getLayoutX(), flow.getWidth() - flow.shim_getVbar().getWidth(), 0.0);
@@ -499,7 +508,7 @@ public class VirtualFlowTest {
      * updated when we encounter a new cell (while scrolling for example) that
      * has a larger pref.
      */
-    @Ignore
+    @Disabled
     @Test public void testGeneralLayout_maxPrefBreadthUpdatedWhenEncounterLargerPref() {
         flow.setPosition(.28);
         pulse();
@@ -510,7 +519,7 @@ public class VirtualFlowTest {
      * Tests that if we encounter cells or pages of cells with smaller prefs
      * than the max pref that we will keep the max pref the same.
      */
-    @Ignore
+    @Disabled
     @Test public void testGeneralLayout_maxPrefBreadthRemainsSameWhenEncounterSmallerPref() {
         flow.setPosition(.28);
         pulse();
@@ -530,7 +539,7 @@ public class VirtualFlowTest {
     /**
      * Tests that changes to the cell count will not affect maxPrefBreadth.
      */
-    @Ignore
+    @Disabled
     @Test public void testGeneralLayout_maxPrefBreadthUnaffectedByCellCountChanges() {
         flow.setCellCount(10);
         pulse();
@@ -597,18 +606,18 @@ public class VirtualFlowTest {
     }
 
     @Test public void testGeneralLayout_ScrollToEndOfVirtual_BarStillVisible() {
-        assertTrue("The vbar was expected to be visible", flow.shim_getVbar().isVisible());
+        assertTrue(flow.shim_getVbar().isVisible(), "The vbar was expected to be visible");
         flow.setPosition(1);
         pulse();
-        assertTrue("The vbar was expected to be visible", flow.shim_getVbar().isVisible());
+        assertTrue(flow.shim_getVbar().isVisible(), "The vbar was expected to be visible");
 
         flow.setPosition(0);
         flow.setVertical(false);
         pulse();
-        assertTrue("The hbar was expected to be visible", flow.shim_getHbar().isVisible());
+        assertTrue(flow.shim_getHbar().isVisible(), "The hbar was expected to be visible");
         flow.setPosition(1);
         pulse();
-        assertTrue("The hbar was expected to be visible", flow.shim_getHbar().isVisible());
+        assertTrue(flow.shim_getHbar().isVisible(), "The hbar was expected to be visible");
     }
 
     // Need to test all the resize operations and make sure the position of
@@ -625,11 +634,11 @@ public class VirtualFlowTest {
     // at the same time that the "virtual" property of the scroll bars is
     // changed
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Cell Layout
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /**
      * Test to make sure that we are virtual -- that all cells are not being
@@ -640,7 +649,7 @@ public class VirtualFlowTest {
         // and their heights, we should have more cells than we have space to
         // fit them and so only enough cells should be created to meet our
         // needs and not any more than that
-        assertTrue("All of the cells were created", VirtualFlowShim.cells_size(flow.cells) < flow.getCellCount());
+        assertTrue(VirtualFlowShim.cells_size(flow.cells) < flow.getCellCount(), "All of the cells were created");
         assertMinimalNumberOfCellsAreUsed(flow);
     }
 
@@ -723,7 +732,7 @@ public class VirtualFlowTest {
      * the cell for item #29), then the max pref is updated and the cells are
      * all resized to match.
      */
-    @Ignore
+    @Disabled
     @Test public void testCellLayout_ScrollingFindsCellWithLargemaxPrefBreadth() {
         flow.resize(50, flow.getHeight());
         flow.setPosition(.28); // happens to position such that #29 is visible
@@ -838,35 +847,35 @@ public class VirtualFlowTest {
 
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Cell Life Cycle
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     @Test public void testCellLifeCycle_CellsAreCreatedOnLayout() {
         // when the flow was first created in setUp we do a layout()
-        assertTrue("The cells didn't get created", VirtualFlowShim.cells_size(flow.cells) > 0);
+        assertTrue(VirtualFlowShim.cells_size(flow.cells) > 0, "The cells didn't get created");
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Position
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Pixel Scrolling
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Cell Count Changes
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     // want to test that the view remains stable when the cell count changes
 
@@ -887,13 +896,13 @@ public class VirtualFlowTest {
 //
 //    }
 //
-////    @Test public void testCellCountChanges_SelectedRowRemoved() {
-////
-////    }
-////
-////    @Test public void testCellCountChanges_NonSelectedRowRemoved() {
-////
-////    }
+//--    @Test public void testCellCountChanges_SelectedRowRemoved() {
+//--
+//--    }
+//--
+//--    @Test public void testCellCountChanges_NonSelectedRowRemoved() {
+//--
+//--    }
 //
 //    @Test public void testCellCountChanges_FirstRowIsAdded() {
 //
@@ -907,19 +916,19 @@ public class VirtualFlowTest {
 //
 //    }
 //
-////    @Test public void testCellCountChanges_RowIsAddedBeforeSelectedRow() {
-////
-////    }
-////
-////    @Test public void testCellCountChanges_RowIsAddedAfterSelectedRow() {
-////
-////    }
+//--    @Test public void testCellCountChanges_RowIsAddedBeforeSelectedRow() {
+//--
+//--    }
+//--
+//--    @Test public void testCellCountChanges_RowIsAddedAfterSelectedRow() {
+//--
+//--    }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  VirtualFlow State Changes
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /**
      * Tests that when the createCell method changes, it results in layout
@@ -927,18 +936,18 @@ public class VirtualFlowTest {
     @Test public void testCreateCellFunctionChangesResultInNeedsLayoutAndNoCellsAndNoAccumCell() {
         assertFalse(flow.isNeedsLayout());
         flow.getCellLength(49); // forces accum cell to be created
-        assertNotNull("Accum cell was null", flow.get_accumCell());
+        assertNotNull(flow.get_accumCell(), "Accum cell was null");
         flow.setCellFactory(p -> new CellStub(flow));
         assertTrue(flow.isNeedsLayout());
-        assertNull("accumCell didn't get cleared", flow.get_accumCell());
+        assertNull(flow.get_accumCell(), "accumCell didn't get cleared");
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Tests on specific functions
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     @Test public void test_getCellLength() {
         assertEquals(100, flow.getCellCount());
@@ -950,7 +959,7 @@ public class VirtualFlowTest {
         pulse();
         assertEquals(100, flow.getCellCount());
         for (int i = 0; i < 50; i++) {
-            if (i != 29) assertEquals("Bad index: " + i, 25, flow.getCellLength(i), 0.0);
+            if (i != 29) assertEquals(25, flow.getCellLength(i), 0.0, "Bad index: " + i);
         }
     }
 
@@ -1046,7 +1055,7 @@ public class VirtualFlowTest {
         flow.addLeadingCells(1, 0);
         flow.sheetChildren.addListener((InvalidationListener) (o) -> {
             int count = ((List) o).size();
-            assertTrue(Integer.toString(count), count <= 100);
+            assertTrue(count <= 100, Integer.toString(count));
         });
         flow.addTrailingCells(true);
     }
@@ -1113,7 +1122,7 @@ public class VirtualFlowTest {
         flow.resize(50, flow.getHeight());
         flow.setPosition(1);
         pulse();
-        assertTrue("The hbar should have been visible", flow.shim_getHbar().isVisible());
+        assertTrue(flow.shim_getHbar().isVisible(), "The hbar should have been visible");
         assertMinimalNumberOfCellsAreUsed(flow);
         assertEquals(flow.getViewportLength()-25.0, VirtualFlowShim.<IndexedCell>cells_getLast(flow.cells).getLayoutY(), 0.0);
     }
@@ -1145,7 +1154,7 @@ public class VirtualFlowTest {
         double cellLength = flow.getCellLength(count);
         double viewportLength = flow.getViewportLength();
 
-        assertEquals("Last cell must end on viewport size", viewportLength, (cellPosition + cellLength), 0.1);
+        assertEquals(viewportLength, (cellPosition + cellLength), 0.1, "Last cell must end on viewport size");
     }
 
     @Test
@@ -1182,7 +1191,7 @@ public class VirtualFlowTest {
         IndexedCell<?> cell = flow.getCell(cellCount - 1);
         double cellPosition = flow.getCellPosition(cell);
 
-        assertEquals("Last cell must be aligned to top of the viewport", 0, cellPosition, 0.1);
+        assertEquals(0, cellPosition, 0.1, "Last cell must be aligned to top of the viewport");
     }
 
     @Test
@@ -1217,14 +1226,14 @@ public class VirtualFlowTest {
 
         IndexedCell vc = flow.getCell(0);
         double cellPosition = flow.getCellPosition(vc);
-        assertEquals("Wrong first cell position", -10d, cellPosition, 0d);
+        assertEquals(-10d, cellPosition, 0d, "Wrong first cell position");
 
         for (int i = 1; i < 10; i++) {
             flow.setCellCount(20 + i);
             pulse();
             vc = flow.getCell(0);
             cellPosition = flow.getCellPosition(vc);
-            assertEquals("Wrong first cell position after inserting " + i + " cells", -10d, cellPosition, 0d);
+            assertEquals(-10d, cellPosition, 0d, "Wrong first cell position after inserting " + i + " cells");
         }
     }
 
@@ -1247,14 +1256,14 @@ public class VirtualFlowTest {
         IndexedCell vc = flow.getCell(33);
         double cellPosition = flow.getCellPosition(vc);
         // cell 33 should be at (32 x 25 + 1 x 100) - 911 = -11
-        assertEquals("Wrong first cell position", -11d, cellPosition, 0d);
+        assertEquals(-11d, cellPosition, 0d, "Wrong first cell position");
 
         for (int i = 1; i < 10; i++) {
             flow.setCellCount(100 + i);
             pulse();
             vc = flow.getCell(33);
             cellPosition = flow.getCellPosition(vc);
-            assertEquals("First cell position changed after adding " + i + " cells on large irregular list", -11d, cellPosition, 0d);
+            assertEquals(-11d, cellPosition, 0d, "First cell position changed after adding " + i + " cells on large irregular list");
         }
     }
 
@@ -1269,26 +1278,26 @@ public class VirtualFlowTest {
         pulse();
 
         int sheetChildrenSize = flow.sheetChildren.size();
-        assertEquals("Wrong number of sheet children", 12, sheetChildrenSize);
+        assertEquals(12, sheetChildrenSize, "Wrong number of sheet children");
 
         for (int i = 1; i < 50; i++) {
             flow.setCellCount(20 + i);
             pulse();
             sheetChildrenSize = flow.sheetChildren.size();
-            assertEquals("Wrong number of sheet children after inserting " + i + " items", 12, sheetChildrenSize);
+            assertEquals(12, sheetChildrenSize, "Wrong number of sheet children after inserting " + i + " items");
         }
 
         for (int i = 1; i < 50; i++) {
             flow.setCellCount(70 - i);
             pulse();
             sheetChildrenSize = flow.sheetChildren.size();
-            assertEquals("Wrong number of sheet children after removing " + i + " items", 12, sheetChildrenSize);
+            assertEquals(12, sheetChildrenSize, "Wrong number of sheet children after removing " + i + " items");
         }
 
         flow.setCellCount(0);
         pulse();
         sheetChildrenSize = flow.sheetChildren.size();
-        assertEquals("Wrong number of sheet children after removing all items", 12, sheetChildrenSize);
+        assertEquals(12, sheetChildrenSize, "Wrong number of sheet children after removing all items");
     }
 
     @Test
@@ -1319,10 +1328,85 @@ public class VirtualFlowTest {
         pulse();
         flow.sheetChildren.addListener((InvalidationListener) (o) -> {
             int count = ((List) o).size();
-            assertTrue(Integer.toString(count), count < 101);
+            assertTrue(count < 101, Integer.toString(count));
         });
         flow.scrollTo(99);
         pulse();
+    }
+
+    @Test
+    public void testVerticalChangeShouldResetIndex() {
+        List<IndexedCell<?>> cells = new ArrayList<>();
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> {
+            CellStub cellStub = new CellStub(flow);
+            cells.add(cellStub);
+            return cellStub;
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(100);
+        flow.resize(100, 100);
+        pulse();
+
+        flow.setVertical(false);
+
+        for (IndexedCell<?> cell : cells) {
+            assertEquals(-1, cell.getIndex());
+        }
+    }
+
+    @Test
+    public void testCellFactoryChangeShouldResetIndex() {
+        List<IndexedCell<?>> cells = new ArrayList<>();
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> {
+            CellStub cellStub = new CellStub(flow);
+            cells.add(cellStub);
+            return cellStub;
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(100);
+        flow.resize(100, 100);
+        pulse();
+
+        flow.setCellFactory(p -> new CellStub(flow));
+
+        pulse();
+
+        for (IndexedCell<?> cell : cells) {
+            assertEquals(-1, cell.getIndex());
+        }
+    }
+
+    @Test
+    public void testRecreateCellsChangeShouldResetIndex() {
+        List<IndexedCell<?>> cells = new ArrayList<>();
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> {
+            CellStub cellStub = new CellStub(flow);
+            cells.add(cellStub);
+            return cellStub;
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(100);
+        flow.resize(100, 100);
+        pulse();
+
+        flow.recreateCells();
+
+        List<IndexedCell<?>> currentCells = new ArrayList<>(cells);
+
+        pulse();
+
+        for (IndexedCell<?> cell : currentCells) {
+            assertEquals(-1, cell.getIndex());
+        }
     }
 
     private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<>();
@@ -1374,10 +1458,10 @@ public class VirtualFlowTest {
         double orig = flow.getPosition();
         flow.scrollPixels(10);
         double pos = flow.getPosition();
-        assertFalse("Moving in positive direction should not decrease position", pos < orig);
+        assertFalse(pos < orig, "Moving in positive direction should not decrease position");
         flow.scrollPixels(-50);
         double neg = flow.getPosition();
-        assertFalse("Moving in negative direction should not increase position", neg > pos);
+        assertFalse(neg > pos, "Moving in negative direction should not increase position");
     }
 
     @Test public void testReverseOrderForCircleFlow() {
@@ -1385,10 +1469,10 @@ public class VirtualFlowTest {
         double orig = vf.getPosition();
         vf.scrollPixels(10);
         double pos = vf.getPosition();
-        assertFalse("Moving in positive direction should not decrease position", pos < orig);
+        assertFalse(pos < orig, "Moving in positive direction should not decrease position");
         vf.scrollPixels(-50);
         double neg = vf.getPosition();
-        assertFalse("Moving in negative direction should not increase position", neg > pos);
+        assertFalse(neg > pos, "Moving in negative direction should not increase position");
     }
 
     @Test public void testGradualMoveForCircleFlow() {
@@ -1414,11 +1498,11 @@ public class VirtualFlowTest {
                 double diff = Math.abs((newDelta-delta)/newDelta);
                 // System.err.println("diff = "+diff);
                 // maximum 10% difference allowed
-                assertTrue("Too much variation while scrolling (from "+s0+" to "+s1+")", diff < 0.1);
+                assertTrue(diff < 0.1, "Too much variation while scrolling (from "+s0+" to "+s1+")");
             }
             // System.err.println("S1 = "+s1);
             // System.err.println("pos = "+vf.getPosition());
-            assertFalse("Thumb moving in the wrong direction at index ", s1 < s0);
+            assertFalse(s1 < s0, "Thumb moving in the wrong direction at index ");
             s0 = s1;
             delta = newDelta;
             position = newPosition;
@@ -1838,6 +1922,76 @@ assertEquals(0, firstCell.getIndex());
         assertEquals(3, flow.getFirstVisibleCell().getIndex());
     }
 
+    @Test
+    public void testScrollBarValueAdjustmentMovementUp() {
+        testScrollBarValueAdjustment(1, 1.0, 0.2, () -> -flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 1.0, 0.2, () -> -flow.getViewportLength());
+        testScrollBarValueAdjustment(1, 0.5, 0.2, () -> -flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 0.5, 0.2, () -> -flow.getViewportLength());
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentMovementDown() {
+        testScrollBarValueAdjustment(1, 0.0, 0.8, () -> flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 0.0, 0.8, () -> flow.getViewportLength());
+        testScrollBarValueAdjustment(1, 0.5, 0.8, () -> flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 0.5, 0.8, () -> flow.getViewportLength());
+    }
+
+    public void testScrollBarValueAdjustment(int cellCount, double position, double adjust, DoubleSupplier targetMovement) {
+        flow = new VirtualFlowShim<>();
+        class C extends CellStub {
+            public C(VirtualFlowShim flow) {
+                super(flow);
+            }
+
+            @Override
+            protected double computePrefHeight(double width) {
+                return getIndex() == 0 ? 1000 : 100;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+        }
+        flow.setCellFactory(fw -> new C(flow));
+        flow.setCellCount(cellCount);
+        flow.resize(256, 200);
+
+        flow.setPosition(position);
+        pulse();
+
+        Supplier<double[]> cellPositionsCalculater = () -> {
+            double[] positions = new double[cellCount];
+            IndexedCell<?> cell = flow.getFirstVisibleCell();
+            positions[cell.getIndex()] = flow.getCellPosition(cell);
+            for (int i = cell.getIndex() + 1; i < cellCount; i++) {
+                positions[i] = positions[i - 1] + flow.getCellSize(i - 1);
+            }
+            for (int i = cell.getIndex() - 1; i >= 0; i--) {
+                positions[i] = positions[i + 1] - flow.getCellSize(i);
+            }
+            return positions;
+        };
+
+        double[] positionsBefore = cellPositionsCalculater.get();
+
+        flow.shim_getVbar().adjustValue(adjust);
+        pulse();
+
+        double[] positionsAfter = cellPositionsCalculater.get();
+
+        for (int i = 0; i < positionsBefore.length; i++) {
+            assertEquals(targetMovement.getAsDouble(), positionsBefore[i] - positionsAfter[i], 0.1);
+        }
+    }
+
     /**
      * The first cell should always be the same when scrolling down just a little bit.
      * This is mainly a regression test to check that no leading cells are added where they should not be.
@@ -1898,6 +2052,70 @@ assertEquals(0, firstCell.getIndex());
         flow.scrollPixels(0.01);
 
         assertEquals(0.0, cell1.getLayoutY(), 0);
+    }
+
+    @Test
+    public void testScrollingXIsSnapped() {
+        StageLoader loader = new StageLoader(flow);
+        flow.resize(50, flow.getHeight());
+
+        pulse();
+
+        double newValue = 25.125476811;
+        double snappedNewValue = flow.snapPositionX(newValue);
+        flow.shim_getHbar().setValue(newValue);
+
+        double layoutX = flow.get_clipView().getLayoutX();
+
+        assertEquals(-snappedNewValue, layoutX, 0.0);
+
+        loader.dispose();
+    }
+
+    @Test
+    public void testScrollingYIsSnapped() {
+        flow.setVertical(false);
+
+        StageLoader loader = new StageLoader(flow);
+        flow.resize(50, flow.getHeight());
+
+        pulse();
+
+        double newValue = 25.125476811;
+        double snappedNewValue = flow.snapPositionY(newValue);
+        flow.shim_getVbar().setValue(newValue);
+
+        double layoutY = flow.get_clipView().getLayoutY();
+
+        assertEquals(-snappedNewValue, layoutY, 0.0);
+
+        loader.dispose();
+    }
+
+    @Test
+    public void testSheetChildrenAreAlwaysTheAmountOfVisibleCells() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(24);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(20);
+
+        flow.resize(250, 240);
+        pulse();
+
+        assertEquals(10, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
+
+        flow.resize(250, 480);
+        pulse();
+
+        assertEquals(20, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
+
+        flow.resize(250, 240);
+        pulse();
+
+        assertEquals(10, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
     }
 
 }

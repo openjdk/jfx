@@ -33,8 +33,8 @@ namespace WebCore {
 class CollectionNamedElementCache {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    inline const Vector<Element*>* findElementsWithId(const AtomString& id) const;
-    inline const Vector<Element*>* findElementsWithName(const AtomString& name) const;
+    inline const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* findElementsWithId(const AtomString& id) const;
+    inline const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* findElementsWithName(const AtomString& name) const;
     const Vector<AtomString>& propertyNames() const { return m_propertyNames; }
 
     inline void appendToIdCache(const AtomString& id, Element&);
@@ -44,9 +44,9 @@ public:
     inline size_t memoryCost() const;
 
 private:
-    typedef HashMap<AtomStringImpl*, Vector<Element*>> StringToElementsMap;
+    typedef HashMap<AtomStringImpl*, Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>> StringToElementsMap;
 
-    inline const Vector<Element*>* find(const StringToElementsMap&, const AtomString& key) const;
+    inline const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* find(const StringToElementsMap&, const AtomString& key) const;
     inline void append(StringToElementsMap&, const AtomString& key, Element&);
 
     StringToElementsMap m_idMap;
@@ -78,6 +78,7 @@ public:
     inline NodeListInvalidationType invalidationType() const;
     inline CollectionType type() const;
     inline ContainerNode& ownerNode() const;
+    inline Ref<ContainerNode> protectedOwnerNode() const;
     inline ContainerNode& rootNode() const;
     inline void invalidateCacheForAttribute(const QualifiedName& attributeName);
     WEBCORE_EXPORT virtual void invalidateCacheForDocument(Document&);
@@ -124,6 +125,11 @@ inline size_t CollectionNamedElementCache::memoryCost() const
 }
 
 inline ContainerNode& HTMLCollection::ownerNode() const
+{
+    return m_ownerNode;
+}
+
+inline Ref<ContainerNode> HTMLCollection::protectedOwnerNode() const
 {
     return m_ownerNode;
 }

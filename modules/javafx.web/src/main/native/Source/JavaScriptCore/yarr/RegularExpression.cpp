@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Collabora Ltd.
  * Copyright (C) 2011 Peter Varga (pvarga@webkit.org), University of Szeged
  *
@@ -32,8 +32,11 @@
 #include "YarrInterpreter.h"
 #include <wtf/Assertions.h>
 #include <wtf/BumpPointerAllocator.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace Yarr {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RegularExpression);
 
 class RegularExpression::Private : public RefCounted<RegularExpression::Private> {
 public:
@@ -92,7 +95,7 @@ RegularExpression& RegularExpression::operator=(const RegularExpression& re)
     return *this;
 }
 
-int RegularExpression::match(StringView str, int startFrom, int* matchLength) const
+int RegularExpression::match(StringView str, unsigned startFrom, int* matchLength) const
 {
     if (!d->m_regExpByteCode)
         return -1;
@@ -171,9 +174,9 @@ void replace(String& string, const RegularExpression& target, StringView replace
         if (index < 0)
             break;
         string = makeStringByReplacing(string, index, matchLength, replacement);
-        index += replacement.length();
         if (!matchLength)
             break; // Avoid infinite loop on 0-length matches, e.g. [a-z]*
+        index += replacement.length();
     }
 }
 

@@ -31,6 +31,7 @@
 #include "JSCBuiltins.h"
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -64,7 +65,6 @@ namespace JSC {
     macro(ShadowRealm) \
     macro(RegExp) \
     macro(min) \
-    macro(trunc) \
     macro(create) \
     macro(defineProperty) \
     macro(defaultPromiseThen) \
@@ -72,9 +72,7 @@ namespace JSC {
     macro(Map) \
     macro(throwTypeErrorFunction) \
     macro(typedArrayLength) \
-    macro(typedArrayClone) \
     macro(typedArrayContentType) \
-    macro(typedArraySort) \
     macro(typedArrayGetOriginalConstructor) \
     macro(BuiltinLog) \
     macro(BuiltinDescribe) \
@@ -118,20 +116,20 @@ namespace JSC {
     macro(syncIterator) \
     macro(nextMethod) \
     macro(asyncGeneratorQueueItemNext) \
-    macro(dateTimeFormat) \
     macro(this) \
+    macro(toIntegerOrInfinity) \
+    macro(toLength) \
     macro(importMapStatus) \
     macro(importInRealm) \
+    macro(evalFunction) \
     macro(evalInRealm) \
     macro(moveFunctionToRealm) \
-    macro(thisTimeValue) \
     macro(newTargetLocal) \
     macro(derivedConstructor) \
     macro(isTypedArrayView) \
     macro(isSharedTypedArrayView) \
     macro(isResizableOrGrowableSharedTypedArrayView) \
     macro(isDetached) \
-    macro(typedArrayDefaultComparator) \
     macro(typedArrayFromFast) \
     macro(isBoundFunction) \
     macro(hasInstanceBoundFunction) \
@@ -200,6 +198,7 @@ namespace JSC {
     macro(sentinelString) \
     macro(createRemoteFunction) \
     macro(isRemoteFunction) \
+    macro(arrayFromFast) \
     macro(arraySort) \
     macro(jsonParse) \
     macro(jsonStringify) \
@@ -229,7 +228,8 @@ extern JS_EXPORT_PRIVATE SymbolImpl::StaticSymbolImpl polyProtoPrivateName;
 }
 
 class BuiltinNames {
-    WTF_MAKE_NONCOPYABLE(BuiltinNames); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(BuiltinNames);
+    WTF_MAKE_TZONE_ALLOCATED(BuiltinNames);
 
 public:
     using PrivateNameSet = MemoryCompactLookupOnlyRobinHoodHashSet<String>;

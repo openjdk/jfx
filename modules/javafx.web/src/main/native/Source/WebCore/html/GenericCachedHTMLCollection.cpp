@@ -51,6 +51,11 @@ template GenericCachedHTMLCollection<CollectionTraversalType::Descendants>::Gene
 template GenericCachedHTMLCollection<CollectionTraversalType::ChildrenOnly>::GenericCachedHTMLCollection(ContainerNode&, CollectionType);
 
 template <CollectionTraversalType traversalType>
+GenericCachedHTMLCollection<traversalType>::~GenericCachedHTMLCollection() = default;
+template GenericCachedHTMLCollection<CollectionTraversalType::Descendants>::~GenericCachedHTMLCollection();
+template GenericCachedHTMLCollection<CollectionTraversalType::ChildrenOnly>::~GenericCachedHTMLCollection();
+
+template <CollectionTraversalType traversalType>
 bool GenericCachedHTMLCollection<traversalType>::elementMatches(Element& element) const
 {
     switch (this->type()) {
@@ -68,8 +73,10 @@ bool GenericCachedHTMLCollection<traversalType>::elementMatches(Element& element
         return element.hasTagName(tdTag) || element.hasTagName(thTag);
     case CollectionType::TSectionRows:
         return element.hasTagName(trTag);
-    case CollectionType::SelectedOptions:
-        return is<HTMLOptionElement>(element) && downcast<HTMLOptionElement>(element).selected();
+    case CollectionType::SelectedOptions: {
+        auto* optionElement = dynamicDowncast<HTMLOptionElement>(element);
+        return optionElement && optionElement->selected();
+    }
     case CollectionType::DataListOptions:
         return is<HTMLOptionElement>(element);
     case CollectionType::MapAreas:

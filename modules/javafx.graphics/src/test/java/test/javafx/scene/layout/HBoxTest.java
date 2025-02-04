@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -37,36 +34,43 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class HBoxTest {
     HBox hbox;
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         this.hbox = new HBox();
     }
 
 
-    @Test public void testHBoxDefaults() {
+    @Test
+    public void testHBoxDefaults() {
         assertEquals(0, hbox.getSpacing(), 1e-100);
         assertTrue(hbox.isFillHeight());
         assertEquals(Pos.TOP_LEFT, hbox.getAlignment());
     }
 
-    @Test public void testHBoxNulls() {
+    @Test
+    public void testHBoxNulls() {
         hbox.setAlignment(null);
 
         // this musn't throw NPE
         hbox.autosize();
         hbox.layout();
 
-        assertNull(null, hbox.getAlignment());
-        assertNull(null, hbox.alignmentProperty().get());
+        assertNull(hbox.getAlignment());
+        assertNull(hbox.alignmentProperty().get());
     }
 
-    @Test public void testSimpleHBox() {
+    @Test
+    public void testSimpleHBox() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -99,7 +103,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxSpacing() {
+    @Test
+    public void testHBoxSpacing() {
         hbox.setSpacing(10);
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);
@@ -133,7 +138,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxFillHeight() {
+    @Test
+    public void testHBoxFillHeight() {
         hbox.setFillHeight(false);
         hbox.setAlignment(Pos.TOP_CENTER);
         MockResizable child1 = new MockResizable(100,100, 200,300, 500,600);
@@ -168,7 +174,8 @@ public class HBoxTest {
         assertEquals(400, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentTopLeft() {
+    @Test
+    public void testHBoxAlignmentTopLeft() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -186,7 +193,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentTopCenter() {
+    @Test
+    public void testHBoxAlignmentTopCenter() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -204,7 +212,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentTopRight() {
+    @Test
+    public void testHBoxAlignmentTopRight() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -222,7 +231,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentCenterLeft() {
+    @Test
+    public void testHBoxAlignmentCenterLeft() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -240,7 +250,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentCenter() {
+    @Test
+    public void testHBoxAlignmentCenter() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -258,7 +269,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentCenterRight() {
+    @Test
+    public void testHBoxAlignmentCenterRight() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -276,7 +288,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentBottomLeft() {
+    @Test
+    public void testHBoxAlignmentBottomLeft() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -294,7 +307,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentBottomCenter() {
+    @Test
+    public void testHBoxAlignmentBottomCenter() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -312,7 +326,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentBottomRight() {
+    @Test
+    public void testHBoxAlignmentBottomRight() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -330,7 +345,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentBaselineLeft() {
+    @Test
+    public void testHBoxAlignmentBaselineLeft() {
         MockResizable child1 = new MockResizable(300,300); // baseline=290
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -349,7 +365,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentBaselineCenter() {
+    @Test
+    public void testHBoxAlignmentBaselineCenter() {
         MockResizable child1 = new MockResizable(300,300); // baseline=290
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -368,7 +385,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentBaselineRight() {
+    @Test
+    public void testHBoxAlignmentBaselineRight() {
         MockResizable child1 = new MockResizable(300,300); // baseline=290
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(hbox).addAll(child1, child2);
@@ -387,7 +405,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentBaselineLeftComputed() {
+    @Test
+    public void testHBoxAlignmentBaselineLeftComputed() {
         MockResizable child1 = new MockResizable(300,300) {
             @Override public double getBaselineOffset() {
                 return BASELINE_OFFSET_SAME_AS_HEIGHT; // should be prefHeight
@@ -410,7 +429,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentBaselineCenterComputed() {
+    @Test
+    public void testHBoxAlignmentBaselineCenterComputed() {
         MockResizable child1 = new MockResizable(300,300) {
             @Override public double getBaselineOffset() {
                 return BASELINE_OFFSET_SAME_AS_HEIGHT; // should be prefHeight
@@ -433,7 +453,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxAlignmentBaselineRightComputed() {
+    @Test
+    public void testHBoxAlignmentBaselineRightComputed() {
         MockResizable child1 = new MockResizable(300,300) {
             @Override public double getBaselineOffset() {
                 return BASELINE_OFFSET_SAME_AS_HEIGHT; // should be prefHeight
@@ -459,7 +480,8 @@ public class HBoxTest {
 
     /* Content Bias */
 
-    @Test public void testHBoxContentBiasNullNoChildHasContentBias() {
+    @Test
+    public void testHBoxContentBiasNullNoChildHasContentBias() {
         Rectangle r = new Rectangle(100,100);
         MockResizable child = new MockResizable(200,100);
         ParentShim.getChildren(hbox).addAll(r, child);
@@ -470,7 +492,8 @@ public class HBoxTest {
         assertEquals(300, hbox.prefWidth(200), 0);
     }
 
-    @Test public void testHBoxContentBiasVERTICALIfChildVERTICAL() {
+    @Test
+    public void testHBoxContentBiasVERTICALIfChildVERTICAL() {
         Rectangle r = new Rectangle(100,50);
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 200, 100);
         MockResizable child = new MockResizable(100,100);
@@ -480,7 +503,8 @@ public class HBoxTest {
 
     }
 
-    @Test public void testHBoxWithVerticalContentBiasAtPrefSize() {
+    @Test
+    public void testHBoxWithVerticalContentBiasAtPrefSize() {
         Rectangle rect1 = new Rectangle(100,50);
         MockBiased biased2 = new MockBiased(Orientation.VERTICAL, 200, 100);
         MockResizable resizable3 = new MockResizable(100,100);
@@ -503,7 +527,8 @@ public class HBoxTest {
         assertEquals(0, resizable3.getLayoutY(), 1e-100);
     }
 
-    @Test public void testHBoxWithVerticalContentBiasWithVerticalShrinking() {
+    @Test
+    public void testHBoxWithVerticalContentBiasWithVerticalShrinking() {
         Rectangle rect1 = new Rectangle(100,50);
         MockBiased biased2 = new MockBiased(Orientation.VERTICAL, 200, 100);
         MockResizable resizable3 = new MockResizable(100,100);
@@ -526,7 +551,8 @@ public class HBoxTest {
         assertEquals(0, resizable3.getLayoutY(), 1e-100);
     }
 
-    @Test public void testHBoxWithVerticalContentBiasWithVerticalGrowing() {
+    @Test
+    public void testHBoxWithVerticalContentBiasWithVerticalGrowing() {
         Rectangle rect1 = new Rectangle(100,50);
         MockBiased biased2 = new MockBiased(Orientation.VERTICAL, 200, 100);
         MockResizable resizable3 = new MockResizable(100,100);
@@ -548,7 +574,8 @@ public class HBoxTest {
         assertEquals(0, resizable3.getLayoutY(), 1e-100);
     }
 
-    @Test public void testHBoxContentBiasHORIZONTALIfChildHORIZONTAL() {
+    @Test
+    public void testHBoxContentBiasHORIZONTALIfChildHORIZONTAL() {
         Rectangle r = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 200, 100);
         MockResizable child = new MockResizable(100,100);
@@ -557,7 +584,8 @@ public class HBoxTest {
         assertEquals(Orientation.HORIZONTAL, hbox.getContentBias());
     }
 
-    @Test public void testHBoxWithHorizontalContentBiasAtPrefSize() {
+    @Test
+    public void testHBoxWithHorizontalContentBiasAtPrefSize() {
         Rectangle rect1 = new Rectangle(100,50);
         MockBiased biased2 = new MockBiased(Orientation.HORIZONTAL, 200, 100);
         MockResizable resizable3 = new MockResizable(100,100);
@@ -580,7 +608,8 @@ public class HBoxTest {
         assertEquals(0, resizable3.getLayoutY(), 1e-100);
     }
 
-    @Test public void testHBoxWithHorizontalContentBiasWithHorizontalShrinking() {
+    @Test
+    public void testHBoxWithHorizontalContentBiasWithHorizontalShrinking() {
         Rectangle rect1 = new Rectangle(100,50);
         MockBiased biased2 = new MockBiased(Orientation.HORIZONTAL, 200, 100);
         MockResizable resizable3 = new MockResizable(100,100);
@@ -602,7 +631,8 @@ public class HBoxTest {
         assertEquals(0, resizable3.getLayoutY(), 1e-100);
     }
 
-    @Test public void testHBoxWithHorizontalContentBiasWithHorizontalGrowingFillHeightFalse() {
+    @Test
+    public void testHBoxWithHorizontalContentBiasWithHorizontalGrowingFillHeightFalse() {
         hbox.setFillHeight(false);
 
         Rectangle rect1 = new Rectangle(100,50);
@@ -628,7 +658,8 @@ public class HBoxTest {
         assertEquals(0, resizable3.getLayoutY(), 1e-100);
     }
 
-    @Test public void testHBoxWithHorizontalContentBiasWithHorizontalGrowingFillHeightTrue() {
+    @Test
+    public void testHBoxWithHorizontalContentBiasWithHorizontalGrowingFillHeightTrue() {
         hbox.setFillHeight(true);
 
         Rectangle rect1 = new Rectangle(100,50);
@@ -657,7 +688,8 @@ public class HBoxTest {
 
 
 
-//    @Test public void testHBoxContentBiasNullIfFillHeightFalse() {
+//    @Test
+//    public void testHBoxContentBiasNullIfFillHeightFalse() {
 //        hbox.setFillHeight(false);
 //        Rectangle r = new Rectangle(100,100);
 //        MockBiased biased = new MockBiased(Orientation.VERTICAL, 200, 100);
@@ -670,7 +702,8 @@ public class HBoxTest {
 //        assertEquals(400, hbox.prefWidth(200), 0);
 //    }
 
-//    @Test public void testHBoxContentBiasNullIfChildHORIZONTALAndFillHeightTrue() {
+//    @Test
+//    public void testHBoxContentBiasNullIfChildHORIZONTALAndFillHeightTrue() {
 //        hbox.setFillHeight(true);
 //        Rectangle r = new Rectangle(100,100);
 //        MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 200);
@@ -683,7 +716,8 @@ public class HBoxTest {
 //        assertEquals(200, hbox.prefHeight(200), 0);
 //    }
 //
-//    @Test public void testHBoxContentBiasNullIfChildHORIZONTALAndFillHeightFalse() {
+//    @Test
+//    public void testHBoxContentBiasNullIfChildHORIZONTALAndFillHeightFalse() {
 //        hbox.setFillHeight(false);
 //        Rectangle r = new Rectangle(100,100);
 //        MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 200);
@@ -696,7 +730,8 @@ public class HBoxTest {
 //        assertEquals(200, hbox.prefHeight(200), 0);
 //    }
 
-    @Test public void testHBoxSetMarginConstraint() {
+    @Test
+    public void testHBoxSetMarginConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
         assertNull(HBox.getMargin(child1));
@@ -709,7 +744,8 @@ public class HBoxTest {
         assertNull(HBox.getMargin(child1));
     }
 
-    @Test public void testHBoxMarginConstraint() {
+    @Test
+    public void testHBoxMarginConstraint() {
         HBox hbox = new HBox();
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);
@@ -745,7 +781,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxSetHgrowConstraint() {
+    @Test
+    public void testHBoxSetHgrowConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
         assertNull(HBox.getHgrow(child1));
@@ -757,7 +794,8 @@ public class HBoxTest {
         assertNull(HBox.getHgrow(child1));
     }
 
-    @Test public void testHBoxHgrowConstraint() {
+    @Test
+    public void testHBoxHgrowConstraint() {
         HBox hbox = new HBox();
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);
@@ -793,7 +831,8 @@ public class HBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHBoxWithHorizontalBiasedChild() {
+    @Test
+    public void testHBoxWithHorizontalBiasedChild() {
         HBox hbox = new HBox();
         System.out.println("************************************");
 
@@ -837,7 +876,8 @@ public class HBoxTest {
 
     }
 
-    @Test public void testHBoxWithVerticalBiasedChild() {
+    @Test
+    public void testHBoxWithVerticalBiasedChild() {
         HBox hbox = new HBox();
 
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 100,100);
@@ -873,7 +913,8 @@ public class HBoxTest {
 
     }
 
-    @Test public void testMaxWidthHonoredWhenGrowing() {
+    @Test
+    public void testMaxWidthHonoredWhenGrowing() {
         MockRegion child = new MockRegion(10,10,100,100,300,300);
         MockRegion child2 = new MockRegion(10,10,100,100,200,200);
         HBox.setHgrow(child, Priority.ALWAYS);
@@ -889,7 +930,8 @@ public class HBoxTest {
         assertEquals(300, child2.getLayoutX(), 0);
     }
 
-    @Test public void testBaselineOffset() {
+    @Test
+    public void testBaselineOffset() {
         hbox.setAlignment(Pos.BASELINE_CENTER);
         MockResizable child = new MockResizable(100, 100);
         MockResizable child2 = new MockResizable(100, 150);

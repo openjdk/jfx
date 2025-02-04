@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package com.sun.prism.es2;
 
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.PlatformUtil;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 
 abstract class GLFactory {
@@ -82,32 +80,19 @@ abstract class GLFactory {
         if (PrismSettings.verbose) {
             System.out.println("GLFactory using " + factoryClassName);
         }
-        @SuppressWarnings("removal")
-        GLFactory tmp = factoryClassName == null ? null :
-            AccessController.doPrivileged(new FactoryLoader(factoryClassName));
-        platformFactory = tmp;
-    }
 
-    private static class FactoryLoader implements PrivilegedAction<GLFactory> {
-        private final String factoryClassName;
-        FactoryLoader(String factoryClassName) {
-            this.factoryClassName = factoryClassName;
+        GLFactory factory = null;
+        try {
+            factory = (factoryClassName == null) ? null :
+                (GLFactory)Class.forName(factoryClassName).getDeclaredConstructor().newInstance();
+        } catch (Throwable t) {
+            System.err.println("GLFactory.static - Platform: "
+                    + System.getProperty("os.name")
+                    + " - not available: "
+                    + factoryClassName);
+            t.printStackTrace();
         }
-
-        @Override
-        public GLFactory run() {
-            GLFactory factory = null;
-            try {
-                factory = (GLFactory) Class.forName(factoryClassName).getDeclaredConstructor().newInstance();
-            } catch (Throwable t) {
-                System.err.println("GLFactory.static - Platform: "
-                        + System.getProperty("os.name")
-                        + " - not available: "
-                        + factoryClassName);
-                t.printStackTrace();
-            }
-            return factory;
-        }
+        platformFactory = factory;
     }
 
     /**

@@ -2,7 +2,7 @@
  * jmorecfg.h
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 1997-2013 by Guido Vollbeding.
+ * Modified 1997-2022 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -384,20 +384,31 @@ typedef enum { FALSE = 0, TRUE = 1 } boolean;
 /*
  * Ordering of RGB data in scanlines passed to or from the application.
  * If your application wants to deal with data in the order B,G,R, just
- * change these macros.  You can also deal with formats such as R,G,B,X
- * (one extra byte per pixel) by changing RGB_PIXELSIZE.  Note that changing
- * the offsets will also change the order in which colormap data is organized.
+ * #define JPEG_USE_RGB_CUSTOM in jconfig.h, or define your own custom
+ * order in jconfig.h and #define JPEG_HAVE_RGB_CUSTOM.
+ * You can also deal with formats such as R,G,B,X (one extra byte per pixel)
+ * by changing RGB_PIXELSIZE.
+ * Note that changing the offsets will also change
+ * the order in which colormap data is organized.
  * RESTRICTIONS:
  * 1. The sample applications cjpeg,djpeg do NOT support modified RGB formats.
  * 2. The color quantizer modules will not behave desirably if RGB_PIXELSIZE
- *    is not 3 (they don't understand about dummy color components!).  So you
- *    can't use color quantization if you change that value.
+ *    is not 3 (they don't understand about dummy color components!).
+ *    So you can't use color quantization if you change that value.
  */
 
-#define RGB_RED        0    /* Offset of Red in an RGB scanline element */
+#ifndef JPEG_HAVE_RGB_CUSTOM
+#ifdef JPEG_USE_RGB_CUSTOM
+#define RGB_RED    2    /* Offset of Red in an RGB scanline element */
+#define RGB_GREEN    1    /* Offset of Green */
+#define RGB_BLUE    0    /* Offset of Blue */
+#else
+#define RGB_RED    0    /* Offset of Red in an RGB scanline element */
 #define RGB_GREEN    1    /* Offset of Green */
 #define RGB_BLUE    2    /* Offset of Blue */
+#endif
 #define RGB_PIXELSIZE    3    /* JSAMPLEs per RGB scanline element */
+#endif
 
 
 /* Definitions for speed-related optimizations. */

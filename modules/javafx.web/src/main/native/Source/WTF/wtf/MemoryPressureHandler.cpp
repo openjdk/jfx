@@ -65,7 +65,7 @@ static MemoryPressureHandler* memoryPressureHandlerIfExists()
 }
 
 MemoryPressureHandler::MemoryPressureHandler()
-#if OS(LINUX) || OS(FREEBSD)
+#if OS(LINUX) || OS(FREEBSD) || OS(QNX)
     : m_holdOffTimer(RunLoop::main(), this, &MemoryPressureHandler::holdOffTimerFired)
 #elif OS(WINDOWS)
     : m_windowsMeasurementTimer(RunLoop::main(), this, &MemoryPressureHandler::windowsMeasurementTimerFired)
@@ -299,19 +299,25 @@ void MemoryPressureHandler::releaseMemory(Critical critical, Synchronous synchro
     platformReleaseMemory(critical);
 }
 
-void MemoryPressureHandler::setMemoryPressureStatus(MemoryPressureStatus memoryPressureStatus)
+void MemoryPressureHandler::setMemoryPressureStatus(SystemMemoryPressureStatus status)
 {
-    if (m_memoryPressureStatus == memoryPressureStatus)
+    if (m_memoryPressureStatus == status)
         return;
 
-    m_memoryPressureStatus = memoryPressureStatus;
+    m_memoryPressureStatus = status;
     memoryPressureStatusChanged();
 }
 
 void MemoryPressureHandler::memoryPressureStatusChanged()
 {
     if (m_memoryPressureStatusChangedCallback)
-        m_memoryPressureStatusChangedCallback(m_memoryPressureStatus);
+        m_memoryPressureStatusChangedCallback();
+}
+
+void MemoryPressureHandler::didExceedProcessMemoryLimit(ProcessMemoryLimit limit)
+{
+    if (m_didExceedProcessMemoryLimitCallback)
+        m_didExceedProcessMemoryLimitCallback(limit);
 }
 
 void MemoryPressureHandler::ReliefLogger::logMemoryUsageChange()
@@ -341,7 +347,7 @@ void MemoryPressureHandler::ReliefLogger::logMemoryUsageChange()
 void MemoryPressureHandler::platformInitialize() { }
 #endif
 
-MemoryPressureHandler::Configuration::Configuration()
+MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration()
     : baseThreshold(std::min(3 * GB, ramSize()))
     , conservativeThresholdFraction(s_conservativeThresholdFraction)
     , strictThresholdFraction(s_strictThresholdFraction)
@@ -350,7 +356,7 @@ MemoryPressureHandler::Configuration::Configuration()
 {
 }
 
-MemoryPressureHandler::Configuration::Configuration(size_t base, double conservative, double strict, std::optional<double> kill, Seconds interval)
+MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration(size_t base, double conservative, double strict, std::optional<double> kill, Seconds interval)
     : baseThreshold(base)
     , conservativeThresholdFraction(conservative)
     , strictThresholdFraction(strict)

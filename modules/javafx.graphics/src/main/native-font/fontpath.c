@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,10 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <malloc.h>
 
 #include <jni.h>
 #include <com_sun_javafx_font_PrismFontFactory.h>
-
-#define BSIZE (max(512, MAX_PATH+1))
 
 /* Typically all local references held by a JNI function are automatically
  * released by JVM when the function returns. However, there is a limit to the
@@ -64,56 +63,141 @@ JNIEXPORT jint JNICALL JNI_OnLoad_javafx_font(JavaVM *vm, void *reserved) {
 }
 #endif // STATIC_BUILD
 
-JNIEXPORT jbyteArray JNICALL
+JNIEXPORT jstring JNICALL
 Java_com_sun_javafx_font_PrismFontFactory_getFontPath(JNIEnv *env, jobject thiz)
 {
-    char windir[BSIZE];
-    char sysdir[BSIZE];
-    char fontpath[BSIZE*2];
-    char *end;
-    jbyteArray byteArrObj;
-    int pathLen;
-    unsigned char *data;
+    const wchar_t* const FONTS_DIR = L"\\Fonts";
+    const UINT FONTS_DIR_STRLEN = (UINT)wcslen(FONTS_DIR);
+    errno_t err = 0;
+    wchar_t* windir = NULL;
+    UINT windirBufSize = 0; // total buffer size in wchar_t elements (including NULL terminator)
+    UINT windirFilledLen = 0; // amount of wchar_t elements filled (excluding NULL terminator)
+    wchar_t* sysdir = NULL;
+    UINT sysdirBufSize = 0;
+    UINT sysdirFilledLen = 0;
+    wchar_t* fontpath = NULL;
+    UINT fontpathBufSize = 0;
+    UINT fontpathFilledLen = 0;
+    wchar_t *end = NULL;
+    jsize pathLen = 0;
+    jstring stringObj = NULL;
+
+    /* Preallocate dummy 1-char buffers in case WinAPI wants to write something despite count being 0.
+     *
+     * Windows API doesn't explicitly say that calling GetSystem/GetWindowsDirectory(NULL, 0)
+     * will NOT attempt writing to NULL, so we want to provide something to prevent access
+     * violation if they do
+     */
+    sysdir = calloc(1, sizeof(wchar_t));
+    windir = calloc(1, sizeof(wchar_t));
+    if (!sysdir || !windir) goto finish;
 
     /* Locate fonts directories relative to the Windows System directory.
      * If Windows System location is different than the user's window
      * directory location, as in a shared Windows installation,
      * return both locations as potential font directories
      */
-    GetSystemDirectory(sysdir, BSIZE);
-    end = strrchr(sysdir,'\\');
-    if (end && (stricmp(end,"\\System") || stricmp(end,"\\System32"))) {
-        *end = 0;
-         strcat(sysdir, "\\Fonts");
-    }
-
-    GetWindowsDirectory(windir, BSIZE);
-    if (strlen(windir) > BSIZE-7) {
-        *windir = 0;
+    UINT ret = GetSystemDirectoryW(sysdir, 0);
+    if (ret == 0) {
+        goto finish;
     } else {
-        strcat(windir, "\\Fonts");
+        /* if buffer is too small, GetSystemDirectory will return the length in wchar_t-s
+         * that's needed to allocate the buffer, including terminating null character.
+         * `*Len` variables keep amount of elements without the NULL-terminator, so appropriate
+         * corrections have to be applied here.
+         */
+        free(sysdir);
+        sysdirBufSize = ret + FONTS_DIR_STRLEN;
+        sysdir = calloc(sysdirBufSize, sizeof(wchar_t));
+        if (!sysdir) goto finish;
+        ret = GetSystemDirectoryW(sysdir, sysdirBufSize - FONTS_DIR_STRLEN);
+        if (ret == 0 || ret >= (sysdirBufSize - FONTS_DIR_STRLEN)) {
+            goto finish;
+        }
+        // write was successful so now ret contains only characters written (without NULL-terminator)
+        sysdirFilledLen = ret;
     }
 
-    strcpy(fontpath,sysdir);
-    if (stricmp(sysdir,windir)) {
-        strcat(fontpath,";");
-        strcat(fontpath,windir);
+    /* Figure out fonts location based on acquired System directory - commonly it is one level up
+     * from sysdir and then in "Fonts" dir
+     */
+    end = wcsrchr(sysdir, '\\');
+    if (end) {
+        const wchar_t* const SYSTEM_DIR = L"\\System";
+        const wchar_t* const SYSTEM32_DIR = L"\\System32";
+
+        UINT sysdirToEnd = (UINT)(end - sysdir);
+        UINT endLen = sysdirFilledLen - sysdirToEnd;
+
+        // If the last directory in sysdir is "System" or "System32", strip that and replace it with "\Fonts"
+        if ((_wcsnicmp(end, SYSTEM_DIR, endLen) == 0) || (_wcsnicmp(end, SYSTEM32_DIR, endLen) == 0)) {
+            *end = 0;
+            // no length re-check here, both \System and \System32 are longer than \Fonts string
+            sysdirFilledLen -= endLen;
+            err = wcsncat_s(sysdir, sysdirBufSize, FONTS_DIR, FONTS_DIR_STRLEN);
+            if (err != 0) goto finish;
+            sysdirFilledLen += FONTS_DIR_STRLEN;
+        }
     }
 
-    pathLen = strlen(fontpath);
-
-    byteArrObj = (*env)->NewByteArray(env, pathLen);
-    if (byteArrObj == NULL) {
-        return (jbyteArray)NULL;
+    // Acquire Windows' directory - follows same assumptions as sysdir above
+    ret = GetWindowsDirectoryW(windir, 0);
+    if (ret == 0) {
+        goto finish;
+    } else {
+        free(windir);
+        windirBufSize = ret + FONTS_DIR_STRLEN;
+        windir = calloc(windirBufSize, sizeof(wchar_t));
+        if (!windir) goto finish;
+        ret = GetWindowsDirectoryW(windir, windirBufSize - FONTS_DIR_STRLEN);
+        if (ret == 0 || ret >= (windirBufSize - FONTS_DIR_STRLEN)) {
+            goto finish;
+        }
+        windirFilledLen = ret;
     }
-    data = (*env)->GetByteArrayElements(env, byteArrObj, NULL);
-    if (data == NULL) {
-        return byteArrObj;
-    }
-    memcpy(data, fontpath, pathLen);
-    (*env)->ReleaseByteArrayElements(env, byteArrObj, (jbyte*) data, (jint)0);
 
-    return byteArrObj;
+    // "Fonts" directory should be placed right inside Windows directory, so just append it to the path
+    err = wcsncat_s(windir, windirBufSize, FONTS_DIR, FONTS_DIR_STRLEN);
+    if (err != 0) goto finish;
+    windirFilledLen += FONTS_DIR_STRLEN;
+
+    // Copy sysdir to final string that we'll return to JVM
+    fontpathBufSize = windirFilledLen + sysdirFilledLen + 2; // add semicolon and zero-terminator
+    fontpath = calloc(fontpathBufSize, sizeof(wchar_t));
+    if (!fontpath) goto finish;
+    err = wcsncpy_s(fontpath, fontpathBufSize, sysdir, sysdirFilledLen);
+    if (err != 0) goto finish;
+    fontpathFilledLen = sysdirFilledLen;
+
+    /* JFX expects either one path, or two separated by a semicolon.
+     * If sysdir and windir are different, form a complete path "list" by
+     * joining them in "<sysdir>;<windir>" pattern. JVM side will unpack it.
+     */
+    if (_wcsnicmp(sysdir, windir, min(sysdirFilledLen, windirFilledLen))) {
+        err = wcsncat_s(fontpath, fontpathBufSize, L";", 1);
+        if (err != 0) goto finish;
+        err = wcsncat_s(fontpath, fontpathBufSize, windir, windirFilledLen);
+        if (err != 0) goto finish;
+        fontpathFilledLen += windirFilledLen + 1;
+    }
+
+    pathLen = (jsize)wcsnlen_s(fontpath, fontpathBufSize);
+
+    // Lastly, return what we just created to JVM as a String
+    stringObj = (*env)->NewString(env, fontpath, fontpathFilledLen);
+
+finish:
+    if (sysdir != NULL) {
+        free(sysdir);
+    }
+    if (windir != NULL) {
+        free(windir);
+    }
+    if (fontpath != NULL) {
+        free(fontpath);
+    }
+
+    return stringObj;
 }
 
 /* The code below is used to obtain information from the windows font APIS
@@ -544,15 +628,10 @@ static void populateFontFileNameFromRegistryKey(HKEY regKey,
                                                 GdiFontMapInfo *fmi,
                                                 jobject fontToFileMap)
 {
-#define MAX_BUFFER (FILENAME_MAX+1)
-    const wchar_t wname[MAX_BUFFER];
-    const char data[MAX_BUFFER];
 
     DWORD type;
     LONG ret;
     HKEY hkeyFonts;
-    DWORD dwNameSize;
-    DWORD dwDataValueSize;
     DWORD nval;
     DWORD dwNumValues, dwMaxValueNameLen, dwMaxValueDataLen;
 
@@ -567,16 +646,17 @@ static void populateFontFileNameFromRegistryKey(HKEY regKey,
                            &dwNumValues, &dwMaxValueNameLen,
                            &dwMaxValueDataLen, NULL, NULL);
 
-    if (ret != ERROR_SUCCESS ||
-        dwMaxValueNameLen >= MAX_BUFFER ||
-        dwMaxValueDataLen >= MAX_BUFFER) {
+    if (ret != ERROR_SUCCESS) {
         RegCloseKey(hkeyFonts);
         return;
     }
+    dwMaxValueNameLen++; /* Account for NULL-terminator */
+    wchar_t *wname = (wchar_t*)malloc(dwMaxValueNameLen * sizeof(wchar_t));
+    wchar_t *data = (wchar_t*)malloc(dwMaxValueDataLen);
     for (nval = 0; nval < dwNumValues; nval++ ) {
-        dwNameSize = MAX_BUFFER;
-        dwDataValueSize = MAX_BUFFER;
-        ret = RegEnumValueW(hkeyFonts, nval, (LPWSTR)wname, &dwNameSize,
+        DWORD dwNameSize = dwMaxValueNameLen;
+        DWORD dwDataValueSize = dwMaxValueDataLen;
+        ret = RegEnumValueW(hkeyFonts, nval, wname, &dwNameSize,
                             NULL, &type, (LPBYTE)data, &dwDataValueSize);
 
         if (ret != ERROR_SUCCESS) {
@@ -586,20 +666,22 @@ static void populateFontFileNameFromRegistryKey(HKEY regKey,
             continue;
         }
 
-        if (!RegistryToBaseTTNameW((LPWSTR)wname) ) {
+        if (!RegistryToBaseTTNameW(wname) ) {
             /* If the filename ends with ".ttf" or ".otf" also accept it.
              * Not expecting to need to do this for .ttc files.
              * Also note this code is not mirrored in the "A" (win9x) path.
              */
-            LPWSTR dot = wcsrchr((LPWSTR)data, L'.');
+            LPWSTR dot = wcsrchr(data, L'.');
             if (dot == NULL || ((wcsicmp(dot, L".ttf") != 0)
                                   && (wcsicmp(dot, L".otf") != 0))) {
                 continue;  /* not a TT font... */
             }
         }
-        registerFontW(fmi, fontToFileMap, (LPWSTR)wname, (LPWSTR)data);
+        registerFontW(fmi, fontToFileMap, wname, data);
     }
 
+    free(wname);
+    free(data);
     RegCloseKey(hkeyFonts);
 }
 

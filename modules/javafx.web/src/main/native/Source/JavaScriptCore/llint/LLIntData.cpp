@@ -30,6 +30,7 @@
 #include "CodeBlock.h"
 #include "JSCConfig.h"
 #include "LLIntCLoop.h"
+#include "LLIntEntrypoint.h"
 #include "LLIntPCRanges.h"
 #include "LLIntSlowPaths.h"
 #include "LLIntThunks.h"
@@ -65,7 +66,7 @@ extern "C" void exceptionHandlerTrampoline(void);
 extern "C" void returnFromLLIntTrampoline(void);
 #endif
 
-#if ENABLE(CSS_SELECTOR_JIT) && CPU(ARM64E)
+#if ENABLE(CSS_SELECTOR_JIT) && CPU(ARM64E) && !ENABLE(C_LOOP)
 extern "C" void vmEntryToCSSJITAfter(void);
 JSC_ANNOTATE_JIT_OPERATION_RETURN(vmEntryToCSSJITAfter);
 #endif
@@ -260,6 +261,7 @@ void initialize()
     INITIALIZE_TAG_AND_UNTAG_THUNKS(llint_function_for_construct_arity_check);
 #endif // CPU(ARM64E)
 #endif // ENABLE(C_LOOP)
+    g_jscConfig.defaultCallThunk = defaultCall().code().taggedPtr();
 }
 
 IGNORE_WARNINGS_BEGIN("missing-noreturn")

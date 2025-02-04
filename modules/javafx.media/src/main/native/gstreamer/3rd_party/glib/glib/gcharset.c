@@ -500,11 +500,11 @@ unalias_lang (char *lang)
   char *p;
   int i;
 
-  if (g_once_init_enter (&alias_table))
+  if (g_once_init_enter_pointer (&alias_table))
     {
       GHashTable *table = g_hash_table_new (g_str_hash, g_str_equal);
       read_aliases ("/usr/share/locale/locale.alias", table);
-      g_once_init_leave (&alias_table, table);
+      g_once_init_leave_pointer (&alias_table, table);
     }
 
   i = 0;

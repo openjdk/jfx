@@ -99,13 +99,19 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
     // 2. If supportedConfigurations is empty, return a promise rejected with a newly created TypeError.
     if (keySystem.isEmpty() || supportedConfigurations.isEmpty()) {
         infoLog(logger, identifier, "Rejected: empty keySystem(", keySystem.isEmpty(), ") or empty supportedConfigurations(", supportedConfigurations.isEmpty(), ")");
-        promise->reject(TypeError);
+        promise->reject(ExceptionCode::TypeError);
         return;
     }
 
     auto request = MediaKeySystemRequest::create(document, keySystem, WTFMove(promise));
-    request->setAllowCallback([keySystem, supportedConfigurations = WTFMove(supportedConfigurations), &document, logger = WTFMove(logger), identifier = WTFMove(identifier)](Ref<DeferredPromise>&& promise) mutable {
-        document.postTask([promise = WTFMove(promise), &document, keySystem, logger = WTFMove(logger), identifier = WTFMove(identifier), supportedConfigurations = WTFMove(supportedConfigurations)] (ScriptExecutionContext&) mutable {
+    request->setAllowCallback([keySystem, supportedConfigurations = WTFMove(supportedConfigurations), weakDocument = WeakPtr { document }, logger = WTFMove(logger), identifier = WTFMove(identifier)](Ref<DeferredPromise>&& promise) mutable {
+        RefPtr document = weakDocument.get();
+        if (!document) {
+            promise->reject(ExceptionCode::InvalidStateError);
+            return;
+        }
+
+        document->postTask([promise = WTFMove(promise), keySystem, logger = WTFMove(logger), identifier = WTFMove(identifier), supportedConfigurations = WTFMove(supportedConfigurations)] (ScriptExecutionContext& context) mutable {
             // 3. Let document be the calling context's Document.
             // 4. Let origin be the origin of document.
             // 5. Let promise be a new promise.
@@ -114,11 +120,12 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
             //      String comparison is case-sensitive.
             if (!CDM::supportsKeySystem(keySystem)) {
                 infoLog(logger, identifier, "Rejected: keySystem(", keySystem, ") not supported");
-                promise->reject(NotSupportedError);
+                promise->reject(ExceptionCode::NotSupportedError);
                 return;
             }
 
             // 6.2. Let implementation be the implementation of keySystem.
+            auto& document = downcast<Document>(context);
             auto implementation = CDM::create(document, keySystem);
             tryNextSupportedConfiguration(document, WTFMove(implementation), WTFMove(supportedConfigurations), WTFMove(promise), WTFMove(logger), WTFMove(identifier));
         });
@@ -162,7 +169,7 @@ static void tryNextSupportedConfiguration(Document& document, RefPtr<CDM>&& impl
 
     // 6.4. Reject promise with a NotSupportedError.
     infoLog(logger, identifier, "Rejected: empty supportedConfigurations");
-    promise->reject(NotSupportedError);
+    promise->reject(ExceptionCode::NotSupportedError);
 }
 
 } // namespace WebCore

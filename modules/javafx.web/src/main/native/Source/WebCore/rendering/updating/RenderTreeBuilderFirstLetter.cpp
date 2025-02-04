@@ -85,7 +85,7 @@ static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& first
         }
     }
 
-    firstLetterStyle.setStyleType(PseudoId::FirstLetter);
+    firstLetterStyle.setPseudoElementType(PseudoId::FirstLetter);
     // Force inline display (except for floating first-letters).
     firstLetterStyle.setDisplay(firstLetterStyle.isFloating() ? DisplayType::Block : DisplayType::Inline);
     // CSS2 says first-letter can't be positioned.
@@ -97,12 +97,12 @@ static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& first
 // CSS 2.1 http://www.w3.org/TR/CSS21/selector.html#first-letter
 // "Punctuation (i.e, characters defined in Unicode [UNICODE] in the "open" (Ps), "close" (Pe),
 // "initial" (Pi). "final" (Pf) and "other" (Po) punctuation classes), that precedes or follows the first letter should be included"
-static inline bool isPunctuationForFirstLetter(UChar32 c)
+static inline bool isPunctuationForFirstLetter(char32_t c)
 {
     return U_GET_GC_MASK(c) & (U_GC_PS_MASK | U_GC_PE_MASK | U_GC_PI_MASK | U_GC_PF_MASK | U_GC_PO_MASK);
 }
 
-static inline bool shouldSkipForFirstLetter(UChar32 c)
+static inline bool shouldSkipForFirstLetter(char32_t c)
 {
     return deprecatedIsSpaceOrNewline(c) || c == noBreakSpace || isPunctuationForFirstLetter(c);
 }
@@ -146,7 +146,7 @@ void RenderTreeBuilder::FirstLetter::updateAfterDescendants(RenderBlock& block)
 
     // If the child already has style, then it has already been created, so we just want
     // to update it.
-    if (firstLetterRenderer->parent()->style().styleType() == PseudoId::FirstLetter) {
+    if (firstLetterRenderer->parent()->style().pseudoElementType() == PseudoId::FirstLetter) {
         updateStyle(block, *firstLetterRenderer);
         return;
     }
@@ -185,9 +185,9 @@ void RenderTreeBuilder::FirstLetter::updateStyle(RenderBlock& firstLetterBlock, 
         // The first-letter renderer needs to be replaced. Create a new renderer of the right type.
         RenderPtr<RenderBoxModelObject> newFirstLetter;
         if (pseudoStyle->display() == DisplayType::Inline)
-            newFirstLetter = createRenderer<RenderInline>(firstLetterBlock.document(), WTFMove(*pseudoStyle));
+            newFirstLetter = createRenderer<RenderInline>(RenderObject::Type::Inline, firstLetterBlock.document(), WTFMove(*pseudoStyle));
         else
-            newFirstLetter = createRenderer<RenderBlockFlow>(firstLetterBlock.document(), WTFMove(*pseudoStyle));
+            newFirstLetter = createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, firstLetterBlock.document(), WTFMove(*pseudoStyle));
         newFirstLetter->initializeStyle();
         newFirstLetter->setIsFirstLetter();
 
@@ -231,9 +231,9 @@ void RenderTreeBuilder::FirstLetter::createRenderers(RenderText& currentTextChil
 
     RenderPtr<RenderBoxModelObject> newFirstLetter;
     if (pseudoStyle->display() == DisplayType::Inline)
-        newFirstLetter = createRenderer<RenderInline>(currentTextChild.document(), WTFMove(*pseudoStyle));
+        newFirstLetter = createRenderer<RenderInline>(RenderObject::Type::Inline, currentTextChild.document(), WTFMove(*pseudoStyle));
     else
-        newFirstLetter = createRenderer<RenderBlockFlow>(currentTextChild.document(), WTFMove(*pseudoStyle));
+        newFirstLetter = createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, currentTextChild.document(), WTFMove(*pseudoStyle));
     newFirstLetter->initializeStyle();
     newFirstLetter->setIsFirstLetter();
 
@@ -257,7 +257,7 @@ void RenderTreeBuilder::FirstLetter::createRenderers(RenderText& currentTextChil
         // accumulating just whitespace into the :first-letter.
         unsigned numCodeUnits = 0;
         for (unsigned scanLength = length; scanLength < oldText.length(); scanLength += numCodeUnits) {
-            UChar32 c = oldText.characterStartingAt(scanLength);
+            char32_t c = oldText.characterStartingAt(scanLength);
 
             if (!shouldSkipForFirstLetter(c))
                 break;

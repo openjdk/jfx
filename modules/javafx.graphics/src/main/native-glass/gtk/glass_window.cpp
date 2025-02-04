@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,11 +138,11 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
         ungrab_focus();
     }
 
-    if (xim.enabled && xim.ic) {
+    if (im_ctx.enabled && im_ctx.ctx) {
         if (event->in) {
-            XSetICFocus(xim.ic);
+            gtk_im_context_focus_in(im_ctx.ctx);
         } else {
-            XUnsetICFocus(xim.ic);
+            gtk_im_context_focus_out(im_ctx.ctx);
         }
     }
 
@@ -427,7 +427,7 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
     bool enter = event->type == GDK_ENTER_NOTIFY;
     if (jview) {
         guint state = event->state;
-        if (enter) { // workaround for RT-21590
+        if (enter) { // workaround for JDK-8126843
             state &= ~MOUSE_BUTTONS_MASK;
         }
 
@@ -459,22 +459,6 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     jchar key = gdk_keyval_to_unicode(event->keyval);
     if (key >= 'a' && key <= 'z' && (event->state & GDK_CONTROL_MASK)) {
         key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
-    } else {
-#ifdef GLASS_GTK2
-        if (key == 0) {
-            // Work around "bug" fixed in gtk-3.0:
-            // http://mail.gnome.org/archives/commits-list/2011-March/msg06832.html
-            switch (event->keyval) {
-            case 0xFF08 /* Backspace */: key =  '\b';
-            case 0xFF09 /* Tab       */: key =  '\t';
-            case 0xFF0A /* Linefeed  */: key =  '\n';
-            case 0xFF0B /* Vert. Tab */: key =  '\v';
-            case 0xFF0D /* Return    */: key =  '\r';
-            case 0xFF1B /* Escape    */: key =  '\033';
-            case 0xFFFF /* Delete    */: key =  '\177';
-            }
-        }
-#endif
     }
 
     if (key > 0) {
@@ -486,31 +470,27 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     } else {
         jChars = mainEnv->NewCharArray(0);
     }
-    if (jview) {
-        if (press) {
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                    com_sun_glass_events_KeyEvent_PRESS,
-                    glassKey,
-                    jChars,
-                    glassModifier);
-            CHECK_JNI_EXCEPTION(mainEnv)
 
-            if (jview && key > 0) { // TYPED events should only be sent for printable characters.
-                mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                        com_sun_glass_events_KeyEvent_TYPED,
-                        com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-                        jChars,
-                        glassModifier);
-                CHECK_JNI_EXCEPTION(mainEnv)
-            }
-        } else {
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                    com_sun_glass_events_KeyEvent_RELEASE,
-                    glassKey,
-                    jChars,
-                    glassModifier);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
+    if (!jview) {
+        return;
+    }
+
+    mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+            (press) ? com_sun_glass_events_KeyEvent_PRESS
+                    : com_sun_glass_events_KeyEvent_RELEASE,
+            glassKey,
+            jChars,
+            glassModifier);
+    CHECK_JNI_EXCEPTION(mainEnv)
+
+    // jview is checked again because previous call might be an exit key
+    if (press && key > 0 && jview) { // TYPED events should only be sent for printable characters.
+        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+                com_sun_glass_events_KeyEvent_TYPED,
+                com_sun_glass_events_KeyEvent_VK_UNDEFINED,
+                jChars,
+                glassModifier);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
@@ -657,15 +637,7 @@ void WindowContextBase::set_background(float r, float g, float b) {
 }
 
 WindowContextBase::~WindowContextBase() {
-    if (xim.ic) {
-        XDestroyIC(xim.ic);
-        xim.ic = NULL;
-    }
-    if (xim.im) {
-        XCloseIM(xim.im);
-        xim.im = NULL;
-    }
-
+    disableIME();
     gtk_widget_destroy(gtk_widget);
 }
 
@@ -961,7 +933,10 @@ void WindowContextTop::process_state(GdkEventWindowState* event) {
 
 void WindowContextTop::process_realize() {
     gdk_window = gtk_widget_get_window(gtk_widget);
-    request_frame_extents();
+    if (frame_type == TITLED) {
+        request_frame_extents();
+    }
+
     gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
     g_object_set_data_full(G_OBJECT(gdk_window), GDK_WINDOW_DATA_CONTEXT, this, NULL);
     gdk_window_register_dnd(gdk_window);
@@ -974,14 +949,6 @@ void WindowContextTop::process_realize() {
 void WindowContextTop::process_configure(GdkEventConfigure* event) {
     int ww = event->width + geometry.extents.left + geometry.extents.right;
     int wh = event->height + geometry.extents.top + geometry.extents.bottom;
-
-    if (!is_maximized && !is_fullscreen) {
-        geometry.final_width.value = (geometry.final_width.type == BOUNDSTYPE_CONTENT)
-                ? event->width : ww;
-
-        geometry.final_height.value = (geometry.final_height.type == BOUNDSTYPE_CONTENT)
-                ? event->height : wh;
-    }
 
     // Do not report if iconified, because Java side would set the state to NORMAL
     if (jwindow && !is_iconified) {
@@ -996,6 +963,14 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
             mainEnv->CallVoidMethod(jview, jViewNotifyResize, event->width, event->height);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
+    }
+
+    if (!is_iconified && !is_fullscreen && !is_maximized) {
+        geometry.final_width.value = (geometry.final_width.type == BOUNDSTYPE_CONTENT)
+                ? event->width : ww;
+
+        geometry.final_height.value = (geometry.final_height.type == BOUNDSTYPE_CONTENT)
+                ? event->height : wh;
     }
 
     int x, y;
@@ -1024,6 +999,13 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
 }
 
 void WindowContextTop::update_window_constraints() {
+    bool is_floating = !is_iconified && !is_fullscreen && !is_maximized;
+
+    if (!is_floating) {
+        // window is not floating on the screen
+        return;
+    }
+
     GdkGeometry hints;
 
     if (resizable.value && !is_disabled) {
@@ -1092,6 +1074,8 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
         geometry.final_width.type = BOUNDSTYPE_CONTENT;
         geometry.final_width.value = cw;
         newW = cw;
+    } else {
+        newW = geometry_get_content_width(&geometry);
     }
 
     if (h > 0) {
@@ -1102,7 +1086,10 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
         geometry.final_height.type = BOUNDSTYPE_CONTENT;
         geometry.final_height.value = ch;
         newH = ch;
+    } else {
+        newH = geometry_get_content_height(&geometry);
     }
+
 
     if (newW > 0 || newH > 0) {
         // call update_window_constraints() to let gtk_window_resize succeed, because it's bound to geometry constraints

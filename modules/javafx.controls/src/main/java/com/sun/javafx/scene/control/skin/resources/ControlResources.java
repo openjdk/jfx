@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ public final class ControlResources {
     // Translatable properties
     private static final String BASE_NAME = "com/sun/javafx/scene/control/skin/resources/controls";
 
-    // Non-translateable properties
+    // Non-translatable properties
     private static final String NT_BASE_NAME = "com/sun/javafx/scene/control/skin/resources/controls-nt";
 
     // Do not cache the bundle here. It is cached by the ResourceBundle

@@ -67,8 +67,8 @@ void SVGMPathElement::buildPendingResource()
             treeScope.addPendingSVGResource(target.identifier, *this);
             ASSERT(hasPendingResources());
         }
-    } else if (is<SVGElement>(*target.element))
-        downcast<SVGElement>(*target.element).addReferencingElement(*this);
+    } else if (auto* svgElement = dynamicDowncast<SVGElement>(*target.element))
+        svgElement->addReferencingElement(*this);
 
     targetPathChanged();
 }
@@ -95,7 +95,6 @@ void SVGMPathElement::didFinishInsertingNode()
 void SVGMPathElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     SVGElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
-    notifyParentOfPathChange(&oldParentOfRemovedTree);
     if (removalType.disconnectedFromDocument)
         clearResourceReferences();
 }
@@ -120,20 +119,14 @@ void SVGMPathElement::svgAttributeChanged(const QualifiedName& attrName)
 RefPtr<SVGPathElement> SVGMPathElement::pathElement()
 {
     auto target = targetElementFromIRIString(href(), treeScopeForSVGReferences());
-    if (is<SVGPathElement>(target.element))
-        return downcast<SVGPathElement>(target.element.get());
-    return nullptr;
+    return dynamicDowncast<SVGPathElement>(target.element);
 }
 
 void SVGMPathElement::targetPathChanged()
 {
-    notifyParentOfPathChange(parentNode());
-}
-
-void SVGMPathElement::notifyParentOfPathChange(ContainerNode* parent)
-{
-    if (is<SVGAnimateMotionElement>(parent))
-        downcast<SVGAnimateMotionElement>(*parent).updateAnimationPath();
+    auto* parent = parentNode();
+    if (auto* animateMotionElement = dynamicDowncast<SVGAnimateMotionElement>(parent))
+        animateMotionElement->updateAnimationPath();
 }
 
 } // namespace WebCore

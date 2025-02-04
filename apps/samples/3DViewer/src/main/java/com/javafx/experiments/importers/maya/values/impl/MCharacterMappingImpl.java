@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -39,14 +39,17 @@ import com.javafx.experiments.importers.maya.values.MCharacterMapping;
 public class MCharacterMappingImpl extends MDataImpl implements MCharacterMapping {
 
     class EntryImpl implements Entry {
+        @Override
         public String getKey() {
             return key;
         }
 
+        @Override
         public int getSourceIndex() {
             return sourceIndex;
         }
 
+        @Override
         public int getTargetIndex() {
             return targetIndex;
         }
@@ -66,10 +69,12 @@ public class MCharacterMappingImpl extends MDataImpl implements MCharacterMappin
         super(type);
     }
 
+    @Override
     public Entry[] getMapping() {
         return entries;
     }
 
+    @Override
     public void parse(Iterator<String> values) {
         int count = Integer.parseInt(values.next());
         entries = new Entry[count];

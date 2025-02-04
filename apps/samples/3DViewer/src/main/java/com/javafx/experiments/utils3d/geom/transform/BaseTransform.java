@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -404,6 +404,7 @@ public abstract class BaseTransform implements CanTransformVec3d {
     public abstract Point2D inverseTransform(Point2D src, Point2D dst)
             throws NoninvertibleTransformException;
 
+    @Override
     public abstract Vec3d transform(Vec3d src, Vec3d dst);
 
     public abstract Vec3d deltaTransform(Vec3d src, Vec3d dst);

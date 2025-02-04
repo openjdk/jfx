@@ -26,9 +26,13 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "CookieChangeListener.h"
+#include "CookieJar.h"
 #include "EventTarget.h"
 #include <wtf/Forward.h>
 #include <wtf/IsoMalloc.h>
+#include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -37,11 +41,12 @@ struct CookieStoreDeleteOptions;
 struct CookieStoreGetOptions;
 class Document;
 class DeferredPromise;
+class ScriptExecutionContext;
 
-class CookieStore final : public RefCounted<CookieStore>, public EventTarget, public ActiveDOMObject {
+class CookieStore final : public RefCounted<CookieStore>, public EventTarget, public ActiveDOMObject, public CookieChangeListener {
     WTF_MAKE_ISO_ALLOCATED(CookieStore);
 public:
-    static Ref<CookieStore> create(Document*);
+    static Ref<CookieStore> create(ScriptExecutionContext*);
     ~CookieStore();
 
     void get(String&& name, Ref<DeferredPromise>&&);
@@ -59,17 +64,38 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
 
+    using EventTarget::weakPtrFactory;
+    using EventTarget::WeakValueType;
+
 private:
-    explicit CookieStore(Document*);
+    explicit CookieStore(ScriptExecutionContext*);
+
+    // CookieChangeListener
+    void cookiesAdded(const String& host, const Vector<Cookie>&) final;
+    void cookiesDeleted(const String& host, const Vector<Cookie>&) final;
 
     // ActiveDOMObject
     const char* activeDOMObjectName() const final;
+    void stop() final;
+    bool virtualHasPendingActivity() const final;
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
+    void eventListenersDidChange() final;
+
+    RefPtr<DeferredPromise> takePromise(uint64_t promiseIdentifier);
+
+    class MainThreadBridge;
+    Ref<MainThreadBridge> m_mainThreadBridge;
+
+    bool m_hasChangeEventListener { false };
+    WeakPtr<CookieJar> m_cookieJar;
+    String m_host;
+    uint64_t m_nextPromiseIdentifier { 0 };
+    HashMap<uint64_t, Ref<DeferredPromise>> m_promises;
 };
 
 }

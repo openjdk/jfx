@@ -35,6 +35,7 @@
 #if USE(PTHREADS)
 
 #include <errno.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SafeStrerror.h>
 #include <wtf/StdLibExtras.h>
@@ -74,6 +75,10 @@
 #if OS(DARWIN)
 #include <mach/mach_traps.h>
 #include <mach/thread_switch.h>
+#endif
+
+#if OS(QNX)
+#define SA_RESTART 0
 #endif
 
 namespace WTF {
@@ -261,9 +266,30 @@ dispatch_qos_class_t Thread::dispatchQOSClass(QOS qos)
 }
 #endif
 
-#if OS(LINUX)
-static int schedPolicy(Thread::QOS qos)
+#if HAVE(SCHEDULING_POLICIES) || OS(LINUX)
+static int schedPolicy(Thread::SchedulingPolicy schedulingPolicy)
 {
+    switch (schedulingPolicy) {
+    case Thread::SchedulingPolicy::FIFO:
+        return SCHED_FIFO;
+    case Thread::SchedulingPolicy::Realtime:
+        return SCHED_RR;
+    case Thread::SchedulingPolicy::Other:
+        return SCHED_OTHER;
+    }
+    ASSERT_NOT_REACHED();
+    return SCHED_OTHER;
+}
+#endif
+
+#if OS(LINUX)
+static int schedPolicy(Thread::QOS qos, Thread::SchedulingPolicy schedulingPolicy)
+{
+    // A specific scheduling policy can override the implied policy from QOS
+    auto policy = schedPolicy(schedulingPolicy);
+    if (policy != SCHED_OTHER)
+        return policy;
+
     switch (qos) {
     case Thread::QOS::UserInteractive:
         return SCHED_RR;
@@ -279,13 +305,16 @@ static int schedPolicy(Thread::QOS qos)
 }
 #endif
 
-bool Thread::establishHandle(NewThreadContext* context, std::optional<size_t> stackSize, QOS qos)
+bool Thread::establishHandle(NewThreadContext* context, std::optional<size_t> stackSize, QOS qos, SchedulingPolicy schedulingPolicy)
 {
     pthread_t threadHandle;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 #if HAVE(QOS_CLASSES)
     pthread_attr_set_qos_class_np(&attr, dispatchQOSClass(qos), 0);
+#endif
+#if HAVE(SCHEDULING_POLICIES)
+    pthread_attr_setschedpolicy(&attr, schedPolicy(schedulingPolicy));
 #endif
     if (stackSize)
         pthread_attr_setstacksize(&attr, stackSize.value());
@@ -297,17 +326,22 @@ bool Thread::establishHandle(NewThreadContext* context, std::optional<size_t> st
     }
 
 #if OS(LINUX)
-    int policy = schedPolicy(qos);
+    int policy = schedPolicy(qos, schedulingPolicy);
     if (policy == SCHED_RR)
         RealTimeThreads::singleton().registerThread(*this);
     else {
-        struct sched_param param = { 0 };
+        struct sched_param param = { };
         error = pthread_setschedparam(threadHandle, policy | SCHED_RESET_ON_FORK, &param);
         if (error)
             LOG_ERROR("Failed to set sched policy %d for thread %ld: %s", policy, threadHandle, safeStrerror(error).data());
     }
-#elif !HAVE(QOS_CLASSES)
+#else
+#if !HAVE(QOS_CLASSES)
     UNUSED_PARAM(qos);
+#endif
+#if !HAVE(SCHEDULING_POLICIES)
+    UNUSED_PARAM(schedulingPolicy);
+#endif
 #endif
 
     establishPlatformSpecificHandle(threadHandle);
@@ -342,6 +376,23 @@ void Thread::changePriority(int delta)
     pthread_setschedparam(m_handle, policy, &param);
 #endif
 }
+
+#if HAVE(THREAD_TIME_CONSTRAINTS)
+void Thread::setThreadTimeConstraints(MonotonicTime period, MonotonicTime nominalComputation, MonotonicTime constraint, bool isPremptable)
+{
+#if OS(DARWIN)
+    thread_time_constraint_policy policy { };
+    policy.period = period.toMachAbsoluteTime();
+    policy.computation = nominalComputation.toMachAbsoluteTime();
+    policy.constraint = constraint.toMachAbsoluteTime();
+    policy.preemptible = isPremptable;
+    if (auto error = thread_policy_set(machThread(), THREAD_TIME_CONSTRAINT_POLICY, (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT))
+        LOG_ERROR("Thread %p failed to set time constraints with error %d", this, error);
+#else
+    ASSERT_NOT_REACHED();
+#endif
+}
+#endif
 
 int Thread::waitForCompletion()
 {
@@ -606,7 +657,7 @@ void ThreadCondition::wait(Mutex& mutex)
 
 bool ThreadCondition::timedWait(Mutex& mutex, WallTime absoluteTime)
 {
-    if (std::isinf(absoluteTime)) {
+    if (absoluteTime.isInfinity()) {
         if (absoluteTime == -WallTime::infinity())
             return false;
         wait(mutex);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,16 +29,16 @@ import com.sun.javafx.runtime.VersionInfo;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Properties;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
 public class VersionInfoTest {
 
     // Increment this feature-release counter for every major release.
-    private static final String FEATURE = "23";
+    private static final String FEATURE = "25";
 
     // The working directory at runtime is 'modules/javafx.base'.
     private static final String PROPERTIES_FILE = "build/module-lib/javafx.properties";
@@ -107,7 +107,7 @@ public class VersionInfoTest {
         properties = new Properties();
     }
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException {
         try (var reader = new FileReader(PROPERTIES_FILE)) {
             properties.load(reader);
@@ -180,7 +180,7 @@ public class VersionInfoTest {
     public void testVersionFormat() {
         String version = VersionInfo.getVersion();
         String message = String.format("Wrong short version string: '%s'", version);
-        assertTrue(message, version.matches(SVSTR));
+        assertTrue(version.matches(SVSTR), message);
     }
 
     @Test

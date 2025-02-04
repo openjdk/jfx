@@ -23,8 +23,6 @@ if (WIN32)
     WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_FTL_JIT PRIVATE OFF)
     # FIXME: Port bmalloc to Windows. https://bugs.webkit.org/show_bug.cgi?id=143310
     WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_SYSTEM_MALLOC PRIVATE ON)
-    # FIXME: Enable WASM on Windows https://bugs.webkit.org/show_bug.cgi?id=222315
-    WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEBASSEMBLY PRIVATE OFF)
 endif ()
 
 WEBKIT_OPTION_END()
@@ -54,9 +52,7 @@ if (WTF_CPU_ARM OR WTF_CPU_MIPS)
     SET_AND_EXPOSE_TO_BUILD(USE_CAPSTONE TRUE)
 endif ()
 
-# FIXME: JSCOnly on WIN32 seems to only work with fully static build
-# https://bugs.webkit.org/show_bug.cgi?id=172862
-if (NOT ENABLE_STATIC_JSC AND NOT WIN32)
+if (NOT ENABLE_STATIC_JSC)
     set(JavaScriptCore_LIBRARY_TYPE SHARED)
     set(bmalloc_LIBRARY_TYPE OBJECT)
     set(WTF_LIBRARY_TYPE OBJECT)

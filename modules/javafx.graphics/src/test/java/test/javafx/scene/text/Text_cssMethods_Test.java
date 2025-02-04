@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,7 @@
 
 package test.javafx.scene.text;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.geometry.VPos;
 import javafx.scene.text.Font;
@@ -35,19 +34,13 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
 import test.com.sun.javafx.test.CssMethodsTestBase;
 
-@RunWith(Parameterized.class)
 public class Text_cssMethods_Test extends CssMethodsTestBase {
     private static final Text TEST_TEXT = new Text();
 
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(new Object[] {
+    public static Stream<Configuration> data() {
+        return Stream.of(
             config(TEST_TEXT, "font", Font.getDefault(),
                    "-fx-font", Font.font("Verdana", FontWeight.BOLD, 22)),
             config(TEST_TEXT, "underline", false, "-fx-underline", true),
@@ -61,10 +54,6 @@ public class Text_cssMethods_Test extends CssMethodsTestBase {
             config(TEST_TEXT, "fontSmoothingType", FontSmoothingType.LCD,
                 "-fx-font-smoothing-type", FontSmoothingType.GRAY),
             config(TEST_TEXT, "tabSize", 8, "-fx-tab-size", 4)
-        });
-    }
-
-    public Text_cssMethods_Test(final Configuration configuration) {
-        super(configuration);
+        );
     }
 }

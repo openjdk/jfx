@@ -2,7 +2,7 @@
  * jdmaster.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2002-2019 by Guido Vollbeding.
+ * Modified 2002-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -164,7 +164,7 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
 #endif /* IDCT_SCALING_SUPPORTED */
 
   /* Report number of components in selected colorspace. */
-  /* Probably this should be in the color conversion module... */
+  /* This should correspond to the actual code in the color conversion module. */
   switch (cinfo->out_color_space) {
   case JCS_GRAYSCALE:
     cinfo->out_color_components = 1;
@@ -173,7 +173,7 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
   case JCS_BG_RGB:
     cinfo->out_color_components = RGB_PIXELSIZE;
     break;
-  default:            /* else must be same colorspace as in file */
+  default:    /* YCCK <=> CMYK conversion or same colorspace as in file */
     i = 0;
     for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
      ci++, compptr++)

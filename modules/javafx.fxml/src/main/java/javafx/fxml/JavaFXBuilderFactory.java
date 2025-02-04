@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,11 +75,11 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
     private static final String WEBVIEW_NAME = "javafx.scene.web.WebView";
 
     // WebViewBuilder class name loaded via reflection
-// TODO: Uncomment the following when RT-40037 is fixed.
+// TODO: Uncomment the following when JDK-8089907 is fixed.
 //    private static final String WEBVIEW_BUILDER_NAME =
 //            "com.sun.javafx.fxml.builder.web.JavaFXWebViewBuilder";
 
-// TODO: Remove the following when RT-40037 is fixed.
+// TODO: Remove the following when JDK-8089907 is fixed.
     private static final String WEBVIEW_BUILDER_NAME =
             "com.sun.javafx.fxml.builder.web.WebViewBuilder";
 
@@ -136,7 +136,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
             builder = new TriangleMeshBuilder();
         } else if (webSupported && type.getName().equals(WEBVIEW_NAME)) {
 
-// TODO: enable this code when RT-40037 is fixed.
+// TODO: enable this code when JDK-8089907 is fixed.
 //            // Construct a WebViewBuilder via reflection
 //            try {
 //                Class<Builder<?>> builderClass =
@@ -149,7 +149,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
 //                builder = null;
 //            }
 
-            // TODO: Remove the following when RT-40037 is fixed.
+            // TODO: Remove the following when JDK-8089907 is fixed.
             try {
                 Class<?> builderClass = classLoader.loadClass(WEBVIEW_BUILDER_NAME);
                 ObjectBuilderWrapper wrapper = new ObjectBuilderWrapper(builderClass);
@@ -189,7 +189,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
      * Legacy ObjectBuilder wrapper.
      *
      * TODO: move this legacy functionality to JavaFXWebViewBuilder and modify
-     * it to work without requiring the legacy builders. See RT-40037.
+     * it to work without requiring the legacy builders. See JDK-8089907.
      */
     private static final class ObjectBuilderWrapper {
         private static final Object[]   NO_ARGS = {};

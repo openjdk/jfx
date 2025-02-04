@@ -95,7 +95,7 @@ gst_audio_channel_mixer_free (GstAudioChannelMixer * mix)
   g_free (mix->matrix_int);
   mix->matrix_int = NULL;
 
-  g_slice_free (GstAudioChannelMixer, mix);
+  g_free (mix);
 }
 
 /*
@@ -146,21 +146,21 @@ gst_audio_channel_mixer_fill_compatible (gfloat ** matrix, gint in_channels,
     GstAudioChannelPosition pos2[1];
   } conv[] = {
     /* front: mono <-> stereo */
-    { {
-    GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+    {{
+                GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
             GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT}, {
-    GST_AUDIO_CHANNEL_POSITION_MONO}},
-        /* front center: 2 <-> 1 */
-    { {
-    GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+            GST_AUDIO_CHANNEL_POSITION_MONO}},
+    /* front center: 2 <-> 1 */
+    {{
+                GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
             GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER}, {
-    GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER}},
-        /* rear: 2 <-> 1 */
-    { {
-    GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+            GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER}},
+    /* rear: 2 <-> 1 */
+    {{
+                GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
             GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT}, {
-    GST_AUDIO_CHANNEL_POSITION_REAR_CENTER}}, { {
-    GST_AUDIO_CHANNEL_POSITION_INVALID}}
+            GST_AUDIO_CHANNEL_POSITION_REAR_CENTER}}, {{
+            GST_AUDIO_CHANNEL_POSITION_INVALID}}
   };
   gint c;
 
@@ -833,10 +833,8 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
       || format == GST_AUDIO_FORMAT_S32
       || format == GST_AUDIO_FORMAT_F32
       || format == GST_AUDIO_FORMAT_F64, NULL);
-  g_return_val_if_fail (in_channels > 0 && in_channels <= 64, NULL);
-  g_return_val_if_fail (out_channels > 0 && out_channels <= 64, NULL);
 
-  mix = g_slice_new0 (GstAudioChannelMixer);
+  mix = g_new0 (GstAudioChannelMixer, 1);
   mix->in_channels = in_channels;
   mix->out_channels = out_channels;
 
@@ -995,8 +993,6 @@ gst_audio_channel_mixer_new (GstAudioChannelMixerFlags flags,
       || format == GST_AUDIO_FORMAT_S32
       || format == GST_AUDIO_FORMAT_F32
       || format == GST_AUDIO_FORMAT_F64, NULL);
-  g_return_val_if_fail (in_channels > 0 && in_channels <= 64, NULL);
-  g_return_val_if_fail (out_channels > 0 && out_channels <= 64, NULL);
 
   matrix =
       gst_audio_channel_mixer_setup_matrix (flags, in_channels, in_position,

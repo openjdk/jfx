@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,17 +30,18 @@ import javafx.beans.property.FloatProperty;
 import javafx.beans.property.ReadOnlyFloatProperty;
 import javafx.beans.property.ReadOnlyFloatWrapper;
 import javafx.beans.property.SimpleFloatProperty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableFloatValueStub;
 import javafx.beans.value.ObservableObjectValueStub;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ReadOnlyFloatWrapperTest {
 
@@ -57,7 +58,7 @@ public class ReadOnlyFloatWrapperTest {
     private ChangeListenerMock<Number> internalChangeListener;
     private ChangeListenerMock<Number> publicChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new ReadOnlyFloatWrapperMock();
         readOnlyProperty = property.getReadOnlyProperty();
@@ -320,12 +321,15 @@ public class ReadOnlyFloatWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 2);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
-        final FloatProperty v = new SimpleFloatProperty(VALUE_1);
-        property.bind(v);
-        property.set(VALUE_1);
+        assertThrows(RuntimeException.class, () -> {
+            final FloatProperty v = new SimpleFloatProperty(VALUE_1);
+            property.bind(v);
+            property.set(VALUE_1);
+        });
     }
+
 
     @Test
     public void testLazyBind_primitive() {
@@ -551,10 +555,13 @@ public class ReadOnlyFloatWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> {
+            property.bind(null);
+        });
     }
+
 
     @Test
     public void testRebind() {

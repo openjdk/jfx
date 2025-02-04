@@ -58,9 +58,9 @@ Ref<MediaStreamPrivate> MediaStreamPrivate::create(Ref<const Logger>&& logger, R
     tracks.reserveInitialCapacity(2);
 
     if (audioSource)
-        tracks.uncheckedAppend(MediaStreamTrackPrivate::create(logger.copyRef(), audioSource.releaseNonNull()));
+        tracks.append(MediaStreamTrackPrivate::create(logger.copyRef(), audioSource.releaseNonNull()));
     if (videoSource)
-        tracks.uncheckedAppend(MediaStreamTrackPrivate::create(logger.copyRef(), videoSource.releaseNonNull()));
+        tracks.append(MediaStreamTrackPrivate::create(logger.copyRef(), videoSource.releaseNonNull()));
 
     return MediaStreamPrivate::create(WTFMove(logger), tracks);
 }
@@ -313,7 +313,7 @@ void MediaStreamPrivate::trackEnded(MediaStreamTrackPrivate& track)
 void MediaStreamPrivate::monitorOrientation(OrientationNotifier& notifier)
 {
     for (auto& track : m_trackSet.values()) {
-        if (track->source().isCaptureSource() && track->deviceType() == CaptureDevice::DeviceType::Camera)
+        if (track->isCaptureTrack() && track->deviceType() == CaptureDevice::DeviceType::Camera)
             track->source().monitorOrientation(notifier);
     }
 }

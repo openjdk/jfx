@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,8 +38,9 @@ import javafx.scene.shape.Rectangle;
  * Base skin for table cell controls, for example:
  * {@link javafx.scene.control.TableCell} and {@link javafx.scene.control.TreeTableCell}.
  *
- * @param <S> The type of the UI control (e.g. the type of the 'row').
- * @param <T> The type of the content in the cell, based on its {@link TableColumnBase}.
+ * @param <S> the type of the UI control (e.g. the type of the 'row')
+ * @param <T> the type of the content in the cell, based on its {@link TableColumnBase}
+ * @param <C> the type of the Cell control
  * @see javafx.scene.control.TableCell
  * @see javafx.scene.control.TreeTableCell
  * @since 9
@@ -72,12 +73,12 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
     public TableCellSkinBase(final C control) {
         super(control);
 
-        // RT-22038
+        // JDK-8126489
         Rectangle clip = new Rectangle();
         clip.widthProperty().bind(control.widthProperty());
         clip.heightProperty().bind(control.heightProperty());
         getSkinnable().setClip(clip);
-        // --- end of RT-22038
+        // --- end of JDK-8126489
 
         TableColumnBase<?,?> tableColumn = getTableColumn();
         if (tableColumn != null) {

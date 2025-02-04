@@ -29,12 +29,12 @@
 
 #include "BasicShapes.h"
 #include "LegacyRenderSVGImage.h"
+#include "LegacyRenderSVGResourceClipper.h"
+#include "LegacyRenderSVGResourceFilter.h"
+#include "LegacyRenderSVGResourceMasker.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "RenderLayer.h"
-#include "RenderSVGResourceClipper.h"
-#include "RenderSVGResourceFilter.h"
-#include "RenderSVGResourceMasker.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGraphicsElement.h"
@@ -47,7 +47,7 @@ namespace WebCore {
 
 static inline bool isRenderingMaskImage(const RenderObject& object)
 {
-    return object.view().frameView().paintBehavior().contains(PaintBehavior::RenderingSVGMask);
+    return object.view().frameView().paintBehavior().contains(PaintBehavior::RenderingSVGClipOrMask);
 }
 
 SVGRenderingContext::~SVGRenderingContext()
@@ -96,17 +96,15 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     // Setup transparency layers before setting up SVG resources!
     bool isRenderingMask = isRenderingMaskImage(*m_renderer);
     // RenderLayer takes care of root opacity.
-    float opacity = (renderer.isLegacySVGRoot() || isRenderingMask) ? 1 : style.opacity();
+    float opacity = (renderer.isLegacyRenderSVGRoot() || isRenderingMask) ? 1 : style.opacity();
     bool hasBlendMode = style.hasBlendMode();
     bool hasIsolation = style.hasIsolation();
     bool isolateMaskForBlending = false;
 
-#if ENABLE(CSS_COMPOSITING)
-    if (style.hasPositionedMask() && is<SVGGraphicsElement>(downcast<SVGElement>(*renderer.element()))) {
-        SVGGraphicsElement& graphicsElement = downcast<SVGGraphicsElement>(*renderer.element());
-        isolateMaskForBlending = graphicsElement.shouldIsolateBlending();
+    if (style.hasPositionedMask()) {
+        if (auto* graphicsElement = dynamicDowncast<SVGGraphicsElement>(*renderer.element()))
+            isolateMaskForBlending = graphicsElement->shouldIsolateBlending();
     }
-#endif
 
     if (opacity < 1 || hasBlendMode || isolateMaskForBlending || hasIsolation) {
         FloatRect repaintRect = m_renderer->repaintRectInLocalCoordinates();
@@ -131,7 +129,15 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     if (hasCSSClipping)
         SVGRenderSupport::clipContextToCSSClippingArea(m_paintInfo->context(), renderer);
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // FIXME: Text painting under LBSE reaches this code path, since all text painting code is shared between legacy / LBSE.
+    SVGResources* resources = nullptr;
+    if (!renderer.document().settings().layerBasedSVGEngineEnabled())
+        resources = SVGResourcesCache::cachedResourcesForRenderer(*m_renderer);
+#else
     auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*m_renderer);
+#endif
+
     if (!resources) {
         if (style.hasReferenceFilterOnly())
             return;
@@ -141,7 +147,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     }
 
     if (!isRenderingMask) {
-        if (RenderSVGResourceMasker* masker = resources->masker()) {
+        if (LegacyRenderSVGResourceMasker* masker = resources->masker()) {
             GraphicsContext* contextPtr = &m_paintInfo->context();
             bool result = masker->applyResource(*m_renderer, style, contextPtr, { });
             m_paintInfo->setContext(*contextPtr);
@@ -150,7 +156,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
         }
     }
 
-    RenderSVGResourceClipper* clipper = resources->clipper();
+    LegacyRenderSVGResourceClipper* clipper = resources->clipper();
     if (!hasCSSClipping && clipper) {
         GraphicsContext* contextPtr = &m_paintInfo->context();
         bool result = clipper->applyResource(*m_renderer, style, contextPtr, { });
@@ -177,7 +183,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
             // changes, we need to paint the whole filter region. Otherwise, elements not visible
             // at the time of the initial paint (due to scrolling, window size, etc.) will never
             // be drawn.
-            m_paintInfo->rect = IntRect(m_filter->drawingRegion(m_renderer));
+            m_paintInfo->rect = IntRect(m_filter->drawingRegion(*m_renderer));
         }
     }
 
@@ -205,7 +211,7 @@ AffineTransform SVGRenderingContext::calculateTransformationToOutermostCoordinat
     const RenderObject* ancestor = &renderer;
     while (ancestor) {
         absoluteTransform = ancestor->localToParentTransform() * absoluteTransform;
-        if (ancestor->isSVGRootOrLegacySVGRoot())
+        if (ancestor->isRenderOrLegacyRenderSVGRoot())
             break;
         ancestor = ancestor->parent();
     }

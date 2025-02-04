@@ -101,7 +101,6 @@ enum TreeType {
 };
 
 [Conditional=WEBGL] enum SimulatedWebGLContextEvent {
-    "ContextChange",
     "GPUStatusFailure",
     "Timeout"
 };
@@ -219,6 +218,65 @@ enum HEVCParameterCodec {
     octet generalTierFlag;
     required FrozenArray<octet> generalConstraintIndicatorFlags;
     unsigned short generalLevelIDC;
+};
+
+enum AV1ConfigurationProfile {
+    "Main",
+    "High",
+    "Professional"
+};
+
+enum AV1ConfigurationLevel {
+    "Level_2_0",
+    "Level_2_1",
+    "Level_2_2",
+    "Level_2_3",
+    "Level_3_0",
+    "Level_3_1",
+    "Level_3_2",
+    "Level_3_3",
+    "Level_4_0",
+    "Level_4_1",
+    "Level_4_2",
+    "Level_4_3",
+    "Level_5_0",
+    "Level_5_1",
+    "Level_5_2",
+    "Level_5_3",
+    "Level_6_0",
+    "Level_6_1",
+    "Level_6_2",
+    "Level_6_3",
+    "Level_7_0",
+    "Level_7_1",
+    "Level_7_2",
+    "Level_7_3"
+};
+
+enum AV1ConfigurationTier {
+    "Main",
+    "High"
+};
+
+enum AV1ConfigurationRange {
+    "VideoRange",
+    "FullRange"
+};
+
+[
+    JSGenerateToJSObject,
+] dictionary AV1CodecConfigurationRecord {
+    DOMString codecName;
+    AV1ConfigurationProfile profile;
+    AV1ConfigurationLevel level;
+    AV1ConfigurationTier tier;
+    octet bitDepth;
+    octet monochrome;
+    octet chromaSubsampling;
+    octet colorPrimaries;
+    octet transferCharacteristics;
+    octet matrixCoefficients;
+    AV1ConfigurationRange videoFullRangeFlag;
 };
 
 [
@@ -374,9 +432,13 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     // Animated image pausing testing.
     boolean hasPausedImageAnimations(Element element);
 
+    undefined markFrontBufferVolatile(Element element);
+    boolean isFullyActive(Document document);
     // Must be called on an element whose enclosingLayer() is self-painting.
     boolean isPaintingFrequently(Element element);
     undefined incrementFrequentPaintCounter(Element element);
+    undefined purgeFrontBuffer(Element element);
+    undefined purgeBackBuffer(Element element);
 
     DOMString elementRenderTreeAsText(Element element);
     boolean isPreloaded(DOMString url);
@@ -406,8 +468,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     Node shadowRoot(Element host);
 
     DOMString shadowRootType(Node root);
-    DOMString shadowPseudoId(Element element);
-    undefined setShadowPseudoId(Element element, [AtomString] DOMString id);
+    DOMString userAgentPart(Element element);
+    undefined setUserAgentPart(Element element, [AtomString] DOMString part);
     Node treeScopeRootNode(Node node);
     Node parentTreeScope(Node node);
 
@@ -431,6 +493,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     // For animations testing, we need a way to get at pseudo elements.
     Element? pseudoElement(Element element, DOMString pseudoId);
+
+    double preferredRenderingUpdateInterval();
 
     DOMString visiblePlaceholder(Element element);
     undefined selectColorInColorChooser(HTMLInputElement element, DOMString colorValue);
@@ -472,6 +536,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     DOMString viewBaseBackgroundColor();
     undefined setViewBaseBackgroundColor(DOMString colorValue);
+
+    DOMString documentBackgroundColor();
 
     undefined setPagination(DOMString mode, long gap, optional long pageLength = 0);
     unsigned long long lineIndexAfterPageBreak(Element element);
@@ -552,6 +618,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean hasAutocorrectedMarker(long from, long length);
     boolean hasDictationAlternativesMarker(long from, long length);
     boolean hasCorrectionIndicatorMarker(long from, long length);
+#if defined(ENABLE_UNIFIED_TEXT_REPLACEMENT) && ENABLE_UNIFIED_TEXT_REPLACEMENT
+    boolean hasUnifiedTextReplacementMarker(long from, long length);
+#endif
     undefined setContinuousSpellCheckingEnabled(boolean enabled);
     undefined setAutomaticQuoteSubstitutionEnabled(boolean enabled);
     undefined setAutomaticLinkDetectionEnabled(boolean enabled);
@@ -614,7 +683,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     DOMString layerTreeAsText(Document document, optional unsigned short flags = 0);
 
     unsigned long long layerIDForElement(Element element);
-
+    
     unsigned long long scrollingNodeIDForNode(optional Node? node = null);
 
     // Flags for platformLayerTreeAsText.
@@ -712,7 +781,6 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     undefined setFullscreenInsets(FullscreenInsets insets);
     undefined setFullscreenAutoHideDuration(double duration);
-    undefined setFullscreenControlsHidden(boolean hidden);
 
     [Conditional=VIDEO] boolean isChangingPresentationMode(HTMLVideoElement element);
     [Conditional=VIDEO_PRESENTATION_MODE] undefined setMockVideoPresentationModeEnabled(boolean enabled);
@@ -737,6 +805,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     undefined startTrackingLayerFlushes();
     unsigned long layerFlushCount();
+
+    undefined setCanvasNoiseInjectionSalt(HTMLCanvasElement element, unsigned long long salt);
+    boolean doesCanvasHavePendingCanvasNoiseInjection(HTMLCanvasElement element);
 
     // Query if a timer is currently throttled, to debug timer throttling.
     boolean isTimerThrottled(long timerHandle);
@@ -817,6 +888,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined enableMockMediaCapabilities();
 
     [Conditional=SPEECH_SYNTHESIS] undefined enableMockSpeechSynthesizer();
+    [Conditional=SPEECH_SYNTHESIS] undefined simulateSpeechSynthesizerVoiceListChange();
     [Conditional=SPEECH_SYNTHESIS] undefined enableMockSpeechSynthesizerForMediaElement(HTMLMediaElement element);
     [Conditional=SPEECH_SYNTHESIS] undefined setSpeechUtteranceDuration(double duration);
     [Conditional=SPEECH_SYNTHESIS] readonly attribute unsigned long minimumExpectedVoiceCount;
@@ -843,6 +915,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     DOMRect selectionBounds();
     StaticRange? selectedRange();
     undefined setSelectionWithoutValidation(Node baseNode, unsigned long baseOffset, Node? extentNode, unsigned long extentOffset);
+    undefined setSelectionFromNone();
 
     [Conditional=MEDIA_SOURCE] undefined initializeMockMediaSource();
     [Conditional=MEDIA_SOURCE] Promise<sequence<DOMString>> bufferedSamplesForTrackId(SourceBuffer buffer, [AtomString] DOMString trackId);
@@ -865,6 +938,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=VIDEO] undefined activeAudioRouteDidChange(boolean shouldPause);
     [Conditional=VIDEO] undefined beginAudioSessionInterruption();
     [Conditional=VIDEO] undefined endAudioSessionInterruption();
+    [Conditional=VIDEO] undefined clearAudioSessionInterruptionFlag();
     [Conditional=VIDEO] undefined suspendAllMediaBuffering();
 
     [Conditional=WIRELESS_PLAYBACK_TARGET] undefined setMockMediaPlaybackTargetPickerEnabled(boolean enabled);
@@ -890,6 +964,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=VIDEO] boolean elementIsBlockingDisplaySleep(HTMLMediaElement element);
     [Conditional=VIDEO] boolean isPlayerVisibleInViewport(HTMLMediaElement element);
     [Conditional=VIDEO] boolean isPlayerMuted(HTMLMediaElement element);
+    [Conditional=VIDEO] boolean isPlayerPaused(HTMLMediaElement element);
 
     MockPageOverlay installMockPageOverlay(PageOverlayType type);
     DOMString pageOverlayLayerTreeAsText(optional unsigned short flags = 0);
@@ -945,6 +1020,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean userIsInteracting();
 
     boolean hasTransientActivation();
+
+    boolean hasHistoryActionActivation();
 
     GCObservation? observeGC(any observed);
 
@@ -1050,11 +1127,14 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     double currentAudioBufferSize();
     boolean audioSessionActive();
 
-    [Conditional=SERVICE_WORKER] Promise<boolean> hasServiceWorkerRegistration(DOMString scopeURL);
-    [Conditional=SERVICE_WORKER] Promise<undefined> terminateServiceWorker(ServiceWorker worker);
-    [Conditional=SERVICE_WORKER] Promise<undefined> whenServiceWorkerIsTerminated(ServiceWorker worker);
+    Promise<boolean> hasServiceWorkerRegistration(DOMString scopeURL);
+    Promise<undefined> terminateServiceWorker(ServiceWorker worker);
+    Promise<undefined> whenServiceWorkerIsTerminated(ServiceWorker worker);
+    undefined terminateWebContentProcess();
 
+#if defined(ENABLE_APPLE_PAY) && ENABLE_APPLE_PAY
     [CallWith=CurrentDocument, Conditional=APPLE_PAY] readonly attribute MockPaymentCoordinator mockPaymentCoordinator;
+#endif
 
     boolean isSystemPreviewLink(Element element);
     boolean isSystemPreviewImage(Element element);
@@ -1113,6 +1193,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     DoViParameterSet? parseDoViCodecParameters(DOMString codecParameters);
     DOMString createDoViCodecParametersString(DoViParameterSet parameters);
     VPCodecConfigurationRecord? parseVPCodecParameters(DOMString codecParameters);
+    AV1CodecConfigurationRecord? parseAV1CodecParameters(DOMString codecParameters);
+    DOMString createAV1CodecParametersString(AV1CodecConfigurationRecord parameters);
+    boolean validateAV1PerLevelConstraints(DOMString codecParameters, VideoConfiguration configuration);
 
     sequence<CookieData> getCookies();
 
@@ -1171,7 +1254,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=APP_HIGHLIGHTS] readonly attribute sequence<DOMString> appHighlightContextMenuItemTitles;
     [Conditional=APP_HIGHLIGHTS] unsigned long numberOfAppHighlights();
 
+#if defined(ENABLE_WEBXR) && ENABLE_WEBXR
     [Conditional=WEBXR] readonly attribute WebXRTest xrTest;
+#endif
 
     [Conditional=ENCRYPTED_MEDIA] unsigned long mediaKeysInternalInstanceObjectRefCount(MediaKeys mediaKeys);
     [Conditional=ENCRYPTED_MEDIA] unsigned long mediaKeySessionInternalInstanceSessionObjectRefCount(MediaKeySession session);
@@ -1205,11 +1290,10 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     undefined retainTextIteratorForDocumentContent();
 
-    [Conditional=SERVICE_WORKER] PushSubscription createPushSubscription(USVString endpoint, EpochTimeStamp? expirationTime, ArrayBuffer serverVAPIDPublicKey, ArrayBuffer clientECDHPublicKey, ArrayBuffer auth);
+    PushSubscription createPushSubscription(USVString endpoint, EpochTimeStamp? expirationTime, ArrayBuffer serverVAPIDPublicKey, ArrayBuffer clientECDHPublicKey, ArrayBuffer auth);
 
     [Conditional=ARKIT_INLINE_PREVIEW_MAC] Promise<sequence<DOMString>> modelInlinePreviewUUIDs();
     [Conditional=ARKIT_INLINE_PREVIEW_MAC] DOMString modelInlinePreviewUUIDForModelElement(HTMLModelElement modelElement);
-    undefined avoidIOSurfaceSizeCheckInWebProcess(HTMLCanvasElement element);
 
     boolean hasSleepDisabler();
 
@@ -1217,9 +1301,17 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     boolean consumeTransientActivation();
 
+    boolean consumeHistoryActionUserActivation();
+
     SelectorFilterHashCounts selectorFilterHashCounts(DOMString selector);
 
     readonly attribute boolean isVisuallyNonEmpty;
     
     boolean isUsingUISideCompositing();
+
+    boolean readyToRetrieveComputedRoleOrLabel(Element element);
+    DOMString getComputedLabel(Element element);
+    DOMString getComputedRole(Element element);
+
+    readonly attribute boolean hasScopeBreakingHasSelectors;
 };

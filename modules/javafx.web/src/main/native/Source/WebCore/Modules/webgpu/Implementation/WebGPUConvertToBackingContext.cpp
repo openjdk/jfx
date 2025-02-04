@@ -34,7 +34,6 @@
 #include "WebGPUBufferBindingType.h"
 #include "WebGPUCompareFunction.h"
 #include "WebGPUCompilationMessageType.h"
-#include "WebGPUComputePassTimestampLocation.h"
 #include "WebGPUCullMode.h"
 #include "WebGPUErrorFilter.h"
 #include "WebGPUFeatureName.h"
@@ -45,7 +44,6 @@
 #include "WebGPUPowerPreference.h"
 #include "WebGPUPrimitiveTopology.h"
 #include "WebGPUQueryType.h"
-#include "WebGPURenderPassTimestampLocation.h"
 #include "WebGPUSamplerBindingType.h"
 #include "WebGPUStencilOperation.h"
 #include "WebGPUStorageTextureAccess.h"
@@ -167,16 +165,6 @@ WGPUCompilationMessageType ConvertToBackingContext::convertToBacking(Compilation
     }
 }
 
-WGPUComputePassTimestampLocation ConvertToBackingContext::convertToBacking(ComputePassTimestampLocation computePassTimestampLocation)
-{
-    switch (computePassTimestampLocation) {
-    case ComputePassTimestampLocation::Beginning:
-        return WGPUComputePassTimestampLocation_Beginning;
-    case ComputePassTimestampLocation::End:
-        return WGPUComputePassTimestampLocation_End;
-    }
-}
-
 WGPUCullMode ConvertToBackingContext::convertToBacking(CullMode cullMode)
 {
     switch (cullMode) {
@@ -205,7 +193,7 @@ WGPUFeatureName ConvertToBackingContext::convertToBacking(FeatureName featureNam
 {
     switch (featureName) {
     case FeatureName::DepthClipControl:
-        return static_cast<WGPUFeatureName>(WGPUFeatureName_DepthClipControl);
+        return WGPUFeatureName_DepthClipControl;
     case FeatureName::Depth32floatStencil8:
         return WGPUFeatureName_Depth32FloatStencil8;
     case FeatureName::TextureCompressionBc:
@@ -217,13 +205,15 @@ WGPUFeatureName ConvertToBackingContext::convertToBacking(FeatureName featureNam
     case FeatureName::TimestampQuery:
         return WGPUFeatureName_TimestampQuery;
     case FeatureName::IndirectFirstInstance:
-        return static_cast<WGPUFeatureName>(WGPUFeatureName_IndirectFirstInstance);
+        return WGPUFeatureName_IndirectFirstInstance;
     case FeatureName::Bgra8unormStorage:
-        return static_cast<WGPUFeatureName>(WGPUFeatureName_BGRA8UnormStorage);
+        return WGPUFeatureName_BGRA8UnormStorage;
     case FeatureName::ShaderF16:
-        return static_cast<WGPUFeatureName>(WGPUFeatureName_ShaderF16);
+        return WGPUFeatureName_ShaderF16;
     case FeatureName::Rg11b10ufloatRenderable:
-        return static_cast<WGPUFeatureName>(WGPUFeatureName_RG11B10UfloatRenderable);
+        return WGPUFeatureName_RG11B10UfloatRenderable;
+    case FeatureName::Float32Filterable:
+        return WGPUFeatureName_Float32Filterable;
     }
 }
 
@@ -313,16 +303,6 @@ WGPUQueryType ConvertToBackingContext::convertToBacking(QueryType queryType)
     }
 }
 
-WGPURenderPassTimestampLocation ConvertToBackingContext::convertToBacking(RenderPassTimestampLocation renderPassTimestampLocation)
-{
-    switch (renderPassTimestampLocation) {
-    case RenderPassTimestampLocation::Beginning:
-        return WGPURenderPassTimestampLocation_Beginning;
-    case RenderPassTimestampLocation::End:
-        return WGPURenderPassTimestampLocation_End;
-    }
-}
-
 WGPUSamplerBindingType ConvertToBackingContext::convertToBacking(SamplerBindingType samplerBindingType)
 {
     switch (samplerBindingType) {
@@ -362,6 +342,10 @@ WGPUStorageTextureAccess ConvertToBackingContext::convertToBacking(StorageTextur
     switch (storageTextureAccess) {
     case StorageTextureAccess::WriteOnly:
         return WGPUStorageTextureAccess_WriteOnly;
+    case StorageTextureAccess::ReadOnly:
+        return WGPUStorageTextureAccess_ReadOnly;
+    case StorageTextureAccess::ReadWrite:
+        return WGPUStorageTextureAccess_ReadWrite;
     }
 }
 
@@ -452,6 +436,8 @@ WGPUTextureFormat ConvertToBackingContext::convertToBacking(TextureFormat textur
         return WGPUTextureFormat_BGRA8UnormSrgb;
     case TextureFormat::Rgb9e5ufloat:
         return WGPUTextureFormat_RGB9E5Ufloat;
+    case TextureFormat::Rgb10a2uint:
+        return WGPUTextureFormat_RGB10A2Uint;
     case TextureFormat::Rgb10a2unorm:
         return WGPUTextureFormat_RGB10A2Unorm;
     case TextureFormat::Rg11b10ufloat:
@@ -690,6 +676,8 @@ WGPUVertexFormat ConvertToBackingContext::convertToBacking(VertexFormat vertexFo
         return WGPUVertexFormat_Sint32x3;
     case VertexFormat::Sint32x4:
         return WGPUVertexFormat_Sint32x4;
+    case VertexFormat::Unorm10_10_10_2:
+        return WGPUVertexFormat_Unorm10_10_10_2;
     }
 }
 
@@ -703,44 +691,38 @@ WGPUVertexStepMode ConvertToBackingContext::convertToBacking(VertexStepMode vert
     }
 }
 
-WGPUBufferUsageFlags ConvertToBackingContext::convertBufferUsageFlagsToBacking(BufferUsageFlags bufferUsageFlags)
+static constexpr bool compare(BufferUsage a, unsigned b)
 {
-    WGPUBufferUsageFlags result = 0;
-    if (bufferUsageFlags.contains(BufferUsage::MapRead))
-        result |= WGPUBufferUsage_MapRead;
-    if (bufferUsageFlags.contains(BufferUsage::MapWrite))
-        result |= WGPUBufferUsage_MapWrite;
-    if (bufferUsageFlags.contains(BufferUsage::CopySource))
-        result |= WGPUBufferUsage_CopySrc;
-    if (bufferUsageFlags.contains(BufferUsage::CopyDestination))
-        result |= WGPUBufferUsage_CopyDst;
-    if (bufferUsageFlags.contains(BufferUsage::Index))
-        result |= WGPUBufferUsage_Index;
-    if (bufferUsageFlags.contains(BufferUsage::Vertex))
-        result |= WGPUBufferUsage_Vertex;
-    if (bufferUsageFlags.contains(BufferUsage::Uniform))
-        result |= WGPUBufferUsage_Uniform;
-    if (bufferUsageFlags.contains(BufferUsage::Storage))
-        result |= WGPUBufferUsage_Storage;
-    if (bufferUsageFlags.contains(BufferUsage::Indirect))
-        result |= WGPUBufferUsage_Indirect;
-    if (bufferUsageFlags.contains(BufferUsage::QueryResolve))
-        result |= WGPUBufferUsage_QueryResolve;
-    return result;
+    return static_cast<unsigned>(a) == b;
 }
 
+WGPUBufferUsageFlags ConvertToBackingContext::convertBufferUsageFlagsToBacking(BufferUsageFlags bufferUsageFlags)
+{
+    static_assert(compare(BufferUsage::MapRead, WGPUBufferUsage_MapRead), "BufferUsageFlags mismatch");
+    static_assert(compare(BufferUsage::MapWrite, WGPUBufferUsage_MapWrite), "BufferUsageFlags mismatch");
+    static_assert(compare(BufferUsage::CopySource, WGPUBufferUsage_CopySrc), "BufferUsageFlags mismatch");
+    static_assert(compare(BufferUsage::CopyDestination, WGPUBufferUsage_CopyDst), "BufferUsageFlags mismatch");
+    static_assert(compare(BufferUsage::Index, WGPUBufferUsage_Index), "BufferUsageFlags mismatch");
+    static_assert(compare(BufferUsage::Vertex, WGPUBufferUsage_Vertex), "BufferUsageFlags mismatch");
+    static_assert(compare(BufferUsage::Uniform, WGPUBufferUsage_Uniform), "BufferUsageFlags mismatch");
+    static_assert(compare(BufferUsage::Storage, WGPUBufferUsage_Storage), "BufferUsageFlags mismatch");
+    static_assert(compare(BufferUsage::Indirect, WGPUBufferUsage_Indirect), "BufferUsageFlags mismatch");
+    static_assert(compare(BufferUsage::QueryResolve, WGPUBufferUsage_QueryResolve), "BufferUsageFlags mismatch");
+
+    return static_cast<WGPUBufferUsageFlags>(bufferUsageFlags);
+}
+
+static constexpr bool compare(auto a, auto b)
+{
+    return static_cast<unsigned>(a) == static_cast<unsigned>(b);
+}
 WGPUColorWriteMaskFlags ConvertToBackingContext::convertColorWriteFlagsToBacking(ColorWriteFlags colorWriteFlags)
 {
-    WGPUColorWriteMaskFlags result = 0;
-    if (colorWriteFlags.contains(ColorWrite::Red))
-        result |= WGPUColorWriteMask_Red;
-    if (colorWriteFlags.contains(ColorWrite::Green))
-        result |= WGPUColorWriteMask_Green;
-    if (colorWriteFlags.contains(ColorWrite::Blue))
-        result |= WGPUColorWriteMask_Blue;
-    if (colorWriteFlags.contains(ColorWrite::Alpha))
-        result |= WGPUColorWriteMask_Alpha;
-    return result;
+    static_assert(compare(ColorWrite::Red, WGPUColorWriteMask_Red), "color masks have different values");
+    static_assert(compare(ColorWrite::Green, WGPUColorWriteMask_Green), "color masks have different values");
+    static_assert(compare(ColorWrite::Blue, WGPUColorWriteMask_Blue), "color masks have different values");
+    static_assert(compare(ColorWrite::Alpha, WGPUColorWriteMask_Alpha), "color masks have different values");
+    return static_cast<WGPUColorWriteMaskFlags>(colorWriteFlags);
 }
 
 WGPUMapModeFlags ConvertToBackingContext::convertMapModeFlagsToBacking(MapModeFlags mapModeFlags)

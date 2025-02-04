@@ -40,7 +40,7 @@ static const Seconds lowQualityTimeThreshold { 500_ms };
 
 ImageQualityController::ImageQualityController(const RenderView& renderView)
     : m_renderView(renderView)
-    , m_timer(*this, &ImageQualityController::highQualityRepaintTimerFired)
+    , m_timer(*this, &ImageQualityController::highQualityRepaintTimerFired, lowQualityTimeThreshold)
 {
 }
 
@@ -60,7 +60,7 @@ void ImageQualityController::set(RenderBoxModelObject* object, LayerSizeMap* inn
     else {
         LayerSizeMap newInnerMap;
         newInnerMap.set(layer, size);
-        m_objectLayerSizeMap.set(object, newInnerMap);
+        m_objectLayerSizeMap.set(*object, newInnerMap);
     }
 }
 
@@ -95,7 +95,7 @@ void ImageQualityController::highQualityRepaintTimerFired()
 
 void ImageQualityController::restartTimer()
 {
-    m_timer.startOneShot(lowQualityTimeThreshold);
+    m_timer.restart();
 }
 
 std::optional<InterpolationQuality> ImageQualityController::interpolationQualityFromStyle(const RenderStyle& style)

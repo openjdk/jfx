@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include <cstring>
 #include <span>
+#include <type_traits>
 #include <wtf/Assertions.h>
 
 namespace WTF {
@@ -59,21 +60,32 @@ bool allOf(ContainerType&& container, AllOfFunction allOfFunction)
 }
 
 template<typename T, typename U>
+std::span<T> spanReinterpretCast(std::span<U> span)
+{
+    RELEASE_ASSERT(!(span.size_bytes() % sizeof(T)));
+    static_assert(std::is_const_v<T> || (!std::is_const_v<T> && !std::is_const_v<U>), "spanCast will not remove constness from source");
+    return std::span<T> { reinterpret_cast<T*>(const_cast<std::remove_const_t<U>*>(span.data())), span.size_bytes() / sizeof(T) };
+}
+
+template<typename T, typename U>
 void memcpySpan(std::span<T> destination, std::span<U> source)
 {
     RELEASE_ASSERT(destination.size() == source.size());
     static_assert(sizeof(T) == sizeof(U));
+    static_assert(std::is_trivially_copyable_v<T>);
+    static_assert(std::is_trivially_copyable_v<U>);
     memcpy(destination.data(), source.data(), destination.size() * sizeof(T));
 }
 
 template<typename T>
 void memsetSpan(std::span<T> destination, uint8_t byte)
 {
+    static_assert(std::is_trivially_copyable_v<T>);
     memset(destination.data(), byte, destination.size() * sizeof(T));
 }
 
 } // namespace WTF
 
+using WTF::spanReinterpretCast;
 using WTF::memcpySpan;
 using WTF::memsetSpan;
-

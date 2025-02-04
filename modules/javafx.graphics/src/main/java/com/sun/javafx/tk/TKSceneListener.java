@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,7 +64,7 @@ public interface TKSceneListener {
     /**
      * Pass a key event to the scene to handle
      */
-    public void keyEvent(KeyEvent keyEvent);
+    public boolean keyEvent(KeyEvent keyEvent);
 
     /**
      * Pass an input method event to the scene to handle

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -348,8 +348,15 @@ public final class Dasher implements StartFlagPathConsumer2D, MarlinConst {
         }
         buf[segIdx++] = type;
         len--;
-        // small arraycopy (2, 4 or 6) but with offset:
-        System.arraycopy(pts, off, buf, segIdx, len);
+
+        if (len == 2) {
+            // most probable case:
+            buf[segIdx    ] = pts[off    ];
+            buf[segIdx + 1] = pts[off + 1];
+        } else {
+            // small arraycopy (4 or 6) but with offset:
+            System.arraycopy(pts, off, buf, segIdx, len);
+        }
         firstSegidx = segIdx + len;
     }
 

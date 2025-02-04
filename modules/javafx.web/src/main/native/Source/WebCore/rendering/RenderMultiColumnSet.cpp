@@ -45,17 +45,18 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMultiColumnSet);
 
 RenderMultiColumnSet::RenderMultiColumnSet(RenderFragmentedFlow& fragmentedFlow, RenderStyle&& style)
-    : RenderFragmentContainerSet(fragmentedFlow.document(), WTFMove(style), fragmentedFlow)
+    : RenderFragmentContainerSet(Type::MultiColumnSet, fragmentedFlow.document(), WTFMove(style), fragmentedFlow)
     , m_maxColumnHeight(RenderFragmentedFlow::maxLogicalHeight())
     , m_minSpaceShortage(RenderFragmentedFlow::maxLogicalHeight())
 {
+    ASSERT(isRenderMultiColumnSet());
 }
 
 RenderMultiColumnSet* RenderMultiColumnSet::nextSiblingMultiColumnSet() const
 {
     for (RenderObject* sibling = nextSibling(); sibling; sibling = sibling->nextSibling()) {
-        if (is<RenderMultiColumnSet>(*sibling))
-            return downcast<RenderMultiColumnSet>(sibling);
+        if (auto multiColumnSet = dynamicDowncast<RenderMultiColumnSet>(*sibling))
+            return multiColumnSet;
     }
     return nullptr;
 }
@@ -63,8 +64,8 @@ RenderMultiColumnSet* RenderMultiColumnSet::nextSiblingMultiColumnSet() const
 RenderMultiColumnSet* RenderMultiColumnSet::previousSiblingMultiColumnSet() const
 {
     for (RenderObject* sibling = previousSibling(); sibling; sibling = sibling->previousSibling()) {
-        if (is<RenderMultiColumnSet>(*sibling))
-            return downcast<RenderMultiColumnSet>(sibling);
+        if (auto* multiColumnSet = dynamicDowncast<RenderMultiColumnSet>(*sibling))
+            return multiColumnSet;
     }
     return nullptr;
 }
@@ -108,7 +109,7 @@ bool RenderMultiColumnSet::containsRendererInFragmentedFlow(const RenderObject& 
 {
     if (!previousSiblingMultiColumnSet() && !nextSiblingMultiColumnSet()) {
         // There is only one set. This is easy, then.
-        return renderer.isDescendantOf(m_fragmentedFlow);
+        return renderer.isDescendantOf(m_fragmentedFlow.get());
     }
 
     RenderObject* firstRenderer = firstRendererInFragmentedFlow();
@@ -576,7 +577,7 @@ LayoutRect RenderMultiColumnSet::fragmentedFlowPortionRectAt(unsigned index) con
     return portionRect;
 }
 
-LayoutRect RenderMultiColumnSet::fragmentedFlowPortionOverflowRect(const LayoutRect& portionRect, unsigned index, unsigned colCount, LayoutUnit colGap)
+LayoutRect RenderMultiColumnSet::fragmentedFlowPortionOverflowRect(const LayoutRect& portionRect, unsigned index, unsigned colCount, LayoutUnit colGap) const
 {
     // This function determines the portion of the flow thread that paints for the column. Along the inline axis, columns are
     // unclipped at outside edges (i.e., the first and last column in the set), and they clip to half the column
@@ -702,7 +703,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
     }
 }
 
-void RenderMultiColumnSet::repaintFragmentedFlowContent(const LayoutRect& repaintRect)
+void RenderMultiColumnSet::repaintFragmentedFlowContent(const LayoutRect& repaintRect) const
 {
     // Figure out the start and end columns and only check within that range so that we don't walk the
     // entire column set. Put the repaint rect into flow thread coordinates by flipping it first.
@@ -742,7 +743,7 @@ void RenderMultiColumnSet::repaintFragmentedFlowContent(const LayoutRect& repain
     }
 }
 
-Vector<LayoutRect> RenderMultiColumnSet::fragmentRectsForFlowContentRect(const LayoutRect& rect)
+Vector<LayoutRect> RenderMultiColumnSet::fragmentRectsForFlowContentRect(const LayoutRect& rect) const
 {
     auto fragmentedFlowRect = rect;
     fragmentedFlow()->flipForWritingMode(fragmentedFlowRect);

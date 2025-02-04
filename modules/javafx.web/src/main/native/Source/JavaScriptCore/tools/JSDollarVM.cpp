@@ -30,6 +30,7 @@
 #include "BuiltinNames.h"
 #include "CachedCall.h"
 #include "CodeBlock.h"
+#include "Completion.h"
 #include "ControlFlowProfiler.h"
 #include "DOMAttributeGetterSetter.h"
 #include "DOMJITGetterSetter.h"
@@ -42,6 +43,7 @@
 #include "JITSizeStatistics.h"
 #include "JSArray.h"
 #include "JSCInlines.h"
+#include "JSGlobalProxyInlines.h"
 #include "JSONObject.h"
 #include "JSPromise.h"
 #include "JSString.h"
@@ -66,6 +68,7 @@
 #include <wtf/Language.h>
 #include <wtf/ProcessID.h>
 #include <wtf/StringPrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WTFProcess.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
 
@@ -276,7 +279,7 @@ void Element::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 DEFINE_VISIT_CHILDREN(Element);
 
 class ElementHandleOwner final : public WeakHandleOwner {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ElementHandleOwner);
 public:
     bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason) final
     {
@@ -287,6 +290,8 @@ public:
         return visitor.containsOpaqueRoot(element->root());
     }
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ElementHandleOwner);
 
 class Root final : public JSDestructibleObject {
 public:
@@ -743,26 +748,32 @@ JSC_DEFINE_CUSTOM_SETTER(testStaticAccessorPutter, (JSGlobalObject* globalObject
     return thisObject->putDirect(vm, PropertyName(Identifier::fromString(vm, "testField"_s)), JSValue::decode(value));
 }
 
-static const struct CompactHashIndex staticCustomAccessorTableIndex[9] = {
-    { -1, -1 },
+#if PLATFORM(MAC)
+static const struct CompactHashIndex staticCustomAccessorTableIndex[5] = {
+    { 0, 4 },
     { -1, -1 },
     { 2, -1 },
     { -1, -1 },
-    { 0, 8 },
+    { 1, -1 },
+};
+#else
+static const struct CompactHashIndex staticCustomAccessorTableIndex[5] = {
+    { 0, 4 },
     { -1, -1 },
-    { -1, -1 },
+    { 2, -1 },
     { -1, -1 },
     { 1, -1 },
 };
+#endif
 
-static const struct HashTableValue staticCustomAccessorTableValues[3] = {
-    { "testStaticAccessor"_s, static_cast<unsigned>(PropertyAttribute::CustomAccessor), NoIntrinsic, { HashTableValue::GetterSetterType, testStaticAccessorGetter, testStaticAccessorPutter } },
-    { "testStaticAccessorDontEnum"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticAccessorGetter, testStaticAccessorPutter } },
-    { "testStaticAccessorReadOnly"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticAccessorGetter, nullptr } },
+static const struct JSC::HashTableValue staticCustomAccessorTableValues[3] = {
+    { "testStaticAccessor"_s, static_cast<unsigned>(PropertyAttribute::CustomAccessor), NoIntrinsic, { JSC::HashTableValue::GetterSetterType, testStaticAccessorGetter, testStaticAccessorPutter } },
+    { "testStaticAccessorDontEnum"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum, NoIntrinsic, { JSC::HashTableValue::GetterSetterType, testStaticAccessorGetter, testStaticAccessorPutter } },
+    { "testStaticAccessorReadOnly"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { JSC::HashTableValue::GetterSetterType, testStaticAccessorGetter, nullptr } },
 };
 
-static const struct HashTable staticCustomAccessorTable =
-    { 3, 7, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor, nullptr, staticCustomAccessorTableValues, staticCustomAccessorTableIndex };
+static const struct JSC::HashTable staticCustomAccessorTable =
+    { 3, 3, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor, nullptr, staticCustomAccessorTableValues, staticCustomAccessorTableIndex };
 
 class StaticCustomAccessor : public JSNonFinalObject {
     using Base = JSNonFinalObject;
@@ -843,26 +854,33 @@ JSC_DEFINE_CUSTOM_SETTER(testStaticValuePutterSetFlag, (JSGlobalObject* globalOb
     return thisObject->putDirect(vm, PropertyName(Identifier::fromString(vm, "testStaticValueSetterCalled"_s)), jsBoolean(true));
 }
 
-static const struct CompactHashIndex staticCustomValueTableIndex[8] = {
-    { 1, -1 },
-    { -1, -1 },
-    { -1, -1 },
-    { -1, -1 },
-    { 3, -1 },
+#if PLATFORM(MAC)
+static const struct CompactHashIndex staticCustomValueTableIndex[5] = {
+    { 1, 4 },
     { 2, -1 },
     { 0, -1 },
     { -1, -1 },
+    { 3, -1 },
+};
+#else
+static const struct CompactHashIndex staticCustomValueTableIndex[5] = {
+    { 1, 4 },
+    { 2, -1 },
+    { 0, -1 },
+    { -1, -1 },
+    { 3, -1 },
+};
+#endif
+
+static const struct JSC::HashTableValue staticCustomValueTableValues[4] = {
+    { "testStaticValue"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { JSC::HashTableValue::GetterSetterType, testStaticValueGetter, testStaticValuePutter } },
+    { "testStaticValueNoSetter"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum, NoIntrinsic, { JSC::HashTableValue::GetterSetterType, testStaticValueGetter, nullptr } },
+    { "testStaticValueReadOnly"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { JSC::HashTableValue::GetterSetterType, testStaticValueGetter, nullptr } },
+    { "testStaticValueSetFlag"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { JSC::HashTableValue::GetterSetterType, testStaticValueGetter, testStaticValuePutterSetFlag } },
 };
 
-static const struct HashTableValue staticCustomValueTableValues[4] = {
-    { "testStaticValue"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, testStaticValuePutter } },
-    { "testStaticValueNoSetter"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, nullptr } },
-    { "testStaticValueReadOnly"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, nullptr } },
-    { "testStaticValueSetFlag"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, testStaticValuePutterSetFlag } },
-};
-
-static const struct HashTable staticCustomValueTable =
-    { 4, 7, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::CustomValue, nullptr, staticCustomValueTableValues, staticCustomValueTableIndex };
+static const struct JSC::HashTable staticCustomValueTable =
+    { 4, 3, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::CustomValue, nullptr, staticCustomValueTableValues, staticCustomValueTableIndex };
 
 class StaticCustomValue : public JSNonFinalObject {
     using Base = JSNonFinalObject;
@@ -940,25 +958,32 @@ JSC_DEFINE_HOST_FUNCTION(staticDontDeleteDontEnumMethod, (JSGlobalObject*, CallF
     return encodedJSUndefined();
 }
 
-static const struct CompactHashIndex staticDontDeleteDontEnumTableIndex[8] = {
+#if PLATFORM(MAC)
+static const struct CompactHashIndex staticDontDeleteDontEnumTableIndex[5] = {
     { 0, -1 },
-    { 1, -1 },
-    { -1, -1 },
+    { 1, 4 },
     { -1, -1 },
     { -1, -1 },
     { 2, -1 },
+};
+#else
+static const struct CompactHashIndex staticDontDeleteDontEnumTableIndex[5] = {
+    { 0, -1 },
+    { 1, 4 },
     { -1, -1 },
     { -1, -1 },
+    { 2, -1 },
+};
+#endif
+
+static const struct JSC::HashTableValue staticDontDeleteDontEnumTableValues[3] = {
+    { "dontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontEnum), NoIntrinsic, { JSC::HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
+    { "dontDelete"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontDelete), NoIntrinsic, { JSC::HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
+    { "dontDeleteDontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontDelete | PropertyAttribute::DontEnum), NoIntrinsic, { JSC::HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
 };
 
-static const struct HashTableValue staticDontDeleteDontEnumTableValues[3] = {
-    { "dontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
-    { "dontDelete"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontDelete), NoIntrinsic, { HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
-    { "dontDeleteDontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontDelete | PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
-};
-
-static const struct HashTable staticDontDeleteDontEnumTable =
-    { 3, 7, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete, nullptr, staticDontDeleteDontEnumTableValues, staticDontDeleteDontEnumTableIndex };
+static const struct JSC::HashTable staticDontDeleteDontEnumTable =
+    { 3, 3, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete, nullptr, staticDontDeleteDontEnumTableValues, staticDontDeleteDontEnumTableIndex };
 
 class ObjectDoingSideEffectPutWithoutCorrectSlotStatus : public JSNonFinalObject {
     using Base = JSNonFinalObject;
@@ -2131,6 +2156,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionClearLinkBufferStats);
 static JSC_DECLARE_HOST_FUNCTION(functionLinkBufferStats);
 static JSC_DECLARE_HOST_FUNCTION(functionValue);
 static JSC_DECLARE_HOST_FUNCTION(functionGetPID);
+static JSC_DECLARE_HOST_FUNCTION(functionVMTaintedState);
 static JSC_DECLARE_HOST_FUNCTION(functionHaveABadTime);
 static JSC_DECLARE_HOST_FUNCTION(functionIsHavingABadTime);
 static JSC_DECLARE_HOST_FUNCTION(functionCallWithStackSize);
@@ -2158,6 +2184,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionCreateObjectDoingSideEffectPutWithoutCo
 static JSC_DECLARE_HOST_FUNCTION(functionCreateEmptyFunctionWithName);
 static JSC_DECLARE_HOST_FUNCTION(functionSetImpureGetterDelegate);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateBuiltin);
+static JSC_DECLARE_HOST_FUNCTION(functionRunTaintedString);
 static JSC_DECLARE_HOST_FUNCTION(functionGetPrivateProperty);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateRoot);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateElement);
@@ -2804,6 +2831,16 @@ JSC_DEFINE_HOST_FUNCTION(functionGetPID, (JSGlobalObject*, CallFrame*))
     return JSValue::encode(jsNumber(getCurrentProcessID()));
 }
 
+// Returns a string describing the current taintedness state of the VM.
+JSC_DEFINE_HOST_FUNCTION(functionVMTaintedState, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+
+    SourceTaintedOrigin sourceTaintedOrigin = sourceTaintedOriginFromStack(vm, callFrame);
+    return JSValue::encode(jsString(vm, sourceTaintedOriginToString(sourceTaintedOrigin)));
+}
+
 // Make the globalObject have a bad time. Does nothing if the object is not a JSGlobalObject.
 // Usage: $vm.haveABadTime(globalObject)
 JSC_DEFINE_HOST_FUNCTION(functionHaveABadTime, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3235,10 +3272,32 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateBuiltin, (JSGlobalObject* globalObject, C
     String functionText = asString(callFrame->argument(0))->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    SourceCode source = makeSource(WTFMove(functionText), { });
-    JSFunction* func = JSFunction::create(vm, createBuiltinExecutable(vm, source, Identifier::fromString(vm, "foo"_s), ImplementationVisibility::Public, ConstructorKind::None, ConstructAbility::CannotConstruct)->link(vm, nullptr, source), globalObject);
+    SourceCode source = makeSource(WTFMove(functionText), { }, SourceTaintedOrigin::Untainted);
+    JSFunction* func = JSFunction::create(vm, createBuiltinExecutable(vm, source, Identifier::fromString(vm, "foo"_s), ImplementationVisibility::Public, ConstructorKind::None, ConstructAbility::CannotConstruct, InlineAttribute::None)->link(vm, nullptr, source), globalObject);
 
     return JSValue::encode(func);
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionRunTaintedString, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (callFrame->argumentCount() < 1 || !callFrame->argument(0).isString())
+        return JSValue::encode(jsUndefined());
+
+    String functionText = asString(callFrame->argument(0))->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+    SourceCode source = makeSource(functionText, { }, SourceTaintedOrigin::KnownTainted);
+    NakedPtr<Exception> error;
+    JSValue result = evaluate(globalObject, source, JSValue(), error);
+
+    if (error)
+        return throwVMException(globalObject, scope, error.get());
+
+    return JSValue::encode(result);
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionGetPrivateProperty, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3350,7 +3409,7 @@ JSC_DEFINE_HOST_FUNCTION(functionShadowChickenFunctionsOnStack, (JSGlobalObject*
         DollarVMAssertScope assertScope;
         if (visitor->isInlinedDFGFrame())
             return IterationStatus::Continue;
-        if (visitor->isWasmFrame())
+        if (visitor->isNativeCalleeFrame())
             return IterationStatus::Continue;
         result->push(globalObject, jsCast<JSObject*>(visitor->callee().asCell()));
         scope.releaseAssertNoException(); // This function is only called from tests.
@@ -3465,7 +3524,7 @@ JSC_DEFINE_HOST_FUNCTION(functionBasicBlockExecutionCount, (JSGlobalObject* glob
 
 class DoNothingDebugger final : public Debugger {
     WTF_MAKE_NONCOPYABLE(DoNothingDebugger);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DoNothingDebugger);
 public:
     DoNothingDebugger(VM& vm)
         : Debugger(vm)
@@ -3480,6 +3539,8 @@ private:
         DollarVMAssertScope assertScope;
     }
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DoNothingDebugger);
 
 static EncodedJSValue changeDebuggerModeWhenIdle(JSGlobalObject* globalObject, OptionSet<CodeGenerationMode> codeGenerationMode)
 {
@@ -4011,8 +4072,11 @@ JSC_DEFINE_HOST_FUNCTION(functionCallFromCPP, (JSGlobalObject* globalObject, Cal
         return JSValue::encode(jsUndefined());
 
     MarkedArgumentBuffer arguments;
+    if (callFrame->argumentCount() > 2) {
+        arguments.ensureCapacity(callFrame->argumentCount() - 2);
     for (unsigned i = 2; i < callFrame->argumentCount(); ++i)
         arguments.append(callFrame->argument(i));
+    }
     ASSERT(!arguments.hasOverflowed());
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -4141,6 +4205,10 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "createDOMJITCheckJSCastObject"_s, functionCreateDOMJITCheckJSCastObject, 0);
     addFunction(vm, "createDOMJITGetterBaseJSObject"_s, functionCreateDOMJITGetterBaseJSObject, 0);
     addFunction(vm, "createBuiltin"_s, functionCreateBuiltin, 2);
+
+    addFunction(vm, "vmTaintedState"_s, functionVMTaintedState, 0);
+    addFunction(vm, "runTaintedString"_s, functionRunTaintedString, 1);
+
 #if ENABLE(WEBASSEMBLY)
     addFunction(vm, "createWasmStreamingParser"_s, functionCreateWasmStreamingParser, 0);
     addFunction(vm, "createWasmStreamingCompilerForCompile"_s, functionCreateWasmStreamingCompilerForCompile, 0);
@@ -4262,6 +4330,11 @@ void JSDollarVM::addConstructibleFunction(VM& vm, JSGlobalObject* globalObject, 
     DollarVMAssertScope assertScope;
     Identifier identifier = Identifier::fromString(vm, name);
     putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function, ImplementationVisibility::Public, NoIntrinsic, function), jsDollarVMPropertyAttributes);
+}
+
+void JSDollarVM::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode)
+{
+    Base::getOwnPropertyNames(object, globalObject, propertyNames, DontEnumPropertiesMode::Exclude);
 }
 
 template<typename Visitor>

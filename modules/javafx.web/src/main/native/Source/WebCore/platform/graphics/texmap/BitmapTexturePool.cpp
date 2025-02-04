@@ -23,8 +23,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #include "config.h"
+#if PLATFORM(JAVA)
 #include "BitmapTexturePool.h"
 
 #if USE(TEXTURE_MAPPER_GL)
@@ -108,3 +108,67 @@ RefPtr<BitmapTexture> BitmapTexturePool::createTexture(const BitmapTexture::Flag
 }
 
 } // namespace WebCore
+#else
+#include "config.h"
+#include "BitmapTexturePool.h"
+
+#if USE(TEXTURE_MAPPER)
+
+namespace WebCore {
+
+static const Seconds releaseUnusedSecondsTolerance { 3_s };
+static const Seconds releaseUnusedTexturesTimerInterval { 500_ms };
+
+BitmapTexturePool::BitmapTexturePool()
+    : m_releaseUnusedTexturesTimer(RunLoop::current(), this, &BitmapTexturePool::releaseUnusedTexturesTimerFired)
+{
+}
+
+RefPtr<BitmapTexture> BitmapTexturePool::acquireTexture(const IntSize& size, OptionSet<BitmapTexture::Flags> flags)
+{
+    Entry* selectedEntry = std::find_if(m_textures.begin(), m_textures.end(),
+        [&](Entry& entry) {
+            return entry.m_texture->refCount() == 1
+                && entry.m_texture->size() == size
+                && entry.m_texture->flags().contains(BitmapTexture::Flags::DepthBuffer) == flags.contains(BitmapTexture::Flags::DepthBuffer);
+        });
+
+    if (selectedEntry == m_textures.end()) {
+        m_textures.append(Entry(BitmapTexture::create(size, flags)));
+        selectedEntry = &m_textures.last();
+    } else
+        selectedEntry->m_texture->reset(size, flags);
+
+    scheduleReleaseUnusedTextures();
+    selectedEntry->markIsInUse();
+    return selectedEntry->m_texture.copyRef();
+}
+
+void BitmapTexturePool::scheduleReleaseUnusedTextures()
+{
+    if (m_releaseUnusedTexturesTimer.isActive())
+        return;
+
+    m_releaseUnusedTexturesTimer.startOneShot(releaseUnusedTexturesTimerInterval);
+}
+
+void BitmapTexturePool::releaseUnusedTexturesTimerFired()
+{
+    if (m_textures.isEmpty())
+        return;
+
+    // Delete entries, which have been unused in releaseUnusedSecondsTolerance.
+    MonotonicTime minUsedTime = MonotonicTime::now() - releaseUnusedSecondsTolerance;
+
+    m_textures.removeAllMatching([&minUsedTime](const Entry& entry) {
+        return entry.canBeReleased(minUsedTime);
+    });
+
+    if (!m_textures.isEmpty())
+        scheduleReleaseUnusedTextures();
+}
+
+} // namespace WebCore
+
+#endif // USE(TEXTURE_MAPPER)
+#endif

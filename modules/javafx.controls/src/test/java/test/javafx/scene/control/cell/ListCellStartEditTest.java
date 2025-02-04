@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,12 @@
 
 package test.javafx.scene.control.cell;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Supplier;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -34,64 +40,51 @@ import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ChoiceBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.function.Supplier;
-
-import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Parameterized tests for the {@link ListCell#startEdit()} method of {@link ListCell} and all sub implementations.
  * The {@link CheckBoxListCell} is special as in there the checkbox will be disabled based of the editability.
  */
-@RunWith(Parameterized.class)
 public class ListCellStartEditTest {
 
     private static final boolean[] EDITABLE_STATES = { true, false };
 
-    private final Supplier<ListCell<String>> listCellSupplier;
-
     private ListView<String> listView;
     private ListCell<String> listCell;
 
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        return wrapAsObjectArray(List.of(ListCell::new, ComboBoxListCell::new, TextFieldListCell::new,
-                ChoiceBoxListCell::new, () -> new CheckBoxListCell<>(obj -> new SimpleBooleanProperty())));
+    private static Collection<Supplier<ListCell<String>>> parameters() {
+        return List.of(
+            ListCell::new,
+            ComboBoxListCell::new,
+            TextFieldListCell::new,
+            ChoiceBoxListCell::new,
+            () -> new CheckBoxListCell<>(obj -> new SimpleBooleanProperty())
+        );
     }
 
-    private static Collection<Object[]> wrapAsObjectArray(List<Supplier<ListCell<?>>> listCells) {
-        return listCells.stream().map(cell -> new Object[] { cell }).collect(toList());
-    }
-
-    public ListCellStartEditTest(Supplier<ListCell<String>> listCellSupplier) {
-        this.listCellSupplier = listCellSupplier;
-    }
-
-    @Before
-    public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Supplier<ListCell<String>> listCellSupplier) {
         ObservableList<String> items = FXCollections.observableArrayList("1", "2", "3");
         listView = new ListView<>(items);
 
         listCell = listCellSupplier.get();
     }
 
-    @Test
-    public void testStartEditMustNotThrowNPE() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testStartEditMustNotThrowNPE(Supplier<ListCell<String>> listCellSupplier) {
+        setup(listCellSupplier);
         // A list cell without anything attached should not throw a NPE.
         listCell.startEdit();
     }
 
-    @Test
-    public void testStartEditRespectsEditable() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testStartEditRespectsEditable(Supplier<ListCell<String>> listCellSupplier) {
+        setup(listCellSupplier);
         listCell.updateIndex(0);
         listCell.updateListView(listView);
 
@@ -133,5 +126,4 @@ public class ListCellStartEditTest {
         // Restore the editing state.
         listCell.cancelEdit();
     }
-
 }

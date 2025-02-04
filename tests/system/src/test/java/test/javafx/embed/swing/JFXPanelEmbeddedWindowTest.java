@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,24 +24,25 @@
  */
 package test.javafx.embed.swing;
 
+import static org.junit.jupiter.api.Assertions.fail;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import javax.swing.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class JFXPanelEmbeddedWindowTest {
     private static JFrame frame;
     private static JFXPanel jfxPanel;
     private static Throwable th;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() throws Exception {
         CountDownLatch initLatch = new CountDownLatch(1);
         SwingUtilities.invokeLater(() -> {
@@ -80,7 +81,7 @@ public class JFXPanelEmbeddedWindowTest {
             try {
                 innerLatch.await(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                fail(e);
             }
             SwingUtilities.invokeLater(() -> outerLatch.countDown());
         });
@@ -90,7 +91,7 @@ public class JFXPanelEmbeddedWindowTest {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() throws Exception {
         if (frame != null) {
             SwingUtilities.invokeLater(frame::dispose);

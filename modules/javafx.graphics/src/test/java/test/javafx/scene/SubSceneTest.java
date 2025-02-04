@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 package test.javafx.scene;
 
 import com.sun.javafx.scene.NodeHelper;
+import javafx.css.PseudoClass;
 import javafx.stage.Stage;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGSubScene;
@@ -40,12 +41,14 @@ import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
 import javafx.scene.SubSceneShim;
 import javafx.scene.layout.Pane;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SubSceneTest {
 
@@ -54,15 +57,19 @@ public class SubSceneTest {
         assertTrue(Platform.isFxApplicationThread());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testNullRoot() {
-        SubScene subScene = new SubScene(null, 10, 10);
+        assertThrows(NullPointerException.class, () -> {
+            SubScene subScene = new SubScene(null, 10, 10);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetNullRoot() {
-        SubScene subScene = new SubScene(new Group(), 10, 10);
-        subScene.setRoot(null);
+        assertThrows(NullPointerException.class, () -> {
+            SubScene subScene = new SubScene(new Group(), 10, 10);
+            subScene.setRoot(null);
+        });
     }
 
     @Test
@@ -144,6 +151,18 @@ public class SubSceneTest {
     }
 
     @Test
+    public void testRootPseudoClassIsSetOnRootNode() {
+        var root = PseudoClass.getPseudoClass("root");
+        SubScene scene = new SubScene(new Group(), 10, 10);
+        Group g = new Group();
+        assertFalse(g.getPseudoClassStates().contains(root));
+        scene.setRoot(g);
+        assertTrue(g.getPseudoClassStates().contains(root));
+        scene.setRoot(new Group());
+        assertFalse(g.getPseudoClassStates().contains(root));
+    }
+
+    @Test
     public void testSetCamera() {
         Camera camera = new PerspectiveCamera();
         SubScene subScene = new SubScene(new Group(camera), 100, 100);
@@ -181,67 +200,77 @@ public class SubSceneTest {
         assertNull(subScene.getCamera());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromOtherScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        Scene scene = new Scene(new Group(camera));
+            Scene scene = new Scene(new Group(camera));
 
-        SubScene subScene = new SubScene(new Group(), 150, 150);
-        Scene otherScene = new Scene(new Group(subScene));
+            SubScene subScene = new SubScene(new Group(), 150, 150);
+            Scene otherScene = new Scene(new Group(subScene));
 
-        scene.setCamera(camera);
-        subScene.setCamera(camera);
+            scene.setCamera(camera);
+            subScene.setCamera(camera);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromItsScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        SubScene subScene = new SubScene(new Group(), 150, 150);
-        Scene scene = new Scene(new Group(camera, subScene));
+            SubScene subScene = new SubScene(new Group(), 150, 150);
+            Scene scene = new Scene(new Group(camera, subScene));
 
-        scene.setCamera(camera);
-        subScene.setCamera(camera);
+            scene.setCamera(camera);
+            subScene.setCamera(camera);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromOtherSubScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        SubScene subScene = new SubScene(new Group(), 150, 150);
-        Scene scene = new Scene(new Group(subScene));
+            SubScene subScene = new SubScene(new Group(), 150, 150);
+            Scene scene = new Scene(new Group(subScene));
 
-        SubScene otherSubScene = new SubScene(new Group(camera), 100, 100);
-        Scene otherScene = new Scene(new Group(otherSubScene));
+            SubScene otherSubScene = new SubScene(new Group(camera), 100, 100);
+            Scene otherScene = new Scene(new Group(otherSubScene));
 
-        otherSubScene.setCamera(camera);
-        subScene.setCamera(camera);
+            otherSubScene.setCamera(camera);
+            subScene.setCamera(camera);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromSubScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        SubScene subScene = new SubScene(new Group(), 150, 150);
-        Scene scene = new Scene(new Group(subScene));
+            SubScene subScene = new SubScene(new Group(), 150, 150);
+            Scene scene = new Scene(new Group(subScene));
 
-        SubScene otherSubScene = new SubScene(new Group(camera), 100, 100);
+            SubScene otherSubScene = new SubScene(new Group(camera), 100, 100);
 
-        otherSubScene.setCamera(camera);
-        subScene.setCamera(camera);
+            otherSubScene.setCamera(camera);
+            subScene.setCamera(camera);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromNestedSubScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        SubScene nestedSubScene = new SubScene(new Group(camera), 100, 100);
-        SubScene subScene = new SubScene(new Group(nestedSubScene), 150, 150);
-        Scene scene = new Scene(new Group(subScene));
+            SubScene nestedSubScene = new SubScene(new Group(camera), 100, 100);
+            SubScene subScene = new SubScene(new Group(nestedSubScene), 150, 150);
+            Scene scene = new Scene(new Group(subScene));
 
-        nestedSubScene.setCamera(camera);
-        subScene.setCamera(camera);
+            nestedSubScene.setCamera(camera);
+            subScene.setCamera(camera);
+        });
     }
 
     @Test
@@ -304,23 +333,27 @@ public class SubSceneTest {
         assertEquals(20, peer.getCamera().getNearClip(), 0.00001);
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void subScenesCannotShareCamera() {
-        SubScene sub = new SubScene(new Group(), 100, 100);
-        SubScene sub2 = new SubScene(new Group(), 100, 100);
-        Scene scene = new Scene(new Group(sub, sub2), 300, 200);
-        Camera cam = new ParallelCamera();
-        sub.setCamera(cam);
-        sub2.setCamera(cam);
+        assertThrows(IllegalArgumentException.class, () -> {
+            SubScene sub = new SubScene(new Group(), 100, 100);
+            SubScene sub2 = new SubScene(new Group(), 100, 100);
+            Scene scene = new Scene(new Group(sub, sub2), 300, 200);
+            Camera cam = new ParallelCamera();
+            sub.setCamera(cam);
+            sub2.setCamera(cam);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void sceneAndSubSceneCannotShareCamera() {
-        SubScene sub = new SubScene(new Group(), 100, 100);
-        Scene scene = new Scene(new Group(sub), 300, 200);
-        Camera cam = new ParallelCamera();
-        scene.setCamera(cam);
-        sub.setCamera(cam);
+        assertThrows(IllegalArgumentException.class, () -> {
+            SubScene sub = new SubScene(new Group(), 100, 100);
+            Scene scene = new Scene(new Group(sub), 300, 200);
+            Camera cam = new ParallelCamera();
+            scene.setCamera(cam);
+            sub.setCamera(cam);
+        });
     }
 
     @Test

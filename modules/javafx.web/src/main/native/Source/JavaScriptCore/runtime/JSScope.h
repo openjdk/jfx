@@ -114,7 +114,7 @@ public:
 
     // postfix ++ intentionally omitted
 
-    bool operator==(const ScopeChainIterator& other) const { return m_node == other.m_node; }
+    friend bool operator==(const ScopeChainIterator&, const ScopeChainIterator&) = default;
 
 private:
     JSScope* m_node;

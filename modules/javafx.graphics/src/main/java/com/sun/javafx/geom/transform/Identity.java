@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -232,7 +232,7 @@ public final class Identity extends BaseTransform {
 
     @Override
     public Shape createTransformedShape(Shape s) {
-        // TODO: Can we just return s? (RT-26884)
+        // TODO: Can we just return s? (JDK-8092003)
         return new Path2D(s);
     }
 

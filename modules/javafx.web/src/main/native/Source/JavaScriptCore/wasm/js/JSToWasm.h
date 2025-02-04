@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY) && ENABLE(JIT)
 
 #include "InternalFunction.h"
 #include "WasmB3IRGenerator.h"
@@ -44,8 +44,8 @@ namespace Wasm {
 struct CallInformation;
 
 void marshallJSResult(CCallHelpers& jit, const TypeDefinition&, const CallInformation& wasmFrameConvention, const RegisterAtOffsetList& savedResultRegisters);
-std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers&, Callee&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>*, const ModuleInformation&, MemoryMode, uint32_t functionIndex);
+std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers&, Callee&, Callee*, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>*, const ModuleInformation&, MemoryMode, uint32_t functionIndex);
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY) && ENABLE(JIT)

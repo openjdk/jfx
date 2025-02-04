@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,12 +32,10 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.scenario.effect.DropShadow;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * A series of tests where we are checking for the dirty region on a grid
@@ -50,7 +48,6 @@ import static org.junit.Assert.assertFalse;
  * must implement TestNGNode; the base class must set the "root" in the
  * parent class.
  */
-@RunWith(Parameterized.class)
 public class GridDirtyRegionTest extends DirtyRegionTestBase {
     /**
      * Specified to avoid magic numbers. There are several places where we
@@ -59,20 +56,17 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     private static final float TRANSLATE_DELTA = 50;
 
     /**
-     * Creates a new instance of the GridDirtyRegionTest. Since this is a
-     * parameterized test, we are passed the node creator and polluter.
-     */
-    public GridDirtyRegionTest(Creator creator, Polluter polluter) {
-        super(creator, polluter);
-    }
-
-    /**
      * Constructs a non-overlapping grid of nodes. Each node is a direct child
      * of the root node. They may end up overlapping when they become dirty,
      * but they don't start out that way! Each node is placed where it belongs
      * in the grid by translating them into place.
+     *
+     * NOTE: This was a parametrized test initializer with @BeforeEach flag, but
+     * JUnit5 does not support parametrized classes yet. Make this a @BeforeEach
+     * method once it does.
      */
-    @Before public void setUp() {
+    @Override
+    protected void setUp(Creator creator, Polluter polluter) {
         // create the grid
         NGNode[] content = new NGNode[9];
         for (int row=0; row<3; row++) {
@@ -90,9 +84,14 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         // clean them all up so that when we perform the test, it is from the
         // starting point of a completely cleaned tree
         root.render(TestGraphics.TEST_GRAPHICS);
+        root.clearDirty();
     }
 
-    @Test public void sanityCheck() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void sanityCheck(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode node = root.getChildren().get(0);
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
         assertEquals(new RectBounds(0, 0, 100, 100), node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
@@ -106,12 +105,20 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         assertEquals(new RectBounds(0, 110, 100, 210), node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
     }
 
-    @Test public void cleanNodesShouldNotContributeToDirtyRegion() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void cleanNodesShouldNotContributeToDirtyRegion(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         // By default the scene should be clean
         assertDirtyRegionEquals(root, new RectBounds());
     }
 
-    @Test public void cleanChildNodesOnADirtyParentShouldNotContributeToDirtyRegion() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void cleanChildNodesOnADirtyParentShouldNotContributeToDirtyRegion(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         // Now if I translate the root, none of the child nodes
         // should contribute to the dirty region
         translate(root, TRANSLATE_DELTA, TRANSLATE_DELTA);
@@ -120,12 +127,20 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         }
     }
 
-    @Test public void whenOnlyTheRootIsDirtyOnlyTheRootShouldBeAskedToAccumulateDirtyRegions() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void whenOnlyTheRootIsDirtyOnlyTheRootShouldBeAskedToAccumulateDirtyRegions(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         translate(root, TRANSLATE_DELTA, TRANSLATE_DELTA);
         assertOnlyTheseNodesAreAskedToAccumulateDirtyRegions(root);
     }
 
-    @Test public void cleanChildNodesOnACleanParentShouldNotContributeToDirtyRegion() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void cleanChildNodesOnACleanParentShouldNotContributeToDirtyRegion(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         // If I make one of the children dirty, then the child should contribute
         // to the dirty region, but none of the other nodes should. This test just
         // checks this second part -- that none of the other child nodes contribute.
@@ -138,7 +153,11 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         }
     }
 
-    @Test public void whenOnlyASingleChildIsDirtyThenParentAndAllChildrenAreAskedToAccumulateDirtyRegions() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void whenOnlyASingleChildIsDirtyThenParentAndAllChildrenAreAskedToAccumulateDirtyRegions(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         polluter.pollute(middleChild);
         List<NGNode> nodes = new ArrayList<>(root.getChildren());
@@ -149,7 +168,11 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         assertOnlyTheseNodesAreAskedToAccumulateDirtyRegions(arr);
     }
 
-    @Test public void whenOnlyASingleChildIsDirtyThenOnlyParentAndThatChildShouldComputeDirtyRegions() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void whenOnlyASingleChildIsDirtyThenOnlyParentAndThatChildShouldComputeDirtyRegions(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         polluter.pollute(middleChild);
         /*
@@ -161,12 +184,20 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         assertOnlyTheseNodesAreAskedToComputeDirtyRegions(root, middleChild);
     }
 
-    @Test public void aDirtyChildNodeShouldFormTheDirtyRegionWhenItIsTheOnlyDirtyNode() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void aDirtyChildNodeShouldFormTheDirtyRegionWhenItIsTheOnlyDirtyNode(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         assertDirtyRegionEquals(root, polluter.polluteAndGetExpectedBounds(middleChild));
     }
 
-    @Test public void theUnionOfTwoDirtyChildNodesDirtyRegionsShouldFormTheDirtyRegionWhenTheyAreTheOnlyDirtyNodes() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void theUnionOfTwoDirtyChildNodesDirtyRegionsShouldFormTheDirtyRegionWhenTheyAreTheOnlyDirtyNodes(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode firstChild = root.getChildren().get(0);
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         RectBounds firstChildArea = polluter.polluteAndGetExpectedBounds(firstChild);
@@ -175,7 +206,11 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         assertDirtyRegionEquals(root, expected);
     }
 
-    @Test public void whenTheParentIsDirtyAndSomeChildrenAreDirtyTheParentBoundsShouldFormTheDirtyRegion() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void whenTheParentIsDirtyAndSomeChildrenAreDirtyTheParentBoundsShouldFormTheDirtyRegion(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         BaseBounds original = root.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
         translate(root, TRANSLATE_DELTA, TRANSLATE_DELTA);
         BaseBounds transformed = root.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
@@ -186,7 +221,11 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         assertDirtyRegionEquals(root, expected);
     }
 
-    @Test public void anEffectShouldChangeTheTransformedBoundsOfAChild() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void anEffectShouldChangeTheTransformedBoundsOfAChild(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         BaseBounds oldTransformedBounds = middleChild.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
         DropShadow shadow = new DropShadow();
@@ -199,7 +238,11 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         assertFalse(newTransformedBounds.equals(oldTransformedBounds));
     }
 
-    @Test public void whenAnEffectIsSetTheChildBecomesDirtyAndTheDirtyRegionIncludesTheEffectBounds() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void whenAnEffectIsSetTheChildBecomesDirtyAndTheDirtyRegionIncludesTheEffectBounds(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         DropShadow shadow = new DropShadow();
         shadow.setGaussianWidth(21);
@@ -213,7 +256,11 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         assertDirtyRegionEquals(root, expected);
     }
 
-    @Test public void whenAnEffectIsChangedOnTheChildTheDirtyRegionIncludesTheOldAndNewEffectBounds() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void whenAnEffectIsChangedOnTheChildTheDirtyRegionIncludesTheOldAndNewEffectBounds(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         DropShadow shadow = new DropShadow();
         shadow.setGaussianWidth(21);
@@ -231,9 +278,9 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     }
 
     // TODO be sure to test changing properties on the node clip. For example, use a rect clip
-    // and change its geometry (RT-26928)
+    // and change its geometry (JDK-8091760)
 
 
     // TODO be sure to write a number of tests regarding the screen clip, and make sure that
-    // I test that accumulating dirty regions is correct in the presence of a clip. (RT-26928)
+    // I test that accumulating dirty regions is correct in the presence of a clip. (JDK-8091760)
 }

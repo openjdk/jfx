@@ -564,8 +564,12 @@ search_by_entry (GstPluginFeature * feature, gpointer search_entry)
 static gint
 sort_by_rank (GstPluginFeature * first, GstPluginFeature * second)
 {
-  return gst_plugin_feature_get_rank (second) -
+  int diff = gst_plugin_feature_get_rank (second) -
       gst_plugin_feature_get_rank (first);
+  if (diff == 0)
+    diff = g_strcmp0 (gst_plugin_feature_get_name (first),
+        gst_plugin_feature_get_name (second));
+  return diff;
 }
 
 static GList *
@@ -1004,7 +1008,7 @@ _gst_uri_new (void)
 
   g_return_val_if_fail (gst_is_initialized (), NULL);
 
-  uri = GST_URI_CAST (g_slice_new0 (GstUri));
+  uri = g_new0 (GstUri, 1);
 
   if (uri)
     gst_mini_object_init (GST_MINI_OBJECT_CAST (uri), 0, gst_uri_get_type (),
@@ -1031,7 +1035,7 @@ _gst_uri_free (GstUri * uri)
   memset (uri, 0xff, sizeof (*uri));
 #endif
 
-  g_slice_free1 (sizeof (*uri), uri);
+  g_free (uri);
 }
 
 static GHashTable *
@@ -1994,10 +1998,13 @@ gst_uri_make_writable (GstUri * uri)
 }
 
 /**
- * gst_uri_to_string:
- * @uri: This #GstUri to convert to a string.
+ * gst_uri_to_string_with_keys:
+ * @uri: (nullable): This #GstUri to convert to a string.
+ * @keys: (transfer none) (nullable) (element-type utf8): A GList containing
+ *   the query argument key strings.
  *
- * Convert the URI to a string.
+ * Convert the URI to a string, with the query arguments in a specific order.
+ * Only the keys in the @keys list will be added to the resulting string.
  *
  * Returns the URI as held in this object as a #gchar* nul-terminated string.
  * The caller should g_free() the string once they are finished with it.
@@ -2005,10 +2012,10 @@ gst_uri_make_writable (GstUri * uri)
  *
  * Returns: (transfer full): The string version of the URI.
  *
- * Since: 1.6
+ * Since: 1.24
  */
 gchar *
-gst_uri_to_string (const GstUri * uri)
+gst_uri_to_string_with_keys (const GstUri * uri, const GList * keys)
 {
   GString *uri_str;
   gchar *escaped;
@@ -2052,10 +2059,15 @@ gst_uri_to_string (const GstUri * uri)
   }
 
   if (uri->query) {
-    g_string_append (uri_str, "?");
-    escaped = gst_uri_get_query_string (uri);
-    g_string_append (uri_str, escaped);
-    g_free (escaped);
+    if (keys != NULL)
+      escaped = gst_uri_get_query_string_ordered (uri, keys);
+    else
+      escaped = gst_uri_get_query_string (uri);
+    if (escaped) {
+      g_string_append (uri_str, "?");
+      g_string_append (uri_str, escaped);
+      g_free (escaped);
+    }
   }
 
   if (uri->fragment != NULL) {
@@ -2065,6 +2077,26 @@ gst_uri_to_string (const GstUri * uri)
   }
 
   return g_string_free (uri_str, FALSE);
+}
+
+/**
+ * gst_uri_to_string:
+ * @uri: This #GstUri to convert to a string.
+ *
+ * Convert the URI to a string.
+ *
+ * Returns the URI as held in this object as a #gchar* nul-terminated string.
+ * The caller should g_free() the string once they are finished with it.
+ * The string is put together as described in RFC 3986.
+ *
+ * Returns: (transfer full): The string version of the URI.
+ *
+ * Since: 1.6
+ */
+gchar *
+gst_uri_to_string (const GstUri * uri)
+{
+  return gst_uri_to_string_with_keys (uri, NULL);
 }
 
 /**
@@ -2634,6 +2666,67 @@ gst_uri_set_query_string (GstUri * uri, const gchar * query)
   uri->query = _gst_uri_string_to_table (query, "&", "=", TRUE, TRUE);
 
   return TRUE;
+}
+
+/**
+ * gst_uri_get_query_string_ordered:
+ * @uri: (nullable): The #GstUri to get the query string from.
+ * @keys: (transfer none) (nullable) (element-type utf8): A GList containing the
+ *   query argument key strings.
+ *
+ * Get a percent encoded URI query string from the @uri, with query parameters
+ * in the order provided by the @keys list. Only parameter keys in the list will
+ * be added to the resulting URI string. This method can be used by retrieving
+ * the keys with gst_uri_get_query_keys() and then sorting the list, for
+ * example.
+ *
+ * Returns: (transfer full) (nullable): A percent encoded query string. Use
+ * g_free() when no longer needed.
+ *
+ * Since: 1.24
+ */
+gchar *
+gst_uri_get_query_string_ordered (const GstUri * uri, const GList * keys)
+{
+  const gchar *sep = "";
+  gchar *escaped;
+  GString *ret = NULL;
+  const GList *key;
+
+  if (!uri)
+    return NULL;
+  g_return_val_if_fail (GST_IS_URI (uri), NULL);
+  if (!uri->query)
+    return NULL;
+
+  for (key = keys; key; key = key->next) {
+    const gchar *query_key = key->data;
+    const gchar *arg;
+
+    /* Key isn't present, skip */
+    if (!g_hash_table_contains (uri->query, query_key))
+      continue;
+
+    if (ret == NULL)
+      ret = g_string_new (NULL);
+
+    /* Append the key */
+    g_string_append (ret, sep);
+    escaped = _gst_uri_escape_http_query_element (query_key);
+    g_string_append (ret, escaped);
+    g_free (escaped);
+
+    if ((arg = g_hash_table_lookup (uri->query, query_key))) {
+      /* Append the argument */
+      escaped = _gst_uri_escape_http_query_element (arg);
+      g_string_append_printf (ret, "=%s", escaped);
+      g_free (escaped);
+    }
+    sep = "&";
+  }
+
+  /* If no keys were seen, return NULL string instead of empty string */
+  return ret ? g_string_free (ret, FALSE) : NULL;
 }
 
 /**

@@ -42,13 +42,34 @@ namespace WTF {
 
 inline void adopted(const void*) { }
 
-template<typename T, typename PtrTraits> class Ref;
-template<typename T, typename PtrTraits = RawPtrTraits<T>> Ref<T, PtrTraits> adoptRef(T&);
+template<typename T> struct DefaultRefDerefTraits {
+    static ALWAYS_INLINE T* refIfNotNull(T* ptr)
+    {
+        if (LIKELY(ptr))
+            ptr->ref();
+        return ptr;
+    }
 
-template<typename T, typename Traits>
+    static ALWAYS_INLINE T& ref(T& ref)
+    {
+        ref.ref();
+        return ref;
+    }
+
+    static ALWAYS_INLINE void derefIfNotNull(T* ptr)
+    {
+        if (LIKELY(ptr))
+            ptr->deref();
+    }
+};
+
+template<typename T, typename PtrTraits, typename RefDerefTraits> class Ref;
+template<typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTraits = DefaultRefDerefTraits<T>> Ref<T, PtrTraits, RefDerefTraits> adoptRef(T&);
+
+template<typename T, typename _PtrTraits, typename RefDerefTraits>
 class Ref {
 public:
-    using PtrTraits = Traits;
+    using PtrTraits = _PtrTraits;
     static constexpr bool isRef = true;
 
     ~Ref()
@@ -58,25 +79,22 @@ public:
             __asan_unpoison_memory_region(this, sizeof(*this));
 #endif
         if (auto* ptr = PtrTraits::exchange(m_ptr, nullptr))
-            ptr->deref();
+            RefDerefTraits::derefIfNotNull(ptr);
     }
 
     Ref(T& object)
-        : m_ptr(&object)
+        : m_ptr(&RefDerefTraits::ref(object))
     {
-        object.ref();
     }
 
     Ref(const Ref& other)
-        : m_ptr(other.ptr())
+        : m_ptr(&RefDerefTraits::ref(other.get()))
     {
-        m_ptr->ref();
     }
 
     template<typename X, typename Y> Ref(const Ref<X, Y>& other)
-        : m_ptr(other.ptr())
+        : m_ptr(&RefDerefTraits::ref(other.get()))
     {
-        m_ptr->ref();
     }
 
     Ref(Ref&& other)
@@ -94,12 +112,12 @@ public:
 
     Ref& operator=(T&);
     Ref& operator=(Ref&&);
-    template<typename X, typename Y> Ref& operator=(Ref<X, Y>&&);
+    template<typename X, typename Y, typename Z> Ref& operator=(Ref<X, Y, Z>&&);
 
     Ref& operator=(const Ref&);
-    template<typename X, typename Y> Ref& operator=(const Ref<X, Y>&);
+    template<typename X, typename Y, typename Z> Ref& operator=(const Ref<X, Y, Z>&);
 
-    template<typename X, typename Y> void swap(Ref<X, Y>&);
+    template<typename X, typename Y, typename Z> void swap(Ref<X, Y, Z>&);
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     Ref(HashTableDeletedValueType) : m_ptr(PtrTraits::hashTableDeletedValue()) { }
@@ -118,7 +136,7 @@ public:
     operator T&() const { ASSERT(m_ptr); return *PtrTraits::unwrap(m_ptr); }
     bool operator!() const { ASSERT(m_ptr); return !*m_ptr; }
 
-    template<typename X, typename Y> Ref<T, PtrTraits> replace(Ref<X, Y>&&) WARN_UNUSED_RETURN;
+    template<typename X, typename Y, typename Z> Ref<T, PtrTraits, RefDerefTraits> replace(Ref<X, Y, Z>&&) WARN_UNUSED_RETURN;
 
     // The following function is deprecated.
     Ref copyRef() && = delete;
@@ -137,7 +155,10 @@ public:
 
 private:
     friend Ref adoptRef<T>(T&);
-    template<typename X, typename Y> friend class Ref;
+    template<typename X, typename Y, typename Z> friend class Ref;
+
+    template<typename X, typename Y, typename Z, typename U, typename V, typename W>
+    friend bool operator==(const Ref<X, Y, Z>&, const Ref<U, V, W>&);
 
     enum AdoptTag { Adopt };
     Ref(T& object, AdoptTag)
@@ -148,18 +169,18 @@ private:
     typename PtrTraits::StorageType m_ptr;
 };
 
-template<typename T, typename U> Ref<T, U> adoptRef(T&);
+template<typename T, typename _PtrTraits, typename RefDerefTraits> Ref<T, _PtrTraits, RefDerefTraits> adoptRef(T&);
 
-template<typename T, typename U>
-inline Ref<T, U>& Ref<T, U>::operator=(T& reference)
+template<typename T, typename _PtrTraits, typename RefDerefTraits>
+inline Ref<T, _PtrTraits, RefDerefTraits>& Ref<T, _PtrTraits, RefDerefTraits>::operator=(T& reference)
 {
     Ref copiedReference = reference;
     swap(copiedReference);
     return *this;
 }
 
-template<typename T, typename U>
-inline Ref<T, U>& Ref<T, U>::operator=(Ref&& reference)
+template<typename T, typename _PtrTraits, typename RefDerefTraits>
+inline Ref<T, _PtrTraits, RefDerefTraits>& Ref<T, _PtrTraits, RefDerefTraits>::operator=(Ref&& reference)
 {
 #if ASAN_ENABLED
     if (__asan_address_is_poisoned(this))
@@ -170,9 +191,9 @@ inline Ref<T, U>& Ref<T, U>::operator=(Ref&& reference)
     return *this;
 }
 
-template<typename T, typename U>
-template<typename X, typename Y>
-inline Ref<T, U>& Ref<T, U>::operator=(Ref<X, Y>&& reference)
+template<typename T, typename _PtrTraits, typename RefDerefTraits>
+template<typename U, typename _OtherPtrTraits, typename OtherRefDerefTraits>
+inline Ref<T, _PtrTraits, RefDerefTraits>& Ref<T, _PtrTraits, RefDerefTraits>::operator=(Ref<U, _OtherPtrTraits, OtherRefDerefTraits>&& reference)
 {
 #if ASAN_ENABLED
     if (__asan_address_is_poisoned(this))
@@ -183,8 +204,8 @@ inline Ref<T, U>& Ref<T, U>::operator=(Ref<X, Y>&& reference)
     return *this;
 }
 
-template<typename T, typename U>
-inline Ref<T, U>& Ref<T, U>::operator=(const Ref& reference)
+template<typename T, typename _PtrTraits, typename RefDerefTraits>
+inline Ref<T, _PtrTraits, RefDerefTraits>& Ref<T, _PtrTraits, RefDerefTraits>::operator=(const Ref& reference)
 {
 #if ASAN_ENABLED
     if (__asan_address_is_poisoned(this))
@@ -195,9 +216,9 @@ inline Ref<T, U>& Ref<T, U>::operator=(const Ref& reference)
     return *this;
 }
 
-template<typename T, typename U>
-template<typename X, typename Y>
-inline Ref<T, U>& Ref<T, U>::operator=(const Ref<X, Y>& reference)
+template<typename T, typename _PtrTraits, typename RefDerefTraits>
+template<typename U, typename _OtherPtrTraits, typename OtherRefDerefTraits>
+inline Ref<T, _PtrTraits, RefDerefTraits>& Ref<T, _PtrTraits, RefDerefTraits>::operator=(const Ref<U, _OtherPtrTraits, OtherRefDerefTraits>& reference)
 {
 #if ASAN_ENABLED
     if (__asan_address_is_poisoned(this))
@@ -208,22 +229,28 @@ inline Ref<T, U>& Ref<T, U>::operator=(const Ref<X, Y>& reference)
     return *this;
 }
 
-template<typename T, typename U>
-template<typename X, typename Y>
-inline void Ref<T, U>::swap(Ref<X, Y>& other)
+template<typename X, typename APtrTraits, typename ARefDerefTraits, typename Y, typename BPtrTraits, typename BRefDerefTraits>
+inline bool operator==(const Ref<X, APtrTraits, ARefDerefTraits>& a, const Ref<Y, BPtrTraits, BRefDerefTraits>& b)
 {
-    U::swap(m_ptr, other.m_ptr);
+    return a.m_ptr == b.m_ptr;
 }
 
-template<typename T, typename U, typename X, typename Y, typename = std::enable_if_t<!std::is_same<U, RawPtrTraits<T>>::value || !std::is_same<Y, RawPtrTraits<X>>::value>>
-inline void swap(Ref<T, U>& a, Ref<X, Y>& b)
+template<typename X, typename _PtrTraits, typename RefDerefTraits>
+template<typename Y, typename _OtherPtrTraits, typename OtherRefDerefTraits>
+inline void Ref<X, _PtrTraits, RefDerefTraits>::swap(Ref<Y, _OtherPtrTraits, OtherRefDerefTraits>& other)
+{
+    _PtrTraits::swap(m_ptr, other.m_ptr);
+}
+
+template<typename X, typename APtrTraits, typename ARefDerefTraits, typename Y, typename BPtrTraits, typename BRefDerefTraits, typename = std::enable_if_t<!std::is_same<APtrTraits, RawPtrTraits<X>>::value || !std::is_same<BPtrTraits, RawPtrTraits<Y>>::value>>
+inline void swap(Ref<X, APtrTraits, ARefDerefTraits>& a, Ref<Y, BPtrTraits, BRefDerefTraits>& b)
 {
     a.swap(b);
 }
 
-template<typename T, typename U>
-template<typename X, typename Y>
-inline Ref<T, U> Ref<T, U>::replace(Ref<X, Y>&& reference)
+template<typename X, typename _PtrTraits, typename RefDerefTraits>
+template<typename Y, typename _OtherPtrTraits, typename OtherRefDerefTraits>
+inline Ref<X, _PtrTraits, RefDerefTraits> Ref<X, _PtrTraits, RefDerefTraits>::replace(Ref<Y, _OtherPtrTraits, OtherRefDerefTraits>&& reference)
 {
 #if ASAN_ENABLED
     if (__asan_address_is_poisoned(this))
@@ -234,71 +261,114 @@ inline Ref<T, U> Ref<T, U>::replace(Ref<X, Y>&& reference)
     return oldReference;
 }
 
-template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
-inline Ref<T, U> static_reference_cast(Ref<X, Y>&& reference)
+template<typename X, typename _PtrTraits = RawPtrTraits<X>, typename RefDerefTraits = DefaultRefDerefTraits<X>, typename Y, typename _OtherPtrTraits, typename OtherRefDerefTraits>
+inline Ref<X, _PtrTraits, RefDerefTraits> static_reference_cast(Ref<Y, _OtherPtrTraits, OtherRefDerefTraits>&& reference)
 {
-    return adoptRef(static_cast<T&>(reference.leakRef()));
+    return adoptRef(static_cast<X&>(reference.leakRef()));
 }
 
-template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
-ALWAYS_INLINE Ref<T, U> static_reference_cast(const Ref<X, Y>& reference)
+template<typename X, typename _PtrTraits = RawPtrTraits<X>, typename RefDerefTraits = DefaultRefDerefTraits<X>, typename Y, typename _OtherPtrTraits, typename OtherRefDerefTraits>
+ALWAYS_INLINE Ref<X, _PtrTraits, RefDerefTraits> static_reference_cast(const Ref<Y, _OtherPtrTraits, OtherRefDerefTraits>& reference)
 {
-    return static_reference_cast<T, U>(reference.copyRef());
+    return static_reference_cast<X, _PtrTraits, RefDerefTraits>(reference.copyRef());
 }
 
-template <typename T, typename U>
-struct GetPtrHelper<Ref<T, U>> {
-    typedef T* PtrType;
-    static T* getPtr(const Ref<T, U>& p) { return const_cast<T*>(p.ptr()); }
+template <typename T, typename _PtrTraits, typename RefDerefTraits>
+struct GetPtrHelper<Ref<T, _PtrTraits, RefDerefTraits>> {
+    using PtrType = T*;
+    using UnderlyingType = T;
+    static T* getPtr(const Ref<T, _PtrTraits, RefDerefTraits>& p) { return const_cast<T*>(p.ptr()); }
 };
 
-template <typename T, typename U>
-struct IsSmartPtr<Ref<T, U>> {
+template <typename T, typename _PtrTraits, typename RefDerefTraits>
+struct IsSmartPtr<Ref<T, _PtrTraits, RefDerefTraits>> {
     static constexpr bool value = true;
+    static constexpr bool isNullable = false;
 };
 
-template<typename T, typename U>
-inline Ref<T, U> adoptRef(T& reference)
+template<typename T, typename _PtrTraits, typename RefDerefTraits>
+inline Ref<T, _PtrTraits, RefDerefTraits> adoptRef(T& reference)
 {
     adopted(&reference);
-    return Ref<T, U>(reference, Ref<T, U>::Adopt);
+    return Ref<T, _PtrTraits, RefDerefTraits>(reference, Ref<T, _PtrTraits, RefDerefTraits>::Adopt);
 }
 
-template<typename ExpectedType, typename ArgType, typename PtrTraits>
-inline bool is(Ref<ArgType, PtrTraits>& source)
+template<typename ExpectedType, typename ArgType, typename PtrTraits, typename RefDerefTraits>
+inline bool is(const Ref<ArgType, PtrTraits, RefDerefTraits>& source)
 {
     return is<ExpectedType>(source.get());
 }
 
-template<typename ExpectedType, typename ArgType, typename PtrTraits>
-inline bool is(const Ref<ArgType, PtrTraits>& source)
-{
-    return is<ExpectedType>(source.get());
-}
-
-template<typename Target, typename Source, typename PtrTraits>
-inline Target& downcast(Ref<Source, PtrTraits>& source)
-{
-    return downcast<Target>(source.get());
-}
-
-template<typename Target, typename Source, typename PtrTraits>
-inline Ref<Target> checkedDowncast(Ref<Source, PtrTraits> source)
+template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
+inline Ref<match_constness_t<Source, Target>> checkedDowncast(Ref<Source, PtrTraits, RefDerefTraits> source)
 {
     static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
     static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
     RELEASE_ASSERT(is<Target>(source));
-    return static_reference_cast<Target>(WTFMove(source));
+    return static_reference_cast<match_constness_t<Source, Target>>(WTFMove(source));
 }
 
-template<typename Target, typename Source, typename PtrTraits>
-inline Target& downcast(const Ref<Source, PtrTraits>& source)
+template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
+inline Ref<match_constness_t<Source, Target>> uncheckedDowncast(Ref<Source, PtrTraits, RefDerefTraits> source)
 {
-    return downcast<Target>(source.get());
+    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    ASSERT_WITH_SECURITY_IMPLICATION(is<Target>(source));
+    return static_reference_cast<match_constness_t<Source, Target>>(WTFMove(source));
 }
+
+template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
+inline Ref<match_constness_t<Source, Target>> downcast(Ref<Source, PtrTraits, RefDerefTraits> source)
+{
+    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    // FIXME: This is too expensive to enable on x86 for now but we should try and
+    // enable the RELEASE_ASSERT() on all architectures.
+#if CPU(ARM64)
+    RELEASE_ASSERT(is<Target>(source));
+#else
+    ASSERT_WITH_SECURITY_IMPLICATION(is<Target>(source));
+#endif
+    return static_reference_cast<match_constness_t<Source, Target>>(WTFMove(source));
+}
+
+template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
+inline RefPtr<match_constness_t<Source, Target>> dynamicDowncast(Ref<Source, PtrTraits, RefDerefTraits> source)
+{
+    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    if (!is<Target>(source))
+        return nullptr;
+    return static_reference_cast<match_constness_t<Source, Target>>(WTFMove(source));
+}
+
+template<typename T> struct RefDerefTraitsAllowingPartiallyDestroyed {
+    static ALWAYS_INLINE T* refIfNotNull(T* ptr)
+    {
+        if (LIKELY(ptr))
+            ptr->refAllowingPartiallyDestroyed();
+        return ptr;
+    }
+
+    static ALWAYS_INLINE T& ref(T& ref)
+    {
+        ref.refAllowingPartiallyDestroyed();
+        return ref;
+    }
+
+    static ALWAYS_INLINE void derefIfNotNull(T* ptr)
+    {
+        if (LIKELY(ptr))
+            ptr->derefAllowingPartiallyDestroyed();
+    }
+};
+
+template<typename T>
+using RefAllowingPartiallyDestroyed = Ref<T, RawPtrTraits<T>, RefDerefTraitsAllowingPartiallyDestroyed<T>>;
 
 } // namespace WTF
 
 using WTF::Ref;
+using WTF::RefAllowingPartiallyDestroyed;
 using WTF::adoptRef;
 using WTF::static_reference_cast;

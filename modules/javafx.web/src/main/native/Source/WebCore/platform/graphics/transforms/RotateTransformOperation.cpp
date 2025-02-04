@@ -53,7 +53,7 @@ bool RotateTransformOperation::operator==(const TransformOperation& other) const
     if (!isSameType(other))
         return false;
     const RotateTransformOperation& r = downcast<RotateTransformOperation>(other);
-    return m_x == r.m_x && m_y == r.m_y && m_z == r.m_z && m_angle == r.m_angle;
+    return m_angle == r.m_angle && m_x == r.m_x && m_y == r.m_y && m_z == r.m_z;
 }
 
 Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation* from, const BlendingContext& context, bool blendToIdentity)
@@ -118,9 +118,9 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
     }
 
     // Convert that to Axis/Angle form
-    double x = -decomp.quaternionX;
-    double y = -decomp.quaternionY;
-    double z = -decomp.quaternionZ;
+    double x = decomp.quaternion.x;
+    double y = decomp.quaternion.y;
+    double z = decomp.quaternion.z;
 #if PLATFORM(JAVA)
     double length = javamath::hypot(x, y, z);
 #else
@@ -132,7 +132,7 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
         x /= length;
         y /= length;
         z /= length;
-        angle = rad2deg(acos(decomp.quaternionW) * 2);
+        angle = rad2deg(acos(decomp.quaternion.w) * 2);
     } else {
         x = 0;
         y = 0;

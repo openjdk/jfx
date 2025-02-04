@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,15 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.skin.ListViewSkin;
-import javafx.scene.control.skin.VirtualFlowShim;
 import javafx.scene.control.skin.VirtualFlow;
-
-import org.junit.Before;
-import org.junit.Test;
+import javafx.scene.control.skin.VirtualFlowShim;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
   A custom ListViewSkin class that re-implements createVirtualFlow() method
@@ -89,7 +87,8 @@ public class CustomListViewSkinTest {
 
     private ListView<String> listViewObj = null;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         listViewObj = new ListView<>();
     }
 

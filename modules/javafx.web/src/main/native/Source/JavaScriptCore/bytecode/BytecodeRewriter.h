@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -111,10 +111,7 @@ public:
             return bytecodeOffset < other.bytecodeOffset;
         }
 
-        bool operator==(const InsertionPoint& other) const
-        {
-            return bytecodeOffset == other.bytecodeOffset && position == other.position;
-        }
+        friend bool operator==(const InsertionPoint&, const InsertionPoint&) = default;
     };
 
 private:
@@ -229,6 +226,9 @@ public:
 
     void adjustJumpTargets();
 
+    template<typename Func>
+    void forEachLabelPoint(Func);
+
 private:
     void insertImpl(InsertionPoint, IncludeBranch, JSInstructionStreamWriter&& fragment);
 
@@ -257,6 +257,20 @@ inline int BytecodeRewriter::calculateDifference(Iterator begin, Iterator end)
             result += begin->length();
     }
     return result;
+}
+
+template<typename Func>
+void BytecodeRewriter::forEachLabelPoint(Func func)
+{
+    int32_t previousBytecodeOffset = -1;
+    for (size_t i = 0; i < m_insertions.size(); ++i) {
+        Insertion& insertion = m_insertions[i];
+        int32_t bytecodeOffset = insertion.index.bytecodeOffset;
+        if (bytecodeOffset == previousBytecodeOffset)
+            continue;
+        previousBytecodeOffset = bytecodeOffset;
+        func(bytecodeOffset);
+    }
 }
 
 } // namespace JSC

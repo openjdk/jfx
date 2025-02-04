@@ -27,6 +27,7 @@
 #include "WorkerModuleScriptLoader.h"
 
 #include "CachedScriptFetcher.h"
+#include "ContentSecurityPolicy.h"
 #include "DOMWrapperWorld.h"
 #include "JSDOMBinding.h"
 #include "JSDOMPromiseDeferred.h"
@@ -55,25 +56,23 @@ WorkerModuleScriptLoader::WorkerModuleScriptLoader(ModuleScriptLoaderClient& cli
 
 WorkerModuleScriptLoader::~WorkerModuleScriptLoader()
 {
-    m_scriptLoader->cancel();
+    protectedScriptLoader()->cancel();
 }
 
-bool WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourceURL)
+void WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourceURL)
 {
     m_sourceURL = WTFMove(sourceURL);
 
-#if ENABLE(SERVICE_WORKER)
-    if (is<ServiceWorkerGlobalScope>(context)) {
-        if (auto* scriptResource = downcast<ServiceWorkerGlobalScope>(context).scriptResource(m_sourceURL)) {
+    if (auto* globalScope = dynamicDowncast<ServiceWorkerGlobalScope>(context)) {
+        if (auto* scriptResource = globalScope->scriptResource(m_sourceURL)) {
             m_script = scriptResource->script;
             m_responseURL = scriptResource->responseURL;
             m_responseMIMEType = scriptResource->mimeType;
             m_retrievedFromServiceWorkerCache = true;
             notifyClientFinished();
-            return true;
+            return;
         }
     }
-#endif
 
     ResourceRequest request { m_sourceURL };
 
@@ -84,7 +83,27 @@ bool WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourc
     fetchOptions.credentials = static_cast<WorkerScriptFetcher&>(scriptFetcher()).credentials();
     fetchOptions.destination = static_cast<WorkerScriptFetcher&>(scriptFetcher()).destination();
     fetchOptions.referrerPolicy = static_cast<WorkerScriptFetcher&>(scriptFetcher()).referrerPolicy();
-    auto contentSecurityPolicyEnforcement = context.shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
+
+    bool cspCheckFailed = false;
+    ContentSecurityPolicyEnforcement contentSecurityPolicyEnforcement = ContentSecurityPolicyEnforcement::DoNotEnforce;
+    if (!context.shouldBypassMainWorldContentSecurityPolicy()) {
+        CheckedPtr contentSecurityPolicy = context.contentSecurityPolicy();
+        if (fetchOptions.destination == FetchOptions::Destination::Script) {
+            cspCheckFailed = contentSecurityPolicy && !contentSecurityPolicy->allowScriptFromSource(m_sourceURL);
+            contentSecurityPolicyEnforcement = ContentSecurityPolicyEnforcement::EnforceScriptSrcDirective;
+        } else {
+            cspCheckFailed = contentSecurityPolicy && !contentSecurityPolicy->allowWorkerFromSource(m_sourceURL);
+            contentSecurityPolicyEnforcement = ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
+        }
+    }
+
+    if (cspCheckFailed) {
+        protectedScriptLoader()->notifyError();
+        ASSERT(!m_failed);
+        notifyFinished();
+        ASSERT(m_failed);
+        return;
+    }
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#fetch-a-single-module-script
     // If destination is "worker" or "sharedworker" and the top-level module fetch flag is set, then set request's mode to "same-origin".
@@ -93,8 +112,12 @@ bool WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourc
             fetchOptions.mode = FetchOptions::Mode::SameOrigin;
     }
 
-    m_scriptLoader->loadAsynchronously(context, WTFMove(request), WorkerScriptLoader::Source::ModuleScript, WTFMove(fetchOptions), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, *this, taskMode());
-    return true;
+    protectedScriptLoader()->loadAsynchronously(context, WTFMove(request), WorkerScriptLoader::Source::ModuleScript, WTFMove(fetchOptions), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, *this, taskMode());
+}
+
+Ref<WorkerScriptLoader> WorkerModuleScriptLoader::protectedScriptLoader()
+{
+    return m_scriptLoader;
 }
 
 ReferrerPolicy WorkerModuleScriptLoader::referrerPolicy()

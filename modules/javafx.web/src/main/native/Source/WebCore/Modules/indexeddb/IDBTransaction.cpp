@@ -96,7 +96,7 @@ IDBTransaction::IDBTransaction(IDBDatabase& database, const IDBTransactionInfo& 
     } else {
         activate();
 
-        auto* context = scriptExecutionContext();
+        RefPtr context = scriptExecutionContext();
         ASSERT(context);
 
         context->eventLoop().runAtEndOfMicrotaskCheckpoint([protectedThis = Ref { *this }] {
@@ -146,10 +146,10 @@ ExceptionOr<Ref<IDBObjectStore>> IDBTransaction::objectStore(const String& objec
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
 
     if (!scriptExecutionContext())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     if (isFinishedOrFinishing())
-        return Exception { InvalidStateError, "Failed to execute 'objectStore' on 'IDBTransaction': The transaction finished."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'objectStore' on 'IDBTransaction': The transaction finished."_s };
 
     Locker locker { m_referencedObjectStoreLock };
 
@@ -166,11 +166,11 @@ ExceptionOr<Ref<IDBObjectStore>> IDBTransaction::objectStore(const String& objec
 
     auto* info = m_database->info().infoForExistingObjectStore(objectStoreName);
     if (!info)
-        return Exception { NotFoundError, "Failed to execute 'objectStore' on 'IDBTransaction': The specified object store was not found."_s };
+        return Exception { ExceptionCode::NotFoundError, "Failed to execute 'objectStore' on 'IDBTransaction': The specified object store was not found."_s };
 
     // Version change transactions are scoped to every object store in the database.
     if (!info || (!found && !isVersionChange()))
-        return Exception { NotFoundError, "Failed to execute 'objectStore' on 'IDBTransaction': The specified object store was not found."_s };
+        return Exception { ExceptionCode::NotFoundError, "Failed to execute 'objectStore' on 'IDBTransaction': The specified object store was not found."_s };
 
     auto objectStore = IDBObjectStore::create(*scriptExecutionContext(), *info, *this);
     Ref objectStoreRef { objectStore.get() };
@@ -195,10 +195,15 @@ void IDBTransaction::abortDueToFailedRequest(DOMException& error)
 void IDBTransaction::transitionedToFinishing(IndexedDB::TransactionState state)
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
-
-    ASSERT(!isFinishedOrFinishing());
+    // Transaction might be transitioned from commiting to aborting due to connection failure.
+    bool wasFinishedOrFinishing = isFinishedOrFinishing();
     m_state = state;
     ASSERT(isFinishedOrFinishing());
+
+    if (!wasFinishedOrFinishing) {
+        for (auto& request : m_cursorRequests)
+            request.transactionTransitionedToFinishing();
+    }
 }
 
 ExceptionOr<void> IDBTransaction::abort()
@@ -207,7 +212,7 @@ ExceptionOr<void> IDBTransaction::abort()
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
 
     if (isFinishedOrFinishing())
-        return Exception { InvalidStateError, "Failed to execute 'abort' on 'IDBTransaction': The transaction is inactive or finished."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'abort' on 'IDBTransaction': The transaction is inactive or finished."_s };
 
     abortInternal();
 
@@ -296,7 +301,7 @@ void IDBTransaction::abortOnServerAndCancelRequests(IDBClient::TransactionOperat
 
     m_currentlyCompletingRequest = nullptr;
 
-    IDBError error(AbortError);
+    IDBError error(ExceptionCode::AbortError);
 
     abortInProgressOperations(error);
 
@@ -366,6 +371,12 @@ void IDBTransaction::addRequest(IDBRequest& request)
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
     m_openRequests.add(&request);
+}
+
+void IDBTransaction::addCursorRequest(IDBRequest& request)
+{
+    ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
+    m_cursorRequests.add(request);
 }
 
 void IDBTransaction::removeRequest(IDBRequest& request)
@@ -457,7 +468,7 @@ ExceptionOr<void> IDBTransaction::commit()
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
 
     if (!isActive())
-        return Exception { InvalidStateError, "Failed to execute 'commit' on 'IDBTransaction': The transaction is inactive."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'commit' on 'IDBTransaction': The transaction is inactive."_s };
 
     if (m_currentlyCompletingRequest && m_currentlyCompletingRequest->willAbortTransactionAfterDispatchingEvent())
         return { };
@@ -846,6 +857,7 @@ Ref<IDBRequest> IDBTransaction::doRequestOpenCursor(Ref<IDBCursor>&& cursor)
 
     auto request = IDBRequest::create(*scriptExecutionContext(), cursor.get(), *this);
     addRequest(request.get());
+    addCursorRequest(request.get());
 
     LOG(IndexedDBOperations, "IDB open cursor operation: %s", cursor->info().loggingString().utf8().data());
     scheduleOperation(IDBClient::TransactionOperationImpl::create(*this, request.get(), [protectedThis = Ref { *this }, request] (const auto& result) {
@@ -897,7 +909,7 @@ void IDBTransaction::iterateCursorOnServer(IDBClient::TransactionOperation& oper
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
     ASSERT(operation.idbRequest());
 
-    auto* cursor = operation.idbRequest()->pendingCursor();
+    RefPtr cursor = operation.idbRequest()->pendingCursor();
     ASSERT(cursor);
 
     if (data.keyData.isNull() && data.primaryKeyData.isNull()) {
@@ -1275,7 +1287,7 @@ void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation
             // If the IDBValue doesn't have any data, then something went wrong writing the blobs to disk.
             // In that case, we cannot successfully store this record, so we callback with an error.
             RefPtr<IDBClient::TransactionOperation> protectedOperation(&operation);
-            auto result = IDBResultData::error(operation.identifier(), IDBError { UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
+            auto result = IDBResultData::error(operation.identifier(), IDBError { ExceptionCode::UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
             scriptExecutionContext()->postTask([protectedOperation = WTFMove(protectedOperation), result = WTFMove(result)](ScriptExecutionContext&) {
                 protectedOperation->doComplete(result);
             });
@@ -1297,7 +1309,7 @@ void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation
 
         // If the IDBValue doesn't have any data, then something went wrong writing the blobs to disk.
         // In that case, we cannot successfully store this record, so we callback with an error.
-        auto result = IDBResultData::error(protectedOperation->identifier(), IDBError { UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
+        auto result = IDBResultData::error(protectedOperation->identifier(), IDBError { ExceptionCode::UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
         callOnMainThread([protectedThis = WTFMove(protectedThis), protectedOperation = WTFMove(protectedOperation), result = WTFMove(result)]() mutable {
             protectedOperation->doComplete(result);
         });
@@ -1440,7 +1452,7 @@ void IDBTransaction::connectionClosedFromServer(const IDBError& error)
     LOG(IndexedDB, "IDBTransaction::connectionClosedFromServer - %s", error.message().utf8().data());
 
     m_database->willAbortTransaction(*this);
-    m_state = IndexedDB::TransactionState::Aborting;
+    transitionedToFinishing(IndexedDB::TransactionState::Aborting);
 
     // Move operations out of m_pendingTransactionOperationQueue, otherwise we may start handling
     // them after we forcibly complete in-progress transactions.
@@ -1466,10 +1478,8 @@ void IDBTransaction::connectionClosedFromServer(const IDBError& error)
     m_abortQueue.clear();
     m_transactionOperationMap.clear();
 
-    m_idbError = error;
     m_domError = error.toDOMException();
-    m_database->didAbortTransaction(*this);
-    fireOnAbort();
+    didAbort(error);
 }
 
 template<typename Visitor>

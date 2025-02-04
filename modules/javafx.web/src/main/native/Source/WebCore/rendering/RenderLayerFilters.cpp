@@ -35,8 +35,8 @@
 #include "CachedSVGDocument.h"
 #include "CachedSVGDocumentReference.h"
 #include "FilterTargetSwitcher.h"
+#include "LegacyRenderSVGResourceFilter.h"
 #include "Logging.h"
-#include "RenderSVGResourceFilter.h"
 #include "RenderStyleInlines.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -62,6 +62,11 @@ bool RenderLayerFilters::hasFilterThatShouldBeRestrictedBySecurityOrigin() const
     return m_filter && m_filter->hasFilterThatShouldBeRestrictedBySecurityOrigin();
 }
 
+bool RenderLayerFilters::hasSourceImage() const
+{
+    return m_targetSwitcher && m_targetSwitcher->hasSourceImage();
+}
+
 void RenderLayerFilters::notifyFinished(CachedResource&, const NetworkLoadMetrics&)
 {
     // FIXME: This really shouldn't have to invalidate layer composition,
@@ -76,25 +81,25 @@ void RenderLayerFilters::updateReferenceFilterClients(const FilterOperations& op
     removeReferenceFilterClients();
 
     for (auto& operation : operations.operations()) {
-        if (!is<ReferenceFilterOperation>(*operation))
+        RefPtr referenceOperation = dynamicDowncast<ReferenceFilterOperation>(*operation);
+        if (!referenceOperation)
             continue;
 
-        auto& referenceOperation = downcast<ReferenceFilterOperation>(*operation);
-        auto* documentReference = referenceOperation.cachedSVGDocumentReference();
+        auto* documentReference = referenceOperation->cachedSVGDocumentReference();
         if (auto* cachedSVGDocument = documentReference ? documentReference->document() : nullptr) {
             // Reference is external; wait for notifyFinished().
             cachedSVGDocument->addClient(*this);
             m_externalSVGReferences.append(cachedSVGDocument);
         } else {
             // Reference is internal; add layer as a client so we can trigger filter repaint on SVG attribute change.
-            auto* filterElement = m_layer.renderer().document().getElementById(referenceOperation.fragment());
+            RefPtr filterElement = m_layer.renderer().document().getElementById(referenceOperation->fragment());
             if (!filterElement)
                 continue;
-            auto* renderer = filterElement->renderer();
-            if (!is<RenderSVGResourceFilter>(renderer))
+            CheckedPtr renderer = dynamicDowncast<LegacyRenderSVGResourceFilter>(filterElement->renderer());
+            if (!renderer)
                 continue;
-            downcast<RenderSVGResourceFilter>(*renderer).addClientRenderLayer(&m_layer);
-            m_internalSVGReferences.append(filterElement);
+            renderer->addClientRenderLayer(m_layer);
+            m_internalSVGReferences.append(WTFMove(filterElement));
         }
     }
 }
@@ -108,7 +113,7 @@ void RenderLayerFilters::removeReferenceFilterClients()
 
     for (auto& filterElement : m_internalSVGReferences) {
         if (auto* renderer = filterElement->renderer())
-            downcast<RenderSVGResourceContainer>(*renderer).removeClientRenderLayer(&m_layer);
+            downcast<LegacyRenderSVGResourceContainer>(*renderer).removeClientRenderLayer(m_layer);
     }
     m_internalSVGReferences.clear();
 }
@@ -129,7 +134,7 @@ IntOutsets RenderLayerFilters::calculateOutsets(RenderElement& renderer, const F
     return CSSFilter::calculateOutsets(renderer, operations, targetBoundingBox);
 }
 
-GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, GraphicsContext& context, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect)
+GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, GraphicsContext& context, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect, const LayoutRect& clipRect)
 {
     auto expandedDirtyRect = dirtyRect;
     auto targetBoundingBox = intersection(filterBoxRect, dirtyRect);
@@ -173,7 +178,7 @@ GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, 
 
     if (!filter.hasFilterThatMovesPixels())
         m_repaintRect = dirtyRect;
-    else if (hasUpdatedBackingStore)
+    else if (hasUpdatedBackingStore || !hasSourceImage())
             m_repaintRect = filterRegion;
         else {
             m_repaintRect = dirtyRect;
@@ -190,7 +195,7 @@ GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, 
     if (!m_targetSwitcher)
         return nullptr;
 
-    m_targetSwitcher->beginClipAndDrawSourceImage(context, m_repaintRect);
+    m_targetSwitcher->beginClipAndDrawSourceImage(context, m_repaintRect, clipRect);
 
     return m_targetSwitcher->drawingContext(context);
 }
@@ -200,7 +205,7 @@ void RenderLayerFilters::applyFilterEffect(GraphicsContext& destinationContext)
     LOG_WITH_STREAM(Filters, stream << "\nRenderLayerFilters " << this << " applyFilterEffect");
 
     ASSERT(m_targetSwitcher);
-    m_targetSwitcher->endClipAndDrawSourceImage(destinationContext);
+    m_targetSwitcher->endClipAndDrawSourceImage(destinationContext, DestinationColorSpace::SRGB());
 
     LOG_WITH_STREAM(Filters, stream << "RenderLayerFilters " << this << " applyFilterEffect done\n");
 }

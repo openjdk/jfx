@@ -1072,6 +1072,8 @@ void testAddShl32();
 void testAddShl64();
 void testAddShl65();
 void testReduceStrengthReassociation(bool flip);
+void testReduceStrengthTruncInt64Constant(int64_t filler, int32_t value);
+void testReduceStrengthTruncDoubleConstant(double filler, float value);
 void testLoadBaseIndexShift2();
 void testLoadBaseIndexShift32();
 void testOptimizeMaterialization();
@@ -1199,6 +1201,8 @@ void addLoadTests(const TestConfig*, Deque<RefPtr<SharedTask<void()>>>&);
 void addTupleTests(const TestConfig*, Deque<RefPtr<SharedTask<void()>>>&);
 
 bool shouldRun(const TestConfig*, const char* testName);
+
+void testCSEStoreWithLoop();
 
 void testLoadPreIndex32();
 void testLoadPreIndex64();

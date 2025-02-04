@@ -53,7 +53,6 @@ private:
     GridArea gridAreaForDefiniteGridAxisItem(const RenderBox&) const;
 
     void collectMasonryItems();
-    void addItemsToFirstTrack();
     void placeItemsUsingOrderModifiedDocumentOrder();
     void placeItemsWithDefiniteGridAxisPosition();
     void placeItemsWithIndefiniteGridAxisPosition();
@@ -68,22 +67,17 @@ private:
     inline GridTrackSizingDirection gridAxisDirection() const;
 
     bool hasDefiniteGridAxisPosition(const RenderBox& child, GridTrackSizingDirection masonryDirection) const;
-    static bool itemGridAreaStartsAtFirstLine(const GridArea& area, GridTrackSizingDirection masonryDirection)
-    {
-        return !(masonryDirection == ForRows ? area.rows.startLine() : area.columns.startLine());
-    }
     GridArea masonryGridAreaFromGridAxisSpan(const GridSpan&) const;
     GridSpan gridAxisSpanFromArea(const GridArea&) const;
     bool hasEnoughSpaceAtPosition(unsigned startingPosition, unsigned spanLength) const;
 
     unsigned m_gridAxisTracksCount;
 
-    HashMap<RenderBox*, GridArea> m_firstTrackItems;
     Vector<RenderBox*> m_itemsWithDefiniteGridAxisPosition;
     Vector<RenderBox*> m_itemsWithIndefiniteGridAxisPosition;
 
     Vector<LayoutUnit> m_runningPositions;
-    HashMap<const RenderBox*, LayoutUnit> m_itemOffsets;
+    HashMap<SingleThreadWeakRef<const RenderBox>, LayoutUnit> m_itemOffsets;
     RenderGrid& m_renderGrid;
     LayoutUnit m_masonryAxisGridGap;
     LayoutUnit m_gridContentSize;

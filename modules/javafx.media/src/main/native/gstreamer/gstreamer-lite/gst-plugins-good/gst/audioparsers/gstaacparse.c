@@ -544,6 +544,70 @@ gst_aac_parse_get_audio_sample_rate (GstAacParse * aacparse, GstBitReader * br,
   return TRUE;
 }
 
+static gboolean
+gst_aac_parse_program_config_element (GstAacParse * aacparse,
+    GstBitReader * br, gint * channels)
+{
+  guint8 G_GNUC_UNUSED element_instance_tag;
+  guint8 G_GNUC_UNUSED object_type;
+  guint8 G_GNUC_UNUSED sampling_frequency_index;
+  guint8 num_front_channel_elements;
+  guint8 num_side_channel_elements;
+  guint8 num_back_channel_elements;
+  guint8 num_lfe_channel_elements;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &element_instance_tag, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &object_type, 2))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &sampling_frequency_index, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &num_front_channel_elements, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &num_side_channel_elements, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &num_back_channel_elements, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &num_lfe_channel_elements, 4))
+    return FALSE;
+  GST_LOG_OBJECT (aacparse, "channels front %d side %d back %d lfe %d ",
+      num_front_channel_elements, num_side_channel_elements,
+      num_back_channel_elements, num_lfe_channel_elements);
+  *channels = num_front_channel_elements + num_side_channel_elements +
+      num_back_channel_elements + num_lfe_channel_elements;
+
+  return TRUE;
+}
+
+static gboolean
+gst_aac_parse_ga_specific_config (GstAacParse * aacparse,
+    GstBitReader * br, gint * channels, guint8 channel_configuration)
+{
+  guint8 G_GNUC_UNUSED frame_length_flag;
+  guint8 depends_on_core_coder;
+  guint32 G_GNUC_UNUSED core_coder_delay;
+  guint8 G_GNUC_UNUSED extension_flag;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &frame_length_flag, 1))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &depends_on_core_coder, 1))
+    return FALSE;
+
+  if (depends_on_core_coder) {
+    if (!gst_bit_reader_get_bits_uint32 (br, &core_coder_delay, 14))
+      return FALSE;
+  }
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &extension_flag, 1))
+    return FALSE;
+
+  if (!channel_configuration) {
+    return gst_aac_parse_program_config_element (aacparse, br, channels);
+  }
+
+  return TRUE;
+}
+
 /* See table 1.13 in ISO/IEC 14496-3 */
 static gboolean
 gst_aac_parse_read_audio_specific_config (GstAacParse * aacparse,
@@ -567,8 +631,6 @@ gst_aac_parse_read_audio_specific_config (GstAacParse * aacparse,
     return FALSE;
   *channels = loas_channels_table[channel_configuration];
   GST_LOG_OBJECT (aacparse, "channel_configuration: %d", channel_configuration);
-  if (!*channels)
-    return FALSE;
 
   if (audio_object_type == 5 || audio_object_type == 29) {
     extension_audio_object_type = 5;
@@ -617,6 +679,32 @@ gst_aac_parse_read_audio_specific_config (GstAacParse * aacparse,
       return FALSE;
     *frame_samples = frame_flag ? 960 : 1024;
   }
+
+  switch (audio_object_type) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 6:
+    case 7:
+    case 17:
+    case 19:
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+      if (!gst_aac_parse_ga_specific_config (aacparse, br, channels,
+              channel_configuration)) {
+        GST_WARNING_OBJECT (aacparse, "Error parsing GASpecificConfig");
+        return FALSE;
+      }
+      break;
+    default:
+      break;
+  }
+
+  if (!*channels)
+    return FALSE;
 
   /* There's LOTS of stuff next, but we ignore it for now as we have
      what we want (sample rate and number of channels */

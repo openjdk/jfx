@@ -26,7 +26,7 @@
 #include "config.h"
 #include "ServiceWorkerRegistration.h"
 
-#if ENABLE(SERVICE_WORKER)
+#include "CookieStoreManager.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventLoop.h"
@@ -148,18 +148,18 @@ void ServiceWorkerRegistration::setUpdateViaCache(ServiceWorkerUpdateViaCache up
 void ServiceWorkerRegistration::update(Ref<DeferredPromise>&& promise)
 {
     if (isContextStopped()) {
-        promise->reject(Exception(InvalidStateError));
+        promise->reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
     auto* newestWorker = getNewestWorker();
     if (!newestWorker) {
-        promise->reject(Exception(InvalidStateError, "newestWorker is null"_s));
+        promise->reject(Exception(ExceptionCode::InvalidStateError, "newestWorker is null"_s));
         return;
     }
 
     if (auto* serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(scriptExecutionContext()); serviceWorkerGlobalScope && serviceWorkerGlobalScope->serviceWorker().state() == ServiceWorkerState::Installing) {
-        promise->reject(Exception(InvalidStateError, "service worker is installing"_s));
+        promise->reject(Exception(ExceptionCode::InvalidStateError, "service worker is installing"_s));
         return;
     }
 
@@ -169,7 +169,7 @@ void ServiceWorkerRegistration::update(Ref<DeferredPromise>&& promise)
 void ServiceWorkerRegistration::unregister(Ref<DeferredPromise>&& promise)
 {
     if (isContextStopped()) {
-        promise->reject(Exception(InvalidStateError));
+        promise->reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
@@ -179,7 +179,7 @@ void ServiceWorkerRegistration::unregister(Ref<DeferredPromise>&& promise)
 void ServiceWorkerRegistration::subscribeToPushService(const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&& promise)
 {
     if (isContextStopped()) {
-        promise.reject(Exception(InvalidStateError));
+        promise.reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
@@ -189,7 +189,7 @@ void ServiceWorkerRegistration::subscribeToPushService(const Vector<uint8_t>& ap
 void ServiceWorkerRegistration::unsubscribeFromPushService(PushSubscriptionIdentifier subscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&& promise)
 {
     if (isContextStopped()) {
-        promise.reject(Exception(InvalidStateError));
+        promise.reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
@@ -199,7 +199,7 @@ void ServiceWorkerRegistration::unsubscribeFromPushService(PushSubscriptionIdent
 void ServiceWorkerRegistration::getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&& promise)
 {
     if (isContextStopped()) {
-        promise.reject(Exception(InvalidStateError));
+        promise.reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
@@ -209,7 +209,7 @@ void ServiceWorkerRegistration::getPushSubscription(DOMPromiseDeferred<IDLNullab
 void ServiceWorkerRegistration::getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&& promise)
 {
     if (isContextStopped()) {
-        promise.reject(Exception(InvalidStateError));
+        promise.reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
@@ -286,20 +286,20 @@ void ServiceWorkerRegistration::showNotification(ScriptExecutionContext& context
 {
     if (!m_activeWorker) {
         RELEASE_LOG_ERROR(Push, "Cannot show notification from ServiceWorker: No active worker");
-        promise->reject(Exception { TypeError, "Registration does not have an active worker"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Registration does not have an active worker"_s });
         return;
     }
 
     auto* client = context.notificationClient();
     if (!client) {
         RELEASE_LOG_ERROR(Push, "Cannot show notification from ServiceWorker: Registration not active");
-        promise->reject(Exception { TypeError, "Registration not active"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Registration not active"_s });
         return;
     }
 
     if (client->checkPermission(&context) != NotificationPermission::Granted) {
         RELEASE_LOG_ERROR(Push, "Cannot show notification from ServiceWorker: Client permission is not granted");
-        promise->reject(Exception { TypeError, "Registration does not have permission to show notifications"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Registration does not have permission to show notifications"_s });
         return;
     }
 
@@ -310,7 +310,24 @@ void ServiceWorkerRegistration::showNotification(ScriptExecutionContext& context
         return;
     }
 
-    if (auto* serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(context)) {
+    RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(context);
+
+    // If we're handling a PushNotificationEvent, this Notification will override the proposed notification
+    // instead of being shown directly.
+    if (serviceWorkerGlobalScope) {
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+        if (RefPtr pushNotificationEvent = serviceWorkerGlobalScope->pushNotificationEvent()) {
+            auto notification = notificationResult.releaseReturnValue();
+            if (!notification->defaultAction().isValid()) {
+                promise->reject(Exception { ExceptionCode::TypeError, "Call to showNotification() while handling a `pushnotification` event did not include NotificationOptions that specify a valid defaultAction url"_s });
+                return;
+            }
+
+            pushNotificationEvent->setUpdatedNotificationData(notification->data());
+            return;
+        }
+#endif
+
         if (auto* pushEvent = serviceWorkerGlobalScope->pushEvent()) {
             auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(promise->globalObject());
             auto& jsPromise = *JSC::jsCast<JSC::JSPromise*>(promise->promise());
@@ -321,7 +338,6 @@ void ServiceWorkerRegistration::showNotification(ScriptExecutionContext& context
             serviceWorkerGlobalScope->addConsoleMessage(MessageSource::Storage, MessageLevel::Warning, "showNotification was called outside of any push event lifetime. PushEvent.waitUntil can be used to extend the push event lifetime as necessary."_s, 0);
         else
             serviceWorkerGlobalScope->setHasPendingSilentPushEvent(false);
-
     }
 
     auto notification = notificationResult.releaseReturnValue();
@@ -337,6 +353,11 @@ void ServiceWorkerRegistration::getNotifications(const GetNotificationOptions& f
 
 #endif // ENABLE(NOTIFICATION_EVENT)
 
-} // namespace WebCore
+CookieStoreManager& ServiceWorkerRegistration::cookies()
+{
+    if (!m_cookieStoreManager)
+        m_cookieStoreManager = CookieStoreManager::create();
+    return *m_cookieStoreManager;
+}
 
-#endif // ENABLE(SERVICE_WORKER)
+} // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,10 @@
 #include <MediaManagement/Media.h>
 #include <Common/VSMemory.h>
 #include <Utils/LowLevelPerf.h>
+#include <jni/Logger.h>
 #include <fxplugins_common.h>
+
+#include <string.h>
 
 #define AUDIO_RESUME_DELTA_TIME   10.0 // seconds
 #define VIDEO_RESUME_DELTA_TIME   10.0 // seconds
@@ -161,8 +164,32 @@ uint32_t CGstAudioPlaybackPipeline::Init()
 
     // Check if we have static pipeline
 #if TARGET_OS_LINUX | TARGET_OS_MAC | TARGET_OS_WIN32
-    if (m_Elements[AV_DEMUXER] == NULL)
-        bStaticDecoderBin = true;
+    if (m_pOptions->GetPipelineType() == CPipelineOptions::kAudioSourcePipeline)
+    {
+        // For pipeline with separate audio source we need to check AUDIO_PARSER.
+        // If it is not set, then audio is static, otherwise we need to check if
+        // AUDIO_PARSER has static src pad or not. If it has static src pad, then
+        // audio is static, otherwise AVPipeline will handle dynamic audio parser.
+        // AV_DEMUXER is video only.
+        if (m_Elements[AUDIO_PARSER] == NULL)
+        {
+            bStaticDecoderBin = true;
+        }
+        else
+        {
+            GstPad *src_pad = gst_element_get_static_pad(m_Elements[AUDIO_PARSER], "src");
+            if (src_pad != NULL)
+            {
+                bStaticDecoderBin = true;
+                gst_object_unref(src_pad);
+            }
+        }
+    }
+    else
+    {
+        if (m_Elements[AV_DEMUXER] == NULL)
+            bStaticDecoderBin = true;
+    }
 #else // TARGET_OS_LINUX | TARGET_OS_MAC | TARGET_OS_WIN32
     if (m_Elements[AUDIO_PARSER] == NULL && m_Elements[AV_DEMUXER] == NULL)
         bStaticDecoderBin = true;
@@ -175,7 +202,7 @@ uint32_t CGstAudioPlaybackPipeline::Init()
     }
     else
     {
-        if (m_Elements[AUDIO_PARSER]) // Add method to link parser to decoder.
+        if (m_Elements[AUDIO_PARSER] && m_pOptions->GetPipelineType() != CPipelineOptions::kAudioSourcePipeline) // Add method to link parser to decoder.
             g_signal_connect (m_Elements[AUDIO_PARSER], "pad-added", G_CALLBACK (OnParserSrcPadAdded), this);
     }
 
@@ -190,15 +217,21 @@ uint32_t CGstAudioPlaybackPipeline::PostBuildInit()
 {
     if (m_bHasAudio && !m_bAudioInitDone)
     {
+        bool bUseAudioDecoder = true;
+
         if (m_Elements[AUDIO_PARSER])
         {
+            // Audio parser might not have static src pad and in this case use audio decoder.
             GstPad *pPad = gst_element_get_static_pad(m_Elements[AUDIO_PARSER], "src");
-            if (NULL == pPad)
-                return ERROR_GSTREAMER_ELEMENT_GET_PAD;
-            m_audioSourcePadProbeHID = gst_pad_add_probe(pPad, GST_PAD_PROBE_TYPE_BUFFER, (GstPadProbeCallback)AudioSourcePadProbe, this, NULL);
-            gst_object_unref(pPad);
+            if (NULL != pPad)
+            {
+                m_audioSourcePadProbeHID = gst_pad_add_probe(pPad, GST_PAD_PROBE_TYPE_BUFFER, (GstPadProbeCallback)AudioSourcePadProbe, this, NULL);
+                gst_object_unref(pPad);
+                bUseAudioDecoder = false; // No need to use audio decoder for AudioTrack info.
+            }
         }
-        else if (m_Elements[AUDIO_DECODER])
+
+        if (bUseAudioDecoder && m_Elements[AUDIO_DECODER])
         {
             if (m_AudioFlags & AUDIO_DECODER_HAS_SINK_PROBE) // Add a buffer probe on the sink pad of the decoder
             {
@@ -580,21 +613,38 @@ uint32_t CGstAudioPlaybackPipeline::SeekPipeline(gint64 seek_time)
     else
         seekFlags = (GstSeekFlags)(GST_SEEK_FLAG_FLUSH);// | GST_SEEK_FLAG_KEY_UNIT);
 
-    if (m_Elements[AUDIO_SINK] != NULL && m_bHasAudio && gst_element_seek(m_Elements[AUDIO_SINK], m_fRate, GST_FORMAT_TIME, seekFlags,
-        GST_SEEK_TYPE_SET, seek_time,
-        GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE))
+    if (m_pOptions->GetPipelineType() == CPipelineOptions::kAudioSourcePipeline)
     {
-        m_SeekLock->Exit();
-        CheckQueueSize(NULL);
-        return ERROR_NONE;
+        gboolean bSeekResult = FALSE;
+        bSeekResult |= gst_element_seek(m_Elements[PIPELINE], m_fRate, GST_FORMAT_TIME, seekFlags,
+                    GST_SEEK_TYPE_SET, seek_time,
+                    GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+
+        if (bSeekResult)
+        {
+            m_SeekLock->Exit();
+            CheckQueueSize(NULL);
+            return ERROR_NONE;
+        }
     }
-    else if (m_Elements[VIDEO_SINK] != NULL && m_bHasVideo && gst_element_seek(m_Elements[VIDEO_SINK], m_fRate, GST_FORMAT_TIME, seekFlags,
-        GST_SEEK_TYPE_SET, seek_time,
-        GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE))
+    else
     {
-        m_SeekLock->Exit();
-        CheckQueueSize(NULL);
-        return ERROR_NONE;
+        if (m_Elements[AUDIO_SINK] != NULL && m_bHasAudio && gst_element_seek(m_Elements[AUDIO_SINK], m_fRate, GST_FORMAT_TIME, seekFlags,
+            GST_SEEK_TYPE_SET, seek_time,
+            GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE))
+        {
+            m_SeekLock->Exit();
+            CheckQueueSize(NULL);
+            return ERROR_NONE;
+        }
+        else if (m_Elements[VIDEO_SINK] != NULL && m_bHasVideo && gst_element_seek(m_Elements[VIDEO_SINK], m_fRate, GST_FORMAT_TIME, seekFlags,
+            GST_SEEK_TYPE_SET, seek_time,
+            GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE))
+        {
+            m_SeekLock->Exit();
+            CheckQueueSize(NULL);
+            return ERROR_NONE;
+        }
     }
 
     m_SeekLock->Exit();
@@ -1509,6 +1559,10 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
             pPipeline->m_SeekLock->Exit();
             break;
 
+        case GST_MESSAGE_LATENCY:
+            gst_bin_recalculate_latency (GST_BIN(pPipeline->m_Elements[PIPELINE]));
+            break;
+
         default:
             break;
     }
@@ -1906,8 +1960,10 @@ GstPadProbeReturn CGstAudioPlaybackPipeline::AudioSinkPadProbe(GstPad* pPad, Gst
     if (!gst_structure_get_boolean(pStructure, "track_enabled", &enabled)) {
         enabled = TRUE; // default to enabled if container doesn't support it
     }
-    if (!gst_structure_get_int(pStructure, "track_id", &trackID)) {
-        trackID = 0; // default audio track ID if none present (can only be one in that case)
+    if (pPipeline->m_pOptions->ForceDefaultTrackID() ||
+            !gst_structure_get_int(pStructure, "track_id", &trackID)) {
+        // Use default ID in case container doesn't have track IDs
+        trackID = DEFAULT_AUDIO_TRACK_ID;
     }
     pPipeline->m_AudioTrackInfo.trackEnabled = enabled;
     pPipeline->m_AudioTrackInfo.trackID = (int64_t)trackID;

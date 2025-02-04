@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,77 +26,78 @@
 package com.sun.scenario.effect.compiler.lexer;
 
 import com.sun.scenario.effect.compiler.JSLLexer;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 public class TypeTest extends LexerBase {
 
     @Test
-    public void floatScalar() throws Exception {
+    public void floatScalar() {
         assertRecognized("float");
     }
 
     @Test
-    public void floatVec2() throws Exception {
+    public void floatVec2() {
         assertRecognized("float2");
     }
 
     @Test
-    public void floatVec3() throws Exception {
+    public void floatVec3() {
         assertRecognized("float3");
     }
 
     @Test
-    public void floatVec4() throws Exception {
+    public void floatVec4() {
         assertRecognized("float4");
     }
 
     @Test
-    public void intScalar() throws Exception {
+    public void intScalar() {
         assertRecognized("int");
     }
 
     @Test
-    public void intVec2() throws Exception {
+    public void intVec2() {
         assertRecognized("int2");
     }
 
     @Test
-    public void intVec3() throws Exception {
+    public void intVec3() {
         assertRecognized("int3");
     }
 
     @Test
-    public void intVec4() throws Exception {
+    public void intVec4() {
         assertRecognized("int4");
     }
 
     @Test
-    public void boolScalar() throws Exception {
+    public void boolScalar() {
         assertRecognized("bool");
     }
 
     @Test
-    public void boolVec2() throws Exception {
+    public void boolVec2() {
         assertRecognized("bool2");
     }
 
     @Test
-    public void boolVec3() throws Exception {
+    public void boolVec3() {
         assertRecognized("bool3");
     }
 
     @Test
-    public void boolVec4() throws Exception {
+    public void boolVec4() {
         assertRecognized("bool4");
     }
 
     @Test
-    public void sampler() throws Exception {
+    public void sampler() {
         assertRecognized("sampler");
     }
 
     @Test
-    public void notAType() throws Exception {
+    public void notAType() {
         assertNotRecognized("double");
     }
 

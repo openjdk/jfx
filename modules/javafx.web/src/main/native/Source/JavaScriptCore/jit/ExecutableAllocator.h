@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,10 @@
 #include "Options.h"
 #include <limits>
 #include <wtf/Assertions.h>
+#include <wtf/ForbidHeapAllocation.h>
 #include <wtf/Gigacage.h>
 #include <wtf/Lock.h>
+#include <wtf/TZoneMalloc.h>
 
 #if !ENABLE(LIBPAS_JIT_HEAP)
 #include <wtf/MetaAllocator.h>
@@ -45,10 +47,6 @@
 #include <sys/mman.h>
 #endif
 
-#if CPU(MIPS) && OS(LINUX)
-#include <sys/cachectl.h>
-#endif
-
 #define EXECUTABLE_POOL_WRITABLE true
 
 namespace JSC {
@@ -56,7 +54,7 @@ namespace JSC {
 static constexpr unsigned jitAllocationGranule = 32;
 
 class ExecutableAllocatorBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_FORBID_HEAP_ALLOCATION;
     WTF_MAKE_NONCOPYABLE(ExecutableAllocatorBase);
 public:
     bool isValid() const { return false; }
@@ -150,6 +148,7 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
 }
 
 class ExecutableAllocator : private ExecutableAllocatorBase {
+    WTF_MAKE_TZONE_ALLOCATED(ExecutableAllocator);
 public:
     using Base = ExecutableAllocatorBase;
 
@@ -180,7 +179,8 @@ public:
     Lock& getLock() const;
 
 #if ENABLE(JUMP_ISLANDS)
-    JS_EXPORT_PRIVATE void* getJumpIslandTo(void* from, void* newDestination);
+    JS_EXPORT_PRIVATE void* getJumpIslandToUsingJITMemcpy(void* from, void* newDestination);
+    JS_EXPORT_PRIVATE void* getJumpIslandToUsingMemcpy(void* from, void* newDestination);
     JS_EXPORT_PRIVATE void* getJumpIslandToConcurrently(void* from, void* newDestination);
 #endif
 
@@ -192,6 +192,7 @@ private:
 #else
 
 class ExecutableAllocator : public ExecutableAllocatorBase {
+    WTF_MAKE_TZONE_ALLOCATED(ExecutableAllocator);
 public:
     static ExecutableAllocator& singleton();
     static void initialize();
@@ -209,6 +210,5 @@ static inline void* performJITMemcpy(void *dst, const void *src, size_t n)
 
 inline bool isJITPC(void*) { return false; }
 #endif // ENABLE(JIT)
-
 
 } // namespace JSC

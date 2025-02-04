@@ -43,8 +43,8 @@
 #include "RenderFileUploadControl.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
-#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
+#include "UserAgentParts.h"
 #include "UserGestureIndicator.h"
 #include <wtf/FileSystem.h>
 #include <wtf/IsoMallocInlines.h>
@@ -57,56 +57,8 @@
 #endif
 
 namespace WebCore {
-class UploadButtonElement;
-}
-
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::UploadButtonElement)
-    static bool isType(const WebCore::Element& element) { return element.isUploadButton(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
-SPECIALIZE_TYPE_TRAITS_END()
-
-namespace WebCore {
 
 using namespace HTMLNames;
-
-// FIXME: This can likely be an HTMLDivElement.
-class UploadButtonElement final : public HTMLInputElement {
-    WTF_MAKE_ISO_ALLOCATED_INLINE(UploadButtonElement);
-public:
-    static Ref<UploadButtonElement> create(Document&);
-    static Ref<UploadButtonElement> createForMultiple(Document&);
-
-private:
-    static Ref<UploadButtonElement> createInternal(Document&, const String& value);
-    bool isUploadButton() const override { return true; }
-
-    UploadButtonElement(Document&);
-};
-
-Ref<UploadButtonElement> UploadButtonElement::create(Document& document)
-{
-    return createInternal(document, fileButtonChooseFileLabel());
-}
-
-Ref<UploadButtonElement> UploadButtonElement::createForMultiple(Document& document)
-{
-    return createInternal(document, fileButtonChooseMultipleFilesLabel());
-}
-
-Ref<UploadButtonElement> UploadButtonElement::createInternal(Document& document, const String& value)
-{
-    auto button = adoptRef(*new UploadButtonElement(document));
-    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { button };
-    button->setType(HTMLNames::buttonTag->localName());
-    button->setPseudo(ShadowPseudoIds::fileSelectorButton());
-    button->setValue(value);
-    return button;
-}
-
-UploadButtonElement::UploadButtonElement(Document& document)
-    : HTMLInputElement(inputTag, document, 0, false)
-{
-}
 
 FileInputType::FileInputType(HTMLInputElement& element)
     : BaseClickableWithKeyInputType(Type::File, element)
@@ -130,7 +82,7 @@ std::pair<Vector<FileChooserFileInfo>, String> FileInputType::filesFromFormContr
     size_t size = state.size() - 1;
     files.reserveInitialCapacity(size / 2);
     for (size_t i = 0; i < size; i += 2)
-        files.uncheckedAppend({ state[i], { }, state[i + 1] });
+        files.append({ state[i], { }, state[i + 1] });
 
     return { files, state[size] };
 }
@@ -150,10 +102,10 @@ FormControlState FileInputType::saveFormControlState() const
     Vector<AtomString> stateVector;
     stateVector.reserveInitialCapacity(length);
     for (auto& file : m_fileList->files()) {
-        stateVector.uncheckedAppend(AtomString { file->path() });
-        stateVector.uncheckedAppend(AtomString { file->name() });
+        stateVector.append(AtomString { file->path() });
+        stateVector.append(AtomString { file->name() });
     }
-    stateVector.uncheckedAppend(AtomString { m_displayString });
+    stateVector.append(AtomString { m_displayString });
     return FormControlState { WTFMove(stateVector) };
 }
 
@@ -272,34 +224,43 @@ void FileInputType::createShadowSubtree()
     ASSERT(element());
     ASSERT(element()->shadowRoot());
 
-    auto button = element()->multiple() ? UploadButtonElement::createForMultiple(element()->document()) : UploadButtonElement::create(element()->document());
+    auto button = HTMLInputElement::create(inputTag, element()->document(), nullptr, false);
+    {
+        ScriptDisallowedScope::EventAllowedScope eventAllowedScopeBeforeAppend { button };
+        button->setType(InputTypeNames::button());
+        button->setUserAgentPart(UserAgentParts::fileSelectorButton());
+        button->setValue(element()->multiple() ? fileButtonChooseMultipleFilesLabel() : fileButtonChooseFileLabel());
+    }
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
     element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, button);
     disabledStateChanged();
+}
+
+static RefPtr<HTMLInputElement> fileSelectorButton(const Element& element)
+{
+    auto root = element.userAgentShadowRoot();
+    if (!root)
+        return nullptr;
+
+    return childrenOfType<HTMLInputElement>(*root).first();
 }
 
 void FileInputType::disabledStateChanged()
 {
     ASSERT(element());
 
-    auto root = element()->userAgentShadowRoot();
-    if (!root)
-        return;
-
-    if (RefPtr button = childrenOfType<UploadButtonElement>(*root).first())
+    if (RefPtr button = fileSelectorButton(*element()))
         button->setBooleanAttribute(disabledAttr, element()->isDisabledFormControl());
 }
 
 void FileInputType::attributeChanged(const QualifiedName& name)
 {
     if (name == multipleAttr) {
-        if (auto* element = this->element()) {
-            if (auto root = element->userAgentShadowRoot()) {
-                if (RefPtr button = childrenOfType<UploadButtonElement>(*root).first())
+        if (RefPtr element = this->element()) {
+            if (RefPtr button = fileSelectorButton(*element))
                     button->setValue(element->multiple() ? fileButtonChooseMultipleFilesLabel() : fileButtonChooseFileLabel());
             }
         }
-    }
     BaseClickableWithKeyInputType::attributeChanged(name);
 }
 
@@ -356,6 +317,11 @@ bool FileInputType::allowsDirectories() const
     if (!element()->document().settings().directoryUploadEnabled())
         return false;
     return element()->hasAttributeWithoutSynchronization(webkitdirectoryAttr);
+}
+
+bool FileInputType::dirAutoUsesValue() const
+{
+    return false;
 }
 
 void FileInputType::setFiles(RefPtr<FileList>&& files, WasSetByJavaScript wasSetByJavaScript)
@@ -448,11 +414,9 @@ void FileInputType::filesChosen(const Vector<String>& paths, const Vector<String
 
     size_t size = element()->hasAttributeWithoutSynchronization(multipleAttr) ? paths.size() : 1;
 
-    Vector<FileChooserFileInfo> files;
-    files.reserveInitialCapacity(size);
-
-    for (size_t i = 0; i < size; ++i)
-        files.uncheckedAppend({ paths[i], i < replacementPaths.size() ? replacementPaths[i] : nullString(), { } });
+    Vector<FileChooserFileInfo> files(size, [&](size_t i) {
+        return FileChooserFileInfo { paths[i], i < replacementPaths.size() ? replacementPaths[i] : nullString(), { } };
+    });
 
     filesChosen(WTFMove(files));
 }

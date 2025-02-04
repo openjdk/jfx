@@ -38,10 +38,13 @@
 namespace JSC {
 
 class DateInstance;
+class DirectCallLinkInfo;
 class JSBigInt;
 class JSBoundFunction;
 class JSPropertyNameEnumerator;
 class JSRopeString;
+class JSMap;
+class JSSet;
 class JSWeakMap;
 class JSWeakSet;
 class NativeExecutable;
@@ -162,16 +165,12 @@ JSC_DECLARE_JIT_OPERATION(operationNewArrayIterator, JSCell*, (VM*, Structure*))
 JSC_DECLARE_JIT_OPERATION(operationNewMapIterator, JSCell*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewSetIterator, JSCell*, (VM*, Structure*));
 
-JSC_DECLARE_JIT_OPERATION(operationPutByValStrict, void, (JSGlobalObject*, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue));
-JSC_DECLARE_JIT_OPERATION(operationPutByValSloppy, void, (JSGlobalObject*, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue));
 JSC_DECLARE_JIT_OPERATION(operationPutByValCellStringStrict, void, (JSGlobalObject*, JSCell*, JSCell* string, EncodedJSValue encodedValue));
 JSC_DECLARE_JIT_OPERATION(operationPutByValCellStringSloppy, void, (JSGlobalObject*, JSCell*, JSCell* string, EncodedJSValue encodedValue));
 JSC_DECLARE_JIT_OPERATION(operationPutByValCellSymbolStrict, void, (JSGlobalObject*, JSCell*, JSCell* symbol, EncodedJSValue encodedValue));
 JSC_DECLARE_JIT_OPERATION(operationPutByValCellSymbolSloppy, void, (JSGlobalObject*, JSCell*, JSCell* symbol, EncodedJSValue encodedValue));
 JSC_DECLARE_JIT_OPERATION(operationPutByValBeyondArrayBoundsStrict, void, (JSGlobalObject*, JSObject*, int32_t index, EncodedJSValue encodedValue));
 JSC_DECLARE_JIT_OPERATION(operationPutByValBeyondArrayBoundsSloppy, void, (JSGlobalObject*, JSObject*, int32_t index, EncodedJSValue encodedValue));
-JSC_DECLARE_JIT_OPERATION(operationPutByValDirectStrict, void, (JSGlobalObject*, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue));
-JSC_DECLARE_JIT_OPERATION(operationPutByValDirectSloppy, void, (JSGlobalObject*, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue));
 JSC_DECLARE_JIT_OPERATION(operationPutByValDirectCellStringStrict, void, (JSGlobalObject*, JSCell*, JSCell* string, EncodedJSValue encodedValue));
 JSC_DECLARE_JIT_OPERATION(operationPutByValDirectCellStringSloppy, void, (JSGlobalObject*, JSCell*, JSCell* string, EncodedJSValue encodedValue));
 JSC_DECLARE_JIT_OPERATION(operationPutByValDirectCellSymbolStrict, void, (JSGlobalObject*, JSCell*, JSCell* symbol, EncodedJSValue encodedValue));
@@ -293,6 +292,8 @@ JSC_DECLARE_JIT_OPERATION(operationMapHash, UCPUStrictInt32, (JSGlobalObject*, E
 JSC_DECLARE_JIT_OPERATION(operationMapHashHeapBigInt, UCPUStrictInt32, (VM*, JSBigInt*));
 JSC_DECLARE_JIT_OPERATION(operationJSMapFindBucket, JSCell*, (JSGlobalObject*, JSCell*, EncodedJSValue, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationJSSetFindBucket, JSCell*, (JSGlobalObject*, JSCell*, EncodedJSValue, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationNewMap, JSMap*, (VM*, Structure*));
+JSC_DECLARE_JIT_OPERATION(operationNewSet, JSSet*, (VM*, Structure*));
 
 JSC_DECLARE_JIT_OPERATION(operationParseIntDoubleNoRadix, EncodedJSValue, (JSGlobalObject*, double));
 JSC_DECLARE_JIT_OPERATION(operationParseIntStringNoRadix, EncodedJSValue, (JSGlobalObject*, JSString*));
@@ -358,12 +359,16 @@ JSC_DECLARE_JIT_OPERATION(operationPutDynamicVarSloppy, void, (JSGlobalObject*, 
 JSC_DECLARE_JIT_OPERATION(operationNumberIsInteger, size_t, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNumberIsNaN, UCPUStrictInt32, (EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationIsNaN, UCPUStrictInt32, (JSGlobalObject*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationToIntegerOrInfinityDouble, EncodedJSValue, (double));
+JSC_DECLARE_JIT_OPERATION(operationToIntegerOrInfinityUntyped, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationToLengthDouble, EncodedJSValue, (double));
+JSC_DECLARE_JIT_OPERATION(operationToLengthUntyped, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
 
 JSC_DECLARE_JIT_OPERATION(operationNewRawObject, char*, (VM*, Structure*, int32_t, Butterfly*));
 JSC_DECLARE_JIT_OPERATION(operationNewObjectWithButterfly, JSCell*, (VM*, Structure*, Butterfly*));
 JSC_DECLARE_JIT_OPERATION(operationNewObjectWithButterflyWithIndexingHeaderAndVectorLength, JSCell*, (VM*, Structure*, unsigned length, Butterfly*));
 
-JSC_DECLARE_JIT_OPERATION(operationLinkDirectCall, void, (OptimizingCallLinkInfo*, JSFunction*));
+JSC_DECLARE_JIT_OPERATION(operationLinkDirectCall, void, (DirectCallLinkInfo*, JSFunction*));
 
 JSC_DECLARE_JIT_OPERATION(operationDateGetFullYear, EncodedJSValue, (VM*, DateInstance*));
 JSC_DECLARE_JIT_OPERATION(operationDateGetUTCFullYear, EncodedJSValue, (VM*, DateInstance*));

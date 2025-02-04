@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,8 @@
 #import "GlassApplication.h"
 #import "GlassLayer3D.h"
 #import "GlassHelper.h"
+
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 //#include <stdio.h>
 //#include <stdarg.h>
@@ -194,6 +196,8 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
             [button setAction:nil];                                                     \
             [button setEnabled:NO];                                                     \
             break;                                                                      \
+        default:                                                                        \
+            break;                                                                      \
     }                                                                                   \
     return button;                                                                      \
 }                                                                                       \
@@ -286,35 +290,6 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 
 @implementation GlassWindow
-
-- (void)setFullscreenWindow:(NSWindow*)fsWindow
-{
-    if (self->fullscreenWindow == fsWindow) {
-        return;
-    }
-
-    [self _ungrabFocus];
-
-    NSWindow *from, *to;
-    from = self->fullscreenWindow ? self->fullscreenWindow : self->nsWindow;
-    to = fsWindow ? fsWindow : self->nsWindow;
-
-    NSArray * children = [from childWindows];
-    for (NSUInteger i=0; i<[children count]; i++)
-    {
-        NSWindow *child = (NSWindow*)[children objectAtIndex:i];
-        if ([[child delegate] isKindOfClass: [GlassWindow class]]) {
-            [from removeChildWindow: child];
-            [to addChildWindow:child ordered:NSWindowAbove];
-        }
-    }
-
-    self->fullscreenWindow = fsWindow;
-
-    GET_MAIN_JENV;
-    (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyDelegatePtr, ptr_to_jlong(fsWindow));
-    GLASS_CHECK_EXCEPTION(env);
-}
 
 - (void)close
 {
@@ -498,8 +473,6 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setHasShadow:YES];
             [window->nsWindow setOpaque:YES];
         }
-
-        window->fullscreenWindow = nil;
 
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
@@ -776,7 +749,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBackground
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [window->nsWindow setBackgroundColor:[NSColor colorWithCalibratedRed:r green:g blue:b alpha:1.0f]];
+        [window->nsWindow setBackgroundColor:[NSColor colorWithSRGBRed:r green:g blue:b alpha:1.0f]];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -840,7 +813,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
                 [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
             }
 
-            window->suppressWindowMoveEvent = YES; // RT-11215
+            window->suppressWindowMoveEvent = YES; // JDK-8111165
             {
                 NSRect viewFrame = [window->view frame];
                 if ((viewFrame.size.width != 0.0f) && (viewFrame.size.height != 0.0f))
@@ -919,7 +892,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
         // ensure that performKeyEquivalent returns YES.
         window->isClosed = YES;
 
-        // RT-39813 When closing a window as the result of a global right-click
+        // JDK-8095359 When closing a window as the result of a global right-click
         //          mouse event outside the bounds of the window, using an immediate
         //          [window->nsWindow close] crashes the JDK as the AppKit at this
         //          point still has another [NSWindow _resignKeyFocus] from the
@@ -1210,7 +1183,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
         }
         now = [window->nsWindow isVisible] ? JNI_TRUE : JNI_FALSE;
 
-        // RT-22502 temp workaround: bring plugin window in front of a browser
+        // JDK-8088691 temp workaround: bring plugin window in front of a browser
         if (now == YES)
         {
             static BOOL isBackgroundOnlyAppChecked = NO;

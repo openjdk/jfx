@@ -41,7 +41,11 @@ class ElementBox : public Box {
 public:
     ElementBox(ElementAttributes&&, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr, OptionSet<BaseTypeFlag> = { ElementBoxFlag });
 
-    enum class ListMarkerAttribute : uint8_t { Image = 1 << 0, Outside = 1 << 1 };
+    enum class ListMarkerAttribute : uint8_t {
+        Image = 1 << 0,
+        Outside = 1 << 1,
+        HasListElementAncestor = 1 << 2
+    };
     ElementBox(ElementAttributes&&, OptionSet<ListMarkerAttribute>, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr);
 
     struct ReplacedAttributes {
@@ -66,6 +70,7 @@ public:
     bool hasChild() const { return firstChild(); }
     bool hasInFlowChild() const { return firstInFlowChild(); }
     bool hasInFlowOrFloatingChild() const { return firstInFlowOrFloatingChild(); }
+    bool hasOutOfFlowChild() const;
 
     void appendChild(UniqueRef<Box>);
     void insertChild(UniqueRef<Box>, Box* beforeChild = nullptr);
@@ -84,6 +89,7 @@ public:
 
     bool isListMarkerImage() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::Image); }
     bool isListMarkerOutside() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::Outside); }
+    bool isListMarkerInsideList() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::HasListElementAncestor); }
 
     // FIXME: This doesn't belong.
     CachedImage* cachedImage() const { return m_replacedData ? m_replacedData->cachedImage : nullptr; }

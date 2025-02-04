@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -261,7 +261,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                 tc.setTableView(getTableView());
             }
 
-            // This code was commented out due to RT-22391, with this enabled
+            // This code was commented out due to JDK-8116917, with this enabled
             // the parent column will be null, which is not desired
 //                // set the parent of this column to also have this tableView
 //                if (getParentColumn() != null) {
@@ -304,7 +304,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         while (c.next()) {
             // update the TableColumn.tableView property
             for (TableColumn<S,?> tc : c.getRemoved()) {
-                // Fix for RT-16978. In TableColumnHeader we add before we
+                // Fix for JDK-8128151. In TableColumnHeader we add before we
                 // remove when moving a TableColumn. This means that for
                 // a very brief moment the tc is duplicated, and we can prevent
                 // nulling out the tableview and parent column. Without this
@@ -766,6 +766,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         // to go back into the TableView.items list - this new value represents
         // just the input for a single cell, so it is likely that it needs to go
         // back into a property within an item in the TableView.items list.
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
 
         // The location of the edit event

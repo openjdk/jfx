@@ -39,7 +39,7 @@ class LayoutState;
 
 class LineBoxBuilder {
 public:
-    LineBoxBuilder(const InlineFormattingContext&, const InlineLayoutState&, const LineBuilder::LayoutResult&);
+    LineBoxBuilder(const InlineFormattingContext&, const LineLayoutResult&);
 
     LineBox build(size_t lineIndex);
 
@@ -55,23 +55,23 @@ private:
     void constructInlineLevelBoxes(LineBox&);
     void adjustIdeographicBaselineIfApplicable(LineBox&);
     void adjustOutsideListMarkersPosition(LineBox&);
+    void expandAboveRootInlineBox(LineBox&, InlineLayoutUnit) const;
 
-    bool isFirstLine() const { return lineLayoutResult().isFirstLast.isFirstFormattedLine != LineBuilder::LayoutResult::IsFirstLast::FirstFormattedLine::No; }
+    bool isFirstLine() const { return lineLayoutResult().isFirstLast.isFirstFormattedLine != LineLayoutResult::IsFirstLast::FirstFormattedLine::No; }
     bool isLastLine() const { return lineLayoutResult().isFirstLast.isLastLineWithInlineContent; }
     const InlineFormattingContext& formattingContext() const { return m_inlineFormattingContext; }
-    const LineBuilder::LayoutResult& lineLayoutResult() const { return m_lineLayoutResult; }
-    const Box& rootBox() const { return formattingContext().root(); }
+    const LineLayoutResult& lineLayoutResult() const { return m_lineLayoutResult; }
+    const ElementBox& rootBox() const { return formattingContext().root(); }
     const RenderStyle& rootStyle() const { return isFirstLine() ? rootBox().firstLineStyle() : rootBox().style(); }
 
-    const InlineLayoutState& inlineLayoutState() const { return m_inlineLayoutState; }
-    const BlockLayoutState& blockLayoutState() const { return inlineLayoutState().parentBlockLayoutState(); }
-    LayoutState& layoutState() const { return formattingContext().layoutState(); }
+    const InlineLayoutState& layoutState() const { return formattingContext().layoutState(); }
+    const BlockLayoutState& blockLayoutState() const { return layoutState().parentBlockLayoutState(); }
 
 private:
     const InlineFormattingContext& m_inlineFormattingContext;
-    const InlineLayoutState& m_inlineLayoutState;
-    const LineBuilder::LayoutResult& m_lineLayoutResult;
+    const LineLayoutResult& m_lineLayoutResult;
     bool m_fallbackFontRequiresIdeographicBaseline { false };
+    bool m_lineHasNonLineSpanningRubyContent { false };
     HashMap<const InlineLevelBox*, TextUtil::FallbackFontList> m_fallbackFontsForInlineBoxes;
     Vector<size_t> m_outsideListMarkers;
 };

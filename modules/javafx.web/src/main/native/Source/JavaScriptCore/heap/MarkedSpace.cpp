@@ -177,7 +177,7 @@ void MarkedSpace::initializeSizeClassForStepSize()
         });
 }
 
-MarkedSpace::MarkedSpace(Heap* heap)
+MarkedSpace::MarkedSpace(JSC::Heap* heap)
 {
     ASSERT_UNUSED(heap, heap == &this->heap());
     initializeSizeClassForStepSize();
@@ -386,7 +386,12 @@ void MarkedSpace::shrink()
 
 void MarkedSpace::beginMarking()
 {
-    if (heap().collectionScope() == CollectionScope::Full) {
+    switch (heap().collectionScope().value()) {
+    case CollectionScope::Eden: {
+        m_edenVersion = nextVersion(m_edenVersion);
+        break;
+    }
+    case CollectionScope::Full: {
         forEachDirectory(
             [&] (BlockDirectory& directory) -> IterationStatus {
                 directory.beginMarkingForFullCollection();
@@ -404,6 +409,9 @@ void MarkedSpace::beginMarking()
 
         for (PreciseAllocation* allocation : m_preciseAllocations)
             allocation->flip();
+
+        break;
+    }
     }
 
     if (ASSERT_ENABLED) {

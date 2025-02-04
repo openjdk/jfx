@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "CompilationResult.h"
 #include "ExecutionCounter.h"
@@ -34,6 +34,7 @@
 #include <wtf/Atomics.h>
 #include <wtf/SegmentedVector.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace Wasm {
 
@@ -45,6 +46,7 @@ class OSREntryData;
 // don't care too much if the countdown is slightly off. The tier up trigger is atomic, however,
 // so tier up will be triggered exactly once.
 class TierUpCount : public UpperTierExecutionCounter {
+    WTF_MAKE_TZONE_ALLOCATED(TierUpCount);
     WTF_MAKE_NONCOPYABLE(TierUpCount);
 public:
     enum class TriggerReason : uint8_t {
@@ -137,4 +139,4 @@ public:
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

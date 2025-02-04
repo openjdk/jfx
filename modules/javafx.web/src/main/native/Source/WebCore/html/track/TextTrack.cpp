@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2018 Google Inc. All rights reserved.
  * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -87,21 +87,42 @@ TextTrack& TextTrack::captionMenuAutomaticItem()
     return automatic;
 }
 
-TextTrack::TextTrack(ScriptExecutionContext* context, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language, TextTrackType type)
-    : TrackBase(context, TrackBase::TextTrack, id, label, language)
-    , ActiveDOMObject(context)
-    , m_trackType(type)
+TextTrack::Kind TextTrack::convertKind(const AtomString& kind)
 {
     if (kind == captionsAtom())
-        m_kind = Kind::Captions;
-    else if (kind == chaptersKeyword())
-        m_kind = Kind::Chapters;
-    else if (kind == descriptionsKeyword())
-        m_kind = Kind::Descriptions;
-    else if (kind == forcedKeyword())
-        m_kind = Kind::Forced;
-    else if (kind == metadataKeyword())
-        m_kind = Kind::Metadata;
+        return Kind::Captions;
+    if (kind == chaptersKeyword())
+        return Kind::Chapters;
+    if (kind == descriptionsKeyword())
+        return Kind::Descriptions;
+    if (kind == forcedKeyword())
+        return Kind::Forced;
+    if (kind == metadataKeyword())
+        return Kind::Metadata;
+    return Kind::Subtitles;
+}
+
+TextTrack::TextTrack(ScriptExecutionContext* context, const AtomString& kind, TrackID id, const AtomString& label, const AtomString& language, TextTrackType type)
+    : TrackBase(context, TrackBase::TextTrack, std::nullopt, id, label, language)
+    , ActiveDOMObject(context)
+    , m_kind(convertKind(kind))
+    , m_trackType(type)
+{
+}
+
+TextTrack::TextTrack(ScriptExecutionContext* context, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language, TextTrackType type)
+    : TrackBase(context, TrackBase::TextTrack, id, 0, label, language)
+    , ActiveDOMObject(context)
+    , m_kind(convertKind(kind))
+    , m_trackType(type)
+{
+}
+
+Ref<TextTrack> TextTrack::create(Document* document, const AtomString& kind, TrackID id, const AtomString& label, const AtomString& language)
+{
+    auto textTrack = adoptRef(*new TextTrack(document, kind, id, label, language, AddTrack));
+    textTrack->suspendIfNeeded();
+    return textTrack;
 }
 
 Ref<TextTrack> TextTrack::create(Document* document, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language)
@@ -124,6 +145,18 @@ TextTrack::~TextTrack()
         for (size_t i = 0; i < m_regions->length(); ++i)
             m_regions->item(i)->setTrack(nullptr);
     }
+}
+
+inline RefPtr<TextTrackCueList> TextTrack::protectedCues() const
+{
+    return m_cues.copyRef();
+}
+
+void TextTrack::didMoveToNewDocument(Document& newDocument)
+{
+    TrackBase::didMoveToNewDocument(newDocument);
+    ActiveDOMObject::didMoveToNewDocument(newDocument);
+    protectedCues()->didMoveToNewDocument(newDocument);
 }
 
 TextTrackList* TextTrack::textTrackList() const
@@ -323,12 +356,11 @@ ExceptionOr<void> TextTrack::addCue(Ref<TextTrackCue>&& cue)
     // track kind set to metadata, throw a InvalidNodeTypeError exception and don't add the cue to the TextTrackList
     // of the TextTrack.
     if (is<DataCue>(cue) && m_kind != Kind::Metadata)
-        return Exception { InvalidNodeTypeError };
+        return Exception { ExceptionCode::InvalidNodeTypeError };
 
     INFO_LOG(LOGIDENTIFIER, cue.get());
 
-    // TODO(93143): Add spec-compliant behavior for negative time values.
-    if (!cue->startMediaTime().isValid() || !cue->endMediaTime().isValid() || cue->startMediaTime() < MediaTime::zeroTime() || cue->endMediaTime() < MediaTime::zeroTime())
+    if (!cue->startMediaTime().isValid() || !cue->endMediaTime().isValid())
         return { };
 
     // 4.8.10.12.5 Text track API
@@ -364,9 +396,9 @@ ExceptionOr<void> TextTrack::removeCue(TextTrackCue& cue)
     // 1. If the given cue is not currently listed in the method's TextTrack
     // object's text track's text track list of cues, then throw a NotFoundError exception.
     if (cue.track() != this)
-        return Exception { NotFoundError };
+        return Exception { ExceptionCode::NotFoundError };
     if (!m_cues)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     INFO_LOG(LOGIDENTIFIER, cue);
 
@@ -429,44 +461,6 @@ VTTRegionList* TextTrack::regions()
     return &ensureVTTRegionList();
 }
 
-void TextTrack::addRegion(Ref<VTTRegion>&& region)
-{
-    auto& regionList = ensureVTTRegionList();
-
-    // 1. If the given region is in a text track list of regions, then remove
-    // region from that text track list of regions.
-    RefPtr regionTrack = region->track();
-    if (regionTrack && regionTrack != this)
-        regionTrack->removeRegion(region.get());
-
-    // 2. If the method's TextTrack object's text track list of regions contains
-    // a region with the same identifier as region replace the values of that
-    // region's width, height, anchor point, viewport anchor point and scroll
-    // attributes with those of region.
-    RefPtr existingRegion = regionList.getRegionById(region->id());
-    if (existingRegion) {
-        existingRegion->updateParametersFromRegion(region);
-        return;
-    }
-
-    // Otherwise: add region to the method's TextTrack object's text track list of regions.
-    region->setTrack(this);
-    regionList.add(WTFMove(region));
-}
-
-ExceptionOr<void> TextTrack::removeRegion(VTTRegion& region)
-{
-    // 1. If the given region is not currently listed in the method's TextTrack
-    // object's text track list of regions, then throw a NotFoundError exception.
-    if (region.track() != this)
-        return Exception { NotFoundError };
-
-    ASSERT(m_regions);
-    m_regions->remove(region);
-    region.setTrack(nullptr);
-    return { };
-}
-
 void TextTrack::cueWillChange(TextTrackCue& cue)
 {
     m_clients.forEach([&] (auto& client) {
@@ -476,9 +470,10 @@ void TextTrack::cueWillChange(TextTrackCue& cue)
     });
 }
 
-void TextTrack::cueDidChange(TextTrackCue& cue)
+void TextTrack::cueDidChange(TextTrackCue& cue, bool updateCueOrder)
 {
     // Make sure the TextTrackCueList order is up-to-date.
+    if (updateCueOrder)
     ensureTextTrackCueList().updateCueIndex(cue);
 
     // ... and add it back again.
@@ -631,7 +626,7 @@ void TextTrack::setLanguage(const AtomString& language)
     });
 }
 
-void TextTrack::setId(const AtomString& id)
+void TextTrack::setId(TrackID id)
 {
     TrackBase::setId(id);
     m_clients.forEach([this] (auto& client) {

@@ -13,12 +13,15 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
     )
 
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+        platform/audio/gstreamer/AudioDestinationGStreamer.h
+
         platform/gstreamer/GStreamerCodecUtilities.h
         platform/gstreamer/GStreamerElementHarness.h
         platform/graphics/gstreamer/GRefPtrGStreamer.h
         platform/graphics/gstreamer/GStreamerCommon.h
         platform/graphics/gstreamer/GUniquePtrGStreamer.h
 
+        platform/mediastream/gstreamer/GStreamerWebRTCProvider.h
         platform/mediastream/libwebrtc/gstreamer/GStreamerVideoDecoderFactory.h
         platform/mediastream/libwebrtc/gstreamer/GStreamerVideoEncoderFactory.h
         platform/mediastream/libwebrtc/gstreamer/LibWebRTCProviderGStreamer.h
@@ -54,8 +57,8 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
     set_source_files_properties(platform/audio/gstreamer/WebKitWebAudioSourceGStreamer.cpp PROPERTIES COMPILE_DEFINITIONS "GLIB_DISABLE_DEPRECATION_WARNINGS=1")
 
     if (VIDEO_DECODING_LIMIT)
-        # Specify video decoding limits.
-        set_source_files_properties(platform/graphics/gstreamer/GStreamerRegistryScanner.cpp PROPERTIES COMPILE_DEFINITIONS VIDEO_DECODING_LIMIT="${VIDEO_DECODING_LIMIT}")
+        # Specify video decoding limits for platform/graphics/gstreamer/GStreamerRegistryScanner.cpp
+        list(APPEND WebCore_PRIVATE_DEFINITIONS VIDEO_DECODING_LIMIT="${VIDEO_DECODING_LIMIT}")
     endif ()
 endif ()
 
@@ -126,11 +129,13 @@ if (ENABLE_VIDEO)
     endif ()
 endif ()
 
-if (ENABLE_WEB_AUDIO)
+if (ENABLE_WEB_AUDIO OR ENABLE_WEB_CODECS)
     list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
         "${WEBCORE_DIR}/platform/audio/gstreamer"
     )
+endif ()
 
+if (ENABLE_WEB_AUDIO)
     if (NOT USE_GSTREAMER_FULL)
         list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
             ${GSTREAMER_AUDIO_INCLUDE_DIRS}

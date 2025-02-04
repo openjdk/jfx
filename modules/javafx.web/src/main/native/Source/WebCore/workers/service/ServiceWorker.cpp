@@ -26,8 +26,6 @@
 #include "config.h"
 #include "ServiceWorker.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "Document.h"
 #include "EventNames.h"
 #include "Logging.h"
@@ -43,6 +41,7 @@
 #include "StructuredSerializeOptions.h"
 #include "WorkerSWClientConnection.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -71,7 +70,7 @@ ServiceWorker::ServiceWorker(ScriptExecutionContext& context, ServiceWorkerData&
     relaxAdoptionRequirement();
     updatePendingActivityForEventDispatch();
 
-    WORKER_RELEASE_LOG("serviceWorkerID=%llu, state=%hhu", identifier().toUInt64(), m_data.state);
+    WORKER_RELEASE_LOG("serviceWorkerID=%llu, state=%hhu", identifier().toUInt64(), enumToUnderlyingType(m_data.state));
 }
 
 ServiceWorker::~ServiceWorker()
@@ -82,7 +81,7 @@ ServiceWorker::~ServiceWorker()
 
 void ServiceWorker::updateState(State state)
 {
-    WORKER_RELEASE_LOG("updateState: Updating service worker %llu state from %hhu to %hhu. registrationID=%llu", identifier().toUInt64(), m_data.state, state, registrationIdentifier().toUInt64());
+    WORKER_RELEASE_LOG("updateState: Updating service worker %llu state from %hhu to %hhu. registrationID=%llu", identifier().toUInt64(), enumToUnderlyingType(m_data.state), enumToUnderlyingType(state), registrationIdentifier().toUInt64());
     m_data.state = state;
     if (state != State::Installing && !m_isStopped) {
         ASSERT(m_pendingActivityForEventDispatch);
@@ -103,7 +102,7 @@ SWClientConnection& ServiceWorker::swConnection()
 ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
     if (m_isStopped)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     Vector<RefPtr<MessagePort>> ports;
     auto messageData = SerializedScriptValue::create(globalObject, messageValue, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
@@ -164,5 +163,3 @@ void ServiceWorker::updatePendingActivityForEventDispatch()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

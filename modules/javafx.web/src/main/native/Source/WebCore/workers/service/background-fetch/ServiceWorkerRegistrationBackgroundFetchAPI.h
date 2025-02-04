@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "Supplementable.h"
 #include <wtf/Forward.h>
 
@@ -48,12 +46,10 @@ public:
 
 private:
     static ServiceWorkerRegistrationBackgroundFetchAPI& from(ServiceWorkerRegistration&);
-    static const char* supplementName();
+    static ASCIILiteral supplementName();
 
     ServiceWorkerRegistration& m_serviceWorkerRegistration;
     RefPtr<BackgroundFetchManager> m_backgroundFetchManager;
 };
 
 }
-
-#endif // ENABLE(SERVICE_WORKER)

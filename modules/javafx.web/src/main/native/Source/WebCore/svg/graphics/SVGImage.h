@@ -66,6 +66,7 @@ public:
     void scheduleStartAnimation();
 
     Page* internalPage() { return m_page.get(); }
+    WEBCORE_EXPORT RefPtr<SVGSVGElement> rootElement() const;
 
 private:
     friend class SVGImageChromeClient;
@@ -93,13 +94,11 @@ private:
     void startAnimationTimerFired();
 
     WEBCORE_EXPORT explicit SVGImage(ImageObserver&);
-    ImageDrawResult draw(GraphicsContext&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { }) final;
-    ImageDrawResult drawForContainer(GraphicsContext&, const FloatSize containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& = { });
-    void drawPatternForContainer(GraphicsContext&, const FloatSize& containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const FloatRect&, const ImagePaintingOptions& = { });
+    ImageDrawResult draw(GraphicsContext&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { }) final;
+    ImageDrawResult drawForContainer(GraphicsContext&, const FloatSize containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& dstRect, const FloatRect& srcRect, ImagePaintingOptions = { });
+    void drawPatternForContainer(GraphicsContext&, const FloatSize& containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const FloatRect&, ImagePaintingOptions = { });
 
-    RefPtr<SVGSVGElement> rootElement() const;
-
-    std::unique_ptr<Page> m_page;
+    RefPtr<Page> m_page;
     FloatSize m_intrinsicSize;
 
     Timer m_startAnimationTimer;

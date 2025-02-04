@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,12 @@ import com.sun.javafx.scene.text.*;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Font;
 
+/**
+ * Stub implementation of the {@link TextLayout} for testing purposes.
+ * <br>
+ * Can calculate the bounds of text by simply using the size of the font.
+ * If the text is bold, the font will be 1 pixel wider for the calculation.
+ */
 public class StubTextLayout implements TextLayout {
 
     @Override
@@ -92,10 +98,22 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
-        final double fontSize = (font == null ? nullFontSize : font.getSize());
+        double fontSizeH = nullFontSize;
+        double fontSizeW = nullFontSize;
+        if (font != null) {
+            fontSizeH = font.getSize();
+            fontSizeW = font.getSize();
+
+            // For better testing, we make bold text a little bit bigger.
+            boolean bold = font.getStyle().toLowerCase().contains("bold");
+            if (bold) {
+                fontSizeW++;
+            }
+        }
+
         final String[] lines = getText().split("\n");
         double width = 0.0;
-        double height = fontSize * lines.length + spacing * (lines.length - 1);
+        double height = fontSizeH * lines.length + spacing * (lines.length - 1);
         for (String line : lines) {
             final int length;
             if (line.contains("\t")) {
@@ -115,10 +133,10 @@ public class StubTextLayout implements TextLayout {
             } else {
                 length = line.length();
             }
-            width = Math.max(width, fontSize * length);
+            width = Math.max(width, fontSizeW * length);
         }
-        return bounds.deriveWithNewBounds(0, (float)-fontSize, 0,
-                (float)width, (float)(height-fontSize), 0);
+        return bounds.deriveWithNewBounds(0, (float)-fontSizeH, 0,
+                (float)width, (float)(height-fontSizeH), 0);
     }
 
     class StubTextLine implements TextLine {
@@ -158,7 +176,7 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
-    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart) {
+    public Hit getHitInfo(float x, float y) {
         // TODO this probably needs to be entirely rewritten...
         if (getText() == null) {
             return new Hit(0, -1, true);

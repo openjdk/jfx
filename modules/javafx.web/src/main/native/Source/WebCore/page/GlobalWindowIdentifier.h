@@ -32,19 +32,16 @@
 
 namespace WebCore {
 
-enum WindowIdentifierType { };
+enum class WindowIdentifierType { };
 using WindowIdentifier = ObjectIdentifier<WindowIdentifierType>;
 
 // Window identifier that is unique across all WebContent processes.
 struct GlobalWindowIdentifier {
     ProcessIdentifier processIdentifier;
     WindowIdentifier windowIdentifier;
-};
 
-inline bool operator==(const GlobalWindowIdentifier& a, const GlobalWindowIdentifier& b)
-{
-    return a.processIdentifier == b.processIdentifier &&  a.windowIdentifier == b.windowIdentifier;
-}
+    friend bool operator==(const GlobalWindowIdentifier&, const GlobalWindowIdentifier&) = default;
+};
 
 inline void add(Hasher& hasher, const GlobalWindowIdentifier& identifier)
 {

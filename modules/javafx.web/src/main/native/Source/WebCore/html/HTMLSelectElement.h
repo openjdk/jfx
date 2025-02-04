@@ -86,6 +86,8 @@ public:
     ExceptionOr<void> setItem(unsigned index, HTMLOptionElement*);
     ExceptionOr<void> setLength(unsigned);
 
+    ExceptionOr<void> showPicker();
+
     WEBCORE_EXPORT HTMLOptionElement* namedItem(const AtomString& name);
     WEBCORE_EXPORT HTMLOptionElement* item(unsigned index);
     bool isSupportedPropertyIndex(unsigned index);
@@ -156,7 +158,6 @@ private:
 
     void recalcListItems(bool updateSelectedStates = true, AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
 
-    void deselectItems(HTMLOptionElement* excludeElement = nullptr);
     void typeAheadFind(KeyboardEvent&);
     void saveLastSelection();
 

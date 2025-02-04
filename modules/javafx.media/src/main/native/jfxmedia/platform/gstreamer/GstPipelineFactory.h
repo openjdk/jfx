@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@
 #define _GST_PIPELINE_FACTORY_H_
 
 #include <Locator/Locator.h>
+#include <Locator/LocatorStream.h>
 #include <PipelineManagement/PipelineFactory.h>
 #include <PipelineManagement/PipelineOptions.h>
 #include <platform/gstreamer/GstElementContainer.h>
@@ -40,9 +41,6 @@
 class CGstPipelineFactory : public CPipelineFactory
 {
 public:
-    virtual bool CanPlayContentType(string contentType);
-    virtual const ContentTypesList& GetSupportedContentTypes();
-
     uint32_t           CreatePlayerPipeline(CLocator* locator, CPipelineOptions *pOptions, CPipeline** ppPipeline);
     static GstElement* GetByFactoryName(GstElement* bin, const char* strFactoryName);
 
@@ -56,22 +54,21 @@ private:
     GstCaps*    FrameTypeToCaps(CVideoFrame::FrameType format);
     void        NegotiatePixelFormat(GstElement* pVideoSink, CPipelineOptions* pOptions);
 
-    uint32_t    CreateMP4Pipeline(GstElement* source, GstElement* videosink, CPipelineOptions* pOptions, CPipeline** ppPipeline);
-    uint32_t    CreateMp3AudioPipeline(GstElement* source, CPipelineOptions* pOptions, CPipeline** ppPipeline);
-    uint32_t    CreateWavPcmAudioPipeline(GstElement* source, CPipelineOptions* pOptions, CPipeline **ppPipeline);
-    uint32_t    CreateAiffPcmAudioPipeline(GstElement* source, CPipelineOptions* pOptions, CPipeline **ppPipeline);
-    uint32_t    CreateHLSPipeline(GstElement* source, GstElement* pVideoSink, CPipelineOptions* pOptions, CPipeline** ppPipeline);
+    uint32_t    CreatePipeline(CPipelineOptions* pOptions, GstElementContainer* pElements, CPipeline** ppPipeline);
 
-    uint32_t    CreateSourceElement(CLocator* locator, GstElement** ppElement, CPipelineOptions *pOptions);
+    uint32_t    CreateMP4Pipeline(GstElement* videosink, CPipelineOptions* pOptions, GstElementContainer* pElements, CPipeline** ppPipeline);
+    uint32_t    CreateMp3AudioPipeline(CPipelineOptions* pOptions, GstElementContainer* pElements, CPipeline** ppPipeline);
+    uint32_t    CreateWavPcmAudioPipeline(CPipelineOptions* pOptions, GstElementContainer* pElements, CPipeline **ppPipeline);
+    uint32_t    CreateAiffPcmAudioPipeline(CPipelineOptions* pOptions, GstElementContainer* pElements, CPipeline **ppPipeline);
+    uint32_t    CreateHLSPipeline(GstElement* pVideoSink, CPipelineOptions* pOptions, GstElementContainer* pElements, CPipeline** ppPipeline);
+
+    uint32_t    CreateSourceElement(CLocator *locator, CStreamCallbacks *callbacks, int streamMimeType,
+                                    GstElement** ppElement, GstElement** ppBuffer, CPipelineOptions *pOptions);
     GstElement* CreateAudioSinkElement();
-    uint32_t    AttachToSource(GstBin* bin, GstElement* source, GstElement* demuxer);
+    uint32_t    AttachToSource(GstBin* bin, GstElement* source, GstElement* buffer, GstElement* demuxer);
 
-    uint32_t    CreateAudioPipeline(GstElement* source,
-                                    const char* strParserName, const char* strDecoderName, bool bConvertFormat,
-                                    CPipelineOptions *pOptions, CPipeline** ppPipeline);
-    uint32_t    CreateAVPipeline(GstElement* source, const char* strDemultiplexerName,
-                                 const char* strAudioDecoderName, bool bConvertFormat, const char* strVideoDecoderName,
-                                 GstElement* pVideoSink, CPipelineOptions* pOptions, CPipeline** ppPipeline);
+    uint32_t    CreateAudioPipeline(bool bConvertFormat, CPipelineOptions *pOptions, GstElementContainer* pElements, CPipeline** ppPipeline);
+    uint32_t    CreateAVPipeline(bool bConvertFormat, GstElement* pVideoSink, CPipelineOptions* pOptions, GstElementContainer* pElements, CPipeline** ppPipeline);
 
 
     uint32_t    CreateAudioBin(const char* strParserName, const char* strDecoderName, bool bConvertFormat,
@@ -91,9 +88,6 @@ private:
     static gint64   SourceSeekData(GstElement *src, guint64 offset, gpointer data);
     static void     SourceCloseConnection(GstElement *src, gpointer data);
     static int      SourceProperty(GstElement *src, int prop, int value, gpointer data);
-
-private:
-    ContentTypesList m_ContentTypes;
 };
 
 #endif  //_GST_PIPELINE_FACTORY_H_

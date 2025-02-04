@@ -53,11 +53,11 @@
 #include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
-#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "StepRange.h"
 #include "Text.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include "UserAgentParts.h"
 #include "UserGestureIndicator.h"
 #include <limits>
 #include <wtf/DateMath.h>
@@ -302,6 +302,15 @@ void BaseDateAndTimeInputType::handleDOMActivateEvent(Event&)
 
     if (m_dateTimeChooser)
         return;
+
+    showPicker();
+}
+
+void BaseDateAndTimeInputType::showPicker()
+{
+    if (!element()->renderer())
+        return;
+
     if (!element()->document().page())
         return;
 
@@ -309,7 +318,7 @@ void BaseDateAndTimeInputType::handleDOMActivateEvent(Event&)
     if (!setupDateTimeChooserParameters(parameters))
         return;
 
-    if (auto chrome = this->chrome()) {
+    if (auto* chrome = this->chrome()) {
         m_dateTimeChooser = chrome->createDateTimeChooser(*this);
         if (m_dateTimeChooser)
             m_dateTimeChooser->showChooser(parameters);
@@ -332,14 +341,14 @@ void BaseDateAndTimeInputType::createShadowSubtree()
     } else {
         auto valueContainer = HTMLDivElement::create(document);
         element.userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, valueContainer);
-        valueContainer->setPseudo(ShadowPseudoIds::webkitDateAndTimeValue());
+        valueContainer->setUserAgentPart(UserAgentParts::webkitDateAndTimeValue());
     }
     updateInnerTextValue();
 }
 
-void BaseDateAndTimeInputType::destroyShadowSubtree()
+void BaseDateAndTimeInputType::removeShadowSubtree()
 {
-    InputType::destroyShadowSubtree();
+    InputType::removeShadowSubtree();
     m_dateTimeEditElement = nullptr;
 }
 
@@ -350,15 +359,15 @@ void BaseDateAndTimeInputType::updateInnerTextValue()
     createShadowSubtreeIfNeeded();
 
     if (!m_dateTimeEditElement) {
-        auto node = element()->userAgentShadowRoot()->firstChild();
-        if (!is<HTMLElement>(node))
+        RefPtr firstChildElement = dynamicDowncast<HTMLElement>(element()->userAgentShadowRoot()->firstChild());
+        if (!firstChildElement)
             return;
         auto displayValue = visibleValue();
         if (displayValue.isEmpty()) {
             // Need to put something to keep text baseline.
             displayValue = " "_s;
         }
-        downcast<HTMLElement>(*node).setInnerText(WTFMove(displayValue));
+        firstChildElement->setInnerText(WTFMove(displayValue));
         return;
     }
 
@@ -486,12 +495,27 @@ bool BaseDateAndTimeInputType::accessKeyAction(bool sendMouseEvents)
 void BaseDateAndTimeInputType::didBlurFromControl()
 {
     closeDateTimeChooser();
+
+    RefPtr element = this->element();
+    if (element && element->wasChangedSinceLastFormControlChangeEvent())
+        element->dispatchFormControlChangeEvent();
 }
 
 void BaseDateAndTimeInputType::didChangeValueFromControl()
 {
     String value = sanitizeValue(m_dateTimeEditElement->value());
-    InputType::setValue(value, value != element()->value(), DispatchInputAndChangeEvent, DoNotSet);
+    bool valueChanged = !equalIgnoringNullity(value, element()->value());
+
+    InputType::setValue(value, valueChanged, DispatchNoEvent, DoNotSet);
+
+    if (!valueChanged)
+        return;
+
+    Ref<HTMLInputElement> input(*element());
+    if (input->userAgentShadowRoot()->containsFocusedElement())
+        input->dispatchFormControlInputEvent();
+    else
+        input->dispatchFormControlChangeEvent();
 
     DateTimeChooserParameters parameters;
     if (!setupDateTimeChooserParameters(parameters))

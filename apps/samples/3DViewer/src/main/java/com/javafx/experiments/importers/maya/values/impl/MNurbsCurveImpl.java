@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -52,47 +52,57 @@ public class MNurbsCurveImpl extends MDataImpl implements MNurbsCurve {
         super(type);
     }
 
+    @Override
     public MData getData(int start, int end) {
         return this; // hack?
     }
 
+    @Override
     public int getDegree() {
         return degree;
     }
 
+    @Override
     public int getSpans() {
         return spans;
     }
 
+    @Override
     public int getForm() {
         return form;
     }
 
+    @Override
     public boolean isRational() {
         return rational;
     }
 
+    @Override
     public int getDimension() {
         return dimension;
     }
 
+    @Override
     public int getNumKnots() {
         return numKnots;
     }
 
+    @Override
     public float[] getKnots() {
         return knots;
     }
 
+    @Override
     public int getNumCVs() {
         return numCvs;
     }
 
+    @Override
     public float[] getCVs() {
         return cvs;
     }
 
-
+    @Override
     public void parse(Iterator<String> values) {
         degree = Integer.parseInt(values.next());
         //        System.out.println("degree="+degree);

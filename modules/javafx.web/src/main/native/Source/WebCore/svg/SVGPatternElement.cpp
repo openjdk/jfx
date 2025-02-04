@@ -29,6 +29,7 @@
 #include "FloatConversion.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include "LegacyRenderSVGResourcePattern.h"
 #include "NodeName.h"
 #include "PatternAttributes.h"
 #include "RenderSVGResourcePattern.h"
@@ -116,13 +117,18 @@ void SVGPatternElement::attributeChanged(const QualifiedName& name, const AtomSt
 
 void SVGPatternElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (PropertyRegistry::isAnimatedLengthAttribute(attrName)) {
+    if (PropertyRegistry::isKnownAttribute(attrName) || SVGFitToViewBox::isKnownAttribute(attrName) || SVGURIReference::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
+        if (PropertyRegistry::isAnimatedLengthAttribute(attrName))
         setPresentationalHintStyleIsDirty();
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (document().settings().layerBasedSVGEngineEnabled()) {
+            if (auto* patternRenderer = dynamicDowncast<RenderSVGResourcePattern>(renderer()))
+                patternRenderer->invalidatePattern();
         return;
     }
+#endif
 
-    if (PropertyRegistry::isKnownAttribute(attrName) || SVGFitToViewBox::isKnownAttribute(attrName) || SVGURIReference::isKnownAttribute(attrName)) {
         updateSVGRendererForElementChange();
         return;
     }
@@ -142,7 +148,11 @@ void SVGPatternElement::childrenChanged(const ChildChange& change)
 
 RenderPtr<RenderElement> SVGPatternElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
     return createRenderer<RenderSVGResourcePattern>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGResourcePattern>(*this, WTFMove(style));
 }
 
 void SVGPatternElement::collectPatternAttributes(PatternAttributes& attributes) const

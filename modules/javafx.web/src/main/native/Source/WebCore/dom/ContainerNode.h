@@ -32,17 +32,16 @@ class HTMLCollection;
 class RadioNodeList;
 class RenderElement;
 
-const int initialNodeVectorSize = 11; // Covers 99.5%. See webkit.org/b/80706
-typedef Vector<Ref<Node>, initialNodeVectorSize> NodeVector;
-
 class ContainerNode : public Node {
     WTF_MAKE_ISO_ALLOCATED(ContainerNode);
 public:
     virtual ~ContainerNode();
 
     Node* firstChild() const { return m_firstChild; }
+    RefPtr<Node> protectedFirstChild() const { return m_firstChild; }
     static ptrdiff_t firstChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_firstChild); }
     Node* lastChild() const { return m_lastChild; }
+    RefPtr<Node> protectedLastChild() const { return m_lastChild; }
     static ptrdiff_t lastChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_lastChild); }
     bool hasChildNodes() const { return m_firstChild; }
     bool hasOneChild() const { return m_firstChild && m_firstChild == m_lastChild; }
@@ -53,7 +52,7 @@ public:
     WEBCORE_EXPORT unsigned countChildNodes() const;
     WEBCORE_EXPORT Node* traverseToChildAt(unsigned) const;
 
-    ExceptionOr<void> insertBefore(Node& newChild, Node* refChild);
+    ExceptionOr<void> insertBefore(Node& newChild, RefPtr<Node>&& refChild);
     ExceptionOr<void> replaceChild(Node& newChild, Node& oldChild);
     WEBCORE_EXPORT ExceptionOr<void> removeChild(Node& child);
     WEBCORE_EXPORT ExceptionOr<void> appendChild(Node& newChild);
@@ -61,11 +60,14 @@ public:
     void replaceAll(Node*);
 
     ContainerNode& rootNode() const { return downcast<ContainerNode>(Node::rootNode()); }
+    Ref<ContainerNode> protectedRootNode() const { return downcast<ContainerNode>(Node::rootNode()); }
 
     // These methods are only used during parsing.
     // They don't send DOM mutation events or handle reparenting.
     // However, arbitrary code may be run by beforeload handlers.
     void parserAppendChild(Node&);
+    void parserAppendChildIntoIsolatedTree(Node&);
+    void parserNotifyChildrenChanged();
     void parserRemoveChild(Node&);
     void parserInsertBefore(Node& newChild, Node& refChild);
 
@@ -112,7 +114,8 @@ public:
 
     void disconnectDescendantFrames();
 
-    RenderElement* renderer() const;
+    inline RenderElement* renderer() const; // Defined in RenderElement.h.
+    inline CheckedPtr<RenderElement> checkedRenderer() const; // Defined in RenderElement.h.
 
     // Return a bounding box in absolute coordinates enclosing this node and all its descendants.
     // This gives the area within which events may get handled by a hander registered on this node.
@@ -123,7 +126,6 @@ public:
 
     WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagName(const AtomString&);
     WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagNameNS(const AtomString& namespaceURI, const AtomString& localName);
-    WEBCORE_EXPORT Ref<NodeList> getElementsByName(const AtomString& elementName);
     WEBCORE_EXPORT Ref<HTMLCollection> getElementsByClassName(const AtomString& classNames);
     Ref<RadioNodeList> radioNodeList(const AtomString&);
 
@@ -138,9 +140,11 @@ public:
     ExceptionOr<void> replaceChildren(FixedVector<NodeOrString>&&);
 
     ExceptionOr<void> ensurePreInsertionValidity(Node& newChild, Node* refChild);
+    ExceptionOr<void> ensurePreInsertionValidityForPhantomDocumentFragment(NodeVector& newChildren, Node* refChild = nullptr);
+    ExceptionOr<void> insertChildrenBeforeWithoutPreInsertionValidityCheck(NodeVector&&, Node* nextChild = nullptr);
 
 protected:
-    explicit ContainerNode(Document&, ConstructionType = CreateContainer);
+    explicit ContainerNode(Document&, NodeType, OptionSet<TypeFlag> = { });
 
     friend void removeDetachedChildrenInContainer(ContainerNode&);
 
@@ -160,6 +164,7 @@ private:
 
     void removeBetween(Node* previousChild, Node* nextChild, Node& oldChild);
     ExceptionOr<void> appendChildWithoutPreInsertionValidityCheck(Node&);
+
     void insertBeforeCommon(Node& nextChild, Node& oldChild);
     void appendChildCommon(Node&);
 
@@ -171,9 +176,10 @@ private:
     Node* m_lastChild { nullptr };
 };
 
-inline ContainerNode::ContainerNode(Document& document, ConstructionType type)
-    : Node(document, type)
+inline ContainerNode::ContainerNode(Document& document, NodeType type, OptionSet<TypeFlag> typeFlags)
+    : Node(document, type, typeFlags | TypeFlag::IsContainerNode)
 {
+    ASSERT(!isTextNode());
 }
 
 inline unsigned Node::countChildNodes() const
@@ -213,71 +219,17 @@ inline void collectChildNodes(Node& node, NodeVector& children)
         children.append(*child);
 }
 
-class ChildNodesLazySnapshot {
-    WTF_MAKE_NONCOPYABLE(ChildNodesLazySnapshot);
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    explicit ChildNodesLazySnapshot(Node& parentNode)
-        : m_currentNode(parentNode.firstChild())
-        , m_currentIndex(0)
-        , m_hasSnapshot(false)
-    {
-        m_nextSnapshot = latestSnapshot;
-        latestSnapshot = this;
-    }
+inline void Node::setParentNode(ContainerNode* parent)
+{
+    ASSERT(isMainThread());
+    m_parentNode = parent;
+    m_refCountAndParentBit = (m_refCountAndParentBit & s_refCountMask) | !!parent;
+}
 
-    ALWAYS_INLINE ~ChildNodesLazySnapshot()
-    {
-        latestSnapshot = m_nextSnapshot;
-    }
-
-    // Returns 0 if there is no next Node.
-    RefPtr<Node> nextNode()
-    {
-        if (LIKELY(!hasSnapshot())) {
-            RefPtr<Node> node = WTFMove(m_currentNode);
-            if (node)
-                m_currentNode = node->nextSibling();
-            return node;
-        }
-        if (m_currentIndex >= m_snapshot.size())
-            return nullptr;
-        return m_snapshot[m_currentIndex++];
-    }
-
-    void takeSnapshot()
-    {
-        if (hasSnapshot())
-            return;
-        m_hasSnapshot = true;
-        Node* node = m_currentNode.get();
-        while (node) {
-            m_snapshot.append(node);
-            node = node->nextSibling();
-        }
-    }
-
-    ChildNodesLazySnapshot* nextSnapshot() { return m_nextSnapshot; }
-    bool hasSnapshot() { return m_hasSnapshot; }
-
-    static void takeChildNodesLazySnapshot()
-    {
-        ChildNodesLazySnapshot* snapshot = latestSnapshot;
-        while (snapshot && !snapshot->hasSnapshot()) {
-            snapshot->takeSnapshot();
-            snapshot = snapshot->nextSnapshot();
-        }
-    }
-
-private:
-    static ChildNodesLazySnapshot* latestSnapshot;
-
-    RefPtr<Node> m_currentNode;
-    unsigned m_currentIndex;
-    bool m_hasSnapshot;
-    Vector<RefPtr<Node>> m_snapshot; // Lazily instantiated.
-    ChildNodesLazySnapshot* m_nextSnapshot;
-};
+inline RefPtr<ContainerNode> Node::protectedParentNode() const
+{
+    return parentNode();
+}
 
 } // namespace WebCore
 

@@ -35,9 +35,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLCompressedTextureETC);
 
 WebGLCompressedTextureETC::WebGLCompressedTextureETC(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::WebGLCompressedTextureETC)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_compressed_texture_etc"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_compressed_texture_etc"_s);
 
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_R11_EAC);
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_SIGNED_R11_EAC);
@@ -52,11 +52,6 @@ WebGLCompressedTextureETC::WebGLCompressedTextureETC(WebGLRenderingContextBase& 
 }
 
 WebGLCompressedTextureETC::~WebGLCompressedTextureETC() = default;
-
-WebGLExtension::ExtensionName WebGLCompressedTextureETC::getName() const
-{
-    return WebGLCompressedTextureETCName;
-}
 
 bool WebGLCompressedTextureETC::supported(GraphicsContextGL& context)
 {

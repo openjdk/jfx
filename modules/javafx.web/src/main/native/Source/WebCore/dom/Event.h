@@ -29,9 +29,9 @@
 #include "EventOptions.h"
 #include "ExceptionOr.h"
 #include "ScriptWrappable.h"
-#include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
 namespace WTF {
@@ -76,7 +76,8 @@ public:
     void setTarget(RefPtr<EventTarget>&&);
 
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
-    void setCurrentTarget(EventTarget*, std::optional<bool> isInShadowTree = std::nullopt);
+    RefPtr<EventTarget> protectedCurrentTarget() const;
+    void setCurrentTarget(RefPtr<EventTarget>&&, std::optional<bool> isInShadowTree = std::nullopt);
     bool currentTargetIsInShadowTree() const { return m_currentTargetIsInShadowTree; }
 
     unsigned short eventPhase() const { return m_eventPhase; }
@@ -110,6 +111,7 @@ public:
     virtual bool isErrorEvent() const { return false; }
     virtual bool isFocusEvent() const { return false; }
     virtual bool isInputEvent() const { return false; }
+    virtual bool isInvokeEvent() const { return false; }
     virtual bool isKeyboardEvent() const { return false; }
     virtual bool isMouseEvent() const { return false; }
     virtual bool isPointerEvent() const { return false; }
@@ -194,7 +196,7 @@ private:
     AtomString m_type;
 
     RefPtr<EventTarget> m_currentTarget;
-    CheckedPtr<const EventPath> m_eventPath;
+    SingleThreadWeakPtr<const EventPath> m_eventPath;
     RefPtr<EventTarget> m_target;
     MonotonicTime m_createTime;
 

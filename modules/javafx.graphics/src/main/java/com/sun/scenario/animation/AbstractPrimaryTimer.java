@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,15 +79,6 @@ public abstract class AbstractPrimaryTimer {
         return null;
     };
 
-    private boolean paused = false;
-    private long totalPausedTime;
-    private long startPauseTime;
-
-    // These methods only exist for the sake of testing.
-    boolean isPaused() { return paused; }
-    long getTotalPausedTime() { return totalPausedTime; }
-    long getStartPauseTime() { return startPauseTime; }
-
     private PulseReceiver receivers[] = new PulseReceiver[2];
     private int receiversLength;
     private boolean receiversLocked;
@@ -121,27 +112,12 @@ public abstract class AbstractPrimaryTimer {
         return PULSE_DURATION_TICKS;
     }
 
-    public void pause() {
-        if (!paused) {
-            startPauseTime = nanos();
-            paused = true;
-        }
-    }
-
-    public void resume() {
-        if (paused) {
-            paused = false;
-            totalPausedTime += nanos() - startPauseTime;
-        }
-    }
-
     public long nanos() {
         if (fixedPulseLength > 0) {
             return debugNanos;
         }
 
-        return paused ? startPauseTime :
-                        System.nanoTime() - totalPausedTime;
+        return System.nanoTime();
     }
 
     public boolean isFullspeed() {
@@ -258,9 +234,6 @@ public abstract class AbstractPrimaryTimer {
 
         @Override
         public void run() {
-            if (paused) {
-                return;
-            }
             final long now = nanos();
             recordStart((nextPulseTime - now) / 1000000);
             timePulseImpl(now);

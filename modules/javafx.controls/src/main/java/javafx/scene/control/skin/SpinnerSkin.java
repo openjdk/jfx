@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,7 @@ import com.sun.javafx.scene.traversal.TraversalContext;
 /**
  * Default skin implementation for the {@link Spinner} control.
  *
+ * @param <T> the type of all values that can be iterated through in the Spinner
  * @see Spinner
  * @since 9
  */
@@ -172,7 +173,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
         // move fake focus in to the textfield if the spinner is editable
         lh.addChangeListener(control.focusedProperty(), (op) -> {
-            // Fix for the regression noted in a comment in RT-29885.
+            // Fix for the regression noted in a comment in JDK-8115009.
             ((FakeFocusTextField)textField).setFakeFocus(control.isFocused());
         });
 
@@ -183,14 +184,14 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
                 // of the conditions below.
                 if (ke.getTarget().equals(textField)) return;
 
-                // Fix for RT-38527 which led to a stack overflow
+                // Fix for JDK-8095537 which led to a stack overflow
                 if (ke.getCode() == KeyCode.ESCAPE) return;
 
                 // This and the additional check of isIncDecKeyEvent in
                 // textField's event filter fix JDK-8185937.
                 if (isIncDecKeyEvent(ke)) return;
 
-                // Fix for the regression noted in a comment in RT-29885.
+                // Fix for the regression noted in a comment in JDK-8115009.
                 // This forwards the event down into the TextField when
                 // the key event is actually received by the Spinner.
                 textField.fireEvent(ke.copyFor(textField, textField));
@@ -215,17 +216,17 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
         lh.addChangeListener(textField.focusedProperty(), (op) -> {
             boolean hasFocus = textField.isFocused();
-            // Fix for RT-29885
+            // Fix for JDK-8115009
             control.getProperties().put("FOCUSED", hasFocus);
-            // --- end of RT-29885
+            // --- end of JDK-8115009
 
-            // RT-21454 starts here
+            // JDK-8120120 starts here
             if (! hasFocus) {
                 pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, false);
             } else {
                 pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
             }
-            // --- end of RT-21454
+            // --- end of JDK-8120120
         });
 
         // end of comboBox-esque fixes
@@ -233,8 +234,8 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         textField.focusTraversableProperty().bind(control.editableProperty());
 
         // Following code borrowed from ComboBoxPopupControl, to resolve the
-        // issue initially identified in RT-36902, but specifically (for Spinner)
-        // identified in RT-40625
+        // issue initially identified in JDK-8094715, but specifically (for Spinner)
+        // identified in JDK-8092584
         ParentHelper.setTraversalEngine(control,
                 new ParentTraversalEngine(control, new Algorithm() {
 
@@ -416,7 +417,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
     }
 
     // Overridden so that we use the textfield as the baseline, rather than the arrow.
-    // See RT-30754 for more information.
+    // See JDK-8115826 for more information.
     /** {@inheritDoc} */
     @Override protected double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         return textField.getLayoutBounds().getMinY() + textField.getLayoutY() + textField.getBaselineOffset();

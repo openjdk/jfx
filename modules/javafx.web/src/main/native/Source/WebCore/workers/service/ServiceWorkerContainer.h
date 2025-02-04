@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ActiveDOMObject.h"
 #include "AddEventListenerOptions.h"
 #include "EventTarget.h"
@@ -156,7 +154,7 @@ private:
     HashMap<ServiceWorkerJobIdentifier, OngoingJob> m_jobMap;
 
     bool m_isStopped { false };
-    HashMap<ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistration*> m_registrations;
+    HashMap<ServiceWorkerRegistrationIdentifier, WeakRef<ServiceWorkerRegistration, WeakPtrImplWithEventTargetData>> m_registrations;
 
 #if ASSERT_ENABLED
     Ref<Thread> m_creationThread { Thread::current() };
@@ -169,5 +167,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

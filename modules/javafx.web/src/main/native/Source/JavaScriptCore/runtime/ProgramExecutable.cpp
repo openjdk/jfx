@@ -30,6 +30,10 @@
 #include "Debugger.h"
 #include "VMTrapsInlines.h"
 
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
 namespace JSC {
 
 const ClassInfo ProgramExecutable::s_info = { "ProgramExecutable"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ProgramExecutable) };
@@ -64,6 +68,17 @@ static GlobalPropertyLookUpStatus hasRestrictedGlobalProperty(JSGlobalObject* gl
     return GlobalPropertyLookUpStatus::NonConfigurable;
 }
 
+static ALWAYS_INLINE bool requiresCanDeclareGlobalFunctionQuirk()
+{
+#if PLATFORM(COCOA)
+    // https://bugs.webkit.org/show_bug.cgi?id=267199
+    static bool requiresQuirk = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ThrowIfCanDeclareGlobalFunctionFails);
+    return requiresQuirk;
+#else
+    return false;
+#endif
+}
+
 JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* globalObject, JSScope* scope)
 {
     DeferTermination deferScope(vm);
@@ -93,20 +108,34 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* 
     }
 
     JSGlobalLexicalEnvironment* globalLexicalEnvironment = globalObject->globalLexicalEnvironment();
+    bool hasGlobalLexicalDeclarations = !globalLexicalEnvironment->isEmpty();
     const VariableEnvironment& variableDeclarations = unlinkedCodeBlock->variableDeclarations();
     const VariableEnvironment& lexicalDeclarations = unlinkedCodeBlock->lexicalDeclarations();
+    size_t numberOfFunctions = unlinkedCodeBlock->numberOfFunctionDecls();
     // The ES6 spec says that no vars/global properties/let/const can be duplicated in the global scope.
     // This carried out section 15.1.8 of the ES6 spec: http://www.ecma-international.org/ecma-262/6.0/index.html#sec-globaldeclarationinstantiation
     {
         // Check for intersection of "var" and "let"/"const"/"class"
-        for (auto& entry : lexicalDeclarations) {
-            if (variableDeclarations.contains(entry.key))
-                return createSyntaxError(globalObject, makeString("Can't create duplicate variable: '"_s, StringView(entry.key.get()), '\''));
-        }
-
         // Check if any new "let"/"const"/"class" will shadow any pre-existing global property names (with configurable = false), or "var"/"let"/"const" variables.
         // It's an error to introduce a shadow.
         for (auto& entry : lexicalDeclarations) {
+            if (globalObject->hasVarDeclaration(entry.key))
+                return createErrorForDuplicateGlobalVariableDeclaration(globalObject, entry.key.get());
+
+            if (hasGlobalLexicalDeclarations) {
+                bool hasProperty = globalLexicalEnvironment->hasProperty(globalObject, entry.key.get());
+                throwScope.assertNoExceptionExceptTermination();
+                if (hasProperty) {
+                    if (UNLIKELY(entry.value.isConst() && !vm.globalConstRedeclarationShouldThrow() && !isInStrictContext())) {
+                        // We only allow "const" duplicate declarations under this setting.
+                        // For example, we don't allow "let" variables to be overridden by "const" variables.
+                        if (globalLexicalEnvironment->isConstVariable(entry.key.get()))
+                            continue;
+                    }
+                    return createErrorForDuplicateGlobalVariableDeclaration(globalObject, entry.key.get());
+                }
+            }
+
             // The ES6 spec says that RestrictedGlobalProperty can't be shadowed.
             GlobalPropertyLookUpStatus status = hasRestrictedGlobalProperty(globalObject, entry.key.get());
             RETURN_IF_EXCEPTION(throwScope, nullptr);
@@ -124,28 +153,47 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* 
             case GlobalPropertyLookUpStatus::NotFound:
                 break;
             }
-
-            bool hasProperty = globalLexicalEnvironment->hasProperty(globalObject, entry.key.get());
-            RETURN_IF_EXCEPTION(throwScope, nullptr);
-            if (hasProperty) {
-                if (UNLIKELY(entry.value.isConst() && !vm.globalConstRedeclarationShouldThrow() && !isInStrictContext())) {
-                    // We only allow "const" duplicate declarations under this setting.
-                    // For example, we don't "let" variables to be overridden by "const" variables.
-                    if (globalLexicalEnvironment->isConstVariable(entry.key.get()))
-                        continue;
-                }
-                return createSyntaxError(globalObject, makeString("Can't create duplicate variable: '"_s, StringView(entry.key.get()), '\''));
-            }
         }
 
         // Check if any new "var"s will shadow any previous "let"/"const"/"class" names.
         // It's an error to introduce a shadow.
-        if (!globalLexicalEnvironment->isEmpty()) {
+        if (hasGlobalLexicalDeclarations) {
             for (auto& entry : variableDeclarations) {
-                bool hasProperty = globalLexicalEnvironment->hasProperty(globalObject, entry.key.get());
-                RETURN_IF_EXCEPTION(throwScope, nullptr);
+                if (entry.value.isSloppyModeHoistedFunction())
+                    continue;
+            bool hasProperty = globalLexicalEnvironment->hasProperty(globalObject, entry.key.get());
+                throwScope.assertNoExceptionExceptTermination();
                 if (hasProperty)
-                    return createSyntaxError(globalObject, makeString("Can't create duplicate variable: '"_s, StringView(entry.key.get()), '\''));
+                    return createErrorForDuplicateGlobalVariableDeclaration(globalObject, entry.key.get());
+            }
+        }
+
+        for (size_t i = 0; i < numberOfFunctions; ++i) {
+            UnlinkedFunctionExecutable* unlinkedFunctionExecutable = unlinkedCodeBlock->functionDecl(i);
+            ASSERT(!unlinkedFunctionExecutable->name().isEmpty());
+            bool canDeclare = globalObject->canDeclareGlobalFunction(unlinkedFunctionExecutable->name());
+            throwScope.assertNoExceptionExceptTermination();
+            if (!canDeclare) {
+                if (requiresCanDeclareGlobalFunctionQuirk()) {
+                    VM::DeletePropertyModeScope scope(vm, VM::DeletePropertyMode::IgnoreConfigurable);
+                    JSCell::deleteProperty(globalObject, globalObject, unlinkedFunctionExecutable->name());
+                    throwScope.assertNoExceptionExceptTermination();
+                        continue;
+                }
+                return createErrorForInvalidGlobalFunctionDeclaration(globalObject, unlinkedFunctionExecutable->name());
+            }
+        }
+
+        if (!globalObject->isStructureExtensible()) {
+            for (auto& entry : variableDeclarations) {
+                if (entry.value.isFunction() || entry.value.isSloppyModeHoistedFunction())
+                    continue;
+                ASSERT(entry.value.isVar());
+                const Identifier& ident = Identifier::fromUid(vm, entry.key.get());
+                bool canDeclare = globalObject->canDeclareGlobalVar(ident);
+                throwScope.assertNoExceptionExceptTermination();
+                if (!canDeclare)
+                    return createErrorForInvalidGlobalVarDeclaration(globalObject, ident);
             }
         }
     }
@@ -154,10 +202,36 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* 
 
     BatchedTransitionOptimizer optimizer(vm, globalObject);
 
-    for (size_t i = 0, numberOfFunctions = unlinkedCodeBlock->numberOfFunctionDecls(); i < numberOfFunctions; ++i) {
+    // https://tc39.es/ecma262/#sec-web-compat-globaldeclarationinstantiation (excluding last step)
+    if (!isInStrictContext()) {
+        for (auto& entry : variableDeclarations) {
+            if (!entry.value.isSloppyModeHoistedFunction())
+                continue;
+
+            const Identifier& ident = Identifier::fromUid(vm, entry.key.get());
+
+            if (hasGlobalLexicalDeclarations) {
+                bool hasProperty = globalLexicalEnvironment->hasProperty(globalObject, ident);
+                throwScope.assertNoExceptionExceptTermination();
+                if (hasProperty)
+                    continue;
+            }
+
+            bool canDeclare = globalObject->canDeclareGlobalVar(ident);
+            throwScope.assertNoExceptionExceptTermination();
+            if (!canDeclare)
+                continue;
+
+            globalObject->createGlobalVarBinding<BindingCreationContext::Global>(ident);
+            throwScope.assertNoExceptionExceptTermination();
+        }
+    }
+
+    for (size_t i = 0; i < numberOfFunctions; ++i) {
         UnlinkedFunctionExecutable* unlinkedFunctionExecutable = unlinkedCodeBlock->functionDecl(i);
         ASSERT(!unlinkedFunctionExecutable->name().isEmpty());
-        globalObject->addFunction(globalObject, unlinkedFunctionExecutable->name());
+        globalObject->createGlobalFunctionBinding<BindingCreationContext::Global>(unlinkedFunctionExecutable->name());
+        throwScope.assertNoExceptionExceptTermination();
         if (vm.typeProfiler() || vm.controlFlowProfiler()) {
             vm.functionHasExecutedCache()->insertUnexecutedRange(sourceID(),
                 unlinkedFunctionExecutable->unlinkedFunctionStart(),
@@ -166,13 +240,14 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* 
     }
 
     for (auto& entry : variableDeclarations) {
+        if (entry.value.isFunction() || entry.value.isSloppyModeHoistedFunction())
+            continue;
         ASSERT(entry.value.isVar());
-        globalObject->addVar(globalObject, Identifier::fromUid(vm, entry.key.get()));
-        throwScope.assertNoException();
+        globalObject->createGlobalVarBinding<BindingCreationContext::Global>(Identifier::fromUid(vm, entry.key.get()));
+        throwScope.assertNoExceptionExceptTermination();
     }
 
     {
-        JSGlobalLexicalEnvironment* globalLexicalEnvironment = jsCast<JSGlobalLexicalEnvironment*>(globalObject->globalScope());
         SymbolTable* symbolTable = globalLexicalEnvironment->symbolTable();
         ConcurrentJSLocker locker(symbolTable->m_lock);
         for (auto& entry : lexicalDeclarations) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 package test.robot.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -37,14 +36,12 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class ComboBoxTest {
@@ -110,10 +107,12 @@ public class ComboBoxTest {
 
             Util.waitForLatch(selectedLatch, 10, "Failed to select " + i + "th choice.");
         }
-        Assert.assertEquals("ComboBox popup list should have been displayed " +
-            (ITEM_COUNT + 1) + " times.", (ITEM_COUNT + 1), onShownCount);
-        Assert.assertEquals("ComboBox choice should have been selected " +
-            ITEM_COUNT + " times.", ITEM_COUNT, onSelectedCount);
+        Assertions.assertEquals(
+            (ITEM_COUNT + 1), onShownCount,
+            "ComboBox popup list should have been displayed " + (ITEM_COUNT + 1) + " times.");
+        Assertions.assertEquals(
+            ITEM_COUNT, onSelectedCount,
+            "ComboBox choice should have been selected " + ITEM_COUNT + " times.");
     }
 
     // This test is for verifying a specific behavior.
@@ -153,20 +152,22 @@ public class ComboBoxTest {
 
             Util.waitForLatch(selectedLatch, 10, "Failed to select " + i + "th choice.");
         }
-        Assert.assertEquals("ComboBox popup list should be displayed " +
-            ITEM_COUNT + " times.", ITEM_COUNT, onShownCount);
-        Assert.assertEquals("ComboBox choice should have been selected " +
-            ITEM_COUNT + " times.", ITEM_COUNT, onSelectedCount);
+        Assertions.assertEquals(
+            ITEM_COUNT, onShownCount,
+            "ComboBox popup list should be displayed " + ITEM_COUNT + " times.");
+        Assertions.assertEquals(
+            ITEM_COUNT, onSelectedCount,
+            "ComboBox choice should have been selected " + ITEM_COUNT + " times.");
     }
 
-    @After
+    @AfterEach
     public void resetUI() {
         Util.runAndWait(() -> {
             root.getChildren().clear();
         });
     }
 
-    @Before
+    @BeforeEach
     public void setupUI() {
         Util.runAndWait(() -> {
             comboBox = new ComboBox();
@@ -179,14 +180,14 @@ public class ComboBoxTest {
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     public static class TestApp extends Application {

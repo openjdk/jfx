@@ -138,6 +138,7 @@ public:
     }
 
     enum ResultCondition {
+        Carry, // <- not implemented
         Overflow,
         Signed,
         PositiveOrZero,
@@ -677,6 +678,8 @@ public:
 
     void lshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.slliInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
 
@@ -726,6 +729,8 @@ public:
 
     void rshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.sraiInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
 
@@ -751,6 +756,13 @@ public:
         m_assembler.maskRegister<32>(dest);
     }
 
+    void addUnsignedRightShift32(RegisterID src1, RegisterID src2, TrustedImm32 amount, RegisterID dest)
+    {
+        // dest = src1 + (src2 >> amount)
+        urshift32(src2, amount, dataTempRegister);
+        add32(src1, dataTempRegister, dest);
+    }
+
     void urshift64(RegisterID shiftAmount, RegisterID dest)
     {
         urshift64(dest, shiftAmount, dest);
@@ -768,6 +780,8 @@ public:
 
     void urshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.srliInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
 
@@ -935,6 +949,11 @@ public:
         }
     }
 
+    void loadPair32(Address src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(src.base, TrustedImm32(src.offset), dest1, dest2);
+    }
+
     void loadPair64(RegisterID src, RegisterID dest1, RegisterID dest2)
     {
         loadPair64(src, TrustedImm32(0), dest1, dest2);
@@ -950,6 +969,11 @@ public:
             load64(Address(src, offset.m_value), dest1);
             load64(Address(src, offset.m_value + 8), dest2);
         }
+    }
+
+    void loadPair64(Address src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(src.base, TrustedImm32(src.offset), dest1, dest2);
     }
 
     void store8(RegisterID src, Address address)
@@ -1213,6 +1237,13 @@ public:
         m_assembler.sdInsn(temp.memory(), immRegister, Imm::S<0>());
     }
 
+    void transfer32(Address src, Address dest)
+    {
+        auto temp = temps<Data>();
+        load32(src, temp.data());
+        store32(temp.data(), dest);
+    }
+
     void transfer64(Address src, Address dest)
     {
         auto temp = temps<Data>();
@@ -1221,6 +1252,25 @@ public:
     }
 
     void transferPtr(Address src, Address dest)
+    {
+        transfer64(src, dest);
+    }
+
+    void transfer32(BaseIndex src, BaseIndex dest)
+    {
+        auto temp = temps<Data>();
+        load32(src, temp.data());
+        store32(temp.data(), dest);
+    }
+
+    void transfer64(BaseIndex src, BaseIndex dest)
+    {
+        auto temp = temps<Data>();
+        load64(src, temp.data());
+        store64(temp.data(), dest);
+    }
+
+    void transferPtr(BaseIndex src, BaseIndex dest)
     {
         transfer64(src, dest);
     }
@@ -1236,6 +1286,11 @@ public:
         store32(src2, Address(dest, offset.m_value + 4));
     }
 
+    void storePair32(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair32(src1, src2, dest.base, TrustedImm32(dest.offset));
+    }
+
     void storePair64(RegisterID src1, RegisterID src2, RegisterID dest)
     {
         storePair64(src1, src2, dest, TrustedImm32(0));
@@ -1245,6 +1300,11 @@ public:
     {
         store64(src1, Address(dest, offset.m_value));
         store64(src2, Address(dest, offset.m_value + 8));
+    }
+
+    void storePair64(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair64(src1, src2, dest.base, TrustedImm32(dest.offset));
     }
 
     void zeroExtend8To32(RegisterID src, RegisterID dest)
@@ -1896,6 +1956,12 @@ public:
         Assembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
     }
 
+    template<PtrTag startTag>
+    static void replaceWithNops(CodeLocationLabel<startTag> instructionStart, size_t memoryToFillWithNopsInBytes)
+    {
+        Assembler::replaceWithNops(instructionStart.dataLocation(), memoryToFillWithNopsInBytes);
+    }
+
     static ptrdiff_t maxJumpReplacementSize()
     {
         return Assembler::maxJumpReplacementSize();
@@ -2354,6 +2420,15 @@ public:
     Jump branch32WithUnalignedHalfWords(RelationalCondition cond, BaseIndex address, TrustedImm32 imm)
     {
         return branch32(cond, address, imm);
+    }
+
+    Jump branch32WithMemory16(RelationalCondition cond, Address left, RegisterID right)
+    {
+        auto temp = temps<Data, Memory>();
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, temp.data());
+        m_assembler.signExtend<32>(temp.data(), temp.data());
+        m_assembler.signExtend<32>(temp.memory(), right);
+        return makeBranch(cond, temp.data(), temp.memory());
     }
 
     Jump branchAdd32(ResultCondition cond, RegisterID src, RegisterID dest)
@@ -3015,7 +3090,8 @@ public:
     Call call(RegisterID target, RegisterID callTag) { UNUSED_PARAM(callTag); return call(target, NoPtrTag); }
     Call call(Address address, RegisterID callTag) { UNUSED_PARAM(callTag); return call(address, NoPtrTag); }
 
-    void callOperation(const CodePtr<OperationPtrTag> operation)
+    template<PtrTag tag>
+    void callOperation(const CodePtr<tag> operation)
     {
         auto temp = temps<Data>();
         loadImmediate(TrustedImmPtr(operation.taggedPtr()), temp.data());
@@ -4171,6 +4247,7 @@ private:
     Jump branchTestFinalize(ResultCondition cond, RegisterID src)
     {
         switch (cond) {
+        case Carry:
         case Overflow:
             break;
         case Signed:

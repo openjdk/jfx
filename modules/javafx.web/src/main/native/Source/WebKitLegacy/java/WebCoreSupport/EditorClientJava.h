@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ public:
     void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
     void didUpdateComposition() override { }
 
-    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const String& originIdentifier) override;
     void discardedComposition(const Document&) override;
     void canceledComposition() override;
 

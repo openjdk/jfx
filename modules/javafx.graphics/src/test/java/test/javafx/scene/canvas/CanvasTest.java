@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,33 +42,35 @@ import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
-import org.junit.Before;
-import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class CanvasTest {
 
     private Canvas canvas;
     private GraphicsContext gc;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         canvas = new Canvas();
         gc = canvas.getGraphicsContext2D();
     }
 
-    @Test public void testPropertyPropagation_visible() throws Exception {
+    @Test
+    public void testPropertyPropagation_visible() throws Exception {
         NodeTest.testBooleanPropertyPropagation(canvas, "visible", false, true);
     }
 
     //maybe test doing stuff from different threads
-    @Test public void testGetGC2() throws Exception {
+    @Test
+    public void testGetGC2() throws Exception {
         GraphicsContext gc2 = canvas.getGraphicsContext2D();
         GraphicsContext gc3 = canvas.getGraphicsContext2D();
         GraphicsContext gc4 = canvas.getGraphicsContext2D();
@@ -80,19 +82,23 @@ public class CanvasTest {
     }
 
     //basic tests make sure that the methods do not blow up.
-    @Test public void testGCfillRect_basic() throws Exception {
+    @Test
+    public void testGCfillRect_basic() throws Exception {
         gc.fillRect(0, 0, 1, 1);
     }
 
-    @Test public void testGCfillOval_basic() throws Exception {
+    @Test
+    public void testGCfillOval_basic() throws Exception {
         gc.fillOval(0, 0, 1, 1);
     }
 
-    @Test public void testGCfillRoundRect_basic() throws Exception {
+    @Test
+    public void testGCfillRoundRect_basic() throws Exception {
         gc.fillRoundRect(0, 0, 1, 1, 2, 2);
     }
 
-    @Test public void testGCfillText_basic() throws Exception {
+    @Test
+    public void testGCfillText_basic() throws Exception {
         gc.fillText("Test", 0, 0);
         gc.fillText("Test", 0, 0, 0);
         gc.fillText("", 0, 0, 0);
@@ -101,7 +107,8 @@ public class CanvasTest {
         gc.fillText(null, 0, 0, 0);
     }
 
-    @Test public void testGCfillPolygon_basic() throws Exception {
+    @Test
+    public void testGCfillPolygon_basic() throws Exception {
         double[] xPoints = {0.0,10.0};
         double[] yPoints = {0.0,10.0};
         gc.fillPolygon( xPoints, yPoints, 2);
@@ -109,32 +116,38 @@ public class CanvasTest {
         gc.fillPolygon( null, yPoints, 2);
     }
 
-    @Test public void testGCfillArc_basic() throws Exception {
+    @Test
+    public void testGCfillArc_basic() throws Exception {
         gc.fillArc(10, 10, 100, 100, 0, 40, ArcType.OPEN);
         gc.fillArc(10, 10, 100, 100, 0, 360, ArcType.CHORD);
         gc.fillArc(10, 10, 100, 100, 0, 361, ArcType.ROUND);
         gc.fillArc(10, 10, 100, 100, 0, 361, null);
     }
 
-    @Test public void testGCdrawRect_basic() throws Exception {
+    @Test
+    public void testGCdrawRect_basic() throws Exception {
         gc.rect(0, 0, 1, 1);
     }
 
-    @Test public void testGCdrawOval_basic() throws Exception {
+    @Test
+    public void testGCdrawOval_basic() throws Exception {
         gc.strokeOval(0, 0, 1, 1);
     }
 
-    @Test public void testGCdrawRoundRect_basic() throws Exception {
+    @Test
+    public void testGCdrawRoundRect_basic() throws Exception {
         gc.strokeRoundRect(0, 0, 1, 1, 2, 2);
     }
 
-    @Test public void testGCstrokeText_basic() throws Exception {
+    @Test
+    public void testGCstrokeText_basic() throws Exception {
         gc.strokeText("Test", 0, 0);
         gc.strokeText("", 0, 0);
         gc.strokeText(null, 0, 0);
     }
 
-    @Test public void testGCdrawPolygon_basic() throws Exception {
+    @Test
+    public void testGCdrawPolygon_basic() throws Exception {
         double[] xPoints = {0.0,10.0};
         double[] yPoints = {0.0,10.0};
         gc.strokePolygon( xPoints, yPoints, 2);
@@ -142,14 +155,16 @@ public class CanvasTest {
         gc.strokePolygon( xPoints, null, 2);
     }
 
-    @Test public void testGCdrawArc_basic() throws Exception {
+    @Test
+    public void testGCdrawArc_basic() throws Exception {
         gc.strokeArc(10, 10, 100, 100, 0, 40, ArcType.OPEN);
         gc.strokeArc(10, 10, 100, 100, 0, 360, ArcType.CHORD);
         gc.strokeArc(10, 10, 100, 100, 0, 361, ArcType.ROUND);
         gc.strokeArc(10, 10, 100, 100, 0, 361, null);
     }
 
-    @Test public void testGCfillPath_basic() throws Exception {
+    @Test
+    public void testGCfillPath_basic() throws Exception {
         gc.arcTo(0, 0, 5, 5, 5);
         gc.moveTo(50, 50);
         gc.lineTo(100, 100);
@@ -162,7 +177,8 @@ public class CanvasTest {
         gc.closePath();
     }
 
-    @Test public void testGCclip_basic() throws Exception {
+    @Test
+    public void testGCclip_basic() throws Exception {
         gc.beginPath();
         gc.moveTo(50, 50);
         gc.lineTo(100, 100);
@@ -172,7 +188,8 @@ public class CanvasTest {
         gc.clip();
     }
 
-    @Test public void testGCfillDrawPath_basic() throws Exception {
+    @Test
+    public void testGCfillDrawPath_basic() throws Exception {
         gc.beginPath();
         gc.moveTo(50, 50);
         gc.lineTo(100, 100);
@@ -183,35 +200,43 @@ public class CanvasTest {
         gc.fill();
     }
 
-    @Test public void testGCPath_LineTo_NoMoveto() throws Exception {
+    @Test
+    public void testGCPath_LineTo_NoMoveto() throws Exception {
         gc.lineTo(10, 10);
     }
 
-    @Test public void testGCPath_QuadraticCurveTo_NoMoveto() throws Exception {
+    @Test
+    public void testGCPath_QuadraticCurveTo_NoMoveto() throws Exception {
         gc.quadraticCurveTo(10, 10, 20, 20);
     }
 
-    @Test public void testGCPath_BezierCurveTo_NoMoveto() throws Exception {
+    @Test
+    public void testGCPath_BezierCurveTo_NoMoveto() throws Exception {
         gc.bezierCurveTo(10, 10, 20, 20, 30, 30);
     }
 
-    @Test public void testGCPath_ArcTo_NoMoveto() throws Exception {
+    @Test
+    public void testGCPath_ArcTo_NoMoveto() throws Exception {
         gc.arcTo(10, 10, 20, 20, 30);
     }
 
-    @Test public void testGCPath_Arc_NoMoveto() throws Exception {
+    @Test
+    public void testGCPath_Arc_NoMoveto() throws Exception {
         gc.arc(10, 10, 20, 20, 30, 30);
     }
 
-    @Test public void testGCPath_ClosePath_NoMoveto() throws Exception {
+    @Test
+    public void testGCPath_ClosePath_NoMoveto() throws Exception {
         gc.closePath();
     }
 
-    @Test public void testGCPath_Rect_NoMoveto() throws Exception {
+    @Test
+    public void testGCPath_Rect_NoMoveto() throws Exception {
         gc.rect(10, 10, 20, 20);
     }
 
-    @Test public void testGCState_Translate() throws Exception {
+    @Test
+    public void testGCState_Translate() throws Exception {
         gc.translate(50, 50);
         Affine result = gc.getTransform();
         Affine expected = new Affine();
@@ -222,7 +247,8 @@ public class CanvasTest {
         assertMatrix(result, expected);
     }
 
-    @Test public void testGCState_Scale() throws Exception {
+    @Test
+    public void testGCState_Scale() throws Exception {
         gc.scale(3, 3);
         Affine result = gc.getTransform();
         Affine expected = new Affine();
@@ -233,7 +259,8 @@ public class CanvasTest {
         assertMatrix(result, expected);
     }
 
-    @Test public void testGCState_Rotate() throws Exception {
+    @Test
+    public void testGCState_Rotate() throws Exception {
         gc.rotate(45.0);
         Affine result = gc.getTransform();
 
@@ -242,7 +269,8 @@ public class CanvasTest {
         assertMatrix(result, expected);
     }
 
-    @Test public void testGCState_getTransform() throws Exception {
+    @Test
+    public void testGCState_getTransform() throws Exception {
         Affine expected = new Affine();
         gc.setTransform(expected);
         Affine result = gc.getTransform();
@@ -257,7 +285,8 @@ public class CanvasTest {
         assertMatrix(result2, expected);
     }
 
-    @Test public void testGCState_FillStrokeSaveRestore() throws Exception {
+    @Test
+    public void testGCState_FillStrokeSaveRestore() throws Exception {
         Affine expected = new Affine();
         gc.setTransform(expected);
         Affine result = gc.getTransform();
@@ -281,14 +310,16 @@ public class CanvasTest {
         assertMatrix(result, expected);
     }
 
-    @Test public void testGCState_SetStroke() {
+    @Test
+    public void testGCState_SetStroke() {
         gc.setStroke(Color.RED);
         assertEquals(Color.RED, gc.getStroke());
         gc.setStroke(null);
         assertEquals(Color.RED, gc.getStroke());
     }
 
-    @Test public void testGCState_Fill_Null() {
+    @Test
+    public void testGCState_Fill_Null() {
         gc.setFill(Color.BLACK);
         assertEquals(Color.BLACK, gc.getFill());
         gc.setFill(Color.RED);
@@ -297,14 +328,16 @@ public class CanvasTest {
         assertEquals(gc.getFill(), Color.RED);
     }
 
-    @Test public void testGCState_FillRule_Null() {
+    @Test
+    public void testGCState_FillRule_Null() {
         gc.setFillRule(FillRule.EVEN_ODD);
         assertEquals(FillRule.EVEN_ODD, gc.getFillRule());
         gc.setFillRule(null);
         assertEquals(FillRule.EVEN_ODD, gc.getFillRule());
     }
 
-    @Test public void testGCState_Font_Null() {
+    @Test
+    public void testGCState_Font_Null() {
         Font f = new Font(10);
         gc.setFont(f);
         assertEquals(f, gc.getFont());
@@ -312,28 +345,32 @@ public class CanvasTest {
         assertEquals(f, gc.getFont());
     }
 
-    @Test public void testGCState_FontSmoothing_Null() {
+    @Test
+    public void testGCState_FontSmoothing_Null() {
         gc.setFontSmoothingType(FontSmoothingType.GRAY);
         assertEquals(FontSmoothingType.GRAY, gc.getFontSmoothingType());
         gc.setFontSmoothingType(null);
         assertEquals(FontSmoothingType.GRAY, gc.getFontSmoothingType());
     }
 
-    @Test public void testGCState_TextBaseline_Null() {
+    @Test
+    public void testGCState_TextBaseline_Null() {
         gc.setTextBaseline(VPos.BASELINE);
         assertEquals(VPos.BASELINE, gc.getTextBaseline());
         gc.setTextBaseline(null);
         assertEquals(VPos.BASELINE, gc.getTextBaseline());
     }
 
-    @Test public void testGCState_TextAlign_Null() {
+    @Test
+    public void testGCState_TextAlign_Null() {
         gc.setTextAlign(TextAlignment.JUSTIFY);
         assertEquals(TextAlignment.JUSTIFY, gc.getTextAlign());
         gc.setTextAlign(null);
         assertEquals(TextAlignment.JUSTIFY, gc.getTextAlign());
     }
 
-    @Test public void testGCState_Line() throws Exception {
+    @Test
+    public void testGCState_Line() throws Exception {
         gc.setLineCap(StrokeLineCap.BUTT);
         gc.setLineJoin(StrokeLineJoin.MITER);
         gc.setLineWidth(5);
@@ -363,7 +400,7 @@ public class CanvasTest {
     }
 
     @Test
-    public void testGCState_LineCapNull() throws Exception {
+        public void testGCState_LineCapNull() throws Exception {
         gc.setLineCap(StrokeLineCap.BUTT);
         gc.setLineCap(null);
         assertEquals(gc.getLineCap(), StrokeLineCap.BUTT);
@@ -376,7 +413,7 @@ public class CanvasTest {
     }
 
     @Test
-    public void testGCState_LineJoinNull() throws Exception {
+        public void testGCState_LineJoinNull() throws Exception {
         gc.setLineJoin(StrokeLineJoin.BEVEL);
         gc.setLineJoin(null);
         assertEquals(gc.getLineJoin(), StrokeLineJoin.BEVEL);
@@ -389,7 +426,7 @@ public class CanvasTest {
     }
 
     @Test
-    public void testGCState_LineDashNonPositive() throws Exception {
+        public void testGCState_LineDashNonPositive() throws Exception {
         gc.setLineDashes(20, 10);
         assertArrayEquals(gc.getLineDashes(), new double[] {20, 10}, 0.00001);
         gc.setLineDashes(1, Double.NaN);
@@ -401,7 +438,7 @@ public class CanvasTest {
     }
 
     @Test
-    public void testGCState_LineDashNull() throws Exception {
+        public void testGCState_LineDashNull() throws Exception {
         gc.setLineDashes(10, 10);
         assertNotNull(gc.getLineDashes());
         gc.setLineDashes(null);
@@ -424,7 +461,7 @@ public class CanvasTest {
     }
 
     @Test
-    public void testGCState_LineDashOddLength() throws Exception {
+        public void testGCState_LineDashOddLength() throws Exception {
         gc.setLineDashes(10);
         assertArrayEquals(gc.getLineDashes(), new double[] {10, 10}, 0.00001);
         gc.setLineDashes(10, 20, 30);
@@ -432,7 +469,7 @@ public class CanvasTest {
     }
 
     @Test
-    public void testGCState_LineDashOffsetNonFinite() throws Exception {
+        public void testGCState_LineDashOffsetNonFinite() throws Exception {
         gc.setLineDashOffset(5.0);
         assertEquals(gc.getLineDashOffset(), 5.0, 0.00001);
         gc.setLineDashOffset(Double.NaN);
@@ -443,7 +480,8 @@ public class CanvasTest {
         assertEquals(gc.getLineDashOffset(), 5.0, 0.00001);
     }
 
-    @Test public void testGCState_BlendMode() throws Exception {
+    @Test
+    public void testGCState_BlendMode() throws Exception {
         gc.setGlobalBlendMode(BlendMode.ADD);
         gc.setGlobalAlpha(0);
 
@@ -458,48 +496,56 @@ public class CanvasTest {
         assertEquals(0, gc.getGlobalAlpha(), 0.000001);
     }
 
-    @Test public void testGCState_BlendMode_Null() {
+    @Test
+    public void testGCState_BlendMode_Null() {
         gc.setGlobalBlendMode(BlendMode.ADD);
         assertEquals(BlendMode.ADD, gc.getGlobalBlendMode());
         gc.setGlobalBlendMode(null);
         assertEquals(BlendMode.ADD, gc.getGlobalBlendMode());
     }
 
-    @Test public void testGCState_ImageSmoothing() {
-        assertTrue("Image smoothing should be enabled by default.", gc.isImageSmoothing());
+    @Test
+    public void testGCState_ImageSmoothing() {
+        assertTrue(gc.isImageSmoothing(), "Image smoothing should be enabled by default.");
         // Disable image smoothing.
         gc.setImageSmoothing(false);
-        assertFalse("Image smoothing should be disabled.", gc.isImageSmoothing());
+        assertFalse(gc.isImageSmoothing(), "Image smoothing should be disabled.");
         // Reset image smoothing to true.
         gc.setImageSmoothing(true);
-        assertTrue("Image smoothing should be enabled.", gc.isImageSmoothing());
+        assertTrue(gc.isImageSmoothing(), "Image smoothing should be enabled.");
     }
 
-    @Test public void testGCappendSVGPath_Null() {
+    @Test
+    public void testGCappendSVGPath_Null() {
         gc.appendSVGPath("m 0 0");
         gc.appendSVGPath("Q 150 -300 300 0");
         gc.appendSVGPath(null);
     }
 
-    @Test public void testGCappendSVGPath_IncorrectPath() {
+    @Test
+    public void testGCappendSVGPath_IncorrectPath() {
         gc.appendSVGPath("Q 150 -300 300 0"); // No move at the beginning
     }
 
-    @Test public void testGCappendSVGPath_IncorrectPath2() {
+    @Test
+    public void testGCappendSVGPath_IncorrectPath2() {
         gc.appendSVGPath("F 150"); // No move at the beginning
     }
 
-    @Test public void testGCapplyEffect_Null() {
+    @Test
+    public void testGCapplyEffect_Null() {
         gc.applyEffect(null);
     }
 
-    @Test public void testGCdrawImage_Null() {
+    @Test
+    public void testGCdrawImage_Null() {
         gc.drawImage(null, 0 ,0);
         gc.drawImage(null, 0 ,0, 100, 100);
         gc.drawImage(null, 0, 0, 100, 100, 0, 0, 100, 100);
     }
 
-    @Test public void testGCdrawImage_InProgress() {
+    @Test
+    public void testGCdrawImage_InProgress() {
         ImageForTesting image = new ImageForTesting("http://something.png", false);
         image.updateProgress(0.5);
 

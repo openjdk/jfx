@@ -210,7 +210,7 @@ void NonFastScrollableRegionOverlay::drawRect(PageOverlay& pageOverlay, Graphics
     fontDescription.setSpecifiedSize(12);
     fontDescription.setComputedSize(12);
     fontDescription.setWeight(FontSelectionValue(500));
-    FontCascade font(WTFMove(fontDescription), 0, 0);
+    FontCascade font(WTFMove(fontDescription));
     font.update(nullptr);
 
     auto drawLegend = [&] (const Color& color, ASCIILiteral text) {
@@ -299,7 +299,7 @@ bool InteractionRegionOverlay::updateRegion()
     return true;
 }
 
-static Vector<Path> pathsForRect(const IntRect& rect, float borderRadius)
+static Vector<Path> pathsForRect(const FloatRect& rect, float borderRadius)
 {
     static constexpr float radius = 4;
 
@@ -378,7 +378,7 @@ std::optional<InteractionRegion> InteractionRegionOverlay::activeRegion() const
         if (!boundingRect.contains(m_mouseLocationInContentCoordinates))
             continue;
 
-        auto paths = pathsForRect(rectInOverlayCoordinates, region.borderRadius);
+        auto paths = pathsForRect(rectInOverlayCoordinates, region.cornerRadius);
         bool didHitRegion = false;
         for (const auto& path : paths) {
             if (path.contains(m_mouseLocationInContentCoordinates)) {
@@ -440,10 +440,10 @@ static void drawCheckbox(const String& text, GraphicsContext& context, const Fon
 
 FloatRect InteractionRegionOverlay::rectForSettingAtIndex(unsigned index) const
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
-    if (!localMainFrame)
+    RefPtr mainFrameView = m_page.mainFrame().virtualView();
+    if (!mainFrameView)
         return FloatRect();
-    auto viewSize = localMainFrame->view()->layoutSize();
+    auto viewSize = mainFrameView->layoutSize();
     static constexpr float settingsWidth = 150;
     static constexpr float rowHeight = 16;
     return {
@@ -485,7 +485,7 @@ void InteractionRegionOverlay::drawSettings(GraphicsContext& context)
     fontDescription.setSpecifiedSize(12);
     fontDescription.setComputedSize(12);
     fontDescription.setWeight(FontSelectionValue(500));
-    FontCascade font(WTFMove(fontDescription), 0, 0);
+    FontCascade font(WTFMove(fontDescription));
     font.update(nullptr);
 
     for (unsigned i = 0; i < m_settings.size(); i++) {
@@ -534,7 +534,7 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
         Vector<Path> clipPaths;
 
         if (shouldClip)
-            clipPaths = pathsForRect(region->rectInLayerCoordinates, region->borderRadius);
+            clipPaths = pathsForRect(region->rectInLayerCoordinates, region->cornerRadius);
 
         bool shouldUseBackdropGradient = !shouldClip || !region || (!valueForSetting("wash"_s) && valueForSetting("clip"_s));
 
@@ -595,7 +595,7 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
         if (!rectForSettingAtIndex(i).contains(eventInContentsCoordinates))
             continue;
         cursorToSet = handCursor();
-        if (event.button() == LeftButton && event.type() == PlatformEvent::Type::MousePressed) {
+        if (event.button() == MouseButton::Left && event.type() == PlatformEvent::Type::MousePressed) {
             m_settings[i].value = !m_settings[i].value;
             m_page.forceRepaintAllFrames();
             return true;

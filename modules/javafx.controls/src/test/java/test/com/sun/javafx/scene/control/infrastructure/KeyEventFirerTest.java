@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,14 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
+import static javafx.scene.input.KeyCode.A;
+import static javafx.scene.input.KeyEvent.KEY_PRESSED;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
-import static org.junit.Assert.*;
-
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -44,6 +41,9 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test of enhanced KeyEventFirer.
@@ -68,8 +68,8 @@ public class KeyEventFirerTest {
         textField.addEventHandler(KEY_PRESSED, textFieldEvents::add);
         KeyEventFirer firer = new KeyEventFirer(textField, scene);
         firer.doKeyPress(A);
-        assertEquals("button must have received the key", 1, buttonEvents.size());
-        assertEquals("textField must not have received the key", 0, textFieldEvents.size());
+        assertEquals(1, buttonEvents.size(), "button must have received the key");
+        assertEquals(0, textFieldEvents.size(), "textField must not have received the key");
     }
 
     /**
@@ -85,8 +85,8 @@ public class KeyEventFirerTest {
         textField.addEventHandler(KEY_PRESSED, textFieldEvents::add);
         KeyEventFirer firer = new KeyEventFirer(null, scene);
         firer.doKeyPress(A);
-        assertEquals("button must have received the key", 1, buttonEvents.size());
-        assertEquals("textField must not have received the key", 0, textFieldEvents.size());
+        assertEquals(1, buttonEvents.size(), "button must have received the key");
+        assertEquals(0, textFieldEvents.size(), "textField must not have received the key");
     }
 
     /**
@@ -105,8 +105,8 @@ public class KeyEventFirerTest {
         incorrectFirer.doKeyPress(A);
         int falseTextFieldNotification = textFieldEvents.size();
         int falseButtonNotification = buttonEvents.size();
-        assertEquals("false green - textField must have received the key", 1, textFieldEvents.size());
-        assertEquals("false green - button must not have received the key", 0, buttonEvents.size());
+        assertEquals(1, textFieldEvents.size(), "false green - textField must have received the key");
+        assertEquals(0, buttonEvents.size(), "false green - button must not have received the key");
         textFieldEvents.clear();
         buttonEvents.clear();
         // firing on the scene makes a difference
@@ -116,14 +116,18 @@ public class KeyEventFirerTest {
         assertEquals(falseButtonNotification + 1, buttonEvents.size());
     }
 
-    @Test (expected= NullPointerException.class)
+    @Test
     public void testTwoParamConstructorNPE() {
-        new KeyEventFirer(null, null);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyEventFirer(null, null);
+        });
     }
 
-    @Test (expected= NullPointerException.class)
+    @Test
     public void testSingleParamConstructorNPE() {
-        new KeyEventFirer(null);
+        assertThrows(NullPointerException.class, () -> {
+            new KeyEventFirer(null);
+        });
     }
 
     /**
@@ -150,7 +154,7 @@ public class KeyEventFirerTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         root = new VBox();
         scene = new Scene(root);
@@ -161,11 +165,10 @@ public class KeyEventFirerTest {
         root.getChildren().addAll(button, textField);
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stage != null) {
             stage.hide();
         }
     }
-
 }

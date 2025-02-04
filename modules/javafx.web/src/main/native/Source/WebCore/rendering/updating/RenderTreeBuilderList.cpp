@@ -28,6 +28,7 @@
 #include "LineInlineHeaders.h"
 #include "RenderChildIterator.h"
 #include "RenderListMarker.h"
+#include "RenderMenuList.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderRuby.h"
 #include "RenderTable.h"
@@ -53,13 +54,13 @@ static RenderBlock* getParentOfFirstLineBox(RenderBlock& current, RenderObject& 
         if (child.isInline() && (!is<RenderInline>(child) || generatesLineBoxesForInlineChild(current, &child)))
             return &current;
 
-        if (child.isFloating() || child.isOutOfFlowPositioned())
+        if (child.isFloating() || child.isOutOfFlowPositioned() || is<RenderMenuList>(child))
             continue;
 
         if (!is<RenderBlock>(child) || is<RenderTable>(child) || is<RenderRubyAsBlock>(child))
             break;
 
-        if (is<RenderBox>(child) && downcast<RenderBox>(child).isWritingModeRoot())
+        if (auto* renderBox = dynamicDowncast<RenderBox>(child); renderBox && renderBox->isWritingModeRoot())
             break;
 
         if (is<RenderListItem>(current) && inQuirksMode && child.node() && isHTMLListElement(*child.node()))

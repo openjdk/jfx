@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,21 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
-
+import java.util.stream.Stream;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.TreeView.EditEvent;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test TreeCell editing state updated on re-use (aka: updateIndex(old, new)).
@@ -50,89 +47,81 @@ import javafx.scene.control.TreeView.EditEvent;
  * This test is parameterized in cellIndex and editingIndex.
  *
  */
-@RunWith(Parameterized.class)
 public class TreeCellEditingTest {
     private TreeCell<String> cell;
     private TreeView<String> tree;
     private ObservableList<TreeItem<String>> model;
 
-    private int cellIndex;
-    private int editingIndex;
-
 //--------------- change off editing index
 
-    @Test
-    public void testOffEditingIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testOffEditingIndex(int cellIndex, int editingIndex) {
+        setup(cellIndex, editingIndex);
         cell.updateIndex(editingIndex);
         TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
         tree.edit(editingItem);
-        assertTrue("sanity: cell is editing", cell.isEditing());
+        assertTrue(cell.isEditing(), "sanity: cell is editing");
         cell.updateIndex(cellIndex);
-        assertEquals("sanity: cell index changed", cellIndex, cell.getIndex());
-        assertFalse("cell must not be editing on update from editingIndex " + editingIndex
-                + " to cellIndex " + cellIndex, cell.isEditing());
+        assertEquals(cellIndex, cell.getIndex(), "sanity: cell index changed");
+        assertFalse(cell.isEditing(), "cell must not be editing on update from editingIndex " + editingIndex + " to cellIndex " + cellIndex);
     }
 
-    @Test
-    public void testCancelOffEditingIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testCancelOffEditingIndex(int cellIndex, int editingIndex) {
+        setup(cellIndex, editingIndex);
         cell.updateIndex(editingIndex);
         TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
         tree.edit(editingItem);
         List<EditEvent<String>> events = new ArrayList<>();
         tree.setOnEditCancel(events::add);
         cell.updateIndex(cellIndex);
-        assertEquals("sanity: tree editing unchanged", editingItem, tree.getEditingItem());
-        assertEquals("sanity: editingIndex unchanged", editingIndex, tree.getRow(editingItem));
-        assertEquals("cell must have fired edit cancel", 1, events.size());
-        assertEquals("cancel on updateIndex from " + editingIndex + " to " + cellIndex + "\n  ",
-                editingItem, events.get(0).getTreeItem());
+        assertEquals(editingItem, tree.getEditingItem(), "sanity: tree editing unchanged");
+        assertEquals(editingIndex, tree.getRow(editingItem), "sanity: editingIndex unchanged");
+        assertEquals(1, events.size(), "cell must have fired edit cancel");
+        assertEquals(editingItem, events.get(0).getTreeItem(), "cancel on updateIndex from " + editingIndex + " to " + cellIndex + "\n  ");
     }
 
 //--------------- change to editing index
 
-    @Test
-    public void testToEditingIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testToEditingIndex(int cellIndex, int editingIndex) {
+        setup(cellIndex, editingIndex);
         cell.updateIndex(cellIndex);
         TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
         tree.edit(editingItem);
-        assertFalse("sanity: cell must not be editing", cell.isEditing());
+        assertFalse(cell.isEditing(), "sanity: cell must not be editing");
         cell.updateIndex(editingIndex);
-        assertEquals("sanity: cell at editing index", editingIndex, cell.getIndex());
-        assertTrue("cell must be editing on update from " + cellIndex
-                + " to editingIndex " + editingIndex, cell.isEditing());
+        assertEquals(editingIndex, cell.getIndex(), "sanity: cell at editing index");
+        assertTrue(cell.isEditing(), "cell must be editing on update from " + cellIndex + " to editingIndex " + editingIndex);
     }
 
-    @Test
-    public void testStartEvent() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testStartEvent(int cellIndex, int editingIndex) {
+        setup(cellIndex, editingIndex);
         cell.updateIndex(cellIndex);
         TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
         tree.edit(editingItem);
         List<EditEvent<String>> events = new ArrayList<>();
         tree.setOnEditStart(events::add);
         cell.updateIndex(editingIndex);
-        assertEquals("cell must have fired edit start on update from " + cellIndex + " to " + editingIndex,
-                1, events.size());
-        assertEquals("treeItem of start event ", editingItem, events.get(0).getTreeItem());
+        assertEquals(1, events.size(), "cell must have fired edit start on update from " + cellIndex + " to " + editingIndex);
+        assertEquals(editingItem, events.get(0).getTreeItem(), "treeItem of start event ");
     }
 
 //------------- parameterized
 
-    // Note: name property not supported before junit 4.11
-    @Parameterized.Parameters //(name = "{index}: cellIndex {0}, editingIndex {1}")
-    public static Collection<Object[]> data() {
-     // [0] is cellIndex, [1] is editingIndex
-        Object[][] data = new Object[][] {
-            {1, 2}, // normal
-            {0, 1}, // zero cell index
-            {1, 0}, // zero editing index
-            {-1, 1}, // negative cell
-        };
-        return Arrays.asList(data);
-    }
-
-    public TreeCellEditingTest(int cellIndex, int editingIndex) {
-        this.cellIndex = cellIndex;
-        this.editingIndex = editingIndex;
+    private static Stream<Arguments> parameters() {
+        // (name = "{index}: cellIndex {0}, editingIndex {1}")
+        return Stream.of(
+            Arguments.of(1, 2), // normal
+            Arguments.of(0, 1), // zero cell index
+            Arguments.of(1, 0), // zero editing index
+            Arguments.of(-1, 1) // negative cell
+        );
     }
 
 //-------------- setup and sanity
@@ -140,30 +129,36 @@ public class TreeCellEditingTest {
     /**
      * Sanity: cell editing state updated when on editing index.
      */
-    @Test
-    public void testEditOnCellIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testEditOnCellIndex(int cellIndex, int editingIndex) {
+        setup(cellIndex, editingIndex);
         cell.updateIndex(editingIndex);
         TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
         tree.edit(editingItem);
-        assertTrue("sanity: cell must be editing", cell.isEditing());
+        assertTrue(cell.isEditing(), "sanity: cell must be editing");
     }
 
     /**
      * Sanity: cell editing state unchanged when off editing index.
      */
-    @Test
-    public void testEditOffCellIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testEditOffCellIndex(int cellIndex, int editingIndex) {
+        setup(cellIndex, editingIndex);
         cell.updateIndex(cellIndex);
         TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
         tree.edit(editingItem);
-        assertFalse("sanity: cell editing must be unchanged", cell.isEditing());
+        assertFalse(cell.isEditing(), "sanity: cell editing must be unchanged");
     }
 
     /**
-     * Test do-nothing block in indexChanged (was RT-31165, is JDK-8123482)
+     * Test do-nothing block in indexChanged (was JDK-8123482, is JDK-8123482)
      */
-    @Test
-    public void testUpdateSameIndexWhileEdititing() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUpdateSameIndexWhileEdititing(int cellIndex, int editingIndex) {
+        setup(cellIndex, editingIndex);
         cell.updateIndex(editingIndex);
         TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
         tree.edit(editingItem);
@@ -178,10 +173,12 @@ public class TreeCellEditingTest {
     }
 
     /**
-     * Test do-nothing block in indexChanged (was RT-31165, is JDK-8123482)
+     * Test do-nothing block in indexChanged (was JDK-8123482, is JDK-8123482)
      */
-    @Test
-    public void testUpdateSameIndexWhileNotEdititing() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUpdateSameIndexWhileNotEdititing(int cellIndex, int editingIndex) {
+        setup(cellIndex, editingIndex);
         cell.updateIndex(cellIndex);
         TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
         tree.edit(editingItem);
@@ -195,7 +192,9 @@ public class TreeCellEditingTest {
         assertEquals(0, events.size());
     }
 
-    @Before public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    private void setup(int cellIndex, int editingIndex) {
         cell = new TreeCell<>();
         model = FXCollections.observableArrayList(new TreeItem<>("zero"),
                 new TreeItem<>("one"), new TreeItem<>("two"));
@@ -206,11 +205,10 @@ public class TreeCellEditingTest {
         tree.setEditable(true);
         tree.setShowRoot(false);
         // make sure that focus change doesn't interfere with tests
-        // (editing cell loosing focus will be canceled from focusListener in Cell)
+        // (editing cell losing focus will be canceled from focusListener in Cell)
         tree.getFocusModel().focus(-1);
         cell.updateTreeView(tree);
-        assertFalse("sanity: cellIndex not same as editingIndex", cellIndex == editingIndex);
-        assertTrue("sanity: valid editingIndex", editingIndex < model.size());
+        assertFalse(cellIndex == editingIndex, "sanity: cellIndex not same as editingIndex");
+        assertTrue(editingIndex < model.size(), "sanity: valid editingIndex");
     }
-
 }

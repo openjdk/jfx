@@ -26,10 +26,9 @@
 #include "config.h"
 #include "SerializedCryptoKeyWrap.h"
 
-#include "CryptoAlgorithmAES_CTR.h"
+#include "CryptoAlgorithmAESCTR.h"
 
 #if ENABLE(WEB_CRYPTO)
-
 #include "NotImplemented.h"
 
 namespace WebCore {

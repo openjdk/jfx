@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,7 @@ import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 /**
  * Default skin implementation for the {@link ComboBox} control.
  *
+ * @param <T> the type of the ComboBox control
  * @see ComboBox
  * @since 9
  */
@@ -154,7 +155,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // listview for popup
         this.listView = createListView();
 
-        // Fix for RT-21207. Additional code related to this bug is further below.
+        // Fix for JDK-8115587. Additional code related to this bug is further below.
         this.listView.setManaged(false);
         getChildren().add(listView);
         // -- end of fix
@@ -164,7 +165,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         updateButtonCell();
 
-        // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
+        // Fix for JDK-8115097 (also tested via ComboBoxListViewSkinTest)
         updateValue();
 
         lh.addChangeListener(control.itemsProperty(), e -> {
@@ -357,13 +358,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 buttonCell.setItem(null);
                 buttonCell.updateIndex(index);
             } else {
-                // RT-21336 Show the ComboBox value even though it doesn't
+                // JDK-8127575 Show the ComboBox value even though it doesn't
                 // exist in the ComboBox items list (part two of fix)
                 buttonCell.updateIndex(-1);
                 boolean empty = updateDisplayText(buttonCell, value, false);
 
                 // Note that empty boolean collected above. This is used to resolve
-                // RT-27834, where we were getting different styling based on whether
+                // JDK-8124141, where we were getting different styling based on whether
                 // the cell was updated via the updateIndex method above, or just
                 // by directly updating the text. We fake the pseudoclass state
                 // for empty, filled, and selected here.
@@ -410,7 +411,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         SelectionModel<T> listViewSM = listView.getSelectionModel();
 
-        // RT-22386: We need to test to see if the value is in the comboBox
+        // JDK-8117826: We need to test to see if the value is in the comboBox
         // items list. If it isn't, then we should clear the listview
         // selection
         final int indexOfNewValue = getIndexOfComboBoxValueInItemsList();
@@ -435,7 +436,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     // just select the first instance of newValue in the list
                     int listViewIndex = comboBoxItems.indexOf(newValue);
                     if (listViewIndex == -1) {
-                        // RT-21336 Show the ComboBox value even though it doesn't
+                        // JDK-8127575 Show the ComboBox value even though it doesn't
                         // exist in the ComboBox items list (part one of fix)
                         updateDisplayNode();
                     } else {
@@ -587,7 +588,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         });
 
         _listView.addEventFilter(MouseEvent.MOUSE_RELEASED, t -> {
-            // RT-18672: Without checking if the user is clicking in the
+            // JDK-8115969: Without checking if the user is clicking in the
             // scrollbar area of the ListView, the comboBox will hide. Therefore,
             // we add the check below to prevent this from happening.
             EventTarget target = t.getTarget();

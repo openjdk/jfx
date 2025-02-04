@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package javafx.scene.control.skin;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.sun.javafx.scene.control.Properties;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.collections.FXCollections;
@@ -39,6 +37,7 @@ import javafx.collections.ObservableMap;
 import javafx.collections.WeakListChangeListener;
 import javafx.collections.WeakMapChangeListener;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
@@ -50,19 +49,18 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SelectionModel;
-import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
 /**
  * Default skin implementation for the {@link ListView} control.
  *
+ * @param <T> the list item type
  * @see ListView
  * @since 9
  */
@@ -74,16 +72,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      *                                                                         *
      **************************************************************************/
 
-    // RT-34744 : IS_PANNABLE will be false unless
+    // JDK-8094803 : IS_PANNABLE will be false unless
     // javafx.scene.control.skin.ListViewSkin.pannable
     // is set to true. This is done in order to make ListView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
-    @SuppressWarnings("removal")
-    private static final boolean IS_PANNABLE =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.ListViewSkin.pannable"));
-
-
+    private static final boolean IS_PANNABLE = Boolean.getBoolean("javafx.scene.control.skin.ListViewSkin.pannable");
 
     /* *************************************************************************
      *                                                                         *
@@ -137,9 +131,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
                 if (c.wasReplaced()) {
-                    // RT-28397: Support for when an item is replaced with itself (but
+                    // JDK-8118897: Support for when an item is replaced with itself (but
                     // updated internal values that should be shown visually).
-                    // This code was updated for RT-36714 to not update all cells,
+                    // This code was updated for JDK-8097146 to not update all cells,
                     // just those affected by the change
                     for (int i = c.getFrom(); i < c.getTo(); i++) {
                         flow.setCellDirty(i);
@@ -147,7 +141,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
                     break;
                 } else if (c.getRemovedSize() == itemCount) {
-                    // RT-22463: If the user clears out an items list then we
+                    // JDK-8098235: If the user clears out an items list then we
                     // should reset all cells (in particular their contained
                     // items) such that a subsequent addition to the list of
                     // an item which equals the old item (but is rendered
@@ -158,7 +152,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
                 }
             }
 
-            // fix for RT-37853
+            // fix for JDK-8094887
             getSkinnable().edit(-1);
 
             markItemCountDirty();
@@ -195,16 +189,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         behavior = new ListViewBehavior<>(control);
 //        control.setInputMap(behavior.getInputMap());
 
-        // init the behavior 'closures'
-        behavior.setOnFocusPreviousRow(() -> onFocusPreviousCell());
-        behavior.setOnFocusNextRow(() -> onFocusNextCell());
-        behavior.setOnMoveToFirstCell(() -> onMoveToFirstCell());
-        behavior.setOnMoveToLastCell(() -> onMoveToLastCell());
-        behavior.setOnSelectPreviousRow(() -> onSelectPreviousCell());
-        behavior.setOnSelectNextRow(() -> onSelectNextCell());
-        behavior.setOnScrollPageDown(this::onScrollPageDown);
-        behavior.setOnScrollPageUp(this::onScrollPageUp);
-
         updateListViewItems();
 
         // init the VirtualFlow
@@ -215,6 +199,18 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.setCellFactory(flow -> createCell());
         flow.setFixedCellSize(control.getFixedCellSize());
         getChildren().add(flow);
+
+        // init the behavior 'closures'
+        behavior.setOnFocusPreviousRow(() -> onFocusPreviousCell());
+        behavior.setOnFocusNextRow(() -> onFocusNextCell());
+        behavior.setOnMoveToFirstCell(() -> onMoveToFirstCell());
+        behavior.setOnMoveToLastCell(() -> onMoveToLastCell());
+        behavior.setOnSelectPreviousRow(() -> onSelectPreviousCell());
+        behavior.setOnSelectNextRow(() -> onSelectNextCell());
+        behavior.setOnScrollPageDown(this::onScrollPageDown);
+        behavior.setOnScrollPageUp(this::onScrollPageUp);
+        behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
+        behavior.setOnVerticalUnitScroll(this::verticalUnitScroll);
 
         EventHandler<MouseEvent> ml = event -> {
             // This ensures that the list maintains the focus, even when the vbar
@@ -551,7 +547,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         int pos = sm.getSelectedIndex();
         flow.scrollTo(pos);
 
-        // Fix for RT-11299
+        // Fix for JDK-8111061
         IndexedCell<T> cell = flow.getFirstVisibleCell();
         if (cell == null || pos < cell.getIndex()) {
             flow.setPosition(pos / (double) getItemCount());
@@ -565,7 +561,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         int pos = sm.getSelectedIndex();
         flow.scrollTo(pos);
 
-        // Fix for RT-11299
+        // Fix for JDK-8111061
         ListCell<T> cell = flow.getLastVisibleCell();
         if (cell == null || cell.getIndex() < pos) {
             flow.setPosition(pos / (double) getItemCount());
@@ -676,5 +672,26 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.scrollTo(firstVisibleCell);
         return newSelectionIndex;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            right = !right;
+        }
+        ScrollBar sb = flow.getHbar();
+        if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        ScrollBar sb = flow.getVbar();
+        if (down) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
     }
 }

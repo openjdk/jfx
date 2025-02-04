@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,11 +31,12 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import javafx.scene.web.WebEngineShim;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Timeout;
 
 public class SVGTest extends TestBase {
     /**
@@ -44,7 +45,9 @@ public class SVGTest extends TestBase {
      * summary svg.path.getTotalLength
      * Load a simple SVG, Replace its path and get its path's totalLength using pat.getTotalLength
      */
-    @Test(timeout = 30000) public void testSvgGetTotalLength() throws Exception {
+    @Test
+    @Timeout(30)
+    public void testSvgGetTotalLength() throws Exception {
         final String svgStub = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>" +
                 " <path id='pathId' d='M150 0 L75 200 L225 200 Z' /> <svg>";
 
@@ -73,25 +76,25 @@ public class SVGTest extends TestBase {
             final String msg = String.format(
                     "svg.path.getTotalLength() for %s",
                     pathData);
-            assertEquals(msg,
-                    expected[0], totalLength, expected[1]);
+            assertEquals((double) expected[0], totalLength, (double) expected[1], msg);
         });
     }
 
-    @Test public void testSVGRenderingWithGradient() {
+    @Test
+    public void testSVGRenderingWithGradient() {
         loadContent("<html>\n" +
-                    "<body style='margin: 0px 0px;'>\n" +
-                    "<svg width='400' height='150'>\n" +
-                    "<defs>\n" +
-                    "<linearGradient id='grad1' x1='0%' y1='0%' x2='100%' y2='100%'>\n" +
-                    "<stop offset='0%' style='stop-color:red' />\n" +
-                    "<stop offset='100%' style='stop-color:yellow' />\n" +
-                    "</linearGradient>\n" +
-                    "</defs>\n" +
-                    "<rect width='400' height='150' fill='url(#grad1)' />\n" +
-                    "</svg>\n" +
-                    "</body>\n" +
-                    "</html>");
+                "<body style='margin: 0px 0px;'>\n" +
+                "<svg width='400' height='150'>\n" +
+                "<defs>\n" +
+                "<linearGradient id='grad1' x1='0%' y1='0%' x2='100%' y2='100%'>\n" +
+                "<stop offset='0%' style='stop-color:red' />\n" +
+                "<stop offset='100%' style='stop-color:yellow' />\n" +
+                "</linearGradient>\n" +
+                "</defs>\n" +
+                "<rect width='400' height='150' fill='url(#grad1)' />\n" +
+                "</svg>\n" +
+                "</body>\n" +
+                "</html>");
         submit(() -> {
             final WebPage webPage = WebEngineShim.getPage(getEngine());
             assertNotNull(webPage);
@@ -99,22 +102,23 @@ public class SVGTest extends TestBase {
             assertNotNull(img);
 
             final Color pixelAt0x0 = new Color(img.getRGB(0, 0), true);
-            assertTrue("Color should be opaque red:" + pixelAt0x0, isColorsSimilar(Color.RED, pixelAt0x0, 1));
+            assertTrue(isColorsSimilar(Color.RED, pixelAt0x0, 1), "Color should be opaque red:" + pixelAt0x0);
 
             final Color pixelAt100x36 = new Color(img.getRGB(100, 36), true);
-            assertTrue("Color should be almost red:" + pixelAt100x36, isColorsSimilar(Color.RED, pixelAt100x36, 40));
-            assertFalse("Color shouldn't be yellow:" + pixelAt100x36, isColorsSimilar(Color.YELLOW, pixelAt100x36, 10));
+            assertTrue(isColorsSimilar(Color.RED, pixelAt100x36, 40), "Color should be almost red:" + pixelAt100x36);
+            assertFalse(isColorsSimilar(Color.YELLOW, pixelAt100x36, 10), "Color shouldn't be yellow:" + pixelAt100x36);
 
             final Color pixelAt200x75 = new Color(img.getRGB(200, 75), true);
-            assertFalse("Color shouldn't be red:" + pixelAt200x75, isColorsSimilar(Color.RED, pixelAt200x75, 10));
-            assertTrue("Color should look like yellow:" + pixelAt200x75, isColorsSimilar(Color.YELLOW, pixelAt200x75, 40));
+            assertFalse(isColorsSimilar(Color.RED, pixelAt200x75, 10), "Color shouldn't be red:" + pixelAt200x75);
+            assertTrue(isColorsSimilar(Color.YELLOW, pixelAt200x75, 40), "Color should look like yellow:" + pixelAt200x75);
 
             final Color pixelAt399x145 = new Color(img.getRGB(399, 149), true);
-            assertTrue("Color should be opaque yellow:" + pixelAt399x145, isColorsSimilar(Color.YELLOW, pixelAt399x145, 1));
+            assertTrue(isColorsSimilar(Color.YELLOW, pixelAt399x145, 1), "Color should be opaque yellow:" + pixelAt399x145);
         });
     }
 
-    @Test public void testCrashOnScrollableSVG() {
+    @Test
+    public void testCrashOnScrollableSVG() {
         load(SVGTest.class.getClassLoader().getResource("test/html/crash-on-scrollable-svg.html").toExternalForm());
         submit(() -> {
             final WebPage webPage = WebEngineShim.getPage(getEngine());
@@ -124,15 +128,15 @@ public class SVGTest extends TestBase {
 
             // RED rectangle should be rendered with in 0,0, 100x100.
             final Color pixelAt0x0 = new Color(img.getRGB(0, 0), true);
-            assertTrue("Color should be opaque red:" + pixelAt0x0, isColorsSimilar(Color.RED, pixelAt0x0, 1));
+            assertTrue(isColorsSimilar(Color.RED, pixelAt0x0, 1), "Color should be opaque red:" + pixelAt0x0);
             final Color pixelAt50x50 = new Color(img.getRGB(50, 50), true);
-            assertTrue("Color should be opaque red:" + pixelAt50x50, isColorsSimilar(Color.RED, pixelAt50x50, 1));
+            assertTrue(isColorsSimilar(Color.RED, pixelAt50x50, 1), "Color should be opaque red:" + pixelAt50x50);
             final Color pixelAt99x99 = new Color(img.getRGB(99, 99), true);
-            assertTrue("Color should be opaque red:" + pixelAt99x99, isColorsSimilar(Color.RED, pixelAt99x99, 1));
+            assertTrue(isColorsSimilar(Color.RED, pixelAt99x99, 1), "Color should be opaque red:" + pixelAt99x99);
 
             // After 100x100, pixel should be WHITE.
             final Color pixelAt100x100 = new Color(img.getRGB(100, 100), true);
-            assertTrue("Color should be white:" + pixelAt100x100, isColorsSimilar(Color.WHITE, pixelAt100x100, 1));
+            assertTrue(isColorsSimilar(Color.WHITE, pixelAt100x100, 1), "Color should be white:" + pixelAt100x100);
         });
     }
 }

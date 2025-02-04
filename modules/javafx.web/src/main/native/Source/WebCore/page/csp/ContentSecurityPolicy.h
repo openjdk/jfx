@@ -80,7 +80,13 @@ enum class ContentSecurityPolicyModeForExtension : uint8_t {
     ManifestV3
 };
 
-class ContentSecurityPolicy {
+enum class AllowTrustedTypePolicy : uint8_t {
+    Allowed,
+    DisallowedName,
+    DisallowedDuplicateName,
+};
+
+class ContentSecurityPolicy : public CanMakeThreadSafeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit ContentSecurityPolicy(URL&&, ScriptExecutionContext&);
@@ -144,6 +150,8 @@ public:
     bool allowObjectFromSource(const URL&, RedirectResponseReceived = RedirectResponseReceived::No, const URL& preRedirectURL = URL()) const;
     bool allowBaseURI(const URL&, bool overrideContentSecurityPolicy = false) const;
 
+    AllowTrustedTypePolicy allowTrustedTypesPolicy(const String&, bool isDuplicate) const;
+
     void setOverrideAllowInlineStyle(bool);
 
     void gatherReportURIs(DOMStringList&) const;
@@ -157,6 +165,13 @@ public:
 
     // Used by ContentSecurityPolicyMediaListDirective
     void reportInvalidPluginTypes(const String&) const;
+
+    // Used by ContentSecurityPolicyTrustedTypesDirective
+    void reportInvalidTrustedTypesPolicy(const String&) const;
+    void reportInvalidTrustedTypesNoneKeyword() const;
+
+    void reportInvalidTrustedTypesSinkGroup(const String&) const;
+    void reportEmptyRequireTrustedTypesForDirective() const;
 
     // Used by ContentSecurityPolicySourceList
     void reportDirectiveAsSourceExpression(const String& directiveName, StringView sourceExpression) const;
@@ -246,7 +261,7 @@ private:
     void reportBlockedScriptExecutionToInspector(const String& directiveText) const;
 
     // We can never have both a script execution context and a ContentSecurityPolicyClient.
-    ScriptExecutionContext* m_scriptExecutionContext { nullptr };
+    WeakPtr<ScriptExecutionContext> m_scriptExecutionContext;
     ContentSecurityPolicyClient* m_client { nullptr };
     mutable ReportingClient* m_reportingClient { nullptr };
 

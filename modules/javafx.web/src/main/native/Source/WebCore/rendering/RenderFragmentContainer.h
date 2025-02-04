@@ -31,6 +31,7 @@
 
 #include "LayerFragment.h"
 #include "RenderBlockFlow.h"
+#include "RenderFragmentedFlow.h"
 #include "VisiblePosition.h"
 #include <memory>
 
@@ -48,21 +49,21 @@ public:
 
     void setFragmentedFlowPortionRect(const LayoutRect& rect) { m_fragmentedFlowPortionRect = rect; }
     LayoutRect fragmentedFlowPortionRect() const { return m_fragmentedFlowPortionRect; }
-    LayoutRect fragmentedFlowPortionOverflowRect();
+    LayoutRect fragmentedFlowPortionOverflowRect() const;
 
     LayoutPoint fragmentedFlowPortionLocation() const;
 
     virtual void attachFragment();
     virtual void detachFragment();
 
-    RenderFragmentedFlow* fragmentedFlow() const { return m_fragmentedFlow; }
+    RenderFragmentedFlow* fragmentedFlow() const { return m_fragmentedFlow.get(); }
 
     // Valid fragments do not create circular dependencies with other flows.
     bool isValid() const { return m_isValid; }
     void setIsValid(bool valid) { m_isValid = valid; }
 
-    RenderBoxFragmentInfo* renderBoxFragmentInfo(const RenderBox*) const;
-    RenderBoxFragmentInfo* setRenderBoxFragmentInfo(const RenderBox*, LayoutUnit logicalLeftInset, LayoutUnit logicalRightInset,
+    RenderBoxFragmentInfo* renderBoxFragmentInfo(const RenderBox&) const;
+    RenderBoxFragmentInfo* setRenderBoxFragmentInfo(const RenderBox&, LayoutUnit logicalLeftInset, LayoutUnit logicalRightInset,
         bool containingBlockChainIsInset);
     std::unique_ptr<RenderBoxFragmentInfo> takeRenderBoxFragmentInfo(const RenderBox*);
     void removeRenderBoxFragmentInfo(const RenderBox&);
@@ -97,17 +98,17 @@ public:
     // Whether or not this fragment is a set.
     virtual bool isRenderFragmentContainerSet() const { return false; }
 
-    virtual void repaintFragmentedFlowContent(const LayoutRect& repaintRect);
+    virtual void repaintFragmentedFlowContent(const LayoutRect& repaintRect) const;
 
     virtual void collectLayerFragments(LayerFragments&, const LayoutRect&, const LayoutRect&) { }
 
-    void addLayoutOverflowForBox(const RenderBox*, const LayoutRect&);
-    void addVisualOverflowForBox(const RenderBox*, const LayoutRect&);
-    LayoutRect visualOverflowRectForBox(const RenderBoxModelObject&);
-    LayoutRect layoutOverflowRectForBoxForPropagation(const RenderBox*);
+    void addLayoutOverflowForBox(const RenderBox&, const LayoutRect&);
+    void addVisualOverflowForBox(const RenderBox&, const LayoutRect&);
+    LayoutRect visualOverflowRectForBox(const RenderBoxModelObject&) const;
+    LayoutRect layoutOverflowRectForBoxForPropagation(const RenderBox&);
     LayoutRect visualOverflowRectForBoxForPropagation(const RenderBoxModelObject&);
 
-    LayoutRect rectFlowPortionForBox(const RenderBox*, const LayoutRect&) const;
+    LayoutRect rectFlowPortionForBox(const RenderBox&, const LayoutRect&) const;
 
     void setFragmentObjectsFragmentStyle();
     void restoreFragmentObjectsOriginalStyle();
@@ -116,24 +117,23 @@ public:
     bool canHaveGeneratedChildren() const override { return true; }
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
-    virtual Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&);
+    virtual Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&) const;
 
 protected:
-    RenderFragmentContainer(Element&, RenderStyle&&, RenderFragmentedFlow*);
-    RenderFragmentContainer(Document&, RenderStyle&&, RenderFragmentedFlow*);
+    RenderFragmentContainer(Type, Element&, RenderStyle&&, RenderFragmentedFlow*);
+    RenderFragmentContainer(Type, Document&, RenderStyle&&, RenderFragmentedFlow*);
 
-    void ensureOverflowForBox(const RenderBox*, RefPtr<RenderOverflow>&, bool);
+    void ensureOverflowForBox(const RenderBox&, RefPtr<RenderOverflow>&, bool) const;
 
     void computePreferredLogicalWidths() override;
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
 
-    LayoutRect overflowRectForFragmentedFlowPortion(const LayoutRect& fragmentedFlowPortionRect, bool isFirstPortion, bool isLastPortion);
-    void repaintFragmentedFlowContentRectangle(const LayoutRect& repaintRect, const LayoutRect& fragmentedFlowPortionRect, const LayoutPoint& fragmentLocation, const LayoutRect* fragmentedFlowPortionClipRect = 0);
+    LayoutRect overflowRectForFragmentedFlowPortion(const LayoutRect& fragmentedFlowPortionRect, bool isFirstPortion, bool isLastPortion) const;
+    void repaintFragmentedFlowContentRectangle(const LayoutRect& repaintRect, const LayoutRect& fragmentedFlowPortionRect, const LayoutPoint& fragmentLocation, const LayoutRect* fragmentedFlowPortionClipRect = 0) const;
 
-    LayoutRect fragmentedFlowContentRectangle(const LayoutRect&, const LayoutRect& fragmentedFlowPortionRect, const LayoutPoint& fragmentLocation, const LayoutRect* fragmentedFlowPortionClipRect = 0);
+    LayoutRect fragmentedFlowContentRectangle(const LayoutRect&, const LayoutRect& fragmentedFlowPortionRect, const LayoutPoint& fragmentLocation, const LayoutRect* fragmentedFlowPortionClipRect = 0) const;
 
 private:
-    bool isRenderFragmentContainer() const final { return true; }
     ASCIILiteral renderName() const override { return "RenderFragmentContainer"_s; }
 
     void insertedIntoTree(IsInternalMove) override;
@@ -144,7 +144,7 @@ private:
     LayoutPoint mapFragmentPointIntoFragmentedFlowCoordinates(const LayoutPoint&);
 
 protected:
-    RenderFragmentedFlow* m_fragmentedFlow;
+    SingleThreadWeakPtr<RenderFragmentedFlow> m_fragmentedFlow;
 
 private:
     LayoutRect m_fragmentedFlowPortionRect;
@@ -153,7 +153,7 @@ private:
     // A RenderBoxFragmentInfo* tells us about any layout information for a RenderBox that
     // is unique to the fragment. For now it just holds logical width information for RenderBlocks, but eventually
     // it will also hold a custom style for any box (for fragment styling).
-    typedef HashMap<const RenderBox*, std::unique_ptr<RenderBoxFragmentInfo>> RenderBoxFragmentInfoMap;
+    using RenderBoxFragmentInfoMap = HashMap<SingleThreadWeakRef<const RenderBox>, std::unique_ptr<RenderBoxFragmentInfo>>;
     RenderBoxFragmentInfoMap m_renderBoxFragmentInfo;
 
     bool m_isValid { false };

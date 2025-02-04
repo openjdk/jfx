@@ -294,6 +294,8 @@ bool doesGC(Graph& graph, Node* node)
     case DirectTailCall:
     case DirectTailCallInlinedCaller:
     case CallWasm:
+    case CallCustomAccessorGetter:
+    case CallCustomAccessorSetter:
     case ForceOSRExit:
     case FunctionToString:
     case FunctionBind:
@@ -394,6 +396,8 @@ bool doesGC(Graph& graph, Node* node)
     case NewArrayBuffer:
     case NewRegexp:
     case NewStringObject:
+    case NewMap:
+    case NewSet:
     case NewSymbol:
     case MakeRope:
     case MakeAtomString:
@@ -451,6 +455,10 @@ bool doesGC(Graph& graph, Node* node)
     default:
 #endif // not ASSERT_ENABLED
         return true;
+
+    case ToIntegerOrInfinity:
+    case ToLength:
+        return node->child1().useKind() == UntypedUse;
 
     case GlobalIsNaN:
         return node->child1().useKind() != DoubleRepUse;

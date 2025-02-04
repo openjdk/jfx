@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,8 +61,7 @@ jclass getJScrollBarThemeClass()
 
 JLObject getJScrollBarTheme(Scrollbar& sb)
 {
-     //REVISIT
-    LocalFrameView* fv = sb.enabled() ? sb.root() : nullptr;
+    FrameView* fv = sb.enabled() ? sb.root() : nullptr;
     if (!fv) {
         // the scrollbar has been detached
         return 0;
@@ -218,7 +217,7 @@ IntRect ScrollbarThemeJava::forwardButtonRect(Scrollbar& scrollbar, ScrollbarPar
 IntRect ScrollbarThemeJava::trackRect(Scrollbar& scrollbar, bool) {
     return getPartRect(scrollbar, TrackBGPart);
 }
-    // REVISIT
+
 int ScrollbarThemeJava::scrollbarThickness(ScrollbarWidth, ScrollbarExpansionState)
 {
     JNIEnv* env = WTF::GetJavaEnv();

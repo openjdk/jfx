@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,7 @@ import java.util.function.BiPredicate;
 
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import static org.junit.Assert.* ;
+import static org.junit.jupiter.api.Assertions.* ;
 
 /**
  * A mock observer that tracks calls to its onChanged() method,
@@ -94,17 +94,17 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     }
 
     public void check1AddRemove(ObservableList<E> list,
-                       List<E> removed,
-                       int from,
-                       int to) {
+                                List<E> removed,
+                                int from,
+                                int to) {
         checkN(1);
         checkAddRemove(0, list, removed, from, to);
     }
 
     public void checkAddRemove(int idx, ObservableList<E> list,
-                       List<E> removed,
-                       int from,
-                       int to) {
+                               List<E> removed,
+                               int from,
+                               int to) {
         checkAddRemove(idx, list, removed, Objects::equals, from, to);
     }
 

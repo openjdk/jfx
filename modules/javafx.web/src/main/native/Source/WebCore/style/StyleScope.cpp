@@ -32,6 +32,7 @@
 #include "CSSFontSelector.h"
 #include "CSSStyleSheet.h"
 #include "CustomPropertyRegistry.h"
+#include "DocumentInlines.h"
 #include "Element.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
@@ -113,13 +114,13 @@ void Scope::createDocumentResolver()
 
     m_resolver = Resolver::create(m_document, Resolver::ScopeType::Document);
 
-    m_document.fontSelector().buildStarted();
+    m_document->fontSelector().buildStarted();
 
     m_resolver->ruleSets().initializeUserStyle();
     m_resolver->addCurrentSVGFontFaceRules();
     m_resolver->appendAuthorStyleSheets(m_activeStyleSheets);
 
-    m_document.fontSelector().buildCompleted();
+    m_document->fontSelector().buildCompleted();
 }
 
 void Scope::createOrFindSharedShadowTreeResolver()
@@ -143,7 +144,12 @@ void Scope::createOrFindSharedShadowTreeResolver()
     if (!result.isNewEntry) {
         m_resolver = result.iterator->value.ptr();
         m_resolver->setSharedBetweenShadowTrees();
+        return;
     }
+
+    static constexpr auto maximimumSharedResolverCount = 256;
+    if (documentScope().m_sharedShadowTreeResolvers.size() > maximimumSharedResolverCount)
+        documentScope().m_sharedShadowTreeResolvers.remove(documentScope().m_sharedShadowTreeResolvers.random());
 }
 
 void Scope::unshareShadowTreeResolverBeforeMutation()
@@ -173,15 +179,15 @@ void Scope::clearResolver()
 void Scope::releaseMemory()
 {
     if (!m_shadowRoot) {
-        for (auto& descendantShadowRoot : m_document.inDocumentShadowRoots())
+        for (auto& descendantShadowRoot : m_document->inDocumentShadowRoots())
             const_cast<ShadowRoot&>(descendantShadowRoot).styleScope().releaseMemory();
     }
 
 #if ENABLE(CSS_SELECTOR_JIT)
     for (auto& sheet : m_activeStyleSheets) {
         sheet->contents().traverseRules([] (const StyleRuleBase& rule) {
-            if (is<StyleRule>(rule))
-                downcast<StyleRule>(rule).releaseCompiledSelectors();
+            if (auto* styleRule = dynamicDowncast<StyleRule>(rule))
+                styleRule->releaseCompiledSelectors();
             return false;
         });
     }
@@ -293,7 +299,7 @@ void Scope::didRemovePendingStylesheet()
     didChangeActiveStyleSheetCandidates();
 
     if (!m_shadowRoot)
-        m_document.didRemoveAllPendingStylesheet();
+        m_document->didRemoveAllPendingStylesheet();
 }
 
 bool Scope::hasPendingSheet(const Element& element) const
@@ -320,7 +326,7 @@ void Scope::addStyleSheetCandidateNode(Node& node, bool createdByParser)
     // since styles outside of the body and head continue to be shunted into the head
     // (and thus can shift to end up before dynamically added DOM content that is also
     // outside the body).
-    if ((createdByParser && m_document.bodyOrFrameset()) || m_styleSheetCandidateNodes.isEmptyIgnoringNullReferences()) {
+    if ((createdByParser && m_document->bodyOrFrameset()) || m_styleSheetCandidateNodes.isEmptyIgnoringNullReferences()) {
         m_styleSheetCandidateNodes.add(node);
         return;
     }
@@ -361,8 +367,8 @@ Vector<Ref<ProcessingInstruction>> Scope::collectXSLTransforms()
 {
     Vector<Ref<ProcessingInstruction>> processingInstructions;
     for (auto& node : m_styleSheetCandidateNodes) {
-        if (is<ProcessingInstruction>(node) && downcast<ProcessingInstruction>(node).isXSL())
-            processingInstructions.append(downcast<ProcessingInstruction>(node));
+        if (auto* processingInstruction = dynamicDowncast<ProcessingInstruction>(node); processingInstruction && processingInstruction->isXSL())
+            processingInstructions.append(*processingInstruction);
     }
     return processingInstructions;
 }
@@ -370,7 +376,7 @@ Vector<Ref<ProcessingInstruction>> Scope::collectXSLTransforms()
 
 auto Scope::collectActiveStyleSheets() -> ActiveStyleSheetCollection
 {
-    if (!m_document.settings().authorAndUserStylesEnabled())
+    if (!m_document->settings().authorAndUserStylesEnabled())
         return { };
 
     LOG_WITH_STREAM(StyleSheets, stream << "Scope " << this << " collectActiveStyleSheets()");
@@ -380,41 +386,40 @@ auto Scope::collectActiveStyleSheets() -> ActiveStyleSheetCollection
 
     for (auto& node : m_styleSheetCandidateNodes) {
         RefPtr<StyleSheet> sheet;
-        if (is<ProcessingInstruction>(node)) {
-            if (!downcast<ProcessingInstruction>(node).isCSS())
+        if (auto* processingInstruction = dynamicDowncast<ProcessingInstruction>(node)) {
+            if (!processingInstruction->isCSS())
                 continue;
             // We don't support linking to embedded CSS stylesheets, see <https://bugs.webkit.org/show_bug.cgi?id=49281> for discussion.
-            sheet = downcast<ProcessingInstruction>(node).sheet();
+            sheet = processingInstruction->sheet();
             if (sheet)
                 styleSheetsForStyleSheetsList.append(sheet);
             LOG_WITH_STREAM(StyleSheets, stream << " adding sheet " << sheet << " from ProcessingInstruction node " << node);
         } else if (is<HTMLLinkElement>(node) || is<HTMLStyleElement>(node) || is<SVGStyleElement>(node)) {
-            Element& element = downcast<Element>(node);
+            Element& element = uncheckedDowncast<Element>(node);
             AtomString title = element.isInShadowTree() ? nullAtom() : element.attributeWithoutSynchronization(titleAttr);
             bool enabledViaScript = false;
-            if (is<HTMLLinkElement>(element)) {
+            if (auto* linkElement = dynamicDowncast<HTMLLinkElement>(element)) {
                 // <LINK> element
-                HTMLLinkElement& linkElement = downcast<HTMLLinkElement>(element);
-                if (linkElement.isDisabled())
+                if (linkElement->isDisabled())
                     continue;
-                enabledViaScript = linkElement.isEnabledViaScript();
-                if (linkElement.styleSheetIsLoading()) {
+                enabledViaScript = linkElement->isEnabledViaScript();
+                if (linkElement->styleSheetIsLoading()) {
                     // it is loading but we should still decide which style sheet set to use
                     if (!enabledViaScript && !title.isEmpty() && m_preferredStylesheetSetName.isEmpty()) {
-                        if (!linkElement.attributeWithoutSynchronization(relAttr).contains("alternate"_s))
+                        if (!linkElement->attributeWithoutSynchronization(relAttr).contains("alternate"_s))
                             m_preferredStylesheetSetName = title;
                     }
                     continue;
                 }
-                if (!linkElement.sheet())
+                if (!linkElement->sheet())
                     title = nullAtom();
             }
             // Get the current preferred styleset. This is the
             // set of sheets that will be enabled.
-            if (is<SVGStyleElement>(element))
-                sheet = downcast<SVGStyleElement>(element).sheet();
-            else if (is<HTMLLinkElement>(element))
-                sheet = downcast<HTMLLinkElement>(element).sheet();
+            if (auto* svgStyleElement = dynamicDowncast<SVGStyleElement>(element))
+                sheet = svgStyleElement->sheet();
+            else if (auto* htmlLinkElement = dynamicDowncast<HTMLLinkElement>(element))
+                sheet = htmlLinkElement->sheet();
             else
                 sheet = downcast<HTMLStyleElement>(element).sheet();
 
@@ -481,14 +486,14 @@ Scope::StyleSheetChange Scope::analyzeStyleSheetChange(const Vector<RefPtr<CSSSt
     if (newStylesheetCount < oldStylesheetCount)
         return { ResolverUpdateType::Reconstruct };
 
-    Vector<StyleSheetContents*> addedSheets;
+    Vector<Ref<StyleSheetContents>> addedSheets;
     unsigned newIndex = 0;
     for (unsigned oldIndex = 0; oldIndex < oldStylesheetCount; ++oldIndex) {
         if (newIndex >= newStylesheetCount)
             return { ResolverUpdateType::Reconstruct };
 
         while (m_activeStyleSheets[oldIndex] != newStylesheets[newIndex]) {
-            addedSheets.append(&newStylesheets[newIndex]->contents());
+            addedSheets.append(newStylesheets[newIndex]->contents());
             ++newIndex;
             if (newIndex == newStylesheetCount)
                 return { ResolverUpdateType::Reconstruct };
@@ -497,7 +502,7 @@ Scope::StyleSheetChange Scope::analyzeStyleSheetChange(const Vector<RefPtr<CSSSt
     }
     bool hasInsertions = !addedSheets.isEmpty();
     while (newIndex < newStylesheetCount) {
-        addedSheets.append(&newStylesheets[newIndex]->contents());
+        addedSheets.append(newStylesheets[newIndex]->contents());
         ++newIndex;
     }
 
@@ -509,16 +514,16 @@ Scope::StyleSheetChange Scope::analyzeStyleSheetChange(const Vector<RefPtr<CSSSt
 static void filterEnabledNonemptyCSSStyleSheets(Vector<RefPtr<CSSStyleSheet>>& result, const Vector<RefPtr<StyleSheet>>& sheets)
 {
     for (auto& sheet : sheets) {
-        if (!is<CSSStyleSheet>(*sheet))
+        auto* styleSheet = dynamicDowncast<CSSStyleSheet>(*sheet);
+        if (!styleSheet)
             continue;
-        CSSStyleSheet& styleSheet = downcast<CSSStyleSheet>(*sheet);
-        if (styleSheet.isLoading())
+        if (styleSheet->isLoading())
             continue;
-        if (styleSheet.disabled())
+        if (styleSheet->disabled())
             continue;
-        if (!styleSheet.length())
+        if (!styleSheet->length())
             continue;
-        result.append(&styleSheet);
+        result.append(styleSheet);
     }
 }
 
@@ -526,15 +531,15 @@ void Scope::updateActiveStyleSheets(UpdateType updateType)
 {
     ASSERT(!m_pendingUpdate);
 
-    if (!m_document.hasLivingRenderTree())
+    if (!m_document->hasLivingRenderTree())
         return;
 
-    if (m_document.inStyleRecalc() || m_document.inRenderTreeUpdate()) {
+    if (m_document->inStyleRecalc() || m_document->inRenderTreeUpdate()) {
         // Protect against deleting style resolver in the middle of a style resolution.
         // Crash stacks indicate we can get here when a resource load fails synchronously (for example due to content blocking).
         // FIXME: These kind of cases should be eliminated and this path replaced by an assert.
         m_pendingUpdate = UpdateType::ContentsOrInterpretation;
-        m_document.scheduleFullStyleRebuild();
+        m_document->scheduleFullStyleRebuild();
         return;
     }
 
@@ -543,13 +548,13 @@ void Scope::updateActiveStyleSheets(UpdateType updateType)
     Vector<RefPtr<CSSStyleSheet>> activeCSSStyleSheets;
 
     if (!isForUserAgentShadowTree()) {
-        activeCSSStyleSheets.appendVector(m_document.extensionStyleSheets().injectedAuthorStyleSheets());
-        activeCSSStyleSheets.appendVector(m_document.extensionStyleSheets().authorStyleSheetsForTesting());
+        activeCSSStyleSheets.appendVector(m_document->extensionStyleSheets().injectedAuthorStyleSheets());
+        activeCSSStyleSheets.appendVector(m_document->extensionStyleSheets().authorStyleSheetsForTesting());
     }
 
     filterEnabledNonemptyCSSStyleSheets(activeCSSStyleSheets, collection.activeStyleSheets);
 
-    LOG_WITH_STREAM(StyleSheets, stream << "Scope::updateActiveStyleSheets for document " << m_document << " sheets " << activeCSSStyleSheets);
+    LOG_WITH_STREAM(StyleSheets, stream << "Scope::updateActiveStyleSheets for document " << m_document.get() << " sheets " << activeCSSStyleSheets);
 
     auto styleSheetChange = StyleSheetChange { ResolverUpdateType::Reconstruct };
     if (updateType == UpdateType::ActiveSet)
@@ -580,7 +585,7 @@ void Scope::invalidateStyleAfterStyleSheetChange(const StyleSheetChange& styleSh
         return;
 
     // If we are already parsing the body and so may have significant amount of elements, put some effort into trying to avoid style recalcs.
-    bool invalidateAll = !m_document.bodyOrFrameset() || m_document.hasNodesWithMissingStyle();
+    bool invalidateAll = !m_document->bodyOrFrameset() || m_document->hasNodesWithMissingStyle();
 
     if (styleSheetChange.resolverUpdateType == ResolverUpdateType::Reconstruct || invalidateAll) {
         Invalidator::invalidateAllStyle(*this);
@@ -624,35 +629,37 @@ const Vector<RefPtr<CSSStyleSheet>> Scope::activeStyleSheetsForInspector()
 {
     Vector<RefPtr<CSSStyleSheet>> result;
 
-    if (auto* pageUserSheet = m_document.extensionStyleSheets().pageUserSheet())
+    if (CheckedPtr extensionStyleSheets = m_document->extensionStyleSheetsIfExists()) {
+        if (auto* pageUserSheet = extensionStyleSheets->pageUserSheet())
         result.append(pageUserSheet);
-    result.appendVector(m_document.extensionStyleSheets().documentUserStyleSheets());
-    result.appendVector(m_document.extensionStyleSheets().injectedUserStyleSheets());
-    result.appendVector(m_document.extensionStyleSheets().injectedAuthorStyleSheets());
-    result.appendVector(m_document.extensionStyleSheets().authorStyleSheetsForTesting());
+        result.appendVector(extensionStyleSheets->documentUserStyleSheets());
+        result.appendVector(extensionStyleSheets->injectedUserStyleSheets());
+        result.appendVector(extensionStyleSheets->injectedAuthorStyleSheets());
+        result.appendVector(extensionStyleSheets->authorStyleSheetsForTesting());
+    }
 
     for (auto& styleSheet : m_styleSheetsForStyleSheetList) {
-        if (!is<CSSStyleSheet>(*styleSheet))
+        auto* sheet = dynamicDowncast<CSSStyleSheet>(*styleSheet);
+        if (!sheet)
             continue;
 
-        CSSStyleSheet& sheet = downcast<CSSStyleSheet>(*styleSheet);
-        if (sheet.disabled())
+        if (sheet->disabled())
             continue;
 
-        result.append(&sheet);
+        result.append(sheet);
     }
 
     return result;
 }
 
-bool Scope::activeStyleSheetsContains(const CSSStyleSheet* sheet) const
+bool Scope::activeStyleSheetsContains(const CSSStyleSheet& sheet) const
 {
     if (m_activeStyleSheets.isEmpty())
         return false;
 
     if (m_weakCopyOfActiveStyleSheetListForFastLookup.isEmpty()) {
         for (auto& activeStyleSheet : m_activeStyleSheets)
-            m_weakCopyOfActiveStyleSheetListForFastLookup.add(activeStyleSheet.get());
+            m_weakCopyOfActiveStyleSheetListForFastLookup.add(*activeStyleSheet);
     }
     return m_weakCopyOfActiveStyleSheetListForFastLookup.contains(sheet);
 }
@@ -672,7 +679,7 @@ void Scope::flushPendingDescendantUpdates()
 {
     ASSERT(m_hasDescendantWithPendingUpdate);
     ASSERT(!m_shadowRoot);
-    for (auto& descendantShadowRoot : m_document.inDocumentShadowRoots())
+    for (auto& descendantShadowRoot : m_document->inDocumentShadowRoots())
         const_cast<ShadowRoot&>(descendantShadowRoot).styleScope().flushPendingUpdate();
     m_hasDescendantWithPendingUpdate = false;
 }
@@ -701,7 +708,7 @@ void Scope::scheduleUpdate(UpdateType update)
         // FIXME: Animation code may trigger resource load in middle of style recalc and that can add a rule to a content extension stylesheet.
         //        Fix and remove isResolvingTreeStyle() test below, see https://bugs.webkit.org/show_bug.cgi?id=194335
         // FIXME: The m_isUpdatingStyleResolver test is here because extension stylesheets can get us here from Resolver::appendAuthorStyleSheets.
-        if (!m_isUpdatingStyleResolver && !m_document.isResolvingTreeStyle())
+        if (!m_isUpdatingStyleResolver && !m_document->isResolvingTreeStyle())
             clearResolver();
     }
 
@@ -761,7 +768,7 @@ auto Scope::collectResolverScopes() -> ResolverScopes
 
     resolverScopes.add(*resolverIfExists(), Vector<WeakPtr<Scope>> { this });
 
-    for (auto& shadowRoot : m_document.inDocumentShadowRoots()) {
+    for (auto& shadowRoot : m_document->inDocumentShadowRoots()) {
         auto& scope = const_cast<ShadowRoot&>(shadowRoot).styleScope();
         auto* resolver = scope.resolverIfExists();
         if (!resolver)
@@ -816,7 +823,7 @@ void Scope::didChangeStyleSheetEnvironment()
     if (!m_shadowRoot) {
         m_sharedShadowTreeResolvers.clear();
 
-        for (auto& descendantShadowRoot : m_document.inDocumentShadowRoots()) {
+        for (auto& descendantShadowRoot : m_document->inDocumentShadowRoots()) {
             // Stylesheets is author shadow roots are potentially affected.
             if (descendantShadowRoot.mode() != ShadowRootMode::UserAgent)
                 const_cast<ShadowRoot&>(descendantShadowRoot).styleScope().scheduleUpdate(UpdateType::ContentsOrInterpretation);
@@ -827,14 +834,14 @@ void Scope::didChangeStyleSheetEnvironment()
 
 void Scope::didChangeViewportSize()
 {
-    Ref<ContainerNode> rootNode = m_document;
+    Ref<ContainerNode> rootNode = m_document.get();
     if (m_shadowRoot)
         rootNode = *m_shadowRoot;
     else {
-        if (!m_document.hasStyleWithViewportUnits())
+        if (!m_document->hasStyleWithViewportUnits())
             return;
 
-        for (auto& descendantShadowRoot : m_document.inDocumentShadowRoots()) {
+        for (auto& descendantShadowRoot : m_document->inDocumentShadowRoots()) {
             if (descendantShadowRoot.mode() == ShadowRootMode::UserAgent)
                 continue;
             const_cast<ShadowRoot&>(descendantShadowRoot).styleScope().didChangeViewportSize();
@@ -845,6 +852,14 @@ void Scope::didChangeViewportSize()
     if (!resolver)
         return;
     resolver->clearCachedDeclarationsAffectedByViewportUnits();
+
+    if (customPropertyRegistry().invalidatePropertiesWithViewportUnits(m_document)) {
+        if (!m_shadowRoot) {
+            if (auto element = m_document->documentElement())
+                element->invalidateStyleForSubtree();
+        }
+        return;
+    }
 
     // FIXME: Ideally, we should save the list of elements that have viewport units and only iterate over those.
     for (RefPtr element = ElementTraversal::firstWithin(rootNode); element; element = ElementTraversal::nextIncludingPseudo(*element)) {
@@ -857,7 +872,7 @@ void Scope::didChangeViewportSize()
 void Scope::invalidateMatchedDeclarationsCache()
 {
     if (!m_shadowRoot) {
-        for (auto& descendantShadowRoot : m_document.inDocumentShadowRoots())
+        for (auto& descendantShadowRoot : m_document->inDocumentShadowRoots())
             const_cast<ShadowRoot&>(descendantShadowRoot).styleScope().invalidateMatchedDeclarationsCache();
     }
 
@@ -868,7 +883,7 @@ void Scope::invalidateMatchedDeclarationsCache()
 void Scope::pendingUpdateTimerFired()
 {
     auto protectedShadowRoot = RefPtr { m_shadowRoot };
-    auto protectedDocument = Ref { m_document };
+    auto protectedDocument = Ref { m_document.get() };
     flushPendingUpdate();
 }
 
@@ -881,7 +896,7 @@ const Vector<RefPtr<StyleSheet>>& Scope::styleSheetsForStyleSheetList()
 
 Scope& Scope::documentScope()
 {
-    return m_document.styleScope();
+    return m_document->styleScope();
 }
 
 bool Scope::isForUserAgentShadowTree() const
@@ -893,7 +908,7 @@ bool Scope::updateQueryContainerState(QueryContainerUpdateContext& context)
 {
     ASSERT(!m_shadowRoot);
 
-    if (!m_document.renderView())
+    if (!m_document->renderView())
         return false;
 
     auto previousStates = WTFMove(m_queryContainerStates);
@@ -901,7 +916,7 @@ bool Scope::updateQueryContainerState(QueryContainerUpdateContext& context)
 
     Vector<Element*> containersToInvalidate;
 
-    for (auto& containerRenderer : m_document.renderView()->containerQueryBoxes()) {
+    for (auto& containerRenderer : m_document->renderView()->containerQueryBoxes()) {
         auto* containerElement = containerRenderer.element();
         if (!containerElement)
             continue;

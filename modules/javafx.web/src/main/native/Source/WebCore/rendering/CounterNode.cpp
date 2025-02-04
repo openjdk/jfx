@@ -27,11 +27,12 @@
 #include "RenderElement.h"
 #include "RenderView.h"
 #include <stdio.h>
+#include <wtf/CheckedArithmetic.h>
 
 namespace WebCore {
 
-CounterNode::CounterNode(RenderElement& owner, bool hasResetType, int value)
-    : m_hasResetType(hasResetType)
+CounterNode::CounterNode(RenderElement& owner, OptionSet<CounterNode::Type> type, int value)
+    : m_type(type)
     , m_value(value)
     , m_owner(owner)
 {
@@ -42,21 +43,21 @@ CounterNode::~CounterNode()
     // Ideally this would be an assert and this would never be reached. In reality this happens a lot
     // so we need to handle these cases. The node is still connected to the tree so we need to detach it.
     if (m_parent || m_previousSibling || m_nextSibling || m_firstChild || m_lastChild) {
-        CheckedPtr<CounterNode> oldParent;
-        CheckedPtr<CounterNode> oldPreviousSibling;
+        RefPtr<CounterNode> oldParent;
+        RefPtr<CounterNode> oldPreviousSibling;
         // Instead of calling removeChild() we do this safely as the tree is likely broken if we get here.
         if (m_parent) {
             if (m_parent->m_firstChild == this)
                 m_parent->m_firstChild = m_nextSibling;
             if (m_parent->m_lastChild == this)
                 m_parent->m_lastChild = m_previousSibling;
-            oldParent = m_parent;
+            oldParent = m_parent.get();
             m_parent = nullptr;
         }
         if (m_previousSibling) {
             if (m_previousSibling->m_nextSibling == this)
                 m_previousSibling->m_nextSibling = m_nextSibling;
-            oldPreviousSibling = m_previousSibling;
+            oldPreviousSibling = m_previousSibling.get();
             m_previousSibling = nullptr;
         }
         if (m_nextSibling) {
@@ -66,12 +67,12 @@ CounterNode::~CounterNode()
         }
         if (m_firstChild) {
             // The node's children are reparented to the old parent.
-            for (CheckedPtr child = m_firstChild; child; ) {
-                CheckedPtr nextChild = child->m_nextSibling;
-                CheckedPtr<CounterNode> nextSibling;
+            for (RefPtr child = m_firstChild.get(); child; ) {
+                RefPtr nextChild = child->m_nextSibling.get();
+                RefPtr<CounterNode> nextSibling;
                 child->m_parent = oldParent;
                 if (oldPreviousSibling) {
-                    nextSibling = oldPreviousSibling->m_nextSibling;
+                    nextSibling = oldPreviousSibling->m_nextSibling.get();
                     child->m_previousSibling = oldPreviousSibling;
                     oldPreviousSibling->m_nextSibling = child;
                     child->m_nextSibling = nextSibling;
@@ -85,9 +86,9 @@ CounterNode::~CounterNode()
     resetRenderers();
 }
 
-Ref<CounterNode> CounterNode::create(RenderElement& owner, bool hasResetType, int value)
+Ref<CounterNode> CounterNode::create(RenderElement& owner, OptionSet<CounterNode::Type> type, int value)
 {
-    return adoptRef(*new CounterNode(owner, hasResetType, value));
+    return adoptRef(*new CounterNode(owner, type, value));
 }
 
 CounterNode* CounterNode::nextInPreOrderAfterChildren(const CounterNode* stayWithin) const
@@ -95,9 +96,9 @@ CounterNode* CounterNode::nextInPreOrderAfterChildren(const CounterNode* stayWit
     if (this == stayWithin)
         return nullptr;
 
-    CheckedPtr current = const_cast<CounterNode*>(this);
-    CheckedPtr<CounterNode> next;
-    while (!(next = current->m_nextSibling)) {
+    RefPtr current = const_cast<CounterNode*>(this);
+    RefPtr<CounterNode> next;
+    while (!(next = current->m_nextSibling.get())) {
         current = current->m_parent.get();
         if (!current || current == stayWithin)
             return nullptr;
@@ -115,35 +116,41 @@ CounterNode* CounterNode::nextInPreOrder(const CounterNode* stayWithin) const
 
 CounterNode* CounterNode::lastDescendant() const
 {
-    CheckedPtr last = m_lastChild;
+    auto* last = m_lastChild.get();
     if (!last)
         return nullptr;
 
-    while (CheckedPtr lastChild = last->m_lastChild)
+    while (auto* lastChild = last->m_lastChild.get())
         last = lastChild;
 
-    return const_cast<CounterNode*>(last.get());
+    return const_cast<CounterNode*>(last);
 }
 
 CounterNode* CounterNode::previousInPreOrder() const
 {
-    CheckedPtr previous = m_previousSibling;
+    auto* previous = m_previousSibling.get();
     if (!previous)
         return const_cast<CounterNode*>(m_parent.get());
 
-    while (CheckedPtr lastChild = previous->m_lastChild)
+    while (auto* lastChild = previous->m_lastChild.get())
         previous = lastChild;
 
-    return const_cast<CounterNode*>(previous.get());
+    return const_cast<CounterNode*>(previous);
 }
 
 int CounterNode::computeCountInParent() const
 {
+    if (hasSetType())
+        return m_value;
+
     int increment = actsAsReset() ? 0 : m_value;
+    // In case the sum overflows we need to ignore the operation instead
+    // of just clamping the result, as per spec resolution.
+    // See https://github.com/w3c/csswg-drafts/issues/9029
     if (m_previousSibling)
-        return m_previousSibling->m_countInParent + increment;
+        return WTF::sumIfNoOverflowOrFirstValue(m_previousSibling->m_countInParent, increment);
     ASSERT(m_parent->m_firstChild == this);
-    return m_parent->m_value + increment;
+    return WTF::sumIfNoOverflowOrFirstValue(m_parent->m_value, increment);
 }
 
 void CounterNode::addRenderer(RenderCounter& renderer)
@@ -191,7 +198,7 @@ void CounterNode::resetRenderers()
 
 void CounterNode::resetThisAndDescendantsRenderers()
 {
-    CheckedPtr node = this;
+    RefPtr node = this;
     do {
         node->resetRenderers();
         node = node->nextInPreOrder(this);
@@ -200,7 +207,7 @@ void CounterNode::resetThisAndDescendantsRenderers()
 
 void CounterNode::recount()
 {
-    for (CheckedPtr node = this; node; node = node->m_nextSibling) {
+    for (RefPtr node = this; node; node = node->m_nextSibling.get()) {
         int oldCount = node->m_countInParent;
         int newCount = node->computeCountInParent();
         if (oldCount == newCount)
@@ -220,18 +227,18 @@ void CounterNode::insertAfter(CounterNode& newChild, CounterNode* beforeChild, c
     if (beforeChild && beforeChild->m_parent != this)
         return;
 
-    if (newChild.m_hasResetType) {
+    if (newChild.hasResetType()) {
         while (m_lastChild != beforeChild)
             RenderCounter::destroyCounterNode(m_lastChild->owner(), identifier);
     }
 
-    CheckedPtr<CounterNode> next;
+    RefPtr<CounterNode> next;
 
     if (beforeChild) {
-        next = beforeChild->m_nextSibling;
+        next = beforeChild->m_nextSibling.get();
         beforeChild->m_nextSibling = &newChild;
     } else {
-        next = m_firstChild;
+        next = m_firstChild.get();
         m_firstChild = &newChild;
     }
 
@@ -247,7 +254,7 @@ void CounterNode::insertAfter(CounterNode& newChild, CounterNode* beforeChild, c
         m_lastChild = &newChild;
     }
 
-    if (!newChild.m_firstChild || newChild.m_hasResetType) {
+    if (!newChild.m_firstChild || newChild.hasResetType()) {
         newChild.m_countInParent = newChild.computeCountInParent();
         newChild.resetThisAndDescendantsRenderers();
         if (next)
@@ -257,8 +264,8 @@ void CounterNode::insertAfter(CounterNode& newChild, CounterNode* beforeChild, c
 
     // The code below handles the case when a formerly root increment counter is loosing its root position
     // and therefore its children become next siblings.
-    CheckedPtr<CounterNode> last = newChild.m_lastChild;
-    CheckedPtr<CounterNode> first = newChild.m_firstChild;
+    RefPtr last = newChild.m_lastChild.get();
+    RefPtr first = newChild.m_firstChild.get();
 
     if (first) {
         ASSERT(last);
@@ -283,7 +290,7 @@ void CounterNode::insertAfter(CounterNode& newChild, CounterNode* beforeChild, c
             next->m_previousSibling = last;
         } else
             m_lastChild = last;
-        for (next = first; ; next = next->m_nextSibling) {
+        for (next = first; ; next = next->m_nextSibling.get()) {
             next->m_parent = this;
             if (last == next)
                 break;
@@ -301,8 +308,8 @@ void CounterNode::removeChild(CounterNode& oldChild)
     ASSERT(!oldChild.m_firstChild);
     ASSERT(!oldChild.m_lastChild);
 
-    CheckedPtr<CounterNode> next = oldChild.m_nextSibling;
-    CheckedPtr<CounterNode> previous = oldChild.m_previousSibling;
+    RefPtr next = oldChild.m_nextSibling.get();
+    RefPtr previous = oldChild.m_previousSibling.get();
 
     oldChild.m_nextSibling = nullptr;
     oldChild.m_previousSibling = nullptr;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,22 +38,9 @@
 
 namespace WebCore {
 
-String RealtimeMediaSourceSettings::facingMode(VideoFacingMode mode)
+RealtimeMediaSourceSettings RealtimeMediaSourceSettings::isolatedCopy() const
 {
-    static const NeverDestroyed<String> values[] = {
-        MAKE_STATIC_STRING_IMPL("unknown"),
-        MAKE_STATIC_STRING_IMPL("user"),
-        MAKE_STATIC_STRING_IMPL("environment"),
-        MAKE_STATIC_STRING_IMPL("left"),
-        MAKE_STATIC_STRING_IMPL("right"),
-    };
-    static_assert(static_cast<size_t>(VideoFacingMode::Unknown) == 0, "VideoFacingMode::Unknown is not 0 as expected");
-    static_assert(static_cast<size_t>(VideoFacingMode::User) == 1, "VideoFacingMode::User is not 1 as expected");
-    static_assert(static_cast<size_t>(VideoFacingMode::Environment) == 2, "VideoFacingMode::Environment is not 2 as expected");
-    static_assert(static_cast<size_t>(VideoFacingMode::Left) == 3, "VideoFacingMode::Left is not 3 as expected");
-    static_assert(static_cast<size_t>(VideoFacingMode::Right) == 4, "VideoFacingMode::Right is not 4 as expected");
-    ASSERT(static_cast<size_t>(mode) < std::size(values));
-    return values[static_cast<size_t>(mode)];
+    return { m_width, m_height , m_frameRate, m_facingMode, m_volume , m_sampleRate, m_sampleSize, m_echoCancellation, m_deviceId.isolatedCopy(), m_groupId.isolatedCopy(), m_label.isolatedCopy(), m_displaySurface, m_logicalSurface, m_whiteBalanceMode, m_zoom, m_torch, RealtimeMediaSourceSupportedConstraints { m_supportedConstraints } };
 }
 
 VideoFacingMode RealtimeMediaSourceSettings::videoFacingModeEnum(const String& mode)
@@ -119,8 +106,14 @@ String RealtimeMediaSourceSettings::convertFlagsToString(const OptionSet<Realtim
         case RealtimeMediaSourceSettings::LogicalSurface:
             builder.append("LogicalSurface");
             break;
+        case RealtimeMediaSourceSettings::WhiteBalanceMode:
+            builder.append("WhiteBalanceMode");
+            break;
         case RealtimeMediaSourceSettings::Zoom:
             builder.append("Zoom");
+            break;
+        case RealtimeMediaSourceSettings::Torch:
+            builder.append("Torch");
             break;
         }
     }
@@ -159,8 +152,12 @@ OptionSet<RealtimeMediaSourceSettings::Flag> RealtimeMediaSourceSettings::differ
         difference.add(RealtimeMediaSourceSettings::DisplaySurface);
     if (logicalSurface() != that.logicalSurface())
         difference.add(RealtimeMediaSourceSettings::LogicalSurface);
+    if (whiteBalanceMode() != that.whiteBalanceMode())
+        difference.add(RealtimeMediaSourceSettings::WhiteBalanceMode);
     if (zoom() != that.zoom())
         difference.add(RealtimeMediaSourceSettings::Zoom);
+    if (torch() != that.torch())
+        difference.add(RealtimeMediaSourceSettings::Torch);
 
     return difference;
 }
@@ -168,11 +165,11 @@ OptionSet<RealtimeMediaSourceSettings::Flag> RealtimeMediaSourceSettings::differ
 String convertEnumerationToString(VideoFacingMode enumerationValue)
 {
     static const NeverDestroyed<String> values[] = {
-        MAKE_STATIC_STRING_IMPL("Unknown"),
-        MAKE_STATIC_STRING_IMPL("User"),
-        MAKE_STATIC_STRING_IMPL("Environment"),
-        MAKE_STATIC_STRING_IMPL("Left"),
-        MAKE_STATIC_STRING_IMPL("Right"),
+        MAKE_STATIC_STRING_IMPL("unknown"),
+        MAKE_STATIC_STRING_IMPL("user"),
+        MAKE_STATIC_STRING_IMPL("environment"),
+        MAKE_STATIC_STRING_IMPL("left"),
+        MAKE_STATIC_STRING_IMPL("right"),
     };
     static_assert(static_cast<size_t>(VideoFacingMode::Unknown) == 0, "VideoFacingMode::Unknown is not 0 as expected");
     static_assert(static_cast<size_t>(VideoFacingMode::User) == 1, "VideoFacingMode::User is not 1 as expected");

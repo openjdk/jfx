@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import test.robot.com.sun.glass.ui.monocle.MonocleUInput;
-import test.com.sun.glass.ui.monocle.LensUInput;
 import com.sun.glass.ui.Application;
 import test.com.sun.glass.ui.monocle.LensUInput;
 import test.com.sun.glass.ui.monocle.NativeUInput;

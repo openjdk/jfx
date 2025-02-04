@@ -32,20 +32,12 @@
 #include "ShadowRoot.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
+#include "StyleSheetContentsCache.h"
 #include "TextNodeTraversal.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
-
-using InlineStyleSheetCacheKey = std::pair<String, CSSParserContext>;
-using InlineStyleSheetCache = HashMap<InlineStyleSheetCacheKey, RefPtr<StyleSheetContents>>;
-
-static InlineStyleSheetCache& inlineStyleSheetCache()
-{
-    static NeverDestroyed<InlineStyleSheetCache> cache;
-    return cache;
-}
 
 static CSSParserContext parserContextForElement(const Element& element)
 {
@@ -59,14 +51,14 @@ static CSSParserContext parserContextForElement(const Element& element)
     return result;
 }
 
-static std::optional<InlineStyleSheetCacheKey> makeInlineStyleSheetCacheKey(const String& text, const Element& element)
+static std::optional<Style::StyleSheetContentsCache::Key> makeStyleSheetContentsCacheKey(const String& text, const Element& element)
 {
     // Only cache for shadow trees. Main document inline stylesheets are generally unique and can't be shared between documents.
     // FIXME: This could be relaxed when a stylesheet does not contain document-relative URLs (or #urls).
     if (!element.isInShadowTree())
         return { };
 
-    return std::make_pair(text, parserContextForElement(element));
+    return Style::StyleSheetContentsCache::Key { text, parserContextForElement(element) };
 }
 
 InlineStyleSheetOwner::InlineStyleSheetOwner(Document& document, bool createdByParser)
@@ -96,11 +88,10 @@ void InlineStyleSheetOwner::insertedIntoDocument(Element& element)
 
 void InlineStyleSheetOwner::removedFromDocument(Element& element)
 {
-    if (auto* scope = m_styleScope.get()) {
+    if (CheckedPtr scope = m_styleScope.get()) {
         if (scope->hasPendingSheet(element))
             scope->removePendingSheet(element);
         scope->removeStyleSheetCandidateNode(element);
-        scope = nullptr;
     }
     if (m_sheet)
         clearSheet();
@@ -108,13 +99,11 @@ void InlineStyleSheetOwner::removedFromDocument(Element& element)
 
 void InlineStyleSheetOwner::clearDocumentData(Element& element)
 {
-    if (m_sheet)
-        m_sheet->clearOwnerNode();
+    if (RefPtr sheet = m_sheet)
+        sheet->clearOwnerNode();
 
-    if (auto* scope = m_styleScope.get()) {
+    if (CheckedPtr scope = m_styleScope.get())
         scope->removeStyleSheetCandidateNode(element);
-        scope = nullptr;
-    }
 }
 
 void InlineStyleSheetOwner::childrenChanged(Element& element)
@@ -141,53 +130,51 @@ void InlineStyleSheetOwner::createSheetFromTextContents(Element& element)
 void InlineStyleSheetOwner::clearSheet()
 {
     ASSERT(m_sheet);
-    auto sheet = WTFMove(m_sheet);
+    RefPtr sheet = std::exchange(m_sheet, nullptr);
     sheet->clearOwnerNode();
 }
 
-inline bool isValidCSSContentType(Element& element, const AtomString& type)
+inline bool isValidCSSContentType(const AtomString& type)
 {
+    // https://html.spec.whatwg.org/multipage/semantics.html#update-a-style-block
     if (type.isEmpty())
         return true;
-    // FIXME: Should MIME types really be case sensitive in XML documents? Doesn't seem like they should,
-    // even though other things are case sensitive in that context. MIME types should never be case sensitive.
-    // We should verify this and then remove the isHTMLElement check here.
-    return element.isHTMLElement() ? equalLettersIgnoringASCIICase(type, "text/css"_s) : type == cssContentTypeAtom();
+    return equalLettersIgnoringASCIICase(type, "text/css"_s);
 }
 
 void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
 {
     ASSERT(element.isConnected());
-    Document& document = element.document();
-    if (m_sheet) {
-        if (m_sheet->isLoading() && m_styleScope)
-            m_styleScope->removePendingSheet(element);
+    Ref document = element.document();
+    if (RefPtr sheet = m_sheet) {
+        if (sheet->isLoading() && m_styleScope)
+            CheckedRef { *m_styleScope }->removePendingSheet(element);
         clearSheet();
     }
 
-    if (!isValidCSSContentType(element, m_contentType))
+    if (!isValidCSSContentType(m_contentType))
         return;
 
-    ASSERT(document.contentSecurityPolicy());
-    const ContentSecurityPolicy& contentSecurityPolicy = *document.contentSecurityPolicy();
-    if (!contentSecurityPolicy.allowInlineStyle(document.url().string(), m_startTextPosition.m_line, text, CheckUnsafeHashes::No, element, element.nonce(), element.isInUserAgentShadowTree())) {
+    ASSERT(document->contentSecurityPolicy());
+    if (!document->checkedContentSecurityPolicy()->allowInlineStyle(document->url().string(), m_startTextPosition.m_line, text, CheckUnsafeHashes::No, element, element.nonce(), element.isInUserAgentShadowTree())) {
         element.notifyLoadedSheetAndAllCriticalSubresources(true);
         return;
     }
 
     auto mediaQueries = MQ::MediaQueryParser::parse(m_media, MediaQueryParserContext(document));
 
-    if (auto* scope = m_styleScope.get())
+    if (CheckedPtr scope = m_styleScope.get())
         scope->addPendingSheet(element);
 
-    auto cacheKey = makeInlineStyleSheetCacheKey(text, element);
+    auto cacheKey = makeStyleSheetContentsCacheKey(text, element);
     if (cacheKey) {
-        if (auto* cachedSheet = inlineStyleSheetCache().get(*cacheKey)) {
+        if (RefPtr cachedSheet = Style::StyleSheetContentsCache::singleton().get(*cacheKey)) {
             ASSERT(cachedSheet->isCacheable());
-            m_sheet = CSSStyleSheet::createInline(*cachedSheet, element, m_startTextPosition);
-            m_sheet->setMediaQueries(WTFMove(mediaQueries));
+            Ref sheet = CSSStyleSheet::createInline(*cachedSheet, element, m_startTextPosition);
+            m_sheet = sheet.copyRef();
+            sheet->setMediaQueries(WTFMove(mediaQueries));
             if (!element.isInShadowTree())
-                m_sheet->setTitle(element.title());
+                sheet->setTitle(element.title());
 
             sheetLoaded(element);
             element.notifyLoadedSheetAndAllCriticalSubresources(false);
@@ -197,12 +184,13 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
 
     m_loading = true;
 
-    auto contents = StyleSheetContents::create(String(), parserContextForElement(element));
+    Ref contents = StyleSheetContents::create(String(), parserContextForElement(element));
 
-    m_sheet = CSSStyleSheet::createInline(contents.get(), element, m_startTextPosition);
-    m_sheet->setMediaQueries(WTFMove(mediaQueries));
+    Ref sheet = CSSStyleSheet::createInline(contents.get(), element, m_startTextPosition);
+    m_sheet = sheet.copyRef();
+    sheet->setMediaQueries(WTFMove(mediaQueries));
     if (!element.isInShadowTree())
-        m_sheet->setTitle(element.title());
+        sheet->setTitle(element.title());
 
     contents->parseString(text);
 
@@ -210,18 +198,8 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
 
     contents->checkLoaded();
 
-    if (cacheKey && contents->isCacheable()) {
-        m_sheet->contents().addedToMemoryCache();
-        inlineStyleSheetCache().add(*cacheKey, &m_sheet->contents());
-
-        // Prevent pathological growth.
-        const size_t maximumInlineStyleSheetCacheSize = 50;
-        if (inlineStyleSheetCache().size() > maximumInlineStyleSheetCacheSize) {
-            auto toRemove = inlineStyleSheetCache().random();
-            toRemove->value->removedFromMemoryCache();
-            inlineStyleSheetCache().remove(toRemove);
-        }
-    }
+    if (cacheKey && contents->isCacheable())
+        Style::StyleSheetContentsCache::singleton().add(WTFMove(*cacheKey), contents);
 }
 
 bool InlineStyleSheetOwner::isLoading() const
@@ -236,7 +214,7 @@ bool InlineStyleSheetOwner::sheetLoaded(Element& element)
     if (isLoading())
         return false;
 
-    if (auto* scope = m_styleScope.get())
+    if (CheckedPtr scope = m_styleScope.get())
         scope->removePendingSheet(element);
 
     return true;
@@ -244,13 +222,8 @@ bool InlineStyleSheetOwner::sheetLoaded(Element& element)
 
 void InlineStyleSheetOwner::startLoadingDynamicSheet(Element& element)
 {
-    if (auto* scope = m_styleScope.get(); scope && !scope->hasPendingSheet(element))
+    if (CheckedPtr scope = m_styleScope.get(); scope && !scope->hasPendingSheet(element))
         scope->addPendingSheet(element);
-}
-
-void InlineStyleSheetOwner::clearCache()
-{
-    inlineStyleSheetCache().clear();
 }
 
 }

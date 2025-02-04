@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,31 +25,26 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
+import java.util.Collection;
 import javafx.application.Platform;
 import javafx.scene.input.InputEvent;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.glass.ui.monocle.TestLogShim;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
-import java.util.Collection;
+public final class TouchExceptionTest extends ParameterizedTestBase {
 
-public class TouchExceptionTest extends ParameterizedTestBase {
-
-    public TouchExceptionTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
     /** Throw an exception in an event handler */
-    @Test
-    public void testRuntimeException() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testRuntimeException(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         Platform.runLater(
                 () -> Thread.currentThread()
                         .setUncaughtExceptionHandler((t, e) -> TestLogShim.log(e.toString()))

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,19 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Tooltip;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  */
-@Ignore
+@Disabled
 public class ControlChildrenTest {
     private ControlStub c;
     private SkinStub<ControlStub> s;
@@ -46,7 +45,8 @@ public class ControlChildrenTest {
     private int changeNotificationCount;
     private ListChangeListener<Node> changeNotifier;
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         c = new ControlStub();
         s = new SkinStub<>(c);
         t = new Tooltip();

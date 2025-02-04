@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,10 @@
 package test.com.sun.javafx.binding;
 
 import com.sun.javafx.binding.ExpressionHelperBaseShim;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import javafx.beans.WeakListener;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ExpressionHelperBaseTest {
 
@@ -163,6 +163,4 @@ public class ExpressionHelperBaseTest {
         assertEquals(0, ExpressionHelperBaseShim.trim(2, array));
         assertArrayEquals(new Object[] {null, null, null}, array);
     }
-
-
 }

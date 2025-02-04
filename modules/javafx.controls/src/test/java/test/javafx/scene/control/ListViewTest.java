@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,17 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.control.VirtualScrollBar;
-import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
-import com.sun.javafx.scene.control.behavior.ListCellBehavior;
-import com.sun.javafx.scene.control.behavior.ListViewBehavior;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
-import com.sun.javafx.tk.Toolkit;
+import static javafx.collections.FXCollections.observableArrayList;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -66,6 +69,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.skin.ListCellSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -73,23 +77,17 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static javafx.collections.FXCollections.*;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.VirtualScrollBar;
+import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -105,7 +103,8 @@ public class ListViewTest {
 
     private StageLoader stageLoader;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
@@ -119,7 +118,7 @@ public class ListViewTest {
         });
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
 
@@ -505,7 +504,7 @@ public class ListViewTest {
         try {
             Thread.sleep(100);
         } catch (InterruptedException ex) {
-            ex.printStackTrace();
+            fail(ex);
         }
 
         // the list is totally changing (it is being cleared), so we should
@@ -584,6 +583,9 @@ public class ListViewTest {
         RT_22463_Person p2 = new RT_22463_Person();
         p2.setId(2l);
         p2.setName("name2");
+
+        stageLoader = new StageLoader(list);
+
         list.setItems(FXCollections.observableArrayList(p1, p2));
         VirtualFlowTestUtils.assertCellTextEquals(list, 0, "name1");
         VirtualFlowTestUtils.assertCellTextEquals(list, 1, "name2");
@@ -598,6 +600,35 @@ public class ListViewTest {
         new_p2.setName("updated name2");
         list.getItems().clear();
         list.setItems(FXCollections.observableArrayList(new_p1, new_p2));
+        VirtualFlowTestUtils.assertCellTextEquals(list, 0, "updated name1");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 1, "updated name2");
+    }
+
+    @Test
+    public void testSetItemsShouldUpdateTheCells() {
+        final ListView<RT_22463_Person> list = new ListView<>();
+
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1L);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2L);
+        p2.setName("name2");
+
+        stageLoader = new StageLoader(list);
+
+        list.setItems(FXCollections.observableArrayList(p1, p2));
+        VirtualFlowTestUtils.assertCellTextEquals(list, 0, "name1");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 1, "name2");
+
+        // Replace all Items by the new ones. Cells should get updated.
+        RT_22463_Person newP1 = new RT_22463_Person();
+        newP1.setId(1L);
+        newP1.setName("updated name1");
+        RT_22463_Person newP2 = new RT_22463_Person();
+        newP2.setId(2L);
+        newP2.setName("updated name2");
+        list.setItems(FXCollections.observableArrayList(newP1, newP2));
         VirtualFlowTestUtils.assertCellTextEquals(list, 0, "updated name1");
         VirtualFlowTestUtils.assertCellTextEquals(list, 1, "updated name2");
     }
@@ -904,7 +935,7 @@ public class ListViewTest {
         sl.dispose();
     }
 
-//--------- regression testing of JDK-8093144 (was: RT-35857)
+//--------- regression testing of JDK-8093144 (was: JDK-8093144)
 
     @Test
     public void test_rt35857_selectLast_retainAllSelected() {
@@ -936,7 +967,7 @@ public class ListViewTest {
      */
     protected <T> void assert_rt35857(ObservableList<T> items, MultipleSelectionModel<T> sm, boolean retain) {
         T selectedItem = sm.getSelectedItem();
-        assertNotNull("sanity: ", selectedItem);
+        assertNotNull(selectedItem, "sanity: ");
         ObservableList<T> expected;
         if (retain) {
             expected = FXCollections.observableArrayList(selectedItem);
@@ -947,7 +978,7 @@ public class ListViewTest {
             items.removeAll(sm.getSelectedItems());
         }
         String modified = (retain ? " retainAll " : " removeAll ") + " selectedItems ";
-        assertEquals("expected list after" + modified, expected, items);
+        assertEquals(expected, items, "expected list after" + modified);
     }
 
     @Test public void test_rt35857() {
@@ -1230,6 +1261,84 @@ public class ListViewTest {
         sl.dispose();
     }
 
+    @Test
+    public void testListViewRemainsFocusedAfterEditCancel() {
+        listView.setCellFactory(TextFieldListCell.forListView());
+        listView.setEditable(true);
+        listView.getItems().add("John");
+
+        StageLoader sl = new StageLoader(new Button(), listView);
+        listView.requestFocus();
+        assertTrue(listView.isFocused());
+
+        ListCell cell = (ListCell) VirtualFlowTestUtils.getCell(listView, 0);
+        assertTrue(cell.getSkin() instanceof ListCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        listView.edit(0);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(listView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+
+        assertEquals("John", cell.getText());
+        assertTrue(listView.isFocused());
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testListViewRemainsFocusedAfterEditCommit() {
+        listView.setCellFactory(TextFieldListCell.forListView());
+        listView.setEditable(true);
+        listView.getItems().add("John");
+
+        StageLoader sl = new StageLoader(new Button(), listView);
+        listView.requestFocus();
+        assertTrue(listView.isFocused());
+
+        ListCell cell = (ListCell) VirtualFlowTestUtils.getCell(listView, 0);
+        assertTrue(cell.getSkin() instanceof ListCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        listView.edit(0);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(listView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals("Andrew", cell.getText());
+        assertTrue(listView.isFocused());
+
+        sl.dispose();
+    }
+
     @Test public void test_rt_38787_remove_b() {
         // selection moves to "a"
         test_rt_38787("a", 0, "b");
@@ -1319,7 +1428,7 @@ public class ListViewTest {
 
         // we also expect there to be an event in the selection model for
         // selected indices and selected items
-        assertEquals(sm.getSelectedIndices() +"", 2, rt_38341_indices_count);
+        assertEquals(2, rt_38341_indices_count, sm.getSelectedIndices() + "");
         assertEquals(2, rt_38341_items_count);
     }
 
@@ -1800,7 +1909,7 @@ public class ListViewTest {
         // but in index (last - 2).
         int expected = last - 2;
         assertEquals("5", sm.getSelectedItem());
-        assertEquals("selected index after disjoint removes above", expected, sm.getSelectedIndex());
+        assertEquals(expected, sm.getSelectedIndex(), "selected index after disjoint removes above");
     }
 
     /**
@@ -1847,8 +1956,8 @@ public class ListViewTest {
 
         // disjoint remove of 2 elements above the last selected
         items.removeAll(items.get(1), items.get(3));
-        assertEquals("sanity: selectedIndex must be shifted by -2", last - 2, sm.getSelectedIndex());
-        assertEquals("must fire single event on removes above", 1, rt_40012_count);
+        assertEquals(last - 2, sm.getSelectedIndex(), "sanity: selectedIndex must be shifted by -2");
+        assertEquals(1, rt_40012_count, "must fire single event on removes above");
     }
 
     /**
@@ -1870,8 +1979,8 @@ public class ListViewTest {
 
         // disjoint remove of 2 elements above the last selected
         items.removeAll(items.get(1), items.get(3));
-        assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
-        assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
+        assertEquals(lastItem, sm.getSelectedItem(), "sanity: selectedItem unchanged");
+        assertEquals(0, rt_40012_count, "must not fire on unchanged selected item");
     }
 
     @Test public void test_rt_40185() {
@@ -1910,12 +2019,12 @@ public class ListViewTest {
         int selected = sm.getSelectedIndex();
 
         sm.getSelectedIndices().addListener((ListChangeListener<Integer>) change -> {
-            assertEquals("sanity: selectedIndex unchanged", selected, sm.getSelectedIndex());
+            assertEquals(selected, sm.getSelectedIndex(), "sanity: selectedIndex unchanged");
             while(change.next()) {
-                assertEquals("single event on clearAndSelect already selected", 1, ++rt_40212_count);
+                assertEquals(1, ++rt_40212_count, "single event on clearAndSelect already selected");
 
                 boolean type = change.wasAdded() || change.wasRemoved() || change.wasPermutated() || change.wasUpdated();
-                assertTrue("at least one of the change types must be true", type);
+                assertTrue(type, "at least one of the change types must be true");
             }
         });
 
@@ -2104,10 +2213,8 @@ public class ListViewTest {
 
         // test editEvent
         assertNotNull(editEvent.get());
-        assertEquals("type is startEdit",
-                     ListView.editStartEvent(), editEvent.get().getEventType());
-        assertEquals("index on start event",
-                     editIndex, editEvent.get().getIndex());
+        assertEquals(ListView.editStartEvent(), editEvent.get().getEventType(), "type is startEdit");
+        assertEquals(editIndex, editEvent.get().getIndex(), "index on start event");
 
         sl.dispose();
     }
@@ -2124,20 +2231,20 @@ public class ListViewTest {
         sm.select(selected);
         sm.getSelectedIndices().addListener((ListChangeListener<Integer>) ch -> {
             if (ch.next()) {
-                assertEquals("Two items should be selected.", 2, ch.getList().size());
-                assertEquals("Selection range should be from index 1 ", 1, ch.getFrom());
-                assertEquals("Selection range should be till index 2 ", 2, ch.getTo());
+                assertEquals(2, ch.getList().size(), "Two items should be selected.");
+                assertEquals(1, ch.getFrom(), "Selection range should be from index 1 ");
+                assertEquals(2, ch.getTo(), "Selection range should be till index 2 ");
             } else {
                 fail("Change event is expected when selection is changed.");
             }
         });
         int focus = lv.getFocusModel().getFocusedIndex();
-        assertEquals("Selected item should be focused.", selected, focus);
+        assertEquals(selected, focus, "Selected item should be focused.");
         // Select the next element
         sm.selectRange(selected, focus + 2);
-        assertEquals("Two items should be selected.", 2, sm.getSelectedIndices().size());
-        assertEquals("List item at index 1 should be selected", 1, (int) sm.getSelectedIndices().get(0));
-        assertEquals("List item at index 2 should be selected", 2, (int) sm.getSelectedIndices().get(1));
+        assertEquals(2, sm.getSelectedIndices().size(), "Two items should be selected.");
+        assertEquals(1, (int) sm.getSelectedIndices().get(0), "List item at index 1 should be selected");
+        assertEquals(2, (int) sm.getSelectedIndices().get(1), "List item at index 2 should be selected");
     }
 
     @Test public void testInterceptedKeyMappingsForComboBoxEditor() {
@@ -2188,7 +2295,7 @@ public class ListViewTest {
         ObservableList<String> items = FXCollections.observableArrayList();
         WeakReference<ListView<String>> listViewRef = new WeakReference<>(new ListView<>(items));
         attemptGC(listViewRef, 10);
-        assertNull("ListView is not GCed.", listViewRef.get());
+        assertNull(listViewRef.get(), "ListView is not GCed.");
     }
 
     @Test
@@ -2198,7 +2305,7 @@ public class ListViewTest {
         ListView<String> listView = new ListView<>(items);
         items.clear();
         attemptGC(itemRef, 10);
-        assertNull("ListView item is not GCed.", itemRef.get());
+        assertNull(itemRef.get(), "ListView item is not GCed.");
     }
 
     @Test
@@ -2302,11 +2409,11 @@ public class ListViewTest {
         for (int i = 0; i < cc; i++) {
             IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
             if ((cell != null) && (cell.getItem() == 20)) {
-                assertEquals("Last cell doesn't end at listview end", viewportLength - 20, cell.getLayoutY(), 1.);
+                assertEquals(viewportLength - 20, cell.getLayoutY(), 1., "Last cell doesn't end at listview end");
                 got20 = true;
             }
             if ((cell != null) && (cell.getItem() == 70)) {
-                assertEquals("Secondlast cell doesn't end properly", viewportLength - 20 - 70, cell.getLayoutY(), 1.);
+                assertEquals(viewportLength - 20 - 70, cell.getLayoutY(), 1., "Secondlast cell doesn't end properly");
                 got70 = true;
             }
         }
@@ -2323,11 +2430,11 @@ public class ListViewTest {
         for (int i = 0; i < cc; i++) {
             IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
             if ((cell != null) && (cell.getItem() == 21)) {
-                assertEquals("Last cell doesn't end at listview end", viewportLength - 21, cell.getLayoutY(), 1.);
+                assertEquals(viewportLength - 21, cell.getLayoutY(), 1., "Last cell doesn't end at listview end");
                 got21 = true;
             }
             if ((cell != null) && (cell.getItem() == 20)) {
-                assertEquals("Secondlast cell doesn't end properly", viewportLength - 21 - 20, cell.getLayoutY(), 1.);
+                assertEquals(viewportLength - 21 - 20, cell.getLayoutY(), 1., "Secondlast cell doesn't end properly");
                 got20 = true;
             }
         }
@@ -2488,19 +2595,19 @@ public class ListViewTest {
             scrolledToBottom = true;
         }
 
-        assertTrue("Our cell must be visible!", scrollToCell.isVisible());
+        assertTrue(scrollToCell.isVisible(), "Our cell must be visible!");
 
         if (lastCell.isVisible() && sumOfHeights >= viewportLength) {
             // There shouldn't be any space between the last cell and the bottom
-            assertTrue("Last cell shouldn't leave space between itself and the bottom", lastCell.getLayoutY() + 1 > (viewportLength - lastCellSize));
+            assertTrue(lastCell.getLayoutY() + 1 > (viewportLength - lastCellSize), "Last cell shouldn't leave space between itself and the bottom");
         }
         if (sumOfHeights < viewportLength) {
             // If we have less cells then space, then all cells are shown, and the position of the last cell, is the sum of the height of the previous cells.
-            assertEquals("Last cell should be at the bottom, if we scroll to it", sumOfHeights - lastCellSize, lastCell.getLayoutY(), 1.);
+            assertEquals(sumOfHeights - lastCellSize, lastCell.getLayoutY(), 1., "Last cell should be at the bottom, if we scroll to it");
         }
         if (!shouldScrollToBottom && sumOfHeights > viewportLength) {
             // If we don't scroll to the bottom, and the cells are bigger than the available space, then our cell should be at the top.
-            assertEquals("Our cell mut be at the top", 0, scrollToCell.getLayoutY(), 1.);
+            assertEquals(0, scrollToCell.getLayoutY(), 1., "Our cell mut be at the top");
         }
         // Additional Tests:
         double previousLayoutY = scrollToCell.getLayoutY();
@@ -2510,10 +2617,10 @@ public class ListViewTest {
             listView.getItems().setAll(alternateHeights);
             listView.requestLayout();
             Toolkit.getToolkit().firePulse();
-            assertEquals("Upper cell shouldn't move after changing heights", previousLayoutY, scrollToCell.getLayoutY(), 1.);
+            assertEquals(previousLayoutY, scrollToCell.getLayoutY(), 1., "Upper cell shouldn't move after changing heights");
             VirtualFlow vf = VirtualFlowTestUtils.getVirtualFlow(listView);
             vf.scrollPixels(-1);
-            assertEquals("Upper cell should move 1 pixels, after scrolling 1 pixel", previousLayoutY + 1, scrollToCell.getLayoutY(), 1.);
+            assertEquals(previousLayoutY + 1, scrollToCell.getLayoutY(), 1., "Upper cell should move 1 pixels, after scrolling 1 pixel");
         }
 
     }
@@ -2549,15 +2656,13 @@ public class ListViewTest {
         assertNotNull(cell);
 
         // should be visible
-        assertTrue("Cell should be visible", cell.isVisible());
+        assertTrue(cell.isVisible(), "Cell should be visible");
 
         // should have parent
-        assertNotNull("Cell should have parent", cell.getParent());
+        assertNotNull(cell.getParent(), "Cell should have parent");
 
         // Note:
         // We don't check for the position of the cell, because it's currently don't work properly.
         // But we wan't to ensure, that the VirtualFlow "Doesn't crash" - which was the case before.
-
     }
-
 }

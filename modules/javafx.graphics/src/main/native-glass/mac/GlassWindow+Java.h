@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,9 +33,9 @@
 - (void)_sendJavaWindowMoveToAnotherScreenEventIfNeeded;
 - (void)_sendJavaWindowMoveEventForFrame:(NSRect)frame;
 - (void)_sendJavaWindowResizeEvent:(int)type forFrame:(NSRect)frame;
+- (void)_sendJavaWindowNotifyScaleChanged:(CGFloat)newScale;
 
 - (id)_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle screen:(NSScreen *)screen jwindow:(jobject)jwindow;
-- (NSWindow*)_getCurrentWindow;
 - (void)_ungrabFocus;
 + (void)_resetGrab;
 - (void)_checkUngrab;

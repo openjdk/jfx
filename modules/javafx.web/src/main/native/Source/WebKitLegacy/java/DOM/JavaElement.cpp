@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1332,21 +1332,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewIfNeede
     IMPL->scrollIntoViewIfNeeded(centerIfNeeded);
 }
 
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollByLinesImpl(JNIEnv*, jclass, jlong peer
-    , jint lines)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->scrollByLines(lines);
-}
-
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollByPagesImpl(JNIEnv*, jclass, jlong peer
-    , jint pages)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->scrollByPages(pages);
-}
 
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getElementsByClassNameImpl(JNIEnv* env, jclass, jlong peer

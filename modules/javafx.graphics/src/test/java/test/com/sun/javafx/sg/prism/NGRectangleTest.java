@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,12 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.sg.prism.NGNodeShim;
 import com.sun.javafx.sg.prism.NGRectangle;
 import com.sun.prism.paint.Color;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for NGRectangle class
@@ -41,7 +42,7 @@ import static org.junit.Assert.assertTrue;
 public class NGRectangleTest extends NGTestBase {
     NGRectangleMock r;
 
-    @Before
+    @BeforeEach
     public void setup() {
         r = new NGRectangleMock();
         r.updateRectangle(0, 0, 100, 100, 0, 0);
