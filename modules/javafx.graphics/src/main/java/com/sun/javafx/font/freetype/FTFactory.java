@@ -77,10 +77,10 @@ public class FTFactory extends PrismFontFactory {
     @Override
     protected PrismFontFile createFontFile(String name, String filename,
                                            int fIndex, boolean register,
-                                           boolean embedded, boolean copy,
-                                           boolean tracked) throws Exception {
+                                           boolean embedded, boolean copy)
+                                           throws Exception {
         return new FTFontFile(name, filename, fIndex, register,
-                              embedded, copy, tracked);
+                              embedded, copy);
     }
 
     @Override
