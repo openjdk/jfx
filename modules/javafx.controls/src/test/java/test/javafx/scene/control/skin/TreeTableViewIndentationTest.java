@@ -141,7 +141,7 @@ public class TreeTableViewIndentationTest {
         Toolkit.getToolkit().firePulse();
 
         TreeTableRow<String> row = (TreeTableRow<String>) VirtualFlowTestUtils.getCell(treeTableView, 0);
-        TreeTableCell<String, String> cell = (TreeTableCell<String, String>) row.getChildrenUnmodifiable().get(1);
+        TreeTableCell<String, String> cell = (TreeTableCell<String, String>) row.getChildrenUnmodifiable().get(0);
 
         Node graphic = cell.getGraphic();
         double x;
