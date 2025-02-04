@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.oracle.tools.fx.monkey;
+package com.oracle.tools.fx.monkey.tools;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;

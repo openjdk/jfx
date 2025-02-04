@@ -51,6 +51,7 @@ import com.oracle.tools.fx.monkey.tools.EmbeddedFxTextArea;
 import com.oracle.tools.fx.monkey.tools.EmbeddedJTextAreaWindow;
 import com.oracle.tools.fx.monkey.tools.KeyboardEventViewer;
 import com.oracle.tools.fx.monkey.tools.Native2AsciiPane;
+import com.oracle.tools.fx.monkey.tools.StageTesterWindow;
 import com.oracle.tools.fx.monkey.tools.SystemInfoViewer;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
@@ -146,6 +147,7 @@ public class MainWindow extends Stage {
         FX.item(m, "JTextArea/JTextField Embedded in SwingNode", this::openJTextArea);
         FX.item(m, "Keyboard Event Viewer", this::openKeyboardViewer);
         FX.item(m, "Native to ASCII", this::openNative2Ascii);
+        FX.item(m, "Stage Tester", this::openStageTesterWindow);
         FX.item(m, "System Info", this::openSystemInfo);
         // Logs
         FX.menu(m, "_Logging");
@@ -153,8 +155,6 @@ public class MainWindow extends Stage {
         // Window
         FX.menu(m, "_Window");
         FX.item(m, orientation);
-        FX.separator(m);
-        FX.item(m, "Stage Tester", this::openStageTesterWindow);
 
         return m;
     }
