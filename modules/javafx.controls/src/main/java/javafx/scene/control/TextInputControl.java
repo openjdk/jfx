@@ -320,6 +320,9 @@ public abstract class TextInputControl extends Control {
             String txt = get();
             if (txt != null && txt.contains("\n")) {
                 txt = txt.replace("\n", "");
+                if (isBound()) {
+                    unbind();
+                }
                 set(txt);
             }
         }
