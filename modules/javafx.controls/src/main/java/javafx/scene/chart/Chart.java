@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,6 @@ package javafx.scene.chart;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import com.sun.javafx.scene.control.skin.Utils;
-
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.application.Platform;
@@ -42,26 +39,24 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.EnumConverter;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
-
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.scene.NodeHelper;
-
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
-
-import javafx.css.converter.BooleanConverter;
-import javafx.css.converter.EnumConverter;
-
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Base class for all charts. It has 3 parts the title, legend and chartContent. The chart content is populated by the
@@ -103,6 +98,8 @@ public abstract class Chart extends Region {
 
     /** Animator for animating stuff on the chart */
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(chartContent);
+
+    private SimpleBooleanProperty accessibilityActive;
 
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
@@ -281,6 +278,15 @@ public abstract class Chart extends Region {
         chartContent.getStyleClass().add("chart-content");
         // mark chartContent as unmanaged because any changes to its preferred size shouldn't cause a relayout
         chartContent.setManaged(false);
+
+        // chart and its data are allowed to be constructed in a background thread
+        sceneProperty().addListener((s, p, scene) -> {
+            if (scene != null) {
+                if (isAccessibilityActive()) {
+                    updateSymbolFocusable(true);
+                }
+            }
+        });
     }
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
@@ -511,6 +517,22 @@ public abstract class Chart extends Region {
         return getClassCssMetaData();
     }
 
+    // child classes override this method to set focus traversable flag on every symbol
+    // package protected
+    void updateSymbolFocusable(boolean on) {
+    }
+
+    boolean isAccessibilityActive() {
+        if (Platform.isFxApplicationThread()) {
+            if (accessibilityActive == null) {
+                boolean aa = Platform.accessibilityActiveProperty().get();
+                accessibilityActive = new SimpleBooleanProperty(aa);
+                accessibilityActive.addListener((src, prev, on) -> {
+                    updateSymbolFocusable(on);
+                });
+            }
+            return accessibilityActive.get();
+        }
+        return false;
+    }
 }
-
-
