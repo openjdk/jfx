@@ -42,11 +42,11 @@ import com.sun.javafx.scene.text.TextLine;
 public final class TextUtils {
     /**
      * Queries the range geometry of the range of text within the text layout as
-     * an array of {@code PathElement}s, for for one of the three possible types:
+     * an array of {@code PathElement}s, for one of the three possible types:
      * <ul>
-     * <li>{@link #TYPE_STRIKETHROUGH} - strike-through shape
-     * <li>{@link #TYPE_TEXT} - text selection shape
-     * <li>{@link #TYPE_UNDERLINE} - underline shape
+     * <li>{@link TextLayout#TYPE_STRIKETHROUGH} - strike-through shape
+     * <li>{@link TextLayout#TYPE_TEXT} - text selection shape
+     * <li>{@link TextLayout#TYPE_UNDERLINE} - underline shape
      * </ul>
      *
      * @param layout the text layout
@@ -60,15 +60,15 @@ public final class TextUtils {
     public static PathElement[] getRange(TextLayout layout, int start, int end, int type, double dx, double dy) {
         ArrayList<PathElement> a = new ArrayList<>();
         layout.getRange(start, end, type, (left, top, right, bottom) -> {
-            left += dx;
-            right += dx;
-            top += dy;
-            bottom += dy;
-            a.add(new MoveTo(left, top));
-            a.add(new LineTo(right, top));
-            a.add(new LineTo(right, bottom));
-            a.add(new LineTo(left, bottom));
-            a.add(new LineTo(left, top));
+            double leftEdge = left + dx;
+            double rightEdge = right + dx;
+            double topEdge = top + dy;
+            double bottomEdge = bottom + dy;
+            a.add(new MoveTo(leftEdge, topEdge));
+            a.add(new LineTo(rightEdge, topEdge));
+            a.add(new LineTo(rightEdge, bottomEdge));
+            a.add(new LineTo(leftEdge, bottomEdge));
+            a.add(new LineTo(leftEdge, topEdge));
         });
         return a.toArray(PathElement[]::new);
     }

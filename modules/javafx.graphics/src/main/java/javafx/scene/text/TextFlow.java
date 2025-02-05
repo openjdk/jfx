@@ -219,7 +219,7 @@ public class TextFlow extends Pane {
      * @since 9
      */
     public PathElement[] caretShape(int charIndex, boolean leading) {
-        float[] c = getTextLayout().getCaretInf(charIndex, leading);
+        float[] c = getTextLayout().getCaretGeometry(charIndex, leading);
         // TODO padding JDK-8341438?
         return TextUtils.getCaretShape(c, 0.0, 0.0);
     }

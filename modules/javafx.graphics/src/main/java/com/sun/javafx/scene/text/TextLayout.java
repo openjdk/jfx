@@ -253,7 +253,7 @@ public interface TextLayout {
      * @param leading whether the caret is biased on the leading edge of the character
      * @return the caret geometry
      */
-    public float[] getCaretInf(int offset, boolean leading);
+    public float[] getCaretGeometry(int offset, boolean leading);
 
     /**
      * Queries the range geometry of the range of text within the text layout for one of the three possible types:
@@ -265,7 +265,7 @@ public interface TextLayout {
      *
      * @param start the start offset
      * @param end the end offset
-     * @param the type of the geometry
+     * @param type the type of the geometry
      * @param client the callback to invoke for each rectangular shape
      */
     public void getRange(int start, int end, int type, GeometryCallback client);

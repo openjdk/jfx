@@ -1082,7 +1082,7 @@ public non-sealed class Text extends Shape {
         if (0 <= charIndex && charIndex <= getTextInternal().length()) {
             double dx = getX();
             double dy = getY() - getYRendering();
-            float[] c = getTextLayout().getCaretInf(charIndex, caretBias);
+            float[] c = getTextLayout().getCaretGeometry(charIndex, caretBias);
             return TextUtils.getCaretShape(c, dx, dy);
         } else {
             return null;

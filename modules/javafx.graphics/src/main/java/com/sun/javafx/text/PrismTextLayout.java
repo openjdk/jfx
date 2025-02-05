@@ -308,7 +308,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public float[] getCaretInf(int offset, boolean isLeading) {
+    public float[] getCaretGeometry(int offset, boolean isLeading) {
         ensureLayout();
         int lineIndex = 0;
         int lineCount = getLineCount();

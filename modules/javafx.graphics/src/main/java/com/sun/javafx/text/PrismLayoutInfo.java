@@ -123,16 +123,12 @@ public abstract class PrismLayoutInfo extends LayoutInfo {
         return Collections.unmodifiableList(rv);
     }
 
-    private TextLine line(int ix) {
-        return layout.getLines()[ix];
-    }
-
     @Override
     public CaretInfo caretInfo(int charIndex, boolean leading) {
         Insets m = insets();
         double dx = m.getLeft(); // TODO RTL?
         double dy = m.getTop();
-        float[] c = layout.getCaretInf(charIndex, leading);
+        float[] c = layout.getCaretGeometry(charIndex, leading);
 
         Rectangle2D[] parts;
         if (c.length == 3) {
