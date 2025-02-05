@@ -706,11 +706,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Test
     public void treeView() {
         assumeFalse(SKIP_TEST);
-        Supplier<TreeItem<String>> gen = () -> {
-            TreeItem<String> root = new TreeItem<>(null);
-            return root;
-        };
-
         test(() -> {
             TreeView<String> c = new TreeView<>();
             c.setSkin(new TreeViewSkin(c));
