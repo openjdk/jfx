@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,29 +24,22 @@
  */
 
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
+ * <p>Incubates a customization mechanism for the JavaFX Controls utilizing the
+ * {@link javafx.scene.control.input.InputMap InputMap}.
+ * <p>
+ * The {@code InputMap}
+ * <ul>
+ * <li>allows for customization of a control behavior by changing the existing or adding new key mappings
+ * <li>supports dynamic modification of the key mappings
+ * <li>allows for accessing the default functionality even when it was overwritten by the application
+ * <li>allows for reverting customization to the default implementation
+ * <li>guarantees priorities between the application and the skin event handlers and key mappings
+ * <li>allows for gradual migration of the existing controls to use the InputMap
+ * <li>supports stateful and stateless (fully static) behavior implementations
+ * </ul>
+ * <p>
+ * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * Will be removed in a future release.</b>
+ * @since 999 TODO
  */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.input;
-    exports javafx.scene.control.skin;
-
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
-}
+package javafx.scene.control.input;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,39 @@
  * questions.
  */
 
+package com.sun.javafx.scene.control.input;
+
+import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.input.InputMap;
+import com.sun.javafx.util.Utils;
+
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
+ * Hides execute() methods in InputMap from the public.
  */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
+public class InputMapHelper {
+    public interface Accessor {
+        public void execute(Object source, InputMap inputMap, FunctionTag tag);
+        public void executeDefault(Object source, InputMap inputMap, FunctionTag tag);
+    }
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.input;
-    exports javafx.scene.control.skin;
+    static {
+        Utils.forceInit(InputMap.class);
+    }
 
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
+    }
+
+    public static void execute(Object source, InputMap inputMap, FunctionTag tag) {
+        accessor.execute(source, inputMap, tag);
+    }
+
+    public static void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
+        accessor.executeDefault(source, inputMap, tag);
+    }
 }

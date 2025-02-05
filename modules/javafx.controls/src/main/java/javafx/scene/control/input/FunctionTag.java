@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,29 @@
  * questions.
  */
 
+package javafx.scene.control.input;
+
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
+ * A function tag is a public identifier of a method that can be mapped to a key binding by the
+ * control's {@link InputMap}.
+ * <h2>Example</h2>
+ * Example:
+ * <pre>
+ * public class RichTextArea extends Control {
+ *     public static class Tags {
+ *         // Deletes the symbol before the caret.
+ *         public static final FunctionTag BACKSPACE = new FunctionTag();
+ *         // Copies selected text to the clipboard.
+ *         public static final FunctionTag COPY = new FunctionTag();
+ *         // Cuts selected text and places it to the clipboard.
+ *         public static final FunctionTag CUT = new FunctionTag();
+ *         ...
+ * </pre>
  *
- * @moduleGraph
- * @since 9
+ * @since 999 TODO
  */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.input;
-    exports javafx.scene.control.skin;
-
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+public final class FunctionTag {
+    /** Constructs the function tag. */
+    public FunctionTag() {
+    }
 }
