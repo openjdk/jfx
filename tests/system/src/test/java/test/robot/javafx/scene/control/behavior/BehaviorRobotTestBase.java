@@ -60,16 +60,16 @@ public abstract class BehaviorRobotTestBase<C extends Control> extends RobotTest
     public void beforeEach() {
         Platform.runLater(() -> {
             step = 0;
-            content.setCenter(control);
+            contentPane.setCenter(control);
         });
     }
 
     @AfterEach
     public void afterEach() {
         Platform.runLater(() -> {
-            content.setCenter(null);
+            contentPane.setCenter(null);
         });
-        content.removeEventFilter(KeyEvent.ANY, keyListener);
+        contentPane.removeEventFilter(KeyEvent.ANY, keyListener);
     }
 
     /**
