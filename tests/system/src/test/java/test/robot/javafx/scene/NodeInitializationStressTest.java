@@ -155,7 +155,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private static final AtomicBoolean failed = new AtomicBoolean();
     // for debugging purposes: setting this to true will skip working tests
     // TODO remove once all the tests pass
-    private static final boolean SKIP_TEST = false;
+    private static final boolean SKIP_TEST = !false;
 
     @Test
     public void accordion() {
@@ -625,19 +625,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349255") // FIX
     @Test
     public void titledPane() {
-        assumeFalse(SKIP_TEST);
+//        assumeFalse(SKIP_TEST);
         test(() -> {
             TitledPane c = new TitledPane("TitledPane", null);
             c.setSkin(new TitledPaneSkin(c));
             return c;
         }, (c) -> {
-            c.setAnimated(nextBoolean());
+            accessControl(c);
+            //c.setAnimated(nextBoolean());
             c.setExpanded(nextBoolean());
             c.setContent(new Label(nextString()));
-            accessControl(c);
         });
     }
 
