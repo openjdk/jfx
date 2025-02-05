@@ -37,6 +37,8 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
@@ -49,10 +51,10 @@ import javafx.css.converter.EnumConverter;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.scene.NodeHelper;
@@ -271,22 +273,12 @@ public abstract class Chart extends Region {
      */
     public Chart() {
         titleLabel.setAlignment(Pos.CENTER);
-        titleLabel.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
         getChildren().addAll(titleLabel, chartContent);
         getStyleClass().add("chart");
         titleLabel.getStyleClass().add("chart-title");
         chartContent.getStyleClass().add("chart-content");
         // mark chartContent as unmanaged because any changes to its preferred size shouldn't cause a relayout
         chartContent.setManaged(false);
-
-        // chart and its data are allowed to be constructed in a background thread
-        sceneProperty().addListener((s, p, scene) -> {
-            if (scene != null) {
-                if (isAccessibilityActive()) {
-                    updateSymbolFocusable(true);
-                }
-            }
-        });
     }
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
@@ -517,21 +509,55 @@ public abstract class Chart extends Region {
         return getClassCssMetaData();
     }
 
-    // child classes override this method to set focus traversable flag on every symbol
-    // package protected
+    private void handleAccessibilityActive(boolean on) {
+        titleLabel.setFocusTraversable(on);
+        updateSymbolFocusable(on);
+    }
+
+    /**
+     * Invoked in the FX application thread when accessibility active platform property changes.
+     * The child classes should override this method to set focus traversable flag on every symbol, as well as
+     * other elements that need to be focusable.
+     * @param on whether the accessibility is active 
+     */
+    // package protected: custom charts must handle accessbility on their own
     void updateSymbolFocusable(boolean on) {
     }
 
+    /**
+     * When called from JavaFX application thread, returns the value of the property.
+     * When called from any other thread, returns false and sets up the machinery to
+     * invoke {@code updateSymbolFocusable()} when needed.
+     * The chart implementations should use this method to set focus travesable flags on the nodes
+     * which needs to be focus traversable when accessibility is on.
+     * @return
+     */
+    // package protected: custom charts must handle accessbility on their own
     boolean isAccessibilityActive() {
         if (Platform.isFxApplicationThread()) {
             if (accessibilityActive == null) {
                 boolean aa = Platform.accessibilityActiveProperty().get();
                 accessibilityActive = new SimpleBooleanProperty(aa);
+                accessibilityActive.bind(Platform.accessibilityActiveProperty());
                 accessibilityActive.addListener((src, prev, on) -> {
-                    updateSymbolFocusable(on);
+                    handleAccessibilityActive(on);
                 });
             }
             return accessibilityActive.get();
+        } else {
+            // chart and its data are allowed to be constructed in a background thread
+            ChangeListener<Scene> li = new ChangeListener<>() {
+                @Override
+                public void changed(ObservableValue<? extends Scene> src, Scene prev, Scene scene) {
+                    if (scene != null) {
+                        if (isAccessibilityActive()) {
+                            handleAccessibilityActive(true);
+                        }
+                        sceneProperty().removeListener(this);
+                    }
+                }
+            };
+            sceneProperty().addListener(li);
         }
         return false;
     }
