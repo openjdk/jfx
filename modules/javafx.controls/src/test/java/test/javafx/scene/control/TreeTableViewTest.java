@@ -3275,10 +3275,10 @@ public class TreeTableViewTest {
 
         table.getColumns().addAll(first);
 
+        stageLoader = new StageLoader(table);
+
         // get the cell at (0,0) - we're hiding the root row
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
         TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof TreeTableCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());

@@ -50,23 +50,25 @@ public class RobotTestBase {
     protected static Scene scene;
     /** Stage valid only during test */
     protected static Stage stage;
-    protected static BorderPane content;
+    protected static BorderPane contentPane;
     /** The Robot instance */
     protected static Robot robot;
 
     public static class App extends Application {
         @Override
         public void start(Stage primaryStage) throws Exception {
-            stage = primaryStage;
             robot = new Robot();
-            content = new BorderPane();
-            content.setPrefWidth(STAGE_WIDTH);
-            content.setPrefHeight(STAGE_HEIGHT);
-            scene = new Scene(content);
+            contentPane = new BorderPane();
+            contentPane.setPrefWidth(STAGE_WIDTH);
+            contentPane.setPrefHeight(STAGE_HEIGHT);
+            scene = new Scene(contentPane);
+
+            stage = primaryStage;
             stage.setScene(scene);
             stage.setOnShown(l -> {
                 Platform.runLater(() -> startupLatch.countDown());
             });
+            stage.setAlwaysOnTop(true);
             stage.show();
         }
     }
@@ -152,7 +154,7 @@ public class RobotTestBase {
      */
     public void setContent(Node n) {
         runAndWait(() -> {
-            content.setCenter(n);
+            contentPane.setCenter(n);
         });
         waitForIdle();
     }
