@@ -95,6 +95,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
         setupTableViewListeners();
     }
 
+    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTableViewListeners() {
         TableView<T> tableView = getSkinnable().getTableView();
         if (tableView == null) {
@@ -115,6 +116,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
             }
         }
     }
+
 
     /* *************************************************************************
      *                                                                         *

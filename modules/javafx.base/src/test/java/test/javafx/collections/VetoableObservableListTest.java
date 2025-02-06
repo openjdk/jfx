@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -233,12 +233,36 @@ public class VetoableObservableListTest {
     public void testRemoveAll() {
         list.removeAll(Arrays.asList("bar", "eggs", "foobar"));
         assertSingleCall(new String[0], new int[] {1,2,3,4});
+
+        list.setAll("a", "b", "c", "d", "e", "f");
+        calls.clear();
+        list.removeAll(List.of("b", "c", "d"));
+        assertEquals(List.of("a", "e", "f"), list);
+        assertSingleCall(new String[0], new int[] {1, 4});
+
+        list.setAll("a", "b", "c", "d", "e", "f");
+        calls.clear();
+        list.removeAll(List.of("a", "b", "d", "e", "f"));
+        assertEquals(List.of("c"), list);
+        assertSingleCall(new String[0], new int[] {0, 2, 3, 6});
     }
 
     @Test
     public void testRetainAll() {
         list.retainAll(Arrays.asList("foo", "barfoo", "ham"));
         assertSingleCall(new String[0], new int[] {1,2,3,4});
+
+        list.setAll("a", "b", "c", "d", "e", "f");
+        calls.clear();
+        list.retainAll(List.of("a", "f"));
+        assertEquals(List.of("a", "f"), list);
+        assertSingleCall(new String[0], new int[] {1, 5});
+
+        list.setAll("a", "b", "c", "d", "e", "f");
+        calls.clear();
+        list.retainAll(List.of("c"));
+        assertEquals(List.of("c"), list);
+        assertSingleCall(new String[0], new int[] {0, 2, 3, 6});
     }
 
     @Test

@@ -109,7 +109,7 @@ void        _g_object_set_has_signal_handler (GObject     *object,
  *
  * Currently private.
  */
-#define _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE(TN, t_n, T_P, _f_, _P_, _C_)       _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE (TN, t_n, T_P) {_P_;} _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER (TN, t_n, T_P, _f_){_C_;} _G_DEFINE_TYPE_EXTENDED_END()
+#define _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE(TN, t_n, T_P, _f_, _P_, _C_)     _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE (TN, t_n) {_P_;} _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER (TN, t_n, T_P, _f_){_C_;} _G_DEFINE_TYPE_EXTENDED_END()
 
 G_END_DECLS
 

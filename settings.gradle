@@ -31,6 +31,8 @@ include "base",
         // BEGIN: incubator placeholder
         //"incubator.mymod",
         // END: incubator placeholder
+        "incubator.input",
+        "incubator.richtext",
         "swing",
         "swt",
         "fxml",
@@ -47,6 +49,8 @@ project(":controls").projectDir = file("modules/javafx.controls")
 // BEGIN: incubator placeholder
 //project(":incubator.mymod").projectDir = file("modules/jfx.incubator.mymod")
 // END: incubator placeholder
+project(":incubator.input").projectDir = file("modules/jfx.incubator.input")
+project(":incubator.richtext").projectDir = file("modules/jfx.incubator.richtext")
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")

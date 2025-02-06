@@ -72,7 +72,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private boolean disclosureNodeDirty = true;
     private Node graphic;
     private final BehaviorBase<TreeTableRow<T>> behavior;
-    private boolean childrenDirty = false;
 
     /* *************************************************************************
      *                                                                         *
@@ -116,13 +115,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             });
         } else {
             registerChangeListener(treeTableView.treeColumnProperty(), (x) -> {
-                // Fix for JDK-8124861: Need to set isDirty to true, rather than the
-                // cheaper updateCells, as otherwise the text indentation will not
-                // be recalculated in TreeTableCellSkin.calculateIndentation()
-                isDirty = true;
-                if (getSkinnable() != null) {
-                    getSkinnable().requestLayout();
-                }
+                updateLeafColumns();
             });
 
             if (getFixedCellSize() > 0) {
@@ -133,6 +126,23 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
                 if (virtualFlow != null) {
                     registerChangeListener(getVirtualFlow().widthProperty(), e -> getTreeTableView().requestLayout());
+                }
+            }
+        }
+    }
+
+    private void updateCachedFixedSize() {
+        if (getSkinnable() != null) {
+            TreeTableView<T> t = getSkinnable().getTreeTableView();
+            if (t != null) {
+                fixedCellSize = t.getFixedCellSize();
+                fixedCellSizeEnabled = fixedCellSize > 0.0;
+
+                if (fixedCellSizeEnabled) {
+                    VirtualFlow<TreeTableRow<T>> virtualFlow = getTableViewSkin().getVirtualFlow();
+                    if (virtualFlow != null) {
+                        registerChangeListener(virtualFlow.widthProperty(), ev -> getSkinnable().requestLayout());
+                    }
                 }
             }
         }
@@ -203,29 +213,16 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         super.updateChildren();
 
         updateDisclosureNodeAndGraphic();
-
-        if (childrenDirty) {
-            childrenDirty = false;
-            if (cells.isEmpty()) {
-                getChildren().clear();
-            } else {
-                // TODO we can optimise this by only showing cells that are
-                // visible based on the table width and the amount of horizontal
-                // scrolling.
-                getChildren().addAll(cells);
-            }
-        }
     }
 
     /** {@inheritDoc} */
     @Override protected void layoutChildren(double x, double y, double w, double h) {
-        if (disclosureNodeDirty) {
-            updateDisclosureNodeAndGraphic();
-            disclosureNodeDirty = false;
+        Node disclosureNode = getDisclosureNode();
+        if (disclosureNode != null && disclosureNode.getParent() == null) {
+            disclosureNodeDirty = true;
         }
 
-        Node disclosureNode = getDisclosureNode();
-        if (disclosureNode != null && disclosureNode.getScene() == null) {
+        if (disclosureNodeDirty) {
             updateDisclosureNodeAndGraphic();
         }
 
@@ -251,13 +248,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     /** {@inheritDoc} */
-    @Override void updateCells(boolean resetChildren) {
-        super.updateCells(resetChildren);
+    @Override void updateCells() {
+        super.updateCells();
 
-        if (resetChildren) {
-            childrenDirty = true;
-            updateChildren();
-        }
+        updateDisclosureNodeAndGraphic();
     }
 
     /** {@inheritDoc} */
@@ -332,6 +326,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     private void updateDisclosureNodeAndGraphic() {
+        disclosureNodeDirty = false;
+
         if (getSkinnable().isEmpty()) {
             getChildren().remove(graphic);
             return;
@@ -355,14 +351,13 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         // check disclosure node
         Node disclosureNode = getSkinnable().getDisclosureNode();
         if (disclosureNode != null) {
-            boolean disclosureVisible = treeItem != null && ! treeItem.isLeaf();
+            boolean disclosureVisible = isDisclosureNodeVisible();
             disclosureNode.setVisible(disclosureVisible);
 
-            if (! disclosureVisible) {
+            if (!disclosureVisible) {
                 getChildren().remove(disclosureNode);
             } else if (disclosureNode.getParent() == null) {
                 getChildren().add(disclosureNode);
-                disclosureNode.toFront();
             } else {
                 disclosureNode.toBack();
             }

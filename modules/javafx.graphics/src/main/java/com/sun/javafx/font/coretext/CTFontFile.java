@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,7 +66,7 @@ class CTFontFile extends PrismFontFile {
 
     private long ctFontRef = 0;
     CTFontFile(String name, String filename, int fIndex, long fontRef) throws Exception {
-        super(name, filename, fIndex, false, false, false, false);
+        super(name, filename, fIndex, false, false, false);
 
         if (fontRef == 0) {
            throw new InternalError("Zero fontref");
@@ -76,8 +76,8 @@ class CTFontFile extends PrismFontFile {
     }
 
     CTFontFile(String name, String filename, int fIndex, boolean register,
-               boolean embedded, boolean copy, boolean tracked) throws Exception {
-        super(name, filename, fIndex, register, embedded, copy, tracked);
+               boolean embedded, boolean copy) throws Exception {
+        super(name, filename, fIndex, register, embedded, copy);
 
         // The super-class code that opens and reads the font can't handle font variations,
         // as used by the macOS "System Font"

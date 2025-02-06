@@ -55,6 +55,7 @@ import javafx.scene.shape.Circle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.javafx.scene.control.SkinStub;
 
 /**
@@ -2051,6 +2052,70 @@ assertEquals(0, firstCell.getIndex());
         flow.scrollPixels(0.01);
 
         assertEquals(0.0, cell1.getLayoutY(), 0);
+    }
+
+    @Test
+    public void testScrollingXIsSnapped() {
+        StageLoader loader = new StageLoader(flow);
+        flow.resize(50, flow.getHeight());
+
+        pulse();
+
+        double newValue = 25.125476811;
+        double snappedNewValue = flow.snapPositionX(newValue);
+        flow.shim_getHbar().setValue(newValue);
+
+        double layoutX = flow.get_clipView().getLayoutX();
+
+        assertEquals(-snappedNewValue, layoutX, 0.0);
+
+        loader.dispose();
+    }
+
+    @Test
+    public void testScrollingYIsSnapped() {
+        flow.setVertical(false);
+
+        StageLoader loader = new StageLoader(flow);
+        flow.resize(50, flow.getHeight());
+
+        pulse();
+
+        double newValue = 25.125476811;
+        double snappedNewValue = flow.snapPositionY(newValue);
+        flow.shim_getVbar().setValue(newValue);
+
+        double layoutY = flow.get_clipView().getLayoutY();
+
+        assertEquals(-snappedNewValue, layoutY, 0.0);
+
+        loader.dispose();
+    }
+
+    @Test
+    public void testSheetChildrenAreAlwaysTheAmountOfVisibleCells() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(24);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(20);
+
+        flow.resize(250, 240);
+        pulse();
+
+        assertEquals(10, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
+
+        flow.resize(250, 480);
+        pulse();
+
+        assertEquals(20, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
+
+        flow.resize(250, 240);
+        pulse();
+
+        assertEquals(10, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
     }
 
 }

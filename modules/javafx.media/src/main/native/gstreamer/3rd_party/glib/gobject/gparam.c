@@ -389,8 +389,8 @@ is_canonical (const gchar *key)
  * dynamically-generated properties which need to be validated at run-time
  * before actually trying to create them.
  *
- * See [canonical parameter names][canonical-parameter-names] for details of
- * the rules for valid names.
+ * See [canonical parameter names][class@GObject.ParamSpec#parameter-names]
+ * for details of the rules for valid names.
  *
  * Returns: %TRUE if @name is a valid property name, %FALSE otherwise.
  * Since: 2.66
@@ -429,9 +429,9 @@ g_param_spec_is_valid_name (const gchar *name)
  *
  * Creates a new #GParamSpec instance.
  *
- * See [canonical parameter names][canonical-parameter-names] for details of
- * the rules for @name. Names which violate these rules lead to undefined
- * behaviour.
+ * See [canonical parameter names][class@GObject.ParamSpec#parameter-names]
+ * for details of the rules for @name. Names which violate these rules lead
+ * to undefined behaviour.
  *
  * Beyond the name, #GParamSpecs have two more descriptive strings, the
  * @nick and @blurb, which may be used as a localized label and description.
@@ -1341,8 +1341,8 @@ pool_depth_list (gpointer key,
  * the prerequisite class, not from the interface that
  * prerequires it.
  *
- * also 'depth' isn't a meaningful concept for interface
- * prerequites.
+ * Also 'depth' isn't a meaningful concept for interface
+ * prerequisites.
  */
 static void
 pool_depth_list_for_interface (gpointer key,

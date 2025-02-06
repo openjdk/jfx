@@ -360,7 +360,7 @@ public abstract class Toolkit {
 
     public abstract boolean isNestedLoopRunning();
 
-    public abstract TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl);
+    public abstract TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl);
 
     public abstract TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner);
     public abstract TKStage createTKEmbeddedStage(HostInterface host);
@@ -594,23 +594,12 @@ public abstract class Toolkit {
     }
 
     public Object getPaint(Paint paint) {
-        if (paint instanceof Color) {
-            return createColorPaint((Color) paint);
-        }
-
-        if (paint instanceof LinearGradient) {
-            return getPaint((LinearGradient) paint);
-        }
-
-        if (paint instanceof RadialGradient) {
-            return getPaint((RadialGradient) paint);
-        }
-
-        if (paint instanceof ImagePattern) {
-            return createImagePatternPaint((ImagePattern) paint);
-        }
-
-        return null;
+        return switch (paint) {
+            case Color color -> createColorPaint(color);
+            case LinearGradient gradient -> getPaint(gradient);
+            case RadialGradient gradient -> getPaint(gradient);
+            case ImagePattern pattern -> createImagePatternPaint(pattern);
+        };
     }
 
     protected static final double clampStopOffset(double offset) {
