@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,14 +126,10 @@ public class PaginationSkin extends SkinBase<Pagination> {
     private boolean nextPageReached = false;
     private boolean setInitialDirection = false;
     private int direction;
-
     private int currentAnimatedIndex;
-    private boolean hasPendingAnimation = false;
-
+    private volatile boolean hasPendingAnimation;
     private boolean animate = true;
-
     private final PaginationBehavior behavior;
-
 
 
     /* *************************************************************************
@@ -706,6 +702,10 @@ public class PaginationSkin extends SkinBase<Pagination> {
     }
 
     private void animateSwitchPage() {
+        if (!Platform.isFxApplicationThread()) {
+            hasPendingAnimation = true;
+            return;
+        }
         if (timeline != null) {
             timeline.setRate(8);
             hasPendingAnimation = true;

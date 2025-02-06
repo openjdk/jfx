@@ -401,7 +401,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349105") // FIX
     @Test
     public void pagination() {
         assumeFalse(SKIP_TEST);
