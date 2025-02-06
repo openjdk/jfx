@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -118,33 +118,20 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 updateLeafColumns();
             });
 
-            if (getFixedCellSize() > 0) {
-                // JDK-8144500:
-                // When in fixed cell size mode, we must listen to the width of the virtual flow, so
-                // that when it changes, we can appropriately add / remove cells that may or may not
-                // be required (because we remove all cells that are not visible).
-                VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
-                if (virtualFlow != null) {
-                    registerChangeListener(getVirtualFlow().widthProperty(), e -> getTreeTableView().requestLayout());
-                }
+            VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
+            if (virtualFlow != null) {
+                registerChangeListener(getVirtualFlow().widthProperty(), e -> requestLayoutWhenFixedCellSizeSet());
             }
         }
     }
 
-    private void updateCachedFixedSize() {
-        if (getSkinnable() != null) {
-            TreeTableView<T> t = getSkinnable().getTreeTableView();
-            if (t != null) {
-                fixedCellSize = t.getFixedCellSize();
-                fixedCellSizeEnabled = fixedCellSize > 0.0;
-
-                if (fixedCellSizeEnabled) {
-                    VirtualFlow<TreeTableRow<T>> virtualFlow = getTableViewSkin().getVirtualFlow();
-                    if (virtualFlow != null) {
-                        registerChangeListener(virtualFlow.widthProperty(), ev -> getSkinnable().requestLayout());
-                    }
-                }
-            }
+    private void requestLayoutWhenFixedCellSizeSet() {
+        // JDK-8144500:
+        // When in fixed cell size mode, we must listen to the width of the virtual flow, so
+        // that when it changes, we can appropriately add / remove cells that may or may not
+        // be required (because we remove all cells that are not visible).
+        if (getFixedCellSize() > 0) {
+            getSkinnable().requestLayout();
         }
     }
 
