@@ -518,7 +518,7 @@ public abstract class Chart extends Region {
      * Invoked in the FX application thread when accessibility active platform property changes.
      * The child classes should override this method to set focus traversable flag on every symbol, as well as
      * other elements that need to be focusable.
-     * @param on whether the accessibility is active 
+     * @param on whether the accessibility is active
      */
     // package protected: custom charts must handle accessbility on their own
     void updateSymbolFocusable(boolean on) {
