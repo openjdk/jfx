@@ -38,6 +38,8 @@ public enum PreviewFeature {
 
     // Add preview feature constants here:
     // TEST_FEATURE("Test Feature")
+    MY_PREVIEW_FEATURE_1("My preview feature 1"),
+    MY_PREVIEW_FEATURE_2("My preview feature 2")
     ;
 
     PreviewFeature(String featureName) {

@@ -25,6 +25,7 @@
 
 package javafx.application;
 
+import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.tk.Toolkit;
 import java.util.Optional;
@@ -762,5 +763,29 @@ public final class Platform {
          * @return the optional value to which the key is mapped
          */
         <T> Optional<T> getValue(String key, Class<T> type);
+    }
+
+    /**
+     * Sample API for a preview feature.
+     *
+     * @return a {@code MyPreviewFeature} instance
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
+     * @since 25
+     */
+    public static MyPreviewFeature getMyPreviewFeature1() {
+        PreviewFeature.MY_PREVIEW_FEATURE_1.checkEnabled();
+        return () -> System.err.println("Hello from Preview Feature 1!");
+    }
+
+    /**
+     * Sample API for a preview feature.
+     *
+     * @return a {@code MyPreviewFeature} instance
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
+     * @since 25
+     */
+    public static MyPreviewFeature getMyPreviewFeature2() {
+        PreviewFeature.MY_PREVIEW_FEATURE_2.checkEnabled();
+        return () -> System.err.println("Hello from Preview Feature 2!");
     }
 }
