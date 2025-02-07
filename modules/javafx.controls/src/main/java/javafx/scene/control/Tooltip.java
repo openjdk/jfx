@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,43 +25,42 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.IDProperty;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.stage.PopupWindowHelper;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
 import javafx.css.SimpleStyleableBooleanProperty;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableObjectProperty;
 import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
-
 import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.DurationConverter;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
 import javafx.css.converter.StringConverter;
-import javafx.css.converter.DurationConverter;
-import javafx.scene.control.skin.TooltipSkin;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
-import javafx.beans.property.*;
-import javafx.beans.value.WritableValue;
-import javafx.css.CssMetaData;
-import javafx.css.FontCssMetaData;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.skin.TooltipSkin;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -69,6 +68,10 @@ import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Window;
 import javafx.util.Duration;
+import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.stage.PopupWindowHelper;
 
 /**
  * Tooltips are common UI elements which are typically used for showing
@@ -769,8 +772,9 @@ public class Tooltip extends PopupControl {
         return getClassCssMetaData();
     }
 
-    @Override public Styleable getStyleableParent() {
-        if (BEHAVIOR.hoveredNode == null) {
+    @Override
+    public Styleable getStyleableParent() {
+        if (!Platform.isFxApplicationThread() || (BEHAVIOR.hoveredNode == null)) {
             return super.getStyleableParent();
         }
         return BEHAVIOR.hoveredNode;
