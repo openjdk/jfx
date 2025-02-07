@@ -226,7 +226,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
             accessControl(c);
             c.setAlignment(Pos.CENTER);
             c.setText(nextString());
-            c.setDefaultButton(true);
+            c.setDefaultButton(nextBoolean());
         });
     }
 
@@ -253,8 +253,8 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new CheckBoxSkin(c));
             return c;
         }, (c) -> {
-            c.setAllowIndeterminate(true);
-            c.setSelected(true);
+            c.setAllowIndeterminate(nextBoolean());
+            c.setSelected(nextBoolean());
             accessControl(c);
         });
     }
@@ -267,8 +267,8 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new ChoiceBoxSkin(c));
             return c;
         }, (c) -> {
-            c.getItems().setAll("ChoiceBox", "1", "2");
-            c.getSelectionModel().select(0);
+            c.getItems().setAll("ChoiceBox", "1", "2", "3");
+            c.getSelectionModel().select(nextInt(4));
             accessControl(c);
         });
     }
@@ -334,7 +334,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new HyperlinkSkin(c));
             return c;
         }, (c) -> {
-            c.setVisited(true);
+            c.setVisited(nextBoolean());
             accessControl(c);
         });
     }
@@ -595,6 +595,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
             return c;
         }, (c) -> {
             accessTextInputControl(c);
+            c.setWrapText(nextBoolean());
         });
     }
 
