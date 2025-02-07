@@ -407,9 +407,12 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setPageFactory((pageIndex) -> {
                 return new Label(pageIndex + " " + nextString());
             });
-            c.setPageCount(100);
-            c.setCurrentPageIndex(nextInt(100));
+            int mx = 1 + nextInt(100);
             accessControl(c);
+            c.setPageCount(mx);
+            c.setCurrentPageIndex(nextInt(mx));
+            // this test generates a lot of garbage quickly
+            System.gc();
         });
     }
 
