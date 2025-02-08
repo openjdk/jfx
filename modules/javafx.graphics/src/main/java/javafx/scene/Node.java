@@ -9079,6 +9079,7 @@ public abstract sealed class Node
      * a running {@link TransitionTimer} with this {@code Node}. This allows the node
      * to keep track of running timers that are targeting its properties.
      *
+     * @param propertyName the CSS name of the targeted property
      * @param timer the transition timer
      */
     private void addTransitionTimer(String propertyName, TransitionTimer timer) {
@@ -9096,7 +9097,7 @@ public abstract sealed class Node
      * This method is called by animatable {@link StyleableProperty} implementations
      * when their {@link TransitionTimer} has completed.
      *
-     * @param timer the transition timer
+     * @param propertyName the CSS name of the targeted property
      */
     private void removeTransitionTimer(String propertyName) {
         var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
