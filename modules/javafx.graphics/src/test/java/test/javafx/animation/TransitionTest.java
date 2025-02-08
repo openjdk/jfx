@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,6 @@
 
 package test.javafx.animation;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import com.sun.javafx.tk.Toolkit;
 import javafx.animation.Interpolator;
 import javafx.animation.ParallelTransition;
@@ -37,8 +33,11 @@ import javafx.animation.TransitionShim;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class TransitionTest {
@@ -48,7 +47,7 @@ public class TransitionTest {
 
     private TransitionImpl transition;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         transition = new TransitionImpl(Duration.millis(1000));
     }

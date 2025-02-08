@@ -25,9 +25,6 @@
 
 package javafx.concurrent;
 
-import java.security.AccessController;
-import java.security.Permission;
-import java.security.PrivilegedAction;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -1001,20 +998,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         return cancel(true);
     }
 
-    // Need to assert the modifyThread permission so an app can cancel
-    // a task that it created (the default executor for the service runs in
-    // its own thread group)
-    // Note that this is needed when running with a security manager.
-    private static final Permission modifyThreadPerm = new RuntimePermission("modifyThread");
-
     @Override public boolean cancel(boolean mayInterruptIfRunning) {
         // Delegate to the super implementation to actually attempt to cancel this thing
         // Assert the modifyThread permission
-        @SuppressWarnings("removal")
-        boolean flag = AccessController.doPrivileged(
-            (PrivilegedAction<Boolean>) () -> super.cancel(mayInterruptIfRunning),
-            null,
-            modifyThreadPerm);
+        boolean flag = super.cancel(mayInterruptIfRunning);
 
         // If cancel succeeded (according to the semantics of the Future cancel method),
         // then we need to make sure the State flag is set appropriately

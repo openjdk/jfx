@@ -24,9 +24,9 @@
  */
 package test.robot.com.sun.glass.ui.monocle;
 
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.monocle.MonocleApplicationShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
@@ -134,15 +134,13 @@ public class MonocleApplicationTest {
     @Test
     public void testCharToKeyCode() throws Exception {
         TestApplication.getStage();
-        Assume.assumeTrue(TestApplication.isMonocle());
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         TestRunnable.invokeAndWait(() -> {
             for (int i = 0; i < TEST_CASES.length; i++) {
                 char ch = (char) TEST_CASES[i][0];
                 int expectedCode = TEST_CASES[i][1];
                 int code = MonocleApplicationShim._getKeyCodeForChar(ch, KeyEvent.VK_UNDEFINED);
-                Assert.assertEquals("Code for character "
-                                    + ((int) ch) + " ('" + ch + "')",
-                                    expectedCode, code);
+                Assertions.assertEquals(expectedCode, code, "Code for character " + ((int) ch) + " ('" + ch + "')");
             }
         });
     }

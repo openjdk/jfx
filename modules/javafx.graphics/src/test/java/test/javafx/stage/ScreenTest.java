@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,16 @@ package test.javafx.stage;
 
 import java.util.List;
 import javafx.stage.Screen;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public final class ScreenTest {
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testGetScreensAreUnmodifiable() {
-        final List<Screen> screens = Screen.getScreens();
-        screens.clear();
+        assertThrows(UnsupportedOperationException.class, () -> {
+            final List<Screen> screens = Screen.getScreens();
+            screens.clear();
+        });
     }
 }

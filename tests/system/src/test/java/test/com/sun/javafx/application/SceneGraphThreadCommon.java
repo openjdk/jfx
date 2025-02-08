@@ -25,9 +25,10 @@
 
 package test.com.sun.javafx.application;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.util.Util.TIMEOUT;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -46,7 +47,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
 import test.util.Util;
 
 /**
@@ -121,7 +121,7 @@ public class SceneGraphThreadCommon {
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
+                fail("Timeout waiting for Application to launch");
             }
         } catch (InterruptedException ex) {
             Throwable t = launchErr.get();
@@ -143,18 +143,11 @@ public class SceneGraphThreadCommon {
         Platform.exit();
         try {
             if (!doneLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to finish");
+                fail("Timeout waiting for Application to finish");
             }
         } catch (InterruptedException ex) {
             Throwable t = launchErr.get();
-            if (t instanceof RuntimeException) {
-                throw (RuntimeException)t;
-            }
-            else if (t instanceof Error) {
-                throw (Error)t;
-            } else {
-                throw new RuntimeException(t);
-            }
+            fail(t);
         }
     }
 

@@ -26,11 +26,9 @@
 package test.robot.com.sun.glass.ui.monocle;
 
 import java.util.Collection;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -49,32 +47,34 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
     protected int totalDeltaX = 0;
     protected int totalDeltaY = 0;
 
-    public ScrollTestBase(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    public static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
-    @Before
-    public void init() {
-        Assume.assumeTrue(TestApplication.isMonocle());
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void init(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
+
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         //Scroll tests should be running only on platforms that support current feature
-        Assume.assumeTrue(Boolean.getBoolean("com.sun.javafx.gestures.scroll"));
+        Assumptions.assumeTrue(Boolean.getBoolean("com.sun.javafx.gestures.scroll"));
+
         point1X = (int) Math.round(width * 0.5);
         point1Y = (int) Math.round(height * 0.5);
         point2X = point1X + 40;
         point2Y = point1Y;
     }
 
-    @After
+    @AfterEach
     public void releaseAll() throws Exception {
-        if (device.getPressedPoints() == 1) {
-            releaseFirstFinger();
-        } else if (device.getPressedPoints() == 2){
-            releaseAllFingers();
+        // junit5: device can be null in ignored/assumed cases
+        if (device != null) {
+            if (device.getPressedPoints() == 1) {
+                releaseFirstFinger();
+            } else if (device.getPressedPoints() == 2) {
+                releaseAllFingers();
+            }
         }
     }
 
@@ -99,7 +99,7 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
     }
 
     protected void pressFirstFinger() throws Exception {
-        Assert.assertEquals(0, device.getPressedPoints());
+        Assertions.assertEquals(0, device.getPressedPoints());
         TestLogShim.reset();
         p1 = device.addPoint(point1X, point1Y);
         device.sync();
@@ -107,7 +107,7 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
     }
 
     protected void pressSecondFinger() throws Exception {
-        Assert.assertEquals(1, device.getPressedPoints());
+        Assertions.assertEquals(1, device.getPressedPoints());
         TestLogShim.reset();
         point2X = point1X + 40;
         point2Y = point1Y;
@@ -127,8 +127,8 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
     protected void moveOneFinger(int deltaX, int deltaY, int numOfIterations,
                                boolean firstMove) throws Exception {
         TestLogShim.reset();
-        Assert.assertEquals(1, device.getPressedPoints());
-        Assert.assertTrue(paramsValid(deltaX, deltaY, numOfIterations,
+        Assertions.assertEquals(1, device.getPressedPoints());
+        Assertions.assertTrue(paramsValid(deltaX, deltaY, numOfIterations,
                 point1X, point1Y));
         point1X += deltaX;
         point1Y += deltaY;
@@ -154,8 +154,8 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
                         + ", touch points: " + 1
                         + ", inertia value: false");
             } else {
-                Assert.assertEquals(0, TestLogShim.countLogContaining("Scroll started"));
-                Assert.assertEquals(0, TestLogShim.countLogContaining("Scroll, DeltaX:"));
+                Assertions.assertEquals(0, TestLogShim.countLogContaining("Scroll started"));
+                Assertions.assertEquals(0, TestLogShim.countLogContaining("Scroll, DeltaX:"));
             }
         } else {
             totalDeltaX += deltaX;
@@ -217,8 +217,8 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
                                 boolean firstMove, boolean fingersChanged)
                                 throws Exception {
         TestLogShim.reset();
-        Assert.assertEquals(2, device.getPressedPoints());
-        Assert.assertTrue(paramsValid(deltaX, deltaY, numOfIterations,
+        Assertions.assertEquals(2, device.getPressedPoints());
+        Assertions.assertTrue(paramsValid(deltaX, deltaY, numOfIterations,
                 point1X, point1Y) && paramsValid(deltaX, deltaY, numOfIterations,
                 point2X, point2Y));
         point1X += deltaX;
@@ -249,9 +249,9 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
                         + ", touch points: " + 2
                         + ", inertia value: false");
             } else {
-                Assert.assertEquals(0, TestLogShim.countLogContaining("Scroll " +
+                Assertions.assertEquals(0, TestLogShim.countLogContaining("Scroll " +
                         "started"));
-                Assert.assertEquals(0, TestLogShim.countLogContaining("Scroll, DeltaX:"));
+                Assertions.assertEquals(0, TestLogShim.countLogContaining("Scroll, DeltaX:"));
             }
         } else {
             if (fingersChanged) {
@@ -317,7 +317,7 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
      * The method releases one finger that is currently pressing on the screen
      */
     protected void releaseFirstFinger() throws Exception {
-        Assert.assertEquals(1, device.getPressedPoints());
+        Assertions.assertEquals(1, device.getPressedPoints());
         String expectedLog;
         TestLogShim.reset();
         device.removePoint(p1);
@@ -339,7 +339,7 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
         }
         totalDeltaX = 0;
         totalDeltaY = 0;
-        Assert.assertEquals(expectedValue, TestLogShim.countLogContaining(expectedLog));
+        Assertions.assertEquals(expectedValue, TestLogShim.countLogContaining(expectedLog));
         if (TestLogShim.countLogContaining("Scroll finished") > 0) {
             TestLogShim.waitForLogContainingSubstrings("Scroll", "inertia value: true");
         }
@@ -350,7 +350,7 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
      * pressing on the screen
      */
     protected void releaseSecondFinger() throws Exception {
-        Assert.assertEquals(2, device.getPressedPoints());
+        Assertions.assertEquals(2, device.getPressedPoints());
         String expectedLog;
         TestLogShim.reset();
         device.removePoint(p2);
@@ -372,14 +372,14 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
         }
         totalDeltaX = 0;
         totalDeltaY = 0;
-        Assert.assertEquals(expectedValue, TestLogShim.countLogContaining(expectedLog));
+        Assertions.assertEquals(expectedValue, TestLogShim.countLogContaining(expectedLog));
     }
 
     /**
      * The method releases two fingers that are currently pressing on the screen
      */
     protected void releaseAllFingers() throws Exception {
-        Assert.assertEquals(2, device.getPressedPoints());
+        Assertions.assertEquals(2, device.getPressedPoints());
         String expectedLog;
         TestLogShim.reset();
         device.removePoint(p1);
@@ -402,14 +402,14 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
         }
         totalDeltaX = 0;
         totalDeltaY = 0;
-        Assert.assertEquals(expectedValue, TestLogShim.countLogContaining(expectedLog));
+        Assertions.assertEquals(expectedValue, TestLogShim.countLogContaining(expectedLog));
         if (TestLogShim.countLogContaining("Scroll finished") > 0) {
             TestLogShim.waitForLogContainingSubstrings("Scroll", "inertia value: true");
         }
     }
 
     protected void tapToStopInertia() throws Exception {
-        Assert.assertEquals(0, device.getPressedPoints());
+        Assertions.assertEquals(0, device.getPressedPoints());
         TestLogShim.reset();
         int p = device.addPoint(point1X, point1Y);
         device.sync();

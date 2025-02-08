@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,9 @@ package test.javafx.scene.web;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the Image to DataURL function
@@ -39,27 +39,27 @@ public class SwingDependencyTest extends TestBase {
     private final PrintStream err = System.err;
 
     private static final String htmlContent = "\n"
-        + "<!DOCTYPE html>\n"
-        + "<html>\n"
-        + "<body>\n"
-        + "<canvas id=\"theCanvas\" width=\"200\" height=\"100\">\n"
-        + "</canvas>\n"
-        + "<p id = \"encodedText\">\n"
-        + "</p>\n"
-        + "<script>\n"
-        + "var c = document.getElementById(\"theCanvas\");\n"
-        + "var ctx = c.getContext(\"2d\");\n"
-        + "var my_gradient=ctx.createLinearGradient(0,0,0,75);\n"
-        + "my_gradient.addColorStop(0,\"red\");\n"
-        + "my_gradient.addColorStop(0.5,\"green\");\n"
-        + "my_gradient.addColorStop(1,\"blue\");\n"
-        + "ctx.fillStyle=my_gradient;\n"
-        + "ctx.fillRect(0,0,150,75);\n"
-        + "var dataURL = c.toDataURL();\n"
-        + "document.getElementById(\"encodedText\").innerHTML=dataURL;\n"
-        + "</script>\n"
-        + "</body>\n"
-        + "</html>\n";
+            + "<!DOCTYPE html>\n"
+            + "<html>\n"
+            + "<body>\n"
+            + "<canvas id=\"theCanvas\" width=\"200\" height=\"100\">\n"
+            + "</canvas>\n"
+            + "<p id = \"encodedText\">\n"
+            + "</p>\n"
+            + "<script>\n"
+            + "var c = document.getElementById(\"theCanvas\");\n"
+            + "var ctx = c.getContext(\"2d\");\n"
+            + "var my_gradient=ctx.createLinearGradient(0,0,0,75);\n"
+            + "my_gradient.addColorStop(0,\"red\");\n"
+            + "my_gradient.addColorStop(0.5,\"green\");\n"
+            + "my_gradient.addColorStop(1,\"blue\");\n"
+            + "ctx.fillStyle=my_gradient;\n"
+            + "ctx.fillRect(0,0,150,75);\n"
+            + "var dataURL = c.toDataURL();\n"
+            + "document.getElementById(\"encodedText\").innerHTML=dataURL;\n"
+            + "</script>\n"
+            + "</body>\n"
+            + "</html>\n";
 
     @Test
     public void testSwingDependency() throws Exception {
@@ -71,11 +71,10 @@ public class SwingDependencyTest extends TestBase {
 
         System.setErr(err);
 
-        Assert.assertFalse("ClassNotFoundException found",
-                            bytes.toString().contains("ClassNotFoundException"));
+        assertFalse(bytes.toString().contains("ClassNotFoundException"), "ClassNotFoundException found");
     }
 
-    @After
+    @AfterEach
     public void resetSystemErr() {
         System.setErr(err);
     }

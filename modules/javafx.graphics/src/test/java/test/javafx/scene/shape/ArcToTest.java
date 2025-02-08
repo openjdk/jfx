@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,57 +34,69 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
 import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
-import org.junit.Test;
 
 import java.lang.reflect.Method;
 import javafx.scene.shape.ArcTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class ArcToTest {
 
-    @Test public void testSetGetX() throws Exception {
+    @Test
+    public void testSetGetX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "x", 123.2, 0.0);
     }
 
-    @Test public void testSetGetY() throws Exception {
+    @Test
+    public void testSetGetY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "y", 123.2, 0.0);
     }
 
-    @Test public void testSetGetRadiusX() throws Exception {
+    @Test
+    public void testSetGetRadiusX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "radiusX", 123.2, 0.0);
     }
 
-    @Test public void testSetGetRadiusY() throws Exception {
+    @Test
+    public void testSetGetRadiusY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "radiusY", 123.2, 0.0);
     }
 
 
-    @Test public void testSetGetXAxisRotation() throws Exception {
+    @Test
+    public void testSetGetXAxisRotation() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "xAxisRotation", 123.2, 0.0);
     }
 
-    @Test public void testSetGetLargeArcFlag() throws Exception {
+    @Test
+    public void testSetGetLargeArcFlag() throws Exception {
         TestUtils.testBooleanPropertyGetterSetter(new ArcTo(), "largeArcFlag");
     }
 
-    @Test public void testSetGetSweepFlag() throws Exception {
+    @Test
+    public void testSetGetSweepFlag() throws Exception {
         TestUtils.testBooleanPropertyGetterSetter(new ArcTo(), "sweepFlag");
     }
 
     //TODO test addTo
 
-    @Test public void testDoublePropertySynced_X() throws Exception {
+    @Test
+    public void testDoublePropertySynced_X() throws Exception {
         checkSyncedProperty("x", Coords.X, 200.0);
     }
 
-    @Test public void testDoublePropertySynced_Y() throws Exception {
+    @Test
+    public void testDoublePropertySynced_Y() throws Exception {
         checkSyncedProperty("y", Coords.Y, 200.0);
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new ArcTo().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

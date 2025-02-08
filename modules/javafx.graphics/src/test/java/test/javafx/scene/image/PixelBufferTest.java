@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,11 +34,10 @@ import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.util.Callback;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public final class PixelBufferTest {
     private static final int WIDTH = 10;
@@ -61,65 +60,51 @@ public final class PixelBufferTest {
 
     @Test
     public void testCreatePixelBufferWithLessCapacityBuffer() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(WIDTH, HEIGHT + 1, BYTE_BUFFER, BYTE_BGRA_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferDimensionsOverflow() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(0xFFFFF, 0xFFFFF, BYTE_BUFFER, BYTE_BGRA_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferWx4xHIsMaxint() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(0x4000, 0x8000, BYTE_BUFFER, BYTE_BGRA_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferWidth0() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(0, HEIGHT, BYTE_BUFFER, BYTE_BGRA_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferHeight0() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(WIDTH, 0, BYTE_BUFFER, BYTE_BGRA_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferBufferNull() {
-        try {
+        assertThrows(NullPointerException.class, () -> {
             new PixelBuffer<>(WIDTH, HEIGHT, null, BYTE_BGRA_PRE_PF);
-            fail("Expected NullPointerException");
-        } catch (NullPointerException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixeBufferPixelFormatNull() {
-        try {
+        assertThrows(NullPointerException.class, () -> {
             new PixelBuffer<>(WIDTH, HEIGHT, BYTE_BUFFER, null);
-            fail("Expected NullPointerException");
-        } catch (NullPointerException expected) {
-        }
+        });
     }
 
     @Test
@@ -146,12 +131,10 @@ public final class PixelBufferTest {
 
     @Test
     public void testUpdatePixelBufferCallbackNull() {
-        try {
+        assertThrows(NullPointerException.class, () -> {
             PixelBuffer<ByteBuffer> pixelBuffer = new PixelBuffer<>(WIDTH, HEIGHT, BYTE_BUFFER, BYTE_BGRA_PRE_PF);
             pixelBuffer.updateBuffer(null);
-            fail("Expected NullPointerException");
-        } catch (NullPointerException expected) {
-        }
+        });
     }
 
     @Test
@@ -165,76 +148,60 @@ public final class PixelBufferTest {
 
     @Test
     public void testCreatePixelBufferIntArgbPreLessCapacityBuffer() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(WIDTH, HEIGHT + 1, INT_BUFFER, INT_ARGB_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferIntArgbPreDimensionsOverflow() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(0xFFFFF, 0xFFFFF, INT_BUFFER, INT_ARGB_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferIntArgbPreWxHIsMaxint() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(0x8000, 0x10000, INT_BUFFER, INT_ARGB_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferIntArgbPF() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(WIDTH, HEIGHT, INT_BUFFER, PixelFormat.getIntArgbInstance());
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferByteBgraPF() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(WIDTH, HEIGHT, BYTE_BUFFER, PixelFormat.getByteBgraInstance());
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     public void testCreatePixelBufferByteRgbPF() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer<>(WIDTH, HEIGHT, BYTE_BUFFER, PixelFormat.getByteRgbInstance());
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     @SuppressWarnings("unchecked")
     public void testCreatePixelBufferIntBufferByteBgraPrePF() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer(WIDTH, HEIGHT, INT_BUFFER, BYTE_BGRA_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
     @SuppressWarnings("unchecked")
     public void testCreatePixelBufferByteBufferIntArgbPrePF() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             new PixelBuffer(WIDTH, HEIGHT, BYTE_BUFFER, INT_ARGB_PRE_PF);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-        }
+        });
     }
 
     @Test
@@ -248,10 +215,8 @@ public final class PixelBufferTest {
     public void testWritableImageGetPixelWriter() {
         PixelBuffer<ByteBuffer> pixelBuffer = new PixelBuffer<>(WIDTH, HEIGHT, BYTE_BUFFER, BYTE_BGRA_PRE_PF);
         WritableImage image = new WritableImage(pixelBuffer);
-        try {
+        assertThrows(UnsupportedOperationException.class, () -> {
             image.getPixelWriter();
-            fail("Expected UnsupportedOperationException");
-        } catch (UnsupportedOperationException expected) {
-        }
+        });
     }
 }

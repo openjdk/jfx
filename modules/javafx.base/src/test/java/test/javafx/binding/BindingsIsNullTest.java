@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package test.javafx.binding;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import test.javafx.beans.InvalidationListenerMock;
 import javafx.beans.binding.Bindings;
@@ -36,8 +36,9 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BindingsIsNullTest {
 
@@ -45,7 +46,7 @@ public class BindingsIsNullTest {
     private StringProperty os;
     private InvalidationListenerMock observer;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         oo = new SimpleObjectProperty<>();
         os = new SimpleStringProperty();
@@ -136,14 +137,20 @@ public class BindingsIsNullTest {
         observer.check(binding, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void test_IsNull_NPE() {
-        Bindings.isNull(null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.isNull(null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void test_IsNotNull_NPE() {
-        Bindings.isNotNull(null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.isNotNull(null);
+        });
     }
+
 
 }

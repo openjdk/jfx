@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -43,14 +39,18 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class GridPaneTest {
     GridPane gridpane;
 
-    @Before public void setUp() {
+    @BeforeEach public void setUp() {
         this.gridpane = new GridPane();
     }
 
@@ -70,8 +70,8 @@ public class GridPaneTest {
         gridpane.autosize();
         gridpane.layout();
 
-        assertNull(null, gridpane.getAlignment());
-        assertNull(null, gridpane.alignmentProperty().get());
+        assertNull(gridpane.getAlignment());
+        assertNull(gridpane.alignmentProperty().get());
     }
 
     @Test public void testSimpleGridPane() {

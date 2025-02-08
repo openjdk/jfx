@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,11 +41,11 @@ import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
 import test.javafx.binding.Variable;
 import javafx.collections.ObservableList;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SelectBindingTest {
 
@@ -101,13 +101,13 @@ public class SelectBindingTest {
     private StringBinding select;
     private ObservableList<?> dependencies;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         System.err.println("SelectBindingTest : log messages are expected from these tests.");
         ErrorLoggingUtiltity.reset();
     }
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         a = new Variable("a");
         b = new Variable("b");
@@ -381,9 +381,11 @@ public class SelectBindingTest {
         ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void createWithRootNull() {
-        select = Bindings.selectString(null, "next", "name");
+        assertThrows(NullPointerException.class, () -> {
+            select = Bindings.selectString(null, "next", "name");
+        });
     }
 
     @Test
@@ -397,9 +399,11 @@ public class SelectBindingTest {
         ErrorLoggingUtiltity.checkWarning(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void createWithOneStepIsNull() {
-        select = Bindings.selectString(a.nextProperty(), null, "name");
+        assertThrows(NullPointerException.class, () -> {
+            select = Bindings.selectString(a.nextProperty(), null, "name");
+        });
     }
 
     @Test

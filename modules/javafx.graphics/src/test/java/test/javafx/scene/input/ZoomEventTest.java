@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,9 +38,13 @@ import javafx.scene.input.PickResult;
 import javafx.scene.input.ZoomEvent;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.Assert;
-import org.junit.Test;
-import static org.junit.Assert.*;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ZoomEventTest {
 
@@ -218,8 +222,8 @@ public class ZoomEventTest {
 
         zoomed = false;
         rect.setOnZoom(event -> {
-            Assert.assertEquals(1.2, event.getZoomFactor(), 0.0001);
-            Assert.assertEquals(2.4, event.getTotalZoomFactor(), 0.0001);
+            assertEquals(1.2, event.getZoomFactor(), 0.0001);
+            assertEquals(2.4, event.getTotalZoomFactor(), 0.0001);
             zoomed = true;
         });
 
@@ -421,16 +425,16 @@ public class ZoomEventTest {
         zoomed = false;
         zoomed2 = false;
         rect.setOnZoom(event -> {
-            Assert.assertEquals(150, event.getX(), 0.00001);
-            Assert.assertEquals(150, event.getY(), 0.00001);
-            Assert.assertEquals(0, event.getZ(), 0.00001);
+            assertEquals(150, event.getX(), 0.00001);
+            assertEquals(150, event.getY(), 0.00001);
+            assertEquals(0, event.getZ(), 0.00001);
             zoomed = true;
         });
 
         scene.setOnZoom(event -> {
-            Assert.assertEquals(150, event.getX(), 0.00001);
-            Assert.assertEquals(150, event.getY(), 0.00001);
-            Assert.assertEquals(50, event.getZ(), 0.00001);
+            assertEquals(150, event.getX(), 0.00001);
+            assertEquals(150, event.getY(), 0.00001);
+            assertEquals(50, event.getZ(), 0.00001);
             zoomed2 = true;
         });
 
@@ -518,8 +522,8 @@ public class ZoomEventTest {
         zoomed = false;
         zoomed2 = false;
         rect2.setOnZoomStarted(event -> {
-            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            assertEquals(250.0, event.getSceneX(), 0.0001);
+            assertEquals(250.0, event.getSceneY(), 0.0001);
             zoomed2 = true;
         });
         SceneHelper.processMouseEvent(scene, generator.generateMouseEvent(
@@ -534,8 +538,8 @@ public class ZoomEventTest {
         zoomed = false;
         zoomed2 = false;
         rect2.setOnZoom(event -> {
-            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            assertEquals(150.0, event.getSceneX(), 0.0001);
+            assertEquals(150.0, event.getSceneY(), 0.0001);
             zoomed2 = true;
         });
         SceneHelper.processMouseEvent(scene, generator.generateMouseEvent(
@@ -550,8 +554,8 @@ public class ZoomEventTest {
         zoomed = false;
         zoomed2 = false;
         rect2.setOnZoomFinished(event -> {
-            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            assertEquals(150.0, event.getSceneX(), 0.0001);
+            assertEquals(150.0, event.getSceneY(), 0.0001);
             zoomed2 = true;
         });
         ((StubScene) SceneHelper.getPeer(scene)).getListener().zoomEvent(
@@ -568,8 +572,8 @@ public class ZoomEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         rect.setOnZoomFinished(event -> {
-            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            assertEquals(250.0, event.getSceneX(), 0.0001);
+            assertEquals(250.0, event.getSceneY(), 0.0001);
             zoomed = true;
         });
 
@@ -601,8 +605,8 @@ public class ZoomEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         rect.setOnZoom(event -> {
-            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            assertEquals(150.0, event.getSceneX(), 0.0001);
+            assertEquals(150.0, event.getSceneY(), 0.0001);
             zoomed = true;
         });
 

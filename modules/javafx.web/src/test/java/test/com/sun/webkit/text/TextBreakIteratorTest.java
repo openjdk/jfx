@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,8 @@ package test.com.sun.webkit.text;
 
 import com.sun.webkit.text.TextBreakIteratorShim;
 import java.text.BreakIterator;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A unit test for the {@link TextBreakIterator} class.
@@ -51,21 +51,20 @@ public class TextBreakIteratorTest {
         int method = TextBreakIteratorShim.TEXT_BREAK_PRECEDING;
         for (int type : ITERATOR_TYPES) {
             String[] strings = new String[] {
-                "", "a", "aa", "a a", "a a. a a."
+                    "", "a", "aa", "a a", "a a. a a."
             };
             for (String string : strings) {
                 int length = string.length();
                 BreakIterator it =
                         TextBreakIteratorShim.getIterator(type, "en-US", string, false);
                 int[] positions = new int[] {
-                    length + 1, length + 2, length + 10
+                        length + 1, length + 2, length + 10
                 };
                 for (int position : positions) {
                     int result = TextBreakIteratorShim.invokeMethod(
                             it, method, position);
-                    assertEquals("Unexpected result, type: " + type
-                            + ", string: " + string + ", position: " + position,
-                            length, result);
+                    assertEquals(length, result, "Unexpected result, type: " + type
+                            + ", string: " + string + ", position: " + position);
                 }
             }
         }

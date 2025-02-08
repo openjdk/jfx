@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,9 +59,6 @@ import javafx.scene.effect.Effect;
 import javafx.scene.shape.*;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
@@ -84,14 +81,21 @@ import javafx.scene.transform.Shear;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 /**
  * Tests various aspects of Node.
  *
  */
 public class NodeTest {
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
 
     // Things to test:
         // When parent is changed, should cursor on toolkit change as well if
@@ -155,7 +159,7 @@ public class NodeTest {
         // Test focus... (SHOULD NOT DEPEND ON KEY LISTENERS BEING INSTALLED!!)
 
         // Test that clip is taken into account for both "contains" and
-        // "intersects". See http://javafx-jira.kenai.com/browse/RT-646
+        // "intersects". See JDK-8105568
 
 
 
@@ -170,14 +174,16 @@ public class NodeTest {
         Rectangle node = new Rectangle();
         Set<PseudoClass> set1 = node.getPseudoClassStates();
         Set<PseudoClass> set2 = node.getPseudoClassStates();
-        assertSame("getPseudoClassStates() should always return the same instance",
-                set1, set2);
+        assertSame(set1, set2,
+                   "getPseudoClassStates() should always return the same instance");
     }
 
-    @Test(expected=UnsupportedOperationException.class)
+    @Test
     public void testPseudoClassStatesIsUnmodifiable() {
-        Node node = new Rectangle();
-        node.getPseudoClassStates().add(PseudoClass.getPseudoClass("dummy"));
+        assertThrows(UnsupportedOperationException.class, () -> {
+            Node node = new Rectangle();
+            node.getPseudoClassStates().add(PseudoClass.getPseudoClass("dummy"));
+        });
     }
 
     @Test
@@ -214,7 +220,7 @@ public class NodeTest {
         Node node = new Rectangle();
         WeakReference<Set<?>> weakRef = new WeakReference<>(node.getPseudoClassStates());
         TestUtils.attemptGC(weakRef);
-        assertNotNull("pseudoClassStates must not be gc'ed", weakRef.get());
+        assertNotNull(weakRef.get(), "pseudoClassStates must not be gc'ed");
     }
 
 // TODO disable this because it depends on TestNode
@@ -961,13 +967,14 @@ public class NodeTest {
         clip2.setClip(rectA);
         rectA.setClip(clip1);
         assertEquals(rectA.getClip(), clip1);
-        thrown.expect(IllegalArgumentException.class);
-        try {
-            rectA.setClip(clip2);
-        } catch (final IllegalArgumentException e) {
-            assertNotSame(rectA.getClip(), clip2);
-            throw e;
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+            try {
+                rectA.setClip(clip2);
+            } catch (final IllegalArgumentException e) {
+                assertNotSame(rectA.getClip(), clip2);
+                throw e;
+            }
+        });
     }
 
     @Test public void testProperties() {

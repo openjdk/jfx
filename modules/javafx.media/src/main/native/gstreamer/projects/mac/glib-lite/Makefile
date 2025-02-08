@@ -112,6 +112,7 @@ C_SOURCES = glib/garcbox.c \
             glib/gscanner.c \
             glib/gsequence.c \
             glib/gspawn.c \
+            glib/gspawn-posix.c \
             glib/gshell.c \
             glib/gslice.c \
             glib/gslist.c \
@@ -121,7 +122,6 @@ C_SOURCES = glib/garcbox.c \
             glib/gstringchunk.c \
             glib/gtestutils.c \
             glib/gthread.c \
-            glib/gthread-posix.c \
             glib/gthreadpool.c \
             glib/gtimer.c \
             glib/gtimezone.c \

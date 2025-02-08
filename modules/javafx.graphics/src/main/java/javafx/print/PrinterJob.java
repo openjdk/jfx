@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,15 +107,8 @@ public final class PrinterJob {
      * a document. These will be enumerated here so long as the
      * platform also enumerates them as if they are printers.
      * @return a new PrinterJob instance, or null.
-     * @throws SecurityException if a job does not have permission
-     * to initiate a printer job.
      */
     public static final PrinterJob createPrinterJob() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPrintJobAccess();
-        }
         Printer printer = Printer.getDefaultPrinter();
         if (printer == null) {
             return null;
@@ -131,15 +124,8 @@ public final class PrinterJob {
      * @param printer to use for the job. If the printer is currently
      * unavailable (eg offline) then this may return null.
      * @return a new PrinterJob, or null.
-     * @throws SecurityException if a job does not have permission
-     * to initiate a printer job.
      */
     public static final PrinterJob createPrinterJob(Printer printer) {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPrintJobAccess();
-        }
         return new PrinterJob(printer);
     }
 

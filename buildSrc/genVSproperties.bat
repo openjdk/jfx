@@ -23,7 +23,7 @@ REM questions.
 
 setlocal ENABLEDELAYEDEXPANSION
 
-REM Windows bat file that runs vcvars64.bat for Visual Studio
+REM Windows bat file that runs vcvarsall.bat for Visual Studio
 REM and echoes out a property file with the values of the environment
 REM variables we want, e.g. PATH, INCLUDE, LIB, and LIBPATH.
 
@@ -68,7 +68,7 @@ if not "%VSCOMNTOOLS%"=="" (
 if "%VSTOOLSDIR%"=="" exit
 if not exist "%VSTOOLSDIR%" exit
 
-call "%VSTOOLSDIR%\vcvars64.bat" > NUL
+call "%VSTOOLSDIR%\vcvarsall.bat" %VCARCH% > NUL
 
 REM Set legacy MSVCDIR variable in case some Makefiles still need it
 if "%MSVCDIR%"=="" set MSVCDIR=%VCINSTALLDIR%

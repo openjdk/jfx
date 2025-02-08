@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,50 +29,39 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public final class Utils_getScreenForRectangle_Test {
-    private final Rectangle2D rectangle;
-    private final int expectedScreenIndex;
 
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(
-                new Object[] {
-                    config(100, 100, 100, 100, 0),
-                    config(2020, 200, 100, 100, 1),
-                    config(1920 - 75, 200, 100, 100, 0),
-                    config(1920 - 25, 200, 100, 100, 1),
-                    config(0, 0, 3360, 1200, 0),
-                    config(2020, 50, 100, 100, 1),
-                    config(2020, 70, 100, 100, 1),
-                    config(1970, -50, 100, 100, 0),
-                    config(2170, -50, 100, 100, 1),
-                    config(2020, 1150, 100, 100, 1),
-                    config(2020, 1170, 100, 100, 0),
-                    config(1970, 1250, 100, 100, 0),
-                    config(2170, 1250, 100, 100, 1)
-                });
+    public static Stream<Arguments> data() {
+        return Stream.of(
+            // rectangle, expectedScreenIndex
+            Arguments.of(new Rectangle2D(100, 100, 100, 100), 0),
+            Arguments.of(new Rectangle2D(2020, 200, 100, 100), 1),
+            Arguments.of(new Rectangle2D(1920 - 75, 200, 100, 100), 0),
+            Arguments.of(new Rectangle2D(1920 - 25, 200, 100, 100), 1),
+            Arguments.of(new Rectangle2D(0, 0, 3360, 1200), 0),
+            Arguments.of(new Rectangle2D(2020, 50, 100, 100), 1),
+            Arguments.of(new Rectangle2D(2020, 70, 100, 100), 1),
+            Arguments.of(new Rectangle2D(1970, -50, 100, 100), 0),
+            Arguments.of(new Rectangle2D(2170, -50, 100, 100), 1),
+            Arguments.of(new Rectangle2D(2020, 1150, 100, 100), 1),
+            Arguments.of(new Rectangle2D(2020, 1170, 100, 100), 0),
+            Arguments.of(new Rectangle2D(1970, 1250, 100, 100), 0),
+            Arguments.of(new Rectangle2D(2170, 1250, 100, 100), 1)
+        );
     }
 
-    public Utils_getScreenForRectangle_Test(
-            final Rectangle2D rectangle, final int expectedScreenIndex) {
-        this.rectangle = rectangle;
-        this.expectedScreenIndex = expectedScreenIndex;
-    }
-
-    @Before
+    @BeforeEach
     public void setUp() {
         ((StubToolkit) Toolkit.getToolkit()).setScreens(
                 new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
@@ -80,24 +69,16 @@ public final class Utils_getScreenForRectangle_Test {
                                         1920, 160, 1440, 900, 96));
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         ((StubToolkit) Toolkit.getToolkit()).resetScreens();
     }
 
-    @Test
-    public void test() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void test(Rectangle2D rectangle, int expectedScreenIndex) {
         final Screen selectedScreen = Utils.getScreenForRectangle(rectangle);
-        Assert.assertEquals(expectedScreenIndex,
-                            Screen.getScreens().indexOf(selectedScreen));
-    }
-
-    private static Object[] config(final double x, final double y,
-                                   final double width, final double height,
-                                   final int expectedScreenIndex) {
-        return new Object[] {
-            new Rectangle2D(x, y, width, height),
-            expectedScreenIndex
-        };
+        assertEquals(expectedScreenIndex,
+                     Screen.getScreens().indexOf(selectedScreen));
     }
 }

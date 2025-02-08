@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -273,7 +273,7 @@ public abstract class AffineBase extends BaseTransform {
     @Override
     public int getType() {
         if (type == TYPE_UNKNOWN) {
-            updateState(); // TODO: Is this really needed? (RT-26884)
+            updateState(); // TODO: Is this really needed? (JDK-8092003)
             if (type == TYPE_UNKNOWN) {
                 type = calculateType();
             }
@@ -989,7 +989,7 @@ public abstract class AffineBase extends BaseTransform {
         case (APPLY_SCALE | APPLY_TRANSLATE):
         case (APPLY_SCALE):
             RectBounds b = new RectBounds(src);
-            //TODO: Need to verify that this is a safe cast ... (RT-26885)
+            //TODO: Need to verify that this is a safe cast ... (JDK-8092066)
             b = (RectBounds) transform(b, b);
             dst.setBounds(b);
             return;
@@ -1940,7 +1940,7 @@ public abstract class AffineBase extends BaseTransform {
         case (APPLY_SCALE | APPLY_TRANSLATE):
         case (APPLY_SCALE):
             RectBounds b = new RectBounds(src);
-            //TODO: Need to verify this casting is safe .... (RT-26885)
+            //TODO: Need to verify this casting is safe .... (JDK-8092066)
             b = (RectBounds) inverseTransform(b, b);
             dst.setBounds(b);
             return;
@@ -2674,7 +2674,7 @@ public abstract class AffineBase extends BaseTransform {
                 // For now, there is no other kind of transform that will get
                 // here so we are already essentially optimal, but if we have
                 // a different type of transform that reaches here we should
-                // try to avoid this garbage... (RT-26884)
+                // try to avoid this garbage... (JDK-8092003)
                 if (!(Tx instanceof AffineBase)) {
                     Tx = new Affine2D(Tx);
                 }

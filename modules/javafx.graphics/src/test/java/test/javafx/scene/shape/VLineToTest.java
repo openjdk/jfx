@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,14 +38,17 @@ import javafx.scene.Scene;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.VLineTo;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 
 public class VLineToTest {
 
-    @Test public void testAddTo() throws Exception {
+    @Test
+    public void testAddTo() throws Exception {
         Path2D path = new Path2D();
         path.moveTo(0f, 0f);
         final VLineTo vLineTo = new VLineTo(1f);
@@ -54,7 +57,8 @@ public class VLineToTest {
         assertEquals(1.0, path.getCurrentPoint().y, 0.0001f);
     }
 
-    @Test public void testDoublePropertySynced_Y() {
+    @Test
+    public void testDoublePropertySynced_Y() {
         double expected = 123.4;
         VLineTo vlineTo = new VLineTo(100.0);
         DoubleProperty v = new SimpleDoubleProperty(100.0);
@@ -77,7 +81,8 @@ public class VLineToTest {
         assertEquals(expected, coords[1], 0.001);
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new VLineTo().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

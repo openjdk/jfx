@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,6 @@
  */
 
 package javafx.scene.robot;
-
-import static com.sun.javafx.FXPermissions.CREATE_ROBOT_PERMISSION;
 
 import java.util.Objects;
 
@@ -56,25 +54,13 @@ public final class Robot {
 
     /**
      * Constructs a new {@code Robot} that can be used for simulating user
-     * interactions. If a security manager is present, the application must
-     * have the {@link javafx.util.FXPermission} {@code "createRobot"} permission
-     * in order to construct a {@code Robot} object.
+     * interactions.
      *
      * @throws IllegalStateException if this object is constructed on a thread
      * other than the JavaFX Application Thread.
-     * @throws SecurityException if a security manager exists and the application
-     * does not have the {@link javafx.util.FXPermission} {@code "createRobot"}
-     * permission.
      */
     public Robot() {
         Application.checkEventThread();
-
-        // Ensure we have proper permission for creating a robot.
-        @SuppressWarnings("removal")
-        final SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            sm.checkPermission(CREATE_ROBOT_PERMISSION);
-        }
 
         peer = Toolkit.getToolkit().createRobot();
         peer.create();

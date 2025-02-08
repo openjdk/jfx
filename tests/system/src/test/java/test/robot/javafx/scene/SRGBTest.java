@@ -25,6 +25,11 @@
 
 package test.robot.javafx.scene;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.awt.GraphicsEnvironment;
+import java.awt.color.ColorSpace;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.swing.SwingUtilities;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -37,20 +42,11 @@ import javafx.scene.robot.Robot;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-
-import java.awt.color.ColorSpace;
-import java.awt.GraphicsEnvironment;
-import javax.swing.SwingUtilities;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.PlatformUtil;
-
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.Test;
-import static org.junit.Assume.assumeTrue;
-
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 
@@ -217,9 +213,13 @@ public class SRGBTest extends VisualTestBase {
     // colors but they might both be working in the wrong space. We use an
     // AWT Robot to verify that they are working in sRGB.
     // Timeout for potential hang on XWayland, see JDK-8335468.
-    @Test(timeout = 15000)
+    @Test
+    @Timeout(value=15)
     public void sRGBPixelTest() throws Exception {
-        assumeTrue(!Util.isOnWayland()); // JDK-8335470
+        if (Util.isOnWayland()) {
+            assumeTrue(Runtime.version().feature() >= 24);
+        }
+
         Rectangle swatch = prepareStage();
 
         for (TestColor testColor : TestColor.values()) {

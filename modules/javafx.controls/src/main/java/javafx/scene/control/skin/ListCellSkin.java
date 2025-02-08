@@ -103,7 +103,7 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
         }
 
         // Added the comparison between the default cell size and the requested
-        // cell size to prevent the issue identified in RT-19873.
+        // cell size to prevent the issue identified in JDK-8116512.
         final double cellSize = getCellSize();
         final double prefHeight = cellSize == DEFAULT_CELL_SIZE ? super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset) : cellSize;
         return prefHeight;

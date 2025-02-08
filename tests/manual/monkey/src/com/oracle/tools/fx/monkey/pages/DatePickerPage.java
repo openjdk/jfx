@@ -25,8 +25,10 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import java.time.LocalDate;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.skin.DatePickerSkin;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.sheets.ComboBoxBasePropertySheet;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -41,7 +43,14 @@ public class DatePickerPage extends TestPaneBase implements HasSkinnable {
     public DatePickerPage() {
         super("DatePickerPage");
 
-        control = new DatePicker(LocalDate.now());
+        control = new DatePicker(LocalDate.now()) {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         OptionPane op = new OptionPane();
         op.section("DatePicker");

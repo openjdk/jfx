@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -266,7 +266,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 // and if we don't check here we may change the selection
                 // mistakenly because the indexOf above will return the first
                 // instance always, and selection may be on the second or
-                // later instances. This is RT-19227.
+                // later instances. This is JDK-8127705.
                 T selectedItem = sm.getSelectedItem();
                 if (selectedItem == null || ! selectedItem.equals(getValue())) {
                     sm.clearAndSelect(index);
@@ -492,11 +492,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     private ChangeListener<T> selectedItemListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
             if (wasSetAllCalled && t1 == null) {
-                // no-op: fix for RT-22572 where the developer was completely
+                // no-op: fix for JDK-8117197 where the developer was completely
                 // replacing all items in the ComboBox, and expecting the
                 // selection (and ComboBox.value) to remain set. If this isn't
                 // here, we would updateValue(null).
-                // Additional fix for RT-22937: adding the '&& t1 == null'.
+                // Additional fix for JDK-8115968: adding the '&& t1 == null'.
                 // Without this, there would be circumstances where the user
                 // selecting a new value from the ComboBox would end up in here,
                 // when we really should go into the updateValue(t1) call below.
@@ -598,20 +598,35 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                     }
                 }
 
+                int index = -1;
                 int shift = 0;
+                T editorValue;
+
+                try {
+                    editorValue = comboBox.getConverter().fromString(comboBox.getEditor().getText());
+                } catch (RuntimeException ex) {
+                    editorValue = null;
+                }
+
                 while (c.next()) {
                     comboBox.wasSetAllCalled = comboBox.previousItemCount == c.getRemovedSize();
 
                     if (c.wasReplaced()) {
-                        // no-op
+                        index = -1;
+                    } else if (c.wasAdded() && editorValue != null && c.getAddedSubList().contains(editorValue)) {
+                        index = c.getFrom() + c.getAddedSubList().indexOf(editorValue);
                     } else if (c.wasAdded() || c.wasRemoved()) {
+                        index = -1;
+
                         if (c.getFrom() <= getSelectedIndex() && getSelectedIndex()!= -1) {
                             shift += c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                         }
                     }
                 }
 
-                if (shift != 0) {
+                if (index >= 0) {
+                    clearAndSelect(index);
+                } else if (shift != 0) {
                     clearAndSelect(getSelectedIndex() + shift);
                 } else if (comboBox.wasSetAllCalled && getSelectedIndex() >= 0 && getSelectedItem() != null) {
                     // try to find the previously selected item

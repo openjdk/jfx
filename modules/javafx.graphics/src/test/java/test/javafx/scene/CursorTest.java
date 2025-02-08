@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,15 +33,15 @@ import javafx.scene.Cursor;
 import javafx.scene.ImageCursor;
 import javafx.scene.image.Image;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CursorTest {
 
-    @Test public void test_cursorFromUppercaseName() {
+    @Test
+    public void test_cursorFromUppercaseName() {
         assertEquals(Cursor.DEFAULT, Cursor.cursor("DEFAULT"));
         assertEquals(Cursor.CLOSED_HAND, Cursor.cursor("CLOSED_HAND"));
         assertEquals(Cursor.CROSSHAIR, Cursor.cursor("CROSSHAIR"));
@@ -62,7 +62,8 @@ public class CursorTest {
         assertEquals(Cursor.W_RESIZE, Cursor.cursor("W_RESIZE"));
     }
 
-    @Test public void test_cursorFromLowercaseName() {
+    @Test
+    public void test_cursorFromLowercaseName() {
         assertEquals(Cursor.DEFAULT, Cursor.cursor("default"));
         assertEquals(Cursor.CLOSED_HAND, Cursor.cursor("closed_hand"));
         assertEquals(Cursor.CROSSHAIR, Cursor.cursor("crosshair"));
@@ -83,7 +84,8 @@ public class CursorTest {
         assertEquals(Cursor.W_RESIZE, Cursor.cursor("w_resize"));
     }
 
-    @Test public void test_cursorFromUrl() {
+    @Test
+    public void test_cursorFromUrl() {
         final StubImageLoaderFactory imageLoaderFactory =
                 ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
 
@@ -98,18 +100,24 @@ public class CursorTest {
         assertEquals(imageUrl, cursorImage.getUrl());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void test_cursorFromNull() {
-        Cursor.cursor(null);
+        assertThrows(NullPointerException.class, () -> {
+            Cursor.cursor(null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void test_cursorFromInvalidUrl() {
-        Cursor.cursor("file//:cursor.png");
+        assertThrows(IllegalArgumentException.class, () -> {
+            Cursor.cursor("file//:cursor.png");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void test_cursorFromInvalidName() {
-        Cursor.cursor("crosslair");
+        assertThrows(IllegalArgumentException.class, () -> {
+            Cursor.cursor("crosslair");
+        });
     }
 }

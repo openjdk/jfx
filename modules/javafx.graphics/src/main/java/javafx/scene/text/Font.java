@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package javafx.scene.text;
 
 import com.sun.javafx.scene.text.FontHelper;
-import java.io.FilePermission;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
@@ -368,14 +367,6 @@ public final class Font {
      * such that the location is readable, and it represents a supported
      * font format then a <code>Font</code> object will be returned.
      * <p>
-     * If a security manager is present, the application
-     * must have both permission to read from the specified URL location
-     * and the {@link javafx.util.FXPermission} "loadFont".
-     * If the application does not have permission to read from the specified
-     * URL location, then null is returned.
-     * If the application does not have the "loadFont" permission then this method
-     * will return the default system font with the specified font size.
-     * <p>
      * Any failure such as a malformed URL being unable to locate or read
      * from the resource, or if it doesn't represent a font, will result in
      * a <code>null</code> return. It is the application's responsibility
@@ -413,15 +404,6 @@ public final class Font {
      * <p>
      * The use case for this method is for loading all fonts
      * from a TrueType Collection (TTC).
-     * <p>
-     * If a security manager is present, the application
-     * must have both permission to read from the specified URL location
-     * and the {@link javafx.util.FXPermission} "loadFont".
-     * If the application does not have permission to read from the specified
-     * URL location, then null is returned.
-     * If the application does not have the "loadFont" permission then this method
-     * will return an array of one element which is the default
-     *  system font with the specified font size.
      * <p>
      * Any failure such as a malformed URL being unable to locate or read
      * from the resource, or if it doesn't represent a font, will result in
@@ -472,17 +454,6 @@ public final class Font {
             // via ClassLoader. This can cause problems on Windows.
             // Getting the path from a File fixes this.
             path = new java.io.File(path).getPath();
-            try {
-                @SuppressWarnings("removal")
-                SecurityManager sm = System.getSecurityManager();
-                if (sm != null) {
-                    FilePermission filePermission =
-                        new FilePermission(path, "read");
-                    sm.checkPermission(filePermission);
-                }
-            } catch (Exception e) {
-                return null;
-            }
             return
             Toolkit.getToolkit().getFontLoader().loadFont(path, size, loadAll);
         }
@@ -512,11 +483,6 @@ public final class Font {
      * If the load is successful such that the stream can be
      * fully read, and it represents a supported font format then a
      * <code>Font</code> object will be returned.
-     * <p>
-     * If a security manager is present, the application
-     * must have the {@link javafx.util.FXPermission} "loadFont".
-     * If the application does not have permission then this method
-     * will return the default system font with the specified font size.
      * <p>
      * Any failure such as abbreviated input, or an unsupported font format
      * will result in a <code>null</code> return. It is the application's
@@ -555,11 +521,6 @@ public final class Font {
      * <p>
      * The use case for this method is for loading all fonts
      * from a TrueType Collection (TTC).
-     * <p>
-     * If a security manager is present, the application
-     * must have the {@link javafx.util.FXPermission} "loadFont".
-     * If the application does not have permission then this method
-     * will return the default system font with the specified font size.
      * <p>
      * Any failure such as abbreviated input, or an unsupported font format
      * will result in a <code>null</code> return. It is the application's

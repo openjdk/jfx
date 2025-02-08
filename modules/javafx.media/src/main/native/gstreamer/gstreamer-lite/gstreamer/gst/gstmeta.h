@@ -26,7 +26,7 @@
 #include <glib.h>
 
 #include <gst/gstbytearrayinterface.h>
-
+#include <gst/gststructure.h>
 
 G_BEGIN_DECLS
 

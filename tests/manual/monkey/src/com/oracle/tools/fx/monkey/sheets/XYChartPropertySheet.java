@@ -25,7 +25,6 @@
 package com.oracle.tools.fx.monkey.sheets;
 
 import javafx.scene.chart.XYChart;
-import javafx.scene.control.Button;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.pages.XYChartPageBase;
 import com.oracle.tools.fx.monkey.util.FX;

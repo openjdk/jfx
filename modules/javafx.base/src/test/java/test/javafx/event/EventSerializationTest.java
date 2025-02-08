@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,10 +37,10 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.event.EventTypeShim;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  *
@@ -50,7 +50,7 @@ public class EventSerializationTest {
     private ObjectOutputStream objectOutputStream;
     private ObjectInputStream objectInputStream;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         byteArrayOutputStream = new ByteArrayOutputStream();
         objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
@@ -89,14 +89,16 @@ public class EventSerializationTest {
 
     }
 
-    @Test(expected=InvalidObjectException.class)
+    @Test
     public void testUnknownEventTypeSerialization() throws IOException, ClassNotFoundException {
         List<String> l = new ArrayList<>();
         l.add("UNKNOWN");
         Object e = EventTypeShim.getEventTypeSerialization(l);
 
-        objectOutputStream.writeObject(e);
-        turnToInput();
-        EventType eType = (EventType) objectInputStream.readObject();
+        assertThrows(InvalidObjectException.class, () -> {
+            objectOutputStream.writeObject(e);
+            turnToInput();
+            EventType eType = (EventType) objectInputStream.readObject();
+        });
     }
 }

@@ -64,6 +64,10 @@ public class PlatformPreferencesChangedTest extends Application {
         var foregroundColorLabel = new Label();
         var accentColorLabel = new Label();
         var colorSchemeLabel = new Label();
+        var reducedMotionLabel = new Label();
+        var reducedTransparencyLabel = new Label();
+        var reducedDataLabel = new Label();
+        var persistentScrollBarsLabel = new Label();
 
         Runnable updateColorProperties = () -> {
             var preferences = Platform.getPreferences();
@@ -71,6 +75,10 @@ public class PlatformPreferencesChangedTest extends Application {
             foregroundColorLabel.setText(preferences.getForegroundColor().toString());
             accentColorLabel.setText(preferences.getAccentColor().toString());
             colorSchemeLabel.setText(preferences.getColorScheme().toString());
+            reducedMotionLabel.setText(Boolean.toString(preferences.isReducedMotion()));
+            reducedTransparencyLabel.setText(Boolean.toString(preferences.isReducedTransparency()));
+            reducedDataLabel.setText(Boolean.toString(preferences.isReducedData()));
+            persistentScrollBarsLabel.setText(Boolean.toString(preferences.isPersistentScrollBars()));
         };
 
         var box = new VBox();
@@ -87,7 +95,11 @@ public class PlatformPreferencesChangedTest extends Application {
                 new HBox(new BoldLabel("    backgroundColor: "), backgroundColorLabel),
                 new HBox(new BoldLabel("    foregroundColor: "), foregroundColorLabel),
                 new HBox(new BoldLabel("    accentColor: "), accentColorLabel),
-                new HBox(new BoldLabel("    colorScheme: "), colorSchemeLabel)),
+                new HBox(new BoldLabel("    colorScheme: "), colorSchemeLabel),
+                new HBox(new BoldLabel("    reducedMotion: "), reducedMotionLabel),
+                new HBox(new BoldLabel("    reducedTransparency: "), reducedTransparencyLabel),
+                new HBox(new BoldLabel("    reducedData: "), reducedDataLabel),
+                new HBox(new BoldLabel("    persistentScrollBars: "), persistentScrollBarsLabel)),
             new Label("4. Click \"Pass\" if the changes were correctly reported, otherwise click \"Fail\"."),
             new HBox(5, passButton, failButton, clearButton)
         ));

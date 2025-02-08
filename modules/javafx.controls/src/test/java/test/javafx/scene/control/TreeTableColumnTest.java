@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,17 @@
 
 package test.javafx.scene.control;
 
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import javafx.scene.control.skin.TableColumnHeader;
-import test.com.sun.javafx.scene.control.test.Person;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -40,14 +47,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.shape.Rectangle;
-import javafx.util.Callback;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import javafx.beans.property.BooleanProperty;
 import javafx.scene.control.CellShim;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
@@ -57,13 +56,15 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableColumnShim;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableView;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.shape.Rectangle;
+import javafx.util.Callback;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.com.sun.javafx.scene.control.test.Person;
 
 /**
  */
@@ -76,7 +77,8 @@ public class TreeTableColumnTest {
     private TreeTableView<Person> table;
     private TreeItem<Person> root;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         root = new TreeItem<>(null);
         root.setExpanded(true);
 
@@ -466,7 +468,7 @@ public class TreeTableColumnTest {
      * minWidth Tests                                                           *
      ***************************************************************************/
 
-    @Ignore ("Fails with hardcoded value of 10")
+    @Disabled("Fails with hardcoded value of 10")
     @Test public void minWidthIs_USE_COMPUTED_SIZE_ByDefault() {
         assertEquals(Control.USE_COMPUTED_SIZE, column.getMinWidth(), 0);
         assertEquals(Control.USE_COMPUTED_SIZE, column.minWidthProperty().get(), 0);
@@ -498,7 +500,7 @@ public class TreeTableColumnTest {
      * maxWidth Tests                                                           *
      ***************************************************************************/
 
-    @Ignore ("Fails with hardcoded value of 5000")
+    @Disabled("Fails with hardcoded value of 5000")
     @Test public void maxWidthIs_USE_COMPUTED_SIZE_ByDefault() {
         assertEquals(Control.USE_COMPUTED_SIZE, column.getMaxWidth(), 0);
         assertEquals(Control.USE_COMPUTED_SIZE, column.maxWidthProperty().get(), 0);
@@ -530,7 +532,7 @@ public class TreeTableColumnTest {
      * prefWidth Tests                                                          *
      ***************************************************************************/
 
-    @Ignore ("Fails with hardcoded value of 80")
+    @Disabled("Fails with hardcoded value of 80")
     @Test public void prefWidthIs_USE_COMPUTED_SIZE_ByDefault() {
         assertEquals(Control.USE_COMPUTED_SIZE, column.getPrefWidth(), 0);
         assertEquals(Control.USE_COMPUTED_SIZE, column.prefWidthProperty().get(), 0);
@@ -1153,7 +1155,7 @@ public class TreeTableColumnTest {
         assertSame(wilma, items.get(2));
     }
 
-    @Ignore("This started failing when I upgraded to Java 7")
+    @Disabled("This started failing when I upgraded to Java 7")
     @Test public void sortingMixOfComparableAndNonComparable() {
         Person fred = new Person("Fred", 36);
         Person wilma = new Person("Wilma", 34);

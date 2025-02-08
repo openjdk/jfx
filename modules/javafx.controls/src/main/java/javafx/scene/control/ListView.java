@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -387,7 +387,7 @@ public class ListView<T> extends Control {
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
 
-        // Fix for RT-36651, which was introduced by RT-35679 (above) and resolved
+        // Fix for JDK-8094212, which was introduced by JDK-8096184 (above) and resolved
         // by having special-case code to remove the listener when requested.
         // This is done by ComboBoxListViewSkin, so that selection is not done
         // when a ComboBox is shown.
@@ -1306,6 +1306,14 @@ public class ListView<T> extends Control {
                 while (c.next()) {
                     final T selectedItem = getSelectedItem();
                     final int selectedIndex = getSelectedIndex();
+                    int addedItemOffset = -1;
+
+                    if (c.wasAdded()
+                            && selectedItem != null
+                            && (addedItemOffset = c.getAddedSubList().indexOf(selectedItem)) >= 0
+                            && selectedIndex == c.getFrom() + addedItemOffset) {
+                        doSelectionUpdate = false;
+                    }
 
                     if (listView.getItems() == null || listView.getItems().isEmpty()) {
                         selectedItemChange = c;
@@ -1322,7 +1330,7 @@ public class ListView<T> extends Control {
                             ! c.wasAdded() &&
                             selectedItem != null &&
                             selectedItem.equals(c.getRemoved().get(0))) {
-                        // Bug fix for RT-28637
+                        // Bug fix for JDK-8118846
                         if (getSelectedIndex() < getItemCount()) {
                             final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
                             T newSelectedItem = getModelItem(previousRow);
@@ -1398,14 +1406,14 @@ public class ListView<T> extends Control {
                             // all items were removed from the model
                             clearSelection();
                         } else if (index < getItemCount() && index >= 0) {
-                            // Fix for RT-18969: the list had setAll called on it
-                            // Use of makeAtomic is a fix for RT-20945
+                            // Fix for JDK-8120433: the list had setAll called on it
+                            // Use of makeAtomic is a fix for JDK-8116954
                             startAtomic();
                             clearSelection(index);
                             stopAtomic();
                             select(index);
                         } else {
-                            // Fix for RT-22079
+                            // Fix for JDK-8126088
                             clearSelection();
                         }
                     }

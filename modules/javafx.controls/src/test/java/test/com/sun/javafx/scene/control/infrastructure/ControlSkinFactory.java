@@ -25,21 +25,14 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
+import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.ButtonBehavior;
-import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
-import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
-
-import static java.util.stream.Collectors.*;
-import static org.junit.Assert.*;
-
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -125,6 +118,10 @@ import javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.scene.control.skin.TreeTableRowSkin;
 import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.control.skin.TreeViewSkin;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import com.sun.javafx.scene.control.behavior.ButtonBehavior;
+import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
+import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 
 /**
  * Utility class to create Controls, alternative Skins and access/create behaviors.

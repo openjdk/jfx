@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,14 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import test.com.sun.javafx.scene.control.test.Person;
-import com.sun.javafx.tk.Toolkit;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -51,19 +53,17 @@ import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.com.sun.javafx.scene.control.test.Person;
 
-import static org.junit.Assert.*;
-
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TableViewMouseInputTest {
     private TableView<String> tableView;
     private TableView.TableViewSelectionModel<String> sm;
@@ -75,7 +75,8 @@ public class TableViewMouseInputTest {
     private final TableColumn<String, String> col3 = new TableColumn<>("col3");
     private final TableColumn<String, String> col4 = new TableColumn<>("col4");
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tableView = new TableView<>();
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
@@ -89,7 +90,8 @@ public class TableViewMouseInputTest {
         sm.clearAndSelect(0);
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         if (tableView.getSkin() != null) {
             tableView.getSkin().dispose();
         }
@@ -159,11 +161,11 @@ public class TableViewMouseInputTest {
 
         // select all from 9 - 7
         VirtualFlowTestUtils.clickOnRow(tableView, 7, KeyModifier.SHIFT);
-        assertTrue(debug(), isSelected(7,8,9));
+        assertTrue(isSelected(7,8,9), debug());
 
         // select all from 9 - 7 - 5
         VirtualFlowTestUtils.clickOnRow(tableView, 5, KeyModifier.SHIFT);
-        assertTrue(debug(),isSelected(5,6,7,8,9));
+        assertTrue(isSelected(5,6,7,8,9), debug());
     }
 
     @Test public void test_rt29833_mouse_select_downwards() {
@@ -174,11 +176,11 @@ public class TableViewMouseInputTest {
 
         // select all from 5 - 7
         VirtualFlowTestUtils.clickOnRow(tableView, 7, KeyModifier.SHIFT);
-        assertTrue(debug(), isSelected(5,6,7));
+        assertTrue(isSelected(5,6,7), debug());
 
         // select all from 5 - 7 - 9
         VirtualFlowTestUtils.clickOnRow(tableView, 9, KeyModifier.SHIFT);
-        assertTrue(debug(),isSelected(5,6,7,8,9));
+        assertTrue(isSelected(5,6,7,8,9), debug());
     }
 
     private int rt30394_count = 0;
@@ -663,7 +665,7 @@ public class TableViewMouseInputTest {
                     continue;
                 }
                 TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, row, column);
-                assertFalse("cell[row: " + row + ", column: " + column + "] is selected, but shouldn't be", cell.isSelected());
+                assertFalse(cell.isSelected(), "cell[row: " + row + ", column: " + column + "] is selected, but shouldn't be");
             }
             TableRow cell = (TableRow) VirtualFlowTestUtils.getCell(table, row);
             assertTrue(cell.isSelected());
@@ -831,7 +833,7 @@ public class TableViewMouseInputTest {
             assertEquals(1, sm.getSelectedCells().size());
             TablePosition<?,?> cell = sm.getSelectedCells().get(0);
             assertEquals(0, cell.getRow());
-            assertEquals("Expected Last Name column, but got " + cell.getTableColumn().getText(), lastNameCol, cell.getTableColumn());
+            assertEquals(lastNameCol, cell.getTableColumn(), "Expected Last Name column, but got " + cell.getTableColumn().getText());
         }
     }
 

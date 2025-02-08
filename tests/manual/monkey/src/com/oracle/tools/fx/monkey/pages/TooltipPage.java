@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.beans.property.ObjectProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ContentDisplay;
@@ -48,36 +49,34 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
  * Tooltip Page.
  */
 public class TooltipPage extends TestPaneBase {
-    private final Tooltip control; // TODO not a control, but a PopupWindow
+    private final Tooltip tooltip;
 
     public TooltipPage() {
         super("TooltipPage");
 
-        control = new Tooltip("This is a tooltip with some default text, to be settable later.");
+        tooltip = new Tooltip("This is a tooltip with some default text, to be settable later.");
+        tooltip.showDelayProperty().addListener((s, p, c) -> {
+            System.out.println("showDelay=" + c);
+        });
 
-        ObjectOption<Node> graphic = new ObjectOption<>("graphic", control.graphicProperty());
-        graphic.addChoice("<null>", null);
-        graphic.addChoice("Image", ImageTools.createImageView(Color.RED, 256, 256));
-        graphic.addChoiceSupplier("Interactive Content", this::createInteractiveContent);
-
-        Label content = new Label("Hover to show the tooltip");
+        Label content = new Label("Hover over this area to show the tooltip");
         content.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        Tooltip.install(content, control);
+        Tooltip.install(content, tooltip);
         content.setAlignment(Pos.CENTER);
 
         OptionPane op = new OptionPane();
         op.section("Tooltip");
-        op.option("Content Display:", new EnumOption<>("contentDisplay", ContentDisplay.class, control.contentDisplayProperty()));
+        op.option("Content Display:", new EnumOption<>("contentDisplay", ContentDisplay.class, tooltip.contentDisplayProperty()));
         op.option("Font: TODO", null); // TODO font
-        op.option("Graphic:", graphic);
-        op.option("Graphic Text Gap:", new DoubleSpinner("graphicTextGap", 0, 100, 0.1, control.graphicTextGapProperty()));
-        op.option("Hide Delay:", new DurationOption("hideDelay", control.hideDelayProperty()));
-        op.option("Show Delay:", new DurationOption("showDelay", control.showDelayProperty()));
-        op.option("Show Duration:", new DurationOption("showDuration", control.showDurationProperty()));
-        op.option("Text:", Options.textOption("text", true, true, control.textProperty()));
-        op.option("Text Alignment:", new EnumOption<>("textAlignment", TextAlignment.class, control.textAlignmentProperty()));
-        op.option("Text Overrun:", new EnumOption<>("textOverrun", OverrunStyle.class, control.textOverrunProperty()));
-        op.option(new BooleanOption("wrapText", "wrap text", control.wrapTextProperty()));
+        op.option("Graphic:", createGraphicOptions("graphic", tooltip.graphicProperty()));
+        op.option("Graphic Text Gap:", new DoubleSpinner("graphicTextGap", 0, 100, 0.1, tooltip.graphicTextGapProperty()));
+        op.option("Hide Delay:", new DurationOption("hideDelay", tooltip.hideDelayProperty()));
+        op.option("Show Delay:", new DurationOption("showDelay", tooltip.showDelayProperty()));
+        op.option("Show Duration:", new DurationOption("showDuration", tooltip.showDurationProperty()));
+        op.option("Text:", Options.textOption("text", true, true, tooltip.textProperty()));
+        op.option("Text Alignment:", new EnumOption<>("textAlignment", TextAlignment.class, tooltip.textAlignmentProperty()));
+        op.option("Text Overrun:", new EnumOption<>("textOverrun", OverrunStyle.class, tooltip.textOverrunProperty()));
+        op.option(new BooleanOption("wrapText", "wrap text", tooltip.wrapTextProperty()));
 
         // TODO popup window
 
@@ -85,10 +84,18 @@ public class TooltipPage extends TestPaneBase {
         setOptions(op);
     }
 
+    private Node createGraphicOptions(String string, ObjectProperty<Node> graphicProperty) {
+        ObjectOption<Node> op = new ObjectOption<>("graphic", tooltip.graphicProperty());
+        op.addChoice("<null>", null);
+        op.addChoice("Image", ImageTools.createImageView(256, 256));
+        op.addChoiceSupplier("Interactive Content", this::createInteractiveContent);
+        return op;
+    }
+
     // TODO tooltip cannot be interactive: the default behavior is to move it away from underneath the mouse pointer!
     private Node createInteractiveContent() {
-        boolean autoHide = control.isAutoHide();
-        control.setAutoHide(false);
+        boolean autoHide = tooltip.isAutoHide();
+        tooltip.setAutoHide(false);
 
         TextField f = new TextField();
         return f;

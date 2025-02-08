@@ -59,10 +59,11 @@ public class TextOption extends BorderPane {
 
         textField = new TextField();
         textField.setMaxWidth(Double.MAX_VALUE);
-        textField.setOnAction((ev) -> {
-            String v = textField.getText();
-            property.set(v);
-        });
+        textField.textProperty().bindBidirectional(property);
+//        setOnAction((ev) -> {
+//            String v = textField.getText();
+//            property.set(v);
+//        });
 
         Button editButton = FX.button("Edit", EnterTextDialog.getRunnable(this, property));
 

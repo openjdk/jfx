@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,8 +38,6 @@ import javafx.scene.Group;
 import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
-import org.junit.Assert;
-import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,61 +47,74 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class ShapeTest {
 
-    @Test public void testBoundPropertySync_StrokeType() throws Exception {
+    @Test
+    public void testBoundPropertySync_StrokeType() throws Exception {
         NodeTest.assertObjectProperty_AsStringSynced(
                 new StubShape(),
                 "strokeType", "strokeType", StrokeType.CENTERED);
     }
 
-    @Test public void testBoundPropertySync_StrokeLineCap() throws Exception {
+    @Test
+    public void testBoundPropertySync_StrokeLineCap() throws Exception {
         NodeTest.assertObjectProperty_AsStringSynced(
                 new StubShape(),
                 "strokeLineCap", "strokeLineCap", StrokeLineCap.SQUARE);
     }
 
-    @Test public void testBoundPropertySync_StrokeLineJoin() throws Exception {
+    @Test
+    public void testBoundPropertySync_StrokeLineJoin() throws Exception {
         NodeTest.assertObjectProperty_AsStringSynced(
                 new StubShape(),
                 "strokeLineJoin", "strokeLineJoin", StrokeLineJoin.MITER);
     }
 
-    @Test public void testBoundPropertySync_StrokeWidth() throws Exception {
+    @Test
+    public void testBoundPropertySync_StrokeWidth() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubShape(),
                 "strokeWidth", "strokeWidth", 2.0);
     }
 
-    @Test public void testBoundPropertySync_StrokeMiterLimit() throws Exception {
+    @Test
+    public void testBoundPropertySync_StrokeMiterLimit() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubShape(),
                 "strokeMiterLimit", "strokeMiterLimit", 3.0);
     }
 
-    @Test public void testBoundPropertySync_DashOffset() throws Exception {
+    @Test
+    public void testBoundPropertySync_DashOffset() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubShape(),
                 "strokeDashOffset", "strokeDashOffset", 15.0);
     }
 
-    @Test public void testBoundPropertySync_Stroke() throws Exception {
+    @Test
+    public void testBoundPropertySync_Stroke() throws Exception {
         final Shape shape = new StubShape();
         shape.setStroke(Color.RED);
         NodeTest.assertObjectProperty_AsStringSynced(
                 shape, "stroke", "stroke", Color.GREEN);
     }
 
-    @Test public void testBoundPropertySync_Fill() throws Exception {
+    @Test
+    public void testBoundPropertySync_Fill() throws Exception {
         final Shape shape = new StubShape();
         shape.setFill(Color.BLUE);
         NodeTest.assertObjectProperty_AsStringSynced(
                 shape, "fill", "fill", Color.RED);
     }
 
-    @Test public void testBoundPropertySync_Smooth() throws Exception {
+    @Test
+    public void testBoundPropertySync_Smooth() throws Exception {
         final Shape shape = new StubShape();
         shape.setSmooth(true);
         NodeTest.assertBooleanPropertySynced(
@@ -111,7 +122,8 @@ public class ShapeTest {
     }
 
     boolean listChangeCalled = false;
-    @Test public void testStrokeDashArray() {
+    @Test
+    public void testStrokeDashArray() {
         // there is no strokeDashArrayProperty or this test
         // would be in Shape_properties_Test
         final ObservableList<Double> expected =
@@ -126,7 +138,7 @@ public class ShapeTest {
         actual.addListener((ListChangeListener<Double>) c -> {
             listChangeCalled = true;
             assertTrue(c.next());
-            Assert.assertEquals(expected, c.getAddedSubList());
+            assertEquals(expected, c.getAddedSubList());
         });
 
         shape.getStrokeDashArray().addAll(expected);
@@ -136,7 +148,8 @@ public class ShapeTest {
         assertTrue(listChangeCalled);
     }
 
-    @Test public void testGetStrokeDashArrayViaCSSPropertyIsNotNull() {
+    @Test
+    public void testGetStrokeDashArrayViaCSSPropertyIsNotNull() {
         final Shape shape = new StubShape();
         Double[] actual = null;
         List<CssMetaData<? extends Styleable, ?>> styleables = shape.getCssMetaData();
@@ -150,7 +163,8 @@ public class ShapeTest {
         assertNotNull(actual);
     }
 
-    @Test public void testGetStrokeDashArrayViaCSSPropertyIsSame() {
+    @Test
+    public void testGetStrokeDashArrayViaCSSPropertyIsSame() {
         final Shape shape = new StubShape();
         shape.getStrokeDashArray().addAll(5d, 7d, 1d, 3d);
         Double[] actuals = null;
@@ -164,10 +178,11 @@ public class ShapeTest {
         }
 
         final Double[] expecteds = new Double[] {5d, 7d, 1d, 3d};
-        Assert.assertArrayEquals(expecteds, actuals);
+        assertArrayEquals(expecteds, actuals);
     }
 
-    @Test public void testSetStrokeDashArrayViaCSSPropertyIsSame() {
+    @Test
+    public void testSetStrokeDashArrayViaCSSPropertyIsSame() {
         final Shape shape = new StubShape();
         List<Double> actual = null;
         List<CssMetaData<? extends Styleable, ?>> styleables = shape.getCssMetaData();
@@ -185,8 +200,9 @@ public class ShapeTest {
         assertEquals(expected, actual);
     }
 
-    // RT-18647: ClassCastException: [Ljava.lang.Double; cannot be cast to javafx.collections.ObservableList
-    @Test public void testRT_18647() {
+    // JDK-8127534: ClassCastException: [Ljava.lang.Double; cannot be cast to javafx.collections.ObservableList
+    @Test
+    public void testRT_18647() {
         final Scene scene = new Scene(new Group(), 500, 500);
 
         final Shape shape = new StubShape();
@@ -205,7 +221,8 @@ public class ShapeTest {
 
     boolean listenerCalled = false;
     // make sure shapeChangeListener doesn't hold reference to runnable.
-    @Test public void testShapeChangeListenerLeakTest() {
+    @Test
+    public void testShapeChangeListenerLeakTest() {
 
         Shape shape = new StubShape();
 

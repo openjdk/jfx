@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,14 +24,13 @@
  */
 package test.robot.testharness;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -40,13 +39,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-
-import junit.framework.AssertionFailedError;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import test.util.Util;
 
 /**
@@ -87,24 +83,24 @@ public abstract class VisualTestBase {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void doSetupOnce() {
         Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void doTeardownOnce() {
         Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void doSetup() {
         runAndWait(() -> robot = new Robot());
         Util.parkCursor(robot);
     }
 
-    @After
+    @AfterEach
     public void doTeardown() {
         runAndWait(() -> {
             if (!stages.isEmpty()) {
@@ -130,7 +126,7 @@ public abstract class VisualTestBase {
     // This must be called on the FX app thread
     protected Stage getStage(boolean alwaysOnTop) {
         Stage stage = new Stage();
-        // Undecorated stage to workaround RT-39904
+        // Undecorated stage to workaround JDK-8089784
         stage.initStyle(StageStyle.UNDECORATED);
         if (alwaysOnTop) {
             stage.setAlwaysOnTop(true);
@@ -143,7 +139,7 @@ public abstract class VisualTestBase {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException ex) {
-            throw new AssertionFailedError("Unexpected exception: " + ex);
+            fail(ex);
         }
     }
 
@@ -169,7 +165,7 @@ public abstract class VisualTestBase {
 
     protected void assertColorEquals(Color expected, Color actual, double delta) {
         if (!testColorEquals(expected, actual, delta)) {
-            throw new AssertionFailedError("expected:" + colorToString(expected)
+            fail("expected:" + colorToString(expected)
                     + " but was:" + colorToString(actual));
         }
     }
@@ -188,7 +184,7 @@ public abstract class VisualTestBase {
         double deltaBlue = Math.abs(notExpected.getBlue() - actual.getBlue());
         double deltaOpacity = Math.abs(notExpected.getOpacity() - actual.getOpacity());
         if (deltaRed < delta && deltaGreen < delta && deltaBlue < delta && deltaOpacity < delta) {
-            throw new AssertionFailedError("not expected:" + colorToString(notExpected)
+            fail("not expected:" + colorToString(notExpected)
                     + " but was:" + colorToString(actual));
         }
     }
@@ -209,7 +205,7 @@ public abstract class VisualTestBase {
         try {
             frameCounter.await();
         } catch (InterruptedException ex) {
-            throw new AssertionFailedError("Unexpected exception: " + ex);
+            fail("Unexpected exception: " + ex);
         } finally {
             runAndWait(() -> {
                 if (timer != null) {
@@ -221,14 +217,14 @@ public abstract class VisualTestBase {
 
     // Waits until the fist frame is rendered after the stage has been shown
     protected void waitFirstFrame() {
-        // This is a temporary workaround until RT-28683 is implemented
+        // This is a temporary workaround until JDK-8091284 is implemented
         frameWait(100);
     }
 
     // Waits until the frame containing the current state of the scene has
     // been rendered
     protected void waitNextFrame() {
-        // This is a temporary workaround until RT-28683 is implemented
+        // This is a temporary workaround until JDK-8091284 is implemented
         // Need to wait for the current frame in process and then the next frame
         // However, we get many intermittent failures with 2 and a very few with
         // 3, so we will wait for 5 frames.

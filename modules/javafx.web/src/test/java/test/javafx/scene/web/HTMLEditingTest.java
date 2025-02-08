@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,12 +31,12 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import org.junit.Test;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HTMLEditingTest extends TestBase {
 
@@ -45,22 +45,21 @@ public class HTMLEditingTest extends TestBase {
      * @bug 8143894
      * summary intercept clipboard data in javascript for onpaste event
      */
-    @Ignore("JDK-8290237")
+    @Disabled("JDK-8290237")
     @Test public void clipboardGetDataOnPaste() {
         // Read the clipboard data from JavaScript onpaste event
         // Verify the paste data from pasteTarget element
         String defaultText = "Default";
         loadContent(
                 "<input id='srcInput' value=" + defaultText + " autofocus>" +
-                "<input id='pasteTarget'></input>" +
-                "<script>"+
-                "srcInput.onpaste = function(e) {" +
-                "pasteTarget.value = e.clipboardData.getData('text/plain');}" +
-                "</script>");
+                        "<input id='pasteTarget'></input>" +
+                        "<script>"+
+                        "srcInput.onpaste = function(e) {" +
+                        "pasteTarget.value = e.clipboardData.getData('text/plain');}" +
+                        "</script>");
 
         submit(() -> {
-            assertTrue("LoadContent completed successfully",
-                    getEngine().getLoadWorker().getState() == SUCCEEDED);
+            assertTrue(getEngine().getLoadWorker().getState() == SUCCEEDED, "LoadContent completed successfully");
             String clipboardData = "Clipboard text";
             ClipboardContent content = new ClipboardContent();
             content.putString(clipboardData);

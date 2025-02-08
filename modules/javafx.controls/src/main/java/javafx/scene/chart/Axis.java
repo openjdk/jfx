@@ -706,7 +706,7 @@ public abstract class Axis<T> extends Region {
         if (lengthDiffers || rangeInvalid || measureInvalid || tickLabelsVisibleInvalid) {
             measureInvalid = false;
             tickLabelsVisibleInvalid = false;
-            // RT-12272 : tick labels overlapping
+            // JDK-8112169 : tick labels overlapping
             // first check if all visible labels fit, if not, retain every nth label
             labelsToSkip.clear();
             int numLabelsToSkip = 0;

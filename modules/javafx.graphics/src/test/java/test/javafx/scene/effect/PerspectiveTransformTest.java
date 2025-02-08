@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,15 +26,15 @@
 package test.javafx.scene.effect;
 
 import javafx.scene.effect.PerspectiveTransform;
-import static org.junit.Assert.assertEquals;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PerspectiveTransformTest extends EffectsTestBase {
     private PerspectiveTransform effect;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         effect = new PerspectiveTransform();
         setupTest(effect);

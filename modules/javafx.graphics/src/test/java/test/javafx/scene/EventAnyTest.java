@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@ package test.javafx.scene;
 import com.sun.javafx.stage.FocusUngrabEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventType;
@@ -55,68 +55,59 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.TransformChangedEvent;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-import static org.junit.Assert.assertTrue;
-import org.junit.Test;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class EventAnyTest {
-    @Parameters
-    public static Collection getParams() {
-        return Arrays.asList(new Object[][] {
-            { ActionEvent.ANY,           actionEvent(),           true},
-            { ActionEvent.ANY,           focusUngrabEvent(),      false},
-            { FocusUngrabEvent.ANY,      focusUngrabEvent(),      true},
-            { FocusUngrabEvent.ANY,      actionEvent(),           false},
-            { ContextMenuEvent.ANY,      contextMenuEvent(),      true},
-            { ContextMenuEvent.ANY,      actionEvent(),           false},
-            { DragEvent.ANY,             dragEvent(),             true },
-            { DragEvent.ANY,             keyEvent(),              false },
-            { InputMethodEvent.ANY,      inputMethodEvent(),      true },
-            { InputMethodEvent.ANY,      keyEvent(),              false },
-            { KeyEvent.ANY,              keyEvent(),              true },
-            { KeyEvent.ANY,              inputMethodEvent(),      false },
-            { MouseDragEvent.ANY,        mouseDragEvent(),        true },
-            { MouseDragEvent.ANY,        mouseEvent(),            false },
-            { MouseEvent.ANY,            mouseEvent(),            true },
-            { MouseEvent.ANY,            mouseDragEvent(),        true },
-            { MouseEvent.ANY,            keyEvent(),              false },
-            { RotateEvent.ANY,           rotateEvent(),           true },
-            { RotateEvent.ANY,           zoomEvent(),             false },
-            { ZoomEvent.ANY,             zoomEvent(),             true },
-            { ZoomEvent.ANY,             rotateEvent(),           false },
-            { ScrollEvent.ANY,           scrollEvent(),           true },
-            { ScrollEvent.ANY,           swipeEvent(),            false },
-            { SwipeEvent.ANY,            swipeEvent(),            true },
-            { SwipeEvent.ANY,            scrollEvent(),           false },
-            { TouchEvent.ANY,            touchEvent(),            true },
-            { TouchEvent.ANY,            rotateEvent(),           false },
-            { TransformChangedEvent.ANY, transformChangedEvent(), true },
-            { TransformChangedEvent.ANY, mouseEvent(),            false },
-            { WindowEvent.ANY,           windowEvent(),           true },
-            { WindowEvent.ANY,           actionEvent(),           false },
-            { GestureEvent.ANY,          rotateEvent(),           true },
-            { GestureEvent.ANY,          mouseEvent(),            false },
-            { InputEvent.ANY,            mouseEvent(),            true },
-            { InputEvent.ANY,            actionEvent(),           false },
-        });
+
+    public static Stream<Arguments> getParams() {
+        return Stream.of(
+            Arguments.of( ActionEvent.ANY,           actionEvent(),           true),
+            Arguments.of( ActionEvent.ANY,           focusUngrabEvent(),      false),
+            Arguments.of( FocusUngrabEvent.ANY,      focusUngrabEvent(),      true),
+            Arguments.of( FocusUngrabEvent.ANY,      actionEvent(),           false),
+            Arguments.of( ContextMenuEvent.ANY,      contextMenuEvent(),      true),
+            Arguments.of( ContextMenuEvent.ANY,      actionEvent(),           false),
+            Arguments.of( DragEvent.ANY,             dragEvent(),             true ),
+            Arguments.of( DragEvent.ANY,             keyEvent(),              false ),
+            Arguments.of( InputMethodEvent.ANY,      inputMethodEvent(),      true ),
+            Arguments.of( InputMethodEvent.ANY,      keyEvent(),              false ),
+            Arguments.of( KeyEvent.ANY,              keyEvent(),              true ),
+            Arguments.of( KeyEvent.ANY,              inputMethodEvent(),      false ),
+            Arguments.of( MouseDragEvent.ANY,        mouseDragEvent(),        true ),
+            Arguments.of( MouseDragEvent.ANY,        mouseEvent(),            false ),
+            Arguments.of( MouseEvent.ANY,            mouseEvent(),            true ),
+            Arguments.of( MouseEvent.ANY,            mouseDragEvent(),        true ),
+            Arguments.of( MouseEvent.ANY,            keyEvent(),              false ),
+            Arguments.of( RotateEvent.ANY,           rotateEvent(),           true ),
+            Arguments.of( RotateEvent.ANY,           zoomEvent(),             false ),
+            Arguments.of( ZoomEvent.ANY,             zoomEvent(),             true ),
+            Arguments.of( ZoomEvent.ANY,             rotateEvent(),           false ),
+            Arguments.of( ScrollEvent.ANY,           scrollEvent(),           true ),
+            Arguments.of( ScrollEvent.ANY,           swipeEvent(),            false ),
+            Arguments.of( SwipeEvent.ANY,            swipeEvent(),            true ),
+            Arguments.of( SwipeEvent.ANY,            scrollEvent(),           false ),
+            Arguments.of( TouchEvent.ANY,            touchEvent(),            true ),
+            Arguments.of( TouchEvent.ANY,            rotateEvent(),           false ),
+            Arguments.of( TransformChangedEvent.ANY, transformChangedEvent(), true ),
+            Arguments.of( TransformChangedEvent.ANY, mouseEvent(),            false ),
+            Arguments.of( WindowEvent.ANY,           windowEvent(),           true ),
+            Arguments.of( WindowEvent.ANY,           actionEvent(),           false ),
+            Arguments.of( GestureEvent.ANY,          rotateEvent(),           true ),
+            Arguments.of( GestureEvent.ANY,          mouseEvent(),            false ),
+            Arguments.of( InputEvent.ANY,            mouseEvent(),            true ),
+            Arguments.of( InputEvent.ANY,            actionEvent(),           false )
+        );
     }
 
     private boolean delivered;
-    private EventType type;
-    private Event event;
-    private boolean matches;
 
-    public EventAnyTest(EventType type, Event event, boolean matches) {
-        this.type = type;
-        this.event = event;
-        this.matches = matches;
-    }
-
-    @Test
-    public void testEventDelivery() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testEventDelivery(EventType type, Event event, boolean matches) {
         Node n = new Rectangle();
         delivered = false;
 

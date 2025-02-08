@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,13 +30,17 @@ import test.com.sun.javafx.iio.ImageTestHelper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class PNGImageLoaderTest {
 
     private void testImage(InputStream stream) throws IOException {
         PNGImageLoader2 loader = new PNGImageLoader2(stream);
-        loader.load(0, 0, 0, true, true);
+        loader.load(0, 0, 0, true, true, 1, 1);
     }
 
     @Test
@@ -46,34 +50,40 @@ public class PNGImageLoaderTest {
         testImage(testStream);
     }
 
-    @Test(timeout = 1000, expected = IOException.class)
+    @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void testRT27010() throws IOException {
-        int[] corruptedIDATLength = {
-            137, 80, 78, 71, 13, 10, 26, 10, // signature
-            0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
-            0, 0, 4, 0, 0, 0, 4, 0, 8, 6, 0, 0, 0, // IHDR chunk data
-            0x7f, 0x1d, 0x2b, 0x83, // IHDR chunk crc
-            0x80, 0, 0x80, 0, 0x49, 0x44, 0x41, 0x54 // negative IDAT length
-        };
+        assertThrows(IOException.class, () -> {
+            int[] corruptedIDATLength = {
+                137, 80, 78, 71, 13, 10, 26, 10, // signature
+                0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+                0, 0, 4, 0, 0, 0, 4, 0, 8, 6, 0, 0, 0, // IHDR chunk data
+                0x7f, 0x1d, 0x2b, 0x83, // IHDR chunk crc
+                0x80, 0, 0x80, 0, 0x49, 0x44, 0x41, 0x54 // negative IDAT length
+            };
 
-        ByteArrayInputStream stream = ImageTestHelper.constructStreamFromInts(corruptedIDATLength);
-        testImage(stream);
+            ByteArrayInputStream stream = ImageTestHelper.constructStreamFromInts(corruptedIDATLength);
+            testImage(stream);
+        });
     }
 
-    @Test(timeout = 1000, expected = IOException.class)
+    @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void testRT27010MultipleIDAT() throws IOException {
-        int[] corruptedIDATLength = {
-            137, 80, 78, 71, 13, 10, 26, 10, // signature
-            0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
-            0, 0, 4, 0, 0, 0, 4, 0, 8, 6, 0, 0, 0, // IHDR chunk data
-            0x7f, 0x1d, 0x2b, 0x83, // IHDR chunk crc
-            0, 0, 0, 1, 0x49, 0x44, 0x41, 0x54, // first IDAT
-            0, // IDAT chunk data
-            0, 0, 0, 0, // IDAT chunk crc
-            0x80, 0, 0, 0, 0x49, 0x44, 0x41, 0x54, // second IDAT
-        };
+        assertThrows(IOException.class, () -> {
+            int[] corruptedIDATLength = {
+                137, 80, 78, 71, 13, 10, 26, 10, // signature
+                0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+                0, 0, 4, 0, 0, 0, 4, 0, 8, 6, 0, 0, 0, // IHDR chunk data
+                0x7f, 0x1d, 0x2b, 0x83, // IHDR chunk crc
+                0, 0, 0, 1, 0x49, 0x44, 0x41, 0x54, // first IDAT
+                0, // IDAT chunk data
+                0, 0, 0, 0, // IDAT chunk crc
+                0x80, 0, 0, 0, 0x49, 0x44, 0x41, 0x54, // second IDAT
+            };
 
-        ByteArrayInputStream stream = ImageTestHelper.constructStreamFromInts(corruptedIDATLength);
-        testImage(stream);
+            ByteArrayInputStream stream = ImageTestHelper.constructStreamFromInts(corruptedIDATLength);
+            testImage(stream);
+        });
     }
 }

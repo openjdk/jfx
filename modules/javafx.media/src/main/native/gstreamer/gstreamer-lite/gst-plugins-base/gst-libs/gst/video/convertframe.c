@@ -268,8 +268,11 @@ build_convert_frame_pipeline (GstElement ** src_element,
   if (dl)
     gst_bin_add (GST_BIN (pipeline), dl);
 
-  /* set caps */
-  g_object_set (src, "caps", from_caps, NULL);
+  /* set input and output caps */
+  g_object_set (src, "caps", from_caps, "emit-signals", TRUE,
+      "format", GST_FORMAT_TIME, NULL);
+  g_object_set (sink, "caps", to_caps, "emit-signals", TRUE, NULL);
+
   if (vcrop) {
     gst_video_info_from_caps (&info, from_caps);
     g_object_set (vcrop, "left", cmeta->x, NULL);
@@ -281,7 +284,6 @@ build_convert_frame_pipeline (GstElement ** src_element,
     GST_DEBUG ("crop meta [x,y,width,height]: %d %d %d %d", cmeta->x, cmeta->y,
         cmeta->width, cmeta->height);
   }
-  g_object_set (sink, "caps", to_caps, NULL);
 
   /* FIXME: linking is still way too expensive, profile this properly */
   if (vcrop) {
@@ -347,9 +349,6 @@ build_convert_frame_pipeline (GstElement ** src_element,
     if (!gst_element_link_pads (encoder, "src", sink, "sink"))
       goto link_failed;
   }
-
-  g_object_set (src, "emit-signals", TRUE, NULL);
-  g_object_set (sink, "emit-signals", TRUE, NULL);
 
   *src_element = src;
   *sink_element = sink;

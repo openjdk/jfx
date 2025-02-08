@@ -24,13 +24,13 @@
  */
 package test.javafx.embed.swing;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.image.BufferedImage;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
-import org.junit.Test;
-import junit.framework.Assert;
+import org.junit.jupiter.api.Test;
 
 public class FXImageConversionTest {
 
@@ -52,7 +52,7 @@ public class FXImageConversionTest {
 
             assertTrue(bf.getType() == BufferedImage.TYPE_INT_RGB);
         } catch (ClassCastException cex) {
-            Assert.fail("FX image conversion wrong cast " + cex);
+            fail("FX image conversion wrong cast " + cex);
         }
     }
 
@@ -71,7 +71,7 @@ public class FXImageConversionTest {
 
             assertTrue(bf.getType() == BufferedImage.TYPE_INT_ARGB_PRE);
         } catch (ClassCastException cex) {
-            Assert.fail("FX image conversion wrong cast " + cex);
+            fail("FX image conversion wrong cast " + cex);
         }
     }
 
@@ -90,7 +90,7 @@ public class FXImageConversionTest {
 
             assertTrue(bf.getType() == BufferedImage.TYPE_INT_ARGB_PRE);
         } catch (ClassCastException cex) {
-            Assert.fail("FX image conversion wrong cast " + cex);
+            fail("FX image conversion wrong cast " + cex);
         }
     }
 }

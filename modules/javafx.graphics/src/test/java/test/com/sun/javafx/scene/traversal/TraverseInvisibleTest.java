@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,8 @@ import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.scene.traversal.TraverseListener;
-import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.geometry.Bounds;
 import javafx.scene.Group;
@@ -42,23 +40,17 @@ import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests TraversalEngine with invisible nodes, using the default ContainerTabOrder algorithm,
  */
-@RunWith(Parameterized.class)
 public final class TraverseInvisibleTest {
-    private final int fromNumber;
-    private final Direction direction;
-    private final int invisibleNumber;
-    private final int toNumber;
-
     private Stage stage;
     private Scene scene;
     private Node[] keypadNodes;
@@ -72,29 +64,18 @@ public final class TraverseInvisibleTest {
     **    3 4 5
     **    6 7 8
     */
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(new Object[][] {
-            { 3, Direction.RIGHT, 4, 5},
-            { 5, Direction.LEFT, 4, 3},
-            { 4, Direction.NEXT, 5, 6},
-            { 6, Direction.PREVIOUS, 5, 4},
-            { 8, Direction.UP, 5, 2 },
-            { 2, Direction.DOWN, 5, 8 }
-        });
+    public static Stream<Arguments> data() {
+        return Stream.of(
+            Arguments.of( 3, Direction.RIGHT, 4, 5),
+            Arguments.of( 5, Direction.LEFT, 4, 3),
+            Arguments.of( 4, Direction.NEXT, 5, 6),
+            Arguments.of( 6, Direction.PREVIOUS, 5, 4),
+            Arguments.of( 8, Direction.UP, 5, 2 ),
+            Arguments.of( 2, Direction.DOWN, 5, 8)
+        );
     }
 
-    public TraverseInvisibleTest(final int fromNumber,
-                         final Direction direction,
-                         final int invisibleNumber,
-                         final int toNumber) {
-        this.fromNumber = fromNumber;
-        this.direction = direction;
-        this.invisibleNumber = invisibleNumber;
-        this.toNumber = toNumber;
-    }
-
-    @Before
+    @BeforeEach
     public void setUp() {
         stage = new Stage();
         scene = new Scene(new Group(), 500, 500);
@@ -107,7 +88,7 @@ public final class TraverseInvisibleTest {
         stage.requestFocus();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         stage = null;
         scene = null;
@@ -115,8 +96,12 @@ public final class TraverseInvisibleTest {
         traversalEngine = null;
     }
 
-    @Test
-    public void traverseOverInvisible() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void traverseOverInvisible(int fromNumber,
+                                      Direction direction,
+                                      int invisibleNumber,
+                                      int toNumber) {
         keypadNodes[fromNumber].requestFocus();
         keypadNodes[invisibleNumber].setVisible(false);
         traversalEngine.trav(keypadNodes[fromNumber], direction, TraversalMethod.DEFAULT);

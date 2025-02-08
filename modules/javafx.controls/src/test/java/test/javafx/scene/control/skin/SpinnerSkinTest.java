@@ -25,7 +25,7 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import javafx.animation.Animation.Status;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Insets;
@@ -36,8 +36,8 @@ import javafx.scene.control.skin.SpinnerSkinShim;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
 import com.sun.javafx.scene.control.behavior.SpinnerBehaviorShim;
 
@@ -71,7 +71,7 @@ public class SpinnerSkinTest {
     private Region decrementArrowButton;
     private Region incrementArrowButton;
 
-    @Before
+    @BeforeEach
     public void before() {
         spinner = new Spinner<>();
         spinner.resize(CONTROL_WIDTH, CONTROL_HEIGHT);

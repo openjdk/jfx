@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.javafx.scene.SceneEventDispatcher;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.css.PseudoClass;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
@@ -48,10 +49,6 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
 import javafx.scene.input.MouseEvent;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.lang.ref.WeakReference;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -68,9 +65,17 @@ import javafx.scene.SceneShim;
 import javafx.scene.SubScene;
 import test.util.memory.JMemoryBuddy;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests various aspects of Scene.
@@ -83,14 +88,14 @@ public class SceneTest {
     private boolean handler2Called = false;
 
 
-    @Before
+    @BeforeEach
     public void setUp() {
         stage = new Stage();
         stage.show();
         stage.requestFocus();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         stage.hide();
     }
@@ -166,15 +171,19 @@ public class SceneTest {
         assertTrue(Platform.isFxApplicationThread());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testNullRoot() {
-        Scene scene = new Scene(null);
+        assertThrows(NullPointerException.class, () -> {
+            Scene scene = new Scene(null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testSetNullRoot() {
-        Scene scene = new Scene(new Group());
-        scene.setRoot(null);
+        assertThrows(NullPointerException.class, () -> {
+            Scene scene = new Scene(new Group());
+            scene.setRoot(null);
+        });
     }
 
     @Test
@@ -227,6 +236,18 @@ public class SceneTest {
         assertTrue(g.getStyleClass().contains("root"));
         scene.setRoot(new Group());
         assertFalse(g.getStyleClass().contains("root"));
+    }
+
+    @Test
+    public void testRootPseudoClassIsSetOnRootNode() {
+        var root = PseudoClass.getPseudoClass("root");
+        Scene scene = new Scene(new Group());
+        Group g = new Group();
+        assertFalse(g.getPseudoClassStates().contains(root));
+        scene.setRoot(g);
+        assertTrue(g.getPseudoClassStates().contains(root));
+        scene.setRoot(new Group());
+        assertFalse(g.getPseudoClassStates().contains(root));
     }
 
     @Test
@@ -651,62 +672,72 @@ public class SceneTest {
         assertNull(scene.getCamera());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromOtherScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        Scene scene1 = new Scene(new Group(camera));
-        Scene scene2 = new Scene(new Group());
+            Scene scene1 = new Scene(new Group(camera));
+            Scene scene2 = new Scene(new Group());
 
-        scene1.setCamera(camera);
-        scene2.setCamera(camera);
+            scene1.setCamera(camera);
+            scene2.setCamera(camera);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromItsSubScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        SubScene subScene = new SubScene(new Group(camera), 150, 150);
-        Scene scene = new Scene(new Group(subScene));
+            SubScene subScene = new SubScene(new Group(camera), 150, 150);
+            Scene scene = new Scene(new Group(subScene));
 
-        subScene.setCamera(camera);
-        scene.setCamera(camera);
+            subScene.setCamera(camera);
+            scene.setCamera(camera);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromOtherSubScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        Scene scene = new Scene(new Group());
+            Scene scene = new Scene(new Group());
 
-        SubScene subScene = new SubScene(new Group(camera), 150, 150);
-        Scene otherScene = new Scene(new Group(subScene));
+            SubScene subScene = new SubScene(new Group(camera), 150, 150);
+            Scene otherScene = new Scene(new Group(subScene));
 
-        subScene.setCamera(camera);
-        scene.setCamera(camera);
+            subScene.setCamera(camera);
+            scene.setCamera(camera);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromSubScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        SubScene subScene = new SubScene(new Group(camera), 150, 150);
-        Scene scene = new Scene(new Group());
+            SubScene subScene = new SubScene(new Group(camera), 150, 150);
+            Scene scene = new Scene(new Group());
 
-        subScene.setCamera(camera);
-        scene.setCamera(camera);
+            subScene.setCamera(camera);
+            scene.setCamera(camera);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetIllegalCameraFromNestedSubScene() {
-        Camera camera = new PerspectiveCamera();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Camera camera = new PerspectiveCamera();
 
-        SubScene nestedSubScene = new SubScene(new Group(camera), 100, 100);
-        SubScene subScene = new SubScene(new Group(nestedSubScene), 150, 150);
-        Scene scene = new Scene(new Group(subScene));
+            SubScene nestedSubScene = new SubScene(new Group(camera), 100, 100);
+            SubScene subScene = new SubScene(new Group(nestedSubScene), 150, 150);
+            Scene scene = new Scene(new Group(subScene));
 
-        nestedSubScene.setCamera(camera);
-        scene.setCamera(camera);
+            nestedSubScene.setCamera(camera);
+            scene.setCamera(camera);
+        });
     }
 
     @Test
@@ -762,22 +793,26 @@ public class SceneTest {
         assertEquals(20, camera.getNearClip(), 0.00001);
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void scenesCannotShareCamera() {
-        Scene scene = new Scene(new Group(), 300, 200);
-        Scene scene2 = new Scene(new Group(), 300, 200);
-        Camera cam = new ParallelCamera();
-        scene.setCamera(cam);
-        scene2.setCamera(cam);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Scene scene = new Scene(new Group(), 300, 200);
+            Scene scene2 = new Scene(new Group(), 300, 200);
+            Camera cam = new ParallelCamera();
+            scene.setCamera(cam);
+            scene2.setCamera(cam);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void subSceneAndSceneCannotShareCamera() {
-        SubScene sub = new SubScene(new Group(), 100, 100);
-        Scene scene = new Scene(new Group(sub), 300, 200);
-        Camera cam = new ParallelCamera();
-        sub.setCamera(cam);
-        scene.setCamera(cam);
+        assertThrows(IllegalArgumentException.class, () -> {
+            SubScene sub = new SubScene(new Group(), 100, 100);
+            Scene scene = new Scene(new Group(sub), 300, 200);
+            Camera cam = new ParallelCamera();
+            sub.setCamera(cam);
+            scene.setCamera(cam);
+        });
     }
 
     @Test
@@ -878,16 +913,20 @@ public class SceneTest {
      *                                                                         *
      **************************************************************************/
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddNullPreLayoutPulseListener() {
-        Scene scene = new Scene(new Group(), 300, 300);
-        scene.addPreLayoutPulseListener(null);
+        assertThrows(NullPointerException.class, () -> {
+            Scene scene = new Scene(new Group(), 300, 300);
+            scene.addPreLayoutPulseListener(null);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddNullPostLayoutPulseListener() {
-        Scene scene = new Scene(new Group(), 300, 300);
-        scene.addPostLayoutPulseListener(null);
+        assertThrows(NullPointerException.class, () -> {
+            Scene scene = new Scene(new Group(), 300, 300);
+            scene.addPostLayoutPulseListener(null);
+        });
     }
 
     @Test public void testRemoveNullPreLayoutPulseListener_nullListenersList() {

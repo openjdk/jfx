@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,7 @@ extern "C" {
         [pool release];
 
         // TODO: check for errors and return an appropriate code
-        // http://javafx-jira.kenai.com/browse/RT-27005
+        // JDK-8096014
         return ERROR_NONE;
     }
 

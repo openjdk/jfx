@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,8 +50,14 @@ import javafx.scene.paint.Paint;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
-import org.junit.Test;
-import static org.junit.Assert.*;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 
 public class CssParserTest {
@@ -61,10 +67,10 @@ public class CssParserTest {
 
         CssParser instance = new CssParser();
 
-        // RT-16959 is an infinite loop on incomplete linear gradient
+        // JDK-8119841 is an infinite loop on incomplete linear gradient
         ParsedValue result = new CssParserShim(instance)
                 .parseExpr("-fx-background-color", "linear-gradient(from 0% 0% to 0% 100%, )");
-        assertNull("parseExpr", result);
+        assertNull(result, "parseExpr");
 
         // The bad syntax should be skipped. The stylesheet should have one
         // linear gradient with colors red, white, blue.
@@ -100,7 +106,7 @@ public class CssParserTest {
     @Test
     public void testRT_17770() {
 
-        // RT-17770 is an infinite loop on a dangling comma.
+        // JDK-8116301 is an infinite loop on a dangling comma.
         // Missing term should be ignored
         String stylesheetText =
             "* {"
@@ -146,9 +152,9 @@ public class CssParserTest {
 
         CssParser instance = new CssParser();
 
-        // RT-16959 is an infinite loop on incomplete linear gradient
+        // JDK-8119841 is an infinite loop on incomplete linear gradient
         ParsedValue result = new CssParserShim(instance).parseExpr("-fx-font-size", "10ptx");
-        assertNull("parseExpr", result);
+        assertNull(result, "parseExpr");
 
         // The bad syntax should be skipped.
         Stylesheet ss = instance.parse(

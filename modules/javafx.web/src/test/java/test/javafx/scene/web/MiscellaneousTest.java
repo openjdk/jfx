@@ -41,26 +41,27 @@ import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.w3c.dom.Document;
-
 import static java.lang.String.format;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Timeout;
 
 public class MiscellaneousTest extends TestBase {
 
     @Test public void testNoEffectOnFollowRedirects() {
-        assertEquals("Unexpected HttpURLConnection.getFollowRedirects() result",
-                true, HttpURLConnection.getFollowRedirects());
+        assertEquals(true, HttpURLConnection.getFollowRedirects(),
+                "Unexpected HttpURLConnection.getFollowRedirects() result");
         load("test/html/ipsum.html");
-        assertEquals("Unexpected HttpURLConnection.getFollowRedirects() result",
-                true, HttpURLConnection.getFollowRedirects());
+        assertEquals(true, HttpURLConnection.getFollowRedirects(),
+                "Unexpected HttpURLConnection.getFollowRedirects() result");
     }
 
     @Test public void testRT22458() throws Exception {
@@ -137,7 +138,8 @@ public class MiscellaneousTest extends TestBase {
     }
 
     // JDK-8133775
-    @Test(expected = IllegalStateException.class) public void testDOMObjectThreadOwnership() {
+    @Test
+    public void testDOMObjectThreadOwnership() {
           class IllegalStateExceptionChecker {
               public Object resultObject;
               public void start() {
@@ -150,7 +152,9 @@ public class MiscellaneousTest extends TestBase {
            submit(obj::start);
            // Try accessing the resultObject created in JavaFX Application Thread
            // from someother thread. It should throw an exception.
-           obj.resultObject.toString();
+           assertThrows(IllegalStateException.class, () -> {
+                obj.resultObject.toString();
+           });
      }
 
     // JDK-8162715
@@ -174,7 +178,9 @@ public class MiscellaneousTest extends TestBase {
         }
     }
 
-    @Test(timeout = 30000) public void testDOMTimer() {
+    @Test
+    @Timeout(30)
+    public void testDOMTimer() {
         final TimerCallback timer = new TimerCallback();
         final WebEngine webEngine = createWebEngine();
         submit(() -> {
@@ -207,13 +213,11 @@ public class MiscellaneousTest extends TestBase {
                     stat.firedTime - stat.createdTime);
             // Timer should not fire too early. Added 20 ms offset to compensate
             // the floating point approximation issues while dealing with timer.
-            assertTrue(msg,
-                    ((stat.firedTime + 20) - stat.createdTime) >= stat.interval);
+            assertTrue(((stat.firedTime + 20) - stat.createdTime) >= stat.interval, msg);
             // Timer should not be too late. Since it is not a real time system,
             // we can't expect the timer to be fire at exactly on the requested
             // time, give a 1000 ms extra time.
-            assertTrue(msg,
-                    (stat.firedTime - stat.createdTime) <= (stat.interval + 1000));
+            assertTrue((stat.firedTime - stat.createdTime) <= (stat.interval + 1000), msg);
         }
     }
 
@@ -274,7 +278,7 @@ public class MiscellaneousTest extends TestBase {
                 ttfFileStream.read(ttfFileContent, offset, available);
                 offset += available;
             }
-            assertEquals("Offset must equal to file length", length, offset);
+            assertEquals(length, offset, "Offset must equal to file length");
         }
 
         // Will be called from JS to indicate test complete
@@ -369,9 +373,9 @@ public class MiscellaneousTest extends TestBase {
         );
 
         submit(()->{
-            assertFalse("ICU text wrap failed ",
-                (Boolean) getEngine().executeScript(
-                "document.getElementById('idwrap').clientHeight == document.getElementById('idword').clientHeight"));
+            assertFalse((Boolean) getEngine().executeScript(
+                            "document.getElementById('idwrap').clientHeight == document.getElementById('idword').clientHeight"),
+                    "ICU text wrap failed");
         });
     }
 
@@ -395,8 +399,7 @@ public class MiscellaneousTest extends TestBase {
         });
 
         try {
-            assertTrue("No callback received from window.requestAnimationFrame",
-                    latch.await(10, TimeUnit.SECONDS));
+            assertTrue(latch.await(10, TimeUnit.SECONDS), "No callback received from window.requestAnimationFrame");
         } catch (InterruptedException e) {
             throw new AssertionError(e);
         }
@@ -406,16 +409,16 @@ public class MiscellaneousTest extends TestBase {
         final String fxVersion = System.getProperty("javafx.runtime.version");
         final String numericStr = fxVersion.split("[^0-9]")[0];
         final String fxVersionString = "JavaFX/" + numericStr;
-        assertTrue("UserAgentString does not contain " + fxVersionString, userAgentString.contains(fxVersionString));
+        assertTrue(userAgentString.contains(fxVersionString), "UserAgentString does not contain " + fxVersionString);
 
         File webkitLicense = new File("src/main/legal/webkit.md");
-        assertTrue("File does not exist: " + webkitLicense, webkitLicense.exists());
+        assertTrue(webkitLicense.exists(), "File does not exist: " + webkitLicense);
 
         try (final BufferedReader licenseText = new BufferedReader(new FileReader(webkitLicense))) {
             final String firstLine = licenseText.readLine().trim();
             final String webkitVersion = firstLine.substring(firstLine.lastIndexOf(" ") + 2);
-            assertTrue("webkitVersion should not be empty", webkitVersion.length() > 0);
-            assertTrue("UserAgentString does not contain: " + webkitVersion, userAgentString.contains(webkitVersion));
+            assertTrue(webkitVersion.length() > 0, "webkitVersion should not be empty");
+            assertTrue(userAgentString.contains(webkitVersion), "UserAgentString does not contain: " + webkitVersion);
         } catch (IOException ex){
             throw new AssertionError(ex);
         }

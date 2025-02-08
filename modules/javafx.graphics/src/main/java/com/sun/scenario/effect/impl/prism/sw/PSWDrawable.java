@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -171,7 +171,7 @@ public class PSWDrawable extends PrDrawable implements HeapImage {
     @Override
     public RTTexture getTextureObject() {
         if (heapDirty) {
-            // RT-27562
+            // JDK-8091374
             // TODO: inefficient approach: upload heap array to (cached)
             // texture, then render that texture to rtt
             int width = rtt.getContentWidth();

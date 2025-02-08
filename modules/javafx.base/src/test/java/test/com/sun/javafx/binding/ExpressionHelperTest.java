@@ -25,9 +25,11 @@
 
 package test.com.sun.javafx.binding;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 
 import java.util.BitSet;
 import java.util.List;
@@ -35,8 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.binding.ExpressionHelperShim;
@@ -67,7 +69,7 @@ public class ExpressionHelperTest {
     private InvalidationListenerMock[] invalidationListener;
     private ChangeListenerMock<Object>[] changeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         helper = null;
         observable = new ObservableValueStub(DATA_1);
@@ -79,34 +81,46 @@ public class ExpressionHelperTest {
         };
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testAddInvalidation_Null_X() {
-        ExpressionHelper.addListener(helper, null, invalidationListener[0]);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.addListener(helper, null, invalidationListener[0]);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testAddInvalidation_X_Null() {
-        ExpressionHelper.addListener(helper, observable, (InvalidationListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.addListener(helper, observable, (InvalidationListener) null);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testRemoveInvalidation_Null() {
-        ExpressionHelper.removeListener(helper, (InvalidationListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.removeListener(helper, (InvalidationListener) null);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testAddChange_Null_X() {
-        ExpressionHelper.addListener(helper, null, changeListener[0]);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.addListener(helper, null, changeListener[0]);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testAddChange_X_Null() {
-        ExpressionHelper.addListener(helper, observable, (ChangeListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.addListener(helper, observable, (ChangeListener) null);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testRemoveChange_Null() {
-        ExpressionHelper.removeListener(helper, (ChangeListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.removeListener(helper, (ChangeListener) null);
+        });
     }
 
     @Test

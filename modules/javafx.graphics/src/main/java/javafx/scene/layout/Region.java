@@ -726,7 +726,7 @@ public class Region extends Parent {
                 // we can repaint the region.
                 if (b != null) {
                     for (BackgroundImage i : b.getImages()) {
-                        final Image image = i.image;
+                        final Image image = i.getImage();
                         final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
                         if (acc.isAnimation(image) || image.getProgress() < 1) {
                             addImageListener(image);
@@ -737,7 +737,7 @@ public class Region extends Parent {
                 // And we must remove this listener from any old images
                 if (old != null) {
                     for (BackgroundImage i : old.getImages()) {
-                        removeImageListener(i.image);
+                        removeImageListener(i.getImage());
                     }
                 }
 
@@ -785,7 +785,7 @@ public class Region extends Parent {
                 // we can repaint the region.
                 if (b != null) {
                     for (BorderImage i : b.getImages()) {
-                        final Image image = i.image;
+                        final Image image = i.getImage();
                         final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
                         if (acc.isAnimation(image) || image.getProgress() < 1) {
                             addImageListener(image);
@@ -796,7 +796,7 @@ public class Region extends Parent {
                 // And we must remove this listener from any old images
                 if (old != null) {
                     for (BorderImage i : old.getImages()) {
-                        removeImageListener(i.image);
+                        removeImageListener(i.getImage());
                     }
                 }
 
@@ -3229,7 +3229,7 @@ public class Region extends Parent {
                 }
 
                 final StrokeType type = bss.getType();
-                double sw = Math.max(bs.getWidths().top, 0d);
+                double sw = Math.max(bs.getWidths().getTop(), 0d);
                 StrokeLineCap cap = bss.getLineCap();
                 StrokeLineJoin join = bss.getLineJoin();
                 float miterlimit = (float) Math.max(bss.getMiterLimit(), 1d);
@@ -3300,9 +3300,9 @@ public class Region extends Parent {
         // since Parent's computeGeomBounds does handle 3D correctly.
         BaseBounds cb = RegionHelper.superComputeGeomBounds(this, bounds, tx);
         /*
-         * This is a work around for RT-7680. Parent returns invalid bounds from
+         * This is a work around for JDK-8109407. Parent returns invalid bounds from
          * computeGeomBoundsImpl when it has no children or if all its children
-         * have invalid bounds. If RT-7680 were fixed, then we could omit this
+         * have invalid bounds. If JDK-8109407 were fixed, then we could omit this
          * first branch of the if and only use the else since the correct value
          * would be computed.
          */

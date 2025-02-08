@@ -2023,6 +2023,20 @@ not_started:
 GstSample *
 gst_app_sink_try_pull_sample (GstAppSink * appsink, GstClockTime timeout)
 {
+  gboolean timeout_valid;
+  gint64 end_time, now;
+
+  /*
+   * 0 is valid but has a special meaning for gst_app_sink_try_pull_object which fetches
+   * a sample/event that is available without waiting. For 0, we don't want to deduct
+   * from the timeout to allow skipping all events and reading a sample directly.
+   */
+  timeout_valid = timeout != 0 && GST_CLOCK_TIME_IS_VALID (timeout);
+
+  if (timeout_valid)
+    end_time =
+        g_get_monotonic_time () + timeout / (GST_SECOND / G_TIME_SPAN_SECOND);
+
   while (TRUE) {
     GstMiniObject *obj;
 
@@ -2034,6 +2048,14 @@ gst_app_sink_try_pull_sample (GstAppSink * appsink, GstClockTime timeout)
       return GST_SAMPLE_CAST (obj);
     } else {
       gst_mini_object_unref (obj);
+      if (timeout_valid) {
+        now = g_get_monotonic_time ();
+        if (now >= end_time) {
+          /* timeout expired */
+          return NULL;
+        }
+        timeout = (end_time - now) * (GST_SECOND / G_TIME_SPAN_SECOND);
+      }
     }
   }
 }

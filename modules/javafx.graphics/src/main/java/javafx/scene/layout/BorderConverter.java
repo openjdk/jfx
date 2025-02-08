@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,11 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.SubPropertyConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
+import java.util.List;
 import java.util.Map;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
@@ -40,8 +42,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
 /**
+ * Converts -fx-border components into a {@link Border}.
  */
-class BorderConverter extends StyleConverter<ParsedValue[], Border> {
+class BorderConverter extends StyleConverter<ParsedValue[], Border>
+                      implements SubPropertyConverter<Border> {
 
     private static final BorderConverter BORDER_IMAGE_CONVERTER =
             new BorderConverter();
@@ -53,11 +57,16 @@ class BorderConverter extends StyleConverter<ParsedValue[], Border> {
     // Disallow instantiation
     private BorderConverter() { }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException if {@code convertedValues} is {@code null}
+     */
     @Override
     public Border convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
         final Paint[][] strokeFills = (Paint[][])convertedValues.get(Border.BORDER_COLOR);
         final BorderStrokeStyle[][] strokeStyles = (BorderStrokeStyle[][]) convertedValues.get(Border.BORDER_STYLE);
-        final String[] imageUrls = (String[]) convertedValues.get(Border.BORDER_IMAGE_SOURCE);
+        final Object[] images = (Object[]) convertedValues.get(Border.BORDER_IMAGE_SOURCE);
         //
         // In W3C CSS, border colors and border images are not layered. In javafx, they are. We've taken the position
         // that there is one layer per -fx-border-color or -fx-border-image-source. This is consistent with
@@ -70,7 +79,7 @@ class BorderConverter extends StyleConverter<ParsedValue[], Border> {
         // as the default stroke is solid.
         //
         final boolean hasStrokes = (strokeFills != null && strokeFills.length > 0) || (strokeStyles != null && strokeStyles.length > 0);
-        final boolean hasImages = imageUrls != null && imageUrls.length > 0;
+        final boolean hasImages = images != null && images.length > 0;
 
         // If there are neither background fills nor images, then there is nothing for us to construct.
         if (!hasStrokes && !hasImages) return null;
@@ -145,7 +154,7 @@ class BorderConverter extends StyleConverter<ParsedValue[], Border> {
 
         BorderImage[] borderImages = null;
         if (hasImages) {
-            borderImages = new BorderImage[imageUrls.length];
+            borderImages = new BorderImage[images.length];
             Object tmp = convertedValues.get(Border.BORDER_IMAGE_REPEAT);
             final RepeatStruct[] repeats = tmp == null ? new RepeatStruct[0] : (RepeatStruct[]) tmp;
             final int lastRepeatIndex = repeats.length - 1;
@@ -162,34 +171,121 @@ class BorderConverter extends StyleConverter<ParsedValue[], Border> {
             final Insets[] insets = tmp == null ? new Insets[0] : (Insets[]) tmp;
             final int lastInsetsIndex = insets.length - 1;
 
-            for (int i=0; i<imageUrls.length; i++) {
-                if (imageUrls[i] == null) continue;
+            for (int i=0; i<images.length; i++) {
+                if (images[i] == null) continue;
                 BorderRepeat repeatX = BorderRepeat.STRETCH, repeatY = BorderRepeat.STRETCH;
                 if (repeats.length > 0) {
                     final RepeatStruct repeat = repeats[i <= lastRepeatIndex ? i : lastRepeatIndex];
-                    switch (repeat.repeatX) {
-                        case SPACE: repeatX = BorderRepeat.SPACE; break;
-                        case ROUND: repeatX = BorderRepeat.ROUND; break;
-                        case REPEAT: repeatX = BorderRepeat.REPEAT; break;
-                        case NO_REPEAT: repeatX = BorderRepeat.STRETCH; break;
-                    }
-                    switch (repeat.repeatY) {
-                        case SPACE: repeatY = BorderRepeat.SPACE; break;
-                        case ROUND: repeatY = BorderRepeat.ROUND; break;
-                        case REPEAT: repeatY = BorderRepeat.REPEAT; break;
-                        case NO_REPEAT: repeatY = BorderRepeat.STRETCH; break;
-                    }
+                    repeatX = convertToBorderRepeat(repeat.repeatX);
+                    repeatY = convertToBorderRepeat(repeat.repeatY);
                 }
 
                 final BorderImageSlices slice = slices.length > 0 ? slices[i <= lastSlicesIndex ? i : lastSlicesIndex] : BorderImageSlices.DEFAULT;
                 final Insets inset = insets.length > 0 ? insets[i <= lastInsetsIndex ? i : lastInsetsIndex] : Insets.EMPTY;
                 final BorderWidths width = widths.length > 0 ? widths[i <= lastWidthsIndex ? i : lastWidthsIndex] : BorderWidths.DEFAULT;
-                final Image img = StyleManager.getInstance().getCachedImage(imageUrls[i]);
-                borderImages[i] = new BorderImage(img, width, inset, slice.widths, slice.filled, repeatX, repeatY);
+                final Image image;
+
+                // The images are either URLs (when they come from CSS) or the actual Image
+                // instances (when they come from the convertBack operation).
+                if (images[i] instanceof String url) {
+                    image = StyleManager.getInstance().getCachedImage(url);
+                } else if (images[i] instanceof Image img) {
+                    image = img;
+                } else {
+                    throw new IllegalArgumentException("Unexpected type: " + images[i].getClass().getName());
+                }
+
+                borderImages[i] = new BorderImage(image, width, inset, slice.widths, slice.filled, repeatX, repeatY);
             }
         }
 
         return borderStrokes == null && borderImages == null ? null : new Border(borderStrokes, borderImages);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException if {@code border} is {@code null}
+     */
+    @Override
+    public Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(Border border) {
+        List<BorderStroke> strokes = border.getStrokes();
+        int strokesCount = strokes.size();
+        Paint[][] borderStrokeFills = new Paint[strokesCount][];
+        BorderStrokeStyle[][] borderStrokeStyles = new BorderStrokeStyle[strokesCount][];
+        Margins[] borderWidths = new Margins[strokesCount];
+        CornerRadii[] borderRadius = new CornerRadii[strokesCount];
+        Insets[] borderInsets = new Insets[strokesCount];
+
+        for (int i = 0; i < strokesCount; ++i) {
+            BorderStroke stroke = strokes.get(i);
+            borderStrokeFills[i] = new Paint[4];
+            borderStrokeFills[i][0] = stroke.getTopStroke();
+            borderStrokeFills[i][1] = stroke.getRightStroke();
+            borderStrokeFills[i][2] = stroke.getBottomStroke();
+            borderStrokeFills[i][3] = stroke.getLeftStroke();
+
+            borderStrokeStyles[i] = new BorderStrokeStyle[4];
+            borderStrokeStyles[i][0] = stroke.getTopStyle();
+            borderStrokeStyles[i][1] = stroke.getRightStyle();
+            borderStrokeStyles[i][2] = stroke.getBottomStyle();
+            borderStrokeStyles[i][3] = stroke.getLeftStyle();
+
+            BorderWidths widths = stroke.getWidths();
+            borderWidths[i] = new Margins(widths.getTop(), widths.getRight(), widths.getBottom(), widths.getLeft(), false);
+
+            borderRadius[i] = stroke.getRadii();
+            borderInsets[i] = stroke.getInsets();
+        }
+
+        List<BorderImage> borderImages = border.getImages();
+        int imagesCount = borderImages.size();
+        Image[] images = new Image[imagesCount];
+        RepeatStruct[] imageRepeats = new RepeatStruct[imagesCount];
+        BorderImageSlices[] imageSlices = new BorderImageSlices[imagesCount];
+        BorderWidths[] imageWidths = new BorderWidths[imagesCount];
+        Insets[] imageInsets = new Insets[imagesCount];
+
+        for (int i = 0; i < imagesCount; ++i) {
+            BorderImage image = borderImages.get(i);
+            images[i] = image.getImage();
+            imageRepeats[i] = new RepeatStruct(
+                convertToBackgroundRepeat(image.getRepeatX()),
+                convertToBackgroundRepeat(image.getRepeatY()));
+            imageSlices[i] = new BorderImageSlices(image.getSlices(), image.isFilled());
+            imageWidths[i] = image.getWidths();
+            imageInsets[i] = image.getInsets();
+        }
+
+        return Map.of(
+            Border.BORDER_COLOR, borderStrokeFills,
+            Border.BORDER_STYLE, borderStrokeStyles,
+            Border.BORDER_WIDTH, borderWidths,
+            Border.BORDER_RADIUS, borderRadius,
+            Border.BORDER_INSETS, borderInsets,
+            Border.BORDER_IMAGE_SOURCE, images,
+            Border.BORDER_IMAGE_REPEAT, imageRepeats,
+            Border.BORDER_IMAGE_SLICE, imageSlices,
+            Border.BORDER_IMAGE_WIDTH, imageWidths,
+            Border.BORDER_IMAGE_INSETS, imageInsets);
+    }
+
+    private BackgroundRepeat convertToBackgroundRepeat(BorderRepeat repeat) {
+        return switch (repeat) {
+            case REPEAT -> BackgroundRepeat.REPEAT;
+            case ROUND -> BackgroundRepeat.ROUND;
+            case SPACE -> BackgroundRepeat.SPACE;
+            case STRETCH -> BackgroundRepeat.NO_REPEAT;
+        };
+    }
+
+    private BorderRepeat convertToBorderRepeat(BackgroundRepeat repeat) {
+        return switch (repeat) {
+            case REPEAT -> BorderRepeat.REPEAT;
+            case ROUND -> BorderRepeat.ROUND;
+            case SPACE -> BorderRepeat.SPACE;
+            case NO_REPEAT -> BorderRepeat.STRETCH;
+        };
     }
 
     /**

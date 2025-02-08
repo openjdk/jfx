@@ -25,13 +25,10 @@
 
 package test.launchertest;
 
+import static test.launchertest.Constants.ERROR_NONE;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
-import javax.swing.JDialog;
-import javax.swing.SwingUtilities;
-
-import static test.launchertest.Constants.*;
 
 /**
  * Test application launcher with daemon threads to verify that the

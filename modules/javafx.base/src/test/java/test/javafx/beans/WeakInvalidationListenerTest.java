@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,20 +27,24 @@ package test.javafx.beans;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class WeakInvalidationListenerTest {
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testConstructWithNull() {
-        new WeakInvalidationListener(null);
+        assertThrows(NullPointerException.class, () -> {
+            new WeakInvalidationListener(null);
+        });
     }
+
 
     @Test
     public void testHandle() {

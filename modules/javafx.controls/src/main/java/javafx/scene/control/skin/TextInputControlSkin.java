@@ -26,8 +26,6 @@
 package javafx.scene.control.skin;
 
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -145,18 +143,16 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         END
     }
 
-    static boolean preload = false;
-    static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
-            if (s != null) {
-                if (s.equalsIgnoreCase("PRERENDER")) {
-                    preload = true;
-                }
+    private static final boolean preload = initPreload();
+
+    private static boolean initPreload() {
+        String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
+        if (s != null) {
+            if (s.equalsIgnoreCase("PRERENDER")) {
+                return true;
             }
-            return null;
-        });
+        }
+        return false;
     }
 
     /**
@@ -234,7 +230,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             { bind(control.focusedProperty(), control.anchorProperty(), control.caretPositionProperty(),
                     control.disabledProperty(), control.editableProperty(), displayCaret, blinkProperty());}
             @Override protected boolean computeValue() {
-                // RT-10682: On Windows, we show the caret during selection, but on others we hide it
+                // JDK-8111037: On Windows, we show the caret during selection, but on others we hide it
                 return !blinkProperty().get() && displayCaret.get() && control.isFocused() &&
                         (isWindows() || (control.getCaretPosition() == control.getAnchor())) &&
                         !control.isDisabled() &&

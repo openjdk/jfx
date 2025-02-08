@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,17 @@
 
 package test.javafx.stage;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.stage.Screen;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class ScreenTest {
@@ -55,7 +51,7 @@ public class ScreenTest {
      * do get one on Mac, but this isn't guaranteed behavior, so this
      * test might or might not be effective.
      */
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Platform.setImplicitExit(false);
         Util.startup(startupLatch, () -> {
@@ -72,7 +68,7 @@ public class ScreenTest {
         });
     }
 
-    @AfterClass
+    @AfterAll
     public static void exitFX() {
         Util.shutdown();
     }
@@ -80,7 +76,7 @@ public class ScreenTest {
     @Test
     public void testScreensNotEmpty() {
         assertNotNull(screens);
-        assertFalse("Screens list is empty", screens.size() == 0);
+        assertFalse(screens.size() == 0, "Screens list is empty");
     }
 
     @Test
@@ -95,6 +91,6 @@ public class ScreenTest {
             System.err.println("Skipping test: Screens listener not called");
         }
         assumeTrue(screensListenerCalled);
-        assertFalse("Screens list is empty in listener", screensSizeIsZero);
+        assertFalse(screensSizeIsZero, "Screens list is empty in listener");
     }
 }

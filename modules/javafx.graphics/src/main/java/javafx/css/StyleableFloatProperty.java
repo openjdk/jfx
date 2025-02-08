@@ -28,6 +28,7 @@ package javafx.css;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.FloatPropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
@@ -69,20 +70,21 @@ public abstract class StyleableFloatProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
+        // If the value is applied for the first time, we don't start a transition.
+        TransitionDefinition transition = getBean() instanceof Node node && !NodeHelper.isInitialCssState(node) ?
             NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
         float newValue = v != null ? v.floatValue() : 0;
 
         if (transition == null) {
             set(newValue);
-        } else if (mediator == null || mediator.newValue != newValue) {
+        } else if (mediator == null || mediator.endValue != newValue) {
             // We only start a new transition if the new target value is different from the target
             // value of the existing transition. This scenario can sometimes happen when a CSS value
             // is redundantly applied, which would cause unexpected animations if we allowed the new
             // transition to interrupt the existing transition.
             mediator = new TransitionMediatorImpl(get(), newValue);
-            mediator.run(transition);
+            mediator.run(transition, getCssMetaData().getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
         }
 
         this.origin = origin;
@@ -92,59 +94,68 @@ public abstract class StyleableFloatProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = StyleOrigin.USER;
-
-        // Calling the 'bind' method always cancels a transition timer.
-        if (mediator != null) {
-            mediator.cancel(true);
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(float v) {
         super.set(v);
-
-        if (mediator == null || mediator.cancel(false)) {
-            origin = StyleOrigin.USER;
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
-    private TransitionMediatorImpl mediator = null;
+    private void onUserChange() {
+        origin = StyleOrigin.USER;
+
+        if (mediator != null) {
+            mediator.cancel();
+        }
+    }
+
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
 
     private class TransitionMediatorImpl extends TransitionMediator {
-        private final float oldValue;
-        private final float newValue;
+        private final float startValue;
+        private final float endValue;
+        private float reversingAdjustedStartValue;
 
-        public TransitionMediatorImpl(float oldValue, float newValue) {
-            this.oldValue = oldValue;
-            this.newValue = newValue;
+        public TransitionMediatorImpl(float startValue, float endValue) {
+            this.startValue = startValue;
+            this.endValue = endValue;
+            this.reversingAdjustedStartValue = startValue;
         }
 
         @Override
         public void onUpdate(double progress) {
-            set(progress < 1 ? oldValue + (newValue - oldValue) * (float)progress : newValue);
+            StyleableFloatProperty.super.set(
+                progress < 1 ? startValue + (endValue - startValue) * (float)progress : endValue);
         }
 
         @Override
         public void onStop() {
-            // When the transition is cancelled or completed, we clear the reference to this mediator.
-            // However, when this mediator was cancelled by a reversing transition, the 'mediator' field
-            // refers to the reversing mediator, and not to this mediator. We need to be careful to only
-            // clear references to this mediator.
-            if (mediator == this) {
-                mediator = null;
-            }
+            mediator = null;
         }
 
         @Override
         public StyleableProperty<?> getStyleableProperty() {
             return StyleableFloatProperty.this;
+        }
+
+        @Override
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            var mediator = (TransitionMediatorImpl)existingMediator;
+
+            if (mediator.reversingAdjustedStartValue == endValue) {
+                reversingAdjustedStartValue = mediator.endValue;
+                return true;
+            }
+
+            return false;
         }
     }
 }

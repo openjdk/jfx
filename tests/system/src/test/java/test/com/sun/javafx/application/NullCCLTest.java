@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,12 @@
 
 package test.com.sun.javafx.application;
 
-import com.sun.javafx.application.PlatformImpl;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.TIMEOUT;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
@@ -44,15 +49,12 @@ import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.application.PlatformImpl;
 import test.util.Util;
-
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
 
 /**
  * Unit tests for Platform runLater.
@@ -62,7 +64,7 @@ public class NullCCLTest {
     // Used to launch the application before running any test
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         // Create a new thread so we can set the CCL to null without affecting JUnit
         new Thread(() -> {
@@ -76,12 +78,10 @@ public class NullCCLTest {
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
+                fail("Timeout waiting for Application to launch");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
 
         Util.runAndWait(() -> {
@@ -90,14 +90,14 @@ public class NullCCLTest {
         });
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Platform.exit();
     }
 
     private Stage stage;
 
-    @After
+    @AfterEach
     public void cleanup() {
         Thread.setDefaultUncaughtExceptionHandler(null);
         if (stage != null) {

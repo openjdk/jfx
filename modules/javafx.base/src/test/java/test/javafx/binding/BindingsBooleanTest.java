@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package test.javafx.binding;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import javafx.beans.InvalidationListener;
 import test.javafx.beans.InvalidationListenerMock;
 import javafx.beans.binding.Bindings;
@@ -35,8 +35,8 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class BindingsBooleanTest {
 
@@ -44,7 +44,7 @@ public class BindingsBooleanTest {
     private BooleanProperty op2;
     private InvalidationListenerMock observer;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         op1 = new SimpleBooleanProperty(true);
         op2 = new SimpleBooleanProperty(false);
@@ -136,15 +136,21 @@ public class BindingsBooleanTest {
         assertNull(op2.listener);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testAnd_null_x() {
-        Bindings.and(null, op1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.and(null, op1);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void testAnd_x_null() {
-        Bindings.and(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.and(op1, null);
+        });
     }
+
 
     @SuppressWarnings("unused")
     @Test
@@ -231,15 +237,21 @@ public class BindingsBooleanTest {
         assertNull(op2.listener);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testOr_null_x() {
-        Bindings.or(null, op1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.or(null, op1);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void testOr_x_null() {
-        Bindings.or(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.or(op1, null);
+        });
     }
+
 
     @Test
     public void testNot() {
@@ -274,10 +286,13 @@ public class BindingsBooleanTest {
         observer.check(binding, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testNot_null() {
-        Bindings.not(null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.not(null);
+        });
     }
+
 
     @Test
     public void testEqual() {
@@ -338,15 +353,21 @@ public class BindingsBooleanTest {
         observer.check(binding, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testEqual_null_x() {
-        Bindings.equal((ObservableBooleanValue)null, op1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.equal((ObservableBooleanValue)null, op1);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void testEqual_x_null() {
-        Bindings.equal(op1, (ObservableBooleanValue)null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.equal(op1, (ObservableBooleanValue)null);
+        });
     }
+
 
     @Test
     public void testNotEqual() {

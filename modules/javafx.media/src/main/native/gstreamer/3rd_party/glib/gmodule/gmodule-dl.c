@@ -136,7 +136,7 @@ _g_module_open (const gchar *file_name,
 
   lock_dlerror ();
   handle = dlopen (file_name,
-       (bind_local ? 0 : RTLD_GLOBAL) | (bind_lazy ? RTLD_LAZY : RTLD_NOW));
+                   (bind_local ? RTLD_LOCAL : RTLD_GLOBAL) | (bind_lazy ? RTLD_LAZY : RTLD_NOW));
   if (!handle)
     {
       const gchar *message = fetch_dlerror (TRUE);
@@ -167,7 +167,7 @@ _g_module_self (void)
    * NULL is given, dlsym returns an appropriate pointer.
    */
   lock_dlerror ();
-#if defined(__BIONIC__) || defined(__NetBSD__) || defined(__FreeBSD__)
+#if defined(__ANDROID__) || defined(__NetBSD__) || defined(__FreeBSD__)
   handle = RTLD_DEFAULT;
 #else
   handle = dlopen (NULL, RTLD_GLOBAL | RTLD_LAZY);
@@ -182,7 +182,7 @@ _g_module_self (void)
 static void
 _g_module_close (gpointer handle)
 {
-#if defined(__BIONIC__) || defined(__NetBSD__) || defined(__FreeBSD__)
+#if defined(__ANDROID__) || defined(__NetBSD__) || defined(__FreeBSD__)
   if (handle != RTLD_DEFAULT)
 #endif
     {

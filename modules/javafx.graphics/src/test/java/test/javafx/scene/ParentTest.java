@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,23 +42,28 @@ import javafx.scene.ParentShim;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ParentTest {
     private StubToolkit toolkit;
     private Stage stage;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
         stage = new Stage();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         stage.close();
     }
@@ -375,35 +380,41 @@ public class ParentTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testAddingNullChild() {
-        Group g = new Group();
-        ParentShim.getChildren(g).add(null);
+        assertThrows(NullPointerException.class, () -> {
+            Group g = new Group();
+            ParentShim.getChildren(g).add(null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testNullCheckIsDoneBeforeTestForDuplicates() {
-        Group g = new Group();
-        ParentShim.getChildren(g).addAll(null, new Rectangle(), null);
+        assertThrows(NullPointerException.class, () -> {
+            Group g = new Group();
+            ParentShim.getChildren(g).addAll(null, new Rectangle(), null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testAddingClipNodeTwice() {
-        Group g = new Group();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Group g = new Group();
 
-        Node clipParent = new Rectangle();
-        Node clipNode = new Rectangle();
+            Node clipParent = new Rectangle();
+            Node clipNode = new Rectangle();
 
-        clipParent.setClip(clipNode);
-        try {
-            // try to add node which is already set as a clip
+            clipParent.setClip(clipNode);
+            try {
+                // try to add node which is already set as a clip
+                ParentShim.getChildren(g).add(clipNode);
+                fail();
+            } catch (IllegalArgumentException e) {
+            }
+
+            // try again
             ParentShim.getChildren(g).add(clipNode);
-            fail();
-        } catch (IllegalArgumentException e) {
-        }
-
-        // try again
-        ParentShim.getChildren(g).add(clipNode);
+        });
     }
 
     @Test
@@ -426,17 +437,19 @@ public class ParentTest {
         ParentShim.getChildren(g).add(clipNode);
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testFalsePermutation() {
-        Group g = new Group();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Group g = new Group();
 
-        Rectangle r1 = new Rectangle();
-        Rectangle r2 = new Rectangle();
-        Rectangle r3 = new Rectangle();
-        Rectangle r4 = new Rectangle();
+            Rectangle r1 = new Rectangle();
+            Rectangle r2 = new Rectangle();
+            Rectangle r3 = new Rectangle();
+            Rectangle r4 = new Rectangle();
 
-        ParentShim.getChildren(g).addAll(r1, r2, r3, r4);
-        ParentShim.getChildren(g).setAll(r1, r2, r2, r4);
+            ParentShim.getChildren(g).addAll(r1, r2, r3, r4);
+            ParentShim.getChildren(g).setAll(r1, r2, r2, r4);
+        });
     }
 
     @Test
@@ -478,7 +491,7 @@ public class ParentTest {
         stage.setScene(scene);
         stage.show();
 
-        // there are assertions tested down the stack (see RT-21746)
+        // there are assertions tested down the stack (see JDK-8115729)
     }
 
     private static class LGroup extends Group {

@@ -126,7 +126,7 @@ public abstract class XYChart<X,Y> extends Chart {
     private final ListChangeListener<Series<X,Y>> seriesChanged = c -> {
         ObservableList<? extends Series<X, Y>> series = c.getList();
         while (c.next()) {
-            // RT-12069, linked list pointers should update when list is permutated.
+            // JDK-8112081, linked list pointers should update when list is permutated.
             if (c.wasPermutated()) {
                 displayedSeries.sort((o1, o2) -> series.indexOf(o2) - series.indexOf(o1));
 
@@ -246,8 +246,8 @@ public abstract class XYChart<X,Y> extends Chart {
             if(old != null) {
                 old.removeListener(seriesChanged);
                 // Set animated to false so we don't animate both remove and add
-                // at the same time. RT-14163
-                // RT-21295 - disable animated only when current is also not null.
+                // at the same time. JDK-8113301
+                // JDK-8127526 - disable animated only when current is also not null.
                 if (current != null && old.size() > 0) {
                     saveAnimationState = (old.get(0).getChart().getAnimated()) ? 1 : 2;
                     old.get(0).getChart().setAnimated(false);
@@ -490,7 +490,7 @@ public abstract class XYChart<X,Y> extends Chart {
         this.yAxis = yAxis;
         if (yAxis.getSide() == null) yAxis.setSide(Side.LEFT);
         yAxis.setEffectiveOrientation(Orientation.VERTICAL);
-        // RT-23123 autoranging leads to charts incorrect appearance.
+        // JDK-8118001 autoranging leads to charts incorrect appearance.
         xAxis.autoRangingProperty().addListener((ov, t, t1) -> {
             updateAxisRange();
         });
@@ -1516,7 +1516,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 final XYChart<X, Y> chart = getChart();
                 while (c.next()) {
                     if (chart != null) {
-                        // RT-25187 Probably a sort happened, just reorder the pointers and return.
+                        // JDK-8125209 Probably a sort happened, just reorder the pointers and return.
                         if (c.wasPermutated()) {
                             displayedData.sort((o1, o2) -> data.indexOf(o2) - data.indexOf(o1));
                             return;
