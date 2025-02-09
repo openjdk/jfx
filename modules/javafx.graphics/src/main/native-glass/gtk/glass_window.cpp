@@ -973,15 +973,14 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
                 ? event->height : wh;
     }
 
-    int x, y;
-    gdk_window_get_origin(gdk_window, &x, &y);
-    if (frame_type == TITLED && !is_fullscreen) {
-        x -= geometry.extents.left;
-        y -= geometry.extents.top;
-    }
+    gint root_x, root_y, origin_x, origin_y;
+    gdk_window_get_root_origin(gdk_window, &root_x, &root_y);
+    gdk_window_get_origin(gdk_window, &origin_x, &origin_y);
 
-    geometry.x = x;
-    geometry.y = y;
+    geometry.x = root_x;
+    geometry.y = root_y;
+    geometry.view_x = origin_x - root_x;
+    geometry.view_y = origin_y - root_y;
     notify_window_move();
 
     glong to_screen = getScreenPtrForLocation(geometry.x, geometry.y);
@@ -1057,8 +1056,8 @@ void WindowContextTop::set_visible(bool visible) {
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch,
                                   float gravity_x, float gravity_y) {
-//     fprintf(stderr, "set_bounds -> x = %d, y = %d, xset = %d, yset = %d, w = %d, h = %d, cw = %d, ch = %d, gx = %f, gy = %f\n",
-//            x, y, xSet, ySet, w, h, cw, ch, gravity_x, gravity_y);
+     fprintf(stderr, "set_bounds -> x = %d, y = %d, xset = %d, yset = %d, w = %d, h = %d, cw = %d, ch = %d, gx = %f, gy = %f\n",
+            x, y, xSet, ySet, w, h, cw, ch, gravity_x, gravity_y);
     // newW / newH are view/content sizes
     int newW = 0;
     int newH = 0;
@@ -1231,8 +1230,8 @@ GtkWindow *WindowContextTop::get_gtk_window() {
     return GTK_WINDOW(gtk_widget);
 }
 
-WindowFrameExtents WindowContextTop::get_frame_extents() {
-    return geometry.extents;
+WindowGeometry WindowContextTop::get_geometry() {
+    return geometry;
 }
 
 void WindowContextTop::update_ontop_tree(bool on_top) {
