@@ -68,7 +68,7 @@ public class LineTo extends PathElement {
     }
 
     /**
-     * Creates a new isntance of LineTo.
+     * Creates a new instance of LineTo.
      * @param x the horizontal coordinate of the line end point
      * @param y the vertical coordinate of the line end point
      */

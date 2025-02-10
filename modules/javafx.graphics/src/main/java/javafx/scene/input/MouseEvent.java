@@ -52,15 +52,15 @@ import java.io.IOException;
  * a mouse press event and terminated as a result of a mouse released
  * event, the source node decides which gesture will take place.
  * <p>
- * The simple press-drag-release gesture is default. It's best used to allow
- * changing size of a shape, dragging it around and so on. Whole
+ * The simple press-drag-release gesture is the default. It's best used to allow
+ * changing the size of a shape, dragging it around and so on. The whole
  * press-drag-release gesture is delivered to one node. When a mouse
  * button is pressed, the top-most node is picked and all subsequent
- * mouse events are delivered to the same node until the button is released.
+ * mouse events are delivered to that same node until the button is released.
  * If a mouse clicked event is generated from these events, it is still
  * delivered to the same node.
  * <p>
- * During simple press-drag-release gesture, the other nodes are not involved
+ * During a simple press-drag-release gesture, the other nodes are not involved
  * and don't get any events. If these nodes need to be involved in the gesture,
  * full press-drag-release gesture has to be activated. This gesture is
  * best used for connecting nodes by "wires", dragging nodes to other nodes etc.
@@ -68,16 +68,16 @@ import java.io.IOException;
  * {@link javafx.scene.input.MouseDragEvent MouseDragEvent} which contains
  * the events delivered to the gesture targets.
  * <p>
- * The third gesture type is platform-supported drag-and-drop gesture. It serves
+ * The third gesture type is the platform-supported drag-and-drop gesture. It serves
  * best to transfer data and works also between (not necessarily FX)
  * applications. This gesture type is more closely described
  * at {@link javafx.scene.input.DragEvent DragEvent}.
  * <p>
- * In a short summary, simple press-drag-release gesture is activated
+ * In summary, simple press-drag-release gestures are activated
  * automatically when a mouse button is pressed and delivers all
  * {@code MouseEvent}s to the gesture source. When you start dragging,
- * eventually the {@code DRAG_DETECTED} event arrives. In its handler
- * you can either start full press-drag-release gesture by calling
+ * eventually the {@code DRAG_DETECTED} event arrives. In its handler,
+ * you can either start a full press-drag-release gesture by calling the
  * {@code startFullDrag} method on a node or scene - the {@code MouseDragEvent}s
  * start to be delivered to gesture targets, or you can start drag and drop
  * gesture by calling {@code startDragAndDrop} method on a node or scene -
@@ -93,14 +93,14 @@ import java.io.IOException;
  *
  * <h2>Mouse enter/exit handling</h2>
  * <p>
- * When the mouse enters a node, the node gets {@code MOUSE_ENTERED} event, when
- * it leaves, it gets {@code MOUSE_EXITED} event. These events are delivered
+ * When the mouse enters a node, the node gets a {@code MOUSE_ENTERED} event, when
+ * it leaves, it gets a {@code MOUSE_EXITED} event. These events are delivered
  * only to the entered/exited node and seemingly don't go through the
  * capturing/bubbling phases. This is the most common use-case.
  * <p>
- * When the capturing or bubbling is desired, there are
+ * When capturing or bubbling is desired, there are
  * {@code MOUSE_ENTERED_TARGET}/{@code MOUSE_EXITED_TARGET} events. These events
- * go through capturing/bubbling phases normally. This means that parent may
+ * go through capturing/bubbling phases normally. This means that a parent may
  * receive the {@code MOUSE_ENTERED_TARGET} event when the mouse entered
  * either the parent itself or some of its children. To distinguish between
  * these two cases, the event target can be tested on equality with the node.
