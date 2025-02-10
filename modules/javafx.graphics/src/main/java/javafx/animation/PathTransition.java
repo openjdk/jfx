@@ -221,7 +221,7 @@ public final class PathTransition extends Transition {
     public static enum OrientationType {
 
         /**
-         * The targeted {@code node}'s rotation matrix stays unchange along the
+         * The targeted {@code node}'s rotation matrix stays unchanged along the
          * geometric path.
          */
         NONE,
