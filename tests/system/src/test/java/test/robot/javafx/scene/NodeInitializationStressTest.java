@@ -39,9 +39,12 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.HPos;
+import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -61,6 +64,8 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChart.Series;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
@@ -74,8 +79,10 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Pagination;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.SplitMenuButton;
@@ -95,6 +102,7 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.skin.AccordionSkin;
+import javafx.scene.control.skin.ButtonBarSkin;
 import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.control.skin.CheckBoxSkin;
 import javafx.scene.control.skin.ChoiceBoxSkin;
@@ -106,8 +114,10 @@ import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.control.skin.ListViewSkin;
 import javafx.scene.control.skin.MenuButtonSkin;
 import javafx.scene.control.skin.PaginationSkin;
+import javafx.scene.control.skin.ProgressIndicatorSkin;
 import javafx.scene.control.skin.RadioButtonSkin;
 import javafx.scene.control.skin.ScrollPaneSkin;
+import javafx.scene.control.skin.SeparatorSkin;
 import javafx.scene.control.skin.SpinnerSkin;
 import javafx.scene.control.skin.SplitMenuButtonSkin;
 import javafx.scene.control.skin.TabPaneSkin;
@@ -233,6 +243,30 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setAlignment(Pos.CENTER);
             c.setText(nextString());
             c.setDefaultButton(nextBoolean());
+        });
+    }
+
+    @Test
+    public void buttonBar() {
+        assumeFalse(SKIP_TEST);
+        String[] buttonOrders = {
+            ButtonBar.BUTTON_ORDER_LINUX,
+            ButtonBar.BUTTON_ORDER_MAC_OS,
+            ButtonBar.BUTTON_ORDER_NONE,
+            ButtonBar.BUTTON_ORDER_WINDOWS
+        };
+        test(() -> {
+            ButtonBar c = new ButtonBar();
+            c.setSkin(new ButtonBarSkin(c));
+            return c;
+        }, (c) -> {
+            accessControl(c);
+            c.setButtonMinWidth(10 + nextDouble(100));
+            c.setButtonOrder(nextItem(buttonOrders));
+            ButtonData d = nextItem(ButtonData.values());
+            Button b = new Button(d.toString());
+            ButtonBar.setButtonData(b, d);
+            c.getButtons().setAll(b);
         });
     }
 
@@ -449,6 +483,19 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     @Test
+    public void progressIndicator() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            ProgressIndicator c = new ProgressIndicator();
+            c.setSkin(new ProgressIndicatorSkin(c));
+            return c;
+        }, (c) -> {
+            accessControl(c);
+            c.setProgress(nextBoolean() ? -1 : nextDouble(1));
+        });
+    }
+
+    @Test
     public void radioButton() {
         assumeFalse(SKIP_TEST);
         test(() -> {
@@ -485,6 +532,21 @@ public class NodeInitializationStressTest extends RobotTestBase {
         }, (c) -> {
             c.setPannable(nextBoolean());
             accessControl(c);
+        });
+    }
+
+    @Test
+    public void separator() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            Separator c = new Separator();
+            c.setSkin(new SeparatorSkin(c));
+            return c;
+        }, (c) -> {
+            accessControl(c);
+            c.setOrientation(nextBoolean() ? Orientation.VERTICAL : Orientation.HORIZONTAL);
+            c.setHalignment(nextEnum(HPos.class));
+            c.setValignment(nextEnum(VPos.class));
         });
     }
 
@@ -885,8 +947,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
         return max * new Random().nextDouble();
     }
 
+    private static <T extends Enum> T nextEnum(Class<T> type) {
+        T[] values = type.getEnumConstants();
+        return nextItem(values);
+    }
+
     private static int nextInt(int max) {
         return new Random().nextInt(max);
+    }
+
+    private static <T> T nextItem(T[] items) {
+        int ix = nextInt(items.length);
+        return items[ix];
     }
 
     private static String nextString() {
