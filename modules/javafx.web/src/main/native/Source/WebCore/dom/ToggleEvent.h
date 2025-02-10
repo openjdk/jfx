@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class ToggleEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(ToggleEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ToggleEvent);
 public:
     struct Init : EventInit {
         String oldState;
@@ -46,13 +46,11 @@ public:
     String newState() const { return m_newState; }
 
 private:
-    ToggleEvent() = default;
+    ToggleEvent();
     ToggleEvent(const AtomString&, const Init&, Event::IsCancelable);
     ToggleEvent(const AtomString&, const Init&);
 
     bool isToggleEvent() const final { return true; }
-
-    EventInterface eventInterface() const final;
 
     String m_oldState;
     String m_newState;

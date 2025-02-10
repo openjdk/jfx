@@ -32,7 +32,6 @@
 #include "DOMPluginArray.h"
 #include "Document.h"
 #include "DocumentInlines.h"
-#include "FeaturePolicy.h"
 #include "FrameLoader.h"
 #include "GPU.h"
 #include "Geolocation.h"
@@ -43,6 +42,7 @@
 #include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
 #include "Page.h"
+#include "PermissionsPolicy.h"
 #include "PlatformStrategies.h"
 #include "PluginData.h"
 #include "PushStrategy.h"
@@ -54,10 +54,10 @@
 #include "ShareData.h"
 #include "ShareDataReader.h"
 #include "SharedBuffer.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Language.h>
 #include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
@@ -66,7 +66,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Navigator);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Navigator);
 
 Navigator::Navigator(ScriptExecutionContext* context, LocalDOMWindow& window)
     : NavigatorBase(context)
@@ -85,17 +85,17 @@ String Navigator::appVersion() const
     if (!frame)
         return String();
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::AppVersion);
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::AppVersion);
     return NavigatorBase::appVersion();
 }
 
 const String& Navigator::userAgent() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame || !frame->page())
         return m_userAgent;
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::UserAgent);
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::UserAgent);
     if (m_userAgent.isNull())
         m_userAgent = frame->loader().userAgent(frame->document()->url());
     return m_userAgent;
@@ -103,7 +103,7 @@ const String& Navigator::userAgent() const
 
 String Navigator::platform() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame || !frame->page())
         return m_platform;
 
@@ -141,7 +141,7 @@ static std::optional<URL> shareableURLForShareData(ScriptExecutionContext& conte
 
 static bool validateWebSharePolicy(Document& document)
 {
-    return isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::WebShare, document, LogFeaturePolicyFailure::Yes);
+    return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::WebShare, document);
 }
 
 bool Navigator::canShare(Document& document, const ShareData& data)
@@ -174,7 +174,7 @@ void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPro
         return;
     }
 
-    auto* window = this->window();
+    RefPtr window = this->window();
     if (!window || !window->consumeTransientActivation()) {
         promise->reject(ExceptionCode::NotAllowedError);
         return;
@@ -212,7 +212,7 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
         return;
     }
 
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame || !frame->page())
         return;
 
@@ -262,7 +262,7 @@ void Navigator::initializePluginAndMimeTypeArrays()
     if (m_plugins)
         return;
 
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     bool needsEmptyNavigatorPluginsQuirk = frame && frame->document() && frame->document()->quirks().shouldNavigatorPluginsBeEmpty();
     if (!frame || !frame->page() || needsEmptyNavigatorPluginsQuirk) {
         if (needsEmptyNavigatorPluginsQuirk)
@@ -309,7 +309,7 @@ void Navigator::initializePluginAndMimeTypeArrays()
 DOMPluginArray& Navigator::plugins()
 {
     if (auto* frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::Plugins);
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::Plugins);
 
     initializePluginAndMimeTypeArrays();
     return *m_plugins;
@@ -318,7 +318,7 @@ DOMPluginArray& Navigator::plugins()
 DOMMimeTypeArray& Navigator::mimeTypes()
 {
     if (auto* frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::MimeTypes);
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::MimeTypes);
 
     initializePluginAndMimeTypeArrays();
     return *m_mimeTypes;
@@ -338,16 +338,16 @@ bool Navigator::cookieEnabled() const
         return false;
 
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::CookieEnabled);
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::CookieEnabled);
 
-    auto* page = frame->page();
+    RefPtr page = frame->page();
     if (!page)
         return false;
 
     if (!page->settings().cookieEnabled())
         return false;
 
-    auto* document = frame->document();
+    RefPtr document = frame->document();
     if (!document)
         return false;
 
@@ -395,25 +395,25 @@ Document* Navigator::document()
 
 void Navigator::setAppBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame) {
         promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
-    auto* page = frame->page();
+    RefPtr page = frame->page();
     if (!page) {
         promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
-    auto* document = frame->document();
+    RefPtr document = frame->document();
     if (document && !document->isFullyActive()) {
         promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
-    page->badgeClient().setAppBadge(page, SecurityOriginData::fromFrame(frame), badge);
+    page->badgeClient().setAppBadge(page.get(), SecurityOriginData::fromFrame(frame.get()), badge);
     promise->resolve();
 }
 
@@ -424,19 +424,19 @@ void Navigator::clearAppBadge(Ref<DeferredPromise>&& promise)
 
 void Navigator::setClientBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame) {
         promise->reject();
         return;
     }
 
-    auto* page = frame->page();
+    RefPtr page = frame->page();
     if (!page) {
         promise->reject();
         return;
     }
 
-    page->badgeClient().setClientBadge(*page, SecurityOriginData::fromFrame(frame), badge);
+    page->badgeClient().setClientBadge(*page, SecurityOriginData::fromFrame(frame.get()), badge);
     promise->resolve();
 }
 

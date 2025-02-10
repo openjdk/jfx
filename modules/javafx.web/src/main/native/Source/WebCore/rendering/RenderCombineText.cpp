@@ -24,12 +24,12 @@
 #include "RenderBlock.h"
 #include "RenderStyleInlines.h"
 #include "StyleInheritedData.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderCombineText);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderCombineText);
 
 const float textCombineMargin = 1.15f; // Allow em + 15% margin
 
@@ -40,6 +40,8 @@ RenderCombineText::RenderCombineText(Text& textNode, const String& string)
 {
     ASSERT(isRenderCombineText());
 }
+
+RenderCombineText::~RenderCombineText() = default;
 
 void RenderCombineText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
@@ -186,12 +188,11 @@ void RenderCombineText::combineTextIfNeeded()
         m_combineFontStyle->fontCascade().update(fontSelector);
 
     if (m_isCombined) {
-        static NeverDestroyed<String> objectReplacementCharacterString(&objectReplacementCharacter, 1);
+        static NeverDestroyed<String> objectReplacementCharacterString = span(objectReplacementCharacter);
         RenderText::setRenderedText(objectReplacementCharacterString.get());
         m_combinedTextWidth = combinedTextWidth;
         m_combinedTextAscent = glyphOverflow.top;
         m_combinedTextDescent = glyphOverflow.bottom;
-        m_lineBoxes.dirtyRange(*this, 0, originalText().length(), originalText().length());
         setNeedsLayout();
     }
 }

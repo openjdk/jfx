@@ -29,6 +29,15 @@
 #include "PeerConnectionBackend.h"
 #include "RealtimeMediaSource.h"
 
+namespace WebCore {
+class LibWebRTCPeerConnectionBackend;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::LibWebRTCPeerConnectionBackend> : std::true_type { };
+}
+
 namespace webrtc {
 class IceCandidateInterface;
 }
@@ -56,6 +65,7 @@ public:
     LibWebRTCPeerConnectionBackend(RTCPeerConnection&, LibWebRTCProvider&);
     ~LibWebRTCPeerConnectionBackend();
 
+    bool shouldEnableWebRTCL4S() const;
 private:
     void close() final;
     void doCreateOffer(RTCOfferOptions&&) final;
@@ -86,7 +96,7 @@ private:
     ExceptionOr<Ref<RTCRtpSender>> addTrack(MediaStreamTrack&, FixedVector<String>&&) final;
     void removeTrack(RTCRtpSender&) final;
 
-    ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(const String&, const RTCRtpTransceiverInit&) final;
+    ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(const String&, const RTCRtpTransceiverInit&, IgnoreNegotiationNeededFlag) final;
     ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(Ref<MediaStreamTrack>&&, const RTCRtpTransceiverInit&) final;
     void setSenderSourceFromTrack(LibWebRTCRtpSenderBackend&, MediaStreamTrack&);
 
@@ -98,8 +108,13 @@ private:
 private:
     bool isLocalDescriptionSet() const final { return m_isLocalDescriptionSet; }
 
+    void startGatheringStatLogs(Function<void(String&&)>&&) final;
+    void stopGatheringStatLogs() final;
+    void provideStatLogs(String&&);
+    friend class RtcEventLogOutput;
+
     template<typename T>
-    ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiverFromTrackOrKind(T&& trackOrKind, const RTCRtpTransceiverInit&);
+    ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiverFromTrackOrKind(T&& trackOrKind, const RTCRtpTransceiverInit&, IgnoreNegotiationNeededFlag = IgnoreNegotiationNeededFlag::No);
 
     Ref<RTCRtpReceiver> createReceiver(std::unique_ptr<LibWebRTCRtpReceiverBackend>&&);
 
@@ -114,6 +129,8 @@ private:
 
     Vector<std::unique_ptr<webrtc::IceCandidateInterface>> m_pendingCandidates;
     Vector<Ref<RTCRtpReceiver>> m_pendingReceivers;
+
+    Function<void(String&&)> m_rtcStatsLogCallback;
 };
 
 } // namespace WebCore

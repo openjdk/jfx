@@ -32,12 +32,12 @@
 
 #include "CSSUnparsedValue.h"
 #include "ExceptionOr.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSOMVariableReferenceValue);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSOMVariableReferenceValue);
 
 ExceptionOr<Ref<CSSOMVariableReferenceValue>> CSSOMVariableReferenceValue::create(String&& variable, RefPtr<CSSUnparsedValue>&& fallback)
 {
@@ -65,8 +65,7 @@ String CSSOMVariableReferenceValue::toString() const
 
 void CSSOMVariableReferenceValue::serialize(StringBuilder& builder, OptionSet<SerializationArguments> arguments) const
 {
-    builder.append("var(");
-    builder.append(m_variable);
+    builder.append("var("_s, m_variable);
     if (m_fallback) {
         builder.append(',');
         m_fallback->serialize(builder, arguments);

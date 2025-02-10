@@ -33,6 +33,7 @@
 #include "MockContentFilter.h"
 #include "MockContentFilterManager.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -87,7 +88,7 @@ void MockContentFilterSettings::setModifiedRequestURL(const String& modifiedRequ
 
 const String& MockContentFilterSettings::unblockRequestURL() const
 {
-    static NeverDestroyed<String> unblockRequestURL = makeString(ContentFilter::urlScheme(), "://", unblockURLHost());
+    static NeverDestroyed<String> unblockRequestURL = makeString(ContentFilter::urlScheme(), "://"_s, unblockURLHost());
     return unblockRequestURL;
 }
 

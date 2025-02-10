@@ -28,6 +28,7 @@
 
 #include "DisplayListItems.h"
 #include "DisplayListResourceHeap.h"
+#include "FilterResults.h"
 #include "GraphicsContext.h"
 #include <wtf/text/TextStream.h>
 
@@ -39,8 +40,7 @@ template<typename T> inline constexpr bool HasIsValid<T, std::void_t<decltype(st
 
 bool isValid(const Item& item)
 {
-    return WTF::switchOn(item, [&](const auto& item) {
-        using T = std::decay_t<decltype(item)>;
+    return WTF::switchOn(item, [&]<typename T> (const T& item) {
         if constexpr (HasIsValid<T>)
             return item.isValid();
         else {
@@ -48,6 +48,19 @@ bool isValid(const Item& item)
             return true;
         }
     });
+}
+
+template<class T>
+inline static std::optional<RenderingResourceIdentifier> applyFilteredImageBufferItem(GraphicsContext& context, const ResourceHeap& resourceHeap, const T& item)
+{
+    ImageBuffer* sourceImage = nullptr;
+    if (auto resourceIdentifier = item.sourceImageIdentifier(); resourceIdentifier.has_value()) {
+        if (sourceImage = resourceHeap.getImageBuffer(resourceIdentifier.value()); !sourceImage)
+            return resourceIdentifier;
+    }
+        FilterResults results;
+        item.apply(context, sourceImage, results);
+        return std::nullopt;
 }
 
 template<class T>
@@ -155,6 +168,10 @@ ApplyItemResult applyItem(GraphicsContext& context, const ResourceHeap& resource
         }, [&](const DrawDisplayListItems& item) -> ApplyItemResult {
             item.apply(context, resourceHeap);
             return { };
+        }, [&](const DrawFilteredImageBuffer& item) -> ApplyItemResult {
+            if (auto missingCachedResourceIdentifier = applyFilteredImageBufferItem(context, resourceHeap, item))
+                return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
+            return { };
         }, [&](const DrawImageBuffer& item) -> ApplyItemResult {
             if (auto missingCachedResourceIdentifier = applyImageBufferItem(context, resourceHeap, item))
                 return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
@@ -200,8 +217,8 @@ bool shouldDumpItem(const Item& item, OptionSet<AsTextFlag> flags)
 
 void dumpItem(TextStream& ts, const Item& item, OptionSet<AsTextFlag> flags)
 {
-    WTF::switchOn(item, [&](const auto& item) {
-        ts << std::decay_t<decltype(item)>::name;
+    WTF::switchOn(item, [&]<typename ItemType> (const ItemType& item) {
+        ts << ItemType::name;
         item.dump(ts, flags);
     });
 }

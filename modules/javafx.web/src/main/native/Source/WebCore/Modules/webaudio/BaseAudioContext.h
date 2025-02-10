@@ -94,13 +94,9 @@ class BaseAudioContext
     , public LoggerHelper
 #endif
 {
-    WTF_MAKE_ISO_ALLOCATED(BaseAudioContext);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BaseAudioContext);
 public:
     virtual ~BaseAudioContext();
-
-    // Reconcile ref/deref which are defined both in ThreadSafeRefCounted and EventTarget.
-    using ThreadSafeRefCounted::ref;
-    using ThreadSafeRefCounted::deref;
 
     // This is used for lifetime testing.
     WEBCORE_EXPORT static bool isContextAlive(uint64_t contextID);
@@ -150,6 +146,10 @@ public:
     ExceptionOr<Ref<IIRFilterNode>> createIIRFilter(ScriptExecutionContext&, Vector<double>&& feedforward, Vector<double>&& feedback);
     ExceptionOr<Ref<AudioBuffer>> createBuffer(unsigned numberOfChannels, unsigned length, float sampleRate);
 
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
+
     // Called at the start of each render quantum.
     void handlePreRenderTasks(const AudioIOPosition& outputPosition);
 
@@ -187,7 +187,7 @@ public:
     // Returns true only after the audio thread has been started and then shutdown.
     bool isAudioThreadFinished() const { return m_isAudioThreadFinished; }
 
-    RecursiveLock& graphLock() { return m_graphLock; }
+    RecursiveLock& graphLock() const { return m_graphLock; }
 
     // Returns true if this thread owns the context's lock.
     bool isGraphOwner() const { return m_graphLock.isOwner(); }
@@ -215,7 +215,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const override { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    const void* logIdentifier() const override { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
     const void* nextAudioNodeLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioNodeIdentifier); }
     const void* nextAudioParameterLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioParameterIdentifier); }
@@ -243,7 +243,7 @@ protected:
     virtual void uninitialize();
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "BaseAudioContext"; }
+    ASCIILiteral logClassName() const final { return "BaseAudioContext"_s; }
 #endif
 
     void addReaction(State, DOMPromiseDeferred<void>&&);
@@ -266,11 +266,11 @@ private:
     void handleDeferredDecrementConnectionCounts();
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final;
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
 
-    // ActiveDOMObject API.
+    // ActiveDOMObject.
     void stop() override;
 
     // When the context goes away, there might still be some sources which haven't finished playing.
@@ -355,7 +355,7 @@ private:
 
     std::atomic<Thread*> m_audioThread;
 
-    RecursiveLock m_graphLock;
+    mutable RecursiveLock m_graphLock;
 
     std::unique_ptr<AsyncAudioDecoder> m_audioDecoder;
 

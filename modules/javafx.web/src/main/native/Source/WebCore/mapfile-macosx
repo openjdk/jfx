@@ -7,9 +7,11 @@
                _WTFReportArgumentAssertionFailure
                _WTFCrash
                __ZN3WTF10fastMallocEm
+               __ZN3WTF6StringC1ENSt3__14spanIKDsLm18446744073709551615EEE
                __ZN3WTF6StringC1EPKc
-               __ZN3WTF6StringC1EPKDsj
+               __ZN3WTF10StringImpl17s_emptyAtomStringE
                __ZN3WTF7RunLoop4mainEv
+               __ZN3WTF6Config25disableFreezingForTestingEv
                __ZN3WTF7RunLoop8dispatchEONS_8FunctionIFvvEEE
                __ZN3WTF8fastFreeEPv
                __ZN3WTF4Lock10unlockSlowEv
@@ -118,7 +120,6 @@
                _JSValueToStringCopy
                _JSValueUnprotect
                __ZN3JSC6Config23enableRestrictedOptionsEv
-               __ZN3JSC6Config25disableFreezingForTestingEv
                __ZN3JSC16slowValidateCellEPNS_6JSCellE
                __ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue
                __ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue
@@ -798,12 +799,10 @@
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_getDirImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_getEmbedsImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_getFgColorImpl
-               _Java_com_sun_webkit_dom_HTMLDocumentImpl_getHeightImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_getLinkColorImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_getPluginsImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_getScriptsImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_getVlinkColorImpl
-               _Java_com_sun_webkit_dom_HTMLDocumentImpl_getWidthImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_openImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_releaseEventsImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_setAlinkColorImpl
@@ -949,9 +948,7 @@
                _Java_com_sun_webkit_dom_HTMLHeadElementImpl_setProfileImpl
                _Java_com_sun_webkit_dom_HTMLHeadingElementImpl_getAlignImpl
                _Java_com_sun_webkit_dom_HTMLHeadingElementImpl_setAlignImpl
-               _Java_com_sun_webkit_dom_HTMLHtmlElementImpl_getManifestImpl
                _Java_com_sun_webkit_dom_HTMLHtmlElementImpl_getVersionImpl
-               _Java_com_sun_webkit_dom_HTMLHtmlElementImpl_setManifestImpl
                _Java_com_sun_webkit_dom_HTMLHtmlElementImpl_setVersionImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getAlignImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getContentDocumentImpl

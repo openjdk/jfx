@@ -42,15 +42,15 @@
 #include "WorkerSWClientConnection.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/EnumTraits.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #define WORKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
 #define WORKER_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ServiceWorker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ServiceWorker);
 
 Ref<ServiceWorker> ServiceWorker::getOrCreate(ScriptExecutionContext& context, ServiceWorkerData&& data)
 {
@@ -70,7 +70,7 @@ ServiceWorker::ServiceWorker(ScriptExecutionContext& context, ServiceWorkerData&
     relaxAdoptionRequirement();
     updatePendingActivityForEventDispatch();
 
-    WORKER_RELEASE_LOG("serviceWorkerID=%llu, state=%hhu", identifier().toUInt64(), enumToUnderlyingType(m_data.state));
+    WORKER_RELEASE_LOG("serviceWorkerID=%" PRIu64 ", state=%hhu", identifier().toUInt64(), enumToUnderlyingType(m_data.state));
 }
 
 ServiceWorker::~ServiceWorker()
@@ -81,7 +81,7 @@ ServiceWorker::~ServiceWorker()
 
 void ServiceWorker::updateState(State state)
 {
-    WORKER_RELEASE_LOG("updateState: Updating service worker %llu state from %hhu to %hhu. registrationID=%llu", identifier().toUInt64(), enumToUnderlyingType(m_data.state), enumToUnderlyingType(state), registrationIdentifier().toUInt64());
+    WORKER_RELEASE_LOG("updateState: Updating service worker %" PRIu64 " state from %hhu to %hhu. registrationID=%" PRIu64, identifier().toUInt64(), enumToUnderlyingType(m_data.state), enumToUnderlyingType(state), registrationIdentifier().toUInt64());
     m_data.state = state;
     if (state != State::Installing && !m_isStopped) {
         ASSERT(m_pendingActivityForEventDispatch);
@@ -94,8 +94,8 @@ void ServiceWorker::updateState(State state)
 SWClientConnection& ServiceWorker::swConnection()
 {
     ASSERT(scriptExecutionContext());
-    if (is<WorkerGlobalScope>(scriptExecutionContext()))
-        return downcast<WorkerGlobalScope>(scriptExecutionContext())->swClientConnection();
+    if (auto* worker = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext()))
+        return worker->swClientConnection();
     return ServiceWorkerProvider::singleton().serviceWorkerConnection();
 }
 
@@ -104,7 +104,7 @@ ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, 
     if (m_isStopped)
         return Exception { ExceptionCode::InvalidStateError };
 
-    Vector<RefPtr<MessagePort>> ports;
+    Vector<Ref<MessagePort>> ports;
     auto messageData = SerializedScriptValue::create(globalObject, messageValue, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
@@ -117,8 +117,8 @@ ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, 
     auto& context = *scriptExecutionContext();
     // FIXME: Maybe we could use a ScriptExecutionContextIdentifier for service workers too.
     ServiceWorkerOrClientIdentifier sourceIdentifier;
-    if (is<ServiceWorkerGlobalScope>(context))
-        sourceIdentifier = downcast<ServiceWorkerGlobalScope>(context).thread().identifier();
+    if (auto* serviceWorker = dynamicDowncast<ServiceWorkerGlobalScope>(context))
+        sourceIdentifier = serviceWorker->thread().identifier();
     else
         sourceIdentifier = context.identifier();
 
@@ -127,19 +127,14 @@ ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, 
     return { };
 }
 
-EventTargetInterface ServiceWorker::eventTargetInterface() const
+enum EventTargetInterfaceType ServiceWorker::eventTargetInterface() const
 {
-    return ServiceWorkerEventTargetInterfaceType;
+    return EventTargetInterfaceType::ServiceWorker;
 }
 
 ScriptExecutionContext* ServiceWorker::scriptExecutionContext() const
 {
     return ContextDestructionObserver::scriptExecutionContext();
-}
-
-const char* ServiceWorker::activeDOMObjectName() const
-{
-    return "ServiceWorker";
 }
 
 void ServiceWorker::stop()

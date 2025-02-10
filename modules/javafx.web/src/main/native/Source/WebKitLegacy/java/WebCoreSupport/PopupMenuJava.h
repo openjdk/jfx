@@ -41,7 +41,7 @@ public:
     PopupMenuJava(PopupMenuClient*);
     ~PopupMenuJava() override;
 
-    void show(const IntRect&, LocalFrameView*, int index) override;
+    void show(const IntRect&, LocalFrameView&, int selectedIndex) override;
     void hide() override;
     void updateFromElement() override;
     void disconnectClient() override;

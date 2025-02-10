@@ -36,7 +36,8 @@
 #include "PlatformLocale.h"
 #include "RenderBlock.h"
 #include "RenderStyleSetters.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
@@ -53,12 +54,13 @@ bool DateTimeNumericFieldElement::Range::isInRange(int value) const
     return value >= minimum && value <= maximum;
 }
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DateTimeNumericFieldElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DateTimeNumericFieldElement);
 
-DateTimeNumericFieldElement::DateTimeNumericFieldElement(Document& document, FieldOwner& fieldOwner, const Range& range, int placeholder)
+DateTimeNumericFieldElement::DateTimeNumericFieldElement(Document& document, DateTimeFieldElementFieldOwner& fieldOwner, const Range& range, int placeholder)
     : DateTimeFieldElement(document, fieldOwner)
     , m_range(range)
     , m_placeholder(formatValue(placeholder))
+    , m_placeholderValue(placeholder)
 {
 }
 
@@ -162,18 +164,13 @@ String DateTimeNumericFieldElement::placeholderValue() const
     return m_placeholder;
 }
 
-int DateTimeNumericFieldElement::valueAsInteger() const
-{
-    return m_hasValue ? m_value : -1;
-}
-
 void DateTimeNumericFieldElement::handleKeyboardEvent(KeyboardEvent& keyboardEvent)
 {
     if (keyboardEvent.type() != eventNames().keypressEvent)
         return;
 
     auto charCode = static_cast<UChar>(keyboardEvent.charCode());
-    String number = localeForOwner().convertFromLocalizedNumber(String(&charCode, 1));
+    String number = localeForOwner().convertFromLocalizedNumber(span(charCode));
     int digit = number[0] - '0';
     if (digit < 0 || digit > 9)
         return;

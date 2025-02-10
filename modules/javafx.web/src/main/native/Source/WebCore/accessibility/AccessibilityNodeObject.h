@@ -81,7 +81,6 @@ public:
 
     bool canSetSelectedAttribute() const override;
 
-    void setNode(Node*);
     Node* node() const override { return m_node.get(); }
     Document* document() const override;
     LocalFrameView* documentFrameView() const override;
@@ -105,7 +104,7 @@ public:
 
     URL url() const override;
     unsigned hierarchicalLevel() const override;
-    String textUnderElement(AccessibilityTextUnderElementMode = AccessibilityTextUnderElementMode()) const override;
+    String textUnderElement(TextUnderElementMode = TextUnderElementMode()) const override;
     String accessibilityDescriptionForChildren() const;
     String description() const override;
     String helpText() const override;
@@ -114,8 +113,10 @@ public:
     void alternativeText(Vector<AccessibilityText>&) const;
     void helpText(Vector<AccessibilityText>&) const;
     String stringValue() const override;
+    WallTime dateTimeValue() const final;
     SRGBA<uint8_t> colorValue() const override;
     String ariaLabeledByAttribute() const override;
+    bool hasAccNameAttribute() const;
     bool hasAttributesRequiredForInclusion() const final;
     void setIsExpanded(bool) override;
 
@@ -144,6 +145,10 @@ public:
 
     LayoutRect elementRect() const override;
 
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    bool shouldEmitNewlinesBeforeAndAfterNode() const final;
+#endif
+
 protected:
     explicit AccessibilityNodeObject(Node*);
     void detachRemoteParts(AccessibilityDetachmentType) override;
@@ -158,6 +163,7 @@ protected:
     AccessibilityRole determineAccessibilityRole() override;
     enum class TreatStyleFormatGroupAsInline : bool { No, Yes };
     AccessibilityRole determineAccessibilityRoleFromNode(TreatStyleFormatGroupAsInline = TreatStyleFormatGroupAsInline::No) const;
+    AccessibilityRole roleFromInputElement(const HTMLInputElement&) const;
     AccessibilityRole ariaRoleAttribute() const override { return m_ariaRole; }
     virtual AccessibilityRole determineAriaRoleAttribute() const;
     AccessibilityRole remapAriaRoleDueToParent(AccessibilityRole) const;
@@ -193,7 +199,7 @@ protected:
     String accessKey() const final;
     bool isLabelable() const;
     AccessibilityObject* controlForLabelElement() const final;
-    String textAsLabel() const;
+    String textAsLabelFor(const AccessibilityObject&) const;
     String textForLabelElements(Vector<Ref<HTMLElement>>&&) const;
     HTMLLabelElement* labelElementContainer() const;
 
@@ -227,7 +233,7 @@ private:
     void setNeedsToUpdateSubtree() override { m_subtreeDirty = true; }
 
     bool isDescendantOfElementType(const HashSet<QualifiedName>&) const;
-
+protected:
     WeakPtr<Node, WeakPtrImplWithEventTargetData> m_node;
 };
 

@@ -36,7 +36,7 @@ std::unique_ptr<KeyedEncoder> KeyedEncoder::encoder()
     return nullptr;
 }
 
-std::unique_ptr<KeyedDecoder> KeyedDecoder::decoder(const uint8_t*, size_t)
+std::unique_ptr<KeyedDecoder> KeyedDecoder::decoder(std::span<const uint8_t> data)
 {
     notImplemented();
     return nullptr;

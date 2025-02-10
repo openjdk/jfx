@@ -80,17 +80,17 @@ public:
 
     static JSBigInt* createFrom(JSGlobalObject*, VM&, int32_t value);
 
-    static size_t offsetOfLength()
+    static constexpr size_t offsetOfLength()
     {
         return OBJECT_OFFSETOF(JSBigInt, m_length);
     }
 
-    static size_t offsetOfSign()
+    static constexpr size_t offsetOfSign()
     {
         return OBJECT_OFFSETOF(JSBigInt, m_sign);
     }
 
-    inline static size_t offsetOfData()
+    static constexpr size_t offsetOfData()
     {
         return OBJECT_OFFSETOF(JSBigInt, m_data);
     }
@@ -164,20 +164,47 @@ public:
     static ComparisonResult compare(JSBigInt* x, JSBigInt* y);
     static ComparisonResult compare(int32_t x, JSBigInt* y);
     static ComparisonResult compare(JSBigInt* x, int32_t y);
-    static ComparisonResult compare(int32_t x, int32_t y)
-    {
-        if (x == y)
-            return JSBigInt::ComparisonResult::Equal;
-        if (x < y)
-            return JSBigInt::ComparisonResult::LessThan;
-        return JSBigInt::ComparisonResult::GreaterThan;
-    }
+    static ComparisonResult compare(JSBigInt* x, int64_t y);
+    static ComparisonResult compare(JSValue x, int64_t y);
+    static ComparisonResult compare(JSBigInt* x, uint64_t y);
+    static ComparisonResult compare(JSValue x, uint64_t y);
+    static ComparisonResult compare(JSValue x, JSValue y);
 
     double toNumber(JSGlobalObject*) const;
     JSObject* toObject(JSGlobalObject*) const;
     inline bool toBoolean() const { return !isZero(); }
 
-    ComparisonResult static compareToDouble(JSBigInt* x, double y);
+    static ComparisonResult compareToDouble(JSBigInt* x, double y);
+    static ComparisonResult compareToDouble(double x, JSBigInt* y);
+    template<typename BigIntImpl>
+    static ComparisonResult compareToDouble(BigIntImpl x, double y);
+    template <typename BigIntImpl>
+    static ComparisonResult compareToDouble(double x, BigIntImpl y) { return flip(compareToDouble(y, x)); }
+    static ComparisonResult compareToDouble(int32_t x, double y);
+    static ComparisonResult compareToDouble(double x, int32_t y) { return flip(compareToDouble(y, x)); }
+    static ComparisonResult compareToDouble(int64_t x, double y);
+    static ComparisonResult compareToDouble(double x, int64_t y) { return flip(compareToDouble(y, x)); }
+    static ComparisonResult compareToDouble(uint64_t x, double y);
+    static ComparisonResult compareToDouble(double x, uint64_t y) { return flip(compareToDouble(y, x)); }
+    static ComparisonResult compareToDouble(JSValue x, double y);
+    static ComparisonResult compareToDouble(double x, JSValue y) { return flip(compareToDouble(y, x)); }
+
+private:
+    ALWAYS_INLINE static ComparisonResult flip(ComparisonResult result)
+    {
+        switch (result) {
+        case JSBigInt::ComparisonResult::LessThan:
+            return JSBigInt::ComparisonResult::GreaterThan;
+        case JSBigInt::ComparisonResult::GreaterThan:
+            return JSBigInt::ComparisonResult::LessThan;
+        case JSBigInt::ComparisonResult::Equal:
+        case JSBigInt::ComparisonResult::Undefined:
+            return result;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return JSBigInt::ComparisonResult::Undefined;
+        }
+    }
 
 private:
     friend class HeapBigIntImpl;
@@ -466,6 +493,12 @@ public:
 
     static std::optional<double> tryExtractDouble(JSValue);
 
+    inline bool isZero() const
+    {
+        ASSERT(length() || !sign());
+        return !length();
+    }
+
 private:
     JSBigInt(VM&, Structure*, Digit*, unsigned length);
 
@@ -565,17 +598,11 @@ private:
     static String toStringBasePowerOfTwo(VM&, JSGlobalObject*, JSBigInt*, unsigned radix);
     static String toStringGeneric(VM&, JSGlobalObject*, JSBigInt*, unsigned radix);
 
-    inline bool isZero() const
-    {
-        ASSERT(length() || !sign());
-        return length() == 0;
-    }
+    template <typename CharType>
+    static JSValue parseInt(JSGlobalObject*, std::span<const CharType> data, ErrorParseMode);
 
     template <typename CharType>
-    static JSValue parseInt(JSGlobalObject*, CharType*  data, unsigned length, ErrorParseMode);
-
-    template <typename CharType>
-    static JSValue parseInt(JSGlobalObject*, VM&, CharType* data, unsigned length, unsigned startIndex, unsigned radix, ErrorParseMode, ParseIntSign = ParseIntSign::Signed, ParseIntMode = ParseIntMode::AllowEmptyString);
+    static JSValue parseInt(JSGlobalObject*, VM&, std::span<const CharType> data, unsigned startIndex, unsigned radix, ErrorParseMode, ParseIntSign = ParseIntSign::Signed, ParseIntMode = ParseIntMode::AllowEmptyString);
 
     static JSBigInt* allocateFor(JSGlobalObject*, VM&, unsigned radix, unsigned charcount);
 

@@ -41,10 +41,10 @@ BufferImage::BufferImage(PlatformImagePtr image)
 
 RefPtr<NativeImage> BufferImage::nativeImage(const DestinationColorSpace&)
 {
-    return nativeImageForCurrentFrame();
+    return currentNativeImage();
 }
 
-RefPtr<NativeImage> BufferImage::nativeImageForCurrentFrame()
+RefPtr<NativeImage> BufferImage::currentNativeImage()
 {
     m_image->getRenderingQueue()->flushBuffer();
     return NativeImage::create(m_image.get());

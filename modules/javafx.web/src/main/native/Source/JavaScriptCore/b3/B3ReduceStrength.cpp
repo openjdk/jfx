@@ -2502,7 +2502,7 @@ private:
                 m_value->child(0), selectSpecializationBound,
                 [&] (Value* value) -> bool {
                     return value->opcode() == Select
-                        && (value->child(1)->isConstant() && value->child(2)->isConstant());
+                        && (value->child(1)->isConstant() || value->child(2)->isConstant());
                 });
 
             if (select) {
@@ -3652,7 +3652,7 @@ private:
 
 bool reduceStrength(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "reduceStrength");
+    PhaseScope phaseScope(proc, "reduceStrength"_s);
     ReduceStrength reduceStrength(proc);
     return reduceStrength.run();
 }

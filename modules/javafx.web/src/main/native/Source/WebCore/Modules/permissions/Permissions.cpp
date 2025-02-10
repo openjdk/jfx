@@ -29,7 +29,6 @@
 #include "DedicatedWorkerGlobalScope.h"
 #include "Document.h"
 #include "Exception.h"
-#include "FeaturePolicy.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSPermissionDescriptor.h"
 #include "JSPermissionStatus.h"
@@ -40,6 +39,7 @@
 #include "PermissionDescriptor.h"
 #include "PermissionName.h"
 #include "PermissionQuerySource.h"
+#include "PermissionsPolicy.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -48,13 +48,13 @@
 #include "WorkerLoaderProxy.h"
 #include "WorkerThread.h"
 #include <optional>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Permissions);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Permissions);
 
 Ref<Permissions> Permissions::create(NavigatorBase& navigator)
 {
@@ -73,15 +73,15 @@ NavigatorBase* Permissions::navigator()
 
 Permissions::~Permissions() = default;
 
-static bool isAllowedByFeaturePolicy(const Document& document, PermissionName name)
+static bool isAllowedByPermissionsPolicy(const Document& document, PermissionName name)
 {
     switch (name) {
     case PermissionName::Camera:
-        return isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Camera, document, LogFeaturePolicyFailure::No);
+        return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Camera, document, PermissionsPolicy::ShouldReportViolation::No);
     case PermissionName::Geolocation:
-        return isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Geolocation, document, LogFeaturePolicyFailure::No);
+        return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Geolocation, document, PermissionsPolicy::ShouldReportViolation::No);
     case PermissionName::Microphone:
-        return isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, document, LogFeaturePolicyFailure::No);
+        return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document, PermissionsPolicy::ShouldReportViolation::No);
     default:
         return true;
     }
@@ -136,13 +136,16 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
         return;
     }
 
-    JSC::VM& vm = context->globalObject()->vm();
+    auto& vm = context->globalObject()->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    auto permissionDescriptor = convert<IDLDictionary<PermissionDescriptor>>(*context->globalObject(), permissionDescriptorValue.get());
-    if (UNLIKELY(scope.exception())) {
+
+    auto permissionDescriptorConversionResult = convert<IDLDictionary<PermissionDescriptor>>(*context->globalObject(), permissionDescriptorValue.get());
+    if (UNLIKELY(permissionDescriptorConversionResult.hasException(scope))) {
         promise.reject(Exception { ExceptionCode::ExistingExceptionError });
         return;
     }
+
+    auto permissionDescriptor = permissionDescriptorConversionResult.releaseReturnValue();
 
     RefPtr origin = context->securityOrigin();
     auto originData = origin ? origin->data() : SecurityOriginData { };
@@ -154,7 +157,7 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
             return;
         }
 
-        if (!isAllowedByFeaturePolicy(*document, permissionDescriptor.name)) {
+        if (!isAllowedByPermissionsPolicy(*document, permissionDescriptor.name)) {
             promise.resolve(PermissionStatus::create(*context, PermissionState::Denied, permissionDescriptor, PermissionQuerySource::Window, *page));
             return;
         }

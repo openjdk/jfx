@@ -33,6 +33,7 @@
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -42,6 +43,25 @@ class MediaSample;
 class MediaDescription;
 class PlatformTimeRanges;
 class VideoTrackPrivate;
+
+struct SourceBufferEvictionData {
+    uint64_t contentSize { 0 };
+    int64_t evictableSize { 0 };
+    uint64_t maximumBufferSize { 0 };
+    size_t numMediaSamples { 0 };
+
+    bool operator!=(const SourceBufferEvictionData& other)
+    {
+        return contentSize != other.contentSize || evictableSize != other.evictableSize || maximumBufferSize != other.maximumBufferSize || numMediaSamples != other.numMediaSamples;
+    }
+
+    void clear()
+    {
+        contentSize = 0;
+        evictableSize = 0;
+        numMediaSamples = 0;
+    }
+};
 
 class SourceBufferPrivateClient : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<SourceBufferPrivateClient> {
 public:
@@ -70,13 +90,25 @@ public:
     };
 
     virtual Ref<MediaPromise> sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&) = 0;
-    virtual Ref<MediaPromise> sourceBufferPrivateBufferedChanged(const Vector<PlatformTimeRanges>&, uint64_t) = 0;
+    virtual Ref<MediaPromise> sourceBufferPrivateBufferedChanged(const Vector<PlatformTimeRanges>&) = 0;
     virtual Ref<MediaPromise> sourceBufferPrivateDurationChanged(const MediaTime&) = 0;
     virtual void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&) = 0;
     virtual void sourceBufferPrivateDidDropSample() = 0;
     virtual void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) = 0;
+    virtual void sourceBufferPrivateEvictionDataChanged(const SourceBufferEvictionData&) { }
 };
 
 } // namespace WebCore
+
+namespace WTF {
+template<>
+struct LogArgument<WebCore::SourceBufferEvictionData> {
+    static String toString(const WebCore::SourceBufferEvictionData& evictionData)
+    {
+        return makeString("{ contentSize:"_s, evictionData.contentSize, " evictableData:"_s, evictionData.evictableSize, " maximumBufferSize:"_s, evictionData.maximumBufferSize, " numSamples:"_s, evictionData.numMediaSamples, " }"_s);
+    }
+};
+
+} // namespace WTF
 
 #endif // ENABLE(MEDIA_SOURCE)

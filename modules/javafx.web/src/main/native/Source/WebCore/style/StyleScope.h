@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "AnchorPositionEvaluator.h"
 #include "LayoutSize.h"
 #include "StyleScopeOrdinal.h"
 #include "Timer.h"
@@ -65,9 +66,12 @@ namespace Style {
 
 class CustomPropertyRegistry;
 class Resolver;
+class RuleSet;
+struct MatchResult;
 
-class Scope : public CanMakeWeakPtr<Scope>, public CanMakeCheckedPtr {
+class Scope final : public CanMakeWeakPtr<Scope>, public CanMakeCheckedPtr<Scope> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Scope);
 public:
     explicit Scope(Document&);
     explicit Scope(ShadowRoot&);
@@ -129,6 +133,11 @@ public:
     void clearResolver();
     void releaseMemory();
 
+    void clearViewTransitionStyles();
+
+    const MatchResult* cachedMatchResult(const Element&);
+    void updateCachedMatchResult(const Element&, const MatchResult&);
+
     const Document& document() const { return m_document; }
     Document& document() { return m_document; }
     const ShadowRoot* shadowRoot() const { return m_shadowRoot; }
@@ -150,6 +159,11 @@ public:
     CustomPropertyRegistry& customPropertyRegistry() { return m_customPropertyRegistry.get(); }
     const CSSCounterStyleRegistry& counterStyleRegistry() const { return m_counterStyleRegistry.get(); }
     CSSCounterStyleRegistry& counterStyleRegistry() { return m_counterStyleRegistry.get(); }
+
+    WeakHashSet<Element, WeakPtrImplWithEventTargetData>& anchorElements() { return m_anchorElements; }
+    AnchorPositionedStates& anchorPositionedStates() { return m_anchorPositionedStates; }
+    AnchorsForAnchorName& anchorsForAnchorName() { return m_anchorsForAnchorName; }
+    void clearAnchorPositioningState();
 
 private:
     Scope& documentScope();
@@ -203,13 +217,15 @@ private:
     using MediaQueryViewportState = std::tuple<IntSize, float, bool>;
     static MediaQueryViewportState mediaQueryViewportStateForDocument(const Document&);
 
-    CheckedRef<Document> m_document;
+    Document& m_document; // FIXME: Use a smart pointer.
     ShadowRoot* m_shadowRoot { nullptr };
 
     RefPtr<Resolver> m_resolver;
 
     Vector<RefPtr<StyleSheet>> m_styleSheetsForStyleSheetList;
     Vector<RefPtr<CSSStyleSheet>> m_activeStyleSheets;
+
+    mutable RefPtr<RuleSet> m_dynamicViewTransitionsStyle;
 
     Timer m_pendingUpdateTimer;
 
@@ -236,12 +252,17 @@ private:
 
     std::optional<MediaQueryViewportState> m_viewportStateOnPreviousMediaQueryEvaluation;
     WeakHashMap<Element, LayoutSize, WeakPtrImplWithEventTargetData> m_queryContainerStates;
+    mutable WeakHashMap<const Element, UniqueRef<MatchResult>, WeakPtrImplWithEventTargetData> m_cachedMatchResults;
 
     UniqueRef<CustomPropertyRegistry> m_customPropertyRegistry;
     UniqueRef<CSSCounterStyleRegistry> m_counterStyleRegistry;
 
     // FIXME: These (and some things above) are only relevant for the root scope.
     HashMap<ResolverSharingKey, Ref<Resolver>> m_sharedShadowTreeResolvers;
+
+    WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_anchorElements;
+    AnchorsForAnchorName m_anchorsForAnchorName;
+    AnchorPositionedStates m_anchorPositionedStates;
 };
 
 HTMLSlotElement* assignedSlotForScopeOrdinal(const Element&, ScopeOrdinal);

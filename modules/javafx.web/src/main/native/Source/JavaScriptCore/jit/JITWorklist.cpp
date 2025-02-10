@@ -53,7 +53,7 @@ JITWorklist::JITWorklist()
 
     Locker locker { *m_lock };
     for (unsigned i = 0; i < Options::numberOfWorklistThreads(); ++i)
-        m_threads.append(new JITWorklistThread(locker, *this));
+        m_threads.append(*new JITWorklistThread(locker, *this));
 }
 
 JITWorklist::~JITWorklist()
@@ -96,7 +96,15 @@ CompilationResult JITWorklist::enqueue(Ref<JITPlan> plan)
     ASSERT(m_plans.find(plan->key()) == m_plans.end());
     m_plans.add(plan->key(), plan.copyRef());
     m_queues[static_cast<unsigned>(plan->tier())].append(WTFMove(plan));
+
+    // Notify when some of thread is waiting.
+    for (auto& thread : m_threads) {
+        if (thread->state() == JITWorklistThread::State::NotCompiling) {
     m_planEnqueued->notifyOne(locker);
+            break;
+        }
+    }
+
     return CompilationDeferred;
 }
 
@@ -117,14 +125,19 @@ size_t JITWorklist::queueLength(const AbstractLocker&) const
 void JITWorklist::suspendAllThreads() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
     m_suspensionLock.lock();
-    for (unsigned i = m_threads.size(); i--;)
-        m_threads[i]->m_rightToRun.lock();
+    Vector<Ref<JITWorklistThread>, 8> busyThreads;
+    for (auto& thread : m_threads) {
+        if (!thread->m_rightToRun.tryLock())
+            busyThreads.append(thread.copyRef());
+    }
+    for (auto& thread : busyThreads)
+        thread->m_rightToRun.lock();
 }
 
 void JITWorklist::resumeAllThreads() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
-    for (unsigned i = m_threads.size(); i--;)
-        m_threads[i]->m_rightToRun.unlock();
+    for (auto& thread : m_threads)
+        thread->m_rightToRun.unlock();
     m_suspensionLock.unlock();
 }
 
@@ -142,29 +155,12 @@ auto JITWorklist::completeAllReadyPlansForVM(VM& vm, JITCompilationKey requested
     DeferGC deferGC(vm);
 
     Vector<RefPtr<JITPlan>, 8> myReadyPlans;
-    removeAllReadyPlansForVM(vm, myReadyPlans);
-
-    State resultingState = NotKnown;
-    while (!myReadyPlans.isEmpty()) {
-        RefPtr<JITPlan> plan = myReadyPlans.takeLast();
-        JITCompilationKey currentKey = plan->key();
-
-        dataLogLnIf(Options::verboseCompilationQueue(), *this, ": Completing ", currentKey);
-
+    State resultingState = removeAllReadyPlansForVM(vm, myReadyPlans, requestedKey);
+    for (auto& plan : myReadyPlans) {
+        dataLogLnIf(Options::verboseCompilationQueue(), *this, ": Completing ", plan->key());
         RELEASE_ASSERT(plan->stage() == JITPlanStage::Ready);
-
         plan->finalize();
-
-        if (currentKey == requestedKey)
-            resultingState = Compiled;
     }
-
-    if (!!requestedKey && resultingState == NotKnown) {
-        Locker locker { *m_lock };
-        if (m_plans.contains(requestedKey))
-            resultingState = Compiling;
-    }
-
     return resultingState;
 }
 
@@ -228,7 +224,7 @@ void JITWorklist::cancelAllPlansForVM(VM& vm)
     waitUntilAllPlansForVMAreReady(vm);
 
     Vector<RefPtr<JITPlan>, 8> myReadyPlans;
-    removeAllReadyPlansForVM(vm, myReadyPlans);
+    removeAllReadyPlansForVM(vm, myReadyPlans, { });
 }
 
 void JITWorklist::removeDeadPlans(VM& vm)
@@ -241,8 +237,8 @@ void JITWorklist::removeDeadPlans(VM& vm)
     });
 
     // No locking needed for this part, see comment in visitWeakReferences().
-    for (unsigned i = m_threads.size(); i--;) {
-        Safepoint* safepoint = m_threads[i].get()->m_safepoint;
+    for (auto& thread : m_threads) {
+        Safepoint* safepoint = thread->m_safepoint;
         if (!safepoint)
             continue;
         if (safepoint->vm() != &vm)
@@ -283,8 +279,8 @@ void JITWorklist::visitWeakReferences(Visitor& visitor)
     // (1) no new threads can be added to m_threads. Hence, it is immutable and needs no locks.
     // (2) JITWorklistThread::m_safepoint is protected by that thread's m_rightToRun which we must be
     //     holding here because of a prior call to suspendAllThreads().
-    for (unsigned i = m_threads.size(); i--;) {
-        Safepoint* safepoint = m_threads[i]->m_safepoint;
+    for (auto& thread : m_threads) {
+        Safepoint* safepoint = thread->m_safepoint;
         if (safepoint && safepoint->vm() == vm)
             safepoint->checkLivenessAndVisitChildren(visitor);
     }
@@ -306,21 +302,32 @@ void JITWorklist::dump(const AbstractLocker& locker, PrintStream& out) const
         ", Num Active Threads = ", m_numberOfActiveThreads, "/", m_threads.size(), "]");
 }
 
-void JITWorklist::removeAllReadyPlansForVM(VM& vm, Vector<RefPtr<JITPlan>, 8>& myReadyPlans)
+JITWorklist::State JITWorklist::removeAllReadyPlansForVM(VM& vm, Vector<RefPtr<JITPlan>, 8>& myReadyPlans, JITCompilationKey requestedKey)
 {
     DeferGC deferGC(vm);
     Locker locker { *m_lock };
-    for (size_t i = 0; i < m_readyPlans.size(); ++i) {
-        RefPtr<JITPlan> plan = m_readyPlans[i];
+
+    bool isCompiled = false;
+    m_readyPlans.removeAllMatching([&](RefPtr<JITPlan> plan) {
         if (plan->vm() != &vm)
-            continue;
+            return false;
         if (plan->stage() != JITPlanStage::Ready)
-            continue;
-        myReadyPlans.append(plan);
-        m_readyPlans[i--] = m_readyPlans.last();
-        m_readyPlans.removeLast();
+            return false;
+        if (plan->key() == requestedKey)
+            isCompiled = true;
         m_plans.remove(plan->key());
+        myReadyPlans.append(WTFMove(plan));
+        return true;
+    });
+
+    if (requestedKey) {
+        if (isCompiled)
+            return Compiled;
+
+        if (m_plans.contains(requestedKey))
+            return Compiling;
     }
+    return NotKnown;
 }
 
 template<typename MatchFunction>

@@ -45,6 +45,7 @@
 #include "WorkerScriptLoaderClient.h"
 #include "WorkerThreadableLoader.h"
 #include <wtf/Ref.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -195,7 +196,7 @@ std::unique_ptr<ResourceRequest> WorkerScriptLoader::createResourceRequest(const
 
 static ResourceError constructJavaScriptMIMETypeError(const ResourceResponse& response)
 {
-    auto message = makeString("Refused to execute ", response.url().stringCenterEllipsizedToLength(), " as script because ", response.mimeType(), " is not a script MIME type.");
+    auto message = makeString("Refused to execute "_s, response.url().stringCenterEllipsizedToLength(), " as script because "_s, response.mimeType(), " is not a script MIME type."_s);
     return { errorDomainWebKitInternal, 0, response.url(), WTFMove(message), ResourceError::Type::AccessControl };
 }
 
@@ -205,7 +206,7 @@ ResourceError WorkerScriptLoader::validateWorkerResponse(const ResourceResponse&
         return { errorDomainWebKitInternal, 0, response.url(), "Response is not 2xx"_s, ResourceError::Type::General };
 
     if (!isScriptAllowedByNosniff(response)) {
-        auto message = makeString("Refused to execute ", response.url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type-Options: nosniff\" was given and its Content-Type is not a script MIME type.");
+        auto message = makeString("Refused to execute "_s, response.url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type-Options: nosniff\" was given and its Content-Type is not a script MIME type."_s);
         return { errorDomainWebKitInternal, 0, response.url(), WTFMove(message), ResourceError::Type::General };
     }
 
@@ -231,7 +232,7 @@ ResourceError WorkerScriptLoader::validateWorkerResponse(const ResourceResponse&
     return { };
 }
 
-void WorkerScriptLoader::didReceiveResponse(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
+void WorkerScriptLoader::didReceiveResponse(ScriptExecutionContextIdentifier mainContext, ResourceLoaderIdentifier identifier, const ResourceResponse& response)
 {
     m_error = validateWorkerResponse(response, m_source, m_destination);
     if (!m_error.isNull()) {
@@ -252,8 +253,9 @@ void WorkerScriptLoader::didReceiveResponse(ResourceLoaderIdentifier identifier,
 
     if (m_topOriginForServiceWorkerRegistration && response.source() == ResourceResponse::Source::MemoryCache && m_context) {
         m_isMatchingServiceWorkerRegistration = true;
-        auto& swConnection = is<WorkerGlobalScope>(m_context) ? static_cast<SWClientConnection&>(downcast<WorkerGlobalScope>(*m_context).swClientConnection()) : ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        swConnection.matchRegistration(WTFMove(*m_topOriginForServiceWorkerRegistration), response.url(), [this, protectedThis = Ref { *this }, response, identifier](auto&& registrationData) mutable {
+        auto* worker = dynamicDowncast<WorkerGlobalScope>(*m_context);
+        auto& swConnection = worker ? static_cast<SWClientConnection&>(worker->swClientConnection()) : ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        swConnection.matchRegistration(WTFMove(*m_topOriginForServiceWorkerRegistration), response.url(), [this, protectedThis = Ref { *this }, response, mainContext, identifier](auto&& registrationData) mutable {
             m_isMatchingServiceWorkerRegistration = false;
             if (registrationData && registrationData->activeWorker)
                 setControllingServiceWorker(WTFMove(*registrationData->activeWorker));
@@ -261,15 +263,15 @@ void WorkerScriptLoader::didReceiveResponse(ResourceLoaderIdentifier identifier,
             if (!m_client)
                 return;
 
-            m_client->didReceiveResponse(identifier, response);
+            m_client->didReceiveResponse(mainContext, identifier, response);
             if (m_client && m_finishing)
-                m_client->notifyFinished();
+                m_client->notifyFinished(mainContext);
         });
         return;
     }
 
     if (m_client)
-        m_client->didReceiveResponse(identifier, response);
+        m_client->didReceiveResponse(mainContext, identifier, response);
 }
 
 void WorkerScriptLoader::didReceiveData(const SharedBuffer& buffer)
@@ -290,13 +292,13 @@ void WorkerScriptLoader::didReceiveData(const SharedBuffer& buffer)
     if (buffer.isEmpty())
         return;
 
-    m_script.append(m_decoder->decode(buffer.data(), buffer.size()));
+    m_script.append(m_decoder->decode(buffer.span()));
 }
 
-void WorkerScriptLoader::didFinishLoading(ResourceLoaderIdentifier identifier, const NetworkLoadMetrics&)
+void WorkerScriptLoader::didFinishLoading(ScriptExecutionContextIdentifier mainContext, ResourceLoaderIdentifier identifier, const NetworkLoadMetrics&)
 {
     if (m_failed) {
-        notifyError();
+        notifyError(mainContext);
         return;
     }
 
@@ -304,24 +306,24 @@ void WorkerScriptLoader::didFinishLoading(ResourceLoaderIdentifier identifier, c
         m_script.append(m_decoder->flush());
 
     m_identifier = identifier;
-    notifyFinished();
+    notifyFinished(mainContext);
 }
 
-void WorkerScriptLoader::didFail(const ResourceError& error)
+void WorkerScriptLoader::didFail(ScriptExecutionContextIdentifier mainContext, const ResourceError& error)
 {
     m_error = error;
-    notifyError();
+    notifyError(mainContext);
 }
 
-void WorkerScriptLoader::notifyError()
+void WorkerScriptLoader::notifyError(ScriptExecutionContextIdentifier mainContext)
 {
     m_failed = true;
     if (m_error.isNull())
         m_error = { errorDomainWebKitInternal, 0, url(), "Failed to load script"_s, ResourceError::Type::General };
-    notifyFinished();
+    notifyFinished(mainContext);
 }
 
-void WorkerScriptLoader::notifyFinished()
+void WorkerScriptLoader::notifyFinished(ScriptExecutionContextIdentifier mainContext)
 {
     m_threadableLoader = nullptr;
     if (!m_client || m_finishing)
@@ -331,7 +333,7 @@ void WorkerScriptLoader::notifyFinished()
     if (m_isMatchingServiceWorkerRegistration)
         return;
 
-    m_client->notifyFinished();
+    m_client->notifyFinished(mainContext);
 }
 
 void WorkerScriptLoader::cancel()

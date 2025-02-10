@@ -59,24 +59,11 @@ RealtimeMediaSourceCenter& RealtimeMediaSourceCenter::singleton()
 RealtimeMediaSourceCenter::RealtimeMediaSourceCenter()
     : m_debounceTimer(RunLoop::main(), this, &RealtimeMediaSourceCenter::triggerDevicesChangedObservers)
 {
-    m_supportedConstraints.setSupportsEchoCancellation(true);
-    m_supportedConstraints.setSupportsWidth(true);
-    m_supportedConstraints.setSupportsHeight(true);
-    m_supportedConstraints.setSupportsAspectRatio(true);
-    m_supportedConstraints.setSupportsFrameRate(true);
-    m_supportedConstraints.setSupportsFacingMode(true);
-    m_supportedConstraints.setSupportsVolume(true);
-    m_supportedConstraints.setSupportsDeviceId(true);
-    m_supportedConstraints.setSupportsDisplaySurface(true);
-
-    m_supportedConstraints.setSupportsWhiteBalanceMode(true);
-    m_supportedConstraints.setSupportsZoom(true);
-    m_supportedConstraints.setSupportsTorch(true);
 }
 
 RealtimeMediaSourceCenter::~RealtimeMediaSourceCenter() = default;
 
-RealtimeMediaSourceCenter::Observer::~Observer() = default;
+RealtimeMediaSourceCenterObserver::~RealtimeMediaSourceCenterObserver() = default;
 
 void RealtimeMediaSourceCenter::createMediaStream(Ref<const Logger>&& logger, NewMediaStreamHandler&& completionHandler, MediaDeviceHashSalts&& hashSalts, CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, const MediaStreamRequest& request)
 {
@@ -167,15 +154,7 @@ static void addStringToSHA1(SHA1& sha1, const String& string)
     if (string.isEmpty())
         return;
 
-    if (string.is8Bit() && string.containsOnlyASCII()) {
-        const uint8_t nullByte = 0;
-        sha1.addBytes(string.characters8(), string.length());
-        sha1.addBytes(&nullByte, 1);
-        return;
-    }
-
-    auto utf8 = string.utf8();
-    sha1.addBytes(utf8.dataAsUInt8Ptr(), utf8.length() + 1); // Include terminating null byte.
+    sha1.addUTF8Bytes(string);
 }
 
 String RealtimeMediaSourceCenter::hashStringWithSalt(const String& id, const String& hashSalt)
@@ -194,13 +173,13 @@ String RealtimeMediaSourceCenter::hashStringWithSalt(const String& id, const Str
     return String::fromLatin1(SHA1::hexDigest(digest).data());
 }
 
-void RealtimeMediaSourceCenter::addDevicesChangedObserver(Observer& observer)
+void RealtimeMediaSourceCenter::addDevicesChangedObserver(RealtimeMediaSourceCenterObserver& observer)
 {
     ASSERT(isMainThread());
     m_observers.add(observer);
 }
 
-void RealtimeMediaSourceCenter::removeDevicesChangedObserver(Observer& observer)
+void RealtimeMediaSourceCenter::removeDevicesChangedObserver(RealtimeMediaSourceCenterObserver& observer)
 {
     ASSERT(isMainThread());
     m_observers.remove(observer);
@@ -442,9 +421,9 @@ const String& RealtimeMediaSourceCenter::currentMediaEnvironment() const
     return m_currentMediaEnvironment;
 }
 
-void RealtimeMediaSourceCenter::setCurrentMediaEnvironment(const String& mediaEnvironment)
+void RealtimeMediaSourceCenter::setCurrentMediaEnvironment(String&& mediaEnvironment)
 {
-    m_currentMediaEnvironment = mediaEnvironment;
+    m_currentMediaEnvironment = WTFMove(mediaEnvironment);
 }
 #endif
 

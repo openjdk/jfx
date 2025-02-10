@@ -20,8 +20,7 @@
 #include "config.h"
 #include "SVGBoundingBoxComputation.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-
+#include "NestingLevelIncrementer.h"
 #include "ReferencedSVGResources.h"
 #include "RenderChildIterator.h"
 #include "RenderObjectInlines.h"
@@ -32,6 +31,7 @@
 #include "RenderSVGInline.h"
 #include "RenderSVGPath.h"
 #include "RenderSVGResourceClipper.h"
+#include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceMarker.h"
 #include "RenderSVGResourceMasker.h"
 #include "RenderSVGRoot.h"
@@ -91,7 +91,7 @@ FloatRect SVGBoundingBoxComputation::handleShapeOrTextOrInline(const SVGBounding
     //
     // Note: The values of the fill, fill-opacity and fill-rule properties do not affect fill-shape.
     if (options.contains(DecorationOption::IncludeFillShape))
-        box = m_renderer.objectBoundingBox();
+        box = m_renderer->objectBoundingBox();
 
     // 4. If stroke is true and the element's stroke is anything other than none, then set box to be the union of box
     //    and the tightest rectangle in coordinate system space that contains the stroke shape of the element, with the
@@ -100,9 +100,9 @@ FloatRect SVGBoundingBoxComputation::handleShapeOrTextOrInline(const SVGBounding
     // Note: The values of the stroke-opacity, stroke-dasharray and stroke-dashoffset do not affect the calculation of the stroke shape.
     if (options.contains(DecorationOption::IncludeStrokeShape)) {
         if (options.contains(DecorationOption::CalculateFastRepaintRect) && is<RenderSVGShape>(m_renderer))
-            box.unite(downcast<RenderSVGShape>(m_renderer).approximateStrokeBoundingBox());
+            box.unite(downcast<RenderSVGShape>(m_renderer.get()).approximateStrokeBoundingBox());
         else
-        box.unite(m_renderer.strokeBoundingBox());
+            box.unite(m_renderer->strokeBoundingBox());
     }
 
     // 5. If markers is true, then for each marker marker rendered on the element:
@@ -112,7 +112,7 @@ FloatRect SVGBoundingBoxComputation::handleShapeOrTextOrInline(const SVGBounding
     //   - Otherwise, set box to be the union of box and the result of invoking the algorithm to compute a bounding box with child as
     //     the element, space as the target coordinate space, true for fill, stroke and markers, and clipped for clipped.
     if (options.contains(DecorationOption::IncludeMarkers)) {
-        if (auto* svgPath = dynamicDowncast<RenderSVGPath>(m_renderer)) {
+        if (CheckedPtr svgPath = dynamicDowncast<RenderSVGPath>(m_renderer.get())) {
         DecorationOptions optionsForMarker = { DecorationOption::IncludeFillShape, DecorationOption::IncludeStrokeShape, DecorationOption::IncludeMarkers };
         if (options.contains(DecorationOption::IncludeClippers))
             optionsForMarker.add(DecorationOption::IncludeClippers);
@@ -141,7 +141,7 @@ FloatRect SVGBoundingBoxComputation::handleRootOrContainer(const SVGBoundingBoxC
         ASSERT(child.isSVGLayerAwareRenderer());
         ASSERT(!child.isRenderSVGRoot());
 
-        auto transform = SVGLayerTransformComputation(child).computeAccumulatedTransform(&m_renderer, TransformState::TrackSVGCTMMatrix);
+        auto transform = SVGLayerTransformComputation(child).computeAccumulatedTransform(m_renderer.ptr(), TransformState::TrackSVGCTMMatrix);
         return transform.isIdentity() ? std::nullopt : std::make_optional(WTFMove(transform));
     };
 
@@ -170,10 +170,10 @@ FloatRect SVGBoundingBoxComputation::handleRootOrContainer(const SVGBoundingBoxC
     //    - If child is not rendered then continue to the next descendant graphics element.
     //    - Otherwise, set box to be the union of box and the result of invoking the algorithm to compute a bounding box with child
     //      as the element and the same values for space, fill, stroke, markers and clipped as the corresponding algorithm input values.
-    for (auto& child : childrenOfType<RenderLayerModelObject>(m_renderer)) {
+    for (CheckedRef child : childrenOfType<RenderLayerModelObject>(m_renderer)) {
         if (is<RenderSVGHiddenContainer>(child))
             continue;
-        if (auto* shape = dynamicDowncast<RenderSVGShape>(child); shape && shape->isRenderingDisabled())
+        if (auto* shape = dynamicDowncast<RenderSVGShape>(child.get()); shape && shape->isRenderingDisabled())
             continue;
 
         SVGBoundingBoxComputation childBoundingBoxComputation(child);
@@ -205,15 +205,15 @@ FloatRect SVGBoundingBoxComputation::handleRootOrContainer(const SVGBoundingBoxC
     //      system space that contains the intersection of box and the rectangle specified by clip. (TODO!)
     adjustBoxForClippingAndEffects(options, box, { DecorationOption::OverrideBoxWithFilterBox });
 
-    if (options.contains(DecorationOption::IncludeClippers) && m_renderer.hasNonVisibleOverflow()) {
-        ASSERT(m_renderer.hasLayer());
+    if (options.contains(DecorationOption::IncludeClippers) && m_renderer->hasNonVisibleOverflow()) {
+        ASSERT(m_renderer->hasLayer());
 
         ASSERT(is<RenderSVGViewportContainer>(m_renderer) || is<RenderSVGResourceMarker>(m_renderer) || is<RenderSVGRoot>(m_renderer));
 
         LayoutRect overflowClipRect;
-        if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(m_renderer))
+        if (CheckedPtr svgModelObject = dynamicDowncast<RenderSVGModelObject>(m_renderer.get()))
             overflowClipRect = svgModelObject->overflowClipRect(svgModelObject->currentSVGLayoutLocation());
-        else if (auto* box = dynamicDowncast<RenderBox>(m_renderer))
+        else if (CheckedPtr box = dynamicDowncast<RenderBox>(m_renderer.get()))
             overflowClipRect = box->overflowClipRect(box->location());
         else {
             ASSERT_NOT_REACHED();
@@ -235,7 +235,7 @@ FloatRect SVGBoundingBoxComputation::handleForeignObjectOrImage(const SVGBoundin
     //    defined by the "x", "y", "width" and "height" geometric properties of the element.
     //
     // Note: The fill, stroke and markers input arguments to this algorithm do not affect the bounding box returned for these elements.
-    auto box = m_renderer.objectBoundingBox();
+    auto box = m_renderer->objectBoundingBox();
 
     // 2. If clipped is true and the value of clip-path on element is not none, then set box to be the tightest rectangle
     //    in coordinate system space that contains the intersection of box and the clipping path.
@@ -257,27 +257,53 @@ void SVGBoundingBoxComputation::adjustBoxForClippingAndEffects(const SVGBounding
         }
     }
 
-    // FIXME: Implement filter support.
-    UNUSED_PARAM(includeFilter);
+    if (includeFilter) {
+        if (auto* referencedFilterRenderer = m_renderer->svgFilterResourceFromStyle()) {
+            auto repaintRectCalculation = options.contains(DecorationOption::CalculateFastRepaintRect) ? RepaintRectCalculation::Fast : RepaintRectCalculation::Accurate;
+
+            auto resourceRect = referencedFilterRenderer->resourceBoundingBox(m_renderer, repaintRectCalculation);
+            if (box.isEmpty() && options.contains(DecorationOption::UseFilterBoxOnEmptyRect))
+                box = resourceRect;
+            else
+                box.intersect(resourceRect);
+        }
+    }
 
     if (options.contains(DecorationOption::IncludeClippers)) {
-        if (auto* referencedClipperRenderer = m_renderer.svgClipperResourceFromStyle()) {
+        if (CheckedPtr referencedClipperRenderer = m_renderer->svgClipperResourceFromStyle()) {
             auto repaintRectCalculation = options.contains(DecorationOption::CalculateFastRepaintRect) ? RepaintRectCalculation::Fast : RepaintRectCalculation::Accurate;
             box.intersect(referencedClipperRenderer->resourceBoundingBox(m_renderer, repaintRectCalculation));
             }
             }
 
     if (options.contains(DecorationOption::IncludeMaskers)) {
-        if (auto* referencedMaskerRenderer = m_renderer.svgMaskerResourceFromStyle()) {
+        if (CheckedPtr referencedMaskerRenderer = m_renderer->svgMaskerResourceFromStyle()) {
+            // When masks are nested, the inner masks do not affect the outer mask dimension, so skip the computation for inner masks.
+            static unsigned s_maskBoundingBoxNestingLevel = 0;
+            NestingLevelIncrementer incrementer { s_maskBoundingBoxNestingLevel };
+            if (s_maskBoundingBoxNestingLevel < 2) {
             auto repaintRectCalculation = options.contains(DecorationOption::CalculateFastRepaintRect) ? RepaintRectCalculation::Fast : RepaintRectCalculation::Accurate;
             box.intersect(referencedMaskerRenderer->resourceBoundingBox(m_renderer, repaintRectCalculation));
         }
     }
+    }
 
     if (options.contains(DecorationOption::IncludeOutline))
-        box.inflate(m_renderer.outlineStyleForRepaint().outlineSize());
+        box.inflate(m_renderer->outlineStyleForRepaint().outlineSize());
+}
+
+LayoutRect SVGBoundingBoxComputation::computeVisualOverflowRect(const RenderLayerModelObject& renderer)
+{
+    DecorationOptions options = repaintBoundingBoxDecoration | DecorationOption::IncludeOutline | DecorationOption::IgnoreTransformations;
+    if (is<RenderSVGContainer>(renderer))
+        options = options | DecorationOption::UseFilterBoxOnEmptyRect;
+    auto repaintBoundingBoxWithoutTransformations = computeDecoratedBoundingBox(renderer, options);
+    if (repaintBoundingBoxWithoutTransformations.isEmpty())
+        return { };
+
+    auto visualOverflowRect = enclosingLayoutRect(repaintBoundingBoxWithoutTransformations);
+    visualOverflowRect.moveBy(-renderer.nominalSVGLayoutLocation());
+    return visualOverflowRect;
 }
 
 }
-
-#endif

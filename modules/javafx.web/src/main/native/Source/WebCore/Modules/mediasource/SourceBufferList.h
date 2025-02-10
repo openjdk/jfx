@@ -43,7 +43,7 @@ class SourceBuffer;
 class WebCoreOpaqueRoot;
 
 class SourceBufferList final : public RefCounted<SourceBufferList>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(SourceBufferList);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SourceBufferList);
 public:
     static Ref<SourceBufferList> create(ScriptExecutionContext*);
     virtual ~SourceBufferList();
@@ -66,11 +66,12 @@ public:
     size_t size() const { return m_list.size(); }
 
     // EventTarget interface
-    EventTargetInterface eventTargetInterface() const final { return SourceBufferListEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SourceBufferList; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
-    using RefCounted<SourceBufferList>::ref;
-    using RefCounted<SourceBufferList>::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     explicit SourceBufferList(ScriptExecutionContext*);
@@ -79,8 +80,6 @@ private:
 
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
-
-    const char* activeDOMObjectName() const final;
 
     Vector<RefPtr<SourceBuffer>> m_list;
 };

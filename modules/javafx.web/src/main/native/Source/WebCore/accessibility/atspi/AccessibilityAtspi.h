@@ -38,7 +38,7 @@ typedef struct _GVariant GVariant;
 namespace WebCore {
 class AccessibilityObjectAtspi;
 class AccessibilityRootAtspi;
-enum class AccessibilityRole;
+enum class AccessibilityRole : uint8_t;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessibilityAtspi);
 class AccessibilityAtspi {
@@ -48,7 +48,7 @@ class AccessibilityAtspi {
 public:
     WEBCORE_EXPORT static AccessibilityAtspi& singleton();
 
-    void connect(const String&);
+    void connect(const String&, const String&);
 
     const char* uniqueName() const;
     GVariant* nullReference() const;
@@ -76,6 +76,8 @@ public:
 
     void valueChanged(AccessibilityObjectAtspi&, double);
 
+    void activeDescendantChanged(AccessibilityObjectAtspi&);
+
     void selectionChanged(AccessibilityObjectAtspi&);
 
     void loadEvent(AccessibilityObjectAtspi&, CString&&);
@@ -99,6 +101,7 @@ private:
     };
 
     void didConnect(GRefPtr<GDBusConnection>&&);
+    void didOwnName();
     void initializeRegistry();
     void addEventListener(const char* dbusName, const char* eventName);
     void removeEventListener(const char* dbusName, const char* eventName);
@@ -114,6 +117,7 @@ private:
 
 #if ENABLE(DEVELOPER_MODE)
     void notify(AccessibilityObjectAtspi&, const char*, NotificationObserverParameter) const;
+    void notifyActiveDescendantChanged(AccessibilityObjectAtspi&) const;
     void notifyStateChanged(AccessibilityObjectAtspi&, const char*, bool) const;
     void notifySelectionChanged(AccessibilityObjectAtspi&) const;
     void notifyMenuSelectionChanged(AccessibilityObjectAtspi&) const;
@@ -125,6 +129,7 @@ private:
 
     static GDBusInterfaceVTable s_cacheFunctions;
 
+    String m_busName;
     bool m_isConnecting { false };
     GRefPtr<GDBusConnection> m_connection;
     GRefPtr<GDBusProxy> m_registry;

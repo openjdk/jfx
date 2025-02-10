@@ -55,7 +55,7 @@ class WebXRViewerSpace;
 struct XRRenderStateInit;
 
 class WebXRSession final : public RefCounted<WebXRSession>, public EventTarget, public ActiveDOMObject, public PlatformXR::TrackingAndRenderingClient {
-    WTF_MAKE_ISO_ALLOCATED(WebXRSession);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRSession);
 public:
     using RequestReferenceSpacePromise = DOMPromiseDeferred<IDLInterface<WebXRReferenceSpace>>;
     using EndPromise = DOMPromiseDeferred<void>;
@@ -64,8 +64,9 @@ public:
     static Ref<WebXRSession> create(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&, FeatureList&&);
     virtual ~WebXRSession();
 
-    using RefCounted<WebXRSession>::ref;
-    using RefCounted<WebXRSession>::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     using PlatformXR::TrackingAndRenderingClient::weakPtrFactory;
     using PlatformXR::TrackingAndRenderingClient::WeakValueType;
@@ -78,6 +79,8 @@ public:
     const WebXRInputSourceArray& inputSources() const;
     RefPtr<PlatformXR::Device> device() const { return m_device.get(); }
 
+    const Vector<String> enabledFeatures() const;
+
     ExceptionOr<void> updateRenderState(const XRRenderStateInit&);
     void requestReferenceSpace(XRReferenceSpaceType, RequestReferenceSpacePromise&&);
 
@@ -88,6 +91,12 @@ public:
     IntSize recommendedWebGLFramebufferResolution() const;
     bool supportsViewportScaling() const;
     bool isPositionEmulated() const;
+
+    // If the immersive session obscures the HTML document (for example, in standalone devices),
+    // Page::updateRendering() won't be called and the WebXRSession needs to take over the
+    // responsibility to service requestVideoFrameCallbacks.
+    void applicationDidEnterBackground() { m_shouldServiceRequestVideoFrameCallbacks = true; }
+    void applicationWillEnterForeground() { m_shouldServiceRequestVideoFrameCallbacks = false; }
 
     // EventTarget.
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
@@ -110,12 +119,11 @@ private:
     WebXRSession(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&, FeatureList&&);
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const override { return WebXRSessionEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::WebXRSession; }
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const override;
+    // ActiveDOMObject.
     void stop() override;
 
     // PlatformXR::TrackingAndRenderingClient
@@ -133,12 +141,14 @@ private:
     void requestFrameIfNeeded();
     void onFrame(PlatformXR::FrameData&&);
     void applyPendingRenderState();
+    void minimalUpdateRendering();
 
     XREnvironmentBlendMode m_environmentBlendMode { XREnvironmentBlendMode::Opaque };
     XRInteractionMode m_interactionMode { XRInteractionMode::WorldSpace };
     XRVisibilityState m_visibilityState { XRVisibilityState::Visible };
     UniqueRef<WebXRInputSourceArray> m_inputSources;
     bool m_ended { false };
+    bool m_shouldServiceRequestVideoFrameCallbacks { false };
     std::unique_ptr<EndPromise> m_endPromise;
 
     WebXRSystem& m_xrSystem;

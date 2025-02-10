@@ -187,11 +187,6 @@ void TestRunner::setAcceptsEditing(bool newAcceptsEditing)
     // FIXME: implement
 }
 
-void TestRunner::setAppCacheMaximumSize(unsigned long long quota)
-{
-    // FIXME: implement
-}
-
 void TestRunner::setCacheModel(int model)
 {
     // FIXME: implement
@@ -407,11 +402,6 @@ void TestRunner::setSerializeHTTPLoads(bool)
     // FIXME: Implement if needed for https://bugs.webkit.org/show_bug.cgi?id=50758.
 }
 
-void TestRunner::clearAllApplicationCaches()
-{
-    // FIXME: implement to support Application Cache quotas.
-}
-
 void TestRunner::setGeolocationPermission(bool allow)
 {
     // FIXME: Implement for Geolocation layout tests.
@@ -563,3 +553,19 @@ void TestRunner::setOnlyAcceptFirstPartyCookies(bool)
 {
     fprintf(testResult, "ERROR: TestRunner::setOnlyAcceptFirstPartyCookies() not implemented\n");
 }
+
+void TestRunner::setPageScaleFactor(double scaleFactor, long x, long y)
+{
+      // FIXME: implement
+}
+
+void TestRunner::setTopContentInset(double)
+{
+    // FIXME: implement
+}
+
+JSValueRef TestRunner::alwaysResolvePromise(JSContextRef)
+{
+   // FIXME: implement
+}
+

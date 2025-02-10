@@ -62,13 +62,13 @@
 #include "TypedElementDescendantIteratorInlines.h"
 #include "UserGestureIndicator.h"
 #include <limits>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFormElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFormElement);
 
 using namespace HTMLNames;
 
@@ -116,9 +116,8 @@ HTMLFormElement::~HTMLFormElement()
 
     m_defaultButton = nullptr;
     for (auto& weakElement : m_listedElements) {
-        RefPtr element { weakElement.get() };
-        ASSERT(element);
-        auto* listedElement = element->asFormListedElement();
+        ASSERT(weakElement);
+        RefPtr listedElement = weakElement->asFormListedElement();
         ASSERT(listedElement);
         listedElement->formWillBeDestroyed();
     }
@@ -136,7 +135,7 @@ Node::InsertedIntoAncestorResult HTMLFormElement::insertedIntoAncestor(Insertion
 
 void HTMLFormElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
-    Node& root = traverseToRootNode(); // Do not rely on rootNode() because our IsInTreeScope is outdated.
+    auto& root = traverseToRootNode(); // Do not rely on rootNode() because our IsInTreeScope is outdated.
     auto listedElements = copyListedElementsVector();
     for (auto& listedElement : listedElements)
         listedElement->formOwnerRemovedFromTree(root);
@@ -315,7 +314,7 @@ ExceptionOr<void> HTMLFormElement::requestSubmit(HTMLElement* submitter)
 {
     // Update layout before processing form actions in case the style changes
     // the form or button relationships.
-    document().updateLayoutIgnorePendingStylesheets();
+    protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
     RefPtr<HTMLFormControlElement> control;
     if (submitter) {
@@ -493,7 +492,7 @@ void HTMLFormElement::attributeChanged(const QualifiedName& name, const AtomStri
         break;
     case AttributeNames::relAttr:
         if (m_relList)
-            m_relList->associatedAttributeValueChanged(newValue);
+            m_relList->associatedAttributeValueChanged();
         break;
     default:
         HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
@@ -808,7 +807,7 @@ bool HTMLFormElement::reportValidity()
 
     // Update layout before processing form actions in case the style changes
     // the form or button relationships.
-    document().updateLayoutIgnorePendingStylesheets();
+    protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
     return validateInteractively();
 }

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <bit>
 #include "ExecutableMemoryHandle.h"
 #include "FastJITPermissions.h"
 #include "JITCompilationEffort.h"
@@ -47,7 +48,11 @@
 #include <sys/mman.h>
 #endif
 
+#if ENABLE(MPROTECT_RX_TO_RWX)
+#define EXECUTABLE_POOL_WRITABLE false
+#else
 #define EXECUTABLE_POOL_WRITABLE true
+#endif
 
 namespace JSC {
 
@@ -110,6 +115,10 @@ ALWAYS_INLINE bool isJITPC(void* pc)
 
 JS_EXPORT_PRIVATE void dumpJITMemory(const void*, const void*, size_t);
 
+#if ENABLE(MPROTECT_RX_TO_RWX)
+JS_EXPORT_PRIVATE void* performJITMemcpyWithMProtect(void *dst, const void *src, size_t n);
+#endif
+
 static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n)
 {
 #if CPU(ARM64)
@@ -121,13 +130,65 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
         RELEASE_ASSERT(!Gigacage::contains(src));
         RELEASE_ASSERT(reinterpret_cast<uint8_t*>(dst) + n <= endOfFixedExecutableMemoryPool());
 
+#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
+        auto checkForZeroes = [n] (const void* buffer_v) {
+            // On x86-64, the maximum immediate size is 8B, no opcodes/prefixes have 0x00
+            // On other architectures this could be smaller
+            constexpr size_t maxZeroByteRunLength = 16;
+            // This algorithm works because the number of 0-bytes which can fit into
+            // one qword (8) is smaller than the limit on which we assert.
+            constexpr size_t stride = sizeof(uint64_t);
+            static_assert(stride <= maxZeroByteRunLength);
+
+            const char* buffer = reinterpret_cast<const char*>(buffer_v);
+            size_t runLength = 0;
+            size_t i = 0;
+            if (n > stride) {
+                for (; (reinterpret_cast<uintptr_t>(buffer) + i) % stride; i++) {
+                    if (!(buffer[i]))
+                        runLength++;
+                    else
+                        runLength = 0;
+                }
+                for (; i + stride <= n; i += stride) {
+                    uint64_t chunk = *reinterpret_cast<const uint64_t*>(buffer + i);
+                    if (!chunk) {
+                        runLength += sizeof(chunk);
+                        RELEASE_ASSERT(runLength <= maxZeroByteRunLength, buffer);
+                    } else {
+                        runLength += (std::countr_zero(chunk) / 8);
+                        RELEASE_ASSERT(runLength <= maxZeroByteRunLength, buffer);
+                        runLength = std::countl_zero(chunk) / 8;
+                    }
+                }
+                for (; i < n; i++) {
+                    if (!(buffer[i])) {
+                        runLength++;
+                        RELEASE_ASSERT(runLength <= maxZeroByteRunLength, buffer);
+                    }
+                }
+            }
+        };
+#endif
+
         if (UNLIKELY(Options::dumpJITMemoryPath()))
             dumpJITMemory(dst, src, n);
 
+#if ENABLE(MPROTECT_RX_TO_RWX)
+        auto ret = performJITMemcpyWithMProtect(dst, src, n);
+#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
+        checkForZeroes(dst);
+#endif
+        return ret;
+#endif
+
         if (g_jscConfig.useFastJITPermissions) {
-            threadSelfRestrictRWXToRW();
+            threadSelfRestrict<MemoryRestriction::kRwxToRw>();
             memcpy(dst, src, n);
-            threadSelfRestrictRWXToRX();
+            threadSelfRestrict<MemoryRestriction::kRwxToRx>();
+#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
+            checkForZeroes(dst);
+#endif
             return dst;
         }
 
@@ -138,9 +199,18 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
             off_t offset = (off_t)((uintptr_t)dst - startOfFixedExecutableMemoryPool<uintptr_t>());
             retagCodePtr<JITThunkPtrTag, CFunctionPtrTag>(g_jscConfig.jitWriteSeparateHeaps)(offset, src, n);
             RELEASE_ASSERT(!Gigacage::contains(src));
+#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
+            checkForZeroes(dst);
+#endif
             return dst;
         }
 #endif
+
+        auto ret = memcpy(dst, src, n);
+#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
+        checkForZeroes(dst);
+#endif
+        return ret;
     }
 
     // Use regular memcpy for writes outside the JIT region.
@@ -177,6 +247,11 @@ public:
     static size_t committedByteCount();
 
     Lock& getLock() const;
+
+#if ENABLE(MPROTECT_RX_TO_RWX)
+    void startWriting(const void* start, size_t sizeInBytes);
+    void finishWriting(const void* start, size_t sizeInBytes);
+#endif
 
 #if ENABLE(JUMP_ISLANDS)
     JS_EXPORT_PRIVATE void* getJumpIslandToUsingJITMemcpy(void* from, void* newDestination);

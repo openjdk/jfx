@@ -47,8 +47,9 @@
 #include "UserAgentParts.h"
 #include "UserGestureIndicator.h"
 #include <wtf/FileSystem.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 #if PLATFORM(MAC)
@@ -202,7 +203,7 @@ String FileInputType::firstElementPathForInputValue() const
     // decided to try to parse the value by looking for backslashes
     // (because that's what Windows file paths use). To be compatible
     // with that code, we make up a fake path for the file.
-    return makeString("C:\\fakepath\\", m_fileList->file(0).name());
+    return makeString("C:\\fakepath\\"_s, m_fileList->file(0).name());
 }
 
 void FileInputType::setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection)
@@ -224,15 +225,16 @@ void FileInputType::createShadowSubtree()
     ASSERT(element());
     ASSERT(element()->shadowRoot());
 
-    auto button = HTMLInputElement::create(inputTag, element()->document(), nullptr, false);
+    Ref button = HTMLInputElement::create(inputTag, element()->protectedDocument(), nullptr, false);
     {
         ScriptDisallowedScope::EventAllowedScope eventAllowedScopeBeforeAppend { button };
         button->setType(InputTypeNames::button());
         button->setUserAgentPart(UserAgentParts::fileSelectorButton());
         button->setValue(element()->multiple() ? fileButtonChooseMultipleFilesLabel() : fileButtonChooseFileLabel());
     }
-    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
-    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, button);
+    Ref shadowRoot = *element()->userAgentShadowRoot();
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
+    shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, button);
     disabledStateChanged();
 }
 

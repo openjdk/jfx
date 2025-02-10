@@ -76,9 +76,9 @@ namespace WebCore {
 
         virtual void setPageIsVisible(bool, String&& sceneIdentifier = ""_s) override;
 
-        virtual float duration() const override;
+        virtual MediaTime duration() const override;
 
-        virtual float currentTime() const override;
+        virtual MediaTime currentTime() const override;
         virtual void seek(float time) ;
         virtual bool seeking() const override;
         void seekToTarget(const SeekTarget&) final { }
@@ -101,7 +101,7 @@ namespace WebCore {
         virtual MediaPlayer::NetworkState networkState() const override;
         virtual MediaPlayer::ReadyState readyState() const override;
 
-        virtual float maxTimeSeekable() const override;
+        virtual MediaTime maxTimeSeekable() const override;
         virtual bool didLoadingProgress() const override;
         virtual const PlatformTimeRanges& buffered() const override;
 
@@ -164,8 +164,8 @@ namespace WebCore {
         FloatSize m_naturalSize;
         bool m_paused;
         bool m_seeking;
-        float m_seekTime;   // valid only when m_seeking is true
-        float m_duration;
+        MediaTime m_seekTime;   // valid only when m_seeking is true
+        MediaTime m_duration;
         std::unique_ptr<PlatformTimeRanges> m_buffered;
         unsigned m_bytesLoaded;
         mutable bool m_didLoadingProgress;  // mutable because didLoadingProgress() is declared const

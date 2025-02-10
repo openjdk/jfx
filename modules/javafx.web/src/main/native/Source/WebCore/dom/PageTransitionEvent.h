@@ -30,7 +30,7 @@
 namespace WebCore {
 
 class PageTransitionEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(PageTransitionEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PageTransitionEvent);
 public:
     static Ref<PageTransitionEvent> create(const AtomString& type, bool persisted)
     {
@@ -47,8 +47,6 @@ public:
     }
 
     virtual ~PageTransitionEvent();
-
-    EventInterface eventInterface() const override;
 
     bool persisted() const { return m_persisted; }
 

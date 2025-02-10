@@ -33,7 +33,7 @@
 namespace WebCore {
 
 class CustomEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(CustomEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CustomEvent);
 public:
     virtual ~CustomEvent();
 
@@ -53,8 +53,6 @@ public:
 private:
     CustomEvent(IsTrusted);
     CustomEvent(const AtomString& type, const Init& initializer, IsTrusted);
-
-    EventInterface eventInterface() const final;
 
     JSValueInWrappedObject m_detail;
     JSValueInWrappedObject m_cachedDetail;

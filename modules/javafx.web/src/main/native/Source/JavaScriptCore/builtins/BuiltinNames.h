@@ -101,6 +101,7 @@ namespace JSC {
     macro(Uint8ClampedArray) \
     macro(Uint16Array) \
     macro(Uint32Array) \
+    macro(Float16Array) \
     macro(Float32Array) \
     macro(Float64Array) \
     macro(BigInt64Array) \
@@ -145,24 +146,33 @@ namespace JSC {
     macro(replaceAllUsingStringSearch) \
     macro(makeTypeError) \
     macro(AggregateError) \
-    macro(mapBucketHead) \
-    macro(mapBucketNext) \
-    macro(mapBucketKey) \
-    macro(mapBucketValue) \
-    macro(setBucketHead) \
-    macro(setBucketNext) \
-    macro(setBucketKey) \
+    macro(mapStorage) \
+    macro(mapIterationNext) \
+    macro(mapIterationEntry) \
+    macro(mapIterationEntryKey) \
+    macro(mapIterationEntryValue) \
+    macro(mapIteratorNext) \
+    macro(mapIteratorKey) \
+    macro(mapIteratorValue) \
+    macro(setStorage) \
+    macro(setIterationNext) \
+    macro(setIterationEntry) \
+    macro(setIterationEntryKey) \
+    macro(setIteratorNext) \
+    macro(setIteratorKey) \
     macro(setClone) \
     macro(setPrototypeDirect) \
     macro(setPrototypeDirectOrThrow) \
     macro(regExpBuiltinExec) \
     macro(regExpMatchFast) \
     macro(regExpProtoFlagsGetter) \
+    macro(regExpProtoHasIndicesGetter) \
     macro(regExpProtoGlobalGetter) \
     macro(regExpProtoIgnoreCaseGetter) \
     macro(regExpProtoMultilineGetter) \
     macro(regExpProtoSourceGetter) \
     macro(regExpProtoStickyGetter) \
+    macro(regExpProtoDotAllGetter) \
     macro(regExpProtoUnicodeGetter) \
     macro(regExpProtoUnicodeSetsGetter) \
     macro(regExpPrototypeSymbolMatch) \
@@ -184,6 +194,7 @@ namespace JSC {
     macro(handleProxyGetTrapResult) \
     macro(importModule) \
     macro(copyDataProperties) \
+    macro(cloneObject) \
     macro(meta) \
     macro(webAssemblyCompileStreamingInternal) \
     macro(webAssemblyInstantiateStreamingInternal) \
@@ -239,13 +250,13 @@ public:
 
     PrivateSymbolImpl* lookUpPrivateName(const Identifier&) const;
     PrivateSymbolImpl* lookUpPrivateName(const String&) const;
-    PrivateSymbolImpl* lookUpPrivateName(const LChar*, unsigned length) const;
-    PrivateSymbolImpl* lookUpPrivateName(const UChar*, unsigned length) const;
+    PrivateSymbolImpl* lookUpPrivateName(std::span<const LChar>) const;
+    PrivateSymbolImpl* lookUpPrivateName(std::span<const UChar>) const;
 
     SymbolImpl* lookUpWellKnownSymbol(const Identifier&) const;
     SymbolImpl* lookUpWellKnownSymbol(const String&) const;
-    SymbolImpl* lookUpWellKnownSymbol(const LChar*, unsigned length) const;
-    SymbolImpl* lookUpWellKnownSymbol(const UChar*, unsigned length) const;
+    SymbolImpl* lookUpWellKnownSymbol(std::span<const LChar>) const;
+    SymbolImpl* lookUpWellKnownSymbol(std::span<const UChar>) const;
 
     void appendExternalName(const Identifier& publicName, const Identifier& privateName);
 

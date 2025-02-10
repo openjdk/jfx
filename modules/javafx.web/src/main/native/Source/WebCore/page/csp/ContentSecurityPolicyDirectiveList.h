@@ -64,7 +64,7 @@ public:
     const ContentSecurityPolicyDirective* violatedDirectiveForFormAction(const URL&, bool didReceiveRedirectResponse) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForFrame(const URL&, bool didReceiveRedirectResponse) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForFrameAncestor(const LocalFrame&) const;
-    const ContentSecurityPolicyDirective* violatedDirectiveForFrameAncestorOrigins(const Vector<RefPtr<SecurityOrigin>>&) const;
+    const ContentSecurityPolicyDirective* violatedDirectiveForFrameAncestorOrigins(const Vector<Ref<SecurityOrigin>>&) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForImage(const URL&, bool didReceiveRedirectResponse) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForPrefetch(const URL&, bool didReceiveRedirectResponse) const;
 #if ENABLE(APPLICATION_MANIFEST)
@@ -82,6 +82,7 @@ public:
 
     bool hasBlockAllMixedContentDirective() const { return m_hasBlockAllMixedContentDirective; }
     bool hasFrameAncestorsDirective() const { return !!m_frameAncestors; }
+    bool requiresTrustedTypesForScript() const { return m_requireTrustedTypesForScript; }
 
     const String& evalDisabledErrorMessage() const { return m_evalDisabledErrorMessage; }
     const String& webAssemblyDisabledErrorMessage() const { return m_webAssemblyDisabledErrorMessage; }
@@ -102,7 +103,7 @@ private:
         String name;
         String value;
     };
-    template<typename CharacterType> std::optional<ParsedDirective> parseDirective(StringParsingBuffer<CharacterType>);
+    template<typename CharacterType> std::optional<ParsedDirective> parseDirective(std::span<const CharacterType>);
     void parseReportTo(ParsedDirective&&);
     void parseReportURI(ParsedDirective&&);
     void parseRequireTrustedTypesFor(ParsedDirective&&);

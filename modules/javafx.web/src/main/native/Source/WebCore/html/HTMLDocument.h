@@ -28,14 +28,12 @@
 namespace WebCore {
 
 class HTMLDocument : public Document {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(HTMLDocument, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(HTMLDocument, WEBCORE_EXPORT);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDocument);
 public:
     static Ref<HTMLDocument> create(LocalFrame*, const Settings&, const URL&, ScriptExecutionContextIdentifier = { });
     static Ref<HTMLDocument> createSynthesizedDocument(LocalFrame&, const URL&);
     virtual ~HTMLDocument();
-
-    WEBCORE_EXPORT int width();
-    WEBCORE_EXPORT int height();
 
     std::optional<std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> namedItem(const AtomString&);
     Vector<AtomString> supportedPropertyNames() const;

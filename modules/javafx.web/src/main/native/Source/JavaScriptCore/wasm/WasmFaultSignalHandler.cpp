@@ -38,11 +38,18 @@
 #include "WasmExceptionType.h"
 #include "WasmMemory.h"
 #include "WasmThunks.h"
+#include <wtf/CodePtr.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/threads/Signals.h>
 
 namespace JSC { namespace Wasm {
+
+using WTF::CodePtr;
+
+#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+void* presignedTrampoline { nullptr };
+#endif
 
 namespace {
 namespace WasmFaultSignalHandlerInternal {
@@ -96,6 +103,12 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
             };
 
             if (didFaultInWasm(faultingInstruction)) {
+#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+                if (g_wtfConfig.signalHandlers.useHardenedHandler) {
+                    MachineContext::setInstructionPointer(context, presignedTrampoline);
+                    return SignalAction::Handled;
+                }
+#endif
                 MachineContext::setInstructionPointer(context, LLInt::getCodePtr<CFunctionPtrTag>(wasm_throw_from_fault_handler_trampoline_reg_instance));
                 return SignalAction::Handled;
             }
@@ -128,6 +141,9 @@ void prepareSignalingMemory()
         if (!Options::useWasmFaultSignalHandler())
             return;
 
+#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+        presignedTrampoline = g_wtfConfig.signalHandlers.presignReturnPCForHandler(LLInt::getCodePtr<NoPtrTag>(wasm_throw_from_fault_handler_trampoline_reg_instance));
+#endif
         addSignalHandler(Signal::AccessFault, [] (Signal signal, SigInfo& sigInfo, PlatformRegisters& ucontext) {
             return trapHandler(signal, sigInfo, ucontext);
         });

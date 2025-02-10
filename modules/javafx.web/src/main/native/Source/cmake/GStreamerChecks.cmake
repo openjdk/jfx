@@ -1,15 +1,4 @@
 if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
-
-    if (PORT STREQUAL "WPE")
-        find_package(WPEBackend_fdo 1.9.0)
-        if ((NOT WPEBACKEND_FDO_FOUND) OR WPEBACKEND_FDO_AUDIO_EXTENSION STREQUAL "WPEBACKEND_FDO_AUDIO_EXTENSION-NOTFOUND")
-            message(WARNING "WPEBackend-fdo audio extension not found. Disabling external audio rendering support")
-            SET_AND_EXPOSE_TO_BUILD(USE_WPEBACKEND_FDO_AUDIO_EXTENSION FALSE)
-        else ()
-            SET_AND_EXPOSE_TO_BUILD(USE_WPEBACKEND_FDO_AUDIO_EXTENSION TRUE)
-        endif ()
-    endif ()
-
     SET_AND_EXPOSE_TO_BUILD(USE_GSTREAMER TRUE)
       if (USE_GSTREAMER_FULL)
           find_package(GStreamer 1.18.4 REQUIRED COMPONENTS full)

@@ -36,7 +36,7 @@ namespace WebCore {
 class FloatQuad;
 
 float euclidianDistance(const FloatSize&);
-float euclidianDistance(const FloatPoint&, const FloatPoint&);
+WEBCORE_EXPORT float euclidianDistance(const FloatPoint&, const FloatPoint&);
 
 // Find point where lines through the two pairs of points intersect. Returns false if the lines don't intersect.
 WEBCORE_EXPORT bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& d1, const FloatPoint& d2, FloatPoint& intersection);
@@ -89,6 +89,11 @@ float angleOfPointToSideOfIntersection(const FloatRect& boundingRect, const std:
 // Given a box and an offset from the top left corner, calculate the distance of the point from each side
 RectEdges<double> distanceOfPointToSidesOfRect(const FloatRect&, const FloatPoint&);
 
+float distanceToClosestSide(FloatPoint, FloatSize);
+float distanceToFarthestSide(FloatPoint, FloatSize);
+float distanceToClosestCorner(FloatPoint, FloatSize);
+float distanceToFarthestCorner(FloatPoint, FloatSize);
+
 // Given a box and an offset from the top left corner, construct a coordinate system with this offset as the origin,
 // and return the vertices of the box in this coordinate system
 std::array<FloatPoint, 4> verticesForBox(const FloatRect&, const FloatPoint);
@@ -105,5 +110,15 @@ struct RotatedRect {
 };
 
 WEBCORE_EXPORT RotatedRect rotatedBoundingRectWithMinimumAngleOfRotation(const FloatQuad&, std::optional<float> minRotationInRadians = std::nullopt);
+
+static inline float min4(float a, float b, float c, float d)
+{
+    return std::min(std::min(a, b), std::min(c, d));
+}
+
+static inline float max4(float a, float b, float c, float d)
+{
+    return std::max(std::max(a, b), std::max(c, d));
+}
 
 }

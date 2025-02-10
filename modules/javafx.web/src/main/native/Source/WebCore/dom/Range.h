@@ -37,11 +37,12 @@ class DocumentFragment;
 class LocalDOMWindow;
 class NodeWithIndex;
 class Text;
+class TrustedHTML;
 
 struct SimpleRange;
 
 class Range final : public AbstractRange, public CanMakeSingleThreadWeakPtr<Range> {
-    WTF_MAKE_ISO_ALLOCATED(Range);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Range);
     WTF_MAKE_NONCOPYABLE(Range);
 public:
     WEBCORE_EXPORT static Ref<Range> create(Document&);
@@ -90,7 +91,7 @@ public:
     Ref<DOMRectList> getClientRects() const;
     Ref<DOMRect> getBoundingClientRect() const;
 
-    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(const String& fragment);
+    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(std::variant<RefPtr<TrustedHTML>, String>&& fragment);
 
     // Expand range to a unit (word or sentence or block or document) boundary.
     // Please refer to https://bugs.webkit.org/show_bug.cgi?id=27632 comment #5 for details.
