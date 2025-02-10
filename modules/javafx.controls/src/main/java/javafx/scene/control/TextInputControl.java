@@ -1334,7 +1334,7 @@ public abstract class TextInputControl extends Control {
     }
 
     /**
-     * If the field is currently being edited, this call will set text to the last commited value.
+     * If the field is currently being edited, this call will set text to the last committed value.
      * @since JavaFX 8u40
      */
     public final void cancelEdit() {
