@@ -411,10 +411,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
             accessControl(c);
             c.setPageCount(mx);
             c.setCurrentPageIndex(nextInt(mx));
-            // this test generates a lot of garbage quickly
-            if (nextBoolean(0.1)) {
-                System.gc();
-            }
         });
     }
 
