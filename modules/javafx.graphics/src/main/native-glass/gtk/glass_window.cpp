@@ -979,6 +979,9 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
 
     geometry.x = root_x;
     geometry.y = root_y;
+
+    // view_x and view_y represent the position of the content relative to the top-left corner of the window,
+    // taking into account window decorations (such as title bars and borders) applied by the window manager.
     geometry.view_x = origin_x - root_x;
     geometry.view_y = origin_y - root_y;
     notify_window_move();
