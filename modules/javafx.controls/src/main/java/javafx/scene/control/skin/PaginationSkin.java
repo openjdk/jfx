@@ -198,7 +198,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
         resetIndexes(true);
 
         navigation = new NavigationControl();
-        navigation.initializePageIndicators();
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
@@ -909,6 +908,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSizeX(newValue.doubleValue())));
                 }
             });
+            initializePageIndicators();
         }
 
         private void initializeNavigationHandlers() {
@@ -950,8 +950,8 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 ib.setToggleGroup(indicatorButtons);
                 controlBox.getChildren().add(ib);
             }
-            navigation.updateTooltipVisible();
-            navigation.updateBulletIndicatorType();
+            updateTooltipVisible();
+            updateBulletIndicatorType();
             controlBox.getChildren().add(rightArrowButton);
         }
 
