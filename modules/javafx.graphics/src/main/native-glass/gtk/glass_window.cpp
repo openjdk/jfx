@@ -977,6 +977,7 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     gdk_window_get_root_origin(gdk_window, &root_x, &root_y);
     gdk_window_get_origin(gdk_window, &origin_x, &origin_y);
 
+    // x and y represent the position of the top-left corner of the window relative to the desktop area
     geometry.x = root_x;
     geometry.y = root_y;
 
