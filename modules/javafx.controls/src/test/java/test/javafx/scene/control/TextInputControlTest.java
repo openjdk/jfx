@@ -125,8 +125,10 @@ public class TextInputControlTest {
         String promptWithLinebreaks = "Prompt\nwith\nLineBreaks\nand\nmixed\tcharacters \uD83C\uDF0D";
         StringProperty promptProperty = new SimpleStringProperty(promptWithLinebreaks);
         textInput.promptTextProperty().bind(promptProperty);
-        String expectedPromptWithoutLineBreaks = promptWithLinebreaks.replace("\n", "");
-        assertEquals(expectedPromptWithoutLineBreaks, textInput.getPromptText());
+        String expectedPrompt = TextArea.class.isAssignableFrom(type)
+                ? promptWithLinebreaks
+                : promptWithLinebreaks.replace("\n", "");
+        assertEquals(expectedPrompt, textInput.getPromptText());
         textInput.promptTextProperty().unbind();
     }
 
