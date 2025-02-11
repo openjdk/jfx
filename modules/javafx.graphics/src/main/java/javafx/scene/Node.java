@@ -2696,8 +2696,8 @@ public abstract sealed class Node
      *                                                                         *
      **************************************************************************/
     /**
-     * Defines whether or not this node's layout will be managed by it's parent.
-     * If the node is managed, it's parent will factor the node's geometry
+     * Defines whether or not this node's layout will be managed by its parent.
+     * If the node is managed, its parent will factor the node's geometry
      * into its own preferred size and {@link #layoutBoundsProperty layoutBounds}
      * calculations and will lay it
      * out during the scene's layout pass.  If a managed node's layoutBounds
@@ -9079,6 +9079,7 @@ public abstract sealed class Node
      * a running {@link TransitionTimer} with this {@code Node}. This allows the node
      * to keep track of running timers that are targeting its properties.
      *
+     * @param propertyName the CSS name of the targeted property
      * @param timer the transition timer
      */
     private void addTransitionTimer(String propertyName, TransitionTimer timer) {
@@ -9096,7 +9097,7 @@ public abstract sealed class Node
      * This method is called by animatable {@link StyleableProperty} implementations
      * when their {@link TransitionTimer} has completed.
      *
-     * @param timer the transition timer
+     * @param propertyName the CSS name of the targeted property
      */
     private void removeTransitionTimer(String propertyName) {
         var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;

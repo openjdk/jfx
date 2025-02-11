@@ -63,6 +63,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Pagination;
 import javafx.scene.control.SkinBase;
+import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
@@ -108,7 +109,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
     private Timeline timeline;
     private Rectangle clipRect;
 
-    private NavigationControl navigation;
+    private final NavigationControl navigation;
     private int fromIndex;
     private int previousIndex;
     private int currentIndex;
@@ -192,7 +193,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
         // sets the current page index property in control to the same value (no-op)
         resetIndexes(true);
 
-        this.navigation = new NavigationControl();
+        navigation = new NavigationControl();
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
@@ -225,6 +226,10 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 return;
             }
             resetIndiciesAndNav();
+        });
+
+        lh.addListChangeListener(control.getStyleClass(), (ch) -> {
+            navigation.updateBulletIndicatorType();
         });
 
         initializeSwipeAndTouchHandlers();
@@ -363,6 +368,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             tooltipVisible = new StyleableBooleanProperty(DEFAULT_TOOLTIP_VISIBLE) {
                 @Override
                 protected void invalidated() {
+                    navigation.updateTooltipVisible();
                     getSkinnable().requestLayout();
                 }
 
@@ -889,7 +895,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
             getChildren().addAll(controlBox, pageInformation);
             initializeNavigationHandlers();
-            initializePageIndicators();
             updatePageIndex();
 
             // listen to changes to arrowButtonGap and update margins
@@ -903,6 +908,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSizeX(newValue.doubleValue())));
                 }
             });
+            initializePageIndicators();
         }
 
         private void initializeNavigationHandlers() {
@@ -944,6 +950,8 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 ib.setToggleGroup(indicatorButtons);
                 controlBox.getChildren().add(ib);
             }
+            updateTooltipVisible();
+            updateBulletIndicatorType();
             controlBox.getChildren().add(rightArrowButton);
         }
 
@@ -1284,6 +1292,24 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
             layoutInArea(controlBox, controlBoxX, controlBoxY, controlBoxWidth, controlBoxHeight, 0, controlBoxHPos, controlBoxVPos);
         }
+
+        private void updateTooltipVisible() {
+            boolean on = tooltipVisibleProperty().get();
+            for (Toggle t : indicatorButtons.getToggles()) {
+                if (t instanceof IndicatorButton b) {
+                    b.setTooltipVisible(on);
+                }
+            }
+        }
+
+        private void updateBulletIndicatorType() {
+            boolean on = getSkinnable().getStyleClass().contains(Pagination.STYLE_CLASS_BULLET);
+            for (Toggle t : indicatorButtons.getToggles()) {
+                if (t instanceof IndicatorButton b) {
+                    b.setBulletIndicatorType(on);
+                }
+            }
+        }
     }
 
     class IndicatorButton extends ToggleButton {
@@ -1292,13 +1318,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
         public IndicatorButton(int pageNumber) {
             this.pageNumber = pageNumber;
             setFocusTraversable(false);
-
-            ListenerHelper lh = ListenerHelper.get(PaginationSkin.this);
-
-            lh.addListChangeListener(getSkinnable().getStyleClass(), (ch) -> {
-                setIndicatorType();
-            });
-            setIndicatorType();
 
             setOnAction(arg0 -> {
                     getNode().requestFocus();
@@ -1310,16 +1329,12 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     }
             });
 
-            lh.addChangeListener(tooltipVisibleProperty(), true, (visible) -> {
-                setTooltipVisible(visible);
-            });
-
             prefHeightProperty().bind(minHeightProperty());
             setAccessibleRole(AccessibleRole.PAGE_ITEM);
         }
 
-        private void setIndicatorType() {
-            if (getSkinnable().getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
+        private void setBulletIndicatorType(boolean on) {
+            if (on) {
                 getStyleClass().remove("number-button");
                 getStyleClass().add("bullet-button");
                 setText(null);
@@ -1499,5 +1514,4 @@ public class PaginationSkin extends SkinBase<Pagination> {
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
-
 }

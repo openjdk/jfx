@@ -502,9 +502,9 @@ public final class LinearGradient extends Paint {
      * &lt;point&gt; = [ [ &lt;length&gt; &lt;length&gt; ] | [ &lt;percentage&gt; | &lt;percentage&gt; ] ]
      * &lt;color-stop&gt; = [ &lt;color&gt; [ &lt;percentage&gt; | &lt;length&gt;]? ]
      * </pre>
-     * <p> Currently length can be only specified in px, the specification of unit can be omited.
+     * <p> Currently length can be only specified in px, the specification of unit can be omitted.
      * Format of color representation is the one used in {@link Color#web(String color)}.
-     * The linear-gradient keyword can be omited.
+     * The linear-gradient keyword can be omitted.
      * For additional information about the format of string representation, see the
      * <a href="../doc-files/cssref.html">CSS Reference Guide</a>.
      * </p>
