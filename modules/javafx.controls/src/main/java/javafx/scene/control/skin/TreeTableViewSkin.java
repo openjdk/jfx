@@ -155,13 +155,15 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             control.edit(-1, null);
         };
 
-        lh.addChangeListener(control.rootProperty(), (src, prev, root) -> {
+        lh.addChangeListener(control.rootProperty(), true, (src, prev, root) -> {
             if (prev != null) {
                 prev.removeEventHandler(TreeItem.<T>treeNotificationEvent(), rootListener);
             }
             if (root != null) {
                 root.addEventHandler(TreeItem.<T>treeNotificationEvent(), rootListener);
             }
+            // fix for JDK-8094887
+            control.edit(-1, null);
             updateItemCount();
         });
 
