@@ -52,12 +52,12 @@
 #include "WindowEventLoop.h"
 #include "WindowFocusAllowedIndicator.h"
 #include <wtf/CompletionHandler.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Notification);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Notification);
 
 static Lock nonPersistentNotificationMapLock;
 static HashMap<WTF::UUID, Notification*>& nonPersistentNotificationMap() WTF_REQUIRES_LOCK(nonPersistentNotificationMapLock)
@@ -82,7 +82,7 @@ static ExceptionOr<Ref<SerializedScriptValue>> createSerializedScriptValue(Scrip
     if (!globalObject)
         return Exception { ExceptionCode::TypeError, "Notification cannot be created without a global object"_s };
 
-    Vector<RefPtr<MessagePort>> dummyPorts;
+    Vector<Ref<MessagePort>> dummyPorts;
     return SerializedScriptValue::create(*globalObject, value, { }, dummyPorts);
 }
 
@@ -143,6 +143,7 @@ Ref<Notification> Notification::create(ScriptExecutionContext& context, const UR
 
     RefPtr<SerializedScriptValue> dataScriptValue;
     if (payload.options && !payload.options->dataJSONString.isEmpty() && context.globalObject()) {
+        JSC::JSLockHolder lock(context.globalObject());
         auto value = JSONParse(context.globalObject(), payload.options->dataJSONString);
         dataScriptValue = SerializedScriptValue::convert(*context.globalObject(), value);
     }
@@ -295,11 +296,6 @@ NotificationClient* Notification::clientFromContext()
     return nullptr;
 }
 
-const char* Notification::activeDOMObjectName() const
-{
-    return "Notification";
-}
-
 void Notification::stop()
 {
     ActiveDOMObject::stop();
@@ -430,7 +426,8 @@ void Notification::requestPermission(Document& document, RefPtr<NotificationPerm
 
 void Notification::eventListenersDidChange()
 {
-    m_hasRelevantEventListener = hasEventListeners(eventNames().clickEvent)
+    m_hasRelevantEventListener = hasEventListeners(eventNames().auxclickEvent)
+        || hasEventListeners(eventNames().clickEvent)
         || hasEventListeners(eventNames().closeEvent)
         || hasEventListeners(eventNames().errorEvent)
         || hasEventListeners(eventNames().showEvent);

@@ -29,12 +29,12 @@
 #include "CSSCalcInvertNode.h"
 #include "CSSNumericValue.h"
 #include "CSSPrimitiveValue.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathInvert);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSMathInvert);
 
 Ref<CSSMathInvert> CSSMathInvert::create(CSSNumberish&& numberish)
 {
@@ -76,8 +76,8 @@ void CSSMathInvert::serialize(StringBuilder& builder, OptionSet<SerializationArg
 {
     // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
-        builder.append(arguments.contains(SerializationArguments::Nested) ? "(" : "calc(");
-    builder.append("1 / ");
+        builder.append(arguments.contains(SerializationArguments::Nested) ? "("_s : "calc("_s);
+    builder.append("1 / "_s);
     m_value->serialize(builder, arguments);
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
         builder.append(')');

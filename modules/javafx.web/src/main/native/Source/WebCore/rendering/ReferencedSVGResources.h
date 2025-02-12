@@ -27,8 +27,8 @@
 
 #include "SVGNames.h"
 #include <wtf/FastMalloc.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -53,7 +53,7 @@ class StyleImage;
 class TreeScope;
 
 class ReferencedSVGResources {
-    WTF_MAKE_ISO_ALLOCATED(ReferencedSVGResources);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ReferencedSVGResources);
 public:
     ReferencedSVGResources(RenderElement&);
     ~ReferencedSVGResources();
@@ -70,13 +70,12 @@ public:
 
     static LegacyRenderSVGResourceContainer* referencedRenderResource(TreeScope&, const AtomString& fragment);
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     // LBSE: All element based.
     static RefPtr<SVGClipPathElement> referencedClipPathElement(TreeScope&, const ReferencePathOperation&);
     static RefPtr<SVGMarkerElement> referencedMarkerElement(TreeScope&, const String&);
     static RefPtr<SVGMaskElement> referencedMaskElement(TreeScope&, const StyleImage&);
+    static RefPtr<SVGMaskElement> referencedMaskElement(TreeScope&, const AtomString&);
     static RefPtr<SVGElement> referencedPaintServerElement(TreeScope&, const String&);
-#endif
 
 private:
     static RefPtr<SVGElement> elementForResourceID(TreeScope&, const AtomString& resourceID, const SVGQualifiedName& tagName);

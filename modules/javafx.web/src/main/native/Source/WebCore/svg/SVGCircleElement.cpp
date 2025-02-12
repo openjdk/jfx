@@ -27,11 +27,11 @@
 #include "NodeName.h"
 #include "RenderSVGEllipse.h"
 #include "SVGElementInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGCircleElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGCircleElement);
 
 inline SVGCircleElement::SVGCircleElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -49,6 +49,17 @@ inline SVGCircleElement::SVGCircleElement(const QualifiedName& tagName, Document
 Ref<SVGCircleElement> SVGCircleElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(*new SVGCircleElement(tagName, document));
+}
+
+SVGAnimatedProperty* SVGCircleElement::propertyForAttribute(const QualifiedName& name) const
+{
+    if (name == SVGNames::cxAttr)
+        return m_cx.ptr();
+    if (name == SVGNames::cyAttr)
+        return m_cy.ptr();
+    if (name == SVGNames::rAttr)
+        return m_r.ptr();
+    return nullptr;
 }
 
 void SVGCircleElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -78,6 +89,7 @@ void SVGCircleElement::svgAttributeChanged(const QualifiedName& attrName)
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
         setPresentationalHintStyleIsDirty();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 
@@ -86,11 +98,8 @@ void SVGCircleElement::svgAttributeChanged(const QualifiedName& attrName)
 
 RenderPtr<RenderElement> SVGCircleElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
         return createRenderer<RenderSVGEllipse>(*this, WTFMove(style));
-#endif
-
     return createRenderer<LegacyRenderSVGEllipse>(*this, WTFMove(style));
 }
 

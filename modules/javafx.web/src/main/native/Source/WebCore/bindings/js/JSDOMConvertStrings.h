@@ -28,16 +28,24 @@
 #include "IDLTypes.h"
 #include "JSDOMConvertBase.h"
 #include "StringAdaptors.h"
+#include "TrustedType.h"
+#include <JavaScriptCore/JSGlobalObject.h>
 
 namespace WebCore {
 
+class ScriptExecutionContext;
+
 WEBCORE_EXPORT String identifierToString(JSC::JSGlobalObject&, const JSC::Identifier&);
+
 WEBCORE_EXPORT String identifierToByteString(JSC::JSGlobalObject&, const JSC::Identifier&);
-WEBCORE_EXPORT String valueToByteString(JSC::JSGlobalObject&, JSC::JSValue);
-WEBCORE_EXPORT AtomString valueToByteAtomString(JSC::JSGlobalObject&, JSC::JSValue);
+WEBCORE_EXPORT ConversionResult<IDLByteString> valueToByteString(JSC::JSGlobalObject&, JSC::JSValue);
+WEBCORE_EXPORT ConversionResult<IDLAtomStringAdaptor<IDLByteString>> valueToByteAtomString(JSC::JSGlobalObject&, JSC::JSValue);
+
 WEBCORE_EXPORT String identifierToUSVString(JSC::JSGlobalObject&, const JSC::Identifier&);
-WEBCORE_EXPORT String valueToUSVString(JSC::JSGlobalObject&, JSC::JSValue);
-WEBCORE_EXPORT AtomString valueToUSVAtomString(JSC::JSGlobalObject&, JSC::JSValue);
+WEBCORE_EXPORT ConversionResult<IDLUSVString> valueToUSVString(JSC::JSGlobalObject&, JSC::JSValue);
+WEBCORE_EXPORT ConversionResult<IDLAtomStringAdaptor<IDLUSVString>> valueToUSVAtomString(JSC::JSGlobalObject&, JSC::JSValue);
+
+ConversionResult<IDLDOMString> trustedScriptCompliantString(JSC::JSGlobalObject&, JSC::JSValue, const String& sink);
 
 inline AtomString propertyNameToString(JSC::PropertyName propertyName)
 {
@@ -54,9 +62,18 @@ inline AtomString propertyNameToAtomString(JSC::PropertyName propertyName)
 // MARK: String types
 
 template<> struct Converter<IDLDOMString> : DefaultConverter<IDLDOMString> {
-    static String convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    using Result = ConversionResult<IDLDOMString>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
-        return value.toWTFString(&lexicalGlobalObject);
+        auto& vm = lexicalGlobalObject.vm();
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        auto string = value.toWTFString(&lexicalGlobalObject);
+
+        RETURN_IF_EXCEPTION(scope, Result::exception());
+
+        return Result { WTFMove(string) };
     }
 };
 
@@ -86,7 +103,9 @@ template<> struct JSConverter<IDLDOMString> {
 };
 
 template<> struct Converter<IDLByteString> : DefaultConverter<IDLByteString> {
-    static String convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    using Result = ConversionResult<IDLByteString>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
         return valueToByteString(lexicalGlobalObject, value);
     }
@@ -110,13 +129,21 @@ template<> struct JSConverter<IDLByteString> {
     {
         return JSC::jsOwnedString(JSC::getVM(&lexicalGlobalObject), value.string);
     }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const URL& value)
+    {
+        return JSC::jsOwnedString(JSC::getVM(&lexicalGlobalObject), value.string());
+    }
 };
 
 template<> struct Converter<IDLUSVString> : DefaultConverter<IDLUSVString> {
-    static String convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    using Result = ConversionResult<IDLUSVString>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
         return valueToUSVString(lexicalGlobalObject, value);
     }
+
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const URL& value)
     {
         return JSC::jsOwnedString(JSC::getVM(&lexicalGlobalObject), value.string());
@@ -151,84 +178,138 @@ template<> struct JSConverter<IDLUSVString> {
 // MARK: -
 // MARK: String type adaptors
 
-template<typename T> struct Converter<IDLLegacyNullToEmptyStringAdaptor<T>> : DefaultConverter<IDLLegacyNullToEmptyStringAdaptor<T>> {
-    static String convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+template<typename TrustedStringAdaptorIDL>
+struct TrustedStringAdaptorTraits;
+
+template<typename T> struct TrustedStringAdaptorTraits<IDLStringContextTrustedScriptAdaptor<T>> {
+    static constexpr auto trustedType = TrustedType::TrustedScript;
+};
+
+template<typename IDL>
+struct TrustedStringConverter : DefaultConverter<IDL> {
+    using Result = ConversionResult<IDL>;
+    using Traits = TrustedStringAdaptorTraits<IDL>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
-        if (value.isNull())
-            return emptyString();
-        return Converter<T>::convert(lexicalGlobalObject, value);
+        return Converter<IDL>::convert(lexicalGlobalObject, value, emptyString());
+    }
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, const String& sink)
+    {
+        return trustedScriptCompliantString(lexicalGlobalObject, value, sink);
     }
 };
 
-template<typename T> struct JSConverter<IDLLegacyNullToEmptyStringAdaptor<T>> {
+template<typename InnerStringType>
+struct JSStringAdaptorConverter  {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = false;
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const String& value)
     {
-        return JSConverter<T>::convert(lexicalGlobalObject, value);
+        return JSConverter<InnerStringType>::convert(lexicalGlobalObject, value);
     }
 };
 
-template<typename T> struct Converter<IDLLegacyNullToEmptyAtomStringAdaptor<T>> : DefaultConverter<IDLLegacyNullToEmptyAtomStringAdaptor<T>> {
-    static AtomString convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
-    {
-        if (value.isNull())
-            return emptyAtom();
-        return Converter<IDLAtomStringAdaptor<T>>::convert(lexicalGlobalObject, value);
-    }
-};
-
-template<typename T>  struct JSConverter<IDLLegacyNullToEmptyAtomStringAdaptor<T>> {
+template<typename InnerStringType>
+struct JSAtomStringAdaptorConverter  {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = false;
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const AtomString& value)
     {
-        return JSConverter<T>::convert(lexicalGlobalObject, value);
+        return JSConverter<InnerStringType>::convert(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const URL& value)
+    {
+        return JSConverter<InnerStringType>::convert(lexicalGlobalObject, value.string());
+    }
+};
+
+template<typename T> struct Converter<IDLStringContextTrustedScriptAdaptor<T>>
+    : TrustedStringConverter<IDLStringContextTrustedScriptAdaptor<T>> { };
+
+template<typename T> struct JSConverter<IDLLegacyNullToEmptyStringAdaptor<T>> : JSStringAdaptorConverter<T> { };
+template<typename T> struct JSConverter<IDLStringContextTrustedScriptAdaptor<T>> : JSStringAdaptorConverter<T> { };
+template<typename T> struct JSConverter<IDLLegacyNullToEmptyAtomStringAdaptor<T>> : JSAtomStringAdaptorConverter<T> { };
+
+template<typename IDL> struct Converter<IDLLegacyNullToEmptyStringAdaptor<IDL>> : DefaultConverter<IDLLegacyNullToEmptyStringAdaptor<IDL>> {
+    using Result = ConversionResult<IDLLegacyNullToEmptyStringAdaptor<IDL>>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    {
+        if (value.isNull())
+            return emptyString();
+        return WebCore::convert<IDL>(lexicalGlobalObject, value);
+    }
+};
+
+template<typename T> struct Converter<IDLLegacyNullToEmptyAtomStringAdaptor<T>> : DefaultConverter<IDLLegacyNullToEmptyAtomStringAdaptor<T>> {
+    using Result = ConversionResult<IDLLegacyNullToEmptyAtomStringAdaptor<T>>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    {
+        if (value.isNull())
+            return emptyAtom();
+        return WebCore::convert<IDLAtomStringAdaptor<T>>(lexicalGlobalObject, value);
     }
 };
 
 template<typename T> struct Converter<IDLAtomStringAdaptor<T>> : DefaultConverter<IDLAtomStringAdaptor<T>> {
-    static AtomString convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    using Result = ConversionResult<IDLAtomStringAdaptor<T>>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
         static_assert(std::is_same<T, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
 
-        return value.toString(&lexicalGlobalObject)->toAtomString(&lexicalGlobalObject);
+        auto& vm = lexicalGlobalObject.vm();
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        auto string = value.toString(&lexicalGlobalObject)->toAtomString(&lexicalGlobalObject);
+
+        RETURN_IF_EXCEPTION(scope, Result::exception());
+
+        return Result { WTFMove(string) };
     }
 };
 
 template<> struct Converter<IDLAtomStringAdaptor<IDLUSVString>> : DefaultConverter<IDLAtomStringAdaptor<IDLUSVString>> {
-    static AtomString convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    using Result = ConversionResult<IDLAtomStringAdaptor<IDLUSVString>>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
         return valueToUSVAtomString(lexicalGlobalObject, value);
     }
 };
 
 template<> struct Converter<IDLAtomStringAdaptor<IDLByteString>> : DefaultConverter<IDLAtomStringAdaptor<IDLByteString>> {
-    static AtomString convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    using Result = ConversionResult<IDLAtomStringAdaptor<IDLByteString>>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
         return valueToByteAtomString(lexicalGlobalObject, value);
     }
 };
 
-template<typename T>  struct JSConverter<IDLAtomStringAdaptor<T>> {
+template<typename IDL>  struct JSConverter<IDLAtomStringAdaptor<IDL>> {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = false;
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const AtomString& value)
     {
-        return JSConverter<T>::convert(lexicalGlobalObject, value);
+        return toJS<IDL>(lexicalGlobalObject, value);
     }
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const String& value)
     {
-        return JSConverter<T>::convert(lexicalGlobalObject, value);
+        return toJS<IDL>(lexicalGlobalObject, value);
     }
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const URL& value)
     {
-        return JSConverter<T>::convert(lexicalGlobalObject, value.string());
+        return toJS<IDL>(lexicalGlobalObject, value.string());
     }
 };
 
@@ -238,17 +319,17 @@ template<>  struct JSConverter<IDLAtomStringAdaptor<IDLUSVString>> {
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const AtomString& value)
     {
-        return JSConverter<IDLUSVString>::convert(lexicalGlobalObject, value.string());
+        return toJS<IDLUSVString>(lexicalGlobalObject, value.string());
     }
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const String& value)
     {
-        return JSConverter<IDLUSVString>::convert(lexicalGlobalObject, value);
+        return toJS<IDLUSVString>(lexicalGlobalObject, value);
     }
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const URL& value)
     {
-        return JSConverter<IDLUSVString>::convert(lexicalGlobalObject, value.string());
+        return toJS<IDLUSVString>(lexicalGlobalObject, value.string());
     }
 };
 
@@ -258,30 +339,148 @@ template<>  struct JSConverter<IDLAtomStringAdaptor<IDLByteString>> {
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const AtomString& value)
     {
-        return JSConverter<IDLByteString>::convert(lexicalGlobalObject, value.string());
+        return toJS<IDLByteString>(lexicalGlobalObject, value.string());
     }
 };
 
-template<typename T> struct Converter<IDLRequiresExistingAtomStringAdaptor<T>> : DefaultConverter<IDLRequiresExistingAtomStringAdaptor<T>> {
+template<typename IDL> struct Converter<IDLRequiresExistingAtomStringAdaptor<IDL>> : DefaultConverter<IDLRequiresExistingAtomStringAdaptor<IDL>> {
     static AtomString convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
-        static_assert(std::is_same<T, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
+        static_assert(std::is_same<IDL, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
 
         return value.toString(&lexicalGlobalObject)->toExistingAtomString(&lexicalGlobalObject);
     }
 };
 
-template<typename T>  struct JSConverter<IDLRequiresExistingAtomStringAdaptor<T>> {
+template<typename IDL> struct JSConverter<IDLRequiresExistingAtomStringAdaptor<IDL>> {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = false;
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const AtomString& value)
     {
-        static_assert(std::is_same<T, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
+        static_assert(std::is_same<IDL, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
 
-        return JSConverter<T>::convert(lexicalGlobalObject, value);
+        return toJS<IDL>(lexicalGlobalObject, value);
     }
 };
 
+
+template<> struct JSConverter<IDLNullable<IDLDOMString>> {
+    static constexpr bool needsState = true;
+    static constexpr bool needsGlobalObject = false;
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const String& value)
+    {
+        if (value.isNull())
+            return JSC::jsNull();
+        return toJS<IDLDOMString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const UncachedString& value)
+    {
+        if (value.string.isNull())
+            return JSC::jsNull();
+        return toJS<IDLDOMString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const OwnedString& value)
+    {
+        if (value.string.isNull())
+            return JSC::jsNull();
+        return toJS<IDLDOMString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const URL& value)
+    {
+        if (value.isNull())
+            return JSC::jsNull();
+        return toJS<IDLDOMString>(lexicalGlobalObject, value);
+    }
+};
+
+template<> struct JSConverter<IDLNullable<IDLByteString>> {
+    static constexpr bool needsState = true;
+    static constexpr bool needsGlobalObject = false;
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const String& value)
+    {
+        if (value.isNull())
+            return JSC::jsNull();
+        return toJS<IDLByteString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const UncachedString& value)
+    {
+        if (value.string.isNull())
+            return JSC::jsNull();
+        return toJS<IDLByteString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const OwnedString& value)
+    {
+        if (value.string.isNull())
+            return JSC::jsNull();
+        return toJS<IDLByteString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const URL& value)
+    {
+        if (value.isNull())
+            return JSC::jsNull();
+        return toJS<IDLByteString>(lexicalGlobalObject, value);
+    }
+};
+
+template<> struct JSConverter<IDLNullable<IDLUSVString>> {
+    static constexpr bool needsState = true;
+    static constexpr bool needsGlobalObject = false;
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const String& value)
+    {
+        if (value.isNull())
+            return JSC::jsNull();
+        return toJS<IDLUSVString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const UncachedString& value)
+    {
+        if (value.string.isNull())
+            return JSC::jsNull();
+        return toJS<IDLUSVString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const OwnedString& value)
+    {
+        if (value.string.isNull())
+            return JSC::jsNull();
+        return toJS<IDLUSVString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const URL& value)
+    {
+        if (value.isNull())
+            return JSC::jsNull();
+        return toJS<IDLUSVString>(lexicalGlobalObject, value);
+    }
+};
+
+template<> struct JSConverter<IDLNullable<IDLAtomStringAdaptor<IDLDOMString>>> {
+    static constexpr bool needsState = true;
+    static constexpr bool needsGlobalObject = false;
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const String& value)
+    {
+        if (value.isNull())
+            return JSC::jsNull();
+        return toJS<IDLDOMString>(lexicalGlobalObject, value);
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, const AtomString& value)
+    {
+        if (value.isNull())
+            return JSC::jsNull();
+        return toJS<IDLDOMString>(lexicalGlobalObject, value.string());
+    }
+};
 
 } // namespace WebCore

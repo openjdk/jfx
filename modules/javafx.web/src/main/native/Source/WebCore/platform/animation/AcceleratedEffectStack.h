@@ -35,14 +35,14 @@ namespace WebCore {
 using AcceleratedEffects = Vector<Ref<AcceleratedEffect>>;
 
 class WEBCORE_EXPORT AcceleratedEffectStack : public RefCounted<AcceleratedEffectStack> {
-    WTF_MAKE_ISO_ALLOCATED(AcceleratedEffectStack);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AcceleratedEffectStack);
 public:
     static Ref<AcceleratedEffectStack> create();
 
     bool hasEffects() const;
     const AcceleratedEffects& primaryLayerEffects() const { return m_primaryLayerEffects; }
     const AcceleratedEffects& backdropLayerEffects() const { return m_backdropLayerEffects; }
-    void setEffects(AcceleratedEffects&&);
+    virtual void setEffects(AcceleratedEffects&&);
 
     const AcceleratedEffectValues& baseValues() { return m_baseValues; }
     void setBaseValues(AcceleratedEffectValues&&);

@@ -37,13 +37,12 @@ class HTMLInputElement;
 
 class AccessibilitySlider : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilitySlider> create(RenderObject*);
+    static Ref<AccessibilitySlider> create(RenderObject&);
     virtual ~AccessibilitySlider() = default;
 
-protected:
-    explicit AccessibilitySlider(RenderObject*);
-
 private:
+    explicit AccessibilitySlider(RenderObject&);
+
     HTMLInputElement* inputElement() const;
     AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const final;
 
@@ -54,7 +53,6 @@ private:
     void addChildren() override;
 
     bool canSetValueAttribute() const override { return true; }
-    const AtomString& getAttribute(const QualifiedName&) const override;
 
     bool setValue(const String&) override;
     float valueForRange() const override;

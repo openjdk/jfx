@@ -26,14 +26,14 @@
 #include "config.h"
 #include "UserScript.h"
 
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 static WTF::URL generateUserScriptUniqueURL()
 {
     static uint64_t identifier;
-    return { { }, makeString("user-script:", ++identifier) };
+    return { { }, makeString("user-script:"_s, ++identifier) };
 }
 
 UserScript::UserScript(String&& source, URL&& url, Vector<String>&& allowlist, Vector<String>&& blocklist, UserScriptInjectionTime injectionTime, UserContentInjectedFrames injectedFrames, WaitForNotificationBeforeInjecting waitForNotification)

@@ -28,6 +28,7 @@
 #if ENABLE(VIDEO)
 
 #include "HTMLMediaElement.h"
+#include "MediaSession.h"
 #include <variant>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -45,11 +46,21 @@ class HTMLMediaElement;
 class MediaControlTextTrackContainerElement;
 class TextTrack;
 class TextTrackList;
+class TextTrackRepresentation;
 class VoidCallback;
 
-class MediaControlsHost final : public RefCounted<MediaControlsHost>, public CanMakeWeakPtr<MediaControlsHost> {
+class MediaControlsHost final
+    : public RefCounted<MediaControlsHost>
+#if ENABLE(MEDIA_SESSION)
+    , private MediaSessionObserver
+#endif
+    , public CanMakeWeakPtr<MediaControlsHost> {
     WTF_MAKE_FAST_ALLOCATED(MediaControlsHost);
 public:
+    using CanMakeWeakPtr<MediaControlsHost>::weakPtrFactory;
+    using CanMakeWeakPtr<MediaControlsHost>::WeakValueType;
+    using CanMakeWeakPtr<MediaControlsHost>::WeakPtrImplType;
+
     static Ref<MediaControlsHost> create(HTMLMediaElement&);
     ~MediaControlsHost();
 
@@ -74,18 +85,23 @@ public:
     void setSelectedTextTrack(TextTrack*);
     Element* textTrackContainer();
     void updateTextTrackContainer();
+    TextTrackRepresentation* textTrackRepresentation() const;
     bool allowsInlineMediaPlayback() const;
     bool supportsFullscreen() const;
     bool isVideoLayerInline() const;
     bool isInMediaDocument() const;
     bool userGestureRequired() const;
     bool shouldForceControlsDisplay() const;
+    bool supportsSeeking() const;
+    bool inWindowFullscreen() const;
+    bool supportsRewind() const;
 
     enum class ForceUpdate : bool { No, Yes };
     void updateCaptionDisplaySizes(ForceUpdate = ForceUpdate::No);
     void updateTextTrackRepresentationImageIfNeeded();
     void enteredFullscreen();
     void exitedFullscreen();
+    void requiresTextTrackRepresentationChanged();
 
     String externalDeviceDisplayName() const;
 
@@ -109,11 +125,28 @@ public:
     std::optional<SourceType> sourceType() const;
 #endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
+    void presentationModeChanged();
+
+#if ENABLE(MEDIA_SESSION)
+    void ensureMediaSessionObserver();
+#endif
+
 private:
     explicit MediaControlsHost(HTMLMediaElement&);
 
-    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
+    void savePreviouslySelectedTextTrackIfNecessary();
+    void restorePreviouslySelectedTextTrackIfNecessary();
+
+#if ENABLE(MEDIA_SESSION)
+    RefPtr<MediaSession> mediaSession() const;
+
+    // MediaSessionObserver
+    void metadataChanged(const RefPtr<MediaMetadata>&) final;
+#endif
+
+    WeakPtr<HTMLMediaElement> m_mediaElement;
     RefPtr<MediaControlTextTrackContainerElement> m_textTrackContainer;
+    RefPtr<TextTrack> m_previouslySelectedTextTrack;
 
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
     RefPtr<VoidCallback> m_showMediaControlsContextMenuCallback;

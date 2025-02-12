@@ -41,7 +41,7 @@ public:
     virtual ~MediaRecorderProvider() = default;
 
 #if ENABLE(MEDIA_RECORDER)
-    virtual RefPtr<MediaRecorderPrivate> createMediaRecorderPrivate(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
+    virtual std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
     virtual bool isSupported(const String&);
 #endif
 };

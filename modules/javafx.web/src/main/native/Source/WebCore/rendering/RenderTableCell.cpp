@@ -45,8 +45,8 @@
 #include "Settings.h"
 #include "StyleProperties.h"
 #include "TransformState.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MATHML)
 #include "MathMLElement.h"
@@ -57,7 +57,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableCell);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTableCell);
 
 struct SameSizeAsRenderTableCell : public RenderBlockFlow {
     unsigned bitfields;
@@ -98,9 +98,11 @@ RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
     ASSERT(isRenderTableCell());
 }
 
-void RenderTableCell::willBeRemovedFromTree(IsInternalMove isInternalMove)
+RenderTableCell::~RenderTableCell() = default;
+
+void RenderTableCell::willBeRemovedFromTree()
 {
-    RenderBlockFlow::willBeRemovedFromTree(isInternalMove);
+    RenderBlockFlow::willBeRemovedFromTree();
     if (!table() || !section())
         return;
     RenderTableSection* section = this->section();
@@ -320,6 +322,31 @@ void RenderTableCell::layout()
     cacheIntrinsicContentLogicalHeightForFlexItem(contentLogicalHeight());
 
     setCellWidthChanged(false);
+}
+
+RectEdges<LayoutUnit> RenderTableCell::padding() const
+{
+    auto top = computedCSSPaddingTop();
+    auto right = computedCSSPaddingRight();
+    auto bottom = computedCSSPaddingBottom();
+    auto left = computedCSSPaddingLeft();
+
+    if (isHorizontalWritingMode()) {
+        bool isTopToBottom = style().blockFlowDirection() == BlockFlowDirection::TopToBottom;
+        top += isTopToBottom ? intrinsicPaddingBefore() : intrinsicPaddingAfter();
+        bottom += isTopToBottom ? intrinsicPaddingAfter() : intrinsicPaddingBefore();
+    } else {
+        bool isLeftToRight = style().blockFlowDirection() == BlockFlowDirection::LeftToRight;
+        left += isLeftToRight ? intrinsicPaddingBefore() : intrinsicPaddingAfter();
+        right += isLeftToRight ? intrinsicPaddingAfter() : intrinsicPaddingBefore();
+    }
+
+    return {
+        top,
+        right,
+        bottom,
+        left
+    };
 }
 
 LayoutUnit RenderTableCell::paddingTop() const
@@ -1017,6 +1044,23 @@ inline CollapsedBorderValue RenderTableCell::cachedCollapsedBottomBorder(const R
     return styleForCellFlow.isLeftToRightDirection() ? section()->cachedCollapsedBorder(*this, CBSEnd) : section()->cachedCollapsedBorder(*this, CBSStart);
 }
 
+RectEdges<LayoutUnit> RenderTableCell::borderWidths() const
+{
+    RenderTable* table = this->table();
+    if (!table)
+        return RenderBlockFlow::borderWidths();
+
+    if (!table->collapseBorders())
+        return RenderBlockFlow::borderWidths();
+
+    return {
+        borderHalfTop(false),
+        borderHalfRight(false),
+        borderHalfBottom(false),
+        borderHalfLeft(false)
+    };
+}
+
 LayoutUnit RenderTableCell::borderLeft() const
 {
     RenderTable* table = this->table();
@@ -1242,7 +1286,7 @@ void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPo
 {
     ASSERT(paintInfo.phase == PaintPhase::CollapsedTableBorders);
 
-    if (!paintInfo.shouldPaintWithinRoot(*this) || style().visibility() != Visibility::Visible)
+    if (!paintInfo.shouldPaintWithinRoot(*this) || style().usedVisibility() != Visibility::Visible)
         return;
 
     LayoutRect localRepaintRect = paintInfo.rect;
@@ -1307,15 +1351,50 @@ void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPo
     }
 }
 
-void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const LayoutPoint& paintOffset, RenderElement* backgroundObject)
+static LayoutRect backgroundRectForRow(const RenderBox& tableRow, const RenderTable& table)
 {
+    LayoutRect rect = tableRow.frameRect();
+    if (!table.collapseBorders()) {
+        // Row frameRects include unwanted hSpacing on both inline ends.
+        auto hSpacing = table.hBorderSpacing();
+        LayoutUnit vSpacing = 0_lu;
+        if (table.style().isHorizontalWritingMode())
+            rect.contract({ vSpacing, hSpacing, vSpacing, hSpacing });
+        else
+            rect.contract({ hSpacing, vSpacing, hSpacing, vSpacing });
+    }
+    return rect;
+}
+
+static LayoutRect backgroundRectForSection(const RenderTableSection& tableSection, const RenderTable& table)
+{
+    LayoutRect rect = { { }, tableSection.size() };
+    if (!table.collapseBorders()) {
+        auto hSpacing = table.hBorderSpacing();
+        auto vSpacing = table.vBorderSpacing();
+        // All sections' size()s include unwanted vSpacing at the block-end
+        // position. The first section's size() includes additional unwanted
+        // vSpacing at the block-start position. All sections' size()s include
+        // unwanted hSpacing on both inline ends.
+        auto beforeBlockSpacing = &tableSection == table.topSection() ? vSpacing : 0_lu;
+        if (table.style().isHorizontalWritingMode())
+            rect.contract({ beforeBlockSpacing, hSpacing, vSpacing, hSpacing });
+        else if (table.style().isFlippedBlocksWritingMode())
+            rect.contract({ hSpacing, beforeBlockSpacing, hSpacing, vSpacing });
+        else
+            rect.contract({ hSpacing, vSpacing, hSpacing, beforeBlockSpacing });
+    }
+    return rect;
+}
+
+void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, LayoutPoint paintOffset, RenderBox* backgroundObject, LayoutPoint backgroundPaintOffset)
+{
+    ASSERT(backgroundObject);
+
     if (!paintInfo.shouldPaintWithinRoot(*this))
         return;
 
-    if (!backgroundObject)
-        return;
-
-    if (style().visibility() != Visibility::Visible)
+    if (style().usedVisibility() != Visibility::Visible)
         return;
 
     RenderTable* tableElt = table();
@@ -1335,17 +1414,31 @@ void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const Lay
     if (backgroundObject != this)
         adjustedPaintOffset.moveBy(location());
 
+    // Background images attached to the row or row group must span the row
+    // or row group. Draw them at the backgroundObject's dimensions, but
+    // clipped to this cell.
+    // FIXME: This should also apply to columns and column groups.
+    bool paintBackgroundObject = backgroundObject != this && bgLayer.hasImage() && !is<RenderTableCol>(backgroundObject);
     // We have to clip here because the background would paint
     // on top of the borders otherwise. This only matters for cells and rows.
-    bool shouldClip = backgroundObject->hasLayer() && (backgroundObject == this || backgroundObject == parent()) && tableElt->collapseBorders();
+    bool shouldClip = paintBackgroundObject || (backgroundObject->hasLayer() && (backgroundObject == this || backgroundObject == parent()) && tableElt->collapseBorders());
     GraphicsContextStateSaver stateSaver(paintInfo.context(), shouldClip);
     if (shouldClip) {
         LayoutRect clipRect(adjustedPaintOffset.x() + borderLeft(), adjustedPaintOffset.y() + borderTop(),
             width() - borderLeft() - borderRight(), height() - borderTop() - borderBottom());
         paintInfo.context().clip(clipRect);
     }
+    LayoutRect fillRect;
+    if (paintBackgroundObject) {
+        if (auto* tableSectionRenderer = dynamicDowncast<RenderTableSection>(backgroundObject))
+            fillRect = backgroundRectForSection(*tableSectionRenderer, *tableElt);
+        else
+            fillRect = backgroundRectForRow(*backgroundObject, *tableElt);
+        fillRect.moveBy(backgroundPaintOffset);
+    } else
+        fillRect = LayoutRect { adjustedPaintOffset, size() };
     auto compositeOp = document().compositeOperatorForBackgroundColor(color, *this);
-    BackgroundPainter { *this, paintInfo }.paintFillLayers(color, bgLayer, LayoutRect(adjustedPaintOffset, frameRect().size()), BackgroundBleedNone, compositeOp, backgroundObject);
+    BackgroundPainter { *this, paintInfo }.paintFillLayers(color, bgLayer, fillRect, BackgroundBleedNone, compositeOp, backgroundObject);
 }
 
 void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -1364,7 +1457,7 @@ void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoin
     backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Normal);
 
     // Paint our cell background.
-    paintBackgroundsBehindCell(paintInfo, paintOffset, this);
+    paintBackgroundsBehindCell(paintInfo, paintOffset, this, paintOffset);
 
     backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Inset);
 
@@ -1377,7 +1470,7 @@ void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoin
 
 void RenderTableCell::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (style().visibility() != Visibility::Visible || paintInfo.phase != PaintPhase::Mask)
+    if (style().usedVisibility() != Visibility::Visible || paintInfo.phase != PaintPhase::Mask)
         return;
 
     RenderTable* tableElt = table();

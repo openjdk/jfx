@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGArgumentsEliminationPhase.h"
+#include "DFGBackwardsPropagationPhase.h"
 #include "DFGByteCodeParser.h"
 #include "DFGCFAPhase.h"
 #include "DFGCFGSimplificationPhase.h"
@@ -78,6 +79,7 @@
 #include "JSCJSValueInlines.h"
 #include "OperandsInlines.h"
 #include "ProfilerDatabase.h"
+#include "StructureID.h"
 #include "TrackedReferences.h"
 #include "VMInlines.h"
 
@@ -130,10 +132,10 @@ Profiler::CompilationKind profilerCompilationKindForMode(JITCompilationMode mode
 
 Plan::Plan(CodeBlock* passedCodeBlock, CodeBlock* profiledDFGCodeBlock,
     JITCompilationMode mode, BytecodeIndex osrEntryBytecodeIndex,
-    const Operands<std::optional<JSValue>>& mustHandleValues)
+    Operands<std::optional<JSValue>>&& mustHandleValues)
         : Base(mode, passedCodeBlock)
         , m_profiledDFGCodeBlock(profiledDFGCodeBlock)
-        , m_mustHandleValues(mustHandleValues)
+        , m_mustHandleValues(WTFMove(mustHandleValues))
         , m_osrEntryBytecodeIndex(osrEntryBytecodeIndex)
         , m_compilation(UNLIKELY(m_vm->m_perBytecodeProfiler) ? adoptRef(new Profiler::Compilation(m_vm->m_perBytecodeProfiler->ensureBytecodesFor(m_codeBlock), profilerCompilationKindForMode(mode))) : nullptr)
         , m_inlineCallFrames(adoptRef(new InlineCallFrameSet()))
@@ -145,9 +147,7 @@ Plan::Plan(CodeBlock* passedCodeBlock, CodeBlock* profiledDFGCodeBlock,
     m_inlineCallFrames->disableThreadingChecks();
 }
 
-Plan::~Plan()
-{
-}
+Plan::~Plan() = default;
 
 size_t Plan::codeSize() const
 {
@@ -159,7 +159,8 @@ size_t Plan::codeSize() const
 void Plan::finalizeInGC()
 {
     ASSERT(m_vm);
-    m_recordedStatuses.finalizeWithoutDeleting(*m_vm);
+    if (m_recordedStatuses)
+        m_recordedStatuses->finalizeWithoutDeleting(*m_vm);
 }
 
 void Plan::notifyReady()
@@ -175,10 +176,7 @@ void Plan::cancel()
     m_mustHandleValues.clear();
     m_compilation = nullptr;
     m_finalizer = nullptr;
-    if (m_inlineCallFrames) {
-        for (auto i : *m_inlineCallFrames)
-            i->baselineCodeBlock.clear();
-    }
+    m_inlineCallFrames = nullptr;
     m_watchpoints = DesiredWatchpoints();
     m_identifiers = DesiredIdentifiers();
     m_weakReferences = DesiredWeakReferences();
@@ -189,7 +187,8 @@ void Plan::cancel()
 Plan::CompilationPath Plan::compileInThreadImpl()
 {
     {
-        CompilerTimingScope timingScope("DFG", "clean must handle values");
+        CompilerTimingScope timingScope("DFG"_s, "initialize"_s);
+        m_recordedStatuses = makeUnique<RecordedStatuses>();
         cleanMustHandleValuesIfNecessary();
     }
 
@@ -202,7 +201,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     Graph dfg(*m_vm, *this);
 
     {
-        CompilerTimingScope timingScope("DFG", "bytecode parser");
+        CompilerTimingScope timingScope("DFG"_s, "bytecode parser"_s);
         if (!parse(dfg))
             return CancelPath;
     }
@@ -274,6 +273,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     if (validationEnabled())
         validate(dfg);
 
+    RUN_PHASE(performBackwardsPropagation);
     RUN_PHASE(performStrengthReduction);
     RUN_PHASE(performCPSRethreading);
     RUN_PHASE(performCFA);
@@ -345,13 +345,18 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         dumpAndVerifyGraph(dfg, "Graph after optimization:");
 
         {
-            CompilerTimingScope timingScope("DFG", "machine code generation");
+            CompilerTimingScope timingScope("DFG"_s, "machine code generation"_s);
 
             SpeculativeJIT speculativeJIT(dfg);
             if (m_codeBlock->codeType() == FunctionCode)
                 speculativeJIT.compileFunction();
             else
                 speculativeJIT.compile();
+        }
+
+        if (m_finalizer) {
+            if (auto jitCode = m_finalizer->jitCode())
+                finalizeInThread(jitCode.releaseNonNull());
         }
 
         return DFGPath;
@@ -496,6 +501,11 @@ Plan::CompilationPath Plan::compileInThreadImpl()
             return FTLPath;
         }
 
+        if (m_finalizer) {
+            if (auto jitCode = m_finalizer->jitCode())
+                finalizeInThread(jitCode.releaseNonNull());
+        }
+
         return FTLPath;
 #else
         RELEASE_ASSERT_NOT_REACHED();
@@ -511,7 +521,16 @@ Plan::CompilationPath Plan::compileInThreadImpl()
 #undef RUN_PHASE
 }
 
-bool Plan::isStillValid()
+void Plan::finalizeInThread(Ref<JSC::JITCode> jitCode)
+{
+    m_watchpoints.countWatchpoints(m_codeBlock, m_identifiers, jitCode->dfgCommon());
+    m_weakReferences.finalize();
+    jitCode->shrinkToFit();
+    if (m_recordedStatuses)
+        m_recordedStatuses->shrinkToFit();
+}
+
+bool Plan::isStillValidCodeBlock()
 {
     CodeBlock* replacement = m_codeBlock->replacement();
     if (!replacement)
@@ -522,31 +541,29 @@ bool Plan::isStillValid()
     // https://bugs.webkit.org/show_bug.cgi?id=132707
     if (m_codeBlock->alternative() != replacement->baselineVersion())
         return false;
-    if (!m_watchpoints.areStillValid())
-        return false;
+
     return true;
 }
 
-void Plan::reallyAdd(CommonData* commonData)
+bool Plan::reallyAdd(CommonData* commonData)
 {
+    if (!m_watchpoints.areStillValidOnMainThread(*m_vm, m_identifiers))
+        return false;
+
     ASSERT(m_vm->heap.isDeferred());
     m_identifiers.reallyAdd(*m_vm, commonData);
     m_weakReferences.reallyAdd(*m_vm, commonData);
     m_transitions.reallyAdd(*m_vm, commonData);
-    m_watchpoints.reallyAdd(m_codeBlock, m_identifiers, commonData);
-    {
-        ConcurrentJSLocker locker(m_codeBlock->m_lock);
+    if (!m_watchpoints.reallyAdd(m_codeBlock, m_identifiers, commonData))
+        return false;
+
         commonData->recordedStatuses = WTFMove(m_recordedStatuses);
-    }
 
     ASSERT(m_vm->heap.isDeferred());
     for (auto* callLinkInfo : commonData->m_directCallLinkInfos)
         callLinkInfo->validateSpeculativeRepatchOnMainThread(*m_vm);
-}
 
-bool Plan::isStillValidOnMainThread()
-{
-    return m_watchpoints.areStillValidOnMainThread(*m_vm, m_identifiers);
+    return true;
 }
 
 CompilationResult Plan::finalize()
@@ -561,7 +578,7 @@ CompilationResult Plan::finalize()
             return CompilationFailed;
         }
 
-        if (!isStillValidOnMainThread() || !isStillValid()) {
+        if (!isStillValidCodeBlock()) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
             return CompilationInvalidated;
         }
@@ -572,10 +589,13 @@ CompilationResult Plan::finalize()
             return CompilationFailed;
         }
 
-        reallyAdd(m_codeBlock->jitCode()->dfgCommon());
+        if (!reallyAdd(m_codeBlock->jitCode()->dfgCommon())) {
+            CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
+            return CompilationInvalidated;
+        }
+
         {
             ConcurrentJSLocker locker(m_codeBlock->m_lock);
-            m_codeBlock->jitCode()->shrinkToFit(locker);
             m_codeBlock->shrinkToFit(locker, CodeBlock::ShrinkMode::LateShrink);
         }
 
@@ -586,7 +606,7 @@ CompilationResult Plan::finalize()
             return CompilationInvalidated;
         }
 
-        if (validationEnabled()) {
+        if (UNLIKELY(validationEnabled())) {
             TrackedReferences trackedReferences;
 
             for (WriteBarrier<JSCell>& reference : m_codeBlock->jitCode()->dfgCommon()->m_weakReferences)
@@ -644,8 +664,10 @@ bool Plan::checkLivenessAndVisitChildren(AbstractSlotVisitor& visitor)
             visitor.appendUnbarriered(value.value());
     }
 
-    m_recordedStatuses.visitAggregate(visitor);
-    m_recordedStatuses.markIfCheap(visitor);
+    if (m_recordedStatuses) {
+        m_recordedStatuses->visitAggregate(visitor);
+        m_recordedStatuses->markIfCheap(visitor);
+    }
 
     visitor.appendUnbarriered(m_codeBlock->alternative());
     visitor.appendUnbarriered(m_profiledDFGCodeBlock);
@@ -664,6 +686,9 @@ bool Plan::checkLivenessAndVisitChildren(AbstractSlotVisitor& visitor)
 
 bool Plan::isKnownToBeLiveDuringGC(AbstractSlotVisitor& visitor)
 {
+    if (safepointKeepsDependenciesLive())
+        return true;
+
     if (!Base::isKnownToBeLiveDuringGC(visitor))
         return false;
     if (!visitor.isMarked(m_codeBlock->alternative()))
@@ -675,6 +700,9 @@ bool Plan::isKnownToBeLiveDuringGC(AbstractSlotVisitor& visitor)
 
 bool Plan::isKnownToBeLiveAfterGC()
 {
+    if (safepointKeepsDependenciesLive())
+        return true;
+
     if (!Base::isKnownToBeLiveAfterGC())
         return false;
     if (!m_vm->heap.isMarked(m_codeBlock->alternative()))

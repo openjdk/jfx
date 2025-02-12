@@ -34,11 +34,11 @@
 #include "WorkerOrWorkletThread.h"
 #include "WorkerRunLoop.h"
 #include "WorkletGlobalScope.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WorkerOrWorkletGlobalScope);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WorkerOrWorkletGlobalScope);
 
 WorkerOrWorkletGlobalScope::WorkerOrWorkletGlobalScope(WorkerThreadType type, PAL::SessionID sessionID, Ref<JSC::VM>&& vm, ReferrerPolicy referrerPolicy, WorkerOrWorkletThread* thread, std::optional<uint64_t> noiseInjectionHashSalt, OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections, ScriptExecutionContextIdentifier contextIdentifier)
     : ScriptExecutionContext(Type::WorkerOrWorkletGlobalScope, contextIdentifier)
@@ -95,6 +95,11 @@ void WorkerOrWorkletGlobalScope::disableEval(const String& errorMessage)
 void WorkerOrWorkletGlobalScope::disableWebAssembly(const String& errorMessage)
 {
     m_script->disableWebAssembly(errorMessage);
+}
+
+void WorkerOrWorkletGlobalScope::setRequiresTrustedTypes(bool required)
+{
+    m_script->setRequiresTrustedTypes(required);
 }
 
 bool WorkerOrWorkletGlobalScope::isJSExecutionForbidden() const

@@ -33,11 +33,11 @@
 #include "SVGTRefElement.h"
 #include "SVGTSpanElement.h"
 #include "SVGTextElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGTextPositioningElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGTextPositioningElement);
 
 SVGTextPositioningElement::SVGTextPositioningElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
     : SVGTextContentElement(tagName, document, WTFMove(propertyRegistry))
@@ -56,19 +56,19 @@ void SVGTextPositioningElement::attributeChanged(const QualifiedName& name, cons
 {
     switch (name.nodeName()) {
     case AttributeNames::xAttr:
-        m_x->baseVal()->parse(newValue);
+        Ref { m_x }->baseVal()->parse(newValue);
         break;
     case AttributeNames::yAttr:
-        m_y->baseVal()->parse(newValue);
+        Ref { m_y }->baseVal()->parse(newValue);
         break;
     case AttributeNames::dxAttr:
-        m_dx->baseVal()->parse(newValue);
+        Ref { m_dx }->baseVal()->parse(newValue);
         break;
     case AttributeNames::dyAttr:
-        m_dy->baseVal()->parse(newValue);
+        Ref { m_dy }->baseVal()->parse(newValue);
         break;
     case AttributeNames::rotateAttr:
-        m_rotate->baseVal()->parse(newValue);
+        Ref { m_rotate }->baseVal()->parse(newValue);
         break;
     default:
         break;
@@ -99,11 +99,12 @@ void SVGTextPositioningElement::svgAttributeChanged(const QualifiedName& attrNam
         if (attrName != SVGNames::rotateAttr)
             updateRelativeLengthsInformation();
 
-        if (auto renderer = this->renderer()) {
-            if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*renderer))
+        if (CheckedPtr renderer = this->renderer()) {
+            if (CheckedPtr textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*renderer))
                 textAncestor->setNeedsPositioningValuesUpdate();
         }
         updateSVGRendererForElementChange();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 

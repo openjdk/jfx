@@ -204,7 +204,7 @@ public:
 
     typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-    static constexpr uint8_t numberOfLowerTierCells = 0;
+    static constexpr uint8_t numberOfLowerTierPreciseCells = 0;
 
 #if ENABLE(STRUCTURE_ID_WITH_SHIFT)
     static constexpr size_t atomSize = 32;
@@ -293,6 +293,7 @@ public:
     static Structure* removePropertyTransitionFromExistingStructure(Structure*, PropertyName, PropertyOffset&);
     static Structure* removePropertyTransitionFromExistingStructureConcurrently(Structure*, PropertyName, PropertyOffset&);
     static Structure* changePrototypeTransition(VM&, Structure*, JSValue prototype, DeferredStructureTransitionWatchpointFire&);
+    static Structure* changeGlobalProxyTargetTransition(VM&, Structure*, JSGlobalObject*, DeferredStructureTransitionWatchpointFire&);
     JS_EXPORT_PRIVATE static Structure* attributeChangeTransition(VM&, Structure*, PropertyName, unsigned attributes, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* attributeChangeTransitionToExistingStructureConcurrently(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* attributeChangeTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
@@ -701,57 +702,57 @@ public:
     }
     void cacheSpecialProperty(JSGlobalObject*, VM&, JSValue, CachedSpecialPropertyKey, const PropertySlot&);
 
-    static ptrdiff_t prototypeOffset()
+    static constexpr ptrdiff_t prototypeOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_prototype);
     }
 
-    static ptrdiff_t globalObjectOffset()
+    static constexpr ptrdiff_t globalObjectOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_globalObject);
     }
 
-    static ptrdiff_t classInfoOffset()
+    static constexpr ptrdiff_t classInfoOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_classInfo);
     }
 
-    static ptrdiff_t outOfLineTypeFlagsOffset()
+    static constexpr ptrdiff_t outOfLineTypeFlagsOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_outOfLineTypeFlags);
     }
 
-    static ptrdiff_t indexingModeIncludingHistoryOffset()
+    static constexpr ptrdiff_t indexingModeIncludingHistoryOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_blob) + TypeInfoBlob::indexingModeIncludingHistoryOffset();
     }
 
-    static ptrdiff_t propertyTableUnsafeOffset()
+    static constexpr ptrdiff_t propertyTableUnsafeOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_propertyTableUnsafe);
     }
 
-    static ptrdiff_t inlineCapacityOffset()
+    static constexpr ptrdiff_t inlineCapacityOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_inlineCapacity);
     }
 
-    static ptrdiff_t previousOrRareDataOffset()
+    static constexpr ptrdiff_t previousOrRareDataOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_previousOrRareData);
     }
 
-    static ptrdiff_t bitFieldOffset()
+    static constexpr ptrdiff_t bitFieldOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_bitField);
     }
 
-    static ptrdiff_t propertyHashOffset()
+    static constexpr ptrdiff_t propertyHashOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_propertyHash);
     }
 
-    static ptrdiff_t seenPropertiesOffset()
+    static constexpr ptrdiff_t seenPropertiesOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_seenProperties) + SeenProperties::offsetOfBits();
     }
@@ -1094,5 +1095,8 @@ private:
     friend class JSDollarVMHelper;
     friend class Integrity::Analyzer;
 };
+
+void dumpTransitionKind(PrintStream&, TransitionKind);
+MAKE_PRINT_ADAPTOR(TransitionKindDump, TransitionKind, dumpTransitionKind);
 
 } // namespace JSC

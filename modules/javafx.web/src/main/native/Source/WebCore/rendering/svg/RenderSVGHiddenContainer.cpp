@@ -21,20 +21,21 @@
 #include "config.h"
 #include "RenderSVGHiddenContainer.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderLayer.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGHiddenContainer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGHiddenContainer);
 
 RenderSVGHiddenContainer::RenderSVGHiddenContainer(Type type, SVGElement& element, RenderStyle&& style, OptionSet<SVGModelObjectFlag> flags)
     : RenderSVGContainer(type, element, WTFMove(style), flags | SVGModelObjectFlag::IsHiddenContainer)
 {
     ASSERT(isRenderSVGHiddenContainer());
 }
+
+RenderSVGHiddenContainer::~RenderSVGHiddenContainer() = default;
 
 void RenderSVGHiddenContainer::layout()
 {
@@ -45,15 +46,4 @@ void RenderSVGHiddenContainer::layout()
     clearNeedsLayout();
 }
 
-void RenderSVGHiddenContainer::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
-{
-    RenderSVGContainer::styleDidChange(diff, oldStyle);
-
-    // Ensure that descendants with layers are rooted within our layer.
-    if (hasLayer())
-        layer()->setIsOpportunisticStackingContext(true);
 }
-
-}
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

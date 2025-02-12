@@ -4148,11 +4148,11 @@ fn testDerivativeFunctions()
 @group(0) @binding(21) var ts3d: texture_storage_3d<rgba32float, write>;
 @group(0) @binding(22) var te: texture_external;
 
-var td2d: texture_depth_2d;
-var td2da: texture_depth_2d_array;
-var tdc: texture_depth_cube;
-var tdca: texture_depth_cube_array;
-var tdms2d: texture_depth_multisampled_2d;
+@group(0) @binding(23) var td2d: texture_depth_2d;
+@group(0) @binding(24) var td2da: texture_depth_2d_array;
+@group(0) @binding(25) var tdc: texture_depth_cube;
+@group(0) @binding(26) var tdca: texture_depth_cube_array;
+@group(0) @binding(27) var tdms2d: texture_depth_multisampled_2d;
 
 // 16.7.1
 // RUN: %metal-compile testTextureDimensions
@@ -4505,7 +4505,7 @@ fn testTextureNumSamples()
 
 // 16.7.8
 // RUN: %metal-compile testTextureSample
-@compute @workgroup_size(1)
+@fragment
 fn testTextureSample()
 {
     // [].(Texture[F32, Texture1d], Sampler, F32) => Vector[F32, 4],
@@ -4557,7 +4557,7 @@ fn testTextureSample()
 
 // 16.7.9
 // RUN: %metal-compile testTextureSampleBias
-@compute @workgroup_size(1)
+@fragment
 fn testTextureSampleBias()
 {
     // [].(Texture[F32, Texture2d], Sampler, Vector[F32, 2], F32) => Vector[F32, 4],
@@ -4587,7 +4587,7 @@ fn testTextureSampleBias()
 
 // 16.7.10
 // RUN: %metal-compile testTextureSampleCompare
-@compute @workgroup_size(1)
+@fragment
 fn testTextureSampleCompare()
 {
     // [].(texture_depth_2d, sampler_comparison, vec2[f32], f32) => f32,
@@ -4743,7 +4743,7 @@ fn testTextureStore()
 
 // 16.8. Atomic Built-in Functions (https://www.w3.org/TR/WGSL/#atomic-builtin-functions)
 var<workgroup> x: atomic<i32>;
-@group(8) @binding(0) var<storage, read_write> y: atomic<i32>;
+@group(7) @binding(10) var<storage, read_write> y: atomic<i32>;
 
 // RUN: %metal-compile testAtomicFunctions
 @compute @workgroup_size(1)

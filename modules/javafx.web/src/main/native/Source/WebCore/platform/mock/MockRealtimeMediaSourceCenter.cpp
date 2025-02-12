@@ -58,6 +58,15 @@
 #endif
 
 namespace WebCore {
+class MockDisplayCapturer;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MockDisplayCapturer> : std::true_type { };
+}
+
+namespace WebCore {
 
 static inline Vector<MockMediaDevice> defaultDevices()
 {
@@ -74,32 +83,34 @@ static inline Vector<MockMediaDevice> defaultDevices()
             MockCameraProperties {
                 30,
                 VideoFacingMode::User, {
-                    { { 2560, 1440 }, { { 10, 10 }, { 7.5, 7.5 }, { 5, 5 } }, 1, 1 },
-                    { { 1280, 720 }, { { 30, 30}, { 27.5, 27.5}, { 25, 25}, { 22.5, 22.5}, { 20, 20}, { 17.5, 17.5}, { 15, 15}, { 12.5, 12.5}, { 10, 10}, { 7.5, 7.5}, { 5, 5} }, 1, 1 },
-                    { { 640, 480 },  { { 30, 30}, { 27.5, 27.5}, { 25, 25}, { 22.5, 22.5}, { 20, 20}, { 17.5, 17.5}, { 15, 15}, { 12.5, 12.5}, { 10, 10}, { 7.5, 7.5}, { 5, 5} }, 1, 1 },
-                    { { 112, 112 },  { { 30, 30}, { 27.5, 27.5}, { 25, 25}, { 22.5, 22.5}, { 20, 20}, { 17.5, 17.5}, { 15, 15}, { 12.5, 12.5}, { 10, 10}, { 7.5, 7.5}, { 5, 5} }, 1, 1 },
+                    { { 2560, 1440 }, { { 10, 10 }, { 7.5, 7.5 }, { 5, 5 } }, 1, 1, true },
+                    { { 1280, 720 }, { { 30, 30 }, { 27.5, 27.5 }, { 25, 25 }, { 22.5, 22.5 }, { 20, 20 }, { 17.5, 17.5 }, { 15, 15 }, { 12.5, 12.5 }, { 10, 10 }, { 7.5, 7.5 }, { 5, 5 } }, 1, 1, true },
+                    { { 640, 480 },  { { 30, 30 }, { 27.5, 27.5 }, { 25, 25 }, { 22.5, 22.5 }, { 20, 20 }, { 17.5, 17.5 }, { 15, 15 }, { 12.5, 12.5 }, { 10, 10 }, { 7.5, 7.5 }, { 5, 5 } }, 1, 1, true },
+                    { { 112, 112 },  { { 30, 30 }, { 27.5, 27.5 }, { 25, 25 }, { 22.5, 22.5 }, { 20, 20 }, { 17.5, 17.5 }, { 15, 15 }, { 12.5, 12.5 }, { 10, 10 }, { 7.5, 7.5 }, { 5, 5 } }, 1, 1, true },
                 },
                 Color::black,
                 { }, // whiteBalanceModes
                 false, // supportsTorch
+                false, // background blur enabled
             } },
 
         MockMediaDevice { "239c24b3-2b15-11e3-8224-0800200c9a66"_s, "Mock video device 2"_s, { },
             MockCameraProperties {
                 15,
                 VideoFacingMode::Environment, {
-                    { { 3840, 2160 }, { { 2, 30 } }, 1, 4 },
-                    { { 1920, 1080 }, { { 2, 30 } }, 1, 4 },
-                    { { 1280, 720 },  { { 3, 120 } }, 1, 4 },
-                    { { 960, 540 },   { { 3, 60 } }, 1, 4 },
-                    { { 640, 480 },   { { 2, 30 } }, 1, 4 },
-                    { { 352, 288 },   { { 2, 30 } }, 1, 4 },
-                    { { 320, 240 },   { { 2, 30 } }, 1, 4 },
-                    { { 160, 120 },   { { 2, 30 } }, 1, 4 },
+                    { { 3840, 2160 }, { { 2, 30 } }, 1, 4, false },
+                    { { 1920, 1080 }, { { 2, 30 } }, 1, 4, true },
+                    { { 1280, 720 },  { { 3, 120 } }, 1, 4, false },
+                    { { 960, 540 },   { { 3, 60 } }, 1, 4, false },
+                    { { 640, 480 },   { { 2, 30 } }, 1, 4, false },
+                    { { 352, 288 },   { { 2, 30 } }, 1, 4, false },
+                    { { 320, 240 },   { { 2, 30 } }, 1, 4, false },
+                    { { 160, 120 },   { { 2, 30 } }, 1, 4, false },
                 },
                 Color::darkGray,
                 { MeteringMode::Manual, MeteringMode::SingleShot, MeteringMode::Continuous },
                 true,
+                true, // background blur enabled
             } },
 
         MockMediaDevice { "SCREEN-1"_s, "Mock screen device 1"_s, { }, MockDisplayProperties { CaptureDevice::DeviceType::Screen, Color::lightGray, { 1920, 1080 } } },
@@ -148,7 +159,7 @@ private:
     CaptureDevice::DeviceType deviceType() const final { return CaptureDevice::DeviceType::Screen; }
     IntSize intrinsicSize() const final;
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "MockDisplayCapturer"; }
+    ASCIILiteral logClassName() const final { return "MockDisplayCapturer"_s; }
 #endif
     Ref<MockRealtimeVideoSource> m_source;
     RealtimeMediaSourceSettings m_settings;

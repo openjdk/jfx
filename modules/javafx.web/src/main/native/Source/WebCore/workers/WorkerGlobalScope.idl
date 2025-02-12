@@ -33,7 +33,7 @@
     readonly attribute WorkerGlobalScope self;
     readonly attribute WorkerLocation location;
     readonly attribute WorkerNavigator navigator;
-    undefined importScripts(USVString... urls);
+    undefined importScripts((TrustedScriptURL or USVString)... urls);
 
     attribute OnErrorEventHandler onerror;
     // FIXME: Implement 'onlanguagechange'.

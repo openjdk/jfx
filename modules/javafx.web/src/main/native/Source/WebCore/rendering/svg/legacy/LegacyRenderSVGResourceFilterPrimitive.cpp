@@ -37,14 +37,14 @@
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGNames.h"
 #include "SVGRenderStyle.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceFilterPrimitive);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceFilterPrimitive);
 
 LegacyRenderSVGResourceFilterPrimitive::LegacyRenderSVGResourceFilterPrimitive(SVGFilterPrimitiveStandardAttributes& filterPrimitiveElement, RenderStyle&& style)
-    : LegacyRenderSVGHiddenContainer(Type::SVGResourceFilterPrimitive, filterPrimitiveElement, WTFMove(style))
+    : LegacyRenderSVGHiddenContainer(Type::LegacySVGResourceFilterPrimitive, filterPrimitiveElement, WTFMove(style))
 {
 }
 
@@ -60,14 +60,14 @@ void LegacyRenderSVGResourceFilterPrimitive::styleDidChange(StyleDifference diff
     if (diff == StyleDifference::Equal || !oldStyle)
         return;
 
-    const SVGRenderStyle& newStyle = style().svgStyle();
+    Ref newStyle = style().svgStyle();
     if (is<SVGFEFloodElement>(filterPrimitiveElement()) || is<SVGFEDropShadowElement>(filterPrimitiveElement())) {
-        if (newStyle.floodColor() != oldStyle->svgStyle().floodColor())
+        if (newStyle->floodColor() != oldStyle->svgStyle().floodColor())
             filterPrimitiveElement().primitiveAttributeChanged(SVGNames::flood_colorAttr);
-        if (newStyle.floodOpacity() != oldStyle->svgStyle().floodOpacity())
+        if (newStyle->floodOpacity() != oldStyle->svgStyle().floodOpacity())
             filterPrimitiveElement().primitiveAttributeChanged(SVGNames::flood_opacityAttr);
     } else if (is<SVGFEDiffuseLightingElement>(filterPrimitiveElement()) || is<SVGFESpecularLightingElement>(filterPrimitiveElement())) {
-        if (newStyle.lightingColor() != oldStyle->svgStyle().lightingColor())
+        if (newStyle->lightingColor() != oldStyle->svgStyle().lightingColor())
             filterPrimitiveElement().primitiveAttributeChanged(SVGNames::lighting_colorAttr);
     }
 }

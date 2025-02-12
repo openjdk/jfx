@@ -29,6 +29,7 @@
 #include "Document.h"
 #include "FrameDestructionObserverInlines.h"
 #include "IdleDeadline.h"
+#include "Page.h"
 #include "Timer.h"
 #include "WindowEventLoop.h"
 
@@ -60,7 +61,8 @@ int IdleCallbackController::queueIdleCallback(Ref<IdleRequestCallback>&& callbac
                 weakThis->invokeIdleCallbackTimeout(handle);
             });
         });
-    }
+    } else if (RefPtr page = m_document ? m_document->page() : nullptr)
+        m_document->protectedWindowEventLoop()->scheduleIdlePeriod(*page);
 
     return handle;
 }

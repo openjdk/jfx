@@ -32,18 +32,21 @@
 #include "EventNames.h"
 #include "JSMessageEvent.h"
 #include <JavaScriptCore/JSCInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace JSC;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MessageEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MessageEvent);
 
-MessageEvent::MessageEvent() = default;
+MessageEvent::MessageEvent()
+    : Event(EventInterfaceType::MessageEvent)
+{
+}
 
 inline MessageEvent::MessageEvent(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
+    : Event(EventInterfaceType::MessageEvent, type, initializer, isTrusted)
     , m_data(JSValueTag { })
     , m_origin(initializer.origin)
     , m_lastEventId(initializer.lastEventId)
@@ -53,8 +56,8 @@ inline MessageEvent::MessageEvent(const AtomString& type, Init&& initializer, Is
 {
 }
 
-inline MessageEvent::MessageEvent(const AtomString& type, DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
-    : Event(type, CanBubble::No, IsCancelable::No)
+inline MessageEvent::MessageEvent(const AtomString& type, DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<Ref<MessagePort>>&& ports)
+    : Event(EventInterfaceType::MessageEvent, type, CanBubble::No, IsCancelable::No)
     , m_data(WTFMove(data))
     , m_origin(origin)
     , m_lastEventId(lastEventId)
@@ -63,7 +66,7 @@ inline MessageEvent::MessageEvent(const AtomString& type, DataType&& data, const
 {
 }
 
-auto MessageEvent::create(JSC::JSGlobalObject& globalObject, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports) -> MessageEventWithStrongData
+auto MessageEvent::create(JSC::JSGlobalObject& globalObject, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<Ref<MessagePort>>&& ports) -> MessageEventWithStrongData
 {
     auto& vm = globalObject.vm();
     Locker<JSC::JSLock> locker(vm.apiLock());
@@ -81,12 +84,12 @@ auto MessageEvent::create(JSC::JSGlobalObject& globalObject, Ref<SerializedScrip
     return MessageEventWithStrongData { event, WTFMove(strongWrapper) };
 }
 
-Ref<MessageEvent> MessageEvent::create(const AtomString& type, DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
+Ref<MessageEvent> MessageEvent::create(const AtomString& type, DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<Ref<MessagePort>>&& ports)
 {
     return adoptRef(*new MessageEvent(type, WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports)));
 }
 
-Ref<MessageEvent> MessageEvent::create(DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
+Ref<MessageEvent> MessageEvent::create(DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<Ref<MessagePort>>&& ports)
 {
     return create(eventNames().messageEvent, WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports));
 }
@@ -103,7 +106,7 @@ Ref<MessageEvent> MessageEvent::create(const AtomString& type, Init&& initialize
 
 MessageEvent::~MessageEvent() = default;
 
-void MessageEvent::initMessageEvent(const AtomString& type, bool canBubble, bool cancelable, JSValue data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
+void MessageEvent::initMessageEvent(const AtomString& type, bool canBubble, bool cancelable, JSValue data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<Ref<MessagePort>>&& ports)
 {
     if (isBeingDispatched())
         return;
@@ -123,11 +126,6 @@ void MessageEvent::initMessageEvent(const AtomString& type, bool canBubble, bool
     m_source = WTFMove(source);
     m_ports = WTFMove(ports);
     m_cachedPorts.clear();
-}
-
-EventInterface MessageEvent::eventInterface() const
-{
-    return MessageEventInterfaceType;
 }
 
 size_t MessageEvent::memoryCost() const

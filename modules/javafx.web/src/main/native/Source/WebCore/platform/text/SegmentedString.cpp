@@ -28,9 +28,9 @@ namespace WebCore {
 inline void SegmentedString::Substring::appendTo(StringBuilder& builder) const
 {
     if (is8Bit)
-        builder.appendCharacters(currentCharacter8, length);
+        builder.append(std::span { currentCharacter8, length });
     else
-        builder.appendCharacters(currentCharacter16, length);
+        builder.append(std::span { currentCharacter16, length });
 }
 
 SegmentedString& SegmentedString::operator=(SegmentedString&& other)
@@ -182,13 +182,14 @@ void SegmentedString::advanceAndUpdateLineNumber16()
 inline void SegmentedString::advancePastSingleCharacterSubstringWithoutUpdatingLineNumber()
 {
     ASSERT(m_currentSubstring.length == 1);
-    if (m_otherSubstrings.isEmpty()) {
         m_currentSubstring.length = 0;
+    m_numberOfCharactersConsumedPriorToCurrentSubstring += m_currentSubstring.numberOfCharactersConsumed();
+    if (m_otherSubstrings.isEmpty()) {
+        m_currentSubstring = { };
         m_currentCharacter = 0;
         updateAdvanceFunctionPointersForEmptyString();
         return;
     }
-    m_numberOfCharactersConsumedPriorToCurrentSubstring += m_currentSubstring.numberOfCharactersConsumed();
     m_currentSubstring = m_otherSubstrings.takeFirst();
     // If we've previously consumed some characters of the non-current string, we now account for those
     // characters as part of the current string, not as part of "prior to current string."
@@ -239,11 +240,11 @@ void SegmentedString::setCurrentPosition(OrdinalNumber line, OrdinalNumber colum
     m_numberOfCharactersConsumedPriorToCurrentLine = numberOfCharactersConsumed() + prologLength - columnAftreProlog.zeroBasedInt();
 }
 
-SegmentedString::AdvancePastResult SegmentedString::advancePastSlowCase(const char* literal, bool lettersIgnoringASCIICase)
+SegmentedString::AdvancePastResult SegmentedString::advancePastSlowCase(ASCIILiteral literal, bool lettersIgnoringASCIICase)
 {
     constexpr unsigned maxLength = 10;
-    ASSERT(!strchr(literal, '\n'));
-    auto length = strlen(literal);
+    ASSERT(!strchr(literal.characters(), '\n'));
+    auto length = literal.length();
     ASSERT(length <= maxLength);
     if (length > this->length())
         return NotEnoughCharacters;
@@ -252,7 +253,7 @@ SegmentedString::AdvancePastResult SegmentedString::advancePastSlowCase(const ch
         auto character = m_currentCharacter;
         if (characterMismatch(character, literal[i], lettersIgnoringASCIICase)) {
             if (i)
-                pushBack(String { consumedCharacters, i });
+                pushBack(String({ consumedCharacters, i }));
             return DidNotMatch;
         }
         advancePastNonNewline();

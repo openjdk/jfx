@@ -35,9 +35,11 @@ namespace WebCore {
 class MathMLUnderOverElement;
 
 class RenderMathMLUnderOver final : public RenderMathMLScripts {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLUnderOver);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLUnderOver);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLUnderOver);
 public:
     RenderMathMLUnderOver(MathMLUnderOverElement&, RenderStyle&&);
+    virtual ~RenderMathMLUnderOver();
 
 private:
     bool isRenderMathMLScripts() const final { return false; }

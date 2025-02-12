@@ -173,7 +173,7 @@ function matchAll(strArg)
     matcher.lastIndex = @toLength(regExp.lastIndex);
 
     var global = @stringIncludesInternal.@call(flags, "g");
-    var fullUnicode = @stringIncludesInternal.@call(flags, "u");
+    var fullUnicode = @stringIncludesInternal.@call(flags, "u") || @stringIncludesInternal.@call(flags, "v");
 
     return new @RegExpStringIterator(matcher, string, global, fullUnicode);
 }
@@ -452,6 +452,9 @@ function hasObservableSideEffectsForRegExpSplit(regexp)
     var regexpGlobal = @tryGetById(regexp, "global");
     if (regexpGlobal !== @regExpProtoGlobalGetter)
         return true;
+    var regexpHasIndices = @tryGetById(regexp, "hasIndices");
+    if (regexpHasIndices !== @regExpProtoHasIndicesGetter)
+        return true;
     var regexpIgnoreCase = @tryGetById(regexp, "ignoreCase");
     if (regexpIgnoreCase !== @regExpProtoIgnoreCaseGetter)
         return true;
@@ -460,6 +463,9 @@ function hasObservableSideEffectsForRegExpSplit(regexp)
         return true;
     var regexpSticky = @tryGetById(regexp, "sticky");
     if (regexpSticky !== @regExpProtoStickyGetter)
+        return true;
+    var regexpDotAll = @tryGetById(regexp, "dotAll");
+    if (regexpDotAll !== @regExpProtoDotAllGetter)
         return true;
     var regexpUnicode = @tryGetById(regexp, "unicode");
     if (regexpUnicode !== @regExpProtoUnicodeGetter)

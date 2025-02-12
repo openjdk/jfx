@@ -41,17 +41,12 @@ class LayoutTraits
         throw "Derived class must implement this function.";
     }
 
-    overridenSupportingObjectClasses()
+    supportingObjectClasses()
     {
-        throw "Derived class must implement this function.";
+        return [AirplaySupport, AudioSupport, CloseSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, OverflowSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport];
     }
 
     resourceDirectory()
-    {
-        throw "Derived class must implement this function.";
-    }
-
-    controlsAlwaysAvailable()
     {
         throw "Derived class must implement this function.";
     }

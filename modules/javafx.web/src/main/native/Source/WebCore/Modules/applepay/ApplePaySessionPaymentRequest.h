@@ -29,6 +29,7 @@
 
 #include "ApplePayAutomaticReloadPaymentRequest.h"
 #include "ApplePayDeferredPaymentRequest.h"
+#include "ApplePayDisbursementRequest.h"
 #include "ApplePayError.h"
 #include "ApplePayLaterAvailability.h"
 #include "ApplePayLineItem.h"
@@ -51,6 +52,14 @@ enum class ApplePaySessionPaymentRequestShippingType : uint8_t {
     ServicePickup,
 };
 
+struct ApplePaySessionPaymentRequestContactFields {
+    bool postalAddress { false };
+    bool phone { false };
+    bool email { false };
+    bool name { false };
+    bool phoneticName { false };
+};
+
 class ApplePaySessionPaymentRequest {
 public:
     WEBCORE_EXPORT ApplePaySessionPaymentRequest();
@@ -65,13 +74,7 @@ public:
     const String& currencyCode() const { return m_currencyCode; }
     void setCurrencyCode(const String& currencyCode) { m_currencyCode = currencyCode; }
 
-    struct ContactFields {
-        bool postalAddress { false };
-        bool phone { false };
-        bool email { false };
-        bool name { false };
-        bool phoneticName { false };
-    };
+    using ContactFields = ApplePaySessionPaymentRequestContactFields;
 
     const ContactFields& requiredBillingContactFields() const { return m_requiredBillingContactFields; }
     void setRequiredBillingContactFields(const ContactFields& requiredBillingContactFields) { m_requiredBillingContactFields = requiredBillingContactFields; }
@@ -93,6 +96,9 @@ public:
         bool supportsEMV { false };
         bool supportsCredit { false };
         bool supportsDebit { false };
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+        bool supportsInstantFundsOut { false };
+#endif
     };
 
     const MerchantCapabilities& merchantCapabilities() const { return m_merchantCapabilities; }
@@ -163,9 +169,19 @@ public:
     void setDeferredPaymentRequest(std::optional<ApplePayDeferredPaymentRequest>&& deferredPaymentRequest) { m_deferredPaymentRequest = WTFMove(deferredPaymentRequest); }
 #endif
 
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+    const std::optional<ApplePayDisbursementRequest>& disbursementRequest() const { return m_disbursementRequest; }
+    void setDisbursementRequest(std::optional<ApplePayDisbursementRequest>&& disbursementRequest) { m_disbursementRequest = WTFMove(disbursementRequest); }
+#endif
+
 #if ENABLE(APPLE_PAY_LATER_AVAILABILITY)
     const std::optional<ApplePayLaterAvailability>& applePayLaterAvailability() const { return m_applePayLaterAvailability; }
     void setApplePayLaterAvailability(const std::optional<ApplePayLaterAvailability>& applePayLaterAvailability) { m_applePayLaterAvailability = applePayLaterAvailability; }
+#endif
+
+#if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
+    const String& merchantCategoryCode() const { return m_merchantCategoryCode; }
+    void setMerchantCategoryCode(const String& merchantCategoryCode) { m_merchantCategoryCode = merchantCategoryCode; }
 #endif
 
     ApplePaySessionPaymentRequest(String&& countryCode
@@ -205,8 +221,14 @@ public:
 #if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
         , std::optional<ApplePayDeferredPaymentRequest>&& deferredPaymentRequest
 #endif
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+        , std::optional<ApplePayDisbursementRequest>&& disbursementRequest
+#endif
 #if ENABLE(APPLE_PAY_LATER_AVAILABILITY)
         , std::optional<ApplePayLaterAvailability>&& applePayLaterAvailability
+#endif
+#if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
+        , String&& merchantCategoryCode
 #endif
         )
             : m_countryCode(WTFMove(countryCode))
@@ -246,8 +268,14 @@ public:
 #if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
             , m_deferredPaymentRequest(WTFMove(deferredPaymentRequest))
 #endif
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+            , m_disbursementRequest(WTFMove(disbursementRequest))
+#endif
 #if ENABLE(APPLE_PAY_LATER_AVAILABILITY)
             , m_applePayLaterAvailability(WTFMove(applePayLaterAvailability))
+#endif
+#if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
+            , m_merchantCategoryCode(WTFMove(merchantCategoryCode))
 #endif
             { }
 
@@ -306,8 +334,16 @@ private:
     std::optional<ApplePayDeferredPaymentRequest> m_deferredPaymentRequest;
 #endif
 
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+    std::optional<ApplePayDisbursementRequest> m_disbursementRequest;
+#endif
+
 #if ENABLE(APPLE_PAY_LATER_AVAILABILITY)
     std::optional<ApplePayLaterAvailability> m_applePayLaterAvailability;
+#endif
+
+#if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
+    String m_merchantCategoryCode;
 #endif
 };
 

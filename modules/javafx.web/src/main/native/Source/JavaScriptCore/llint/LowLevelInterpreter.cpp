@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,9 +88,7 @@ using namespace JSC::LLInt;
 // Define the opcode dispatch mechanism when using the C loop:
 //
 
-#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 using WebConfig::g_config;
-#endif
 
 // These are for building a C Loop interpreter:
 #define OFFLINE_ASM_BEGIN
@@ -279,6 +277,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
             opcodeMap[__opcode] = __opcode;
 #endif
         FOR_EACH_BYTECODE_ID(OPCODE_ENTRY)
+        FOR_EACH_BYTECODE_HELPER_ID(OPCODE_ENTRY)
         FOR_EACH_CLOOP_BYTECODE_HELPER_ID(LLINT_OPCODE_ENTRY)
         FOR_EACH_LLINT_NATIVE_HELPER(LLINT_OPCODE_ENTRY)
         FOR_EACH_CLOOP_RETURN_HELPER_ID(LLINT_OPCODE_ENTRY)
@@ -482,7 +481,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 
 } // namespace JSC
 
-#elif !COMPILER(MSVC)
+#else // !ENABLE(C_LOOP)
 
 //============================================================================
 // Define the opcode dispatch mechanism when using an ASM loop:
@@ -503,7 +502,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #if CPU(ARM_THUMB2)
 #define OFFLINE_ASM_BEGIN_SPACER "bkpt #0\n"
 #elif CPU(ARM64)
-#define OFFLINE_ASM_BEGIN_SPACER "brk #0xc471\n"
+#define OFFLINE_ASM_BEGIN_SPACER "brk #" STRINGIZE_VALUE_OF(WTF_FATAL_CRASH_CODE) "\n"
 #elif CPU(X86_64)
 #define OFFLINE_ASM_BEGIN_SPACER "int3\n"
 #else
@@ -518,7 +517,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 
 #if ENABLE(OFFLINE_ASM_ALT_ENTRY)
 #define OFFLINE_ASM_BEGIN   asm ( \
-    OFFLINE_ASM_GLOBAL_LABEL_IMPL(jsc_llint_begin, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(jsc_llint_begin, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B, HIDE_SYMBOL) \
     OFFLINE_ASM_BEGIN_SPACER
 #else
 #define OFFLINE_ASM_BEGIN   asm (
@@ -557,45 +556,71 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #endif
 
 #if CPU(ARM_THUMB2)
-#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT) \
+#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT, VISIBILITY) \
     OFFLINE_ASM_TEXT_SECTION                     \
     ALIGNMENT                                    \
     ALT_ENTRY(label)                             \
     ".globl " SYMBOL_STRING(label) "\n"          \
-    HIDE_SYMBOL(label) "\n"                      \
+    VISIBILITY(label) "\n"                       \
     ".thumb\n"                                   \
     ".thumb_func " THUMB_FUNC_PARAM(label) "\n"  \
     SYMBOL_STRING(label) ":\n"
-#elif CPU(ARM64)
-#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT) \
+#elif CPU(RISCV64)
+#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT, VISIBILITY) \
     OFFLINE_ASM_TEXT_SECTION                    \
     ALIGNMENT                                   \
     ALT_ENTRY(label)                            \
     ".globl " SYMBOL_STRING(label) "\n"         \
-    HIDE_SYMBOL(label) "\n"                     \
+    ".attribute arch, \"rv64gc\"" "\n"          \
+    VISIBILITY(label) "\n"                      \
     SYMBOL_STRING(label) ":\n"
 #else
-#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT) \
+#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT, VISIBILITY) \
     OFFLINE_ASM_TEXT_SECTION                    \
+    ALIGNMENT                                   \
     ALT_ENTRY(label)                            \
     ".globl " SYMBOL_STRING(label) "\n"         \
-    HIDE_SYMBOL(label) "\n"                     \
+    VISIBILITY(label) "\n"                      \
     SYMBOL_STRING(label) ":\n"
 #endif
 
 #define OFFLINE_ASM_ALIGN4B ".balign 4\n"
 #define OFFLINE_ASM_NOALIGN ""
 
+#if CPU(ARM64) || CPU(ARM64E)
+#define OFFLINE_ASM_ALIGN_TRAP(align) OFFLINE_ASM_BEGIN_SPACER "\n .balignl " #align ", 0xd4388e20\n" // pad with brk instructions
+#elif CPU(X86_64)
+#define OFFLINE_ASM_ALIGN_TRAP(align) OFFLINE_ASM_BEGIN_SPACER "\n .balign " #align ", 0xcc\n" // pad with int 3 instructions
+#elif CPU(ARM)
+#define OFFLINE_ASM_ALIGN_TRAP(align) OFFLINE_ASM_BEGIN_SPACER "\n .balignw " #align ", 0xde00\n" // pad with udf instructions
+#elif CPU(RISCV64)
+#define OFFLINE_ASM_ALIGN_TRAP(align) OFFLINE_ASM_BEGIN_SPACER "\n .balign " #align ", 0x73\n" // pad with ebreak instructions
+#endif
+
+#define OFFLINE_ASM_EXPORT_SYMBOL(symbol)
+
 #if ENABLE(OFFLINE_ASM_ALT_ENTRY)
 #define OFFLINE_ASM_GLOBAL_LABEL(label) \
-    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B)
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B, HIDE_SYMBOL)
 #define OFFLINE_ASM_UNALIGNED_GLOBAL_LABEL(label) \
-    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_NOALIGN)
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_NOALIGN, HIDE_SYMBOL)
+#define OFFLINE_ASM_ALIGNED_GLOBAL_LABEL(label, align) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN_TRAP(align), HIDE_SYMBOL)
+#define OFFLINE_ASM_GLOBAL_EXPORT_LABEL(label) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B, OFFLINE_ASM_EXPORT_SYMBOL)
+#define OFFLINE_ASM_UNALIGNED_GLOBAL_EXPORT_LABEL(label) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_NOALIGN, OFFLINE_ASM_EXPORT_SYMBOL)
 #else
 #define OFFLINE_ASM_GLOBAL_LABEL(label) \
-    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B)
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B, HIDE_SYMBOL)
 #define OFFLINE_ASM_UNALIGNED_GLOBAL_LABEL(label) \
-    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_NOALIGN)
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_NOALIGN, HIDE_SYMBOL)
+#define OFFLINE_ASM_ALIGNED_GLOBAL_LABEL(label, align) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN_TRAP(align), HIDE_SYMBOL)
+#define OFFLINE_ASM_GLOBAL_EXPORT_LABEL(label) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B, OFFLINE_ASM_EXPORT_SYMBOL)
+#define OFFLINE_ASM_UNALIGNED_GLOBAL_EXPORT_LABEL(label) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_NOALIGN, OFFLINE_ASM_EXPORT_SYMBOL)
 #endif // ENABLE(OFFLINE_ASM_ALT_ENTRY)
 
 #if COMPILER(CLANG) && ENABLE(OFFLINE_ASM_ALT_ENTRY)

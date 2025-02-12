@@ -40,7 +40,9 @@
 #include "VMInlines.h"
 #include <charconv>
 #include <wtf/text/EscapedFormsForJSON.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringCommon.h>
 
 // Turn this on to log information about fastStringify usage, with a focus on why it failed.
 #define FAST_STRINGIFY_LOG_USAGE 0
@@ -177,17 +179,17 @@ static inline String gap(JSGlobalObject* globalObject, JSValue space)
     // If the space value is a number, create a gap string with that number of spaces.
     if (space.isNumber()) {
         double spaceCount = space.asNumber();
-        int count;
+        size_t count;
         if (spaceCount > maxGapLength)
             count = maxGapLength;
         else if (!(spaceCount > 0))
             count = 0;
         else
-            count = static_cast<int>(spaceCount);
+            count = static_cast<size_t>(spaceCount);
         char spaces[maxGapLength];
-        for (int i = 0; i < count; ++i)
+        for (size_t i = 0; i < count; ++i)
             spaces[i] = ' ';
-        return String(spaces, count);
+        return String({ spaces, count });
     }
 
     // If the space value is a string, use it as the gap string, otherwise use no gap string.
@@ -384,7 +386,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
     }
 
     if (value.isString()) {
-        String string = asString(value)->value(m_globalObject);
+        auto string = asString(value)->value(m_globalObject);
         RETURN_IF_EXCEPTION(scope, StringifyFailed);
         builder.appendQuotedJSONString(string);
         return StringifySucceeded;
@@ -843,7 +845,7 @@ inline String FastStringifier<CharType>::result() const
     }
     logOutcome("success"_s);
 #endif
-    return { m_buffer, m_length };
+    return std::span { m_buffer, m_length };
 }
 
 template<typename CharType>
@@ -1054,69 +1056,144 @@ void FastStringifier<CharType>::append(JSValue value)
 
     switch (cell.type()) {
     case StringType: {
-        auto& string = asString(&cell)->tryGetValue();
-        if (UNLIKELY(string.isNull())) {
+        auto string = asString(&cell)->tryGetValue();
+        if (UNLIKELY(string.data.isNull())) {
             recordFailure("String::tryGetValue"_s);
             return;
         }
+
+        auto charactersCopySameType = [&](auto span, auto* cursor) ALWAYS_INLINE_LAMBDA {
+#if (CPU(ARM64) || CPU(X86_64)) && COMPILER(CLANG)
+            constexpr size_t stride = SIMD::stride<CharType>;
+            if (span.size() >= stride) {
+                using UnsignedType = std::make_unsigned_t<CharType>;
+                using BulkType = decltype(SIMD::load(static_cast<const UnsignedType*>(nullptr)));
+                constexpr auto quoteMask = SIMD::splat<UnsignedType>('"');
+                constexpr auto escapeMask = SIMD::splat<UnsignedType>('\\');
+                constexpr auto controlMask = SIMD::splat<UnsignedType>(' ');
+                const auto* ptr = span.data();
+                const auto* end = ptr + span.size();
+                auto* cursorEnd = cursor + span.size();
+                BulkType accumulated { };
+                for (; ptr + (stride - 1) < end; ptr += stride, cursor += stride) {
+                    auto input = SIMD::load(bitwise_cast<const UnsignedType*>(ptr));
+                    SIMD::store(input, bitwise_cast<UnsignedType*>(cursor));
+                    auto quotes = SIMD::equal(input, quoteMask);
+                    auto escapes = SIMD::equal(input, escapeMask);
+                    auto controls = SIMD::lessThan(input, controlMask);
+                    accumulated = SIMD::bitOr(accumulated, quotes, escapes, controls);
+                    if constexpr (sizeof(CharType) != 1) {
+                        constexpr auto surrogateMask = SIMD::splat<UnsignedType>(0xf800);
+                        constexpr auto surrogateCheckMask = SIMD::splat<UnsignedType>(0xd800);
+                        accumulated = SIMD::bitOr(accumulated, SIMD::equal(SIMD::bitAnd(input, surrogateMask), surrogateCheckMask));
+                    }
+                }
+                if (ptr < end) {
+                    auto input = SIMD::load(bitwise_cast<const UnsignedType*>(end - stride));
+                    SIMD::store(input, bitwise_cast<UnsignedType*>(cursorEnd - stride));
+                    auto quotes = SIMD::equal(input, quoteMask);
+                    auto escapes = SIMD::equal(input, escapeMask);
+                    auto controls = SIMD::lessThan(input, controlMask);
+                    accumulated = SIMD::bitOr(accumulated, quotes, escapes, controls);
+                    if constexpr (sizeof(CharType) != 1) {
+                        constexpr auto surrogateMask = SIMD::splat<UnsignedType>(0xf800);
+                        constexpr auto surrogateCheckMask = SIMD::splat<UnsignedType>(0xd800);
+                        accumulated = SIMD::bitOr(accumulated, SIMD::equal(SIMD::bitAnd(input, surrogateMask), surrogateCheckMask));
+                    }
+                }
+                return SIMD::isNonZero(accumulated);
+            }
+#endif
+            for (auto character : span) {
+                if constexpr (sizeof(CharType) != 1) {
+                    if (UNLIKELY(U16_IS_SURROGATE(character)))
+                        return true;
+                }
+                if (UNLIKELY(character <= 0xff && WTF::escapedFormsForJSON[character]))
+                    return true;
+                *cursor++ = character;
+            }
+            return false;
+        };
+
+        auto charactersCopyUpconvert = [&](std::span<const LChar> span, UChar* cursor) ALWAYS_INLINE_LAMBDA {
+#if (CPU(ARM64) || CPU(X86_64)) && COMPILER(CLANG)
+            constexpr size_t stride = SIMD::stride<LChar>;
+            if (span.size() >= stride) {
+                using UnsignedType = std::make_unsigned_t<LChar>;
+                using BulkType = decltype(SIMD::load(static_cast<const UnsignedType*>(nullptr)));
+                constexpr auto quoteMask = SIMD::splat<UnsignedType>('"');
+                constexpr auto escapeMask = SIMD::splat<UnsignedType>('\\');
+                constexpr auto controlMask = SIMD::splat<UnsignedType>(' ');
+                constexpr auto zeros = SIMD::splat<UnsignedType>(0);
+                const auto* ptr = span.data();
+                const auto* end = ptr + span.size();
+                auto* cursorEnd = cursor + span.size();
+                BulkType accumulated { };
+                for (; ptr + (stride - 1) < end; ptr += stride, cursor += stride) {
+                    auto input = SIMD::load(bitwise_cast<const UnsignedType*>(ptr));
+                    simde_vst2q_u8(bitwise_cast<UnsignedType*>(cursor), (simde_uint8x16x2_t { input, zeros }));
+                    auto quotes = SIMD::equal(input, quoteMask);
+                    auto escapes = SIMD::equal(input, escapeMask);
+                    auto controls = SIMD::lessThan(input, controlMask);
+                    accumulated = SIMD::bitOr(accumulated, quotes, escapes, controls);
+                }
+                if (ptr < end) {
+                    auto input = SIMD::load(bitwise_cast<const UnsignedType*>(end - stride));
+                    simde_vst2q_u8(bitwise_cast<UnsignedType*>(cursorEnd - stride), (simde_uint8x16x2_t { input, zeros }));
+                    auto quotes = SIMD::equal(input, quoteMask);
+                    auto escapes = SIMD::equal(input, escapeMask);
+                    auto controls = SIMD::lessThan(input, controlMask);
+                    accumulated = SIMD::bitOr(accumulated, quotes, escapes, controls);
+                }
+                return SIMD::isNonZero(accumulated);
+            }
+#endif
+            for (auto character : span) {
+                if (UNLIKELY(WTF::escapedFormsForJSON[character]))
+                    return true;
+                *cursor++ = character;
+            }
+            return false;
+        };
+
         if constexpr (sizeof(CharType) == 1) {
-        if (UNLIKELY(!string.is8Bit())) {
+            if (UNLIKELY(!string.data.is8Bit())) {
                 m_retryWith16BitFastStringifier = m_length < (m_capacity / 2);
             recordFailure("16-bit string"_s);
             return;
         }
-        auto stringLength = string.length();
+            auto stringLength = string.data.length();
         if (UNLIKELY(!hasRemainingCapacity(1 + stringLength + 1))) {
             recordBufferFull();
             return;
         }
-        auto* cursor = m_buffer + m_length;
-        *cursor++ = '"';
-        auto* characters = string.characters8();
-        for (unsigned i = 0; i < stringLength; ++i) {
-            auto character = characters[i];
-            if (UNLIKELY(WTF::escapedFormsForJSON[character])) {
+            m_buffer[m_length] = '"';
+            if (UNLIKELY(charactersCopySameType(string.data.span8(), m_buffer + m_length + 1))) {
                 recordFailure("string character needs escaping"_s);
                 return;
             }
-            *cursor++ = character;
-        }
-        *cursor = '"';
+            m_buffer[m_length + 1 + stringLength] = '"';
         m_length += 1 + stringLength + 1;
         } else {
-            auto stringLength = string.length();
+            auto stringLength = string.data.length();
             if (UNLIKELY(!hasRemainingCapacity(1 + stringLength + 1))) {
                 recordBufferFull();
         return;
     }
-            auto* cursor = m_buffer + m_length;
-            *cursor++ = '"';
-            if (string.is8Bit()) {
-                auto* characters = string.characters8();
-                for (unsigned i = 0; i < stringLength; ++i) {
-                    auto character = characters[i];
-                    if (UNLIKELY(WTF::escapedFormsForJSON[character])) {
+            m_buffer[m_length] = '"';
+            if (string.data.is8Bit()) {
+                if (UNLIKELY(charactersCopyUpconvert(string.data.span8(), m_buffer + m_length + 1))) {
                         recordFailure("string character needs escaping"_s);
                         return;
                     }
-                    *cursor++ = character;
-                }
             } else {
-                auto* characters = string.characters16();
-                for (unsigned i = 0; i < stringLength; ++i) {
-                    auto character = characters[i];
-                    if (UNLIKELY(U16_IS_SURROGATE(character))) {
-                        recordFailure("string character is surrogate"_s);
+                if (UNLIKELY(charactersCopySameType(string.data.span16(), m_buffer + m_length + 1))) {
+                    recordFailure("string character needs escaping or surrogate pair handling"_s);
                         return;
                     }
-                    if (UNLIKELY(character <= 0xff && WTF::escapedFormsForJSON[character])) {
-                        recordFailure("string character needs escaping"_s);
-                        return;
-                    }
-                    *cursor++ = character;
-                }
             }
-            *cursor = '"';
+            m_buffer[m_length + 1 + stringLength] = '"';
             m_length += 1 + stringLength + 1;
         }
         return;
@@ -1187,7 +1264,7 @@ void FastStringifier<CharType>::append(JSValue value)
             if (needComma)
                 m_buffer[m_length++] = ',';
             m_buffer[m_length] = '"';
-            auto* characters = name.characters8();
+            auto characters = name.span8();
             for (unsigned i = 0; i < nameLength; ++i) {
                 auto character = characters[i];
                 if (UNLIKELY(WTF::escapedFormsForJSON[character])) {
@@ -1519,13 +1596,12 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncParse, (JSGlobalObject* globalObject, Call
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto* string = callFrame->argument(0).toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    auto viewWithString = string->viewWithUnderlyingString(globalObject);
+    auto view = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    StringView view = viewWithString.view;
 
     JSValue unfiltered;
-    if (view.is8Bit()) {
-        LiteralParser<LChar> jsonParser(globalObject, view.characters8(), view.length(), StrictJSON);
+    if (view->is8Bit()) {
+        LiteralParser jsonParser(globalObject, view->span8(), StrictJSON);
         unfiltered = jsonParser.tryLiteralParse();
         EXCEPTION_ASSERT(!scope.exception() || !unfiltered);
         if (!unfiltered) {
@@ -1533,7 +1609,7 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncParse, (JSGlobalObject* globalObject, Call
             return throwVMError(globalObject, scope, createSyntaxError(globalObject, jsonParser.getErrorMessage()));
         }
     } else {
-        LiteralParser<UChar> jsonParser(globalObject, view.characters16(), view.length(), StrictJSON);
+        LiteralParser jsonParser(globalObject, view->span16(), StrictJSON);
         unfiltered = jsonParser.tryLiteralParse();
         EXCEPTION_ASSERT(!scope.exception() || !unfiltered);
         if (!unfiltered) {
@@ -1567,11 +1643,11 @@ JSValue JSONParse(JSGlobalObject* globalObject, StringView json)
         return JSValue();
 
     if (json.is8Bit()) {
-        LiteralParser<LChar> jsonParser(globalObject, json.characters8(), json.length(), StrictJSON);
+        LiteralParser jsonParser(globalObject, json.span8(), StrictJSON);
         return jsonParser.tryLiteralParse();
     }
 
-    LiteralParser<UChar> jsonParser(globalObject, json.characters16(), json.length(), StrictJSON);
+    LiteralParser jsonParser(globalObject, json.span16(), StrictJSON);
     return jsonParser.tryLiteralParse();
 }
 
@@ -1584,7 +1660,7 @@ JSValue JSONParseWithException(JSGlobalObject* globalObject, StringView json)
         return JSValue();
 
     if (json.is8Bit()) {
-        LiteralParser<LChar> jsonParser(globalObject, json.characters8(), json.length(), StrictJSON);
+        LiteralParser jsonParser(globalObject, json.span8(), StrictJSON);
         JSValue result = jsonParser.tryLiteralParse();
         RETURN_IF_EXCEPTION(scope, { });
         if (!result)
@@ -1592,7 +1668,7 @@ JSValue JSONParseWithException(JSGlobalObject* globalObject, StringView json)
         return result;
     }
 
-    LiteralParser<UChar> jsonParser(globalObject, json.characters16(), json.length(), StrictJSON);
+    LiteralParser jsonParser(globalObject, json.span16(), StrictJSON);
     JSValue result = jsonParser.tryLiteralParse();
     RETURN_IF_EXCEPTION(scope, { });
     if (!result)

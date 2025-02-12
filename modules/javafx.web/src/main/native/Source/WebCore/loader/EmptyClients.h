@@ -29,6 +29,7 @@
 #pragma once
 
 #include "ChromeClient.h"
+#include "CryptoClient.h"
 #include <wtf/UniqueRef.h>
 
 // Empty client classes for use by WebCore.
@@ -152,10 +153,6 @@ class EmptyChromeClient : public ChromeClient {
     std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
 #endif
 
-#if ENABLE(APP_HIGHLIGHTS)
-    void storeAppHighlight(AppHighlight&&) const final;
-#endif
-
     void setTextIndicator(const TextIndicatorData&) const final;
 
     DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() const final;
@@ -240,5 +237,12 @@ class EmptyChromeClient : public ChromeClient {
 
 DiagnosticLoggingClient& emptyDiagnosticLoggingClient();
 WEBCORE_EXPORT PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier>, PAL::SessionID);
+
+class EmptyCryptoClient: public CryptoClient {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    EmptyCryptoClient() = default;
+    ~EmptyCryptoClient() = default;
+};
 
 }

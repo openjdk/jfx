@@ -45,7 +45,7 @@ void TextureMapperTile::updateContents(TextureMapper& textureMapper, Image* imag
         m_texture = textureMapper.createTexture();
         m_texture->reset(targetRect.size(), image->currentFrameKnownToBeOpaque() ? 0 : BitmapTexture::SupportsAlpha);
     }
-    auto nativeImage = image->nativeImageForCurrentFrame();
+    auto nativeImage = image->currentNativeImage();
     m_texture->updateContents(nativeImage.get(), targetRect, sourceOffset);
 
 }
@@ -125,7 +125,7 @@ void TextureMapperTile::updateContents(Image* image, const IntRect& dirtyRect)
         m_texture = BitmapTexture::create(targetRect.size(), flags);
     }
 
-    auto nativeImage = image->nativeImageForCurrentFrame();
+    auto nativeImage = image->currentNativeImage();
     m_texture->updateContents(nativeImage.get(), targetRect, sourceOffset);
 }
 

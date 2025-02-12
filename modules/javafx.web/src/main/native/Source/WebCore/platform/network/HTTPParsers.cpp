@@ -44,6 +44,7 @@
 #include <wtf/DateMath.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/OptionSet.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -73,19 +74,17 @@ static inline bool skipWhiteSpace(const String& str, unsigned& pos)
 // Returns true if the function can match the whole token (case insensitive)
 // incrementing pos on match, otherwise leaving pos unchanged.
 // Note: Might return pos == str.length()
-static inline bool skipToken(const String& str, unsigned& pos, const char* token)
+static inline bool skipToken(const String& str, unsigned& pos, ASCIILiteral token)
 {
-    unsigned len = str.length();
-    unsigned current = pos;
+    if (token.length() > str.length())
+        return false;
 
-    while (current < len && *token) {
-        if (toASCIILower(str[current]) != *token++)
+    unsigned current = pos;
+    for (auto character : token.span8()) {
+        if (toASCIILower(str[current]) != character)
             return false;
         ++current;
     }
-
-    if (*token)
-        return false;
 
     pos = current;
     return true;
@@ -312,18 +311,18 @@ bool isValidUserAgentHeaderValue(const String& value)
 }
 #endif
 
-static const size_t maxInputSampleSize = 128;
+static constexpr size_t maxInputSampleSize = 128;
 template<typename CharType>
-static String trimInputSample(CharType* p, size_t length)
+static String trimInputSample(std::span<const CharType> input)
 {
-    if (length <= maxInputSampleSize)
-        return String(p, length);
-    return makeString(StringView(p, length).left(maxInputSampleSize), horizontalEllipsis);
+    if (input.size() <= maxInputSampleSize)
+        return input;
+    return makeString(input.first(maxInputSampleSize), horizontalEllipsis);
 }
 
 std::optional<WallTime> parseHTTPDate(const String& value)
 {
-    double dateInMillisecondsSinceEpoch = parseDateFromNullTerminatedCharacters(value.utf8().data());
+    double dateInMillisecondsSinceEpoch = parseDate(value.utf8().span());
     if (!std::isfinite(dateInMillisecondsSinceEpoch))
         return std::nullopt;
     // This assumes system_clock epoch equals Unix epoch which is true for all implementations but unspecified.
@@ -487,7 +486,7 @@ XSSProtectionDisposition parseXSSProtectionHeader(const String& header, String& 
             return result;
 
         // At start of next directive.
-        if (skipToken(header, pos, "mode")) {
+        if (skipToken(header, pos, "mode"_s)) {
             if (modeDirectiveSeen) {
                 failureReason = failureReasonDuplicateMode;
                 failurePosition = pos;
@@ -499,13 +498,13 @@ XSSProtectionDisposition parseXSSProtectionHeader(const String& header, String& 
                 failurePosition = pos;
                 return XSSProtectionDisposition::Invalid;
             }
-            if (!skipToken(header, pos, "block")) {
+            if (!skipToken(header, pos, "block"_s)) {
                 failureReason = failureReasonInvalidMode;
                 failurePosition = pos;
                 return XSSProtectionDisposition::Invalid;
             }
             result = XSSProtectionDisposition::BlockEnabled;
-        } else if (skipToken(header, pos, "report")) {
+        } else if (skipToken(header, pos, "report"_s)) {
             if (reportDirectiveSeen) {
                 failureReason = failureReasonDuplicateReport;
                 failurePosition = pos;
@@ -703,10 +702,10 @@ static inline bool isValidHeaderNameCharacter(CharacterType character)
     }
 }
 
-size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReason, StringView& nameStr, String& valueStr, bool strict)
+size_t parseHTTPHeader(std::span<const uint8_t> data, String& failureReason, StringView& nameStr, String& valueStr, bool strict)
 {
-    auto p = start;
-    auto end = start + length;
+    auto p = data.data();
+    auto end = data.data() + data.size();
 
     Vector<uint8_t> name;
     Vector<uint8_t> value;
@@ -723,14 +722,14 @@ size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReaso
         case '\r':
             if (name.isEmpty()) {
                 if (p + 1 < end && *(p + 1) == '\n')
-                    return (p + 2) - start;
-                failureReason = makeString("CR doesn't follow LF in header name at ", trimInputSample(p, end - p));
+                    return (p + 2) - data.data();
+                failureReason = makeString("CR doesn't follow LF in header name at "_s, trimInputSample(std::span { p, end }));
                 return 0;
             }
-            failureReason = makeString("Unexpected CR in header name at ", trimInputSample(name.data(), name.size()));
+            failureReason = makeString("Unexpected CR in header name at "_s, trimInputSample(name.span()));
             return 0;
         case '\n':
-            failureReason = makeString("Unexpected LF in header name at ", trimInputSample(name.data(), name.size()));
+            failureReason = makeString("Unexpected LF in header name at "_s, trimInputSample(name.span()));
             return 0;
         case ':':
             break;
@@ -739,7 +738,7 @@ size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReaso
                 if (name.size() < 1)
                     failureReason = "Unexpected start character in header name"_s;
                 else
-                    failureReason = makeString("Unexpected character in header name at ", trimInputSample(name.data(), name.size()));
+                    failureReason = makeString("Unexpected character in header name at "_s, trimInputSample(name.span()));
                 return 0;
             }
             name.append(*p);
@@ -756,7 +755,7 @@ size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReaso
     }
 
     nameSize = name.size();
-    nameStr = StringView(namePtr, nameSize);
+    nameStr = std::span { namePtr, nameSize };
 
     for (; p < end && *p == 0x20; p++) { }
 
@@ -766,7 +765,7 @@ size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReaso
             break;
         case '\n':
             if (strict) {
-                failureReason = makeString("Unexpected LF in header value at ", trimInputSample(value.data(), value.size()));
+                failureReason = makeString("Unexpected LF in header value at "_s, trimInputSample(value.span()));
                 return 0;
             }
             break;
@@ -779,23 +778,23 @@ size_t parseHTTPHeader(const uint8_t* start, size_t length, String& failureReaso
         }
     }
     if (p >= end || (strict && *p != '\n')) {
-        failureReason = makeString("CR doesn't follow LF after header value at ", trimInputSample(p, end - p));
+        failureReason = makeString("CR doesn't follow LF after header value at "_s, trimInputSample(std::span { p, end }));
         return 0;
     }
-    valueStr = String::fromUTF8(value.data(), value.size());
+    valueStr = String::fromUTF8(value.span());
     if (valueStr.isNull()) {
         failureReason = "Invalid UTF-8 sequence in header value"_s;
         return 0;
     }
-    return p - start;
+    return p - data.data();
 }
 
-size_t parseHTTPRequestBody(const uint8_t* data, size_t length, Vector<uint8_t>& body)
+size_t parseHTTPRequestBody(std::span<const uint8_t> data, Vector<uint8_t>& body)
 {
     body.clear();
-    body.append(data, length);
+    body.append(data);
 
-    return length;
+    return data.size();
 }
 
 std::optional<uint64_t> parseContentLength(StringView contentLengthValue)

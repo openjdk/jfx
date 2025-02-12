@@ -49,6 +49,7 @@
 #include "Text.h"
 #include "UserAgentParts.h"
 #include "ValidationMessageClient.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -95,7 +96,7 @@ void ValidationMessage::updateValidationMessage(HTMLElement& element, const Stri
         if (!updatedMessage.isEmpty()) {
             const AtomString& title = m_element->attributeWithoutSynchronization(titleAttr);
             if (!title.isEmpty())
-                updatedMessage = updatedMessage + '\n' + title;
+                updatedMessage = makeString(updatedMessage, '\n', title);
         }
     }
 
@@ -134,7 +135,7 @@ void ValidationMessage::setMessageDOMAndStartTimer()
     m_messageHeading->removeChildren();
     m_messageBody->removeChildren();
 
-    auto& document = m_messageHeading->document();
+    Ref document = m_messageHeading->document();
     auto lines = StringView(m_message).split('\n');
     auto it = lines.begin();
     if (it != lines.end()) {
@@ -147,7 +148,7 @@ void ValidationMessage::setMessageDOMAndStartTimer()
         }
     }
 
-    int magnification = document.page() ? document.page()->settings().validationMessageTimerMagnification() : -1;
+    int magnification = document->page() ? document->page()->settings().validationMessageTimerMagnification() : -1;
     if (magnification <= 0)
         m_timer = nullptr;
     else {
@@ -255,11 +256,12 @@ bool ValidationMessage::shadowTreeContains(const Node& node) const
 void ValidationMessage::deleteBubbleTree()
 {
     ASSERT(!validationMessageClient());
-    if (m_bubble) {
-        ScriptDisallowedScope::EventAllowedScope allowedScope(*m_element->userAgentShadowRoot());
+    if (RefPtr bubble = m_bubble) {
+        Ref shadowRoot = *m_element->userAgentShadowRoot();
+        ScriptDisallowedScope::EventAllowedScope allowedScope(shadowRoot);
         m_messageHeading = nullptr;
         m_messageBody = nullptr;
-        m_element->userAgentShadowRoot()->removeChild(*m_bubble);
+        shadowRoot->removeChild(*bubble);
         m_bubble = nullptr;
     }
     m_message = String();

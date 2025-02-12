@@ -34,7 +34,7 @@ namespace WebCore {
 class TimeRanges;
 
 class BufferedChangeEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(BufferedChangeEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BufferedChangeEvent);
 public:
     ~BufferedChangeEvent();
 
@@ -59,7 +59,6 @@ public:
 private:
     BufferedChangeEvent(RefPtr<TimeRanges>&& added, RefPtr<TimeRanges>&& removed);
     BufferedChangeEvent(const AtomString& type, Init&&);
-    EventInterface eventInterface() const final;
 
     RefPtr<TimeRanges> m_added;
     RefPtr<TimeRanges> m_removed;

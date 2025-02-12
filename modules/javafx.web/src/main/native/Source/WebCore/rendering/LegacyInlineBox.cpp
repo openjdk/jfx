@@ -22,7 +22,6 @@
 
 #include "FontMetrics.h"
 #include "HitTestResult.h"
-#include "LegacyEllipsisBox.h"
 #include "LegacyInlineFlowBox.h"
 #include "LegacyRootInlineBox.h"
 #include "LocalFrame.h"
@@ -30,7 +29,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLineBreak.h"
 #include "RenderStyleInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 #if ENABLE(TREE_DEBUGGING)
@@ -39,14 +38,14 @@
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyInlineBox);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyInlineBox);
 
 struct SameSizeAsLegacyInlineBox {
     virtual ~SameSizeAsLegacyInlineBox() = default;
     void* a[3];
     SingleThreadWeakPtr<RenderObject> r;
     FloatPoint b;
-    float c[2];
+    float c[1];
     unsigned d : 23;
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
     unsigned s;
@@ -93,9 +92,9 @@ void LegacyInlineBox::removeFromParent()
 
 #if ENABLE(TREE_DEBUGGING)
 
-const char* LegacyInlineBox::boxName() const
+ASCIILiteral LegacyInlineBox::boxName() const
 {
-    return "InlineBox";
+    return "InlineBox"_s;
 }
 
 void LegacyInlineBox::showNodeTreeForThis() const
@@ -115,15 +114,15 @@ void LegacyInlineBox::outputLineTreeAndMark(TextStream& stream, const LegacyInli
 
 void LegacyInlineBox::outputLineBox(TextStream& stream, bool mark, int depth) const
 {
-    stream << "-------- " << (isDirty() ? "D" : "-") << "-";
+    stream << "-------- "_s << (isDirty() ? "D"_s : "-"_s) << "-"_s;
     int printedCharacters = 0;
     if (mark) {
-        stream << "*";
+        stream << "*"_s;
         ++printedCharacters;
     }
     while (++printedCharacters <= depth * 2)
-        stream << " ";
-    stream << boxName() << " " << FloatRect(x(), y(), width(), height()) << " (" << this << ") renderer->(" << &renderer() << ")";
+        stream << " "_s;
+    stream << boxName() << " "_s << FloatRect(x(), y(), width(), height()) << " ("_s << this << ") renderer->("_s << &renderer() << ")"_s;
     stream.nextLine();
 }
 
@@ -134,19 +133,14 @@ float LegacyInlineBox::logicalHeight() const
     if (hasVirtualLogicalHeight())
         return virtualLogicalHeight();
 
-    if (auto* inlineBox = dynamicDowncast<LegacyRootInlineBox>(*this); inlineBox && inlineBox->isForTrailingFloats())
-        return 0;
-
     const RenderStyle& lineStyle = this->lineStyle();
     if (renderer().isRenderTextOrLineBreak())
-        return lineStyle.metricsOfPrimaryFont().height();
-    if (auto* box = dynamicDowncast<RenderBox>(renderer()); box && parent())
-        return isHorizontal() ? box->height() : box->width();
+        return lineStyle.metricsOfPrimaryFont().intHeight();
 
     ASSERT(isInlineFlowBox());
     RenderBoxModelObject* flowObject = boxModelObject();
     const FontMetrics& fontMetrics = lineStyle.metricsOfPrimaryFont();
-    float result = fontMetrics.height();
+    float result = fontMetrics.intHeight();
     if (parent())
         result += flowObject->borderAndPaddingLogicalHeight();
     return result;
@@ -182,12 +176,6 @@ void LegacyInlineBox::dirtyLineBoxes()
 void LegacyInlineBox::adjustPosition(float dx, float dy)
 {
     m_topLeft.move(dx, dy);
-
-    if (renderer().isOutOfFlowPositioned())
-        return;
-
-    if (renderer().isReplacedOrInlineBlock())
-        downcast<RenderBox>(renderer()).move(LayoutUnit(dx), LayoutUnit(dy));
 }
 
 const LegacyRootInlineBox& LegacyInlineBox::root() const
@@ -250,26 +238,7 @@ LegacyInlineBox* LegacyInlineBox::previousLeafOnLine() const
 
 RenderObject::HighlightState LegacyInlineBox::selectionState() const
 {
-    ASSERT(!is<LegacyEllipsisBox>(*this));
     return renderer().selectionState();
-}
-
-bool LegacyInlineBox::canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidth) const
-{
-    // Non-replaced elements can always accommodate an ellipsis.
-    if (!renderer().isReplacedOrInlineBlock())
-        return true;
-
-    IntRect boxRect(left(), 0, m_logicalWidth, 10);
-    IntRect ellipsisRect(ltr ? blockEdge - ellipsisWidth : blockEdge, 0, ellipsisWidth, 10);
-    return !(boxRect.intersects(ellipsisRect));
-}
-
-float LegacyInlineBox::placeEllipsisBox(bool, float, float, float, float& truncatedWidth, bool&)
-{
-    // Use -1 to mean "we didn't set the position."
-    truncatedWidth += logicalWidth();
-    return -1;
 }
 
 void LegacyInlineBox::clearKnownToHaveNoOverflow()

@@ -27,6 +27,8 @@
 
 #include "ServiceWorkerTypes.h"
 
+#include <wtf/text/MakeString.h>
+
 namespace WebCore {
 
 struct ServiceWorkerJobDataIdentifier {
@@ -37,7 +39,7 @@ struct ServiceWorkerJobDataIdentifier {
 
     String loggingString() const
     {
-        return connectionIdentifier.loggingString() + "-" + jobIdentifier.loggingString();
+        return makeString(connectionIdentifier.loggingString(), '-', jobIdentifier.loggingString());
     }
 };
 

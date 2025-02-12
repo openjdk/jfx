@@ -49,6 +49,7 @@
 #include "VisibleUnits.h"
 #include <stdio.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -713,7 +714,7 @@ void VisiblePosition::showTreeForThis() const
 
 String VisiblePositionRange::debugDescription() const
 {
-    return makeString("start: ", start.debugDescription(), ", end: ", end.debugDescription());
+    return makeString("start: "_s, start.debugDescription(), ", end: "_s, end.debugDescription());
 }
 #endif // ENABLE(TREE_DEBUGGING)
 

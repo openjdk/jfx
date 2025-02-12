@@ -30,11 +30,11 @@
 
 #include "WebXRReferenceSpace.h"
 #include "WebXRRigidTransform.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(XRReferenceSpaceEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XRReferenceSpaceEvent);
 
 Ref<XRReferenceSpaceEvent> XRReferenceSpaceEvent::create(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
 {
@@ -42,7 +42,7 @@ Ref<XRReferenceSpaceEvent> XRReferenceSpaceEvent::create(const AtomString& type,
 }
 
 XRReferenceSpaceEvent::XRReferenceSpaceEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
+    : Event(EventInterfaceType::XRReferenceSpaceEvent, type, initializer, isTrusted)
     , m_referenceSpace(initializer.referenceSpace)
     , m_transform(initializer.transform)
 {

@@ -37,6 +37,7 @@
 #include <wtf/JSONValues.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PrintStream.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
 namespace WTF {
@@ -468,7 +469,6 @@ void MediaTime::setTimeScale(uint32_t timeScale, RoundingFlags flags)
         return;
 
     timeScale = std::min(MaximumTimeScale, timeScale);
-
     Int128 newValue = static_cast<Int128>(m_timeValue) * timeScale;
     int64_t remainder = static_cast<int64_t>(newValue % m_timeScale);
     newValue = newValue / m_timeScale;

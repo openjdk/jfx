@@ -39,7 +39,7 @@
 #include <variant>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
@@ -68,26 +68,26 @@ public:
 };
 
 // Do not make WeakPtrImplWithEventTargetData a derived class of DefaultWeakPtrImpl to catch the bug which uses incorrect impl class.
-class WeakPtrImplWithEventTargetData final : public WTF::WeakPtrImplBaseSingleThread<WeakPtrImplWithEventTargetData> {
+class WeakPtrImplWithEventTargetData final : public WTF::WeakPtrImplBase<WeakPtrImplWithEventTargetData> {
 public:
     EventTargetData& eventTargetData() { return m_eventTargetData; }
     const EventTargetData& eventTargetData() const { return m_eventTargetData; }
 
-    template<typename T> WeakPtrImplWithEventTargetData(T* ptr) : WTF::WeakPtrImplBaseSingleThread<WeakPtrImplWithEventTargetData>(ptr) { }
+    template<typename T> WeakPtrImplWithEventTargetData(T* ptr) : WTF::WeakPtrImplBase<WeakPtrImplWithEventTargetData>(ptr) { }
 
 private:
     EventTargetData m_eventTargetData;
 };
 
 class EventTarget : public ScriptWrappable, public CanMakeWeakPtrWithBitField<EventTarget, WeakPtrFactoryInitialization::Lazy, WeakPtrImplWithEventTargetData> {
-    WTF_MAKE_ISO_ALLOCATED(EventTarget);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EventTarget);
 public:
     static Ref<EventTarget> create(ScriptExecutionContext&);
 
     inline void ref(); // Defined in Node.h.
     inline void deref(); // Defined in Node.h.
 
-    virtual EventTargetInterface eventTargetInterface() const = 0;
+    virtual enum EventTargetInterfaceType eventTargetInterface() const = 0;
     virtual ScriptExecutionContext* scriptExecutionContext() const = 0;
 
     WEBCORE_EXPORT virtual bool isPaymentRequest() const;
@@ -202,9 +202,9 @@ protected:
         HasFormAssociatedCustomElementInterface = 1 << 11,
         HasShadowRootContainingSlots = 1 << 12,
         IsInTopLayer = 1 << 13,
+        // 1-bit free
         // SVGElement bits
-        HasPendingResources = 1 << 14,
-        // 1 Free bits
+        HasPendingResources = 1 << 15,
     };
 
     EventTargetData& ensureEventTargetData()
