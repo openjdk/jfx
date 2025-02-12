@@ -33,7 +33,7 @@
 namespace WebCore {
 
 class ApplePayShippingMethodSelectedEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(ApplePayShippingMethodSelectedEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ApplePayShippingMethodSelectedEvent);
 public:
     static Ref<ApplePayShippingMethodSelectedEvent> create(const AtomString& type, const ApplePayShippingMethod& shippingMethod)
     {
@@ -46,9 +46,6 @@ public:
 
 private:
     ApplePayShippingMethodSelectedEvent(const AtomString& type, const ApplePayShippingMethod&);
-
-    // Event.
-    EventInterface eventInterface() const override;
 
     const ApplePayShippingMethod m_shippingMethod;
 };

@@ -86,9 +86,7 @@ public:
     using AddResult = typename HashTableType::AddResult;
 
 public:
-    HashMap()
-    {
-    }
+    HashMap() = default;
 
     HashMap(std::initializer_list<KeyValuePairType> initializerList)
     {
@@ -157,22 +155,23 @@ public:
     template<typename V> AddResult fastAdd(const KeyType&, V&&);
     template<typename V> AddResult fastAdd(KeyType&&, V&&);
 
-    template<typename Functor> AddResult ensure(const KeyType&, Functor&&);
-    template<typename Functor> AddResult ensure(KeyType&&, Functor&&);
+    AddResult ensure(const KeyType&, const Invocable<MappedType()> auto&);
+    AddResult ensure(KeyType&&, const Invocable<MappedType()> auto&);
 
     bool remove(const KeyType&);
     bool remove(iterator);
-    template<typename Functor>
-    bool removeIf(Functor&&);
+    // FIXME: This feels like it should be Invocable<bool(const KeyValuePairType&)>
+    bool removeIf(const Invocable<bool(KeyValuePairType&)> auto&);
     void clear();
 
     MappedTakeType take(const KeyType&); // efficient combination of get with remove
     MappedTakeType take(iterator);
+    std::optional<MappedTakeType> takeOptional(const KeyType&);
     MappedTakeType takeFirst();
 
-    // An alternate version of find() that finds the object by hashing and comparing
-    // with some other type, to avoid the cost of type conversion. HashTranslator
-    // must have the following function members:
+    // Alternate versions of find() / contains() / get() / remove() that find the object
+    // by hashing and comparing with some other type, to avoid the cost of type conversion.
+    // HashTranslator must have the following function members:
     //   static unsigned hash(const T&);
     //   static bool equal(const ValueType&, const T&);
     template<typename HashTranslator, typename T> iterator find(const T&);
@@ -182,13 +181,14 @@ public:
     template<typename HashTranslator, typename T> MappedPeekType inlineGet(const T&) const;
     template<typename HashTranslator, typename T> bool remove(const T&);
 
-    // An alternate version of add() that finds the object by hashing and comparing
+    // Alternate versions of add() / ensure() that find the object by hashing and comparing
     // with some other type, to avoid the cost of type conversion if the object is already
     // in the table. HashTranslator must have the following function members:
     //   static unsigned hash(const T&);
     //   static bool equal(const ValueType&, const T&);
     //   static translate(ValueType&, const T&, unsigned hashCode);
     template<typename HashTranslator, typename K, typename V> AddResult add(K&&, V&&);
+    template<typename HashTranslator> AddResult ensure(auto&& key, const Invocable<MappedType()> auto&);
 
     // Overloads for smart pointer keys that take the raw pointer type as the parameter.
     template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value, iterator>::type find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*);
@@ -219,8 +219,7 @@ private:
     template<typename K, typename V>
     AddResult inlineAdd(K&&, V&&);
 
-    template<typename K, typename F>
-    AddResult inlineEnsure(K&&, F&&);
+    AddResult inlineEnsure(auto&& key, const Invocable<MappedType()> auto&);
 
     template<typename... Items>
     void addForInitialization(KeyValuePairType&& item, Items&&... items)
@@ -239,20 +238,20 @@ private:
 
 template<typename ValueTraits, typename HashFunctions>
 struct HashMapTranslator {
-    template<typename T> static unsigned hash(const T& key) { return HashFunctions::hash(key); }
-    template<typename T, typename U> static bool equal(const T& a, const U& b) { return HashFunctions::equal(a, b); }
-    template<typename T, typename U, typename V> static void translate(T& location, U&& key, V&& mapped)
+    static unsigned hash(const auto& key) { return HashFunctions::hash(key); }
+    static bool equal(const auto& a, const auto& b) { return HashFunctions::equal(a, b); }
+    template<typename U> static void translate(auto& location, U&& key, const Invocable<typename ValueTraits::ValueTraits::TraitType()> auto& functor)
     {
         ValueTraits::KeyTraits::assignToEmpty(location.key, std::forward<U>(key));
-        ValueTraits::ValueTraits::assignToEmpty(location.value, std::forward<V>(mapped));
+        ValueTraits::ValueTraits::assignToEmpty(location.value, functor());
     }
 };
 
 template<typename ValueTraits, typename HashFunctions>
 struct HashMapEnsureTranslator {
-    template<typename T> static unsigned hash(const T& key) { return HashFunctions::hash(key); }
-    template<typename T, typename U> static bool equal(const T& a, const U& b) { return HashFunctions::equal(a, b); }
-    template<typename T, typename U, typename Functor> static void translate(T& location, U&& key, Functor&& functor)
+    static unsigned hash(const auto& key) { return HashFunctions::hash(key); }
+    static bool equal(const auto& a, const auto& b) { return HashFunctions::equal(a, b); }
+    template<typename U> static void translate(auto& location, U&& key, const Invocable<typename ValueTraits::ValueTraits::TraitType()> auto& functor)
     {
         ValueTraits::KeyTraits::assignToEmpty(location.key, std::forward<U>(key));
         ValueTraits::ValueTraits::assignToEmpty(location.value, functor());
@@ -261,12 +260,23 @@ struct HashMapEnsureTranslator {
 
 template<typename ValueTraits, typename Translator>
 struct HashMapTranslatorAdapter {
-    template<typename T> static unsigned hash(const T& key) { return Translator::hash(key); }
-    template<typename T, typename U> static bool equal(const T& a, const U& b) { return Translator::equal(a, b); }
-    template<typename T, typename U, typename V> static void translate(T& location, U&& key, V&& mapped, unsigned hashCode)
+    static unsigned hash(const auto& key) { return Translator::hash(key); }
+    static bool equal(const auto& a, const auto& b) { return Translator::equal(a, b); }
+    static void translate(auto& location, auto&& key, const Invocable<typename ValueTraits::ValueTraits::TraitType()> auto& functor, unsigned hashCode)
     {
         Translator::translate(location.key, key, hashCode);
-        location.value = std::forward<V>(mapped);
+        location.value = functor();
+    }
+};
+
+template<typename ValueTraits, typename Translator>
+struct HashMapEnsureTranslatorAdapter {
+    static unsigned hash(const auto& key) { return Translator::hash(key); }
+    static bool equal(const auto& a, const auto& b) { return Translator::equal(a, b); }
+    static void translate(auto& location, auto&& key, const Invocable<typename ValueTraits::ValueTraits::TraitType()> auto& functor, unsigned hashCode)
+    {
+        Translator::translate(location.key, key, hashCode);
+        location.value = functor();
     }
 };
 
@@ -410,14 +420,14 @@ template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTrai
 template<typename K, typename V>
 ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>::inlineAdd(K&& key, V&& value) -> AddResult
 {
-    return m_impl.template add<HashMapTranslator<KeyValuePairTraits, HashFunctions>>(std::forward<K>(key), std::forward<V>(value));
+    return m_impl.template add<HashMapTranslator<KeyValuePairTraits, HashFunctions>>(std::forward<K>(key), [&] () ALWAYS_INLINE_LAMBDA -> MappedType { return std::forward<V>(value); });
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg>
-template<typename K, typename F>
-ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>::inlineEnsure(K&& key, F&& functor) -> AddResult
+template<typename K>
+ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>::inlineEnsure(K&& key, const Invocable<MappedType()> auto& functor) -> AddResult
 {
-    return m_impl.template add<HashMapEnsureTranslator<KeyValuePairTraits, HashFunctions>>(std::forward<K>(key), std::forward<F>(functor));
+    return m_impl.template add<HashMapEnsureTranslator<KeyValuePairTraits, HashFunctions>>(std::forward<K>(key), functor);
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg>
@@ -435,10 +445,17 @@ auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTra
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg>
+template<typename HashTranslator, typename K>
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>::ensure(K&& key, const Invocable<MappedType()> auto& functor) -> AddResult
+{
+    return m_impl.template addPassingHashCode<HashMapEnsureTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(std::forward<K>(key), functor);
+}
+
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg>
 template<typename HashTranslator, typename K, typename V>
 auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>::add(K&& key, V&& value) -> AddResult
 {
-    return m_impl.template addPassingHashCode<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(std::forward<K>(key), std::forward<V>(value));
+    return m_impl.template addPassingHashCode<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(std::forward<K>(key), [&] () ALWAYS_INLINE_LAMBDA -> MappedType { return std::forward<V>(value); });
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg>
@@ -470,17 +487,15 @@ ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTrait
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg>
-template<typename Functor>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>::ensure(const KeyType& key, Functor&& functor) -> AddResult
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>::ensure(const KeyType& key, const Invocable<MappedType()> auto& functor) -> AddResult
 {
-    return inlineEnsure(key, std::forward<Functor>(functor));
+    return inlineEnsure(key, functor);
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg>
-template<typename Functor>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>::ensure(KeyType&& key, Functor&& functor) -> AddResult
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>::ensure(KeyType&& key, const Invocable<MappedType()> auto& functor) -> AddResult
 {
-    return inlineEnsure(std::forward<KeyType>(key), std::forward<Functor>(functor));
+    return inlineEnsure(std::forward<KeyType>(key), functor);
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y>
@@ -518,10 +533,9 @@ inline bool HashMap<T, U, V, W, X, Y>::remove(iterator it)
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y>
-template<typename Functor>
-inline bool HashMap<T, U, V, W, X, Y>::removeIf(Functor&& functor)
+inline bool HashMap<T, U, V, W, X, Y>::removeIf(const Invocable<bool(KeyValuePairType&)> auto& functor)
 {
-    return m_impl.removeIf(std::forward<Functor>(functor));
+    return m_impl.removeIf(functor);
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y>
@@ -550,6 +564,15 @@ auto HashMap<T, U, V, W, MappedTraits, Y>::take(iterator it) -> MappedTakeType
     auto value = MappedTraits::take(WTFMove(it->value));
     remove(it);
     return value;
+}
+
+template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y>
+auto HashMap<T, U, V, W, MappedTraits, Y>::takeOptional(const KeyType& key) -> std::optional<MappedTakeType>
+{
+    auto it = find(key);
+    if (it == end())
+        return std::nullopt;
+    return take(it);
 }
 
 template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y>

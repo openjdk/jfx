@@ -39,6 +39,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/SetForScope.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -363,7 +364,7 @@ static inline String expandedNameLocalPart(Node& node)
 static inline String expandedName(Node& node)
 {
     auto& prefix = node.prefix();
-    return prefix.isEmpty() ? expandedNameLocalPart(node) : prefix + ":" + expandedNameLocalPart(node);
+    return prefix.isEmpty() ? expandedNameLocalPart(node) : makeString(prefix, ':', expandedNameLocalPart(node));
 }
 
 Value FunLocalName::evaluate() const

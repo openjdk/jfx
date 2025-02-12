@@ -33,33 +33,50 @@
 
 namespace WebCore {
 
-void GPUPresentationContext::configure(const GPUCanvasConfiguration& canvasConfiguration)
+bool GPUPresentationContext::configure(const GPUCanvasConfiguration& canvasConfiguration, GPUIntegerCoordinate width, GPUIntegerCoordinate height, bool reportValidationErrors)
 {
-    m_device = canvasConfiguration.device;
-    m_backing->configure(canvasConfiguration.convertToBacking());
+    m_device = canvasConfiguration.device.get();
+    m_currentTexture = nullptr;
+    m_textureDescriptor = GPUTextureDescriptor {
+        { "canvas backing"_s },
+        GPUExtent3DDict { width, height, 1 },
+        1,
+        1,
+        GPUTextureDimension::_2d,
+        canvasConfiguration.format,
+        canvasConfiguration.usage,
+        canvasConfiguration.viewFormats
+    };
+
+    if (!m_backing->configure(canvasConfiguration.convertToBacking(reportValidationErrors))) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    return true;
 }
 
 void GPUPresentationContext::unconfigure()
 {
+    m_currentTexture = nullptr;
     m_backing->unconfigure();
 }
 
 RefPtr<GPUTexture> GPUPresentationContext::getCurrentTexture()
 {
-    if (!m_currentTexture && m_device.get()) {
-        if (auto currentTexture = m_backing->getCurrentTexture()) {
-            GPUTextureDescriptor textureDescriptor;
-            textureDescriptor.format = GPUTextureFormat::Bgra8unorm;
-            m_currentTexture = GPUTexture::create(*currentTexture, textureDescriptor, *m_device.get()).ptr();
-        }
+    if ((!m_currentTexture || m_currentTexture->isDestroyed()) && m_device.get()) {
+        if (auto currentTexture = m_backing->getCurrentTexture())
+            m_currentTexture = GPUTexture::create(*currentTexture, m_textureDescriptor, *m_device.get()).ptr();
     }
 
     return m_currentTexture;
 }
 
-void GPUPresentationContext::present()
+void GPUPresentationContext::present(bool presentBacking)
 {
     m_currentTexture = nullptr;
+    if (presentBacking)
+        m_backing->present(presentBacking);
 }
 
 } // namespace WebCore

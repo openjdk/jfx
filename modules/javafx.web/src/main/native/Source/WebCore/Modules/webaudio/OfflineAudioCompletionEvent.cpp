@@ -33,11 +33,11 @@
 #include "OfflineAudioCompletionEventInit.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
 #include <JavaScriptCore/TypedArrayAdaptors.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OfflineAudioCompletionEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OfflineAudioCompletionEvent);
 
 Ref<OfflineAudioCompletionEvent> OfflineAudioCompletionEvent::create(Ref<AudioBuffer>&& renderedBuffer)
 {
@@ -51,23 +51,18 @@ Ref<OfflineAudioCompletionEvent> OfflineAudioCompletionEvent::create(const AtomS
 }
 
 OfflineAudioCompletionEvent::OfflineAudioCompletionEvent(Ref<AudioBuffer>&& renderedBuffer)
-    : Event(eventNames().completeEvent, CanBubble::Yes, IsCancelable::No)
+    : Event(EventInterfaceType::OfflineAudioCompletionEvent, eventNames().completeEvent, CanBubble::Yes, IsCancelable::No)
     , m_renderedBuffer(WTFMove(renderedBuffer))
 {
 }
 
 OfflineAudioCompletionEvent::OfflineAudioCompletionEvent(const AtomString& eventType, OfflineAudioCompletionEventInit&& init)
-    : Event(eventType, init, IsTrusted::No)
+    : Event(EventInterfaceType::OfflineAudioCompletionEvent, eventType, init, IsTrusted::No)
     , m_renderedBuffer(init.renderedBuffer.releaseNonNull())
 {
 }
 
 OfflineAudioCompletionEvent::~OfflineAudioCompletionEvent() = default;
-
-EventInterface OfflineAudioCompletionEvent::eventInterface() const
-{
-    return OfflineAudioCompletionEventInterfaceType;
-}
 
 } // namespace WebCore
 

@@ -75,6 +75,8 @@ private:
         MouseLocationState&&,
         ScrollbarHoverState&&,
         ScrollbarEnabledState&&,
+        UserInterfaceLayoutDirection,
+        ScrollbarWidth,
         RequestedKeyboardScrollData&&
     );
 

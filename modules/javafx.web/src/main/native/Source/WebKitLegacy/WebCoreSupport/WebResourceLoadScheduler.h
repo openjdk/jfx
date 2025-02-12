@@ -33,6 +33,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
@@ -44,7 +45,8 @@ class WebResourceLoadScheduler;
 WebResourceLoadScheduler& webResourceLoadScheduler();
 
 class WebResourceLoadScheduler final : public WebCore::LoaderStrategy {
-    WTF_MAKE_NONCOPYABLE(WebResourceLoadScheduler); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebResourceLoadScheduler);
+    WTF_MAKE_NONCOPYABLE(WebResourceLoadScheduler);
 public:
     WebResourceLoadScheduler();
 
@@ -85,8 +87,10 @@ private:
     bool isSuspendingPendingRequests() const { return !!m_suspendPendingRequestsCount; }
     void isResourceLoadFinished(WebCore::CachedResource&, CompletionHandler<void(bool)>&&) final;
 
-    class HostInformation : public CanMakeWeakPtr<HostInformation>, public CanMakeCheckedPtr {
-        WTF_MAKE_NONCOPYABLE(HostInformation); WTF_MAKE_FAST_ALLOCATED;
+    class HostInformation final : public CanMakeWeakPtr<HostInformation>, public CanMakeCheckedPtr<HostInformation> {
+        WTF_MAKE_NONCOPYABLE(HostInformation);
+        WTF_MAKE_TZONE_ALLOCATED(HostInformation);
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HostInformation);
     public:
         HostInformation(const String&, unsigned);
         ~HostInformation();

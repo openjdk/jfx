@@ -29,16 +29,19 @@
 #include "CommonVM.h"
 #include "CustomElementReactionQueue.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "HTMLSlotElement.h"
 #include "IdleCallbackController.h"
 #include "Microtasks.h"
 #include "MutationObserver.h"
+#include "OpportunisticTaskScheduler.h"
 #include "Page.h"
 #include "SecurityOrigin.h"
 #include "ThreadGlobalData.h"
 #include "ThreadTimers.h"
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RunLoop.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -58,15 +61,13 @@ static String agentClusterKeyOrNullIfUnique(const SecurityOrigin& origin)
         RegistrableDomain registrableDomain { origin.data() };
         if (registrableDomain.isEmpty())
             return origin.toString();
-        return makeString(origin.protocol(), "://", registrableDomain.string());
+        return makeString(origin.protocol(), "://"_s, registrableDomain.string());
     };
     auto key = computeKey();
     if (key.isEmpty() || key == "null"_s)
         return { };
     return key;
 }
-
-static constexpr auto IdleCallbackDurationExpectation = 4_ms;
 
 Ref<WindowEventLoop> WindowEventLoop::eventLoopForSecurityOrigin(const SecurityOrigin& origin)
 {
@@ -120,6 +121,13 @@ MicrotaskQueue& WindowEventLoop::microtaskQueue()
     return *m_microtaskQueue;
 }
 
+void WindowEventLoop::scheduleIdlePeriod(Page& page)
+{
+    if (m_pagesWithRenderingOpportunity.contains(page) && page.opportunisticTaskScheduler().isScheduled())
+        page.opportunisticTaskScheduler().willQueueIdleCallback();
+    scheduleToRunIfNeeded();
+}
+
 void WindowEventLoop::didScheduleRenderingUpdate(Page& page, MonotonicTime nextRenderingUpdate)
 {
     m_pagesWithRenderingOpportunity.set(page, nextRenderingUpdate);
@@ -133,8 +141,10 @@ void WindowEventLoop::didStartRenderingUpdate(Page& page)
 void WindowEventLoop::opportunisticallyRunIdleCallbacks()
 {
     auto now = MonotonicTime::now();
-    if (shouldEndIdlePeriod(now))
+    if (shouldEndIdlePeriod(now)) {
+        decayIdleCallbackDuration();
         return;
+    }
 
     m_lastIdlePeriodStartTime = now;
 
@@ -147,16 +157,23 @@ void WindowEventLoop::opportunisticallyRunIdleCallbacks()
             return;
         idleCallbackController->startIdlePeriod();
     });
+
+    auto duration = MonotonicTime::now() - m_lastIdlePeriodStartTime;
+    m_expectedIdleCallbackDuration = (m_expectedIdleCallbackDuration + duration) / 2;
 }
 
 bool WindowEventLoop::shouldEndIdlePeriod(MonotonicTime now)
 {
     if (hasTasksForFullyActiveDocument())
         return true;
-    if (!microtaskQueue().isEmpty())
+    if (microtaskQueue().hasMicrotasksForFullyActiveDocument())
         return true;
+    auto expectedFinishTime = now + m_expectedIdleCallbackDuration;
     auto renderingTime = nextRenderingTime();
-    if (renderingTime && *renderingTime < now + IdleCallbackDurationExpectation)
+    if (renderingTime && *renderingTime < expectedFinishTime)
+        return true;
+    auto timerTime = nextTimerFireTime();
+    if (timerTime && *timerTime < expectedFinishTime)
         return true;
     return false;
 }
@@ -192,9 +209,6 @@ void WindowEventLoop::didReachTimeToRun()
     auto deadline = ApproximateTime::now() + ThreadTimers::maxDurationOfFiringTimers;
     run(deadline);
 
-    if (hasTasksForFullyActiveDocument() || !microtaskQueue().isEmpty())
-        return;
-
     auto hasIdleCallbacks = findMatchingAssociatedContext([&](ScriptExecutionContext& context) {
         RefPtr document = dynamicDowncast<Document>(context);
         if (!document || document->activeDOMObjectsAreSuspended() || document->activeDOMObjectsAreStopped())
@@ -207,10 +221,8 @@ void WindowEventLoop::didReachTimeToRun()
     if (!hasIdleCallbacks)
         return;
 
-    auto now = MonotonicTime::now();
-
-    auto timerTime = nextTimerFireTime();
-    if (timerTime && *timerTime < now + IdleCallbackDurationExpectation) {
+    if (shouldEndIdlePeriod(MonotonicTime::now())) {
+        decayIdleCallbackDuration();
         scheduleToRunIfNeeded();
         return;
     }

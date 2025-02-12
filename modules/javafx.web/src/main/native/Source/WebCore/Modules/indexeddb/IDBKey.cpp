@@ -31,11 +31,11 @@
 #include <JavaScriptCore/JSArrayBuffer.h>
 #include <JavaScriptCore/JSArrayBufferView.h>
 #include <JavaScriptCore/JSCInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(IDBKey);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBKey);
 
 using IDBKeyVector = Vector<RefPtr<IDBKey>>;
 
@@ -47,15 +47,19 @@ Ref<IDBKey> IDBKey::createBinary(const ThreadSafeDataBuffer& buffer)
 Ref<IDBKey> IDBKey::createBinary(JSC::JSArrayBuffer& arrayBuffer)
 {
     RefPtr buffer = arrayBuffer.impl();
-    return adoptRef(*new IDBKey(ThreadSafeDataBuffer::copyData(buffer->data(), buffer->byteLength())));
+    if (buffer && buffer->isDetached())
+        return createInvalid();
+    return adoptRef(*new IDBKey(ThreadSafeDataBuffer::copyData(buffer->span())));
 }
 
 Ref<IDBKey> IDBKey::createBinary(JSC::JSArrayBufferView& arrayBufferView)
 {
+    if (arrayBufferView.isDetached())
+        return createInvalid();
     auto bufferView = arrayBufferView.possiblySharedImpl();
     if (!bufferView)
         return createInvalid();
-    return adoptRef(*new IDBKey(ThreadSafeDataBuffer::copyData(bufferView->data(), bufferView->byteLength())));
+    return adoptRef(*new IDBKey(ThreadSafeDataBuffer::copyData(bufferView->span())));
 }
 
 IDBKey::IDBKey(IndexedDB::KeyType type, double number)

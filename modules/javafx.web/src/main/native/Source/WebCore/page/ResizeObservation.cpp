@@ -32,7 +32,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
 #include "SVGElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -41,7 +41,7 @@ Ref<ResizeObservation> ResizeObservation::create(Element& target, ResizeObserver
     return adoptRef(*new ResizeObservation(target, observedBox));
 }
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ResizeObservation);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ResizeObservation);
 
 ResizeObservation::ResizeObservation(Element& element, ResizeObserverBoxOptions observedBox)
     : m_target { element }
@@ -117,6 +117,11 @@ FloatSize ResizeObservation::contentBoxSize() const
 FloatSize ResizeObservation::snappedContentBoxSize() const
 {
     return m_lastObservationSizes.contentBoxLogicalSize; // FIXME: Need to pixel snap.
+}
+
+RefPtr<Element> ResizeObservation::protectedTarget() const
+{
+    return m_target.get();
 }
 
 std::optional<ResizeObservation::BoxSizes> ResizeObservation::elementSizeChanged() const

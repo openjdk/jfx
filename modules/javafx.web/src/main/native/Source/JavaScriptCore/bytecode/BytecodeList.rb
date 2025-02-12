@@ -26,7 +26,7 @@ types [
 
     :BasicBlockLocation,
     :BoundLabel,
-    :BaselineCallLinkInfo,
+    :DataOnlyCallLinkInfo,
     :DebugHookType,
     :ECMAMode,
     :ErrorTypeWithExtension,
@@ -95,7 +95,7 @@ op :tail_call_varargs,
         firstVarArg: int,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     },
     tmps: {
         argCountIncludingThis: unsigned
@@ -116,7 +116,7 @@ op :call_varargs,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     },
     tmps: {
         argCountIncludingThis: unsigned,
@@ -140,7 +140,7 @@ op :iterator_next,
         valueValueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         doneModeMetadata: GetByIdModeMetadata,
         valueModeMetadata: GetByIdModeMetadata,
         iterableProfile: ArrayProfile,
@@ -166,7 +166,7 @@ op :construct_varargs,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     },
     tmps: {
         argCountIncludingThis: unsigned
@@ -192,7 +192,7 @@ op :iterator_open,
         nextValueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         modeMetadata: GetByIdModeMetadata,
         arrayProfile: ArrayProfile,
         iterationMetadata: IterationModeMetadata,
@@ -247,7 +247,7 @@ op :construct,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     }
 
 op :tail_call,
@@ -258,7 +258,7 @@ op :tail_call,
         argv: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         arrayProfile: ArrayProfile,
     }
 
@@ -270,11 +270,11 @@ op :call_direct_eval,
         argv: unsigned,
         thisValue: VirtualRegister,
         scope: VirtualRegister,
-        ecmaMode: ECMAMode,
+        lexicallyScopedFeatures: unsigned,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     }
 
 op :tail_call_forward_arguments,
@@ -287,7 +287,7 @@ op :tail_call_forward_arguments,
         firstVarArg: int,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
     }
 
 op_group :CreateInternalFieldObjectOp,
@@ -352,6 +352,17 @@ op :get_by_id,
         modeMetadata: GetByIdModeMetadata,
     }
 
+op :get_length,
+    args: {
+        dst: VirtualRegister,
+        base: VirtualRegister,
+        valueProfile: unsigned,
+    },
+    metadata: {
+        modeMetadata: GetByIdModeMetadata,
+        arrayProfile: ArrayProfile,
+    }
+
 op :profile_type,
     args: {
         targetVirtualRegister: VirtualRegister,
@@ -394,7 +405,7 @@ op :call,
         valueProfile: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         arrayProfile: ArrayProfile,
     }
 
@@ -405,7 +416,7 @@ op :call_ignore_result,
         argv: unsigned,
     },
     metadata: {
-        callLinkInfo: BaselineCallLinkInfo,
+        callLinkInfo: DataOnlyCallLinkInfo,
         arrayProfile: ArrayProfile,
     }
 
@@ -1012,6 +1023,12 @@ op :to_property_key,
         src: VirtualRegister,
     }
 
+op :to_property_key_or_number,
+    args: {
+        dst: VirtualRegister,
+        src: VirtualRegister,
+    }
+
 op :put_to_arguments,
     args: {
         arguments: VirtualRegister,
@@ -1400,6 +1417,8 @@ op :llint_default_call_trampoline
 op :llint_virtual_call_trampoline
 op :llint_virtual_construct_trampoline
 op :llint_virtual_tail_call_trampoline
+op :llint_polymorphic_normal_call_trampoline
+op :llint_polymorphic_closure_call_trampoline
 op :checkpoint_osr_exit_from_inlined_call_trampoline
 op :checkpoint_osr_exit_trampoline
 op :normal_osr_exit_trampoline
@@ -1413,14 +1432,28 @@ op :op_construct_return_location
 op :op_call_varargs_return_location
 op :op_construct_varargs_return_location
 op :op_get_by_id_return_location
+op :op_get_by_id_direct_return_location
+op :op_get_length_return_location
 op :op_get_by_val_return_location
 op :op_put_by_id_return_location
 op :op_put_by_val_return_location
+op :op_put_by_val_direct_return_location
+op :op_in_by_id_return_location
+op :op_in_by_val_return_location
+op :op_enumerator_get_by_val_return_location
+op :op_enumerator_put_by_val_return_location
+op :op_enumerator_in_by_val_return_location
 op :op_iterator_open_return_location
 op :op_iterator_next_return_location
 op :op_call_direct_eval_slow_return_location
+op :wasm_function_prologue_trampoline
 op :wasm_function_prologue
+op :wasm_function_prologue_simd_trampoline
 op :wasm_function_prologue_simd
+op :js_to_wasm_wrapper_entry_crash_for_simd_parameters
+op :js_to_wasm_wrapper_entry
+op :wasm_to_wasm_wrapper_entry
+op :wasm_to_js_wrapper_entry
 
 op :js_trampoline_op_call
 op :js_trampoline_op_call_ignore_result

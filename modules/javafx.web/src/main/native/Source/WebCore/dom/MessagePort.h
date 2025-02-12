@@ -50,13 +50,14 @@ struct StructuredSerializeOptions;
 
 class MessagePort final : public ActiveDOMObject, public EventTarget, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MessagePort> {
     WTF_MAKE_NONCOPYABLE(MessagePort);
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(MessagePort, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(MessagePort, WEBCORE_EXPORT);
 public:
     static Ref<MessagePort> create(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
     WEBCORE_EXPORT virtual ~MessagePort();
 
-    using ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref;
-    using ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref;
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
@@ -65,8 +66,8 @@ public:
     void entangle();
 
     // Returns nullptr if the passed-in vector is empty.
-    static ExceptionOr<Vector<TransferredMessagePort>> disentanglePorts(Vector<RefPtr<MessagePort>>&&);
-    static Vector<RefPtr<MessagePort>> entanglePorts(ScriptExecutionContext&, Vector<TransferredMessagePort>&&);
+    static ExceptionOr<Vector<TransferredMessagePort>> disentanglePorts(Vector<Ref<MessagePort>>&&);
+    static Vector<Ref<MessagePort>> entanglePorts(ScriptExecutionContext&, Vector<TransferredMessagePort>&&);
 
     WEBCORE_EXPORT static bool isMessagePortAliveForTesting(const MessagePortIdentifier&);
     WEBCORE_EXPORT static void notifyMessageAvailable(const MessagePortIdentifier&);
@@ -86,7 +87,7 @@ public:
     const MessagePortIdentifier& remoteIdentifier() const { return m_remoteIdentifier; }
 
     // EventTarget.
-    EventTargetInterface eventTargetInterface() const final { return MessagePortEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MessagePort; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
@@ -102,8 +103,7 @@ private:
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
     bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) final;
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
+    // ActiveDOMObject.
     void contextDestroyed() final;
     void stop() final { close(); }
     bool virtualHasPendingActivity() const final;

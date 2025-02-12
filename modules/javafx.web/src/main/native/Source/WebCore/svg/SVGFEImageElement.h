@@ -29,7 +29,8 @@
 namespace WebCore {
 
 class SVGFEImageElement final : public SVGFilterPrimitiveStandardAttributes, public SVGURIReference, public CachedImageClient {
-    WTF_MAKE_ISO_ALLOCATED(SVGFEImageElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEImageElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEImageElement);
 public:
     static Ref<SVGFEImageElement> create(const QualifiedName&, Document&);
 
@@ -48,7 +49,7 @@ private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
     void didFinishInsertingNode() override;

@@ -41,14 +41,16 @@ class RenderVideo;
 class PictureInPictureObserver;
 class VideoFrameRequestCallback;
 
-enum class PixelFormat : uint8_t;
+enum class ImageBufferPixelFormat : uint8_t;
 enum class RenderingMode : bool;
 
 class HTMLVideoElement final : public HTMLMediaElement, public Supplementable<HTMLVideoElement> {
-    WTF_MAKE_ISO_ALLOCATED(HTMLVideoElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLVideoElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLVideoElement);
 public:
     WEBCORE_EXPORT static Ref<HTMLVideoElement> create(Document&);
     static Ref<HTMLVideoElement> create(const QualifiedName&, Document&, bool createdByParser);
+    ~HTMLVideoElement();
 
     WEBCORE_EXPORT unsigned videoWidth() const;
     WEBCORE_EXPORT unsigned videoHeight() const;
@@ -74,7 +76,7 @@ public:
     void requestFullscreen(FullscreenOptions&&, RefPtr<DeferredPromise>&&) override;
 #endif
 
-    RefPtr<ImageBuffer> createBufferForPainting(const FloatSize&, RenderingMode, const DestinationColorSpace&, PixelFormat) const;
+    RefPtr<ImageBuffer> createBufferForPainting(const FloatSize&, RenderingMode, const DestinationColorSpace&, ImageBufferPixelFormat) const;
 
     // Used by canvas to gain raw pixel access
     void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&);
@@ -93,6 +95,7 @@ public:
     static VideoPresentationMode toPresentationMode(HTMLMediaElementEnums::VideoFullscreenMode);
     WEBCORE_EXPORT bool webkitSupportsPresentationMode(VideoPresentationMode) const;
     VideoPresentationMode webkitPresentationMode() const;
+    VideoPresentationMode webkitPresentationModeForBindings() const;
     void webkitSetPresentationMode(VideoPresentationMode);
 
     WEBCORE_EXPORT void setPresentationMode(VideoPresentationMode);
@@ -112,12 +115,24 @@ public:
 #endif
 
     RenderVideo* renderer() const;
+    void acceleratedRenderingStateChanged();
+    bool supportsAcceleratedRendering() const;
 
     bool shouldServiceRequestVideoFrameCallbacks() const { return !m_videoFrameRequests.isEmpty(); }
     void serviceRequestVideoFrameCallbacks(ReducedResolutionSeconds);
 
     unsigned requestVideoFrameCallback(Ref<VideoFrameRequestCallback>&&);
     void cancelVideoFrameCallback(unsigned);
+
+    WEBCORE_EXPORT void setVideoFullscreenStandby(bool);
+
+#if USE(GSTREAMER)
+    void enableGStreamerHolePunching() { m_enableGStreamerHolePunching = true; }
+    bool isGStreamerHolePunchingEnabled() const final { return m_enableGStreamerHolePunching; }
+#endif
+
+    // ActiveDOMObject
+    void stop() final;
 
 private:
     HTMLVideoElement(const QualifiedName&, Document&, bool createdByParser);
@@ -142,7 +157,14 @@ private:
 
     PlatformMediaSession::MediaType presentationType() const final { return PlatformMediaSession::MediaType::Video; }
 
+    bool mediaPlayerRenderingCanBeAccelerated() final { return m_renderingCanBeAccelerated; }
+    void mediaPlayerRenderingModeChanged() final;
     void mediaPlayerEngineUpdated() final;
+
+    void computeAcceleratedRenderingStateAndUpdateMediaPlayer() final;
+#if PLATFORM(IOS_FAMILY)
+    bool canShowWhileLocked() const final;
+#endif
 
     std::unique_ptr<HTMLImageLoader> m_imageLoader;
 
@@ -150,13 +172,15 @@ private:
 
     FloatSize m_lastReportedNaturalSize { };
 
+    bool m_renderingCanBeAccelerated { false };
+
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     bool m_enteringPictureInPicture { false };
     bool m_exitingPictureInPicture { false };
 #endif
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
-    PictureInPictureObserver* m_pictureInPictureObserver { nullptr };
+    WeakPtr<PictureInPictureObserver> m_pictureInPictureObserver;
 #endif
 
     struct VideoFrameRequest {
@@ -174,6 +198,10 @@ private:
     Vector<UniqueRef<VideoFrameRequest>> m_videoFrameRequests;
     Vector<UniqueRef<VideoFrameRequest>> m_servicedVideoFrameRequests;
     unsigned m_nextVideoFrameRequestIndex { 0 };
+
+#if USE(GSTREAMER)
+    bool m_enableGStreamerHolePunching { false };
+#endif
 };
 
 } // namespace WebCore

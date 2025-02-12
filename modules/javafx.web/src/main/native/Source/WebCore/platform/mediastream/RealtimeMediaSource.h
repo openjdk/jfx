@@ -63,6 +63,15 @@
 #include <wtf/glib/GRefPtr.h>
 #endif
 
+namespace WebCore {
+class RealtimeMediaSourceObserver;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RealtimeMediaSourceObserver> : std::true_type { };
+}
+
 namespace WTF {
 class MediaTime;
 }
@@ -84,15 +93,10 @@ struct CaptureSourceError;
 struct CaptureSourceOrError;
 struct VideoFrameAdaptor;
 
-class WEBCORE_EXPORT RealtimeMediaSource
-#if !RELEASE_LOG_DISABLED
-    : public LoggerHelper
-#endif
-{
+class RealtimeMediaSourceObserver : public CanMakeWeakPtr<RealtimeMediaSourceObserver> {
 public:
-    class Observer : public CanMakeWeakPtr<Observer> {
-    public:
-        virtual ~Observer();
+    WEBCORE_EXPORT RealtimeMediaSourceObserver();
+    WEBCORE_EXPORT virtual ~RealtimeMediaSourceObserver();
 
         // Source state changes.
         virtual void sourceStarted() { }
@@ -106,10 +110,23 @@ public:
         virtual bool preventSourceFromEnding() { return false; }
 
         virtual void hasStartedProducingData() { }
-    };
-    class AudioSampleObserver : public CanMakeCheckedPtr {
+};
+
+class WEBCORE_EXPORT RealtimeMediaSource
+#if !RELEASE_LOG_DISABLED
+    : public LoggerHelper
+#endif
+{
+public:
+    class AudioSampleObserver {
     public:
         virtual ~AudioSampleObserver() = default;
+
+        // CheckedPtr interface
+        virtual uint32_t ptrCount() const = 0;
+        virtual uint32_t ptrCountWithoutThreadCheck() const = 0;
+        virtual void incrementPtrCount() const = 0;
+        virtual void decrementPtrCount() const = 0;
 
         // May be called on a background thread.
         virtual void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t /*numberOfFrames*/) = 0;
@@ -147,7 +164,7 @@ public:
     void start();
     void stop();
     void endImmediatly() { end(nullptr); }
-    virtual void requestToEnd(Observer& callingObserver);
+    virtual void requestToEnd(RealtimeMediaSourceObserver& callingObserver);
     bool isEnded() const { return m_isEnded; }
 
     bool muted() const { return m_muted; }
@@ -161,8 +178,8 @@ public:
 
     double fitnessScore() const { return m_fitnessScore; }
 
-    WEBCORE_EXPORT void addObserver(Observer&);
-    WEBCORE_EXPORT void removeObserver(Observer&);
+    WEBCORE_EXPORT void addObserver(RealtimeMediaSourceObserver&);
+    WEBCORE_EXPORT void removeObserver(RealtimeMediaSourceObserver&);
 
     WEBCORE_EXPORT void addAudioSampleObserver(AudioSampleObserver&);
     WEBCORE_EXPORT void removeAudioSampleObserver(AudioSampleObserver&);
@@ -230,12 +247,16 @@ public:
     virtual void applyConstraints(const MediaConstraints&, ApplyConstraintsHandler&&);
     std::optional<ApplyConstraintsError> applyConstraints(const MediaConstraints&);
 
-    struct VideoFrameSizeConstraints {
+    struct VideoPresetConstraints {
         std::optional<int> width;
         std::optional<int> height;
         std::optional<double> frameRate;
+        std::optional<double> zoom;
+        bool shouldPreferPowerEfficiency { false };
+
+        bool hasConstraints() const { return !!width || !!height || !!frameRate || !!zoom; }
     };
-    WEBCORE_EXPORT VideoFrameSizeConstraints extractVideoFrameSizeConstraints(const MediaConstraints&);
+    WEBCORE_EXPORT VideoPresetConstraints extractVideoPresetConstraints(const MediaConstraints&);
 
     std::optional<MediaConstraintType> hasAnyInvalidConstraint(const MediaConstraints&);
     bool supportsConstraint(MediaConstraintType);
@@ -259,7 +280,7 @@ public:
     const Logger* loggerPtr() const { return m_logger.get(); }
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    const char* logClassName() const override { return "RealtimeMediaSource"; }
+    ASCIILiteral logClassName() const override { return "RealtimeMediaSource"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
 
@@ -280,6 +301,11 @@ public:
     using OwnerCallback = std::function<void(RealtimeMediaSource&, bool isNewClonedSource)>;
     void registerOwnerCallback(OwnerCallback&&);
 
+    virtual bool isPowerEfficient() const { return false; }
+
+#if USE(GSTREAMER)
+    virtual std::pair<GstClockTime, GstClockTime> queryCaptureLatency() const;
+#endif
 protected:
     RealtimeMediaSource(const CaptureDevice&, MediaDeviceHashSalts&& hashSalts = { }, PageIdentifier = { });
 
@@ -298,11 +324,11 @@ protected:
 
     void applyConstraint(MediaConstraintType, const MediaConstraint&);
     void applyConstraints(const MediaTrackConstraintSetMap&);
-    VideoFrameSizeConstraints extractVideoFrameSizeConstraints(const MediaTrackConstraintSetMap&);
+    VideoPresetConstraints extractVideoPresetConstraints(const MediaTrackConstraintSetMap&);
     std::optional<MediaConstraintType> hasInvalidSizeFrameRateAndZoomConstraints(std::optional<IntConstraint> width, std::optional<IntConstraint> height, std::optional<DoubleConstraint>, std::optional<DoubleConstraint>, double& fitnessDistance);
 
-    virtual bool supportsSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>);
-    virtual void setSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>);
+    virtual bool supportsSizeFrameRateAndZoom(const VideoPresetConstraints&);
+    virtual void setSizeFrameRateAndZoom(const VideoPresetConstraints&);
 
     void notifyMutedObservers();
     void notifyMutedChange(bool muted);
@@ -315,10 +341,10 @@ protected:
     void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata);
     void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t);
 
-    void forEachObserver(const Function<void(Observer&)>&);
+    void forEachObserver(const Function<void(RealtimeMediaSourceObserver&)>&);
     void forEachVideoFrameObserver(const Function<void(VideoFrameObserver&)>&);
 
-    void end(Observer* = nullptr);
+    void end(RealtimeMediaSourceObserver* = nullptr);
 
     void setType(Type);
 
@@ -356,7 +382,7 @@ private:
     String m_ephemeralHashedID;
     Type m_type;
     String m_name;
-    WeakHashSet<Observer> m_observers;
+    WeakHashSet<RealtimeMediaSourceObserver> m_observers;
 
     mutable Lock m_audioSampleObserversLock;
     HashSet<CheckedPtr<AudioSampleObserver>> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);

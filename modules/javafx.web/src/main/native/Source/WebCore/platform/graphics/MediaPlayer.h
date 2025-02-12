@@ -32,6 +32,7 @@
 #include "FourCC.h"
 #include "GraphicsTypesGL.h"
 #include "LayoutRect.h"
+#include "MediaPlayerClientIdentifier.h"
 #include "MediaPlayerEnums.h"
 #include "MediaPlayerIdentifier.h"
 #include "MediaPromiseTypes.h"
@@ -41,6 +42,7 @@
 #include "SecurityOriginData.h"
 #include "Timer.h"
 #include "VideoPlaybackQualityMetrics.h"
+#include "VideoTarget.h"
 #include <JavaScriptCore/Forward.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
@@ -55,6 +57,17 @@
 
 OBJC_CLASS AVPlayer;
 OBJC_CLASS NSArray;
+
+namespace WebCore {
+class MediaPlayerClient;
+class MediaPlayerFactory;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaPlayerClient> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaPlayerFactory> : std::true_type { };
+}
 
 #if USE(AVFOUNDATION)
 typedef struct __CVBuffer* CVPixelBufferRef;
@@ -195,6 +208,8 @@ public:
     // A characteristic of the media file, eg. video, audio, closed captions, etc, has changed.
     virtual void mediaPlayerCharacteristicChanged() { }
 
+    virtual void mediaPlayerVideoPlaybackConfigurationChanged() { }
+
     // whether the rendering system can accelerate the display of this MediaPlayer.
     virtual bool mediaPlayerRenderingCanBeAccelerated() { return false; }
 
@@ -210,6 +225,9 @@ public:
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     virtual RefPtr<ArrayBuffer> mediaPlayerCachedKeyForKeyId(const String&) const = 0;
     virtual void mediaPlayerKeyNeeded(const SharedBuffer&) { }
+#endif
+
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA)
     virtual String mediaPlayerMediaKeysStorageDirectory() const { return emptyString(); }
 #endif
 
@@ -235,7 +253,7 @@ public:
     virtual bool mediaPlayerPlatformVolumeConfigurationRequired() const { return false; }
     virtual bool mediaPlayerIsLooping() const { return false; }
     virtual CachedResourceLoader* mediaPlayerCachedResourceLoader() { return nullptr; }
-    virtual RefPtr<PlatformMediaResourceLoader> mediaPlayerCreateResourceLoader() = 0;
+    virtual Ref<PlatformMediaResourceLoader> mediaPlayerCreateResourceLoader() = 0;
     virtual bool doesHaveAttribute(const AtomString&, AtomString* = nullptr) const { return false; }
     virtual bool mediaPlayerShouldUsePersistentCache() const { return true; }
     virtual const String& mediaPlayerMediaCacheDirectory() const { return emptyString(); }
@@ -264,7 +282,7 @@ public:
 
     virtual String mediaPlayerElementId() const { return emptyString(); }
 
-    virtual void mediaPlayerEngineFailedToLoad() const { }
+    virtual void mediaPlayerEngineFailedToLoad() { }
 
     virtual double mediaPlayerRequestedPlaybackRate() const { return 0; }
     virtual MediaPlayerEnums::VideoFullscreenMode mediaPlayerFullscreenMode() const { return MediaPlayerEnums::VideoFullscreenModeNone; }
@@ -302,9 +320,19 @@ public:
     virtual FloatSize mediaPlayerVideoLayerSize() const { return { }; }
     virtual void mediaPlayerVideoLayerSizeDidChange(const FloatSize&) { }
 
+    virtual bool isGStreamerHolePunchingEnabled() const { return false; }
+
+    virtual PlatformVideoTarget mediaPlayerVideoTarget() const { return nullptr; }
+
+    virtual MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const { return { WTF::HashTableDeletedValue }; }
+
 #if !RELEASE_LOG_DISABLED
     virtual const void* mediaPlayerLogIdentifier() { return nullptr; }
     virtual const Logger& mediaPlayerLogger() = 0;
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    virtual bool canShowWhileLocked() const { return false; }
 #endif
 };
 
@@ -420,19 +448,20 @@ public:
     void queueTaskOnEventLoop(Function<void()>&&);
 
     bool paused() const;
+    void willSeekToTarget(const MediaTime&);
     void seekToTime(const MediaTime&);
     void seekWhenPossible(const MediaTime&);
     void seekToTarget(const SeekTarget&);
     bool seeking() const;
     void seeked(const MediaTime&);
 
-    static double invalidTime() { return -1.0;}
+    static double invalidTime() { return -1.0; }
     MediaTime duration() const;
     MediaTime currentTime() const;
 
     using CurrentTimeDidChangeCallback = std::function<void(const MediaTime&)>;
     bool setCurrentTimeDidChangeCallback(CurrentTimeDidChangeCallback&&);
-    bool currentTimeMayProgress() const;
+    bool timeIsProgressing() const;
 
     MediaTime startTime() const;
     MediaTime initialTime() const;
@@ -511,6 +540,11 @@ public:
     using MediaPlayerEnums::MovieLoadType;
     MovieLoadType movieLoadType() const;
 
+    using MediaPlayerEnums::VideoPlaybackConfiguration;
+    using MediaPlayerEnums::VideoPlaybackConfigurationOption;
+    void videoPlaybackConfigurationChanged();
+    VideoPlaybackConfiguration videoPlaybackConfiguration() const;
+
     using MediaPlayerEnums::Preload;
     Preload preload() const;
     void setPreload(Preload);
@@ -574,6 +608,7 @@ public:
     unsigned videoDecodedByteCount() const;
 
     void setPrivateBrowsingMode(bool);
+    bool inPrivateBrowsingMode() const { return m_inPrivateBrowsingMode; }
 
 #if ENABLE(WEB_AUDIO)
     AudioSourceProvider* audioSourceProvider();
@@ -600,7 +635,7 @@ public:
     String elementId() const;
 
     CachedResourceLoader* cachedResourceLoader();
-    RefPtr<PlatformMediaResourceLoader> createResourceLoader();
+    Ref<PlatformMediaResourceLoader> createResourceLoader();
 
     void addAudioTrack(AudioTrackPrivate&);
     void addTextTrack(InbandTextTrackPrivate&);
@@ -613,7 +648,6 @@ public:
     void onNewVideoFrameMetadata(VideoFrameMetadata&&, RetainPtr<CVPixelBufferRef>&&);
 #endif
 
-    bool requiresTextTrackRepresentation() const;
     void setTextTrackRepresentation(TextTrackRepresentation*);
     void syncTextTrackBounds();
     void tracksChanged();
@@ -627,9 +661,11 @@ public:
 #endif
 
     static void resetMediaEngines();
+    void reset();
 
 #if USE(GSTREAMER)
     void simulateAudioInterruption();
+    bool isGStreamerHolePunchingEnabled();
 #endif
 
     void beginSimulatedHDCPError();
@@ -653,9 +689,9 @@ public:
     void setShouldDisableSleep(bool);
     bool shouldDisableSleep() const;
 
-    String contentMIMEType() const { return m_contentType.containerType(); }
-    String contentTypeCodecs() const { return m_contentType.parameter(ContentType::codecsParameter()); }
-    bool contentMIMETypeWasInferredFromExtension() const { return m_contentMIMETypeWasInferredFromExtension; }
+    String contentMIMEType() const;
+    String contentTypeCodecs() const;
+    bool contentMIMETypeWasInferredFromExtension() const;
 
     const Vector<ContentType>& mediaContentTypesRequiringHardwareSupport() const;
     void setShouldCheckHardwareSupport(bool);
@@ -678,7 +714,7 @@ public:
     AVPlayer *objCAVFoundationAVPlayer() const;
 #endif
 
-    bool performTaskAtMediaTime(Function<void()>&&, const MediaTime&);
+    bool performTaskAtTime(Function<void()>&&, const MediaTime&);
 
     bool shouldIgnoreIntrinsicSize();
 
@@ -731,6 +767,30 @@ public:
 
     void setResourceOwner(const ProcessIdentity&);
 
+    void setVideoTarget(const PlatformVideoTarget&);
+
+#if HAVE(SPATIAL_TRACKING_LABEL)
+    const String& defaultSpatialTrackingLabel() const;
+    void setDefaultSpatialTrackingLabel(const String&);
+
+    const String& spatialTrackingLabel() const;
+    void setSpatialTrackingLabel(const String&);
+#endif
+
+    void setInFullscreenOrPictureInPicture(bool);
+    bool isInFullscreenOrPictureInPicture() const;
+
+    PlatformVideoTarget videoTarget() const { return client().mediaPlayerVideoTarget(); }
+    MediaPlayerClientIdentifier clientIdentifier() const { return client().mediaPlayerClientIdentifier(); }
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    bool supportsLinearMediaPlayer() const;
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    bool canShowWhileLocked() const;
+#endif
+
 private:
     MediaPlayer(MediaPlayerClient&);
     MediaPlayer(MediaPlayerClient&, MediaPlayerEnums::MediaEngineIdentifier);
@@ -760,9 +820,9 @@ private:
     bool m_visibleInViewport { false };
     bool m_muted { false };
     bool m_preservesPitch { true };
-    bool m_privateBrowsing { false };
+    bool m_inPrivateBrowsingMode { false };
+    bool m_shouldPrepareToPlay { false };
     bool m_shouldPrepareToRender { false };
-    bool m_contentMIMETypeWasInferredFromExtension { false };
     bool m_initializingMediaEngine { false };
     DynamicRangeMode m_preferredDynamicRangeMode;
     PitchCorrectionAlgorithm m_pitchCorrectionAlgorithm { PitchCorrectionAlgorithm::BestAllAround };
@@ -778,6 +838,14 @@ private:
 #endif
     bool m_isGatheringVideoFrameMetadata { false };
     bool m_requiresRemotePlayback { false };
+
+#if HAVE(SPATIAL_TRACKING_LABEL)
+    String m_defaultSpatialTrackingLabel;
+    String m_spatialTrackingLabel;
+#endif
+
+    bool m_isInFullscreenOrPictureInPicture { false };
+
     String m_lastErrorMessage;
     ProcessIdentity m_processIdentity;
 };

@@ -312,7 +312,7 @@ private:
 class LocalCSEPhase : public Phase {
 public:
     LocalCSEPhase(Graph& graph)
-        : Phase(graph, "local common subexpression elimination")
+        : Phase(graph, "local common subexpression elimination"_s)
         , m_smallBlock(graph)
         , m_largeBlock(graph)
         , m_hugeBlock(graph)
@@ -524,6 +524,7 @@ private:
 
         bool run(BasicBlock* block)
         {
+            dataLogLnIf(DFGCSEPhaseInternal::verbose, "Starting block: ", block->index);
             m_maps.clear();
             m_changed = false;
             m_block = block;
@@ -577,6 +578,7 @@ private:
                         case Array::Uint8ClampedArray:
                         case Array::Uint16Array:
                         case Array::Uint32Array:
+                        case Array::Float16Array:
                         case Array::Float32Array:
                         case Array::Float64Array:
                             if (!mode.isInBounds())
@@ -606,11 +608,13 @@ private:
 
         void write(AbstractHeap heap)
         {
+            dataLogLnIf(DFGCSEPhaseInternal::verbose, "\tWrite to heap ", heap);
             m_maps.write(heap);
         }
 
         void def(PureValue value)
         {
+            dataLogLnIf(DFGCSEPhaseInternal::verbose, "\tDef of value ", value, " at node ", m_node->index());
             Node* match = m_maps.addPure(value, m_node);
             if (!match)
                 return;
@@ -621,6 +625,7 @@ private:
 
         void def(const HeapLocation& location, const LazyNode& value)
         {
+            dataLogLnIf(DFGCSEPhaseInternal::verbose, "\tDef to ", location, " of value ", value, " at node ", m_node->index());
             LazyNode match = m_maps.addImpure(location, value);
             if (!match)
                 return;
@@ -672,7 +677,7 @@ private:
 class GlobalCSEPhase : public Phase {
 public:
     GlobalCSEPhase(Graph& graph)
-        : Phase(graph, "global common subexpression elimination")
+        : Phase(graph, "global common subexpression elimination"_s)
         , m_impureDataMap(graph)
         , m_insertionSet(graph)
     {

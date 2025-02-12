@@ -28,6 +28,7 @@
 
 #include "TextCodecICU.h"
 #include <mutex>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace PAL {
 
@@ -1078,7 +1079,7 @@ const std::array<std::pair<uint16_t, UChar>, 7724>& jis0208()
                 icuInput[1] = 0xA1 + j;
 
                 UChar* output = &icuOutput;
-                const char* input = reinterpret_cast<const char*>(icuInput);
+                const char* input = byteCast<char>(&icuInput[0]);
                 ucnv_toUnicode(icuConverter.get(), &output, output + 1, &input, input + sizeof(icuInput), nullptr, true, &error);
                 ASSERT(!error);
                 if (icuOutput != 0xFFFD) {
@@ -1884,7 +1885,7 @@ const std::array<std::pair<uint16_t, UChar>, 6067>& jis0212()
                 icuInput[2] = 0xA1 + j;
 
                 UChar* output = &icuOutput;
-                const char* input = reinterpret_cast<const char*>(icuInput);
+                const char* input = byteCast<char>(&icuInput[0]);
                 ucnv_toUnicode(icuConverter.get(), &output, output + 1, &input, input + sizeof(icuInput), nullptr, true, &error);
                 ASSERT(!error);
                 if (icuOutput != 0xFFFD) {
@@ -4908,7 +4909,7 @@ const std::array<std::pair<uint16_t, char32_t>, 18590>& big5()
                 icuInput[0] = lead;
                 icuInput[1] = trail + offset;
                 UChar* output = &icuOutput;
-                const char* input = reinterpret_cast<const char*>(icuInput);
+                const char* input = byteCast<char>(&icuInput[0]);
                 ucnv_toUnicode(icuConverter.get(), &output, output + 1, &input, input + sizeof(icuInput), nullptr, true, &error);
                 ASSERT(!error);
                 (*array)[arrayIndex++] = { pointer, icuOutput };
@@ -7076,7 +7077,7 @@ const std::array<std::pair<uint16_t, UChar>, 17048>& eucKR()
         ASSERT(U_SUCCESS(error));
         auto getPair = [icuConverter = WTFMove(icuConverter)] (uint16_t pointer) -> std::optional<std::pair<uint16_t, UChar>> {
             std::array<uint8_t, 2> icuInput { static_cast<uint8_t>(pointer / 190u + 0x81), static_cast<uint8_t>(pointer % 190u + 0x41) };
-            const char* input = reinterpret_cast<const char*>(icuInput.data());
+            const char* input = byteCast<char>(icuInput.data());
             UChar icuOutput[2];
             UChar* output = icuOutput;
             UErrorCode error = U_ZERO_ERROR;
@@ -8619,18 +8620,18 @@ const std::array<UChar, 23940>& gb18030()
             icuInput[1] += (icuInput[1] < 0x3F) ? 0x40 : 0x41;
             UChar icuOutput { 0 };
             UChar* output = &icuOutput;
-            const char* input = reinterpret_cast<const char*>(icuInput);
+            const char* input = byteCast<char>(&icuInput[0]);
             ucnv_toUnicode(icuConverter.get(), &output, output + 1, &input, input + sizeof(icuInput), nullptr, true, &error);
             ASSERT(!error);
             ASSERT(icuOutput != 0xFFFD);
             (*array)[pointer] = icuOutput;
         }
 
-#if U_ICU_VERSION_MAJOR_NUM < 74
+        if (WTF::ICU::majorVersion() < 74) {
         // This is a difference between ICU and the encoding specification.
         ASSERT((*array)[6555] == 0xe5e5);
         (*array)[6555] = 0x3000;
-#endif
+        }
 
 #if !HAVE(GB_18030_2022)
         static std::array<std::pair<size_t, UChar>, 18> gb18030_2022Differences { {

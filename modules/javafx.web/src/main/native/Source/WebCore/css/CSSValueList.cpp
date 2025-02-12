@@ -218,10 +218,7 @@ CSSValueListBuilder CSSValueContainingVector::copyValues() const
 
 void CSSValueContainingVector::serializeItems(StringBuilder& builder) const
 {
-    auto prefix = ""_s;
-    auto separator = separatorCSSText();
-    for (auto& value : *this)
-        builder.append(std::exchange(prefix, separator), value.cssText());
+    builder.append(interleave(*this, [](auto& value) { return value.cssText(); }, separatorCSSText()));
 }
 
 String CSSValueContainingVector::serializeItems() const
@@ -288,6 +285,15 @@ void CSSValueContainingVector::customClearReplacementURLForSubresources()
 {
     for (auto& value : *this)
         const_cast<CSSValue&>(value).clearReplacementURLForSubresources();
+}
+
+IterationStatus CSSValueContainingVector::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+{
+    for (auto& value : *this) {
+        if (func(const_cast<CSSValue&>(value)) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    return IterationStatus::Continue;
 }
 
 } // namespace WebCore

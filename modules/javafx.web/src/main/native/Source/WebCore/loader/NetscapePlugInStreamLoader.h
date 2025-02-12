@@ -34,6 +34,15 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class NetscapePlugInStreamLoaderClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::NetscapePlugInStreamLoaderClient> : std::true_type { };
+}
+
+namespace WebCore {
 
 class NetscapePlugInStreamLoader;
 class SharedBuffer;
@@ -72,7 +81,7 @@ private:
     NetscapePlugInStreamLoader(LocalFrame&, NetscapePlugInStreamLoaderClient&);
 
     void willCancel(const ResourceError&) override;
-    void didCancel(const ResourceError&) override;
+    void didCancel(LoadWillContinueInAnotherProcess) override;
 
     void notifyDone();
 

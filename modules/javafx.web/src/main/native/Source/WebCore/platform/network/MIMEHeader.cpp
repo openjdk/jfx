@@ -37,8 +37,8 @@
 #include "SharedBufferChunkReader.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -104,8 +104,8 @@ RefPtr<MIMEHeader> MIMEHeader::parseHeader(SharedBufferChunkReader& buffer)
                 LOG_ERROR("No boundary found in multipart MIME header.");
                 return nullptr;
             }
-            mimeHeader->m_endOfPartBoundary = "--" + mimeHeader->m_endOfPartBoundary;
-            mimeHeader->m_endOfDocumentBoundary = mimeHeader->m_endOfPartBoundary + "--";
+            mimeHeader->m_endOfPartBoundary = makeString("--"_s, mimeHeader->m_endOfPartBoundary);
+            mimeHeader->m_endOfDocumentBoundary = makeString(mimeHeader->m_endOfPartBoundary, "--"_s);
         }
     }
 

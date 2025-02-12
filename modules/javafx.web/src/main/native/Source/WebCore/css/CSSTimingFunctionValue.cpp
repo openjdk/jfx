@@ -26,8 +26,8 @@
 #include "config.h"
 #include "CSSTimingFunctionValue.h"
 
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -37,10 +37,10 @@ String CSSLinearTimingFunctionValue::customCSSText() const
         return "linear"_s;
 
     StringBuilder builder;
-    builder.append("linear(");
+    builder.append("linear("_s);
     for (size_t i = 0; i < m_points.size(); ++i) {
         if (i)
-            builder.append(", ");
+            builder.append(", "_s);
 
         const auto& point = m_points[i];
         builder.append(FormattedNumber::fixedPrecision(point.value), ' ', FormattedNumber::fixedPrecision(point.progress * 100.0), '%');
@@ -56,7 +56,7 @@ bool CSSLinearTimingFunctionValue::equals(const CSSLinearTimingFunctionValue& ot
 
 String CSSCubicBezierTimingFunctionValue::customCSSText() const
 {
-    return makeString("cubic-bezier(", m_x1, ", ", m_y1, ", ", m_x2, ", ", m_y2, ')');
+    return makeString("cubic-bezier("_s, m_x1, ", "_s, m_y1, ", "_s, m_x2, ", "_s, m_y2, ')');
 }
 
 bool CSSCubicBezierTimingFunctionValue::equals(const CSSCubicBezierTimingFunctionValue& other) const
@@ -66,27 +66,27 @@ bool CSSCubicBezierTimingFunctionValue::equals(const CSSCubicBezierTimingFunctio
 
 String CSSStepsTimingFunctionValue::customCSSText() const
 {
-    const char* position = "";
+    ASCIILiteral position = ""_s;
     if (m_stepPosition) {
         switch (m_stepPosition.value()) {
         case StepsTimingFunction::StepPosition::JumpStart:
-            position = ", jump-start";
+            position = ", jump-start"_s;
             break;
         case StepsTimingFunction::StepPosition::JumpNone:
-            position = ", jump-none";
+            position = ", jump-none"_s;
             break;
         case StepsTimingFunction::StepPosition::JumpBoth:
-            position = ", jump-both";
+            position = ", jump-both"_s;
             break;
         case StepsTimingFunction::StepPosition::Start:
-            position = ", start";
+            position = ", start"_s;
             break;
         case StepsTimingFunction::StepPosition::JumpEnd:
         case StepsTimingFunction::StepPosition::End:
             break;
         }
     }
-    return makeString("steps(", m_steps, position, ')');
+    return makeString("steps("_s, m_steps, position, ')');
 }
 
 bool CSSStepsTimingFunctionValue::equals(const CSSStepsTimingFunctionValue& other) const
@@ -96,7 +96,7 @@ bool CSSStepsTimingFunctionValue::equals(const CSSStepsTimingFunctionValue& othe
 
 String CSSSpringTimingFunctionValue::customCSSText() const
 {
-    return makeString("spring(", FormattedNumber::fixedPrecision(m_mass), ' ', FormattedNumber::fixedPrecision(m_stiffness), ' ', FormattedNumber::fixedPrecision(m_damping), ' ', FormattedNumber::fixedPrecision(m_initialVelocity), ')');
+    return makeString("spring("_s, FormattedNumber::fixedPrecision(m_mass), ' ', FormattedNumber::fixedPrecision(m_stiffness), ' ', FormattedNumber::fixedPrecision(m_damping), ' ', FormattedNumber::fixedPrecision(m_initialVelocity), ')');
 }
 
 bool CSSSpringTimingFunctionValue::equals(const CSSSpringTimingFunctionValue& other) const

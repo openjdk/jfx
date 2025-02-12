@@ -46,9 +46,9 @@ class MediaRecorder final
     : public ActiveDOMObject
     , public RefCounted<MediaRecorder>
     , public EventTarget
-    , private MediaStreamPrivate::Observer
-    , private MediaStreamTrackPrivate::Observer {
-    WTF_MAKE_ISO_ALLOCATED(MediaRecorder);
+    , private MediaStreamPrivateObserver
+    , private MediaStreamTrackPrivateObserver {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaRecorder);
 public:
     enum class RecordingState { Inactive, Recording, Paused };
 
@@ -59,15 +59,16 @@ public:
     using Options = MediaRecorderPrivateOptions;
     static ExceptionOr<Ref<MediaRecorder>> create(Document&, Ref<MediaStream>&&, Options&& = { });
 
-    using CreatorFunction = ExceptionOr<Ref<MediaRecorderPrivate>> (*)(MediaStreamPrivate&, const Options&);
+    using CreatorFunction = ExceptionOr<std::unique_ptr<MediaRecorderPrivate>> (*)(MediaStreamPrivate&, const Options&);
 
     WEBCORE_EXPORT static void setCustomPrivateRecorderCreator(CreatorFunction);
 
     RecordingState state() const { return m_state; }
     const String& mimeType() const { return m_options.mimeType; }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     ExceptionOr<void> startRecording(std::optional<unsigned>);
     void stopRecording();
@@ -87,20 +88,19 @@ public:
 private:
     MediaRecorder(Document&, Ref<MediaStream>&&, Options&&);
 
-    static ExceptionOr<Ref<MediaRecorderPrivate>> createMediaRecorderPrivate(Document&, MediaStreamPrivate&, const Options&);
+    static ExceptionOr<std::unique_ptr<MediaRecorderPrivate>> createMediaRecorderPrivate(Document&, MediaStreamPrivate&, const Options&);
 
     Document* document() const;
 
     // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    EventTargetInterface eventTargetInterface() const final { return MediaRecorderEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaRecorder; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
-    // ActiveDOMObject API.
+    // ActiveDOMObject.
     void suspend(ReasonForSuspension) final;
     void stop() final;
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     void stopRecordingInternal(CompletionHandler<void()>&& = [] { });
@@ -116,7 +116,7 @@ private:
 
     void handleTrackChange();
 
-    // MediaStreamTrackPrivate::Observer
+    // MediaStreamTrackPrivateObserver
     void trackEnded(MediaStreamTrackPrivate&) final;
     void trackMutedChanged(MediaStreamTrackPrivate&) final;
     void trackEnabledChanged(MediaStreamTrackPrivate&) final;
@@ -130,7 +130,7 @@ private:
 
     Options m_options;
     Ref<MediaStream> m_stream;
-    RefPtr<MediaRecorderPrivate> m_private;
+    std::unique_ptr<MediaRecorderPrivate> m_private;
     RecordingState m_state { RecordingState::Inactive };
     Vector<Ref<MediaStreamTrackPrivate>> m_tracks;
     std::optional<unsigned> m_timeSlice;

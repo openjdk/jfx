@@ -44,6 +44,7 @@
 #include <wtf/DateMath.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -101,7 +102,7 @@ Decimal MonthInputType::defaultValueForStepUp() const
 StepRange MonthInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
     ASSERT(element());
-    const Decimal stepBase = parseToNumber(element()->attributeWithoutSynchronization(minAttr), Decimal::fromDouble(monthDefaultStepBase));
+    const Decimal stepBase = findStepBase(Decimal::fromDouble(monthDefaultStepBase));
     const Decimal minimum = parseToNumber(element()->attributeWithoutSynchronization(minAttr), Decimal::fromDouble(DateComponents::minimumMonth()));
     const Decimal maximum = parseToNumber(element()->attributeWithoutSynchronization(maxAttr), Decimal::fromDouble(DateComponents::maximumMonth()));
     const Decimal step = StepRange::parseStep(anyStepHandling, monthStepDescription, element()->attributeWithoutSynchronization(stepAttr));

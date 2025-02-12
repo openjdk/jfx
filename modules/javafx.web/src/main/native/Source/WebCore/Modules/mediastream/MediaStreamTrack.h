@@ -55,13 +55,13 @@ class MediaStreamTrack
     : public RefCounted<MediaStreamTrack>
     , public ActiveDOMObject
     , public EventTarget
-    , private MediaStreamTrackPrivate::Observer
-    , private PlatformMediaSession::AudioCaptureSource
+    , private MediaStreamTrackPrivateObserver
+    , private AudioCaptureSource
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_ISO_ALLOCATED(MediaStreamTrack);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaStreamTrack);
 public:
     class Observer {
     public:
@@ -122,6 +122,8 @@ public:
         String whiteBalanceMode;
         std::optional<double> zoom;
         std::optional<bool> torch;
+        std::optional<bool> backgroundBlur;
+        std::optional<bool> powerEfficient;
     };
     TrackSettings getSettings() const;
 
@@ -156,8 +158,9 @@ public:
     void addObserver(Observer&);
     void removeObserver(Observer&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void setIdForTesting(String&& id) { m_private->setIdForTesting(WTFMove(id)); }
 
@@ -180,6 +183,8 @@ public:
     bool isDetached() const { return m_isDetached; }
     UniqueRef<MediaStreamTrackDataHolder> detach();
 
+    void setMediaStreamId(const String& id) { m_mediaStreamId = id; }
+    const String& mediaStreamId() const { return m_mediaStreamId; }
 protected:
     MediaStreamTrack(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
 
@@ -192,18 +197,17 @@ private:
 
     void configureTrackRendering();
 
-    // ActiveDOMObject API.
+    // ActiveDOMObject.
     void stop() final { stopTrack(); }
-    const char* activeDOMObjectName() const override;
     void suspend(ReasonForSuspension) final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    EventTargetInterface eventTargetInterface() const final { return MediaStreamTrackEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaStreamTrack; }
 
-    // MediaStreamTrackPrivate::Observer
+    // MediaStreamTrackPrivateObserver
     void trackStarted(MediaStreamTrackPrivate&) final;
     void trackEnded(MediaStreamTrackPrivate&) final;
     void trackMutedChanged(MediaStreamTrackPrivate&) final;
@@ -211,12 +215,12 @@ private:
     void trackEnabledChanged(MediaStreamTrackPrivate&) final;
     void trackConfigurationChanged(MediaStreamTrackPrivate&) final;
 
-    // PlatformMediaSession::AudioCaptureSource
+    // AudioCaptureSource
     bool isCapturingAudio() const final;
     bool wantsToCaptureAudio() const final;
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "MediaStreamTrack"; }
+    ASCIILiteral logClassName() const final { return "MediaStreamTrack"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
 
@@ -224,6 +228,7 @@ private:
 
     MediaTrackConstraints m_constraints;
 
+    String m_mediaStreamId;
     String m_groupId;
     State m_readyState { State::Live };
     bool m_muted { false };

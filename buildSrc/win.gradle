@@ -163,6 +163,7 @@ if (hasProperty('toolchainDir')) {
     }
     msvcBinDir = "$msvcInstallDir/bin/Host${CPU_BITS}/$TARGET_ARCH"
 }
+ext.WIN.MSVC_BIN_DIR = msvcBinDir
 def compiler = IS_COMPILE_PARFAIT ? "cl.exe" : cygpath("$msvcBinDir/cl.exe")
 def linker = IS_STATIC_BUILD ? (IS_COMPILE_PARFAIT ? "lib.exe" : cygpath("$msvcBinDir/lib.exe")) : (IS_COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe"))
 def winSdkBinDir = "$WINDOWS_SDK_DIR/Bin"

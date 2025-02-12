@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "ActiveDOMCallback.h"
 #include "CSSPaintSize.h"
 #include "CallbackResult.h"
@@ -50,7 +48,9 @@ public:
     virtual ~CSSPaintCallback()
     {
     }
+
+private:
+    virtual bool hasCallback() const = 0;
 };
 
 } // namespace WebCore
-#endif

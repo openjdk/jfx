@@ -108,6 +108,7 @@ bool doesGC(Graph& graph, Node* node)
     case ArithCeil:
     case ArithTrunc:
     case ArithFRound:
+    case ArithF16Round:
     case ArithUnary:
     case CheckStructure:
     case CheckStructureOrEmpty:
@@ -123,6 +124,7 @@ bool doesGC(Graph& graph, Node* node)
     case SkipScope:
     case GetGlobalObject:
     case GetGlobalThis:
+    case UnwrapGlobalProxy:
     case GetClosureVar:
     case PutClosureVar:
     case GetInternalField:
@@ -143,6 +145,7 @@ bool doesGC(Graph& graph, Node* node)
     case ProfileControlFlow:
     case OverridesHasInstance:
     case IsEmpty:
+    case IsEmptyStorage:
     case TypeOfIsUndefined:
     case TypeOfIsObject:
     case TypeOfIsFunction:
@@ -167,10 +170,16 @@ bool doesGC(Graph& graph, Node* node)
     case SuperSamplerEnd:
     case CPUIntrinsic:
     case NormalizeMapKey: // HeapBigInt => BigInt32 conversion does not involve GC.
-    case GetMapBucketHead:
-    case GetMapBucketNext:
-    case LoadKeyFromMapBucket:
-    case LoadValueFromMapBucket:
+    case MapGet:
+    case LoadMapValue:
+    case MapIteratorNext:
+    case MapIteratorKey:
+    case MapIteratorValue:
+    case MapStorage:
+    case MapIterationNext:
+    case MapIterationEntry:
+    case MapIterationEntryKey:
+    case MapIterationEntryValue:
     case ExtractValueFromWeakMapGet:
     case Unreachable:
     case ExtractOSREntryLocal:
@@ -197,6 +206,7 @@ bool doesGC(Graph& graph, Node* node)
     case GetGetter:
     case GetSetter:
     case GetArrayLength:
+    case GetUndetachedTypeArrayLength:
     case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case StringCharCodeAt:
@@ -309,14 +319,16 @@ bool doesGC(Graph& graph, Node* node)
     case GetByValWithThis:
     case GetByValWithThisMegamorphic:
     case GetDynamicVar:
-    case GetMapBucket:
     case HasIndexedProperty:
     case HasOwnProperty:
     case InById:
+    case InByIdMegamorphic:
     case InByVal:
+    case InByValMegamorphic:
     case HasPrivateName:
     case HasPrivateBrand:
     case InstanceOf:
+    case InstanceOfMegamorphic:
     case InstanceOfCustom:
     case VarargsLength:
     case LoadVarargs:
@@ -366,6 +378,7 @@ bool doesGC(Graph& graph, Node* node)
     case ToObject:
     case ToPrimitive:
     case ToPropertyKey:
+    case ToPropertyKeyOrNumber:
     case ToThis:
     case TryGetById:
     case CreateThis:
@@ -477,6 +490,7 @@ bool doesGC(Graph& graph, Node* node)
         switch (node->child1().useKind()) {
         case StringObjectUse:
         case StringOrStringObjectUse:
+        case StringOrOtherUse:
             return false;
         default:
             break;
@@ -508,27 +522,30 @@ bool doesGC(Graph& graph, Node* node)
             if (node->isBinaryUseKind(BooleanUse)
                 || node->isBinaryUseKind(SymbolUse)
                 || node->isBinaryUseKind(ObjectUse)
-                || node->isBinaryUseKind(ObjectUse, ObjectOrOtherUse) || node->isBinaryUseKind(ObjectOrOtherUse, ObjectUse))
+                || node->isSymmetricBinaryUseKind(ObjectUse, ObjectOrOtherUse))
                 return false;
         }
         return true;
 
     case CompareStrictEq:
         if (node->isBinaryUseKind(BooleanUse)
+            || node->isSymmetricBinaryUseKind(BooleanUse, UntypedUse)
             || node->isBinaryUseKind(Int32Use)
 #if USE(JSVALUE64)
             || node->isBinaryUseKind(Int52RepUse)
 #endif
             || node->isBinaryUseKind(DoubleRepUse)
             || node->isBinaryUseKind(SymbolUse)
-            || node->isBinaryUseKind(SymbolUse, UntypedUse)
-            || node->isBinaryUseKind(UntypedUse, SymbolUse)
+            || node->isSymmetricBinaryUseKind(SymbolUse, UntypedUse)
             || node->isBinaryUseKind(StringIdentUse)
-            || node->isBinaryUseKind(ObjectUse, UntypedUse) || node->isBinaryUseKind(UntypedUse, ObjectUse)
+            || node->isSymmetricBinaryUseKind(ObjectUse, UntypedUse)
             || node->isBinaryUseKind(ObjectUse)
-            || node->isBinaryUseKind(MiscUse, UntypedUse) || node->isBinaryUseKind(UntypedUse, MiscUse)
-            || node->isBinaryUseKind(StringIdentUse, NotStringVarUse) || node->isBinaryUseKind(NotStringVarUse, StringIdentUse)
-            || node->isBinaryUseKind(NotDoubleUse, NeitherDoubleNorHeapBigIntNorStringUse) || node->isBinaryUseKind(NeitherDoubleNorHeapBigIntNorStringUse, NotDoubleUse))
+            || node->isBinaryUseKind(OtherUse)
+            || node->isSymmetricBinaryUseKind(OtherUse, UntypedUse)
+            || node->isBinaryUseKind(MiscUse)
+            || node->isSymmetricBinaryUseKind(MiscUse, UntypedUse)
+            || node->isSymmetricBinaryUseKind(StringIdentUse, NotStringVarUse)
+            || node->isSymmetricBinaryUseKind(NotDoubleUse, NeitherDoubleNorHeapBigIntNorStringUse))
             return false;
         return true;
 

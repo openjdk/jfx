@@ -95,18 +95,18 @@ std::unique_ptr<Compilation> compile(B3::Procedure& proc)
     LinkBuffer linkBuffer(jit, nullptr);
 
     return makeUnique<Compilation>(
-        FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "testair compilation"), proc.releaseByproducts());
+        FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, nullptr, "testair compilation"), proc.releaseByproducts());
 }
 
 template<typename T, typename... Arguments>
 T invoke(const Compilation& code, Arguments... arguments)
 {
     void* executableAddress;
-    T (*function)(Arguments...);
+    T (SYSV_ABI *function)(Arguments...);
     T result;
 
     executableAddress = untagCFunctionPtr<JITCompilationPtrTag>(code.code().taggedPtr());
-    function = bitwise_cast<T(*)(Arguments...)>(executableAddress);
+    function = bitwise_cast<T(SYSV_ABI *)(Arguments...)>(executableAddress);
     result = function(arguments...);
 
     return result;
@@ -1665,7 +1665,7 @@ void testShuffleShiftDouble()
     CHECK(things[3] == 3);
 }
 
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
 void testX86VMULSD()
 {
     B3::Procedure proc;
@@ -1676,7 +1676,7 @@ void testX86VMULSD()
     root->append(MoveDouble, nullptr, Tmp(FPRInfo::argumentFPR2), Tmp(FPRInfo::returnValueFPR));
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
-    CHECK(compileAndRun<double>(proc, 2.4, 4.2, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, 4.2, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDDestRex()
@@ -1689,7 +1689,7 @@ void testX86VMULSDDestRex()
     root->append(MoveDouble, nullptr, Tmp(X86Registers::xmm15), Tmp(FPRInfo::returnValueFPR));
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
-    CHECK(compileAndRun<double>(proc, 2.4, 4.2, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, 4.2, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDOp1DestRex()
@@ -1703,7 +1703,7 @@ void testX86VMULSDOp1DestRex()
     root->append(MoveDouble, nullptr, Tmp(X86Registers::xmm15), Tmp(FPRInfo::returnValueFPR));
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
-    CHECK(compileAndRun<double>(proc, 2.4, 4.2, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, 4.2, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDOp2DestRex()
@@ -1717,7 +1717,7 @@ void testX86VMULSDOp2DestRex()
     root->append(MoveDouble, nullptr, Tmp(X86Registers::xmm15), Tmp(FPRInfo::returnValueFPR));
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
-    CHECK(compileAndRun<double>(proc, 2.4, 4.2, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, 4.2, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDOpsDestRex()
@@ -1732,7 +1732,7 @@ void testX86VMULSDOpsDestRex()
     root->append(MoveDouble, nullptr, Tmp(X86Registers::xmm15), Tmp(FPRInfo::returnValueFPR));
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
-    CHECK(compileAndRun<double>(proc, 2.4, 4.2, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, 4.2, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDAddr()
@@ -1746,7 +1746,7 @@ void testX86VMULSDAddr()
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
     double secondArg = 4.2;
-    CHECK(compileAndRun<double>(proc, 2.4, &secondArg + 2, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, &secondArg + 2, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDAddrOpRexAddr()
@@ -1761,7 +1761,7 @@ void testX86VMULSDAddrOpRexAddr()
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
     double secondArg = 4.2;
-    CHECK(compileAndRun<double>(proc, 2.4, &secondArg + 2, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, &secondArg + 2, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDDestRexAddr()
@@ -1775,7 +1775,7 @@ void testX86VMULSDDestRexAddr()
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
     double secondArg = 4.2;
-    CHECK(compileAndRun<double>(proc, 2.4, &secondArg - 2, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, &secondArg - 2, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDRegOpDestRexAddr()
@@ -1790,7 +1790,7 @@ void testX86VMULSDRegOpDestRexAddr()
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
     double secondArg = 4.2;
-    CHECK(compileAndRun<double>(proc, 2.4, &secondArg, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, &secondArg, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDAddrOpDestRexAddr()
@@ -1805,7 +1805,7 @@ void testX86VMULSDAddrOpDestRexAddr()
     root->append(RetDouble, nullptr, Tmp(FPRInfo::returnValueFPR));
 
     double secondArg = 4.2;
-    CHECK(compileAndRun<double>(proc, 2.4, &secondArg - 1, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, &secondArg - 1, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDBaseNeedsRex()
@@ -1821,7 +1821,7 @@ void testX86VMULSDBaseNeedsRex()
 
     double secondArg = 4.2;
     uint64_t index = 8;
-    CHECK(compileAndRun<double>(proc, 2.4, &secondArg - 1, index, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, &secondArg - 1, index, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDIndexNeedsRex()
@@ -1837,7 +1837,7 @@ void testX86VMULSDIndexNeedsRex()
 
     double secondArg = 4.2;
     uint64_t index = - 8;
-    CHECK(compileAndRun<double>(proc, 2.4, &secondArg + 1, index, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, &secondArg + 1, index, PNaN) == 2.4 * 4.2);
 }
 
 void testX86VMULSDBaseIndexNeedRex()
@@ -1854,9 +1854,9 @@ void testX86VMULSDBaseIndexNeedRex()
 
     double secondArg = 4.2;
     uint64_t index = 16;
-    CHECK(compileAndRun<double>(proc, 2.4, &secondArg - 2, index, pureNaN()) == 2.4 * 4.2);
+    CHECK(compileAndRun<double>(proc, 2.4, &secondArg - 2, index, PNaN) == 2.4 * 4.2);
 }
-#endif // #if CPU(X86) || CPU(X86_64)
+#endif // #if CPU(X86_64)
 
 #if CPU(ARM64)
 void testInvalidateCachedTempRegisters()
@@ -2682,7 +2682,7 @@ void run(const char* filter)
     RUN(testShuffleSwapDouble());
     RUN(testShuffleShiftDouble());
 
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     RUN(testX86VMULSD());
     RUN(testX86VMULSDDestRex());
     RUN(testX86VMULSDOp1DestRex());
@@ -2743,7 +2743,7 @@ void run(const char* filter)
     for (unsigned i = filter ? 1 : WTF::numberOfProcessorCores(); i--;) {
         threads.append(
             Thread::create(
-                "testair thread",
+                "testair thread"_s,
                 [&] () {
                     for (;;) {
                         RefPtr<SharedTask<void()>> task;

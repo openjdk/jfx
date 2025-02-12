@@ -43,8 +43,8 @@ namespace JSC { namespace IPInt {
 do { \
     void* base = reinterpret_cast<void*>(ipint_unreachable_validate); \
     void* ptr = reinterpret_cast<void*>(ipint_ ## name ## _validate); \
-    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr(); \
-    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr(); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
     RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == opcode * 256, #name); \
 } while (false);
 
@@ -52,8 +52,8 @@ do { \
 do { \
     void* base = reinterpret_cast<void*>(ipint_i32_trunc_sat_f32_s_validate); \
     void* ptr = reinterpret_cast<void*>(ipint_ ## name ## _validate); \
-    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr(); \
-    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr(); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
     RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == opcode * 256, #name); \
 } while (false);
 
@@ -61,8 +61,8 @@ do { \
 do { \
     void* base = reinterpret_cast<void*>(ipint_simd_v128_load_mem_validate); \
     void* ptr = reinterpret_cast<void*>(ipint_ ## name ## _validate); \
-    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr(); \
-    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr(); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
     RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == opcode * 256, #name); \
 } while (false);
 
@@ -70,18 +70,82 @@ do { \
 do { \
     void* base = reinterpret_cast<void*>(ipint_memory_atomic_notify_validate); \
     void* ptr = reinterpret_cast<void*>(ipint_ ## name ## _validate); \
-    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr(); \
-    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr(); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
     RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == opcode * 256, #name); \
 } while (false);
 
+#define VALIDATE_IPINT_ARGUMINT_OPCODE(opcode, name) \
+do { \
+    void* base = reinterpret_cast<void*>(ipint_argumINT_a0_validate); \
+    void* ptr = reinterpret_cast<void*>(ipint_ ## name ## _validate); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
+    RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == opcode * 64, #name); \
+} while (false);
+
+#define VALIDATE_IPINT_SLOW_PATH(opcode, name) \
+do { \
+    void* base = reinterpret_cast<void*>(ipint_local_get_slow_path_validate); \
+    void* ptr = reinterpret_cast<void*>(ipint_ ## name ## _validate); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
+    RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == opcode * 256, #name); \
+} while (false);
+
+#define VALIDATE_IPINT_MINT_CALL_OPCODE(opcode, name) \
+do { \
+    void* base = reinterpret_cast<void*>(ipint_mint_a0_validate); \
+    void* ptr = reinterpret_cast<void*>(ipint_ ## name ## _validate); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
+    RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == opcode * 64, #name); \
+} while (false);
+
+#define VALIDATE_IPINT_MINT_RETURN_OPCODE(opcode, name) \
+do { \
+    void* base = reinterpret_cast<void*>(ipint_mint_r0_validate); \
+    void* ptr = reinterpret_cast<void*>(ipint_ ## name ## _validate); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
+    RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == opcode * 64, #name); \
+} while (false);
+
+#define VALIDATE_IPINT_UINT_OPCODE(opcode, name) \
+do { \
+    void* base = reinterpret_cast<void*>(ipint_uint_r0_validate); \
+    void* ptr = reinterpret_cast<void*>(ipint_ ## name ## _validate); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
+    RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == opcode * 64, #name); \
+} while (false);
+
+#if CPU(ADDRESS64)
+#define VALIDATE_JS_TO_WASM_WRAPPER_ENTRY(opcode, name) \
+do { \
+    void* base = reinterpret_cast<void*>(js_to_wasm_wrapper_entry_interp_LoadI32_validate); \
+    void* ptr = reinterpret_cast<void*>(js_to_wasm_wrapper_entry_interp_ ## name ## _validate); \
+    void* untaggedBase = CodePtr<CFunctionPtrTag>::fromTaggedPtr(base).template untaggedPtr<>(); \
+    void* untaggedPtr = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>(); \
+    RELEASE_ASSERT_WITH_MESSAGE((char*)(untaggedPtr) - (char*)(untaggedBase) == ((opcode) * 8 * 4), (#name)); \
+} while (false);
+#else
+#define VALIDATE_JS_TO_WASM_WRAPPER_ENTRY(opcode, name)
+#endif
+
 void initialize()
 {
-#if !ENABLE(C_LOOP) && CPU(ADDRESS64) && (CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS)))
+#if !ENABLE(C_LOOP) && ((CPU(ADDRESS64) && (CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS)))) || (CPU(ADDRESS32) && CPU(ARM_THUMB2)))
     FOR_EACH_IPINT_OPCODE(VALIDATE_IPINT_OPCODE);
     FOR_EACH_IPINT_0xFC_TRUNC_OPCODE(VALIDATE_IPINT_0xFC_OPCODE);
     FOR_EACH_IPINT_SIMD_OPCODE(VALIDATE_IPINT_SIMD_OPCODE);
     FOR_EACH_IPINT_ATOMIC_OPCODE(VALIDATE_IPINT_ATOMIC_OPCODE);
+
+    FOR_EACH_IPINT_ARGUMINT_OPCODE(VALIDATE_IPINT_ARGUMINT_OPCODE);
+    FOR_EACH_IPINT_SLOW_PATH(VALIDATE_IPINT_SLOW_PATH);
+    FOR_EACH_IPINT_MINT_CALL_OPCODE(VALIDATE_IPINT_MINT_CALL_OPCODE);
+    FOR_EACH_IPINT_MINT_RETURN_OPCODE(VALIDATE_IPINT_MINT_RETURN_OPCODE);
+    FOR_EACH_IPINT_UINT_OPCODE(VALIDATE_IPINT_UINT_OPCODE);
 #else
     RELEASE_ASSERT_NOT_REACHED("IPInt only supports ARM64 and X86_64 (for now).");
 #endif

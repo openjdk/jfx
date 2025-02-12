@@ -47,6 +47,8 @@ SVGLengthContext::SVGLengthContext(const SVGElement* context, const FloatRect& v
 {
 }
 
+SVGLengthContext::~SVGLengthContext() = default;
+
 FloatRect SVGLengthContext::resolveRectangle(const SVGElement* context, SVGUnitTypes::SVGUnitType type, const FloatRect& viewport, const SVGLengthValue& x, const SVGLengthValue& y, const SVGLengthValue& width, const SVGLengthValue& height)
 {
     ASSERT(type != SVGUnitTypes::SVG_UNIT_TYPE_UNKNOWN);
@@ -241,9 +243,14 @@ static inline const RenderStyle* renderStyleForLengthResolving(const SVGElement*
     return nullptr;
 }
 
+RefPtr<const SVGElement> SVGLengthContext::protectedContext() const
+{
+    return m_context.get();
+}
+
 ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEMS(float value) const
 {
-    auto* style = renderStyleForLengthResolving(m_context);
+    auto* style = renderStyleForLengthResolving(protectedContext().get());
     if (!style)
         return Exception { ExceptionCode::NotSupportedError };
 
@@ -256,7 +263,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEMS(float value)
 
 ExceptionOr<float> SVGLengthContext::convertValueFromEMSToUserUnits(float value) const
 {
-    auto* style = renderStyleForLengthResolving(m_context);
+    auto* style = renderStyleForLengthResolving(protectedContext().get());
     if (!style)
         return Exception { ExceptionCode::NotSupportedError };
 
@@ -265,13 +272,13 @@ ExceptionOr<float> SVGLengthContext::convertValueFromEMSToUserUnits(float value)
 
 ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEXS(float value) const
 {
-    auto* style = renderStyleForLengthResolving(m_context);
+    auto* style = renderStyleForLengthResolving(protectedContext().get());
     if (!style)
         return Exception { ExceptionCode::NotSupportedError };
 
     // Use of ceil allows a pixel match to the W3Cs expected output of coords-units-03-b.svg
     // if this causes problems in real world cases maybe it would be best to remove this
-    float xHeight = std::ceil(style->metricsOfPrimaryFont().xHeight());
+    float xHeight = std::ceil(style->metricsOfPrimaryFont().xHeight().value_or(0));
     if (!xHeight)
         return Exception { ExceptionCode::NotSupportedError };
 
@@ -280,13 +287,13 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEXS(float value)
 
 ExceptionOr<float> SVGLengthContext::convertValueFromEXSToUserUnits(float value) const
 {
-    auto* style = renderStyleForLengthResolving(m_context);
+    auto* style = renderStyleForLengthResolving(protectedContext().get());
     if (!style)
         return Exception { ExceptionCode::NotSupportedError };
 
     // Use of ceil allows a pixel match to the W3Cs expected output of coords-units-03-b.svg
     // if this causes problems in real world cases maybe it would be best to remove this
-    return value * std::ceil(style->metricsOfPrimaryFont().xHeight());
+    return value * std::ceil(style->metricsOfPrimaryFont().xHeight().value_or(0));
 }
 
 std::optional<FloatSize> SVGLengthContext::viewportSize() const
@@ -316,7 +323,7 @@ std::optional<FloatSize> SVGLengthContext::computeViewportSize() const
     // applies zooming/panning for the whole SVG subtree as affine transform. Therefore
     // any length within the SVG subtree needs to exclude the 'zoom' information.
     if (m_context->isOutermostSVGSVGElement())
-        return downcast<SVGSVGElement>(*m_context).currentViewportSizeExcludingZoom();
+        return downcast<SVGSVGElement>(*protectedContext()).currentViewportSizeExcludingZoom();
 
     // Take size from nearest viewport element.
     RefPtr svg = dynamicDowncast<SVGSVGElement>(m_context->viewportElement());

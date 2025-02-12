@@ -79,8 +79,8 @@ private:
     void drawEllipse(const FloatRect&) final { }
     void fillPath(const Path&) final { }
     void strokePath(const Path&) final { }
-    void fillRect(const FloatRect&) final { }
-    void fillRect(const FloatRect&, Gradient&, const AffineTransform&) final { }
+    void fillRect(const FloatRect&, RequiresClipToRect) final { }
+    void fillRect(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect) final { }
     void fillRect(const FloatRect&, const Color&) final { }
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final { }
     void strokeRect(const FloatRect&, float) final { }
@@ -112,7 +112,7 @@ private:
     void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final { }
 
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString&, const FloatPoint&, unsigned = 0, std::optional<unsigned> = std::nullopt) final { }
-    void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady) final { }
+    void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::CustomFontNotReadyAction::DoNotPaintIfFontNotReady) final { }
 
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final { }
 

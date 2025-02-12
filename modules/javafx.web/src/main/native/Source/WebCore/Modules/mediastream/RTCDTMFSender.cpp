@@ -33,11 +33,11 @@
 #include "RTCDTMFToneChangeEvent.h"
 #include "RTCRtpSender.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCDTMFSender);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCDTMFSender);
 
 static const size_t minToneDurationMs = 40;
 static const size_t maxToneDurationMs = 6000;
@@ -149,11 +149,6 @@ void RTCDTMFSender::stop()
     m_isPendingPlayoutTask = false;
     m_backend = nullptr;
     m_toneTimer.stop();
-}
-
-const char* RTCDTMFSender::activeDOMObjectName() const
-{
-    return "RTCDTMFSender";
 }
 
 } // namespace WebCore

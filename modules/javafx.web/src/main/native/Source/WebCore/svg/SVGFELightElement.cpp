@@ -36,11 +36,11 @@
 #include "SVGFilterElement.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFELightElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFELightElement);
 
 SVGFELightElement::SVGFELightElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -73,34 +73,34 @@ void SVGFELightElement::attributeChanged(const QualifiedName& name, const AtomSt
 {
     switch (name.nodeName()) {
     case AttributeNames::azimuthAttr:
-        m_azimuth->setBaseValInternal(newValue.toFloat());
+        Ref { m_azimuth }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::elevationAttr:
-        m_elevation->setBaseValInternal(newValue.toFloat());
+        Ref { m_elevation }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::xAttr:
-        m_x->setBaseValInternal(newValue.toFloat());
+        Ref { m_x }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::yAttr:
-        m_y->setBaseValInternal(newValue.toFloat());
+        Ref { m_y }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::zAttr:
-        m_z->setBaseValInternal(newValue.toFloat());
+        Ref { m_z }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::pointsAtXAttr:
-        m_pointsAtX->setBaseValInternal(newValue.toFloat());
+        Ref { m_pointsAtX }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::pointsAtYAttr:
-        m_pointsAtY->setBaseValInternal(newValue.toFloat());
+        Ref { m_pointsAtY }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::pointsAtZAttr:
-        m_pointsAtZ->setBaseValInternal(newValue.toFloat());
+        Ref { m_pointsAtZ }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::specularExponentAttr:
-        m_specularExponent->setBaseValInternal(newValue.toFloat());
+        Ref { m_specularExponent }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::limitingConeAngleAttr:
-        m_limitingConeAngle->setBaseValInternal(newValue.toFloat());
+        Ref { m_limitingConeAngle }->setBaseValInternal(newValue.toFloat());
         break;
     default:
         break;
@@ -120,8 +120,8 @@ void SVGFELightElement::svgAttributeChanged(const QualifiedName& attrName)
         if (!parent)
             return;
 
-        auto* renderer = parent->renderer();
-        if (!renderer || !renderer->isRenderSVGResourceFilterPrimitive())
+        CheckedPtr renderer = parent->renderer();
+        if (!renderer || !renderer->isRenderOrLegacyRenderSVGResourceFilterPrimitive())
             return;
 
         if (auto* lightingElement = dynamicDowncast<SVGFEDiffuseLightingElement>(*parent)) {

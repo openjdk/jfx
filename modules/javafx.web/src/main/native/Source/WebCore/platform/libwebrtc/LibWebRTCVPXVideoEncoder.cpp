@@ -33,6 +33,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WorkQueue.h>
+#include <wtf/text/MakeString.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_COMMA_BEGIN
@@ -40,17 +41,19 @@ ALLOW_COMMA_BEGIN
 #include <webrtc/modules/video_coding/codecs/av1/libaom_av1_encoder.h>
 #include <webrtc/modules/video_coding/codecs/vp8/include/vp8.h>
 #include <webrtc/modules/video_coding/codecs/vp9/include/vp9.h>
-#include <webrtc/sdk/WebKit/WebKitEncoder.h>
 #include <webrtc/system_wrappers/include/cpu_info.h>
+#include <webrtc/webkit_sdk/WebKit/WebKitEncoder.h>
 
 ALLOW_COMMA_END
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
 
+static constexpr double defaultFrameRate = 30.0;
+
 static WorkQueue& vpxEncoderQueue()
 {
-    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("VPX VideoEncoder Queue"));
+    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("VPX VideoEncoder Queue"_s));
     return queue.get();
 }
 
@@ -64,6 +67,8 @@ public:
     void postTask(Function<void()>&& task) { m_postTaskCallback(WTFMove(task)); }
     void encode(VideoEncoder::RawFrame&&, bool shouldGenerateKeyFrame, VideoEncoder::EncodeCallback&&);
     void close() { m_isClosed = true; }
+    void setRates(uint64_t bitRate, double frameRate);
+
 private:
     LibWebRTCVPXInternalVideoEncoder(LibWebRTCVPXVideoEncoder::Type, VideoEncoder::OutputCallback&&, VideoEncoder::PostTaskCallback&&);
     webrtc::EncodedImageCallback::Result OnEncodedImage(const webrtc::EncodedImage&, const webrtc::CodecSpecificInfo*) final;
@@ -73,10 +78,10 @@ private:
     VideoEncoder::PostTaskCallback m_postTaskCallback;
     UniqueRef<webrtc::VideoEncoder> m_internalEncoder;
     int64_t m_timestamp { 0 };
+    int64_t m_timestampOffset { 0 };
     std::optional<uint64_t> m_duration;
     bool m_isClosed { false };
-    uint64_t m_width { 0 };
-    uint64_t m_height { 0 };
+    VideoEncoder::Config m_config;
     bool m_isInitialized { false };
     bool m_hasEncoded { false };
     bool m_hasMultipleTemporalLayers { false };
@@ -90,7 +95,7 @@ void LibWebRTCVPXVideoEncoder::create(Type type, const VideoEncoder::Config& con
         auto internalEncoder = encoder->m_internalEncoder;
         internalEncoder->postTask([callback = WTFMove(callback), descriptionCallback = WTFMove(descriptionCallback), encoder = WTFMove(encoder), error]() mutable {
             if (error) {
-                callback(makeUnexpected(makeString("VPx encoding initialization failed with error ", error)));
+                callback(makeUnexpected(makeString("VPx encoding initialization failed with error "_s, error)));
                 return;
             }
             callback(UniqueRef<VideoEncoder> { WTFMove(encoder) });
@@ -140,17 +145,28 @@ void LibWebRTCVPXVideoEncoder::close()
     m_internalEncoder->close();
 }
 
+bool LibWebRTCVPXVideoEncoder::setRates(uint64_t bitRate, double frameRate, Function<void()>&& callback)
+{
+    vpxEncoderQueue().dispatch([encoder = m_internalEncoder, bitRate, frameRate, callback = WTFMove(callback)]() mutable {
+        encoder->setRates(bitRate, frameRate);
+        encoder->postTask(WTFMove(callback));
+    });
+    return true;
+}
+
 static UniqueRef<webrtc::VideoEncoder> createInternalEncoder(LibWebRTCVPXVideoEncoder::Type type)
 {
     switch (type) {
     case LibWebRTCVPXVideoEncoder::Type::VP8:
-        return makeUniqueRefFromNonNullUniquePtr(webrtc::VP8Encoder::Create());
+        return makeUniqueRefFromNonNullUniquePtr(webrtc::CreateVp8Encoder(webrtc::EnvironmentFactory().Create()));
     case LibWebRTCVPXVideoEncoder::Type::VP9:
-        return makeUniqueRefFromNonNullUniquePtr(webrtc::VP9Encoder::Create());
+        return makeUniqueRefFromNonNullUniquePtr(webrtc::CreateVp9Encoder(webrtc::EnvironmentFactory().Create()));
     case LibWebRTCVPXVideoEncoder::Type::VP9_P2:
-        return makeUniqueRefFromNonNullUniquePtr(webrtc::VP9Encoder::Create(cricket::CreateVideoCodec(webrtc::SdpVideoFormat { cricket::kVp9CodecName, { { "profile-id", "2" } } } )));
+        return makeUniqueRefFromNonNullUniquePtr(webrtc::CreateVp9Encoder(webrtc::EnvironmentFactory().Create(), { webrtc::VP9Profile::kProfile2 }));
+#if ENABLE(AV1)
     case LibWebRTCVPXVideoEncoder::Type::AV1:
-        return makeUniqueRefFromNonNullUniquePtr(webrtc::CreateLibaomAv1Encoder());
+        return makeUniqueRefFromNonNullUniquePtr(webrtc::CreateLibaomAv1Encoder(webrtc::EnvironmentFactory().Create()));
+#endif
     }
 }
 
@@ -161,10 +177,31 @@ LibWebRTCVPXInternalVideoEncoder::LibWebRTCVPXInternalVideoEncoder(LibWebRTCVPXV
 {
 }
 
+static webrtc::VideoBitrateAllocation computeAllocation(const VideoEncoder::Config& config)
+{
+    auto totalBitRate = config.bitRate ? config.bitRate : 3 * config.width * config.height;
+
+    webrtc::VideoBitrateAllocation allocation;
+    switch (config.scalabilityMode) {
+    case VideoEncoder::ScalabilityMode::L1T1:
+        allocation.SetBitrate(0, 0, totalBitRate);
+        break;
+    case VideoEncoder::ScalabilityMode::L1T2:
+        allocation.SetBitrate(0, 0, totalBitRate * 0.6);
+        allocation.SetBitrate(0, 1, totalBitRate * 0.4);
+        break;
+    case VideoEncoder::ScalabilityMode::L1T3:
+        allocation.SetBitrate(0, 0, totalBitRate * 0.5);
+        allocation.SetBitrate(0, 1, totalBitRate * 0.2);
+        allocation.SetBitrate(0, 2, totalBitRate * 0.3);
+        break;
+    }
+    return allocation;
+}
+
 int LibWebRTCVPXInternalVideoEncoder::initialize(LibWebRTCVPXVideoEncoder::Type type, const VideoEncoder::Config& config)
 {
-    m_width = config.width;
-    m_height = config.height;
+    m_config = config;
 
     const int defaultPayloadSize = 1440;
     webrtc::VideoCodec videoCodec;
@@ -172,25 +209,17 @@ int LibWebRTCVPXInternalVideoEncoder::initialize(LibWebRTCVPXVideoEncoder::Type 
     videoCodec.height = config.height;
     videoCodec.maxFramerate = 100;
 
-    webrtc::VideoBitrateAllocation allocation;
-    auto totalBitRate = config.bitRate ? config.bitRate : 3 * config.width * config.height;
     switch (config.scalabilityMode) {
     case VideoEncoder::ScalabilityMode::L1T1:
         videoCodec.SetScalabilityMode(webrtc::ScalabilityMode::kL1T1);
-        allocation.SetBitrate(0, 0, totalBitRate);
         break;
     case VideoEncoder::ScalabilityMode::L1T2:
         m_hasMultipleTemporalLayers = true;
         videoCodec.SetScalabilityMode(webrtc::ScalabilityMode::kL1T2);
-        allocation.SetBitrate(0, 0, totalBitRate * 0.6);
-        allocation.SetBitrate(0, 1, totalBitRate * 0.4);
         break;
     case VideoEncoder::ScalabilityMode::L1T3:
         m_hasMultipleTemporalLayers = true;
         videoCodec.SetScalabilityMode(webrtc::ScalabilityMode::kL1T3);
-        allocation.SetBitrate(0, 0, totalBitRate * 0.5);
-        allocation.SetBitrate(0, 1, totalBitRate * 0.2);
-        allocation.SetBitrate(0, 2, totalBitRate * 0.3);
         break;
     }
 
@@ -214,17 +243,19 @@ int LibWebRTCVPXInternalVideoEncoder::initialize(LibWebRTCVPXVideoEncoder::Type 
         videoCodec.codecType = webrtc::kVideoCodecVP9;
         videoCodec.VP9()->numberOfSpatialLayers = 1;
         break;
+#if ENABLE(AV1)
     case LibWebRTCVPXVideoEncoder::Type::AV1:
         videoCodec.codecType = webrtc::kVideoCodecAV1;
         videoCodec.qpMax = 56; // default qp max
         break;
+#endif
     }
 
     if (auto error = m_internalEncoder->InitEncode(&videoCodec, webrtc::VideoEncoder::Settings { webrtc::VideoEncoder::Capabilities { true }, static_cast<int>(webrtc::CpuInfo::DetectNumberOfCores()), defaultPayloadSize }))
         return error;
 
     m_isInitialized = true;
-    m_internalEncoder->SetRates({ allocation, config.frameRate ? config.frameRate : 30.0 });
+    m_internalEncoder->SetRates({ computeAllocation(config), config.frameRate ? config.frameRate : defaultFrameRate });
 
     m_internalEncoder->RegisterEncodeCompleteCallback(this);
     return 0;
@@ -235,6 +266,8 @@ void LibWebRTCVPXInternalVideoEncoder::encode(VideoEncoder::RawFrame&& rawFrame,
     if (!m_isInitialized)
         return;
 
+    if (rawFrame.timestamp + m_timestampOffset <= 0)
+        m_timestampOffset = 1 - rawFrame.timestamp;
     m_timestamp = rawFrame.timestamp;
     m_duration = rawFrame.duration;
 
@@ -243,10 +276,10 @@ void LibWebRTCVPXInternalVideoEncoder::encode(VideoEncoder::RawFrame&& rawFrame,
 
     auto frameBuffer = webrtc::pixelBufferToFrame(rawFrame.frame->pixelBuffer());
 
-    if (m_width != static_cast<size_t>(frameBuffer->width()) || m_height != static_cast<size_t>(frameBuffer->height()))
-        frameBuffer = frameBuffer->Scale(m_width, m_height);
+    if (m_config.width != static_cast<size_t>(frameBuffer->width()) || m_config.height != static_cast<size_t>(frameBuffer->height()))
+        frameBuffer = frameBuffer->Scale(m_config.width, m_config.height);
 
-    webrtc::VideoFrame frame { frameBuffer, webrtc::kVideoRotation_0, rawFrame.timestamp };
+    webrtc::VideoFrame frame { frameBuffer, webrtc::kVideoRotation_0, rawFrame.timestamp + m_timestampOffset };
     auto error = m_internalEncoder->Encode(frame, &frameTypes);
 
     if (!m_hasEncoded)
@@ -258,9 +291,18 @@ void LibWebRTCVPXInternalVideoEncoder::encode(VideoEncoder::RawFrame&& rawFrame,
 
         String result;
         if (error)
-            result = makeString("VPx encoding failed with error ", error);
+            result = makeString("VPx encoding failed with error "_s, error);
         callback(WTFMove(result));
     });
+}
+
+void LibWebRTCVPXInternalVideoEncoder::setRates(uint64_t bitRate, double frameRate)
+{
+    if (bitRate)
+        m_config.bitRate = bitRate;
+    if (frameRate)
+        m_config.frameRate = frameRate;
+    m_internalEncoder->SetRates({ computeAllocation(m_config), m_config.frameRate ? m_config.frameRate : defaultFrameRate });
 }
 
 webrtc::EncodedImageCallback::Result LibWebRTCVPXInternalVideoEncoder::OnEncodedImage(const webrtc::EncodedImage& encodedImage, const webrtc::CodecSpecificInfo*)
@@ -272,7 +314,7 @@ webrtc::EncodedImageCallback::Result LibWebRTCVPXInternalVideoEncoder::OnEncoded
     }
 
     VideoEncoder::EncodedFrame encodedFrame {
-        Vector<uint8_t> { std::span<const uint8_t> { encodedImage.data(), encodedImage.size() } },
+        Vector<uint8_t> { std::span { encodedImage.data(), encodedImage.size() } },
         encodedImage._frameType == webrtc::VideoFrameType::kVideoFrameKey,
         m_timestamp,
         m_duration,

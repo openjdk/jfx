@@ -47,19 +47,19 @@
 #include "SVGSVGElement.h"
 #include "SVGViewSpec.h"
 #include "TransformState.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGRoot);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGRoot);
 
 const int defaultWidth = 300;
 const int defaultHeight = 150;
 
 LegacyRenderSVGRoot::LegacyRenderSVGRoot(SVGSVGElement& element, RenderStyle&& style)
-    : RenderReplaced(Type::LegacySVGRoot, element, WTFMove(style))
+    : RenderReplaced(Type::LegacySVGRoot, element, WTFMove(style), ReplacedFlag::UsesBoundaryCaching)
     , m_isLayoutSizeChanged(false)
     , m_needsBoundariesOrTransformUpdate(true)
     , m_hasBoxDecorations(false)
@@ -78,6 +78,11 @@ LegacyRenderSVGRoot::~LegacyRenderSVGRoot() = default;
 SVGSVGElement& LegacyRenderSVGRoot::svgSVGElement() const
 {
     return downcast<SVGSVGElement>(nodeForNonAnonymous());
+}
+
+Ref<SVGSVGElement> LegacyRenderSVGRoot::protectedSVGSVGElement() const
+{
+    return svgSVGElement();
 }
 
 bool LegacyRenderSVGRoot::hasIntrinsicAspectRatio() const
@@ -121,7 +126,7 @@ void LegacyRenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicS
 
 bool LegacyRenderSVGRoot::isEmbeddedThroughSVGImage() const
 {
-    return isInSVGImage(&svgSVGElement());
+    return isInSVGImage(protectedSVGSVGElement().ptr());
 }
 
 bool LegacyRenderSVGRoot::isEmbeddedThroughFrameContainingSVGDocument() const
@@ -171,7 +176,8 @@ void LegacyRenderSVGRoot::layout()
     LayoutStateDisabler layoutStateDisabler(view().frameView().layoutContext());
 
     bool needsLayout = selfNeedsLayout();
-    LayoutRepainter repainter(*this, checkForRepaintDuringLayout() && needsLayout);
+    auto checkForRepaintOverride = !needsLayout ? std::make_optional(LayoutRepainter::CheckForRepaint::No) : std::nullopt;
+    LayoutRepainter repainter(*this, checkForRepaintOverride);
 
     LayoutSize oldSize = size();
     updateLogicalWidth();
@@ -231,7 +237,7 @@ void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint&
         return;
 
     // Don't paint, if the context explicitly disabled it.
-    if (paintInfo.context().paintingDisabled() && !paintInfo.context().detectingContentfulPaint())
+    if (paintInfo.phase != PaintPhase::EventRegion && paintInfo.context().paintingDisabled() && !paintInfo.context().detectingContentfulPaint())
         return;
 
     // SVG outlines are painted during PaintPhase::Foreground.
@@ -272,13 +278,20 @@ void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint&
     childPaintInfo.context().save();
 
     // Apply initial viewport clip
-    if (clipViewport)
-        childPaintInfo.context().clip(snappedIntRect(overflowClipRect(paintOffset)));
+    if (clipViewport) {
+        auto clipRect = snappedIntRect(overflowClipRect(paintOffset));
+        childPaintInfo.context().clip(clipRect);
+        if (paintInfo.phase == PaintPhase::EventRegion && childPaintInfo.eventRegionContext())
+            childPaintInfo.eventRegionContext()->pushClip(clipRect);
+    }
 
     // Convert from container offsets (html renderers) to a relative transform (svg renderers).
     // Transform from our paint container's coordinate system to our local coords.
     IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset);
-    childPaintInfo.applyTransform(AffineTransform::makeTranslation(toFloatSize(adjustedPaintOffset)) * localToBorderBoxTransform());
+    auto transform = AffineTransform::makeTranslation(toFloatSize(adjustedPaintOffset)) * localToBorderBoxTransform();
+    childPaintInfo.applyTransform(transform);
+    if (paintInfo.phase == PaintPhase::EventRegion && childPaintInfo.eventRegionContext())
+        childPaintInfo.eventRegionContext()->pushTransform(transform);
 
     // SVGRenderingContext must be destroyed before we restore the childPaintInfo.context(), because a filter may have
     // changed the context and it is only reverted when the SVGRenderingContext destructor finishes applying the filter.
@@ -297,6 +310,11 @@ void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint&
         }
     }
 
+    if (paintInfo.phase == PaintPhase::EventRegion && childPaintInfo.eventRegionContext()) {
+        childPaintInfo.eventRegionContext()->popTransform();
+        if (clipViewport)
+            childPaintInfo.eventRegionContext()->popClip();
+    }
     childPaintInfo.context().restore();
 }
 
@@ -308,22 +326,22 @@ void LegacyRenderSVGRoot::willBeDestroyed()
     RenderReplaced::willBeDestroyed();
 }
 
-void LegacyRenderSVGRoot::insertedIntoTree(IsInternalMove isInternalMove)
+void LegacyRenderSVGRoot::insertedIntoTree()
 {
-    RenderReplaced::insertedIntoTree(isInternalMove);
+    RenderReplaced::insertedIntoTree();
     SVGResourcesCache::clientWasAddedToTree(*this);
 }
 
-void LegacyRenderSVGRoot::willBeRemovedFromTree(IsInternalMove isInternalMove)
+void LegacyRenderSVGRoot::willBeRemovedFromTree()
 {
     SVGResourcesCache::clientWillBeRemovedFromTree(*this);
-    RenderReplaced::willBeRemovedFromTree(isInternalMove);
+    RenderReplaced::willBeRemovedFromTree();
 }
 
 void LegacyRenderSVGRoot::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     if (diff == StyleDifference::Layout)
-        setNeedsBoundariesUpdate();
+        invalidateCachedBoundaries();
 
     // Box decorations may have appeared/disappeared - recompute status.
     if (diff == StyleDifference::Repaint)
@@ -337,7 +355,7 @@ void LegacyRenderSVGRoot::styleDidChange(StyleDifference diff, const RenderStyle
 // relative to our borderBox origin. This method gives us exactly that.
 void LegacyRenderSVGRoot::buildLocalToBorderBoxTransform()
 {
-    float scale = style().effectiveZoom();
+    float scale = style().usedZoom();
     FloatPoint translate = svgSVGElement().currentTranslateValue();
     LayoutSize borderAndPadding(borderLeft() + paddingLeft(), borderTop() + paddingTop());
     m_localToBorderBoxTransform = svgSVGElement().viewBoxToViewTransform(contentWidth() / scale, contentHeight() / scale);
@@ -481,8 +499,6 @@ bool LegacyRenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResu
     LayoutPoint pointInParent = locationInContainer.point() - toLayoutSize(accumulatedOffset);
     LayoutPoint pointInBorderBox = pointInParent - toLayoutSize(location());
 
-    ASSERT(SVGHitTestCycleDetectionScope::isEmpty());
-
     // Test SVG content if the point is in our content box or it is inside the visualOverflowRect and the overflow is visible.
     // FIXME: This should be an intersection when rect-based hit tests are supported by nodeAtFloatPoint.
     if (contentBoxRect().contains(pointInBorderBox) || (!shouldApplyViewportClip() && visualOverflowRect().contains(pointInParent))) {
@@ -492,13 +508,11 @@ bool LegacyRenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResu
             // FIXME: nodeAtFloatPoint() doesn't handle rect-based hit tests yet.
             if (child->nodeAtFloatPoint(request, result, localPoint, hitTestAction)) {
                 updateHitTestResult(result, pointInBorderBox);
-                if (result.addNodeToListBasedTestResult(child->node(), request, locationInContainer) == HitTestProgress::Stop) {
-                    ASSERT(SVGHitTestCycleDetectionScope::isEmpty());
+                if (result.addNodeToListBasedTestResult(child->protectedNode().get(), request, locationInContainer) == HitTestProgress::Stop)
                     return true;
                 }
             }
         }
-    }
 
     // If we didn't early exit above, we've just hit the container <svg> element. Unlike SVG 1.1, 2nd Edition allows container elements to be hit.
     if ((hitTestAction == HitTestBlockBackground || hitTestAction == HitTestChildBlockBackground) && visibleToHitTesting(request)) {
@@ -509,12 +523,10 @@ bool LegacyRenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResu
         LayoutRect boundsRect(accumulatedOffset + location(), size());
         if (locationInContainer.intersects(boundsRect)) {
             updateHitTestResult(result, pointInBorderBox);
-            if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
+            if (result.addNodeToListBasedTestResult(protectedNodeForHitTest().get(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
                 return true;
         }
     }
-
-    ASSERT(SVGHitTestCycleDetectionScope::isEmpty());
 
     return false;
 }

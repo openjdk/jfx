@@ -55,7 +55,8 @@ class HTMLImageElement
 #endif
     , public FormAssociatedElement
     , public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(HTMLImageElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLImageElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLImageElement);
 public:
     static Ref<HTMLImageElement> create(Document&);
     static Ref<HTMLImageElement> create(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
@@ -63,8 +64,9 @@ public:
 
     virtual ~HTMLImageElement();
 
-    using HTMLElement::ref;
-    using HTMLElement::deref;
+    // ActiveDOMObject.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
 
     void formOwnerRemovedFromTree(const Node& formRoot);
 
@@ -74,7 +76,7 @@ public:
     WEBCORE_EXPORT unsigned naturalWidth() const;
     WEBCORE_EXPORT unsigned naturalHeight() const;
     const URL& currentURL() const { return m_currentURL; }
-    const AtomString& currentSrc() const { return m_currentSrc; }
+    WEBCORE_EXPORT const AtomString& currentSrc();
 
     bool isServerMap() const;
 
@@ -142,6 +144,10 @@ public:
     WEBCORE_EXPORT bool isSystemPreviewImage() const;
 #endif
 
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    bool isMultiRepresentationHEIC() const;
+#endif
+
     void loadDeferredImage();
 
     AtomString srcsetForBindings() const;
@@ -179,7 +185,7 @@ public:
 
     bool originClean(const SecurityOrigin&) const;
 
-    void collectExtraStyleForPresentationalHints(MutableStyleProperties&);
+    Image* image() const;
 
 protected:
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
@@ -196,11 +202,11 @@ private:
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     void invalidateAttributeMapping();
+    void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) final;
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     void didAttachRenderers() override;
@@ -253,13 +259,17 @@ private:
     HTMLSourceElement* sourceElement() const;
     void setSourceElement(HTMLSourceElement*);
 
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    IntersectionObserverData& ensureIntersectionObserverData() final;
+    IntersectionObserverData* intersectionObserverDataIfExists() final;
 
-    CompositeOperator m_compositeOperator;
+    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
+
     AtomString m_bestFitImageURL;
-    AtomString m_currentSrc;
     URL m_currentURL;
+    AtomString m_currentSrc;
     AtomString m_parsedUsemap;
+    CompositeOperator m_compositeOperator;
     float m_imageDevicePixelRatio;
 #if ENABLE(SERVICE_CONTROLS)
     bool m_isImageMenuEnabled { false };
@@ -272,8 +282,6 @@ private:
     WeakPtr<HTMLSourceElement, WeakPtrImplWithEventTargetData> m_sourceElement;
 
     Vector<MQ::MediaQueryResult> m_dynamicMediaQueryResults;
-
-    Image* image() const;
 
     friend class HTMLPictureElement;
 };

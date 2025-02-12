@@ -56,6 +56,7 @@ public:
     static void destroy(JSCell*);
     static size_t estimatedSize(JSCell*, VM&);
     JS_EXPORT_PRIVATE static void dumpToStream(const JSCell*, PrintStream&);
+    void dumpSimpleName(PrintStream&) const;
 
     OptionSet<Yarr::Flags> flags() const { return m_flags; }
 #define JSC_DEFINE_REGEXP_FLAG_ACCESSOR(key, name, lowerCaseName, index) bool lowerCaseName() const { return m_flags.contains(Yarr::Flags::name); }
@@ -142,6 +143,8 @@ public:
     void deleteCode();
 
 #if ENABLE(REGEXP_TRACING)
+    constexpr static unsigned SameLineFormatedRegExpnWidth = 74;
+    static void printTraceHeader();
     void printTraceData();
 #endif
 
@@ -195,7 +198,7 @@ private:
     Yarr::YarrCodeBlock& ensureRegExpJITCode()
     {
         if (!m_regExpJITCode)
-            m_regExpJITCode = makeUnique<Yarr::YarrCodeBlock>();
+            m_regExpJITCode = makeUnique<Yarr::YarrCodeBlock>(this);
         return *m_regExpJITCode.get();
     }
 #endif

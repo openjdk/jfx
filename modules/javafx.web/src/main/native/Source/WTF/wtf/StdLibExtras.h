@@ -27,7 +27,9 @@
 #pragma once
 
 #include <cstring>
+#include <functional>
 #include <memory>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -58,11 +60,22 @@
 #define DEFINE_DEBUG_ONLY_GLOBAL(type, name, arguments)
 #endif // NDEBUG
 
-// OBJECT_OFFSETOF: Like the C++ offsetof macro, but you can use it with classes.
+#if COMPILER(CLANG)
+// We have to use __builtin_offsetof directly here instead of offsetof because otherwise Clang will drop
+// our pragma and we'll still get the warning.
+#define OBJECT_OFFSETOF(class, field) \
+    _Pragma("clang diagnostic push") \
+    _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"") \
+    __builtin_offsetof(class, field) \
+    _Pragma("clang diagnostic pop")
+#elif COMPILER(GCC)
+// It would be nice to silence this warning locally like we do on Clang but GCC complains about `error: ‘#pragma’ is not allowed here`
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#define OBJECT_OFFSETOF(class, field) offsetof(class, field)
+#endif
+
 // The magic number 0x4000 is insignificant. We use it to avoid using NULL, since
 // NULL can cause compiler problems, especially in cases of multiple inheritance.
-#define OBJECT_OFFSETOF(class, field) (reinterpret_cast<ptrdiff_t>(&(reinterpret_cast<class*>(0x4000)->field)) - 0x4000)
-
 #define CAST_OFFSET(from, to) (reinterpret_cast<uintptr_t>(static_cast<to>((reinterpret_cast<from>(0x4000)))) - 0x4000)
 
 // STRINGIZE: Can convert any value to quoted string, even expandable macros
@@ -84,7 +97,7 @@
  * - https://bugs.webkit.org/show_bug.cgi?id=38045
  * - http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43976
  */
-#if (CPU(ARM) || CPU(MIPS) || CPU(RISCV64)) && COMPILER(GCC_COMPATIBLE)
+#if CPU(ARM) || CPU(MIPS) || CPU(RISCV64)
 template<typename Type>
 inline bool isPointerTypeAlignmentOkay(Type* ptr)
 {
@@ -132,7 +145,7 @@ inline bool is8ByteAligned(void* p)
 }
 
 template<typename ToType, typename FromType>
-inline ToType bitwise_cast(FromType from)
+constexpr inline ToType bitwise_cast(FromType from)
 {
     static_assert(sizeof(FromType) == sizeof(ToType), "bitwise_cast size of FromType and ToType must be equal!");
 #if COMPILER_SUPPORTS(BUILTIN_IS_TRIVIALLY_COPYABLE)
@@ -385,7 +398,7 @@ bool findBitInWord(T word, size_t& startOrResultIndex, size_t endIndex, bool val
     size_t index = startOrResultIndex;
     word >>= index;
 
-#if COMPILER(GCC_COMPATIBLE) && (CPU(X86_64) || CPU(ARM64))
+#if CPU(X86_64) || CPU(ARM64)
     // We should only use ctz() when we know that ctz() is implementated using
     // a fast hardware instruction. Otherwise, this will actually result in
     // worse performance.
@@ -596,22 +609,22 @@ public:
 template<class T, class... Args>
 ALWAYS_INLINE decltype(auto) makeUnique(Args&&... args)
 {
-    static_assert(std::is_same<typename T::webkitFastMalloced, int>::value, "T is FastMalloced");
-    static_assert(!TypeHasRefMemberFunction<T>::value, "T should not be refcounted");
+    static_assert(std::is_same<typename T::WTFIsFastAllocated, int>::value, "T sould use FastMalloc (WTF_MAKE_FAST_ALLOCATED)");
+    static_assert(!TypeHasRefMemberFunction<T>::value, "T should not be RefCounted");
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
 template<class T, class... Args>
 ALWAYS_INLINE decltype(auto) makeUniqueWithoutRefCountedCheck(Args&&... args)
 {
-    static_assert(std::is_same<typename T::webkitFastMalloced, int>::value, "T is FastMalloced");
+    static_assert(std::is_same<typename T::WTFIsFastAllocated, int>::value, "T sould use FastMalloc (WTF_MAKE_FAST_ALLOCATED)");
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
 template<class T, class... Args>
 ALWAYS_INLINE decltype(auto) makeUniqueWithoutFastMallocCheck(Args&&... args)
 {
-    static_assert(!TypeHasRefMemberFunction<T>::value, "T should not be refcounted");
+    static_assert(!TypeHasRefMemberFunction<T>::value, "T should not be RefCounted");
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
@@ -670,43 +683,122 @@ template<typename OptionalType> auto valueOrDefault(OptionalType&& optionalValue
     return optionalValue ? *std::forward<OptionalType>(optionalValue) : std::remove_reference_t<decltype(*optionalValue)> { };
 }
 
+template<typename T, typename U, std::size_t Extent>
+std::span<T, Extent> spanReinterpretCast(std::span<U, Extent> span)
+{
+    RELEASE_ASSERT(!(span.size_bytes() % sizeof(T)));
+    static_assert(std::is_const_v<T> || (!std::is_const_v<T> && !std::is_const_v<U>), "spanCast will not remove constness from source");
+    return std::span<T, Extent> { reinterpret_cast<T*>(const_cast<std::remove_const_t<U>*>(span.data())), span.size_bytes() / sizeof(T) };
+}
+
+template<typename T, std::size_t Extent>
+std::span<T, Extent> spanConstCast(std::span<const T, Extent> span)
+{
+    return std::span<T, Extent> { const_cast<T*>(span.data()), span.size() };
+}
+
+template<typename T, std::size_t Extent>
+std::span<const uint8_t, Extent == std::dynamic_extent ? std::dynamic_extent: Extent * sizeof(T)> asBytes(std::span<T, Extent> span)
+{
+    return std::span<const uint8_t, Extent == std::dynamic_extent ? std::dynamic_extent: Extent * sizeof(T)> { reinterpret_cast<const uint8_t*>(span.data()), span.size_bytes() };
+}
+
+template<typename T, std::size_t Extent>
+std::span<uint8_t, Extent == std::dynamic_extent ? std::dynamic_extent: Extent * sizeof(T)> asWritableBytes(std::span<T, Extent> span)
+{
+    return std::span<uint8_t, Extent == std::dynamic_extent ? std::dynamic_extent: Extent * sizeof(T)> { reinterpret_cast<uint8_t*>(span.data()), span.size_bytes() };
+}
+
+template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
+bool equalSpans(std::span<T, TExtent> a, std::span<U, UExtent> b)
+{
+    static_assert(sizeof(T) == sizeof(U));
+    static_assert(std::has_unique_object_representations_v<T>);
+    static_assert(std::has_unique_object_representations_v<U>);
+    if (a.size() != b.size())
+        return false;
+    return !memcmp(a.data(), b.data(), a.size_bytes());
+}
+
+template<typename T, std::size_t TExtent, typename U, std::size_t UExtent>
+void memcpySpan(std::span<T, TExtent> destination, std::span<U, UExtent> source)
+{
+    static_assert(sizeof(T) == sizeof(U));
+    static_assert(std::is_trivially_copyable_v<T>);
+    static_assert(std::is_trivially_copyable_v<U>);
+    RELEASE_ASSERT(destination.size() >= source.size());
+    memcpy(destination.data(), source.data(), source.size_bytes());
+}
+
+template<typename T, std::size_t Extent>
+void memsetSpan(std::span<T, Extent> destination, uint8_t byte)
+{
+    static_assert(std::is_trivially_copyable_v<T>);
+    memset(destination.data(), byte, destination.size_bytes());
+}
+
+template<typename T> concept ByteType = sizeof(T) == 1 && ((std::is_integral_v<T> && !std::same_as<T, bool>) || std::same_as<T, std::byte>) && !std::is_const_v<T>;
+
+template<typename> struct ByteCastTraits;
+
+template<ByteType T> struct ByteCastTraits<T> {
+    template<ByteType U> static constexpr U cast(T character) { return static_cast<U>(character); }
+};
+
+template<ByteType T> struct ByteCastTraits<T*> {
+    template<ByteType U> static constexpr auto cast(T* pointer) { return bitwise_cast<U*>(pointer); }
+};
+
+template<ByteType T> struct ByteCastTraits<const T*> {
+    template<ByteType U> static constexpr auto cast(const T* pointer) { return bitwise_cast<const U*>(pointer); }
+};
+
+template<ByteType T, size_t Extent> struct ByteCastTraits<std::span<T, Extent>> {
+    template<ByteType U> static constexpr auto cast(std::span<T, Extent> span) { return spanReinterpretCast<U>(span); }
+};
+
+template<ByteType T, size_t Extent> struct ByteCastTraits<std::span<const T, Extent>> {
+    template<ByteType U> static constexpr auto cast(std::span<const T, Extent> span) { return spanReinterpretCast<const U>(span); }
+};
+
+template<ByteType T, typename U> constexpr auto byteCast(const U& value)
+{
+    return ByteCastTraits<U>::template cast<T>(value);
+}
+
+// This is like std::invocable but it takes the expected signature rather than just the arguments.
+template<typename Functor, typename Signature>
+concept Invocable = requires(std::decay_t<Functor>&& f, std::function<Signature> expected)
+{
+    { expected = std::move(f) };
+};
+
 } // namespace WTF
 
 #define WTFMove(value) std::move<WTF::CheckMoveParameter>(value)
 
-// FIXME: Needed for GCC<=9.3. Remove it after Ubuntu 20.04 end of support (May 2023).
-#if defined(__GLIBCXX__) && !defined(HAVE_STD_REMOVE_CVREF) && !COMPILER(CLANG)
-namespace std {
-template <typename T>
-struct remove_cvref {
-    using type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-};
-
-template <typename T>
-using remove_cvref_t = typename remove_cvref<T>::type;
-}
-#endif
-
-#if !(defined(__cpp_lib_forward_like) && __cpp_lib_forward_like >= 202207L)
-namespace std {
+namespace WTF {
 namespace detail {
-template<typename T, typename U> using copy_const = conditional_t<is_const_v<T>, const U, U>;
-template<typename T, typename U> using override_ref = conditional_t<is_rvalue_reference_v<T>, remove_reference_t<U>&&, U&>;
-template<typename T, typename U> using forward_like_impl = override_ref<T&&, copy_const<remove_reference_t<T>, remove_reference_t<U>>>;
+template<typename T, typename U> using copy_const = std::conditional_t<std::is_const_v<T>, const U, U>;
+template<typename T, typename U> using override_ref = std::conditional_t<std::is_rvalue_reference_v<T>, std::remove_reference_t<U>&&, U&>;
+template<typename T, typename U> using forward_like_impl = override_ref<T&&, copy_const<std::remove_reference_t<T>, std::remove_reference_t<U>>>;
 } // namespace detail
 template<typename T, typename U> constexpr auto forward_like(U&& value) -> detail::forward_like_impl<T, U> { return static_cast<detail::forward_like_impl<T, U>>(value); }
-} // namespace std
-#endif
+} // namespace WTF
 
 using WTF::GB;
 using WTF::KB;
 using WTF::MB;
 using WTF::approximateBinarySearch;
+using WTF::asBytes;
+using WTF::asWritableBytes;
 using WTF::binarySearch;
 using WTF::bitwise_cast;
+using WTF::byteCast;
 using WTF::callStatelessLambda;
 using WTF::checkAndSet;
 using WTF::constructFixedSizeArrayWithArguments;
+using WTF::equalSpans;
 using WTF::findBitInWord;
 using WTF::insertIntoBoundedVector;
 using WTF::is8ByteAligned;
@@ -716,12 +808,17 @@ using WTF::isStatelessLambda;
 using WTF::makeUnique;
 using WTF::makeUniqueWithoutFastMallocCheck;
 using WTF::makeUniqueWithoutRefCountedCheck;
+using WTF::memcpySpan;
+using WTF::memsetSpan;
 using WTF::mergeDeduplicatedSorted;
 using WTF::roundUpToMultipleOf;
 using WTF::roundUpToMultipleOfNonPowerOfTwo;
 using WTF::roundDownToMultipleOf;
 using WTF::safeCast;
+using WTF::spanConstCast;
+using WTF::spanReinterpretCast;
 using WTF::tryBinarySearch;
 using WTF::valueOrCompute;
 using WTF::valueOrDefault;
 using WTF::toTwosComplement;
+using WTF::Invocable;

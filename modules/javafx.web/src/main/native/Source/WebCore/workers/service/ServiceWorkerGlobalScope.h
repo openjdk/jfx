@@ -26,9 +26,11 @@
 #pragma once
 
 #include "CookieStore.h"
+#include "FetchIdentifier.h"
 #include "NotificationClient.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerContextData.h"
+#include "ServiceWorkerFetch.h"
 #include "ServiceWorkerRegistration.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/MonotonicTime.h>
@@ -38,11 +40,13 @@ namespace WebCore {
 
 class DeferredPromise;
 class ExtendableEvent;
+class FetchEvent;
 class Page;
 class PushEvent;
 class ServiceWorkerClient;
 class ServiceWorkerClients;
 class ServiceWorkerThread;
+class WorkerClient;
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
 class PushNotificationEvent;
@@ -53,9 +57,9 @@ enum class NotificationEventType : bool;
 struct ServiceWorkerClientData;
 
 class ServiceWorkerGlobalScope final : public WorkerGlobalScope {
-    WTF_MAKE_ISO_ALLOCATED(ServiceWorkerGlobalScope);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ServiceWorkerGlobalScope);
 public:
-    static Ref<ServiceWorkerGlobalScope> create(ServiceWorkerContextData&&, ServiceWorkerData&&, const WorkerParameters&, Ref<SecurityOrigin>&&, ServiceWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&);
+    static Ref<ServiceWorkerGlobalScope> create(ServiceWorkerContextData&&, ServiceWorkerData&&, const WorkerParameters&, Ref<SecurityOrigin>&&, ServiceWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, std::unique_ptr<WorkerClient>&&);
 
     ~ServiceWorkerGlobalScope();
 
@@ -67,7 +71,7 @@ public:
 
     void skipWaiting(Ref<DeferredPromise>&&);
 
-    EventTargetInterface eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final;
 
     ServiceWorkerThread& thread();
 
@@ -109,8 +113,18 @@ public:
 
     CookieStore& cookieStore();
 
+    using FetchKey = std::pair<SWServerConnectionIdentifier, FetchIdentifier>;
+    void addFetchTask(FetchKey, Ref<ServiceWorkerFetch::Client>&&);
+    void addFetchEvent(FetchKey, FetchEvent&);
+    RefPtr<ServiceWorkerFetch::Client> fetchTask(FetchKey);
+    bool hasFetchTask() const;
+    void removeFetchTask(FetchKey);
+    RefPtr<ServiceWorkerFetch::Client> takeFetchTask(FetchKey);
+    void navigationPreloadFailed(FetchKey, ResourceError&&);
+    void navigationPreloadIsReady(FetchKey, ResourceResponse&&);
+
 private:
-    ServiceWorkerGlobalScope(ServiceWorkerContextData&&, ServiceWorkerData&&, const WorkerParameters&, Ref<SecurityOrigin>&&, ServiceWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&);
+    ServiceWorkerGlobalScope(ServiceWorkerContextData&&, ServiceWorkerData&&, const WorkerParameters&, Ref<SecurityOrigin>&&, ServiceWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, std::unique_ptr<WorkerClient>&&);
     void notifyServiceWorkerPageOfCreationIfNecessary();
 
     void prepareForDestruction() final;
@@ -141,11 +155,21 @@ private:
     MonotonicTime m_lastPushEventTime;
     bool m_consoleMessageReportingEnabled { false };
     RefPtr<CookieStore> m_cookieStore;
+
+    struct FetchTask {
+        RefPtr<ServiceWorkerFetch::Client> client;
+        std::variant<std::nullptr_t, Ref<FetchEvent>, UniqueRef<ResourceError>, UniqueRef<ResourceResponse>> navigationPreload;
+    };
+    HashMap<FetchKey, FetchTask> m_ongoingFetchTasks;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ServiceWorkerGlobalScope)
-    static bool isType(const WebCore::ScriptExecutionContext& context) { return is<WebCore::WorkerGlobalScope>(context) && downcast<WebCore::WorkerGlobalScope>(context).type() == WebCore::WorkerGlobalScope::Type::ServiceWorker; }
+    static bool isType(const WebCore::ScriptExecutionContext& context)
+    {
+        auto* global = dynamicDowncast<WebCore::WorkerGlobalScope>(context);
+        return global && global->type() == WebCore::WorkerGlobalScope::Type::ServiceWorker;
+    }
     static bool isType(const WebCore::WorkerGlobalScope& context) { return context.type() == WebCore::WorkerGlobalScope::Type::ServiceWorker; }
 SPECIALIZE_TYPE_TRAITS_END()

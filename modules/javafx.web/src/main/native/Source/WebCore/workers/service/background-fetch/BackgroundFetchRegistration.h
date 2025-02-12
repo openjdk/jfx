@@ -43,7 +43,7 @@ struct BackgroundFetchRecordInformation;
 struct CacheQueryOptions;
 
 class BackgroundFetchRegistration final : public RefCounted<BackgroundFetchRegistration>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(BackgroundFetchRegistration);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BackgroundFetchRegistration);
 public:
     static Ref<BackgroundFetchRegistration> create(ScriptExecutionContext&, BackgroundFetchInformation&&);
     ~BackgroundFetchRegistration();
@@ -67,8 +67,9 @@ public:
 
     void updateInformation(const BackgroundFetchInformation&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     BackgroundFetchRegistration(ScriptExecutionContext&, BackgroundFetchInformation&&);
@@ -76,13 +77,12 @@ private:
     ServiceWorkerRegistrationIdentifier registrationIdentifier() const { return m_information.registrationIdentifier; }
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return BackgroundFetchRegistrationEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::BackgroundFetchRegistration; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 

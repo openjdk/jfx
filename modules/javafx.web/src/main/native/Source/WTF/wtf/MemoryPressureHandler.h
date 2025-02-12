@@ -90,6 +90,7 @@ public:
 
     WTF_EXPORT_PRIVATE void install();
 
+    WTF_EXPORT_PRIVATE void setMemoryFootprintPollIntervalForTesting(Seconds);
     WTF_EXPORT_PRIVATE void setShouldUsePeriodicMemoryMonitor(bool);
 
 #if OS(LINUX) || OS(FREEBSD) || OS(QNX)
@@ -206,6 +207,10 @@ public:
 
     void setShouldLogMemoryMemoryPressureEvents(bool shouldLog) { m_shouldLogMemoryMemoryPressureEvents = shouldLog; }
 
+    // Runs the provided callback the first time that this process's footprint exceeds any of the given thresholds.
+    // Only works in processes that use PeriodicMemoryMonitor.
+    WTF_EXPORT_PRIVATE void setMemoryFootprintNotificationThresholds(Vector<size_t>&& thresholds, WTF::Function<void(size_t)>&&);
+
 private:
     std::optional<size_t> thresholdForMemoryKill();
     size_t thresholdForPolicy(MemoryUsagePolicy);
@@ -246,6 +251,8 @@ private:
     WTF::Function<void()> m_memoryPressureStatusChangedCallback;
     WTF::Function<void(ProcessMemoryLimit)> m_didExceedProcessMemoryLimitCallback;
     LowMemoryHandler m_lowMemoryHandler;
+    Vector<size_t> m_memoryFootprintNotificationThresholds;
+    WTF::Function<void(size_t)> m_memoryFootprintNotificationHandler;
 
     Configuration m_configuration;
 

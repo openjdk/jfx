@@ -29,7 +29,9 @@
 
 #include "JSDOMConstructor.h"
 #include "JSDOMConvertInterface.h"
+#include "JSDOMConvertSequences.h"
 #include "JSDOMConvertStrings.h"
+#include "JSMessagePort.h"
 
 namespace WebCore {
 
@@ -39,50 +41,39 @@ JSC::EncodedJSValue constructJSExtendableMessageEvent(JSC::JSGlobalObject* lexic
 {
     VM& vm = lexicalGlobalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    UNUSED_PARAM(throwScope);
 
-    auto* jsConstructor = jsCast<JSDOMConstructorBase*>(callFrame.jsCallee());
-    ASSERT(jsConstructor);
     if (UNLIKELY(callFrame.argumentCount() < 1))
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
+
     auto type = convert<IDLAtomStringAdaptor<IDLDOMString>>(*lexicalGlobalObject, callFrame.uncheckedArgument(0));
-    RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
+    if (UNLIKELY(type.hasException(throwScope)))
+        return encodedJSValue();
+
     auto eventInitDict = convert<IDLDictionary<ExtendableMessageEvent::Init>>(*lexicalGlobalObject, callFrame.argument(1));
+    if (UNLIKELY(eventInitDict.hasException(throwScope)))
+        return encodedJSValue();
+
+    auto object = ExtendableMessageEvent::create(*lexicalGlobalObject, type.releaseReturnValue(), eventInitDict.releaseReturnValue());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    JSValue data = eventInitDict.data;
-    auto object = ExtendableMessageEvent::create(*lexicalGlobalObject, WTFMove(type), WTFMove(eventInitDict));
-    RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-
-    JSValue wrapper = toJSNewlyCreated<IDLInterface<ExtendableMessageEvent>>(*lexicalGlobalObject, *jsConstructor->globalObject(), WTFMove(object));
-
-    // Cache the JSValue passed in for data parameter in the wrapper so the getter returns the exact value
-    // it was initialized too. We do not store the JSValue in the implementation object to avoid leaks.
-    auto* jsMessageEvent = jsCast<JSExtendableMessageEvent*>(wrapper);
-    jsMessageEvent->m_data.set(vm, jsMessageEvent, data);
-
-    return JSValue::encode(wrapper);
+    return JSValue::encode(object.strongWrapper.get());
 }
 
-JSValue JSExtendableMessageEvent::data(JSGlobalObject& lexicalGlobalObject) const
+JSC::JSValue JSExtendableMessageEvent::ports(JSC::JSGlobalObject& lexicalGlobalObject) const
 {
-    if (JSValue cachedValue = m_data.get()) {
-        // We cannot use a cached object if we are in a different world than the one it was created in.
-        if (isWorldCompatible(lexicalGlobalObject, cachedValue))
-            return cachedValue;
-        ASSERT_NOT_REACHED();
-    }
-
-    auto& event = wrapped();
-    JSValue result;
-    if (auto* serializedValue = event.data())
-        result = serializedValue->deserialize(lexicalGlobalObject, globalObject(), event.ports(), SerializationErrorMode::NonThrowing);
-    else
-        result = jsNull();
-
-    // Save the result so we don't have to deserialize the value again.
-    m_data.set(lexicalGlobalObject.vm(), this, result);
-    return result;
+    auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
+    return cachedPropertyValue(throwScope, lexicalGlobalObject, *this, wrapped().cachedPorts(), [&](JSC::ThrowScope& throwScope) {
+        return toJS<IDLFrozenArray<IDLInterface<MessagePort>>>(lexicalGlobalObject, *globalObject(), throwScope, wrapped().ports());
+    });
 }
+
+template<typename Visitor>
+void JSExtendableMessageEvent::visitAdditionalChildren(Visitor& visitor)
+{
+    wrapped().data().visit(visitor);
+    wrapped().cachedPorts().visit(visitor);
+}
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSExtendableMessageEvent);
 
 }

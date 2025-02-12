@@ -41,6 +41,7 @@
 #include <variant>
 #include <wtf/CompletionHandler.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/MakeString.h>
 
 namespace JSC { namespace Wasm {
 
@@ -256,9 +257,9 @@ public:
         return push(NoConsistencyCheck);
     }
 
-    void didPopValueFromStack(ExpressionType, String) { --m_stackSize; }
+    void didPopValueFromStack(ExpressionType, ASCIILiteral) { --m_stackSize; }
     bool usesSIMD() { return m_usesSIMD; }
-    void notifyFunctionUsesSIMD() { ASSERT(Options::useWebAssemblySIMD()); m_usesSIMD = true; }
+    void notifyFunctionUsesSIMD() { ASSERT(Options::useWasmSIMD()); m_usesSIMD = true; }
 
     PartialResult WARN_UNUSED_RETURN addDrop(ExpressionType);
 
@@ -286,6 +287,7 @@ public:
     // Locals
     PartialResult WARN_UNUSED_RETURN getLocal(uint32_t index, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN setLocal(uint32_t index, ExpressionType value);
+    PartialResult WARN_UNUSED_RETURN teeLocal(uint32_t, ExpressionType, ExpressionType& result);
 
     // Globals
     PartialResult WARN_UNUSED_RETURN getGlobal(uint32_t index, ExpressionType& result);
@@ -384,6 +386,7 @@ public:
     PartialResult WARN_UNUSED_RETURN addCrash();
 
     ALWAYS_INLINE void willParseOpcode() { }
+    ALWAYS_INLINE void willParseExtendedOpcode() { }
     ALWAYS_INLINE void didParseOpcode() { }
     void didFinishParsingLocals();
 
@@ -580,10 +583,10 @@ private:
     bool m_usesSIMD { false };
 };
 
-Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileBytecode(const uint8_t* functionStart, size_t functionLength, const TypeDefinition& signature, ModuleInformation& info, uint32_t functionIndex)
+Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileBytecode(std::span<const uint8_t> function, const TypeDefinition& signature, ModuleInformation& info, uint32_t functionIndex)
 {
     LLIntGenerator llintGenerator(info, functionIndex, signature);
-    FunctionParser<LLIntGenerator> parser(llintGenerator, functionStart, functionLength, signature, info);
+    FunctionParser<LLIntGenerator> parser(llintGenerator, function, signature, info);
     WASM_FAIL_IF_HELPER_FAILS(parser.parse());
 
     return llintGenerator.finalize();
@@ -1005,6 +1008,19 @@ auto LLIntGenerator::setLocal(uint32_t index, ExpressionType value) -> PartialRe
 
     WasmMov::emit(this, target, value);
 
+    return { };
+}
+
+auto LLIntGenerator::teeLocal(uint32_t index, ExpressionType value, ExpressionType& result) -> PartialResult
+{
+    {
+        auto check = setLocal(index, value);
+        ASSERT_UNUSED(check, check);
+    }
+    {
+        auto check = getLocal(index, result);
+        ASSERT_UNUSED(check, check);
+    }
     return { };
 }
 
@@ -1487,7 +1503,7 @@ auto LLIntGenerator::addCall(uint32_t functionIndex, const TypeDefinition& signa
 
         const auto& callingConvention = wasmCallingConvention();
         const TypeIndex callerTypeIndex = m_info.internalFunctionTypeIndices[m_functionIndex];
-        const TypeDefinition& callerTypeDefinition = TypeInformation::get(callerTypeIndex);
+        const TypeDefinition& callerTypeDefinition = TypeInformation::get(callerTypeIndex).expand();
         uint32_t callerStackArgs = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), callingConvention.numberOfStackValues(*callerTypeDefinition.as<FunctionSignature>()));
 
         WasmTailCall::emit(this, functionIndex, wasmCalleeInfo.stackOffset, wasmCalleeInfo.numberOfStackArguments, callerStackArgs);
@@ -1519,7 +1535,7 @@ auto LLIntGenerator::addCallIndirect(unsigned tableIndex, const TypeDefinition& 
 
         const auto& callingConvention = wasmCallingConvention();
         const TypeIndex callerTypeIndex = m_info.internalFunctionTypeIndices[m_functionIndex];
-        const TypeDefinition& callerTypeDefinition = TypeInformation::get(callerTypeIndex);
+        const TypeDefinition& callerTypeDefinition = TypeInformation::get(callerTypeIndex).expand();
         uint32_t callerStackArgs = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), callingConvention.numberOfStackValues(*callerTypeDefinition.as<FunctionSignature>()));
 
         WasmTailCallIndirect::emit(this, calleeIndex, m_codeBlock->addSignature(signature), calleeInfo.stackOffset, calleeInfo.numberOfStackArguments, callerStackArgs, tableIndex);
@@ -2295,7 +2311,7 @@ void LLIntGenerator::dump(const ControlStack& controlStack, const Stack* stack)
     dataLogLn("Control stack: stackSize:(", m_stackSize.value(), ")");
     for (size_t i = controlStack.size(); i--;) {
         dataLog("  ", controlStack[i].controlData, ": ");
-        CommaPrinter comma(", ", "");
+        CommaPrinter comma(", "_s, ""_s);
         dumpExpressionStack(comma, *stack);
         stack = &controlStack[i].enclosedExpressionStack;
         dataLogLn();

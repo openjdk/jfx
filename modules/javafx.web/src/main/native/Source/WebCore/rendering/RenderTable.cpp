@@ -57,15 +57,15 @@
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "StyleInheritedData.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTable);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTable);
 
 RenderTable::RenderTable(Type type, Element& element, RenderStyle&& style)
     : RenderBlock(type, element, WTFMove(style), { })
@@ -135,7 +135,7 @@ RenderTableSection* RenderTable::topSection() const
 void RenderTable::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBlock::styleDidChange(diff, oldStyle);
-    propagateStyleToAnonymousChildren(PropagateToAllChildren);
+    propagateStyleToAnonymousChildren(StylePropagationType::AllChildren);
 
     bool oldFixedTableLayout = oldStyle ? oldStyle->isFixedTableLayout() : false;
 
@@ -272,8 +272,8 @@ void RenderTable::updateLogicalWidth()
     LayoutUnit containerWidthInInlineDirection = hasPerpendicularContainingBlock ? perpendicularContainingBlockLogicalHeight() : availableLogicalWidth;
 
     Length styleLogicalWidth = style().logicalWidth();
-    if (hasOverridingLogicalWidth())
-        setLogicalWidth(overridingLogicalWidth());
+    if (auto overridingLogicalWidth = this->overridingLogicalWidth())
+        setLogicalWidth(*overridingLogicalWidth);
     else if ((styleLogicalWidth.isSpecified() && styleLogicalWidth.isPositive()) || styleLogicalWidth.isIntrinsic())
         setLogicalWidth(convertStyleLogicalWidthToComputedWidth(styleLogicalWidth, containerWidthInInlineDirection));
     else {
@@ -458,7 +458,7 @@ void RenderTable::layout()
     unsigned sectionCount = 0;
     bool shouldCacheIntrinsicContentLogicalHeightForFlexItem = true;
 
-    LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
+    LayoutRepainter repainter(*this);
     {
         LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
 
@@ -526,9 +526,10 @@ void RenderTable::layout()
         if (logicalHeightLength.isIntrinsic() || (logicalHeightLength.isSpecified() && logicalHeightLength.isPositive()))
             computedLogicalHeight = convertStyleLogicalHeightToComputedHeight(logicalHeightLength);
 
-        if (hasOverridingLogicalHeight())
-            computedLogicalHeight = std::max(computedLogicalHeight, overridingLogicalHeight() - borderAndPaddingAfter - sumCaptionsLogicalHeight());
+        if (auto overridingLogicalHeight = this->overridingLogicalHeight())
+            computedLogicalHeight = std::max(computedLogicalHeight, *overridingLogicalHeight - borderAndPaddingAfter - sumCaptionsLogicalHeight());
 
+        if (!shouldIgnoreLogicalMinMaxHeightSizes()) {
         Length logicalMaxHeightLength = style().logicalMaxHeight();
         if (logicalMaxHeightLength.isFillAvailable() || (logicalMaxHeightLength.isSpecified() && !logicalMaxHeightLength.isNegative()
             && !logicalMaxHeightLength.isMinContent() && !logicalMaxHeightLength.isMaxContent() && !logicalMaxHeightLength.isFitContent())) {
@@ -543,6 +544,7 @@ void RenderTable::layout()
             LayoutUnit computedMinLogicalHeight = convertStyleLogicalHeightToComputedHeight(logicalMinHeightLength);
             computedLogicalHeight = std::max(computedLogicalHeight, computedMinLogicalHeight);
         }
+        }
 
         distributeExtraLogicalHeight(computedLogicalHeight - totalSectionLogicalHeight);
 
@@ -553,7 +555,12 @@ void RenderTable::layout()
             // Completely empty tables (with no sections or anything) should at least honor their
             // overriding or specified height in strict mode, but this value will not be cached.
             shouldCacheIntrinsicContentLogicalHeightForFlexItem = false;
-            setLogicalHeight(hasOverridingLogicalHeight() ? overridingLogicalHeight() - borderAndPaddingAfter : logicalHeight() + computedLogicalHeight);
+            auto tableLogicalHeight = [&] {
+                if (auto overridingLogicalHeight = this->overridingLogicalHeight())
+                    return *overridingLogicalHeight - borderAndPaddingAfter;
+                return logicalHeight() + computedLogicalHeight;
+            };
+            setLogicalHeight(tableLogicalHeight());
         }
 
         LayoutUnit sectionLogicalLeft = style().isLeftToRightDirection() ? borderStart() : borderEnd();
@@ -612,7 +619,7 @@ void RenderTable::layout()
     }
 
     bool paginated = layoutState && layoutState->isPaginated();
-    if (sectionMoved && paginated) {
+    if (sectionCount && sectionMoved && paginated) {
         // FIXME: Table layout should always stabilize even when section moves (see webkit.org/b/174412).
         if (m_recursiveSectionMovedWithPaginationLevel < sectionCount) {
             SetForScope recursiveSectionMovedWithPaginationLevel(m_recursiveSectionMovedWithPaginationLevel, m_recursiveSectionMovedWithPaginationLevel + 1);
@@ -715,6 +722,19 @@ void RenderTable::addOverflowFromChildren()
 
 void RenderTable::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    auto isSkippedContent = [&] {
+        if (style().usedContentVisibility() == ContentVisibility::Visible)
+            return false;
+        // FIXME: Tables can never be skipped content roots. If a table is _inside_ a skipped subtree, we should have bailed out at the skipped root ancestor.
+        // However with continuation (see webkit.org/b/275459) used visibility values does not always get propagated properly and
+        // we may end up here with a dirty (skipped) table.
+        if (auto* containingBlock = this->containingBlock(); containingBlock && containingBlock->isAnonymousBlock() && !containingBlock->style().hasSkippedContent())
+            return true;
+        return false;
+    };
+    if (isSkippedContent())
+        return;
+
     LayoutPoint adjustedPaintOffset = paintOffset + location();
 
     PaintPhase paintPhase = paintInfo.phase;
@@ -736,7 +756,7 @@ void RenderTable::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
     PaintPhase paintPhase = paintInfo.phase;
-    if ((paintPhase == PaintPhase::BlockBackground || paintPhase == PaintPhase::ChildBlockBackground) && hasVisibleBoxDecorations() && style().visibility() == Visibility::Visible)
+    if ((paintPhase == PaintPhase::BlockBackground || paintPhase == PaintPhase::ChildBlockBackground) && hasVisibleBoxDecorations() && style().usedVisibility() == Visibility::Visible)
         paintBoxDecorations(paintInfo, paintOffset);
 
     if (paintPhase == PaintPhase::Mask) {
@@ -766,7 +786,7 @@ void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
         }
     }
 
-    if (collapseBorders() && paintPhase == PaintPhase::ChildBlockBackground && style().visibility() == Visibility::Visible) {
+    if (collapseBorders() && paintPhase == PaintPhase::ChildBlockBackground && style().usedVisibility() == Visibility::Visible) {
         recalcCollapsedBorders();
         // Using our cached sorted styles, we then do individual passes,
         // painting each style of border from lowest precedence to highest precedence.
@@ -783,7 +803,7 @@ void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     }
 
     // Paint outline.
-    if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && hasOutline() && style().visibility() == Visibility::Visible)
+    if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && hasOutline() && style().usedVisibility() == Visibility::Visible)
         paintOutline(paintInfo, LayoutRect(paintOffset, size()));
 }
 
@@ -842,7 +862,7 @@ void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& p
 
 void RenderTable::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (style().visibility() != Visibility::Visible || paintInfo.phase != PaintPhase::Mask)
+    if (style().usedVisibility() != Visibility::Visible || paintInfo.phase != PaintPhase::Mask)
         return;
 
     LayoutRect rect(paintOffset, size());
@@ -889,9 +909,9 @@ void RenderTable::computePreferredLogicalWidths()
     for (unsigned i = 0; i < m_captions.size(); i++)
         m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, m_captions[i]->minPreferredLogicalWidth());
 
-    if (hasOverridingLogicalWidth()) {
-        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, overridingLogicalWidth());
-        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, overridingLogicalWidth());
+    if (auto overridingLogicalWidth = this->overridingLogicalWidth()) {
+        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, *overridingLogicalWidth);
+        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, *overridingLogicalWidth);
     }
 
     auto& styleToUse = style();
@@ -1167,7 +1187,7 @@ void RenderTable::recalcSections() const
     for (auto& section : childrenOfType<RenderTableSection>(const_cast<RenderTable&>(*this)))
         section.removeRedundantColumns();
 
-    ASSERT(selfNeedsLayout());
+    ASSERT(selfNeedsLayout() || !wasSkippedDuringLastLayoutDueToContentVisibility() || *wasSkippedDuringLastLayoutDueToContentVisibility());
 
     m_needsSectionRecalc = false;
 }
@@ -1635,7 +1655,7 @@ bool RenderTable::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     LayoutRect boundsRect(adjustedLocation, size());
     if (visibleToHitTesting(request) && (action == HitTestBlockBackground || action == HitTestChildBlockBackground) && locationInContainer.intersects(boundsRect)) {
         updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - toLayoutSize(adjustedLocation)));
-        if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
+        if (result.addNodeToListBasedTestResult(protectedNodeForHitTest().get(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
             return true;
     }
 

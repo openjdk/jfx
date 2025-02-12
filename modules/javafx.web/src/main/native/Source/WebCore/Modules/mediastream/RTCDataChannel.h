@@ -51,7 +51,7 @@ class Blob;
 class RTCPeerConnectionHandler;
 
 class RTCDataChannel final : public RefCounted<RTCDataChannel>, public ActiveDOMObject, public RTCDataChannelHandlerClient, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(RTCDataChannel);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCDataChannel);
 public:
     static Ref<RTCDataChannel> create(ScriptExecutionContext&, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&, RTCDataChannelState);
     static Ref<RTCDataChannel> create(ScriptExecutionContext&, RTCDataChannelIdentifier, String&&, RTCDataChannelInit&&, RTCDataChannelState);
@@ -86,8 +86,9 @@ public:
     bool canDetach() const;
     std::unique_ptr<DetachedRTCDataChannel> detach();
 
-    using RefCounted<RTCDataChannel>::ref;
-    using RefCounted<RTCDataChannel>::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     WEBCORE_EXPORT static std::unique_ptr<RTCDataChannelHandler> handlerFromIdentifier(RTCDataChannelLocalIdentifier);
     void fireOpenEventIfNeeded();
@@ -100,21 +101,20 @@ private:
     void scheduleDispatchEvent(Ref<Event>&&);
     void removeFromDataChannelLocalMapIfNeeded();
 
-    EventTargetInterface eventTargetInterface() const final { return RTCDataChannelEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCDataChannel; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    // ActiveDOMObject API
+    // ActiveDOMObject.
     void stop() final;
-    const char* activeDOMObjectName() const final { return "RTCDataChannel"; }
     bool virtualHasPendingActivity() const final;
 
     // RTCDataChannelHandlerClient API
     void didChangeReadyState(RTCDataChannelState) final;
     void didReceiveStringData(const String&) final;
-    void didReceiveRawData(const uint8_t*, size_t) final;
+    void didReceiveRawData(std::span<const uint8_t>) final;
     void didDetectError(Ref<RTCError>&&) final;
     void bufferedAmountIsDecreasing(size_t) final;
 

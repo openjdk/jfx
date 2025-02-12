@@ -54,7 +54,7 @@
 #include "StepRange.h"
 #include "StyleResolver.h"
 #include "UserAgentParts.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(IOS_TOUCH_EVENTS)
 #include "Document.h"
@@ -66,8 +66,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SliderThumbElement);
-WTF_MAKE_ISO_ALLOCATED_IMPL(SliderContainerElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SliderThumbElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SliderContainerElement);
 
 inline static Decimal sliderPosition(HTMLInputElement& element)
 {
@@ -79,7 +79,7 @@ inline static Decimal sliderPosition(HTMLInputElement& element)
 inline static bool hasVerticalAppearance(HTMLInputElement& input)
 {
     ASSERT(input.renderer());
-    return !input.renderer()->isHorizontalWritingMode() || input.renderer()->style().effectiveAppearance() == StyleAppearance::SliderVertical;
+    return !input.renderer()->isHorizontalWritingMode() || input.renderer()->style().usedAppearance() == StyleAppearance::SliderVertical;
 }
 
 
@@ -90,7 +90,8 @@ inline static bool hasVerticalAppearance(HTMLInputElement& input)
 // FIXME: Find a way to cascade appearance and adjust heights, and get rid of this class.
 // http://webkit.org/b/62535
 class RenderSliderContainer final : public RenderFlexibleBox {
-    WTF_MAKE_ISO_ALLOCATED_INLINE(RenderSliderContainer);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_INLINE(RenderSliderContainer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSliderContainer);
 public:
     RenderSliderContainer(SliderContainerElement& element, RenderStyle&& style)
         : RenderFlexibleBox(Type::SliderContainer, element, WTFMove(style))
@@ -108,7 +109,7 @@ private:
 RenderBox::LogicalExtentComputedValues RenderSliderContainer::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const
 {
     ASSERT(element()->shadowHost());
-    auto& input = checkedDowncast<HTMLInputElement>(*element()->shadowHost());
+    auto& input = downcast<HTMLInputElement>(*element()->shadowHost());
     bool isVertical = hasVerticalAppearance(input);
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -121,7 +122,7 @@ RenderBox::LogicalExtentComputedValues RenderSliderContainer::computeLogicalHeig
             int tickLength = theme().sliderTickSize().height();
             trackHeight = 2 * (offsetFromCenter + tickLength);
         }
-        float zoomFactor = style().effectiveZoom();
+        float zoomFactor = style().usedZoom();
         if (zoomFactor != 1.0)
             trackHeight *= zoomFactor;
 
@@ -136,7 +137,7 @@ RenderBox::LogicalExtentComputedValues RenderSliderContainer::computeLogicalHeig
 void RenderSliderContainer::layout()
 {
     ASSERT(element()->shadowHost());
-    auto& input = checkedDowncast<HTMLInputElement>(*element()->shadowHost());
+    auto& input = downcast<HTMLInputElement>(*element()->shadowHost());
     bool isVertical = hasVerticalAppearance(input);
     mutableStyle().setFlexDirection(isVertical && style().isHorizontalWritingMode() ? FlexDirection::Column : FlexDirection::Row);
     TextDirection oldTextDirection = style().direction();
@@ -558,7 +559,7 @@ RefPtr<HTMLInputElement> SliderThumbElement::hostInput() const
 {
     // Only HTMLInputElement creates SliderThumbElement instances as its shadow nodes.
     // So, shadowHost() must be an HTMLInputElement.
-    return checkedDowncast<HTMLInputElement>(shadowHost());
+    return downcast<HTMLInputElement>(shadowHost());
 }
 
 std::optional<Style::ResolvedStyle> SliderThumbElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* hostStyle)
@@ -567,12 +568,12 @@ std::optional<Style::ResolvedStyle> SliderThumbElement::resolveCustomStyle(const
         return std::nullopt;
 
     auto elementStyle = resolveStyle(resolutionContext);
-    switch (hostStyle->effectiveAppearance()) {
+    switch (hostStyle->usedAppearance()) {
     case StyleAppearance::SliderVertical:
-        elementStyle.style->setEffectiveAppearance(StyleAppearance::SliderThumbVertical);
+        elementStyle.style->setUsedAppearance(StyleAppearance::SliderThumbVertical);
         break;
     case StyleAppearance::SliderHorizontal:
-        elementStyle.style->setEffectiveAppearance(StyleAppearance::SliderThumbHorizontal);
+        elementStyle.style->setUsedAppearance(StyleAppearance::SliderThumbHorizontal);
         break;
     default:
         break;

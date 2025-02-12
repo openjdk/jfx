@@ -27,8 +27,8 @@
 #include "PatternAttributes.h"
 #include "SVGPatternElement.h"
 #include <memory>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -40,15 +40,19 @@ public:
 };
 
 class LegacyRenderSVGResourcePattern final : public LegacyRenderSVGResourceContainer {
-    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGResourcePattern);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGResourcePattern);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGResourcePattern);
 public:
     LegacyRenderSVGResourcePattern(SVGPatternElement&, RenderStyle&&);
+    virtual ~LegacyRenderSVGResourcePattern();
+
     SVGPatternElement& patternElement() const;
+    Ref<SVGPatternElement> protectedPatternElement() const;
 
     void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
-    bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
+    OptionSet<ApplyResult> applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
     void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) override;
     FloatRect resourceBoundingBox(const RenderObject&, RepaintRectCalculation) override { return FloatRect(); }
 
