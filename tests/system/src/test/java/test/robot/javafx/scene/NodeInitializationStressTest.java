@@ -436,7 +436,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349090") // FIX
     @Test
     public void pieChart() {
         assumeFalse(SKIP_TEST);
