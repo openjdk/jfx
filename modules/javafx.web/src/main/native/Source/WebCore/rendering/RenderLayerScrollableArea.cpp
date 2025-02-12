@@ -78,6 +78,7 @@
 #include "ScrollingCoordinator.h"
 #include "ShadowRoot.h"
 #include <wtf/SetForScope.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -501,7 +502,7 @@ bool RenderLayerScrollableArea::scrollsOverflow() const
 bool RenderLayerScrollableArea::canUseCompositedScrolling() const
 {
     auto& renderer = m_layer.renderer();
-    bool isVisible = renderer.style().visibility() == Visibility::Visible;
+    bool isVisible = renderer.style().usedVisibility() == Visibility::Visible;
     if (renderer.settings().asyncOverflowScrollingEnabled())
         return isVisible && scrollsOverflow() && !m_layer.isInsideSVGForeignObject();
 
@@ -520,7 +521,7 @@ void RenderLayerScrollableArea::setScrollOffset(const ScrollOffset& offset)
 ScrollingNodeID RenderLayerScrollableArea::scrollingNodeID() const
 {
     if (!m_layer.isComposited())
-        return 0;
+        return { };
 
     return m_layer.backing()->scrollingNodeIDForRole(ScrollCoordinationRole::Scrolling);
 }
@@ -546,7 +547,7 @@ bool RenderLayerScrollableArea::handleWheelEventForScrolling(const PlatformWheel
 IntRect RenderLayerScrollableArea::visibleContentRectInternal(VisibleContentRectIncludesScrollbars scrollbarInclusion, VisibleContentRectBehavior) const
 {
     IntSize scrollbarSpace;
-    if (showsOverflowControls() && scrollbarInclusion == IncludeScrollbars)
+    if (showsOverflowControls() && scrollbarInclusion == VisibleContentRectIncludesScrollbars::Yes)
         scrollbarSpace = scrollbarIntrusion();
 
     auto visibleSize = this->visibleSize();
@@ -847,12 +848,7 @@ bool RenderLayerScrollableArea::canShowNonOverlayScrollbars() const
 
 void RenderLayerScrollableArea::createScrollbarsController()
 {
-    if (auto scrollbarController = m_layer.page().chrome().client().createScrollbarsController(m_layer.page(), *this)) {
-        setScrollbarsController(WTFMove(scrollbarController));
-        return;
-    }
-
-    ScrollableArea::createScrollbarsController();
+    m_layer.page().chrome().client().ensureScrollbarsController(m_layer.page(), *this);
 }
 
 static inline RenderElement* rendererForScrollbar(RenderLayerModelObject& renderer)
@@ -1024,14 +1020,14 @@ OverscrollBehavior RenderLayerScrollableArea::verticalOverscrollBehavior() const
 Color RenderLayerScrollableArea::scrollbarThumbColorStyle() const
 {
     if (auto* renderer = m_layer.renderBox())
-        return renderer->style().effectiveScrollbarThumbColor();
+        return renderer->style().usedScrollbarThumbColor();
     return { };
 }
 
 Color RenderLayerScrollableArea::scrollbarTrackColorStyle() const
 {
     if (auto* renderer = m_layer.renderBox())
-        return renderer->style().effectiveScrollbarTrackColor();
+        return renderer->style().usedScrollbarTrackColor();
     return { };
 }
 
@@ -1171,6 +1167,8 @@ void RenderLayerScrollableArea::computeHasCompositedScrollableOverflow(LayoutUpT
         paintParent->setDescendantsNeedUpdateBackingAndHierarchyTraversal();
 
     m_hasCompositedScrollableOverflow = hasCompositedScrollableOverflow;
+    if (m_hasCompositedScrollableOverflow)
+        m_layer.compositor().layerGainedCompositedScrollableOverflow(m_layer);
 }
 
 bool RenderLayerScrollableArea::hasScrollableHorizontalOverflow() const
@@ -1250,7 +1248,7 @@ void RenderLayerScrollableArea::updateScrollbarsAfterStyleChange(const RenderSty
         return;
 
     // List box parts handle the scrollbars by themselves so we have nothing to do.
-    if (box->style().effectiveAppearance() == StyleAppearance::Listbox)
+    if (box->style().usedAppearance() == StyleAppearance::Listbox)
         return;
 
     bool hadVerticalScrollbar = hasVerticalScrollbar();
@@ -1270,7 +1268,7 @@ void RenderLayerScrollableArea::updateScrollbarsAfterLayout()
     ASSERT(box);
 
     // List box parts handle the scrollbars by themselves so we have nothing to do.
-    if (box->style().effectiveAppearance() == StyleAppearance::Listbox)
+    if (box->style().usedAppearance() == StyleAppearance::Listbox)
         return;
 
     bool hadHorizontalScrollbar = hasHorizontalScrollbar();
@@ -1306,7 +1304,7 @@ void RenderLayerScrollableArea::updateScrollbarsAfterLayout()
         // FIXME: This does not belong here.
         auto* parent = renderer.parent();
         if (CheckedPtr parentFlexibleBox = dynamicDowncast<RenderFlexibleBox>(parent); parentFlexibleBox && renderer.isRenderBox())
-            parentFlexibleBox->clearCachedMainSizeForChild(*m_layer.renderBox());
+            parentFlexibleBox->clearCachedMainSizeForFlexItem(*m_layer.renderBox());
     }
 
     // Set up the range.
@@ -1581,7 +1579,6 @@ bool RenderLayerScrollableArea::hitTestOverflowControls(HitTestResult& result, c
 
     auto rects = overflowControlsRects();
 
-    IntRect resizeControlRect;
     auto& renderer = m_layer.renderer();
     if (renderer.style().resize() != Resize::None) {
         if (rects.resizer.contains(localPoint))
@@ -1851,7 +1848,7 @@ void RenderLayerScrollableArea::updateAllScrollbarRelatedStyle()
 // FIXME: this is only valid after we've made layers.
 bool RenderLayerScrollableArea::usesCompositedScrolling() const
 {
-    return m_layer.isComposited() && m_layer.backing()->hasScrollingLayer();
+    return hasCompositedScrollableOverflow() && m_layer.isComposited();
 }
 
 static inline int adjustedScrollDelta(int beginningDelta)
@@ -2001,7 +1998,7 @@ bool RenderLayerScrollableArea::mockScrollbarsControllerEnabled() const
 
 void RenderLayerScrollableArea::logMockScrollbarsControllerMessage(const String& message) const
 {
-    m_layer.renderer().document().addConsoleMessage(MessageSource::Other, MessageLevel::Debug, "RenderLayer: " + message);
+    m_layer.renderer().document().addConsoleMessage(MessageSource::Other, MessageLevel::Debug, makeString("RenderLayer: "_s, message));
 }
 
 String RenderLayerScrollableArea::debugDescription() const
@@ -2047,5 +2044,15 @@ void RenderLayerScrollableArea::invalidateScrollAnchoringElement()
         m_scrollAnchoringController->invalidateAnchorElement();
 }
 
+FrameIdentifier RenderLayerScrollableArea::rootFrameID() const
+{
+    return m_layer.renderer().frame().rootFrame().frameID();
+}
+
+void RenderLayerScrollableArea::scrollbarWidthChanged(ScrollbarWidth width)
+{
+    scrollbarsController().scrollbarWidthChanged(width);
+    availableContentSizeChanged(AvailableSizeChangeReason::ScrollbarsChanged);
+}
 
 } // namespace WebCore

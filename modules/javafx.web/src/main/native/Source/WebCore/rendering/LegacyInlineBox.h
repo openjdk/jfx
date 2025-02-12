@@ -24,7 +24,7 @@
 #include "RenderBoxModelObject.h"
 #include "RenderText.h"
 #include "TextFlags.h"
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakPtr.h>
 
@@ -37,7 +37,7 @@ class LegacyRootInlineBox;
 // LegacyInlineBox represents a rectangle that occurs on a line. It corresponds to
 // some RenderObject (i.e., it represents a portion of that RenderObject).
 class LegacyInlineBox {
-    WTF_MAKE_ISO_ALLOCATED(LegacyInlineBox);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyInlineBox);
 public:
     virtual ~LegacyInlineBox();
 
@@ -81,16 +81,11 @@ public:
 
     WEBCORE_EXPORT virtual void outputLineTreeAndMark(WTF::TextStream&, const LegacyInlineBox* markedBox, int depth) const;
     WEBCORE_EXPORT virtual void outputLineBox(WTF::TextStream&, bool mark, int depth) const;
-    WEBCORE_EXPORT virtual const char* boxName() const;
+    WEBCORE_EXPORT virtual ASCIILiteral boxName() const;
 #endif
 
-    bool behavesLikeText() const { return m_bitfields.behavesLikeText(); }
-    void setBehavesLikeText(bool behavesLikeText) { m_bitfields.setBehavesLikeText(behavesLikeText); }
-
-    virtual bool isInlineElementBox() const { return false; }
     virtual bool isInlineFlowBox() const { return false; }
     virtual bool isInlineTextBox() const { return false; }
-    virtual bool isEllipsisBox() const { return false; }
     virtual bool isRootInlineBox() const { return false; }
     virtual bool isSVGInlineTextBox() const { return false; }
     virtual bool isSVGInlineFlowBox() const { return false; }
@@ -214,18 +209,12 @@ public:
     int caretLeftmostOffset() const { return isLeftToRightDirection() ? caretMinOffset() : caretMaxOffset(); }
     int caretRightmostOffset() const { return isLeftToRightDirection() ? caretMaxOffset() : caretMinOffset(); }
 
-    virtual void clearTruncation() { }
-
     bool isDirty() const { return m_bitfields.dirty(); }
     virtual void markDirty(bool dirty = true) { m_bitfields.setDirty(dirty); }
 
     WEBCORE_EXPORT virtual void dirtyLineBoxes();
 
     WEBCORE_EXPORT virtual RenderObject::HighlightState selectionState() const;
-
-    WEBCORE_EXPORT virtual bool canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidth) const;
-    // visibleLeftEdge, visibleRightEdge are in the parent's coordinate system.
-    WEBCORE_EXPORT virtual float placeEllipsisBox(bool ltr, float visibleLeftEdge, float visibleRightEdge, float ellipsisWidth, float &truncatedWidth, bool&);
 
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
     void setHasBadParent();
@@ -253,24 +242,9 @@ public:
     bool knownToHaveNoOverflow() const { return m_bitfields.knownToHaveNoOverflow(); }
     void clearKnownToHaveNoOverflow();
 
-    void setExpansion(float newExpansion)
-    {
-        m_logicalWidth -= m_expansion;
-        m_expansion = newExpansion;
-        m_logicalWidth += m_expansion;
-    }
-    void setExpansionWithoutGrowing(float newExpansion)
-    {
-        ASSERT(!m_expansion);
-        m_expansion = newExpansion;
-    }
-    float expansion() const { return m_expansion; }
-
-    void setHasHyphen(bool hasHyphen) { m_bitfields.setHasEllipsisBoxOrHyphen(hasHyphen); }
-    void setCanHaveLeftExpansion(bool canHaveLeftExpansion) { m_bitfields.setCanHaveLeftExpansion(canHaveLeftExpansion); }
-    void setCanHaveRightExpansion(bool canHaveRightExpansion) { m_bitfields.setCanHaveRightExpansion(canHaveRightExpansion); }
-    void setForceRightExpansion() { m_bitfields.setForceRightExpansion(true); }
-    void setForceLeftExpansion() { m_bitfields.setForceLeftExpansion(true); }
+    // For LegacyInlineTextBox
+    bool isInGlyphDisplayListCache() const { return m_bitfields.isInGlyphDisplayListCache(); }
+    void setIsInGlyphDisplayListCache(bool inCache = true) { m_bitfields.setIsInGlyphDisplayListCache(inCache); }
 
 private:
     LegacyInlineBox* m_nextOnLine { nullptr }; // The next element on the same line as us.
@@ -282,7 +256,6 @@ private:
 
 private:
     float m_logicalWidth { 0 };
-    float m_expansion { 0 };
     FloatPoint m_topLeft;
 
 #define ADD_BOOLEAN_BITFIELD(name, Name) \
@@ -302,14 +275,7 @@ private:
             , m_extracted(extracted)
             , m_hasVirtualLogicalHeight(false)
             , m_isHorizontal(isHorizontal)
-            , m_endsWithBreak(false)
-            , m_canHaveLeftExpansion(false)
-            , m_canHaveRightExpansion(false)
             , m_knownToHaveNoOverflow(true)
-            , m_hasEllipsisBoxOrHyphen(false)
-            , m_behavesLikeText(false)
-            , m_forceRightExpansion(false)
-            , m_forceLeftExpansion(false)
             , m_determinedIfNextOnLineExists(false)
             , m_nextOnLineExists(false)
         {
@@ -334,14 +300,8 @@ private:
         // for RootInlineBox
         ADD_BOOLEAN_BITFIELD(endsWithBreak, EndsWithBreak); // Whether the line ends with a <br>.
         // shared between RootInlineBox and LegacyInlineTextBox
-        ADD_BOOLEAN_BITFIELD(canHaveLeftExpansion, CanHaveLeftExpansion);
-        ADD_BOOLEAN_BITFIELD(canHaveRightExpansion, CanHaveRightExpansion);
         ADD_BOOLEAN_BITFIELD(knownToHaveNoOverflow, KnownToHaveNoOverflow);
-        ADD_BOOLEAN_BITFIELD(hasEllipsisBoxOrHyphen, HasEllipsisBoxOrHyphen);
         // for LegacyInlineTextBox
-        ADD_BOOLEAN_BITFIELD(behavesLikeText, BehavesLikeText); // Whether or not this object represents text with a non-zero height. Includes non-image list markers, text boxes, br.
-        ADD_BOOLEAN_BITFIELD(forceRightExpansion, ForceRightExpansion);
-        ADD_BOOLEAN_BITFIELD(forceLeftExpansion, ForceLeftExpansion);
         ADD_BOOLEAN_BITFIELD(isInGlyphDisplayListCache, IsInGlyphDisplayListCache);
 
     private:
@@ -382,17 +342,6 @@ protected:
     // For RootInlineBox
     bool endsWithBreak() const { return m_bitfields.endsWithBreak(); }
     void setEndsWithBreak(bool endsWithBreak) { m_bitfields.setEndsWithBreak(endsWithBreak); }
-    bool hasEllipsisBox() const { return m_bitfields.hasEllipsisBoxOrHyphen(); }
-    void setHasEllipsisBox(bool hasEllipsisBox) { m_bitfields.setHasEllipsisBoxOrHyphen(hasEllipsisBox); }
-
-    // For LegacyInlineTextBox
-    bool hasHyphen() const { return m_bitfields.hasEllipsisBoxOrHyphen(); }
-    bool canHaveLeftExpansion() const { return m_bitfields.canHaveLeftExpansion(); }
-    bool canHaveRightExpansion() const { return m_bitfields.canHaveRightExpansion(); }
-    bool forceRightExpansion() const { return m_bitfields.forceRightExpansion(); }
-    bool forceLeftExpansion() const { return m_bitfields.forceLeftExpansion(); }
-    bool isInGlyphDisplayListCache() const { return m_bitfields.isInGlyphDisplayListCache(); }
-    void setIsInGlyphDisplayListCache(bool inCache = true) { m_bitfields.setIsInGlyphDisplayListCache(inCache); }
 
     // For LegacyInlineFlowBox and LegacyInlineTextBox
     bool extracted() const { return m_bitfields.extracted(); }

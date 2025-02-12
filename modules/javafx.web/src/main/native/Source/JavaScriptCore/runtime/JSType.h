@@ -66,7 +66,7 @@ namespace JSC {
     macro(BooleanObjectType, SpecObjectOther) \
     macro(NumberObjectType, SpecObjectOther) \
     macro(ErrorInstanceType, SpecObjectOther) \
-    macro(GlobalProxyType, SpecObjectOther) \
+    macro(GlobalProxyType, SpecGlobalProxy) \
     macro(DirectArgumentsType, SpecDirectArguments) \
     macro(ScopedArgumentsType, SpecScopedArguments) \
     macro(ClonedArgumentsType, SpecObjectOther) \
@@ -86,6 +86,7 @@ namespace JSC {
     macro(Uint16ArrayType, SpecUint16Array) \
     macro(Int32ArrayType, SpecInt32Array) \
     macro(Uint32ArrayType, SpecUint32Array) \
+    macro(Float16ArrayType, SpecFloat16Array) \
     macro(Float32ArrayType, SpecFloat32Array) \
     macro(Float64ArrayType, SpecFloat64Array) \
     macro(BigInt64ArrayType, SpecBigInt64Array) \

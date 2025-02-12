@@ -38,6 +38,15 @@ enum class Scope;
 }
 
 namespace WebCore {
+class AuthenticatorCoordinator;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AuthenticatorCoordinator> : std::true_type { };
+}
+
+namespace WebCore {
 
 class AbortSignal;
 class AuthenticatorCoordinatorClient;
@@ -64,8 +73,8 @@ public:
     WEBCORE_EXPORT void setClient(std::unique_ptr<AuthenticatorCoordinatorClient>&&);
 
     // The following methods implement static methods of PublicKeyCredential.
-    void create(const Document&, CredentialCreationOptions&&, WebAuthn::Scope, RefPtr<AbortSignal>&&, CredentialPromise&&);
-    void discoverFromExternalSource(const Document&, CredentialRequestOptions&&, const ScopeAndCrossOriginParent&, CredentialPromise&&);
+    void create(const Document&, CredentialCreationOptions&&, RefPtr<AbortSignal>&&, CredentialPromise&&);
+    void discoverFromExternalSource(const Document&, CredentialRequestOptions&&, CredentialPromise&&);
     void isUserVerifyingPlatformAuthenticatorAvailable(const Document&, DOMPromiseDeferred<IDLBoolean>&&) const;
     void isConditionalMediationAvailable(const Document&, DOMPromiseDeferred<IDLBoolean>&&) const;
 

@@ -37,6 +37,7 @@
 #include "TextUtil.h"
 #include <wtf/ListHashSet.h>
 #include <wtf/Range.h>
+#include <wtf/text/MakeString.h>
 
 using WTF::Range;
 
@@ -206,8 +207,8 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
             auto enclosingAscentAndDescent = TextUtil::enclosingGlyphBoundsForText(StringView(content).substring(text->start, text->length), style);
             // FIXME: Take fallback fonts into account.
             auto& fontMetrics = style.metricsOfPrimaryFont();
-            auto topOverflow = std::max(0.f, ceilf(-enclosingAscentAndDescent.ascent) - fontMetrics.ascent());
-            auto bottomOverflow = std::max(0.f, ceilf(enclosingAscentAndDescent.descent) - fontMetrics.descent());
+            auto topOverflow = std::max(0.f, ceilf(-enclosingAscentAndDescent.ascent) - fontMetrics.intAscent());
+            auto bottomOverflow = std::max(0.f, ceilf(enclosingAscentAndDescent.descent) - fontMetrics.intDescent());
             inkOverflow.inflate(topOverflow, { }, bottomOverflow, { });
         };
         addGlyphOverflow();
@@ -216,7 +217,7 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
     };
 
     if (inlineTextBox.isCombined()) {
-        static auto objectReplacementCharacterString = NeverDestroyed<String> { &objectReplacementCharacter, 1 };
+        static auto objectReplacementCharacterString = NeverDestroyed<String> { span(objectReplacementCharacter) };
         // The rendered text is the actual combined content, while the "original" one is blank.
         boxes.append({ lineIndex()
             , InlineDisplay::Box::Type::Text
@@ -287,7 +288,7 @@ void InlineDisplayContentBuilder::appendHardLineBreakDisplayBox(const Line::Run&
 
 void InlineDisplayContentBuilder::appendAtomicInlineLevelDisplayBox(const Line::Run& lineRun, const InlineRect& borderBoxRect, InlineDisplay::Boxes& boxes)
 {
-    ASSERT(lineRun.layoutBox().isAtomicInlineLevelBox());
+    ASSERT(lineRun.layoutBox().isAtomicInlineBox());
     auto& layoutBox = lineRun.layoutBox();
 
     auto isContentful = true;
@@ -301,7 +302,7 @@ void InlineDisplayContentBuilder::appendAtomicInlineLevelDisplayBox(const Line::
     };
 
     boxes.append({ lineIndex()
-        , InlineDisplay::Box::Type::AtomicInlineLevelBox
+        , InlineDisplay::Box::Type::AtomicInlineBox
         , layoutBox
         , lineRun.bidiLevel()
         , borderBoxRect
@@ -379,7 +380,7 @@ void InlineDisplayContentBuilder::appendInlineDisplayBoxAtBidiBoundary(const Box
 void InlineDisplayContentBuilder::insertRubyAnnotationBox(const Box& annotationBox, size_t insertionPosition, const InlineRect& borderBoxRect, InlineDisplay::Boxes& boxes)
 {
     boxes.insert(insertionPosition, { lineIndex()
-        , InlineDisplay::Box::Type::AtomicInlineLevelBox
+        , InlineDisplay::Box::Type::AtomicInlineBox
         , annotationBox
         , UBIDI_DEFAULT_LTR
         , borderBoxRect
@@ -428,8 +429,8 @@ void InlineDisplayContentBuilder::processNonBidiContent(const LineLayoutResult& 
                 return lineBox.logicalRectForLineBreakBox(layoutBox);
 
             auto& boxGeometry = formattingContext().geometryForBox(layoutBox);
-            if (lineRun.isBox() || lineRun.isListMarker())
-                return lineBox.logicalBorderBoxForAtomicInlineLevelBox(layoutBox, boxGeometry);
+            if (lineRun.isAtomicInlineBox() || lineRun.isListMarker())
+                return lineBox.logicalBorderBoxForAtomicInlineBox(layoutBox, boxGeometry);
             if (lineRun.isInlineBoxStart() || lineRun.isLineSpanningInlineBoxStart())
                 return lineBox.logicalBorderBoxForInlineBox(layoutBox, boxGeometry);
             ASSERT_NOT_REACHED();
@@ -448,7 +449,7 @@ void InlineDisplayContentBuilder::processNonBidiContent(const LineLayoutResult& 
                 appendSoftLineBreakDisplayBox(lineRun, visualRectRelativeToRoot, boxes);
             else if (lineRun.isHardLineBreak())
                 appendHardLineBreakDisplayBox(lineRun, visualRectRelativeToRoot, boxes);
-            else if (lineRun.isBox() || lineRun.isListMarker())
+            else if (lineRun.isAtomicInlineBox() || lineRun.isListMarker())
                 appendAtomicInlineLevelDisplayBox(lineRun, visualRectRelativeToRoot, boxes);
             else if (lineRun.isInlineBoxStart() || lineRun.isLineSpanningInlineBoxStart()) {
                 // Do not generate display boxes for inline boxes on non-contentful lines (e.g. <span></span>)
@@ -576,7 +577,7 @@ void InlineDisplayContentBuilder::adjustVisualGeometryForDisplayBox(size_t displ
     auto& layoutBox = displayBox.layoutBox();
 
     if (!displayBox.isNonRootInlineBox()) {
-        if (displayBox.isAtomicInlineLevelBox() || displayBox.isGenericInlineLevelBox()) {
+        if (displayBox.isAtomicInlineBox() || displayBox.isGenericInlineLevelBox()) {
             auto isLeftToRightDirection = layoutBox.parent().style().isLeftToRightDirection();
             auto& boxGeometry = formattingContext().geometryForBox(layoutBox);
             auto boxMarginLeft = marginLeftInInlineDirection(boxGeometry, isLeftToRightDirection);
@@ -661,7 +662,8 @@ void InlineDisplayContentBuilder::processBidiContent(const LineLayoutResult& lin
 
     auto lineLogicalTop = isHorizontalWritingMode ? m_displayLine.top() : m_displayLine.left();
     auto lineLogicalLeft = isHorizontalWritingMode ? m_displayLine.left() : m_displayLine.top();
-    auto contentStartInInlineDirectionVisualOrder = lineLogicalLeft + m_displayLine.contentLogicalLeftIgnoringInlineDirection();
+    // Note that hangable punctuation does not contribute to contentLogicalLeftIgnoringInlineDirection() as it is considered more of an overflow.
+    auto contentStartInInlineDirectionVisualOrder = lineLogicalLeft + m_displayLine.contentLogicalLeftIgnoringInlineDirection() - (rootStyle().isLeftToRightDirection() ? lineLayoutResult.hangingContent.hangablePunctuationStartWidth : 0.f);
     auto hasInlineBox = false;
     auto createDisplayBoxesInVisualOrder = [&] {
 
@@ -705,8 +707,8 @@ void InlineDisplayContentBuilder::processBidiContent(const LineLayoutResult& lin
                     return { { }, { } };
                 }
                 auto& boxGeometry = formattingContext().geometryForBox(layoutBox);
-                if (lineRun.isBox() || lineRun.isListMarker())
-                    return lineBox.logicalBorderBoxForAtomicInlineLevelBox(layoutBox, boxGeometry);
+                if (lineRun.isAtomicInlineBox() || lineRun.isListMarker())
+                    return lineBox.logicalBorderBoxForAtomicInlineBox(layoutBox, boxGeometry);
                 ASSERT_NOT_REACHED();
                 return { };
             }();
@@ -748,7 +750,7 @@ void InlineDisplayContentBuilder::processBidiContent(const LineLayoutResult& lin
                 displayBoxTree.append(parentDisplayBoxNodeIndex, boxes.size() - 1);
                 continue;
             }
-            if (lineRun.isBox() || lineRun.isListMarker()) {
+            if (lineRun.isAtomicInlineBox() || lineRun.isListMarker()) {
                 auto isLeftToRightDirection = layoutBox.parent().style().isLeftToRightDirection();
                 auto& boxGeometry = formattingContext().geometryForBox(layoutBox);
                 auto boxMarginLeft = marginLeftInInlineDirection(boxGeometry, isLeftToRightDirection);
@@ -775,16 +777,18 @@ void InlineDisplayContentBuilder::processBidiContent(const LineLayoutResult& lin
                     // FIXME: Maybe we should not tag ruby bases with annotation boxes only contentful?
                     if (!lineBox.inlineLevelBoxFor(lineRun).hasContent())
                         return true;
-                    if (!layoutBox.isRubyBase() || !is<ElementBox>(layoutBox))
+                    if (!layoutBox.isRubyBase())
                         return false;
-                    auto& rubyBaseLayoutBox = downcast<ElementBox>(layoutBox);
+                    auto* rubyBaseLayoutBox = dynamicDowncast<ElementBox>(layoutBox);
+                    if (!rubyBaseLayoutBox)
+                        return false;
                     // Let's create empty inline boxes for ruby bases with annotation only.
-                    if (!rubyBaseLayoutBox.firstChild() || (rubyBaseLayoutBox.firstChild() == rubyBaseLayoutBox.lastChild() && rubyBaseLayoutBox.firstChild()->isRubyAnnotationBox()))
+                    if (!rubyBaseLayoutBox->firstChild() || (rubyBaseLayoutBox->firstChild() == rubyBaseLayoutBox->lastChild() && rubyBaseLayoutBox->firstChild()->isRubyAnnotationBox()))
                         return true;
                     // Let's check if we actually don't have a contentful run inside this ruby base.
                     for (size_t nextLogicalRunIndex = logicalIndex + 1; nextLogicalRunIndex < inlineContent.size(); ++nextLogicalRunIndex) {
                         auto& lineRun = inlineContent[nextLogicalRunIndex];
-                        if (lineRun.isInlineBoxEnd() && &lineRun.layoutBox() == &rubyBaseLayoutBox)
+                        if (lineRun.isInlineBoxEnd() && &lineRun.layoutBox() == rubyBaseLayoutBox)
                             break;
                         if (lineRun.isContentful())
                             return false;
@@ -872,7 +876,7 @@ void InlineDisplayContentBuilder::collectInkOverflowForInlineBoxes(InlineDisplay
     for (size_t index = boxes.size(); index--;) {
         auto& displayBox = boxes[index];
 
-        auto mayHaveInkOverflow = displayBox.isText() || displayBox.isAtomicInlineLevelBox() || displayBox.isGenericInlineLevelBox() || displayBox.isNonRootInlineBox();
+        auto mayHaveInkOverflow = displayBox.isText() || displayBox.isAtomicInlineBox() || displayBox.isGenericInlineLevelBox() || displayBox.isNonRootInlineBox();
         if (!mayHaveInkOverflow)
             continue;
         if (displayBox.isNonRootInlineBox() && !accumulatedInkOverflowRect.isEmpty())
@@ -1092,6 +1096,7 @@ size_t InlineDisplayContentBuilder::processRubyBase(size_t rubyBaseStart, Inline
                 baseBorderBoxLogicalRect.setWidth(std::max(0_lu, baseBorderBoxLogicalRect.width() - letterSpacing));
             }
 
+            // FIXME: There is a confusion here. The functions expect margin box.
             auto borderBoxLogicalTopLeft = RubyFormattingContext::placeAnnotationBox(rubyBaseLayoutBox, baseBorderBoxLogicalRect, formattingContext);
             auto contentBoxLogicalSize = RubyFormattingContext::sizeAnnotationBox(rubyBaseLayoutBox, baseBorderBoxLogicalRect, formattingContext);
             auto& annotationBoxGeometry = formattingContext.geometryForBox(*annotationBox);
@@ -1188,9 +1193,6 @@ void InlineDisplayContentBuilder::applyRubyOverhang(InlineDisplay::Boxes& displa
                     formattingContext.geometryForBox(*layoutBox.associatedRubyAnnotationBox()).moveHorizontally(LayoutUnit { -shiftValue });
             }
         };
-        if (beforeOverhang)
-            moveBoxRangeToVisualLeft(rubyBaseStart, displayBoxes.size() - 1, beforeOverhang);
-        if (afterOverhang) {
             auto hasJustifiedAdjacentAfterContent = [&] {
                 if (startEndPair.end() == displayBoxes.size())
                     return false;
@@ -1200,14 +1202,24 @@ void InlineDisplayContentBuilder::applyRubyOverhang(InlineDisplay::Boxes& displa
                     return false;
                 }
                 return !!afterRubyBaseDisplayBox.expansion().horizontalExpansion;
-            };
-            if (hasJustifiedAdjacentAfterContent()) {
+        }();
+
+        if (beforeOverhang) {
+            // When "before" adjacent content slightly pulls the rest of the content on the line leftward, justify content should stay intact.
+            moveBoxRangeToVisualLeft(rubyBaseStart, hasJustifiedAdjacentAfterContent ? startEndPair.end() : displayBoxes.size() - 1, beforeOverhang);
+        }
+        if (afterOverhang) {
+            // Normally we shift all the "after" boxes to the left here as one monolithic content
+            // but in case of justified alignment we can only move the adjacent run under the annotation
+            // and expand the justified space to keep the rest of the runs stationary.
+            if (hasJustifiedAdjacentAfterContent) {
                 auto& afterRubyBaseDisplayBox = displayBoxes[startEndPair.end()];
                 auto expansion = afterRubyBaseDisplayBox.expansion();
                 auto inflateValue = afterOverhang + beforeOverhang;
                 afterRubyBaseDisplayBox.setExpansion({ expansion.behavior, expansion.horizontalExpansion + inflateValue });
-                afterRubyBaseDisplayBox.expandHorizontally(inflateValue);
-            }
+                isHorizontalWritingMode ? afterRubyBaseDisplayBox.expandHorizontally(inflateValue) : afterRubyBaseDisplayBox.expandVertically(inflateValue);
+                moveBoxRangeToVisualLeft(startEndPair.end(), startEndPair.end(), afterOverhang);
+            } else
             moveBoxRangeToVisualLeft(startEndPair.end(), displayBoxes.size() - 1, afterOverhang);
         }
     }

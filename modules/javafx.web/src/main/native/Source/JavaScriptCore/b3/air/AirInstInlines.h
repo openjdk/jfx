@@ -167,10 +167,8 @@ inline std::optional<unsigned> Inst::shouldTryAliasingDef()
     case AddFloat:
     case MulDouble:
     case MulFloat:
-#if CPU(X86) || CPU(X86_64)
-        if (MacroAssembler::supportsAVX())
+        if (isX86_64_AVX())
             return std::nullopt;
-#endif
         if (args.size() == 3)
             return 2;
         break;
@@ -225,7 +223,7 @@ inline bool isAddSignExtend64Valid(const Inst& inst)
 
 inline bool isShiftValid(const Inst& inst)
 {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     return inst.args[0] == Tmp(X86Registers::ecx);
 #else
     UNUSED_PARAM(inst);
@@ -285,7 +283,7 @@ inline bool isRotateLeft64Valid(const Inst& inst)
 
 inline bool isX86DivHelperValid(const Inst& inst)
 {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     return inst.args[0] == Tmp(X86Registers::eax)
         && inst.args[1] == Tmp(X86Registers::edx);
 #else
@@ -326,7 +324,7 @@ inline bool isX86UDiv64Valid(const Inst& inst)
 
 inline bool isAtomicStrongCASValid(const Inst& inst)
 {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     switch (inst.args.size()) {
     case 3:
         return inst.args[0] == Tmp(X86Registers::eax);
@@ -335,20 +333,20 @@ inline bool isAtomicStrongCASValid(const Inst& inst)
     default:
         return false;
     }
-#else // CPU(X86) || CPU(X86_64)
+#else // CPU(X86_64)
     UNUSED_PARAM(inst);
     return false;
-#endif // CPU(X86) || CPU(X86_64)
+#endif // CPU(X86_64)
 }
 
 inline bool isBranchAtomicStrongCASValid(const Inst& inst)
 {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     return inst.args[1] == Tmp(X86Registers::eax);
-#else // CPU(X86) || CPU(X86_64)
+#else // CPU(X86_64)
     UNUSED_PARAM(inst);
     return false;
-#endif // CPU(X86) || CPU(X86_64)
+#endif // CPU(X86_64)
 }
 
 inline bool isAtomicStrongCAS8Valid(const Inst& inst)

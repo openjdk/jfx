@@ -30,11 +30,12 @@
 
 #include "Document.h"
 #include "PaymentRequest.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MerchantValidationEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MerchantValidationEvent);
 
 Ref<MerchantValidationEvent> MerchantValidationEvent::create(const AtomString& type, const String& methodName, URL&& validationURL)
 {
@@ -51,14 +52,14 @@ ExceptionOr<Ref<MerchantValidationEvent>> MerchantValidationEvent::create(Docume
     if (!methodName.isEmpty()) {
         auto validatedMethodName = convertAndValidatePaymentMethodIdentifier(methodName);
         if (!validatedMethodName)
-            return Exception { ExceptionCode::RangeError, makeString('"', methodName, "\" is an invalid payment method identifier.") };
+            return Exception { ExceptionCode::RangeError, makeString('"', methodName, "\" is an invalid payment method identifier."_s) };
     }
 
     return adoptRef(*new MerchantValidationEvent(type, WTFMove(methodName), WTFMove(validationURL), WTFMove(eventInit)));
 }
 
 MerchantValidationEvent::MerchantValidationEvent(const AtomString& type, const String& methodName, URL&& validationURL)
-    : Event { type, Event::CanBubble::No, Event::IsCancelable::No }
+    : Event { EventInterfaceType::MerchantValidationEvent, type, Event::CanBubble::No, Event::IsCancelable::No }
     , m_methodName { methodName }
     , m_validationURL { WTFMove(validationURL) }
 {
@@ -67,17 +68,12 @@ MerchantValidationEvent::MerchantValidationEvent(const AtomString& type, const S
 }
 
 MerchantValidationEvent::MerchantValidationEvent(const AtomString& type, String&& methodName, URL&& validationURL, Init&& eventInit)
-    : Event { type, WTFMove(eventInit), IsTrusted::No }
+    : Event { EventInterfaceType::MerchantValidationEvent, type, WTFMove(eventInit), IsTrusted::No }
     , m_methodName { WTFMove(methodName) }
     , m_validationURL { WTFMove(validationURL) }
 {
     ASSERT(!isTrusted());
     ASSERT(m_validationURL.isValid());
-}
-
-EventInterface MerchantValidationEvent::eventInterface() const
-{
-    return MerchantValidationEventInterfaceType;
 }
 
 ExceptionOr<void> MerchantValidationEvent::complete(Ref<DOMPromise>&& merchantSessionPromise)

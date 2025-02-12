@@ -40,7 +40,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityTableCell::AccessibilityTableCell(RenderObject* renderer)
+AccessibilityTableCell::AccessibilityTableCell(RenderObject& renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
@@ -52,7 +52,7 @@ AccessibilityTableCell::AccessibilityTableCell(Node& node)
 
 AccessibilityTableCell::~AccessibilityTableCell() = default;
 
-Ref<AccessibilityTableCell> AccessibilityTableCell::create(RenderObject* renderer)
+Ref<AccessibilityTableCell> AccessibilityTableCell::create(RenderObject& renderer)
 {
     return adoptRef(*new AccessibilityTableCell(renderer));
 }
@@ -64,28 +64,26 @@ Ref<AccessibilityTableCell> AccessibilityTableCell::create(Node& node)
 
 bool AccessibilityTableCell::computeAccessibilityIsIgnored() const
 {
-    AccessibilityObjectInclusion decision = defaultObjectInclusion();
+    auto decision = defaultObjectInclusion();
     if (decision == AccessibilityObjectInclusion::IncludeObject)
         return false;
     if (decision == AccessibilityObjectInclusion::IgnoreObject)
         return true;
 
     // Ignore anonymous table cells as long as they're not in a table (ie. when display:table is used).
-    RenderObject* renderTable = is<RenderTableCell>(renderer()) ? downcast<RenderTableCell>(*m_renderer).table() : nullptr;
-    bool inTable = renderTable && renderTable->node() && (renderTable->node()->hasTagName(tableTag) || nodeHasGridRole(renderTable->node()));
-    if (!node() && !inTable)
+    WeakPtr parentTable = this->parentTable();
+    bool inTable = parentTable && parentTable->element() && (parentTable->element()->hasTagName(tableTag) || nodeHasTableRole(parentTable->element()));
+    if (!element() && !inTable)
         return true;
 
-    if (!isExposedTableCell())
-        return AccessibilityRenderObject::computeAccessibilityIsIgnored();
-
-    return false;
+    return !isExposedTableCell() && AccessibilityRenderObject::computeAccessibilityIsIgnored();
 }
 
 AccessibilityTable* AccessibilityTableCell::parentTable() const
 {
+    CheckedPtr cache = axObjectCache();
     // If the document no longer exists, we might not have an axObjectCache.
-    if (!axObjectCache())
+    if (!cache)
         return nullptr;
 
     // Do not use getOrCreate. parentTable() can be called while the render tree is being modified
@@ -93,25 +91,26 @@ AccessibilityTable* AccessibilityTableCell::parentTable() const
     // By using only get() implies that the AXTable must be created before AXTableCells. This should
     // always be the case when AT clients access a table.
     // https://bugs.webkit.org/show_bug.cgi?id=42652
-    AccessibilityObject* tableFromRenderTree = nullptr;
+    RefPtr<AccessibilityTable> tableFromRenderTree;
     if (auto* renderTableCell = dynamicDowncast<RenderTableCell>(renderer()))
-        tableFromRenderTree = axObjectCache()->get(renderTableCell->table());
-    else if (node()) {
+        tableFromRenderTree = dynamicDowncast<AccessibilityTable>(cache->get(renderTableCell->table()));
+
+    if (!tableFromRenderTree) {
+        if (node()) {
         return downcast<AccessibilityTable>(Accessibility::findAncestor<AccessibilityObject>(*this, false, [] (const auto& ancestor) {
             return is<AccessibilityTable>(ancestor);
         }));
     }
-
-    if (!tableFromRenderTree)
         return nullptr;
+    }
 
     // The RenderTableCell's table() object might be anonymous sometimes. We should handle it gracefully
     // by finding the right table.
     if (!tableFromRenderTree->node()) {
-        for (auto* ancestor = parentObject(); ancestor; ancestor = ancestor->parentObject()) {
+        for (RefPtr ancestor = parentObject(); ancestor; ancestor = ancestor->parentObject()) {
             // If this is a non-anonymous table object, but not an accessibility table, we should stop because
             // we don't want to choose another ancestor table as this cell's table.
-            if (auto* ancestorTable = dynamicDowncast<AccessibilityTable>(ancestor)) {
+            if (auto* ancestorTable = dynamicDowncast<AccessibilityTable>(ancestor.get())) {
                 if (ancestorTable->isExposable())
                     return ancestorTable;
                 if (ancestorTable->node())
@@ -121,7 +120,7 @@ AccessibilityTable* AccessibilityTableCell::parentTable() const
         return nullptr;
     }
 
-    return dynamicDowncast<AccessibilityTable>(tableFromRenderTree);
+    return tableFromRenderTree.get();
 }
 
 bool AccessibilityTableCell::isExposedTableCell() const
@@ -142,14 +141,26 @@ AccessibilityRole AccessibilityTableCell::determineAccessibilityRole()
     if (defaultRole == AccessibilityRole::ColumnHeader || defaultRole == AccessibilityRole::RowHeader || defaultRole == AccessibilityRole::Cell || defaultRole == AccessibilityRole::GridCell)
         return defaultRole;
 
-    if (!isExposedTableCell())
+    // This matches the logic of `isExposedTableCell()`, but allows us to keep the pointer to the parentTable
+    // for use at the bottom of this method.
+    auto* parentTable = this->parentTable();
+    if (!parentTable || !parentTable->isExposable())
         return defaultRole;
+
+    auto cellRole = parentTable->hasGridAriaRole() ? AccessibilityRole::GridCell : AccessibilityRole::Cell;
+    // It's important that we temporarily set our m_role because:
+    // 1. isColumnHeader() and isRowHeader() call rowIndexRange() and columnIndexRange(), in turn calling
+    //    ensureIndexesUpToDate()
+    // 2. This causes our parentTable() to addChildren(), which causes the rows to addChildren(), then causing cells
+    //    (like `this`) to addChildren(). But it's possible we don't have an m_role yet, meaning `this` cell will be
+    //    erroneously ignored (because it is AccessibilityRole::Unknown until we return from this function to set it).
+    // 3. This causes the AX tree to be wrong.
+    SetForScope temporaryRole(m_role, m_role == AccessibilityRole::Unknown ? cellRole : m_role);
+
     if (isColumnHeader())
         return AccessibilityRole::ColumnHeader;
-    if (isRowHeader())
-        return AccessibilityRole::RowHeader;
 
-    return AccessibilityRole::Cell;
+    return isRowHeader() ? AccessibilityRole::RowHeader : cellRole;
 }
 
 bool AccessibilityTableCell::isTableHeaderCell() const
@@ -186,14 +197,14 @@ bool AccessibilityTableCell::isColumnHeader() const
     // We are in a situation after checking the scope attribute.
     // It is an attempt to resolve the type of th element without support in the specification.
     // Checking tableTag and tbodyTag allows to check the case of direct row placement in the table and lets stop the loop at the table level.
-    for (Node* parentNode = node(); parentNode; parentNode = parentNode->parentNode()) {
-        if (parentNode->hasTagName(theadTag))
+    for (RefPtr ancestor = node()->parentNode(); ancestor; ancestor = ancestor->parentNode()) {
+        if (ancestor->hasTagName(theadTag))
             return true;
-        if (parentNode->hasTagName(tfootTag))
+        if (ancestor->hasTagName(tfootTag))
             return false;
-        if (parentNode->hasTagName(tableTag) || parentNode->hasTagName(tbodyTag)) {
-            auto rowRange = rowIndexRange();
-            if (!rowRange.first)
+        if (ancestor->hasTagName(tableTag) || ancestor->hasTagName(tbodyTag)) {
+            // If we're in the first row, we're a column header.
+            if (!rowIndexRange().first)
                 return true;
             return false;
         }
@@ -214,14 +225,15 @@ bool AccessibilityTableCell::isRowHeader() const
     // We are in a situation after checking the scope attribute.
     // It is an attempt to resolve the type of th element without support in the specification.
     // Checking tableTag allows to check the case of direct row placement in the table and lets stop the loop at the table level.
-    for (Node* parentNode = node(); parentNode; parentNode = parentNode->parentNode()) {
-        if (parentNode->hasTagName(tfootTag) || parentNode->hasTagName(tbodyTag) || parentNode->hasTagName(tableTag)) {
-            auto colRange = columnIndexRange();
-            if (!colRange.first)
+    for (RefPtr ancestor = node()->parentNode(); ancestor; ancestor = ancestor->parentNode()) {
+        if (ancestor->hasTagName(tfootTag) || ancestor->hasTagName(tbodyTag) || ancestor->hasTagName(tableTag)) {
+            // If we're in the first column, we're a row header.
+            if (!columnIndexRange().first)
                 return true;
             return false;
         }
-        if (parentNode->hasTagName(theadTag))
+
+        if (ancestor->hasTagName(theadTag))
             return false;
     }
     return false;
@@ -250,7 +262,7 @@ bool AccessibilityTableCell::supportsExpandedTextValue() const
 
 AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::columnHeaders()
 {
-    auto* parent = parentTable();
+    RefPtr parent = parentTable();
     if (!parent)
         return { };
 
@@ -264,12 +276,12 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::columnHeaders(
     auto colRange = columnIndexRange();
 
     for (unsigned row = 0; row < rowRange.first; row++) {
-        auto* tableCell = parent->cellForColumnAndRow(colRange.first, row);
+        RefPtr tableCell = parent->cellForColumnAndRow(colRange.first, row);
         if (!tableCell || tableCell == this || headers.contains(tableCell))
             continue;
 
         ASSERT(is<AccessibilityObject>(tableCell));
-        if (tableCell->cellScope() == "colgroup"_s && isTableCellInSameColGroup(tableCell))
+        if (tableCell->cellScope() == "colgroup"_s && isTableCellInSameColGroup(tableCell.get()))
             headers.append(tableCell);
         else if (tableCell->isColumnHeader())
             headers.append(tableCell);
@@ -281,7 +293,7 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::columnHeaders(
 AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::rowHeaders()
 {
     AccessibilityChildrenVector headers;
-    AccessibilityTable* parent = parentTable();
+    RefPtr parent = parentTable();
     if (!parent)
         return headers;
 
@@ -289,11 +301,11 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::rowHeaders()
     auto colRange = columnIndexRange();
 
     for (unsigned column = 0; column < colRange.first; column++) {
-        auto* tableCell = parent->cellForColumnAndRow(column, rowRange.first);
+        RefPtr tableCell = parent->cellForColumnAndRow(column, rowRange.first);
         if (!tableCell || tableCell == this || headers.contains(tableCell))
             continue;
 
-        if (tableCell->cellScope() == "rowgroup"_s && isTableCellInSameRowGroup(tableCell))
+        if (tableCell->cellScope() == "rowgroup"_s && isTableCellInSameRowGroup(tableCell.get()))
             headers.append(tableCell);
         else if (tableCell->isRowHeader())
             headers.append(tableCell);
@@ -326,8 +338,32 @@ AccessibilityTableRow* AccessibilityTableCell::parentRow() const
 
 void AccessibilityTableCell::ensureIndexesUpToDate() const
 {
-    if (auto* parentTable = this->parentTable())
+    if (RefPtr parentTable = this->parentTable())
         parentTable->ensureCellIndexesUpToDate();
+}
+
+void AccessibilityTableCell::setRowIndex(unsigned index)
+{
+    if (m_rowIndex == index)
+        return;
+    m_rowIndex = index;
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (auto* cache = axObjectCache())
+        cache->rowIndexChanged(*this);
+#endif
+}
+
+void AccessibilityTableCell::setColumnIndex(unsigned index)
+{
+    if (m_columnIndex == index)
+        return;
+    m_columnIndex = index;
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (auto* cache = axObjectCache())
+        cache->columnIndexChanged(*this);
+#endif
 }
 
 std::pair<unsigned, unsigned> AccessibilityTableCell::rowIndexRange() const
@@ -376,7 +412,7 @@ AccessibilityObject* AccessibilityTableCell::titleUIElement() const
     if (!headerCell->element() || !headerCell->element()->hasTagName(thTag))
         return nullptr;
 
-    return axObjectCache()->getOrCreate(headerCell);
+    return axObjectCache()->getOrCreate(*headerCell);
 }
 
 int AccessibilityTableCell::axColumnIndex() const
@@ -400,7 +436,7 @@ int AccessibilityTableCell::axRowIndex() const
     if (int value = getIntegralAttribute(aria_rowindexAttr); value >= 1)
         return value;
 
-    if (AccessibilityTableRow* parentRow = this->parentRow())
+    if (RefPtr parentRow = this->parentRow())
         return parentRow->axRowIndex();
 
     return -1;

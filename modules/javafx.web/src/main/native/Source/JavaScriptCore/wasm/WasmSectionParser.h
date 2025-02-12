@@ -32,13 +32,14 @@
 #include "WasmOps.h"
 #include "WasmParser.h"
 #include <wtf/text/ASCIILiteral.h>
+#include <wtf/text/MakeString.h>
 
 namespace JSC { namespace Wasm {
 
 class SectionParser final : public Parser<void> {
 public:
-    SectionParser(const uint8_t* data, size_t size, size_t offsetInSource, ModuleInformation& info)
-        : Parser(data, size)
+    SectionParser(std::span<const uint8_t> data, size_t offsetInSource, ModuleInformation& info)
+        : Parser(data)
         , m_offsetInSource(offsetInSource)
         , m_info(info)
     {
@@ -55,7 +56,7 @@ private:
     NEVER_INLINE UnexpectedResult WARN_UNUSED_RETURN fail(Args... args) const
     {
         using namespace FailureHelper; // See ADL comment in namespace above.
-        if (UNLIKELY(ASSERT_ENABLED && Options::crashOnFailedWebAssemblyValidate()))
+        if (UNLIKELY(ASSERT_ENABLED && Options::crashOnFailedWasmValidate()))
             CRASH();
 
         return UnexpectedResult(makeString("WebAssembly.Module doesn't parse at byte "_s, String::number(m_offset + m_offsetInSource), ": "_s, makeString(args)...));
@@ -87,7 +88,7 @@ private:
     PartialResult WARN_UNUSED_RETURN parseI32InitExprForDataSection(std::optional<I32InitExpr>&);
 
     static bool checkStructuralSubtype(const TypeDefinition&, const TypeDefinition&);
-    PartialResult WARN_UNUSED_RETURN checkSubtypeValidity(const TypeDefinition&, RefPtr<const TypeDefinition>);
+    PartialResult WARN_UNUSED_RETURN checkSubtypeValidity(const TypeDefinition&);
 
     size_t m_offsetInSource;
     Ref<ModuleInformation> m_info;

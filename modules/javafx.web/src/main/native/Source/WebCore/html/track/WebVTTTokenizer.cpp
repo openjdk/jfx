@@ -34,6 +34,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "CSSTokenizerInputStream.h"
 #include "HTMLEntityParser.h"
 #include "MarkupTokenizerInlines.h"
 #include <wtf/text/StringBuilder.h>
@@ -55,11 +56,6 @@ namespace WebCore {
         character = m_preprocessor.nextInputCharacter(); \
         goto stateName; \
     } while (false)
-
-template<unsigned charactersCount> ALWAYS_INLINE bool equalLiteral(const StringBuilder& s, const char (&characters)[charactersCount])
-{
-    return equal(s, reinterpret_cast<const LChar*>(characters), charactersCount - 1);
-}
 
 static void addNewClass(StringBuilder& classes, const StringBuilder& newClass)
 {
@@ -86,7 +82,7 @@ WebVTTTokenizer::WebVTTTokenizer(const String& input)
 {
     // Append an EOF marker and close the input "stream".
     ASSERT(!m_input.isClosed());
-    m_input.append(String { &kEndOfFileMarker, 1 });
+    m_input.append(span(kEndOfFileMarker));
     m_input.close();
 }
 

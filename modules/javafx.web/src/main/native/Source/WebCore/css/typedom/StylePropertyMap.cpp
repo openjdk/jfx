@@ -36,6 +36,7 @@
 #include "Document.h"
 #include "StylePropertyShorthand.h"
 #include <wtf/FixedVector.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -76,12 +77,12 @@ ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& pr
         auto value = styleValues[0]->toCSSValue();
         if (!value)
             return Exception { ExceptionCode::TypeError, "Invalid values"_s };
-        setCustomProperty(document, property, checkedDowncast<CSSVariableReferenceValue>(value.releaseNonNull()));
+        setCustomProperty(document, property, downcast<CSSVariableReferenceValue>(value.releaseNonNull()));
         return { };
     }
     auto propertyID = cssPropertyID(property);
     if (propertyID == CSSPropertyInvalid || !isExposed(propertyID, document.settings()))
-        return Exception { ExceptionCode::TypeError, makeString("Invalid property ", property) };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
 
     if (!CSSProperty::isListValuedProperty(propertyID) && values.size() > 1)
         return Exception { ExceptionCode::TypeError, makeString(property, " is not a list-valued property but more than one value was provided"_s) };
@@ -147,7 +148,7 @@ ExceptionOr<void> StylePropertyMap::append(Document& document, const AtomString&
 
     auto propertyID = cssPropertyID(property);
     if (propertyID == CSSPropertyInvalid || !isExposed(propertyID, document.settings()))
-        return Exception { ExceptionCode::TypeError, makeString("Invalid property ", property) };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
 
     if (!CSSProperty::isListValuedProperty(propertyID))
         return Exception { ExceptionCode::TypeError, makeString(property, " does not support multiple values"_s) };
@@ -187,7 +188,7 @@ ExceptionOr<void> StylePropertyMap::remove(Document& document, const AtomString&
 
     auto propertyID = cssPropertyID(property);
     if (!isExposed(propertyID, document.settings()))
-        return Exception { ExceptionCode::TypeError, makeString("Invalid property ", property) };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
 
     removeProperty(propertyID);
     return { };

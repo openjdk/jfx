@@ -46,7 +46,33 @@ struct GPUBindGroupDescriptor : public GPUObjectDescriptorBase {
         };
     }
 
-    GPUBindGroupLayout* layout { nullptr };
+    const RefPtr<GPUExternalTexture>* externalTextureMatches(Vector<GPUBindGroupEntry>& comparisonEntries, bool& hasExternalTexture) const
+    {
+        bool matched = true;
+        hasExternalTexture = false;
+        auto entriesSize = entries.size();
+        if (entriesSize != comparisonEntries.size())
+            matched = false;
+
+        const RefPtr<GPUExternalTexture>* result = nullptr;
+        for (size_t i = 0; i < entriesSize; ++i) {
+            auto& entry = entries[i];
+            if (matched && !GPUBindGroupEntry::equal(entry, comparisonEntries[i]))
+                matched = false;
+
+            auto externalTexture = entry.externalTexture();
+            if (!result)
+                result = externalTexture;
+            else if (externalTexture)
+                return nullptr;
+            if (result)
+                hasExternalTexture = true;
+        }
+
+        return matched ? result : nullptr;
+    }
+
+    WeakPtr<GPUBindGroupLayout> layout;
     Vector<GPUBindGroupEntry> entries;
 };
 

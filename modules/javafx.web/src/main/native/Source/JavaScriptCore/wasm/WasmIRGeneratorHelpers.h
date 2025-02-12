@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,6 @@
 #include "JSWebAssemblyInstance.h"
 #include "LinkBuffer.h"
 #include "ProbeContext.h"
-#include "WasmInstance.h"
 #include "WasmOperations.h"
 
 namespace JSC { namespace Wasm {
@@ -45,16 +44,19 @@ struct PatchpointExceptionHandleBase {
 };
 
 #if ENABLE(WEBASSEMBLY_OMGJIT)
+
 struct PatchpointExceptionHandle : public PatchpointExceptionHandleBase {
     PatchpointExceptionHandle(std::optional<bool> hasExceptionHandlers, unsigned callSiteIndex)
         : m_hasExceptionHandlers(hasExceptionHandlers)
         , m_callSiteIndex(callSiteIndex)
     { }
 
-    PatchpointExceptionHandle(std::optional<bool> hasExceptionHandlers, unsigned callSiteIndex, unsigned numLiveValues)
+    PatchpointExceptionHandle(std::optional<bool> hasExceptionHandlers, unsigned callSiteIndex, unsigned numLiveValues, unsigned firstStackmapParamOffset, unsigned firstStackmapChildOffset)
         : m_hasExceptionHandlers(hasExceptionHandlers)
         , m_callSiteIndex(callSiteIndex)
         , m_numLiveValues(numLiveValues)
+        , m_firstStackmapParamOffset(firstStackmapParamOffset)
+        , m_firstStackmapChildOffset(firstStackmapChildOffset)
     { }
 
     template <typename Generator>
@@ -69,10 +71,8 @@ struct PatchpointExceptionHandle : public PatchpointExceptionHandleBase {
             return;
 
         StackMap values(*m_numLiveValues);
-        unsigned paramsOffset = params.size() - *m_numLiveValues;
-        unsigned childrenOffset = params.value()->numChildren() - *m_numLiveValues;
         for (unsigned i = 0; i < *m_numLiveValues; ++i)
-            values[i] = OSREntryValue(params[i + paramsOffset], params.value()->child(i + childrenOffset)->type());
+            values[i] = OSREntryValue(params[i + m_firstStackmapParamOffset], params.value()->child(i + m_firstStackmapChildOffset)->type());
 
         generator->addStackMap(m_callSiteIndex, WTFMove(values));
     }
@@ -80,7 +80,10 @@ struct PatchpointExceptionHandle : public PatchpointExceptionHandleBase {
     std::optional<bool> m_hasExceptionHandlers;
     unsigned m_callSiteIndex { s_invalidCallSiteIndex };
     std::optional<unsigned> m_numLiveValues { };
+    unsigned m_firstStackmapParamOffset { };
+    unsigned m_firstStackmapChildOffset { };
 };
+
 #else
 
 using PatchpointExceptionHandle = PatchpointExceptionHandleBase;
@@ -138,11 +141,11 @@ static inline void computeExceptionHandlerLocations(Vector<CodeLocationLabel<Exc
 
 static inline void emitRethrowImpl(CCallHelpers& jit)
 {
-    // Instance in argumentGPR0
+    // JSWebAssemblyInstance in argumentGPR0
     // exception pointer in argumentGPR1
 
     GPRReg scratch = GPRInfo::nonPreservedNonArgumentGPR0;
-    jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, Instance::offsetOfVM()), scratch);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, JSWebAssemblyInstance::offsetOfVM()), scratch);
     jit.copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(scratch);
 
     jit.prepareWasmCallOperation(GPRInfo::argumentGPR0);
@@ -153,11 +156,11 @@ static inline void emitRethrowImpl(CCallHelpers& jit)
 static inline void emitThrowImpl(CCallHelpers& jit, unsigned exceptionIndex)
 {
     JIT_COMMENT(jit, "throw impl, index: ", exceptionIndex);
-    // Instance in argumentGPR0
+    // JSWebAssemblyInstance in argumentGPR0
     // arguments to the exception off of stack pointer
 
     GPRReg scratch = GPRInfo::nonPreservedNonArgumentGPR0;
-    jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, Instance::offsetOfVM()), scratch);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, JSWebAssemblyInstance::offsetOfVM()), scratch);
     jit.copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(scratch);
 
     jit.move(MacroAssembler::TrustedImm32(exceptionIndex), GPRInfo::argumentGPR1);
@@ -169,14 +172,14 @@ static inline void emitThrowImpl(CCallHelpers& jit, unsigned exceptionIndex)
 
 #if ENABLE(WEBASSEMBLY_OMGJIT)
 template<SavedFPWidth savedFPWidth>
-static inline void buildEntryBufferForCatch(Probe::Context& context)
+static ALWAYS_INLINE void buildEntryBufferForCatch(Probe::Context& context)
 {
     unsigned valueSize = (savedFPWidth == SavedFPWidth::SaveVectors) ? 2 : 1;
     CallFrame* callFrame = context.fp<CallFrame*>();
     CallSiteIndex callSiteIndex = callFrame->callSiteIndex();
     OptimizingJITCallee* callee = bitwise_cast<OptimizingJITCallee*>(callFrame->callee().asNativeCallee());
     const StackMap& stackmap = callee->stackmap(callSiteIndex);
-    Instance* instance = context.gpr<Instance*>(GPRInfo::wasmContextInstancePointer);
+    JSWebAssemblyInstance* instance = context.gpr<JSWebAssemblyInstance*>(GPRInfo::wasmContextInstancePointer);
     EncodedJSValue exception = context.gpr<EncodedJSValue>(GPRInfo::returnValueGPR);
     uint64_t* buffer = instance->vm().wasmContext.scratchBufferForSize(stackmap.size() * valueSize * 8);
     loadValuesIntoBuffer(context, stackmap, buffer, savedFPWidth);
@@ -184,15 +187,15 @@ static inline void buildEntryBufferForCatch(Probe::Context& context)
     JSValue thrownValue = JSValue::decode(exception);
     void* payload = nullptr;
     if (JSWebAssemblyException* wasmException = jsDynamicCast<JSWebAssemblyException*>(thrownValue))
-        payload = bitwise_cast<void*>(wasmException->payload().data());
+        payload = bitwise_cast<void*>(wasmException->payload().span().data());
 
     context.gpr(GPRInfo::argumentGPR0) = bitwise_cast<uintptr_t>(buffer);
     context.gpr(GPRInfo::argumentGPR1) = exception;
     context.gpr(GPRInfo::argumentGPR2) = bitwise_cast<uintptr_t>(payload);
 }
 
-static inline void buildEntryBufferForCatchSIMD(Probe::Context& context) { buildEntryBufferForCatch<SavedFPWidth::SaveVectors>(context); }
-static inline void buildEntryBufferForCatchNoSIMD(Probe::Context& context) { buildEntryBufferForCatch<SavedFPWidth::DontSaveVectors>(context); }
+static inline void SYSV_ABI buildEntryBufferForCatchSIMD(Probe::Context& context) { buildEntryBufferForCatch<SavedFPWidth::SaveVectors>(context); }
+static inline void SYSV_ABI buildEntryBufferForCatchNoSIMD(Probe::Context& context) { buildEntryBufferForCatch<SavedFPWidth::DontSaveVectors>(context); }
 
 
 static inline void prepareForTailCall(CCallHelpers& jit, const B3::StackmapGenerationParams& params, const Checked<int32_t>& tailCallStackOffsetFromFP)

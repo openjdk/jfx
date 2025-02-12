@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "HashMapImplInlines.h"
+#include "HashMapHelper.h"
 #include "WeakMapImpl.h"
 
 namespace JSC {
@@ -101,7 +101,7 @@ void WeakMapImpl<WeakMapBucket>::rehash(RehashMode mode)
     // in auxiliary buffer.
 
     uint32_t oldCapacity = m_capacity;
-    MallocPtr<WeakMapBufferType, JSValueMalloc> oldBuffer = WTFMove(m_buffer);
+    MallocPtr<WeakMapBufferType> oldBuffer = WTFMove(m_buffer);
 
     uint32_t capacity = m_capacity;
     if (mode == RehashMode::RemoveBatching) {

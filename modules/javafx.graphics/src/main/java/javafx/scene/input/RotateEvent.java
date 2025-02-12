@@ -50,7 +50,7 @@ import javafx.event.EventType;
  * indirectly as on track pad - the mouse cursor location is usually used
  * as the gesture coordinates).
  * <p>
- * The gesture's {@code ROTATE} events are surounded by {@code ROTATION_STARTED}
+ * The gesture's {@code ROTATE} events are surrounded by {@code ROTATION_STARTED}
  * and {@code ROTATION_FINISHED} events. If rotation inertia is active on the
  * given platform, some {@code ROTATE} events with {@code isInertia()} returning
  * {@code true} can come after {@code ROTATION_FINISHED}.

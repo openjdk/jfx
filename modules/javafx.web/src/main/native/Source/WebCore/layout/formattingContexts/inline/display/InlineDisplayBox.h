@@ -73,7 +73,7 @@ struct Box {
         Ellipsis,
         SoftLineBreak,
         LineBreakBox,
-        AtomicInlineLevelBox,
+        AtomicInlineBox,
         NonRootInlineBox,
         RootInlineBox,
         GenericInlineLevelBox
@@ -93,12 +93,12 @@ struct Box {
     bool isTextOrSoftLineBreak() const { return isText() || isSoftLineBreak(); }
     bool isLineBreakBox() const { return m_type == Type::LineBreakBox; }
     bool isLineBreak() const { return isSoftLineBreak() || isLineBreakBox(); }
-    bool isAtomicInlineLevelBox() const { return m_type == Type::AtomicInlineLevelBox; }
+    bool isAtomicInlineBox() const { return m_type == Type::AtomicInlineBox; }
     bool isInlineBox() const { return isNonRootInlineBox() || isRootInlineBox(); }
     bool isNonRootInlineBox() const { return m_type == Type::NonRootInlineBox; }
     bool isRootInlineBox() const { return m_type == Type::RootInlineBox; }
     bool isGenericInlineLevelBox() const { return m_type == Type::GenericInlineLevelBox; }
-    bool isInlineLevelBox() const { return isAtomicInlineLevelBox() || isLineBreakBox() || isInlineBox() || isGenericInlineLevelBox(); }
+    bool isInlineLevelBox() const { return isAtomicInlineBox() || isLineBreakBox() || isInlineBox() || isGenericInlineLevelBox(); }
     bool isNonRootInlineLevelBox() const { return isInlineLevelBox() && !isRootInlineBox(); }
 
     UBiDiLevel bidiLevel() const { return m_bidiLevel; }
@@ -106,7 +106,8 @@ struct Box {
     inline bool isHorizontal() const;
 
     bool hasContent() const { return m_hasContent; }
-    bool isVisible() const { return !isFullyTruncated() && style().visibility() == Visibility::Visible; }
+    bool isVisible() const { return !isFullyTruncated() && style().usedVisibility() == Visibility::Visible; }
+    bool isVisibleIgnoringUsedVisibility() const { return !isFullyTruncated() && style().visibility() == Visibility::Visible; }
     bool isFullyTruncated() const { return m_isFullyTruncated; }
 
     const FloatRect& visualRectIgnoringBlockDirection() const { return m_unflippedVisualRect; }
@@ -158,6 +159,7 @@ struct Box {
     void setIsFirstForLayoutBox(bool isFirstBox) { m_isFirstForLayoutBox = isFirstBox; }
     void setIsLastForLayoutBox(bool isLastBox) { m_isLastForLayoutBox = isLastBox; }
 
+    bool isInGlyphDisplayListCache() const { return m_isInGlyphDisplayListCache; }
     void setIsInGlyphDisplayListCache() { m_isInGlyphDisplayListCache = true; }
     void removeFromGlyphDisplayListCache();
 

@@ -46,10 +46,16 @@ public:
 
     void attach(RenderElement& parent, RenderPtr<RenderObject>, RenderObject* beforeChild = nullptr);
 
-    enum class CanCollapseAnonymousBlock : bool { No, Yes };
+    enum class IsInternalMove : bool { No, Yes };
     enum class WillBeDestroyed : bool { No, Yes };
-    RenderPtr<RenderObject> detach(RenderElement&, RenderObject&, CanCollapseAnonymousBlock = CanCollapseAnonymousBlock::Yes, WillBeDestroyed = WillBeDestroyed::Yes) WARN_UNUSED_RETURN;
+    enum class CanCollapseAnonymousBlock : bool { No, Yes };
+    RenderPtr<RenderObject> detach(RenderElement&, RenderObject&, WillBeDestroyed, CanCollapseAnonymousBlock = CanCollapseAnonymousBlock::Yes) WARN_UNUSED_RETURN;
 
+    enum class TearDownType : uint8_t {
+        Root,                          // destroy root renderer
+        SubtreeWithRootStillAttached,  // subtree teardown when renderers are still attached to the tree (common case)
+        SubtreeWithRootAlreadyDetached // subtree teardown when destroy root gets detached first followed by destroying renderers (e.g. pseudo subtree)
+    };
     void destroy(RenderObject& renderer, CanCollapseAnonymousBlock = CanCollapseAnonymousBlock::Yes);
 
     // NormalizeAfterInsertion::Yes ensures that the destination subtree is consistent after the insertion (anonymous wrappers etc).
@@ -57,7 +63,7 @@ public:
     void move(RenderBoxModelObject& from, RenderBoxModelObject& to, RenderObject& child, NormalizeAfterInsertion);
 
     void updateAfterDescendants(RenderElement&);
-    void destroyAndCleanUpAnonymousWrappers(RenderObject& child);
+    void destroyAndCleanUpAnonymousWrappers(RenderObject& child, const RenderElement* destroyRoot);
     void normalizeTreeAfterStyleChange(RenderElement&, RenderStyle& oldStyle);
 
     bool hasBrokenContinuation() const { return m_hasBrokenContinuation; }
@@ -72,10 +78,10 @@ private:
     void attachIgnoringContinuation(RenderElement& parent, RenderPtr<RenderObject>, RenderObject* beforeChild = nullptr);
     void attachToRenderGrid(RenderGrid& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild = nullptr);
     void attachToRenderElement(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild = nullptr);
-    void attachToRenderElementInternal(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild = nullptr, RenderObject::IsInternalMove = RenderObject::IsInternalMove::No);
+    void attachToRenderElementInternal(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild = nullptr);
 
-    RenderPtr<RenderObject> detachFromRenderElement(RenderElement& parent, RenderObject& child, WillBeDestroyed = WillBeDestroyed::Yes) WARN_UNUSED_RETURN;
-    RenderPtr<RenderObject> detachFromRenderGrid(RenderGrid& parent, RenderObject& child) WARN_UNUSED_RETURN;
+    RenderPtr<RenderObject> detachFromRenderElement(RenderElement& parent, RenderObject& child, WillBeDestroyed) WARN_UNUSED_RETURN;
+    RenderPtr<RenderObject> detachFromRenderGrid(RenderGrid& parent, RenderObject& child, WillBeDestroyed) WARN_UNUSED_RETURN;
 
     void move(RenderBoxModelObject& from, RenderBoxModelObject& to, RenderObject& child, RenderObject* beforeChild, NormalizeAfterInsertion);
     // Move all of the kids from |startChild| up to but excluding |endChild|. 0 can be passed as the |endChild| to denote
@@ -89,7 +95,7 @@ private:
     void removeFloatingObjects(RenderBlock&);
 
     RenderObject* splitAnonymousBoxesAroundChild(RenderBox& parent, RenderObject& originalBeforeChild);
-    void makeChildrenNonInline(RenderBlock& parent, RenderObject* insertionPoint = nullptr);
+    void createAnonymousWrappersForInlineContent(RenderBlock& parent, RenderObject* insertionPoint = nullptr);
     void removeAnonymousWrappersForInlineChildrenIfNeeded(RenderElement& parent);
 
     void reportVisuallyNonEmptyContent(const RenderElement& parent, const RenderObject& child);
@@ -146,7 +152,10 @@ private:
 #endif
     std::unique_ptr<Continuation> m_continuationBuilder;
     bool m_hasBrokenContinuation { false };
-    RenderObject::IsInternalMove m_internalMovesType { RenderObject::IsInternalMove::No };
+    IsInternalMove m_internalMovesType { IsInternalMove::No };
+    TearDownType m_tearDownType { TearDownType::Root };
+    CheckedPtr<const RenderElement> m_subtreeDestroyRoot;
+    SingleThreadWeakPtr<const RenderObject> m_anonymousDestroyRoot;
 };
 
 }

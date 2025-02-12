@@ -521,9 +521,24 @@ bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFile
     return true;
 }
 
-int overwriteEntireFile(const String& path, std::span<uint8_t> span)
+int overwriteEntireFile(const String& path, std::span<const uint8_t>)
 {
     return 0;
+}
+
+int64_t writeToFile(PlatformFileHandle, std::span<const uint8_t> data)
+{
+     return 0;
+}
+
+int64_t readFromFile(PlatformFileHandle, std::span<uint8_t> data)
+{
+      return 0;
+}
+
+std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+{
+     return { String(), nullptr};
 }
 
 } // namespace FileSystemImpl

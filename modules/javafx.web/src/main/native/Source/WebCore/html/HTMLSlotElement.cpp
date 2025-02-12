@@ -34,13 +34,13 @@
 #include "ShadowRoot.h"
 #include "SlotAssignment.h"
 #include "Text.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLSlotElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLSlotElement);
 
 using namespace HTMLNames;
 
@@ -125,16 +125,15 @@ static void flattenAssignedNodes(Vector<Ref<Node>>& nodes, const HTMLSlotElement
         }
         return;
     }
-    for (auto& nodeWeakPtr : *assignedNodes) {
-        auto* node = nodeWeakPtr.get();
-        if (UNLIKELY(!node)) {
+    for (auto& weakNode : *assignedNodes) {
+        if (UNLIKELY(!weakNode)) {
             ASSERT_NOT_REACHED();
             continue;
         }
-        if (auto* slot = dynamicDowncast<HTMLSlotElement>(*node); slot && slot->containingShadowRoot())
+        if (RefPtr slot = dynamicDowncast<HTMLSlotElement>(*weakNode); slot && slot->containingShadowRoot())
             flattenAssignedNodes(nodes, *slot);
         else
-            nodes.append(*node);
+            nodes.append(Ref { *weakNode });
     }
 }
 

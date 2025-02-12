@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
- * Copyright (c) 2023 Igalia S.L.
+ * Copyright (c) 2023, 2024 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,20 +21,19 @@
 #include "config.h"
 #include "RenderSVGResourceContainer.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderLayer.h"
 #include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGRoot.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGResourceElementClient.h"
-
-#include <wtf/IsoMallocInlines.h>
+#include "SVGVisitedElementTracking.h"
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourceContainer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourceContainer);
 
 RenderSVGResourceContainer::RenderSVGResourceContainer(Type type, SVGElement& element, RenderStyle&& style)
     : RenderSVGHiddenContainer(type, element, WTFMove(style), SVGModelObjectFlag::IsResourceContainer)
@@ -69,36 +68,41 @@ void RenderSVGResourceContainer::idChanged()
     registerResource();
 }
 
-void RenderSVGResourceContainer::registerResource()
+static inline void notifyResourceChanged(SVGElement& element)
 {
-    auto& treeScope = this->treeScopeForSVGReferences();
-    if (!treeScope.isIdOfPendingSVGResource(m_id))
+    static NeverDestroyed<SVGVisitedElementTracking::VisitedSet> s_visitedSet;
+
+    SVGVisitedElementTracking recursionTracking(s_visitedSet);
+    if (recursionTracking.isVisiting(element))
         return;
 
-    auto elements = copyToVectorOf<Ref<SVGElement>>(treeScope.removePendingSVGResource(m_id));
-    for (auto& element : elements) {
-        ASSERT(element->hasPendingResources());
-        treeScope.clearHasPendingSVGResourcesIfPossible(element);
+    SVGVisitedElementTracking::Scope recursionScope(recursionTracking, element);
 
-        for (auto& cssClient : element->referencingCSSClients()) {
+    for (auto& cssClient : element.referencingCSSClients()) {
             if (!cssClient)
             continue;
-            cssClient->resourceChanged(element.get());
+        cssClient->resourceChanged(element);
     }
+}
+
+void RenderSVGResourceContainer::registerResource()
+{
+    Ref treeScope = this->treeScopeForSVGReferences();
+    if (!treeScope->isIdOfPendingSVGResource(m_id))
+        return;
+
+    auto elements = copyToVectorOf<Ref<SVGElement>>(treeScope->removePendingSVGResource(m_id));
+    for (auto& element : elements) {
+        ASSERT(element->hasPendingResources());
+        treeScope->clearHasPendingSVGResourcesIfPossible(element);
+        notifyResourceChanged(element.get());
     }
 }
 
 void RenderSVGResourceContainer::repaintAllClients() const
 {
     Ref svgElement = element();
-
-    for (auto& cssClient : svgElement->referencingCSSClients()) {
-        if (!cssClient)
-            continue;
-        cssClient->resourceChanged(svgElement.get());
-    }
+    notifyResourceChanged(svgElement.get());
 }
 
 }
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

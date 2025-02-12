@@ -247,10 +247,10 @@ public:
 
     class InputStream {
     public:
-        InputStream(const CharType* input, unsigned start, unsigned length, bool decodeSurrogatePairs)
-            : input(input)
+        InputStream(std::span<const CharType> input, unsigned start, bool decodeSurrogatePairs)
+            : input(input.data())
             , pos(start)
-            , length(length)
+            , length(input.size())
             , decodeSurrogatePairs(decodeSurrogatePairs)
         {
         }
@@ -285,7 +285,8 @@ public:
                     return errorCodePoint;
                 next();
                 return U16_GET_SUPPLEMENTARY(result, input[p + 1]);
-            }
+            } else if (decodeSurrogatePairs && p > 0 && U16_IS_TRAIL(result) && U16_IS_LEAD(input[p - 1]))
+                return errorCodePoint;
             return result;
         }
 
@@ -351,8 +352,12 @@ public:
         {
             ASSERT(from < length);
             auto result = input[from];
-            if (U16_IS_LEAD(result) && decodeSurrogatePairs && from + 1 < length && U16_IS_TRAIL(input[from + 1]))
+            if (decodeSurrogatePairs && from + 1 < length) {
+                if (U16_IS_LEAD(result) && U16_IS_TRAIL(input[from + 1]))
                 return U16_GET_SUPPLEMENTARY(result, input[from + 1]);
+                if (U16_IS_TRAIL(result) && U16_IS_LEAD(input[from + 1]))
+                    return errorCodePoint;
+            }
             return result;
         }
 
@@ -619,13 +624,16 @@ public:
             if (term.matchDirection() == Backward && negativeInputOffset > input.getPos())
                 return false;
 
-            int oldCh = input.reread(matchBegin + i);
-            int ch;
+            char32_t oldCh = input.reread(matchBegin + i);
+            char32_t ch;
             if (!U_IS_BMP(oldCh)) {
                 ch = input.readSurrogatePairChecked(negativeInputOffset);
                 ++i;
             } else
                 ch = term.matchDirection() == Forward ? input.readChecked(negativeInputOffset) : input.tryReadBackward(negativeInputOffset);
+
+            if (oldCh == errorCodePoint || ch == errorCodePoint)
+                return false;
 
             if (oldCh == ch)
                 continue;
@@ -2192,11 +2200,11 @@ public:
         return output[0];
     }
 
-    Interpreter(BytecodePattern* pattern, unsigned* output, const CharType* input, unsigned length, unsigned start)
+    Interpreter(BytecodePattern* pattern, unsigned* output, std::span<const CharType> input, unsigned start)
         : pattern(pattern)
         , compileMode(pattern->compileMode())
         , output(output)
-        , input(input, start, length, pattern->eitherUnicode())
+        , input(input, start, pattern->eitherUnicode())
         , startOffset(start)
         , remainingMatchCount(matchLimit)
     {
@@ -2646,15 +2654,22 @@ public:
             ASSERT(matchDirection == Backward || minimumSize >= parenthesesInputCountAlreadyChecked);
 
             unsigned countToCheck = 0;
+            unsigned backwardUncheckAmount = 0;
 
             if (matchDirection == Forward)
                 countToCheck = minimumSize - parenthesesInputCountAlreadyChecked;
-            else if (minimumSize > parenthesesInputCountAlreadyChecked) {
-                countToCheck = minimumSize - parenthesesInputCountAlreadyChecked;
-                haveCheckedInput(minimumSize);
-            } else if (minimumSize > disjunction->m_minimumSize) {
-                countToCheck = minimumSize - disjunction->m_minimumSize;
-                haveCheckedInput(currentCountAlreadyChecked);
+            else {
+                // Backward case
+                unsigned minAlreadyChecked = std::min(disjunction->m_minimumSize, parenthesesInputCountAlreadyChecked);
+                if (minimumSize > minAlreadyChecked) {
+                    countToCheck = minimumSize - minAlreadyChecked;
+                    haveCheckedInput(countToCheck + currentCountAlreadyChecked);
+
+                    if (minimumSize > disjunction->m_minimumSize)
+                        backwardUncheckAmount = countToCheck;
+                    else
+                        backwardUncheckAmount = minimumSize;
+                }
             }
 
             if (countToCheck) {
@@ -2758,7 +2773,6 @@ public:
                                 return ErrorCode::OffsetTooLarge;
                         }
                     } else { // Backward
-                        unsigned uncheckAmount = 0;
                         CheckedUint32 checkedCountForLookbehind = currentCountAlreadyChecked;
                         ASSERT(checkedCountForLookbehind >= term.inputPosition);
                         checkedCountForLookbehind -= term.inputPosition;
@@ -2779,13 +2793,6 @@ public:
                         if (auto error = emitDisjunction(term.parentheses.disjunction, checkedCountForLookbehind, positiveInputOffset + minimumSize, term.matchDirection()))
                         return error;
                         atomParentheticalAssertionEnd(term.parentheses.lastSubpatternId, term.frameLocation, term.quantityMaxCount, term.quantityType);
-
-                    if (uncheckAmount) {
-                        checkInput(uncheckAmount);
-                        currentCountAlreadyChecked += uncheckAmount;
-                        if (currentCountAlreadyChecked.hasOverflowed())
-                            return ErrorCode::OffsetTooLarge;
-                    }
                     }
                     break;
                 }
@@ -2796,8 +2803,8 @@ public:
                 }
             }
 
-            if (matchDirection == Backward && countToCheck)
-                uncheckInput(countToCheck);
+            if (matchDirection == Backward && backwardUncheckAmount)
+                uncheckInput(backwardUncheckAmount);
         }
         return std::nullopt;
     }
@@ -3133,20 +3140,20 @@ unsigned interpret(BytecodePattern* bytecode, StringView input, unsigned start, 
 {
     SuperSamplerScope superSamplerScope(false);
     if (input.is8Bit())
-        return Interpreter<LChar>(bytecode, output, input.characters8(), input.length(), start).interpret();
-    return Interpreter<UChar>(bytecode, output, input.characters16(), input.length(), start).interpret();
+        return Interpreter<LChar>(bytecode, output, input.span8(), start).interpret();
+    return Interpreter<UChar>(bytecode, output, input.span16(), start).interpret();
 }
 
-unsigned interpret(BytecodePattern* bytecode, const LChar* input, unsigned length, unsigned start, unsigned* output)
+unsigned interpret(BytecodePattern* bytecode, std::span<const LChar> input, unsigned start, unsigned* output)
 {
     SuperSamplerScope superSamplerScope(false);
-    return Interpreter<LChar>(bytecode, output, input, length, start).interpret();
+    return Interpreter<LChar>(bytecode, output, input, start).interpret();
 }
 
-unsigned interpret(BytecodePattern* bytecode, const UChar* input, unsigned length, unsigned start, unsigned* output)
+unsigned interpret(BytecodePattern* bytecode, std::span<const UChar> input, unsigned start, unsigned* output)
 {
     SuperSamplerScope superSamplerScope(false);
-    return Interpreter<UChar>(bytecode, output, input, length, start).interpret();
+    return Interpreter<UChar>(bytecode, output, input, start).interpret();
 }
 
 // These should be the same for both UChar & LChar.

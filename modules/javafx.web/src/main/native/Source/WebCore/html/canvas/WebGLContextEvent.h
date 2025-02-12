@@ -32,7 +32,7 @@
 namespace WebCore {
 
 class WebGLContextEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(WebGLContextEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebGLContextEvent);
 public:
     static Ref<WebGLContextEvent> create(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, const String& statusMessage)
     {
@@ -50,8 +50,6 @@ public:
     virtual ~WebGLContextEvent();
 
     const String& statusMessage() const { return m_statusMessage; }
-
-    EventInterface eventInterface() const override;
 
 private:
     WebGLContextEvent(const AtomString& type, CanBubble, IsCancelable, const String& statusMessage);

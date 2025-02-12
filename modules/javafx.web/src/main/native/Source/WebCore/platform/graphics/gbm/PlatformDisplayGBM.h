@@ -25,8 +25,10 @@
 
 #pragma once
 
-#if USE(EGL) && USE(GBM)
+#if USE(GBM)
 #include "PlatformDisplay.h"
+
+struct gbm_device;
 
 namespace WebCore {
 
@@ -36,11 +38,11 @@ public:
 
     virtual ~PlatformDisplayGBM();
 private:
-    explicit PlatformDisplayGBM(struct gbm_device*);
+    PlatformDisplayGBM(std::unique_ptr<GLDisplay>&&, struct gbm_device*);
 
     Type type() const override { return PlatformDisplay::Type::GBM; }
 };
 
 } // namespace WebCore
 
-#endif // USE(EGL) && USE(GBM)
+#endif // USE(GBM)

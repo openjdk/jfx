@@ -79,7 +79,7 @@ RefPtr<RQRef> createEmptyPath()
 
 static GraphicsContext& scratchContext()
 {
-    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     static GraphicsContext &context = img->context();
     return context;
 }

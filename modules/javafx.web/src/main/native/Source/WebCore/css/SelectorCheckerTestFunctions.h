@@ -40,6 +40,7 @@
 #include "SelectorChecker.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "ViewTransition.h"
 #include <wtf/Compiler.h>
 
 #if ENABLE(ATTACHMENT_ELEMENT)
@@ -207,10 +208,6 @@ ALWAYS_INLINE bool matchesLangPseudoClass(const Element& element, const FixedVec
 #if ENABLE(VIDEO)
     if (auto* vttElement = dynamicDowncast<WebVTTElement>(element))
         language = vttElement->language();
-    else if (auto* ruby = dynamicDowncast<WebVTTRubyElement>(element))
-        language = ruby->language();
-    else if (auto* rubyText = dynamicDowncast<WebVTTRubyTextElement>(element))
-        language = rubyText->language();
     else
 #endif
         language = element.effectiveLang();
@@ -256,10 +253,6 @@ ALWAYS_INLINE bool matchesLangPseudoClass(const Element& element, const FixedVec
 
 ALWAYS_INLINE bool matchesDirPseudoClass(const Element& element, const AtomString& argument)
 {
-    // FIXME: Add support for non-HTML elements.
-    if (!is<HTMLElement>(element))
-        return false;
-
     switch (element.effectiveTextDirection()) {
     case TextDirection::LTR:
         return equalIgnoringASCIICase(argument, "ltr"_s);
@@ -433,7 +426,7 @@ ALWAYS_INLINE bool matchesFullscreenDocumentPseudoClass(const Element& element)
 }
 
 #if ENABLE(VIDEO)
-ALWAYS_INLINE bool matchesInWindowFullScreenPseudoClass(const Element& element)
+ALWAYS_INLINE bool matchesInWindowFullscreenPseudoClass(const Element& element)
 {
     if (&element != element.document().fullscreenManager().currentFullscreenElement())
         return false;
@@ -460,10 +453,6 @@ ALWAYS_INLINE bool matchesFutureCuePseudoClass(const Element& element)
 {
     if (auto* webVTTElement = dynamicDowncast<WebVTTElement>(element))
         return !webVTTElement->isPastNode();
-    if (auto* webVTTRubyElement = dynamicDowncast<WebVTTRubyElement>(element))
-        return !webVTTRubyElement->isPastNode();
-    if (auto* webVTTRubyTextElement = dynamicDowncast<WebVTTRubyTextElement>(element))
-        return !webVTTRubyTextElement->isPastNode();
     return false;
 }
 
@@ -471,10 +460,6 @@ ALWAYS_INLINE bool matchesPastCuePseudoClass(const Element& element)
 {
     if (auto* vttElement = dynamicDowncast<WebVTTElement>(element))
         return vttElement->isPastNode();
-    if (auto* ruby = dynamicDowncast<WebVTTRubyElement>(element))
-        return ruby->isPastNode();
-    if (auto* rubyText = dynamicDowncast<WebVTTRubyTextElement>(element))
-        return rubyText->isPastNode();
     return false;
 }
 
@@ -550,9 +535,6 @@ ALWAYS_INLINE bool matchesFocusPseudoClass(const Element& element)
 
 ALWAYS_INLINE bool matchesFocusVisiblePseudoClass(const Element& element)
 {
-    if (!element.document().settings().focusVisibleEnabled())
-        return matchesLegacyDirectFocusPseudoClass(element);
-
     if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClass::FocusVisible))
         return true;
 
@@ -596,6 +578,39 @@ ALWAYS_INLINE bool matchesUserInvalidPseudoClass(const Element& element)
 ALWAYS_INLINE bool matchesUserValidPseudoClass(const Element& element)
 {
     return element.matchesUserValidPseudoClass();
+}
+
+ALWAYS_INLINE bool matchesActiveViewTransitionPseudoClass(const Element& element)
+{
+    if (&element != element.document().documentElement())
+        return false;
+    return !!element.document().activeViewTransition();
+}
+
+ALWAYS_INLINE bool matchesActiveViewTransitionTypePseudoClass(const Element& element, const FixedVector<PossiblyQuotedIdentifier>& typesInSelector)
+{
+    // This pseudo class only matches the root element.
+    if (&element != element.document().documentElement())
+        return false;
+
+    if (const auto* viewTransition = element.document().activeViewTransition()) {
+        const auto& activeTypes = viewTransition->types();
+
+        for (const auto& type : typesInSelector) {
+            ASSERT(!type.wasQuoted);
+
+            // https://github.com/w3c/csswg-drafts/issues/9534#issuecomment-1802364085
+            // RESOLVED: type can accept any idents, except 'none' or '-ua-' prefixes
+            const auto& ident = type.identifier;
+            if (ident.convertToASCIILowercase() == "none"_s || ident.convertToASCIILowercase().startsWith("-ua-"_s))
+                continue;
+
+            if (activeTypes.hasType(ident))
+                return true;
+        }
+    }
+
+    return false;
 }
 
 } // namespace WebCore

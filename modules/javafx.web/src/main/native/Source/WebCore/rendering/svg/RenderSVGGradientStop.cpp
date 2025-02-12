@@ -28,14 +28,14 @@
 #include "SVGGradientElement.h"
 #include "SVGNames.h"
 #include "SVGStopElement.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace SVGNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGGradientStop);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGGradientStop);
 
 RenderSVGGradientStop::RenderSVGGradientStop(SVGStopElement& element, RenderStyle&& style)
     : RenderElement(Type::SVGGradientStop, element, WTFMove(style), { }, { })
@@ -53,20 +53,18 @@ void RenderSVGGradientStop::styleDidChange(StyleDifference diff, const RenderSty
 
     // <stop> elements should only be allowed to make renderers under gradient elements
     // but I can imagine a few cases we might not be catching, so let's not crash if our parent isn't a gradient.
-    const auto* gradient = gradientElement();
+    RefPtr gradient = gradientElement();
     if (!gradient)
         return;
 
-    auto* renderer = gradient->renderer();
+    CheckedPtr renderer = gradient->renderer();
     if (!renderer)
         return;
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-    if (auto* gradientRenderer = dynamicDowncast<RenderSVGResourceGradient>(renderer)) {
+    if (auto* gradientRenderer = dynamicDowncast<RenderSVGResourceGradient>(renderer.get())) {
         gradientRenderer->invalidateGradient();
         return;
     }
-#endif
 
     downcast<LegacyRenderSVGResourceContainer>(*renderer).removeAllClientsFromCache();
 }
@@ -79,7 +77,7 @@ void RenderSVGGradientStop::layout()
 
 SVGGradientElement* RenderSVGGradientStop::gradientElement()
 {
-    return dynamicDowncast<SVGGradientElement>(element().parentElement());
+    return dynamicDowncast<SVGGradientElement>(element().protectedParentElement().get());
 }
 
 }

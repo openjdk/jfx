@@ -59,9 +59,9 @@ public:
     void didClose();
 
 protected:
-    void platformSend(const uint8_t* data, size_t length, Function<void(bool)>&&) final;
+    void platformSend(std::span<const uint8_t> data, Function<void(bool)>&&) final;
     std::optional<size_t> platformSendInternal(const uint8_t*, size_t);
-    void platformSendHandshake(const uint8_t* data, size_t length, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
+    void platformSendHandshake(std::span<const uint8_t> data, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
     void platformClose() final;
     size_t bufferedAmount() final;
     bool sendPendingData();

@@ -122,18 +122,18 @@ void PopupMenuJava::populate()
     }
 }
 
-void PopupMenuJava::show(const IntRect& r, LocalFrameView* frameView, int index)
+void PopupMenuJava::show(const IntRect& r,  LocalFrameView& frameView, int selectedIndex)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
-    ASSERT(frameView->frame().page());
+    ASSERT(frameView.frame().page());
 
-    createPopupMenuJava(frameView->frame().page());
+    createPopupMenuJava(frameView.frame().page());
     populate();
-    setSelectedItem(m_popup, index);
+    setSelectedItem(m_popup, selectedIndex);
 
     // r is in contents coordinates, while popup menu expects window coordinates
-    IntRect wr = frameView->contentsToWindow(r);
+    IntRect wr = frameView.contentsToWindow(r);
 
     static jmethodID mid = env->GetMethodID(
             getJPopupMenuClass(),
@@ -144,7 +144,7 @@ void PopupMenuJava::show(const IntRect& r, LocalFrameView* frameView, int index)
     env->CallVoidMethod(
             m_popup,
             mid,
-            (jobject) WebPage::jobjectFromPage(frameView->frame().page()),
+            (jobject) WebPage::jobjectFromPage(frameView.frame().page()),
             wr.x(),
             wr.y() + wr.height(),
             wr.width());

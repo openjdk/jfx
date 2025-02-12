@@ -109,7 +109,7 @@ void PingLoader::loadImage(LocalFrame& frame, const URL& url)
 
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
 
-    String referrer = SecurityPolicy::generateReferrerHeader(document->referrerPolicy(), request.url(), frame.loader().outgoingReferrer(), OriginAccessPatternsForWebProcess::singleton());
+    String referrer = SecurityPolicy::generateReferrerHeader(document->referrerPolicy(), request.url(), frame.loader().outgoingReferrerURL(), OriginAccessPatternsForWebProcess::singleton());
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
     frame.checkedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
@@ -134,6 +134,8 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
 #endif
 
     Ref document = *frame.document();
+    if (!document->checkedContentSecurityPolicy()->allowConnectToSource(pingURL))
+        return;
     document->checkedContentSecurityPolicy()->upgradeInsecureRequestIfNeeded(request, ContentSecurityPolicy::InsecureRequestType::Load);
 
     request.setHTTPMethod("POST"_s);
@@ -202,7 +204,7 @@ void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Re
     if (reportType == ViolationReportType::ContentSecurityPolicy)
         frame.checkedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
 
-    String referrer = SecurityPolicy::generateReferrerHeader(document->referrerPolicy(), reportURL, frame.loader().outgoingReferrer(), OriginAccessPatternsForWebProcess::singleton());
+    String referrer = SecurityPolicy::generateReferrerHeader(document->referrerPolicy(), reportURL, frame.loader().outgoingReferrerURL(), OriginAccessPatternsForWebProcess::singleton());
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
 

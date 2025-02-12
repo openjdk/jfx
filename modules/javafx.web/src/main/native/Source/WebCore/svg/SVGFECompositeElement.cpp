@@ -25,11 +25,11 @@
 #include "FEComposite.h"
 #include "NodeName.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFECompositeElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFECompositeElement);
 
 inline SVGFECompositeElement::SVGFECompositeElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -59,26 +59,26 @@ void SVGFECompositeElement::attributeChanged(const QualifiedName& name, const At
     case AttributeNames::operatorAttr: {
         CompositeOperationType propertyValue = SVGPropertyTraits<CompositeOperationType>::fromString(newValue);
         if (enumToUnderlyingType(propertyValue))
-            m_svgOperator->setBaseValInternal<CompositeOperationType>(propertyValue);
+            Ref { m_svgOperator }->setBaseValInternal<CompositeOperationType>(propertyValue);
         break;
     }
     case AttributeNames::inAttr:
-        m_in1->setBaseValInternal(newValue);
+        Ref { m_in1 }->setBaseValInternal(newValue);
         break;
     case AttributeNames::in2Attr:
-        m_in2->setBaseValInternal(newValue);
+        Ref { m_in2 }->setBaseValInternal(newValue);
         break;
     case AttributeNames::k1Attr:
-        m_k1->setBaseValInternal(newValue.toFloat());
+        Ref { m_k1 }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::k2Attr:
-        m_k2->setBaseValInternal(newValue.toFloat());
+        Ref { m_k2 }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::k3Attr:
-        m_k3->setBaseValInternal(newValue.toFloat());
+        Ref { m_k3 }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::k4Attr:
-        m_k4->setBaseValInternal(newValue.toFloat());
+        Ref { m_k4 }->setBaseValInternal(newValue.toFloat());
         break;
     default:
         break;

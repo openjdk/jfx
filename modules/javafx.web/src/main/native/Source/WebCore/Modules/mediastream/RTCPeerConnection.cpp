@@ -36,6 +36,7 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "DNS.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -53,6 +54,7 @@
 #include "RTCConfiguration.h"
 #include "RTCController.h"
 #include "RTCDataChannel.h"
+#include "RTCDataChannelEvent.h"
 #include "RTCDtlsTransport.h"
 #include "RTCDtlsTransportBackend.h"
 #include "RTCIceCandidate.h"
@@ -66,8 +68,8 @@
 #include "RTCSessionDescription.h"
 #include "RTCSessionDescriptionInit.h"
 #include "Settings.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/text/Base64.h>
 
@@ -79,7 +81,7 @@ namespace WebCore {
 
 using namespace PeerConnection;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCPeerConnection);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCPeerConnection);
 
 ExceptionOr<Ref<RTCPeerConnection>> RTCPeerConnection::create(Document& document, RTCConfiguration&& configuration)
 {
@@ -184,9 +186,41 @@ ExceptionOr<void> RTCPeerConnection::removeTrack(RTCRtpSender& sender)
     return { };
 }
 
-ExceptionOr<Ref<RTCRtpTransceiver>> RTCPeerConnection::addTransceiver(AddTransceiverTrackOrKind&& withTrack, const RTCRtpTransceiverInit& init)
+static bool isAudioTransceiver(const RTCPeerConnection::AddTransceiverTrackOrKind& withTrack)
+{
+    return switchOn(withTrack, [] (const String& type) -> bool {
+        return type == "audio"_s;
+    }, [] (const RefPtr<MediaStreamTrack>& track) -> bool {
+        return track->isAudio();
+    });
+}
+static std::optional<Exception> validateSendEncodings(Vector<RTCRtpEncodingParameters>& encodings, bool isAudio)
+{
+    size_t encodingIndex = 0;
+    bool hasAnyScaleResolutionDownBy = !isAudio && WTF::anyOf(encodings, [] (auto& encoding){ return !!encoding.scaleResolutionDownBy; });
+    for (auto& encoding: encodings) {
+        if (isAudio) {
+            encoding.scaleResolutionDownBy = { };
+            encoding.maxFramerate = { };
+            continue;
+        }
+        if (encoding.scaleResolutionDownBy && *encoding.scaleResolutionDownBy < 1)
+            return Exception { ExceptionCode::RangeError, "scaleResolutionDownBy is below 1"_s };
+        if (encoding.maxFramerate && *encoding.maxFramerate <= 0)
+            return Exception { ExceptionCode::RangeError, "maxFrameRate is below or equal 0"_s };
+        if (hasAnyScaleResolutionDownBy) {
+            if (!encoding.scaleResolutionDownBy)
+                encoding.scaleResolutionDownBy = 1;
+        } else
+            encoding.scaleResolutionDownBy = 1 << (encodings.size() - ++encodingIndex);
+    }
+    return { };
+}
+ExceptionOr<Ref<RTCRtpTransceiver>> RTCPeerConnection::addTransceiver(AddTransceiverTrackOrKind&& withTrack, RTCRtpTransceiverInit&& init)
 {
     INFO_LOG(LOGIDENTIFIER);
+    if (auto exception = validateSendEncodings(init.sendEncodings, isAudioTransceiver(withTrack)))
+        return WTFMove(*exception);
 
     if (std::holds_alternative<String>(withTrack)) {
         const String& kind = std::get<String>(withTrack);
@@ -196,7 +230,7 @@ ExceptionOr<Ref<RTCRtpTransceiver>> RTCPeerConnection::addTransceiver(AddTransce
         if (isClosed())
             return Exception { ExceptionCode::InvalidStateError };
 
-        return m_backend->addTransceiver(kind, init);
+        return m_backend->addTransceiver(kind, init, PeerConnectionBackend::IgnoreNegotiationNeededFlag::No);
     }
 
     if (isClosed())
@@ -206,12 +240,78 @@ ExceptionOr<Ref<RTCRtpTransceiver>> RTCPeerConnection::addTransceiver(AddTransce
     return m_backend->addTransceiver(WTFMove(track), init);
 }
 
+ExceptionOr<Ref<RTCRtpTransceiver>> RTCPeerConnection::addReceiveOnlyTransceiver(String&& kind)
+{
+    ALWAYS_LOG(LOGIDENTIFIER);
+    // https://www.w3.org/TR/webrtc/#legacy-configuration-extensions Step 3.3: Let transceiver be
+    // the result of invoking the equivalent of connection.addTransceiver(kind), except that this
+    // operation MUST NOT update the negotiation-needed flag.
+    RTCRtpTransceiverInit init { .direction = RTCRtpTransceiverDirection::Recvonly, .streams = { }, .sendEncodings = { } };
+    if (kind != "audio"_s && kind != "video"_s)
+        return Exception { ExceptionCode::TypeError };
+
+    ASSERT(!isClosed());
+    if (isClosed())
+        return Exception { ExceptionCode::InvalidStateError };
+
+    return m_backend->addTransceiver(kind, init, PeerConnectionBackend::IgnoreNegotiationNeededFlag::Yes);
+}
+
 void RTCPeerConnection::createOffer(RTCOfferOptions&& options, Ref<DeferredPromise>&& promise)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
     if (isClosed()) {
         promise->reject(ExceptionCode::InvalidStateError);
         return;
+    }
+
+    // https://www.w3.org/TR/webrtc/#legacy-configuration-extensions
+    auto needsReceiveOnlyTransceiver = [&](auto option, auto&& trackKind) -> bool {
+        if (!option) {
+            for (auto& transceiver : currentTransceivers()) {
+                if (transceiver->stopped())
+                    continue;
+                if (transceiver->sender().trackKind() != trackKind)
+                    continue;
+                if (transceiver->direction() == RTCRtpTransceiverDirection::Sendrecv)
+                    transceiver->setDirection(RTCRtpTransceiverDirection::Sendonly);
+                else if (transceiver->direction() == RTCRtpTransceiverDirection::Recvonly)
+                    transceiver->setDirection(RTCRtpTransceiverDirection::Inactive);
+            }
+            return false;
+        }
+
+        for (auto& transceiver : currentTransceivers()) {
+            if (transceiver->stopped())
+                continue;
+            if (transceiver->sender().trackKind() != trackKind)
+                continue;
+            auto direction = transceiver->direction();
+            if (direction == RTCRtpTransceiverDirection::Sendrecv || direction == RTCRtpTransceiverDirection::Recvonly)
+                return false;
+        }
+
+        return true;
+    };
+
+    if (options.offerToReceiveAudio) {
+        if (needsReceiveOnlyTransceiver(*options.offerToReceiveAudio, "audio"_s)) {
+            auto result = addReceiveOnlyTransceiver("audio"_s);
+            if (result.hasException()) {
+                promise->reject(result.releaseException());
+                return;
+            }
+        }
+    }
+
+    if (options.offerToReceiveVideo) {
+        if (needsReceiveOnlyTransceiver(*options.offerToReceiveVideo, "video"_s)) {
+            auto result = addReceiveOnlyTransceiver("video"_s);
+            if (result.hasException()) {
+                promise->reject(result.releaseException());
+                return;
+            }
+        }
     }
 
     chainOperation(WTFMove(promise), [this, options = WTFMove(options)](Ref<DeferredPromise>&& promise) mutable {
@@ -408,7 +508,7 @@ ExceptionOr<Vector<MediaEndpointConfiguration::IceServerInfo>> RTCPeerConnection
 
             urls.removeAllMatching([&](auto& urlString) {
                 URL url { URL { }, urlString };
-                if (url.path().endsWithIgnoringASCIICase(".local"_s) || !portAllowed(url)) {
+                if (url.path().endsWithIgnoringASCIICase(".local"_s) || !portAllowed(url) || isIPAddressDisallowed(url)) {
                     queueTaskToDispatchEvent(*this, TaskSource::MediaElement, RTCPeerConnectionIceErrorEvent::create(Event::CanBubble::No, Event::IsCancelable::No, { }, { }, WTFMove(urlString), 701, "URL is not allowed"_s));
                     return true;
                 }
@@ -432,7 +532,7 @@ ExceptionOr<Vector<MediaEndpointConfiguration::IceServerInfo>> RTCPeerConnection
                         if (server.credential.utf8().length() > MaxTurnUsernameLength || server.username.utf8().length() > MaxTurnUsernameLength)
                             return Exception { ExceptionCode::TypeError, "TURN/TURNS username and/or credential are too long"_s };
                     }
-                } else if (!serverURL.protocolIs("stun"_s))
+                } else if (!serverURL.protocolIs("stun"_s) && !serverURL.protocolIs("stuns"_s))
                     return Exception { ExceptionCode::SyntaxError, "ICE server protocol not supported"_s };
             }
             if (serverURLs.size())
@@ -497,7 +597,7 @@ ExceptionOr<void> RTCPeerConnection::setConfiguration(RTCConfiguration&& configu
 
         for (auto& certificate : configuration.certificates) {
             bool isThere = m_configuration.certificates.findIf([&certificate](const auto& item) {
-                return item.get() == certificate.get();
+                return item == certificate;
             }) != notFound;
             if (!isThere)
                 return Exception { ExceptionCode::InvalidModificationError, "A certificate given in constructor is not present"_s };
@@ -630,11 +730,6 @@ void RTCPeerConnection::unregisterFromController()
 {
     if (m_controller)
         m_controller->remove(*this);
-}
-
-const char* RTCPeerConnection::activeDOMObjectName() const
-{
-    return "RTCPeerConnection";
 }
 
 void RTCPeerConnection::suspend(ReasonForSuspension reason)
@@ -865,6 +960,17 @@ void RTCPeerConnection::dispatchEvent(Event& event)
     EventTarget::dispatchEvent(event);
 }
 
+void RTCPeerConnection::dispatchDataChannelEvent(UniqueRef<RTCDataChannelHandler>&& channelHandler, String&& label, RTCDataChannelInit&& channelInit)
+{
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, label = WTFMove(label), channelHandler = WTFMove(channelHandler), channelInit = WTFMove(channelInit)]() mutable {
+        if (isClosed())
+            return;
+        auto channel = RTCDataChannel::create(*document(), channelHandler.moveToUniquePtr(), WTFMove(label), WTFMove(channelInit), RTCDataChannelState::Open);
+        ALWAYS_LOG(LOGIDENTIFIER, makeString("Dispatching data-channel event for channel "_s, channel->label()));
+        dispatchEvent(RTCDataChannelEvent::create(eventNames().datachannelEvent, Event::CanBubble::No, Event::IsCancelable::No, Ref { channel }));
+        channel->fireOpenEventIfNeeded();
+    });
+}
 static inline ExceptionOr<PeerConnectionBackend::CertificateInformation> certificateTypeFromAlgorithmIdentifier(JSC::JSGlobalObject& lexicalGlobalObject, RTCPeerConnection::AlgorithmIdentifier&& algorithmIdentifier)
 {
     if (std::holds_alternative<String>(algorithmIdentifier))
@@ -875,11 +981,12 @@ static inline ExceptionOr<PeerConnectionBackend::CertificateInformation> certifi
     JSC::VM& vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    auto parameters = convertDictionary<RTCPeerConnection::CertificateParameters>(lexicalGlobalObject, value.get());
-    if (UNLIKELY(scope.exception())) {
+    auto parametersConversionResult = convertDictionary<RTCPeerConnection::CertificateParameters>(lexicalGlobalObject, value.get());
+    if (UNLIKELY(parametersConversionResult.hasException(scope))) {
         scope.clearException();
         return Exception { ExceptionCode::TypeError, "Unable to read certificate parameters"_s };
     }
+    auto parameters = parametersConversionResult.releaseReturnValue();
 
     if (parameters.expires && *parameters.expires < 0)
         return Exception { ExceptionCode::TypeError, "Expire value is invalid"_s };
@@ -1090,6 +1197,16 @@ WTFLogChannel& RTCPeerConnection::logChannel() const
     return LogWebRTC;
 }
 #endif
+
+void RTCPeerConnection::startGatheringStatLogs(Function<void(String&&)>&& callback)
+{
+    m_backend->startGatheringStatLogs(WTFMove(callback));
+}
+
+void RTCPeerConnection::stopGatheringStatLogs()
+{
+    m_backend->stopGatheringStatLogs();
+}
 
 } // namespace WebCore
 

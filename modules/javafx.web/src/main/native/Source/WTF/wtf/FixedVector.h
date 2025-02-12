@@ -95,6 +95,8 @@ public:
         : m_storage(other.isEmpty() ? nullptr : Storage::createFromVector(other).moveToUniquePtr())
     { }
 
+    // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
+    // should probably go through the explicit constructor.
     template<size_t inlineCapacity, typename OverflowHandler>
     FixedVector& operator=(const Vector<T, inlineCapacity, OverflowHandler>& other)
     {
@@ -109,6 +111,8 @@ public:
         m_storage = target.isEmpty() ? nullptr : Storage::createFromVector(WTFMove(target)).moveToUniquePtr();
     }
 
+    // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
+    // should probably go through the explicit constructor.
     template<size_t inlineCapacity, typename OverflowHandler>
     FixedVector& operator=(Vector<T, inlineCapacity, OverflowHandler>&& other)
     {
@@ -117,27 +121,25 @@ public:
         return *this;
     }
 
-private:
-    FixedVector(std::unique_ptr<Storage>&& storage)
-        :  m_storage { WTFMove(storage) }
-    { }
-
-public:
     template<typename... Args>
     static FixedVector createWithSizeAndConstructorArguments(size_t size, Args&&... args)
     {
         return FixedVector<T> { size ? Storage::createWithSizeAndConstructorArguments(size, std::forward<Args>(args)...).moveToUniquePtr() : std::unique_ptr<Storage> { nullptr } };
     }
 
+    template<std::invocable<size_t> Generator>
+    static FixedVector createWithSizeFromGenerator(size_t size, Generator&& generator)
+    {
+        return FixedVector<T> { Storage::createWithSizeFromGenerator(size, std::forward<Generator>(generator)) };
+    }
+
     size_t size() const { return m_storage ? m_storage->size() : 0; }
     bool isEmpty() const { return m_storage ? m_storage->isEmpty() : true; }
     size_t byteSize() const { return m_storage ? m_storage->byteSize() : 0; }
 
-    T* data() { return m_storage ? m_storage->data() : nullptr; }
     iterator begin() { return m_storage ? m_storage->begin() : nullptr; }
     iterator end() { return m_storage ? m_storage->end() : nullptr; }
 
-    const T* data() const { return const_cast<FixedVector*>(this)->data(); }
     const_iterator begin() const { return const_cast<FixedVector*>(this)->begin(); }
     const_iterator end() const { return const_cast<FixedVector*>(this)->end(); }
 
@@ -188,12 +190,29 @@ public:
         swap(m_storage, other.m_storage);
     }
 
-    static ptrdiff_t offsetOfStorage() { return OBJECT_OFFSETOF(FixedVector, m_storage); }
+    static constexpr ptrdiff_t offsetOfStorage() { return OBJECT_OFFSETOF(FixedVector, m_storage); }
 
     Storage* storage() { return m_storage.get(); }
 
+    std::span<const T> span() const { return { m_storage ? m_storage->data() : nullptr, size() }; }
+    std::span<T> mutableSpan() { return { m_storage ? m_storage->data() : nullptr, size() }; }
+
+    Vector<T> subvector(size_t offset, size_t length = std::dynamic_extent) const
+    {
+        return { span().subspan(offset, length) };
+    }
+
+    std::span<const T> subspan(size_t offset, size_t length = std::dynamic_extent) const
+    {
+        return span().subspan(offset, length);
+    }
+
 private:
     friend class JSC::LLIntOffsetsExtractor;
+
+    FixedVector(std::unique_ptr<Storage>&& storage)
+        :  m_storage { WTFMove(storage) }
+    { }
 
     std::unique_ptr<Storage> m_storage;
 };

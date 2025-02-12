@@ -46,6 +46,7 @@
 #include "NetworkLoadMetrics.h"
 #include "Quirks.h"
 #include "SharedBuffer.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -75,7 +76,7 @@ void CrossOriginPreflightChecker::validatePreflightResponse(DocumentThreadableLo
         return;
     }
 
-    auto result = WebCore::validatePreflightResponse(page->sessionID(), request, response, loader.options().storedCredentialsPolicy, loader.securityOrigin(), &CrossOriginAccessControlCheckDisabler::singleton());
+    auto result = WebCore::validatePreflightResponse(page->sessionID(), request, response, loader.options().storedCredentialsPolicy, loader.topOrigin(), loader.securityOrigin(), &CrossOriginAccessControlCheckDisabler::singleton());
     if (!result) {
         loader.document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, result.error());
         loader.preflightFailure(identifier, ResourceError(errorDomainWebKitInternal, 0, request.url(), result.error(), ResourceError::Type::AccessControl));
@@ -93,7 +94,7 @@ void CrossOriginPreflightChecker::validatePreflightResponse(DocumentThreadableLo
     loader.preflightSuccess(WTFMove(request));
 }
 
-void CrossOriginPreflightChecker::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void CrossOriginPreflightChecker::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
     Ref loader = m_loader.get();
@@ -133,7 +134,7 @@ void CrossOriginPreflightChecker::startPreflight()
     options.serviceWorkersMode = ServiceWorkersMode::None;
     options.initiatorContext = loader->options().initiatorContext;
 
-    bool includeFetchMetadata = loader->document().settings().fetchMetadataEnabled() && !loader->document().quirks().shouldDisableFetchMetadata();
+    bool includeFetchMetadata = !loader->document().quirks().shouldDisableFetchMetadata();
     CachedResourceRequest preflightRequest(createAccessControlPreflightRequest(m_request, loader->securityOrigin(), loader->referrer(), includeFetchMetadata), options);
     preflightRequest.setInitiatorType(AtomString { loader->options().initiatorType });
 
@@ -148,7 +149,7 @@ void CrossOriginPreflightChecker::doPreflight(DocumentThreadableLoader& loader, 
     if (!loader.document().frame())
         return;
 
-    bool includeFetchMetadata = loader.document().settings().fetchMetadataEnabled() && !loader.document().quirks().shouldDisableFetchMetadata();
+    bool includeFetchMetadata = !loader.document().quirks().shouldDisableFetchMetadata();
     ResourceRequest preflightRequest = createAccessControlPreflightRequest(request, loader.securityOrigin(), loader.referrer(), includeFetchMetadata);
     ResourceError error;
     ResourceResponse response;
@@ -170,9 +171,9 @@ void CrossOriginPreflightChecker::doPreflight(DocumentThreadableLoader& loader, 
     }
 
     // FIXME: Ideally, we should ask platformLoadResourceSynchronously to set ResourceResponse isRedirected and use it here.
-    bool isRedirect = preflightRequest.url().strippedForUseAsReferrer() != response.url().strippedForUseAsReferrer();
+    bool isRedirect = preflightRequest.url().strippedForUseAsReferrer().string != response.url().strippedForUseAsReferrer().string;
     if (isRedirect || !response.isSuccessful()) {
-        auto errorMessage = makeString("Preflight response is not successful. Status code: ", response.httpStatusCode());
+        auto errorMessage = makeString("Preflight response is not successful. Status code: "_s, response.httpStatusCode());
         loader.protectedDocument()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, errorMessage);
 
         loader.preflightFailure(identifier, ResourceError { errorDomainWebKitInternal, 0, request.url(), errorMessage, ResourceError::Type::AccessControl });
