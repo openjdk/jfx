@@ -673,7 +673,7 @@ void EditorClientJava::clearUndoRedoOperations()
     m_redoStack.clear();
 }
 
-void EditorClientJava::getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
+void EditorClientJava::getClientPasteboardData(const std::optional<SimpleRange>&, Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>>& pasteboardTypesAndData)
 {
     notImplemented();
 }

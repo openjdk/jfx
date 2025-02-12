@@ -83,7 +83,7 @@ private:
 };
 
 class ImageBitmap final : public ScriptWrappable, public RefCounted<ImageBitmap> {
-    WTF_MAKE_ISO_ALLOCATED(ImageBitmap);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ImageBitmap);
 public:
     using Source = std::variant<
         RefPtr<HTMLImageElement>,
@@ -135,6 +135,10 @@ public:
     std::optional<DetachedImageBitmap> detach();
     bool isDetached() const { return !m_bitmap; }
     void close() { takeImageBuffer(); }
+
+#if USE(SKIA)
+    void prepareForCrossThreadTransfer();
+#endif
 
     size_t memoryCost() const;
 private:

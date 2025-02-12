@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3934,11 +3934,27 @@ project(":web") {
                     if (t.name == "win") {
                         // To enable ninja build on Windows
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        // Adds compiler and linker flags if present
-                        def cFlags = webkitProperties.ccFlags?.join(' ') ?: ''
-                        def lFlags = webkitProperties.linkFlags?.join(' ') ?: ''
+                        // Ensure the Clang environment is set up properly
+                        // Set the Clang compiler and linker as webkit has dropped MSVC compiler support
+                        def clangCompiler = "clang-cl.exe"  // Set to the path of clang-cl
+                        def msvcLinker = "link.exe"  // Set to the path of clang-cl
+                        // Define the flags for Clang compilation and MSVC linking
+                        def cFlags = "-shared"
+                        def lFlags = "-shared"
+                        if (!IS_64) {
+                            cFlags += " /clang:-m32"
+                            lFlags += " /machine:x86"
+                        }
+                        // Pass Clang-specific flags
                         cmakeArgs = "$cmakeArgs -DCMAKE_C_FLAGS='${cFlags}' -DCMAKE_CXX_FLAGS='${cFlags}'"
                         cmakeArgs = "$cmakeArgs -DCMAKE_SHARED_LINKER_FLAGS='${lFlags}'"
+
+                        // Specify Clang-CL as the compiler for C and C++
+                        cmakeArgs = "$cmakeArgs -DCMAKE_C_COMPILER=${clangCompiler} -DCMAKE_CXX_COMPILER=${clangCompiler}"
+                        // pass the MSVC bin dir for icu Third party lib
+                        cmakeArgs = "$cmakeArgs -DCMAKE_LINKER=${msvcLinker} -DMSVC_BIN_DIR='${WIN.MSVC_BIN_DIR}'"
+
+
                     } else if (t.name == "mac") {
                         cmakeArgs = " $cmakeArgs -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
@@ -4272,6 +4288,8 @@ project(":systemTests") {
 
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
+
+        maxHeapSize = "1000m"
 
         // FIXME: Remove this when JDK-8334137 is fixed
         if (jdk24OrLater) {

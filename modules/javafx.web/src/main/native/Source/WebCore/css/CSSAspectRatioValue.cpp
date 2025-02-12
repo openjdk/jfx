@@ -29,13 +29,13 @@
 #include "config.h"
 #include "CSSAspectRatioValue.h"
 
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 String CSSAspectRatioValue::customCSSText() const
 {
-    return makeString(m_numeratorValue, " / ", m_denominatorValue);
+    return makeString(m_numeratorValue, " / "_s, m_denominatorValue);
 }
 
 bool CSSAspectRatioValue::equals(const CSSAspectRatioValue& other) const

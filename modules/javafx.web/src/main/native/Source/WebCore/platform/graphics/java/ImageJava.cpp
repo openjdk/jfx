@@ -51,7 +51,7 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
         return;
     }
 
-    auto nativeImage = nativeImageForCurrentFrame();
+    auto nativeImage = currentNativeImage();
     if (!nativeImage) {
         return;
     }

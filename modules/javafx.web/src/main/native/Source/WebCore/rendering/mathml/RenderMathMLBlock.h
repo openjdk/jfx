@@ -39,7 +39,8 @@ class RenderMathMLOperator;
 class MathMLPresentationElement;
 
 class RenderMathMLBlock : public RenderBlock {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLBlock);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLBlock);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLBlock);
 public:
     RenderMathMLBlock(Type, MathMLPresentationElement&, RenderStyle&&);
     RenderMathMLBlock(Type, Document&, RenderStyle&&);
@@ -56,7 +57,7 @@ public:
     // embellished operator, and omits any embellishments.
     // FIXME: We don't yet handle all the cases in the MathML spec. See
     // https://bugs.webkit.org/show_bug.cgi?id=78617.
-    virtual RenderMathMLOperator* unembellishedOperator() const { return 0; }
+    virtual RenderMathMLOperator* unembellishedOperator() const { return nullptr; }
 
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
 
@@ -76,7 +77,7 @@ protected:
     static inline LayoutUnit ascentForChild(const RenderBox& child);
 
     void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
-    void layoutInvalidMarkup(bool relayoutChildren);
+    void computeAndSetBlockDirectionMarginsOfChildren();
 
 private:
     bool isRenderMathMLBlock() const final { return true; }
@@ -89,9 +90,11 @@ private:
 };
 
 class RenderMathMLTable final : public RenderTable {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLTable);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLTable);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLTable);
 public:
     inline RenderMathMLTable(MathMLElement&, RenderStyle&&);
+    virtual ~RenderMathMLTable();
 
     MathMLStyle& mathMLStyle() const { return m_mathMLStyle; }
 

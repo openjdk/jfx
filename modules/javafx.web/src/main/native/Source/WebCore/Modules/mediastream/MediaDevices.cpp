@@ -46,17 +46,18 @@
 #include "LocalFrame.h"
 #include "Logging.h"
 #include "MediaTrackSupportedConstraints.h"
+#include "PermissionsPolicy.h"
 #include "RealtimeMediaSourceSettings.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
 #include "UserMediaController.h"
 #include "UserMediaRequest.h"
 #include <wtf/CryptographicallyRandomNumber.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaDevices);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaDevices);
 
 inline MediaDevices::MediaDevices(Document& document)
     : ActiveDOMObject(document)
@@ -150,10 +151,26 @@ void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promi
     bool isUserGesturePriviledged = false;
 
     if (audioConstraints.isValid) {
+        if (audioConstraints.hasDisallowedRequiredConstraintForDeviceSelection(MediaConstraints::DeviceType::Microphone)) {
+            // Asynchronous rejection.
+            callOnMainThread([promise = WTFMove(promise)] () mutable {
+                promise.reject(Exception { ExceptionCode::TypeError, "A required constraint."_s });
+
+            });
+            return;
+        }
         isUserGesturePriviledged |= computeUserGesturePriviledge(GestureAllowedRequest::Microphone);
         audioConstraints.setDefaultAudioConstraints();
     }
     if (videoConstraints.isValid) {
+        if (videoConstraints.hasDisallowedRequiredConstraintForDeviceSelection(MediaConstraints::DeviceType::Camera)) {
+            // Asynchronous rejection.
+            callOnMainThread([promise = WTFMove(promise)] () mutable {
+                promise.reject(Exception { ExceptionCode::TypeError, "A required constraint."_s });
+
+            });
+            return;
+        }
         isUserGesturePriviledged |= computeUserGesturePriviledge(GestureAllowedRequest::Camera);
         videoConstraints.setDefaultVideoConstraints();
     }
@@ -231,6 +248,8 @@ static bool hasInvalidGetDisplayMediaConstraint(const MediaConstraints& constrai
         case MediaConstraintType::WhiteBalanceMode:
         case MediaConstraintType::Zoom:
         case MediaConstraintType::Torch:
+        case MediaConstraintType::BackgroundBlur:
+        case MediaConstraintType::PowerEfficient:
             // Ignored.
             break;
 
@@ -253,7 +272,7 @@ void MediaDevices::getDisplayMedia(DisplayMediaStreamConstraints&& constraints, 
 
     bool isUserGesturePriviledged = computeUserGesturePriviledge(GestureAllowedRequest::Display);
     if (!isUserGesturePriviledged) {
-        promise.reject(Exception { ExceptionCode::InvalidAccessError, "getDisplayMedia must be called from a user gesture handler."_s });
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "getDisplayMedia must be called from a user gesture handler."_s });
         return;
     }
 
@@ -275,19 +294,19 @@ void MediaDevices::getDisplayMedia(DisplayMediaStreamConstraints&& constraints, 
 
 static inline bool checkCameraAccess(const Document& document)
 {
-    return isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Camera, document, LogFeaturePolicyFailure::No);
+    return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Camera, document, PermissionsPolicy::ShouldReportViolation::No);
 }
 
 static inline bool checkMicrophoneAccess(const Document& document)
 {
-    return isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, document, LogFeaturePolicyFailure::No);
+    return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document, PermissionsPolicy::ShouldReportViolation::No);
 }
 
 static inline bool checkSpeakerAccess(const Document& document)
 {
     return document.frame()
         && document.frame()->settings().exposeSpeakersEnabled()
-        && isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::SpeakerSelection, document, LogFeaturePolicyFailure::No);
+        && PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::SpeakerSelection, document, PermissionsPolicy::ShouldReportViolation::No);
 }
 
 void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts, EnumerateDevicesPromise&& promise)
@@ -362,24 +381,7 @@ void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
 
 MediaTrackSupportedConstraints MediaDevices::getSupportedConstraints()
 {
-    auto& supported = RealtimeMediaSourceCenter::singleton().supportedConstraints();
-    MediaTrackSupportedConstraints result;
-    result.width = supported.supportsWidth();
-    result.height = supported.supportsHeight();
-    result.aspectRatio = supported.supportsAspectRatio();
-    result.frameRate = supported.supportsFrameRate();
-    result.facingMode = supported.supportsFacingMode();
-    result.whiteBalanceMode = supported.supportsWhiteBalanceMode();
-    result.volume = supported.supportsVolume();
-    result.sampleRate = supported.supportsSampleRate();
-    result.sampleSize = supported.supportsSampleSize();
-    result.echoCancellation = supported.supportsEchoCancellation();
-    result.deviceId = supported.supportsDeviceId();
-    result.groupId = supported.supportsGroupId();
-    result.displaySurface = supported.supportsDisplaySurface();
-    result.zoom = supported.supportsZoom();
-
-    return result;
+    return { };
 }
 
 void MediaDevices::scheduledEventTimerFired()
@@ -398,11 +400,6 @@ bool MediaDevices::virtualHasPendingActivity() const
     return hasEventListeners(m_eventNames.devicechangeEvent);
 }
 
-const char* MediaDevices::activeDOMObjectName() const
-{
-    return "MediaDevices";
-}
-
 void MediaDevices::listenForDeviceChanges()
 {
     RefPtr document = this->document();
@@ -410,8 +407,8 @@ void MediaDevices::listenForDeviceChanges()
     if (!controller)
         return;
 
-    bool canAccessCamera = isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Camera, *document, LogFeaturePolicyFailure::No);
-    bool canAccessMicrophone = isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, *document, LogFeaturePolicyFailure::No);
+    bool canAccessCamera = PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Camera, *document, PermissionsPolicy::ShouldReportViolation::No);
+    bool canAccessMicrophone = PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, *document, PermissionsPolicy::ShouldReportViolation::No);
 
     if (m_listeningForDeviceChanges || (!canAccessCamera && !canAccessMicrophone))
         return;

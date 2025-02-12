@@ -122,9 +122,13 @@ void* DebugHeap::malloc(size_t size, FailureAction action)
 
 void* DebugHeap::memalign(size_t alignment, size_t size, FailureAction action)
 {
+#if BPLATFORM_JAVA && BOS(DARWIN)
+    void* result = ::aligned_alloc(alignment, size);
+#else
     void* result = nullptr;
     if (posix_memalign(&result, alignment, size))
         RELEASE_BASSERT(action == FailureAction::ReturnNull || result);
+#endif
     return result;
 }
 

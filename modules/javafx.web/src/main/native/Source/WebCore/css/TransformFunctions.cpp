@@ -44,7 +44,6 @@
 #include "ScaleTransformOperation.h"
 #include "SkewTransformOperation.h"
 #include "TranslateTransformOperation.h"
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -110,14 +109,16 @@ std::optional<TransformOperations> transformsForValue(const CSSValue& value, con
     if (!valueList)
         return { };
 
-    TransformOperations operations;
-    for (auto& currentValue : *valueList) {
-        auto transform  = transformForValue(currentValue, conversionData);
+    Vector<Ref<TransformOperation>> operations(valueList->size(), [&](size_t i) -> std::optional<Ref<TransformOperation>> {
+        auto transform  = transformForValue((*valueList)[i], conversionData);
         if (!transform)
             return { };
-        operations.operations().append(WTFMove(transform));
-    }
-    return operations;
+        return transform.releaseNonNull();
+    });
+    if (operations.size() != valueList->size())
+        return { };
+
+    return TransformOperations { WTFMove(operations) };
 }
 
 RefPtr<TransformOperation> transformForValue(const CSSValue& value, const CSSToLengthConversionData& conversionData)

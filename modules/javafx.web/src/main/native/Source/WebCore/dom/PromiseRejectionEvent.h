@@ -33,7 +33,7 @@ namespace WebCore {
 class DOMPromise;
 
 class PromiseRejectionEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(PromiseRejectionEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PromiseRejectionEvent);
 public:
     struct Init : EventInit {
         RefPtr<DOMPromise> promise;
@@ -49,8 +49,6 @@ public:
 
     DOMPromise& promise() const { return m_promise.get(); }
     const JSValueInWrappedObject& reason() const { return m_reason; }
-
-    EventInterface eventInterface() const override { return PromiseRejectionEventInterfaceType; }
 
 private:
     PromiseRejectionEvent(const AtomString&, const Init&, IsTrusted);

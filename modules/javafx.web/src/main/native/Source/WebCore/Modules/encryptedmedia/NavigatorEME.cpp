@@ -50,10 +50,10 @@ struct LogArgument<Vector<T>> {
     static String toString(const Vector<T>& value)
     {
         StringBuilder builder;
-        builder.append("[");
+        builder.append('[');
         for (auto item : value)
             builder.append(LogArgument<T>::toString(item));
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 };
@@ -89,7 +89,7 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
 {
     // https://w3c.github.io/encrypted-media/#dom-navigator-requestmediakeysystemaccess
     // W3C Editor's Draft 09 November 2016
-    auto identifier = Logger::LogSiteIdentifier("NavigatorEME", __func__, &navigator);
+    auto identifier = Logger::LogSiteIdentifier("NavigatorEME"_s, __func__, &navigator);
     Ref<Logger> logger = document.logger();
 
     infoLog(logger, identifier, "keySystem(", keySystem, "), supportedConfigurations(", supportedConfigurations, ")");

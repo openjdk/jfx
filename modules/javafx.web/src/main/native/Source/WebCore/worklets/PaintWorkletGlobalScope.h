@@ -25,13 +25,20 @@
 
 #pragma once
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "CSSPaintCallback.h"
 #include "WorkletGlobalScope.h"
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
 #include <wtf/Lock.h>
+
+namespace WebCore {
+struct PaintDefinition;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PaintDefinition> : std::true_type { };
+}
 
 namespace JSC {
 class JSObject;
@@ -41,16 +48,8 @@ class VM;
 namespace WebCore {
 class JSDOMGlobalObject;
 
-class PaintWorkletGlobalScope final : public WorkletGlobalScope {
-    WTF_MAKE_ISO_ALLOCATED(PaintWorkletGlobalScope);
-public:
-    static RefPtr<PaintWorkletGlobalScope> tryCreate(Document&, ScriptSourceCode&&);
-
-    ExceptionOr<void> registerPaint(JSC::JSGlobalObject&, const AtomString& name, JSC::Strong<JSC::JSObject> paintConstructor);
-    double devicePixelRatio() const;
-
-    // All paint definitions must be destroyed before the vm is destroyed, because otherwise they will point to freed memory.
-    struct PaintDefinition : public CanMakeWeakPtr<PaintDefinition> {
+// All paint definitions must be destroyed before the vm is destroyed, because otherwise they will point to freed memory.
+struct PaintDefinition : public CanMakeWeakPtr<PaintDefinition> {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
         PaintDefinition(const AtomString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&&, Vector<AtomString>&& inputProperties, Vector<String>&& inputArguments);
 
@@ -59,7 +58,15 @@ public:
         const Ref<CSSPaintCallback> paintCallback;
         const Vector<AtomString> inputProperties;
         const Vector<String> inputArguments;
-    };
+};
+
+class PaintWorkletGlobalScope final : public WorkletGlobalScope {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaintWorkletGlobalScope);
+public:
+    static RefPtr<PaintWorkletGlobalScope> tryCreate(Document&, ScriptSourceCode&&);
+
+    ExceptionOr<void> registerPaint(JSC::JSGlobalObject&, const AtomString& name, JSC::Strong<JSC::JSObject> paintConstructor);
+    double devicePixelRatio() const;
 
     HashMap<String, std::unique_ptr<PaintDefinition>>& paintDefinitionMap() WTF_REQUIRES_LOCK(m_paintDefinitionLock);
     Lock& paintDefinitionLock() WTF_RETURNS_LOCK(m_paintDefinitionLock) { return m_paintDefinitionLock; }
@@ -106,8 +113,10 @@ inline auto PaintWorkletGlobalScope::paintDefinitionMap() -> HashMap<String, std
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PaintWorkletGlobalScope)
-static bool isType(const WebCore::ScriptExecutionContext& context) { return is<WebCore::WorkletGlobalScope>(context) && downcast<WebCore::WorkletGlobalScope>(context).isPaintWorkletGlobalScope(); }
+static bool isType(const WebCore::ScriptExecutionContext& context)
+{
+    auto* global = dynamicDowncast<WebCore::WorkletGlobalScope>(context);
+    return global && global->isPaintWorkletGlobalScope();
+}
 static bool isType(const WebCore::WorkletGlobalScope& context) { return context.isPaintWorkletGlobalScope(); }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif // ENABLE(CSS_PAINTING_API)

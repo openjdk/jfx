@@ -38,13 +38,14 @@
 #include "LoadableTextTrack.h"
 #include "Logging.h"
 #include "NodeName.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTrackElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTrackElement);
 
 using namespace HTMLNames;
 
@@ -56,7 +57,7 @@ static String urlForLoggingTrack(const URL& url)
 
     if (url.string().length() < maximumURLLengthForLogging)
         return url.string();
-    return makeString(StringView(url.string()).left(maximumURLLengthForLogging), "...");
+    return makeString(StringView(url.string()).left(maximumURLLengthForLogging), "..."_s);
 }
 
 #endif
@@ -73,7 +74,6 @@ inline HTMLTrackElement::HTMLTrackElement(const QualifiedName& tagName, Document
 
 HTMLTrackElement::~HTMLTrackElement()
 {
-    m_track->clearElement();
     m_track->clearClient(*this);
 }
 
@@ -165,7 +165,7 @@ bool HTMLTrackElement::isDefault() const
 
 TextTrack& HTMLTrackElement::track()
 {
-    return m_track;
+    return m_track.get();
 }
 
 bool HTMLTrackElement::isURLAttribute(const Attribute& attribute) const
@@ -318,11 +318,6 @@ void HTMLTrackElement::textTrackModeChanged(TextTrack&)
 RefPtr<HTMLMediaElement> HTMLTrackElement::mediaElement() const
 {
     return dynamicDowncast<HTMLMediaElement>(parentElement());
-}
-
-const char* HTMLTrackElement::activeDOMObjectName() const
-{
-    return "HTMLTrackElement";
 }
 
 void HTMLTrackElement::eventListenersDidChange()

@@ -33,12 +33,12 @@
 #include "SVGStopElement.h"
 #include "SVGTransformable.h"
 #include "StyleResolver.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGradientElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGGradientElement);
 
 SVGGradientElement::SVGGradientElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
     : SVGElement(tagName, document, WTFMove(propertyRegistry))
@@ -58,16 +58,16 @@ void SVGGradientElement::attributeChanged(const QualifiedName& name, const AtomS
     case AttributeNames::gradientUnitsAttr: {
         auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
-            m_gradientUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
+            Ref { m_gradientUnits }->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
         break;
     }
     case AttributeNames::gradientTransformAttr:
-        m_gradientTransform->baseVal()->parse(newValue);
+        Ref { m_gradientTransform }->baseVal()->parse(newValue);
         break;
     case AttributeNames::spreadMethodAttr: {
         auto propertyValue = SVGPropertyTraits<SVGSpreadMethodType>::fromString(newValue);
         if (propertyValue > 0)
-            m_spreadMethod->setBaseValInternal<SVGSpreadMethodType>(propertyValue);
+            Ref { m_spreadMethod }->setBaseValInternal<SVGSpreadMethodType>(propertyValue);
         break;
     }
     default:
@@ -80,13 +80,11 @@ void SVGGradientElement::attributeChanged(const QualifiedName& name, const AtomS
 
 void SVGGradientElement::invalidateGradientResource()
 {
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled()) {
-        if (auto* gradientRenderer = dynamicDowncast<RenderSVGResourceGradient>(renderer()))
+        if (CheckedPtr gradientRenderer = dynamicDowncast<RenderSVGResourceGradient>(renderer()))
             gradientRenderer->invalidateGradient();
         return;
     }
-#endif
 
     updateSVGRendererForElementChange();
 }

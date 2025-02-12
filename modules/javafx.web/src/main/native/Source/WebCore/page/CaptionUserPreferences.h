@@ -35,7 +35,7 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class TextTrack;
+
 class CaptionUserPreferencesTestingModeToken;
 class HTMLMediaElement;
 class Page;
@@ -104,9 +104,9 @@ public:
     virtual bool testingMode() const { return m_testingModeCount; }
 
     friend class CaptionUserPreferencesTestingModeToken;
-    UniqueRef<CaptionUserPreferencesTestingModeToken> createTestingModeToken() { return makeUniqueRef<CaptionUserPreferencesTestingModeToken>(*this); }
+    WEBCORE_EXPORT UniqueRef<CaptionUserPreferencesTestingModeToken> createTestingModeToken();
 
-    PageGroup& pageGroup() const { return m_pageGroup; }
+    PageGroup& pageGroup() const;
 
 protected:
     explicit CaptionUserPreferences(PageGroup&);
@@ -128,7 +128,7 @@ private:
     void notify();
     Page* currentPage() const;
 
-    PageGroup& m_pageGroup;
+    WeakRef<PageGroup> m_pageGroup;
     mutable CaptionDisplayMode m_displayMode;
     Timer m_timer;
     String m_userPreferredLanguage;

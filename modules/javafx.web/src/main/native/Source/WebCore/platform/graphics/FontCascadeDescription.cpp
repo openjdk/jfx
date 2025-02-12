@@ -30,6 +30,7 @@
 #include "config.h"
 #include "FontCascadeDescription.h"
 
+#include "Font.h"
 #include <wtf/text/StringHash.h>
 
 #if USE(CORE_TEXT)
@@ -145,6 +146,16 @@ FontSmoothingMode FontCascadeDescription::usedFontSmoothing() const
         return FontSmoothingMode::Antialiased;
 #endif
     return fontSmoothingMode;
+}
+
+void FontCascadeDescription::resolveFontSizeAdjustFromFontIfNeeded(const Font& font)
+{
+    const auto& fontSizeAdjust = this->fontSizeAdjust();
+    if (!fontSizeAdjust.shouldResolveFromFont())
+        return;
+
+    auto aspectValue = fontSizeAdjust.resolve(computedSize(), font.fontMetrics());
+    setFontSizeAdjust({ fontSizeAdjust.metric, FontSizeAdjust::ValueType::FromFont, aspectValue });
 }
 
 } // namespace WebCore

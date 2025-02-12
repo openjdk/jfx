@@ -33,7 +33,7 @@
 namespace WebCore {
 
 class NavigationCurrentEntryChangeEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(NavigationCurrentEntryChangeEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigationCurrentEntryChangeEvent);
 public:
     struct Init : EventInit {
         std::optional<NavigationNavigationType> navigationType;
@@ -47,8 +47,6 @@ public:
 
 private:
     NavigationCurrentEntryChangeEvent(const AtomString& type, const Init&);
-
-    EventInterface eventInterface() const override;
 
     std::optional<NavigationNavigationType> m_navigationType;
     RefPtr<NavigationHistoryEntry> m_from;

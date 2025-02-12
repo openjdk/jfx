@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,17 +25,43 @@
 
 #pragma once
 
-#include <wtf/text/WTFString.h>
-
-#if ENABLE(PUBLIC_SUFFIX_LIST)
+#include <wtf/CrossThreadCopier.h>
+#include <wtf/HashTraits.h>
+#include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
-WEBCORE_EXPORT bool isPublicSuffix(StringView domain);
-WEBCORE_EXPORT String topPrivatelyControlledDomain(const String& domain);
-WEBCORE_EXPORT void setTopPrivatelyControlledDomain(const String& domain, const String& topPrivatelyControlledDomain);
-String decodeHostName(const String& domain);
+class PublicSuffix {
+public:
+    static PublicSuffix fromRawString(String&& string) { return PublicSuffix(WTFMove(string)); }
+    PublicSuffix() = default;
+    bool isValid() const { return !m_string.isEmpty(); }
+    const String& string() const { return m_string; }
+    PublicSuffix isolatedCopy() const { return fromRawString(crossThreadCopy(m_string)); }
+
+    PublicSuffix(WTF::HashTableDeletedValueType)
+        : m_string(WTF::HashTableDeletedValue) { }
+    friend bool operator==(const PublicSuffix&, const PublicSuffix&) = default;
+    bool operator==(ASCIILiteral other) const { return m_string == other; }
+    bool isHashTableDeletedValue() const { return m_string.isHashTableDeletedValue(); }
+    unsigned hash() const { return m_string.hash(); }
+    struct PublicSuffixHash {
+        static unsigned hash(const PublicSuffix& publicSuffix) { return ASCIICaseInsensitiveHash::hash(publicSuffix.m_string.impl()); }
+        static bool equal(const PublicSuffix& a, const PublicSuffix& b) { return equalIgnoringASCIICase(a.string(), b.string()); }
+        static const bool safeToCompareToEmptyOrDeleted = false;
+    };
+
+private:
+    explicit PublicSuffix(String&& string) : m_string(WTFMove(string)) { }
+
+    String m_string;
+};
 
 } // namespace WebCore
 
-#endif // ENABLE(PUBLIC_SUFFIX_LIST)
+namespace WTF {
+
+template<> struct DefaultHash<WebCore::PublicSuffix> : WebCore::PublicSuffix::PublicSuffixHash { };
+template<> struct HashTraits<WebCore::PublicSuffix> : SimpleClassHashTraits<WebCore::PublicSuffix> { };
+
+} // namespace WTF

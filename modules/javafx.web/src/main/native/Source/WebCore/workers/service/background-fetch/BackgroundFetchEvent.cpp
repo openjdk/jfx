@@ -26,20 +26,20 @@
 #include "config.h"
 #include "BackgroundFetchEvent.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(BackgroundFetchEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BackgroundFetchEvent);
 
 Ref<BackgroundFetchEvent> BackgroundFetchEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
     auto registration = init.registration;
-    return adoptRef(*new BackgroundFetchEvent(type, WTFMove(init), WTFMove(registration), isTrusted));
+    return adoptRef(*new BackgroundFetchEvent(EventInterfaceType::BackgroundFetchEvent, type, WTFMove(init), WTFMove(registration), isTrusted));
 }
 
-BackgroundFetchEvent::BackgroundFetchEvent(const AtomString& type, ExtendableEventInit&& eventInit, RefPtr<BackgroundFetchRegistration>&& registration, IsTrusted isTrusted)
-    : ExtendableEvent(type, WTFMove(eventInit), isTrusted)
+BackgroundFetchEvent::BackgroundFetchEvent(enum EventInterfaceType eventInterface, const AtomString& type, ExtendableEventInit&& eventInit, RefPtr<BackgroundFetchRegistration>&& registration, IsTrusted isTrusted)
+    : ExtendableEvent(eventInterface, type, WTFMove(eventInit), isTrusted)
     , m_registration(WTFMove(registration))
 {
 }

@@ -35,7 +35,6 @@ inline LayoutUnit RenderBox::clientLogicalHeight() const { return style().isHori
 inline LayoutUnit RenderBox::clientLogicalWidth() const { return style().isHorizontalWritingMode() ? clientWidth() : clientHeight(); }
 inline LayoutUnit RenderBox::clientTop() const { return borderTop(); }
 inline LayoutRect RenderBox::computedCSSContentBoxRect() const { return LayoutRect(borderLeft() + computedCSSPaddingLeft(), borderTop() + computedCSSPaddingTop(), paddingBoxWidth() - computedCSSPaddingLeft() - computedCSSPaddingRight()  - (style().scrollbarGutter().bothEdges ? verticalScrollbarWidth() : 0), paddingBoxHeight() - computedCSSPaddingTop() - computedCSSPaddingBottom() - (style().scrollbarGutter().bothEdges ? horizontalScrollbarHeight() : 0)); }
-inline LayoutRect RenderBox::contentBoxRect() const { return { contentBoxLocation(), contentSize() }; }
 inline LayoutUnit RenderBox::contentHeight() const { return std::max(0_lu, paddingBoxHeight() - paddingTop() - paddingBottom() - (style().scrollbarGutter().bothEdges ? horizontalScrollbarHeight() : 0)); }
 inline LayoutUnit RenderBox::contentLogicalHeight() const { return style().isHorizontalWritingMode() ? contentHeight() : contentWidth(); }
 inline LayoutSize RenderBox::contentLogicalSize() const { return style().isHorizontalWritingMode() ? contentSize() : contentSize().transposedSize(); }
@@ -60,10 +59,9 @@ inline LayoutUnit RenderBox::logicalRightVisualOverflow() const { return style()
 inline LayoutSize RenderBox::logicalSize() const { return style().isHorizontalWritingMode() ? m_frameRect.size() : m_frameRect.size().transposedSize(); }
 inline LayoutUnit RenderBox::logicalTop() const { return style().isHorizontalWritingMode() ? y() : x(); }
 inline LayoutUnit RenderBox::logicalWidth() const { return style().isHorizontalWritingMode() ? width() : height(); }
-inline LayoutUnit RenderBox::overridingContentLogicalHeight() const { return std::max(LayoutUnit(), overridingLogicalHeight() - borderAndPaddingLogicalHeight() - scrollbarLogicalHeight() - (style().scrollbarGutter().bothEdges ? scrollbarLogicalHeight() : 0)); }
-inline LayoutUnit RenderBox::overridingContentLogicalWidth() const { return std::max(LayoutUnit(), overridingLogicalWidth() - borderAndPaddingLogicalWidth() - scrollbarLogicalWidth() - (style().scrollbarGutter().bothEdges ? scrollbarLogicalWidth() : 0)); }
+inline LayoutUnit RenderBox::overridingContentLogicalHeight(LayoutUnit overridingLogicalHeight) const { return std::max(0_lu, overridingLogicalHeight - borderAndPaddingLogicalHeight() - scrollbarLogicalHeight() - (style().scrollbarGutter().bothEdges ? scrollbarLogicalHeight() : 0)); }
+inline LayoutUnit RenderBox::overridingContentLogicalWidth(LayoutUnit overridingLogicalWidth) const { return std::max(LayoutUnit(), overridingLogicalWidth - borderAndPaddingLogicalWidth() - scrollbarLogicalWidth() - (style().scrollbarGutter().bothEdges ? scrollbarLogicalWidth() : 0)); }
 inline LayoutUnit RenderBox::paddingBoxHeight() const { return std::max(0_lu, height() - borderTop() - borderBottom() - horizontalScrollbarHeight()); }
-inline LayoutRect RenderBox::paddingBoxRectIncludingScrollbar() const { return LayoutRect(borderLeft(), borderTop(), width() - borderLeft() - borderRight(), height() - borderTop() - borderBottom()); }
 inline LayoutUnit RenderBox::paddingBoxWidth() const { return std::max(0_lu, width() - borderLeft() - borderRight() - verticalScrollbarWidth()); }
 inline int RenderBox::scrollbarLogicalHeight() const { return style().isHorizontalWritingMode() ? horizontalScrollbarHeight() : verticalScrollbarWidth(); }
 inline int RenderBox::scrollbarLogicalWidth() const { return style().isHorizontalWritingMode() ? verticalScrollbarWidth() : horizontalScrollbarHeight(); }
@@ -72,12 +70,53 @@ inline void RenderBox::setLogicalSize(LayoutSize size) { setSize(style().isHoriz
 inline bool RenderBox::shouldTrimChildMargin(MarginTrimType type, const RenderBox& child) const { return style().marginTrim().contains(type) && isChildEligibleForMarginTrim(type, child); }
 inline bool RenderBox::stretchesToViewport() const { return document().inQuirksMode() && style().logicalHeight().isAuto() && !isFloatingOrOutOfFlowPositioned() && (isDocumentElementRenderer() || isBody()) && !shouldComputeLogicalHeightFromAspectRatio() && !isInline(); }
 
+inline LayoutRect RenderBox::paddingBoxRectIncludingScrollbar() const
+{
+    auto borderWidths = this->borderWidths();
+    return LayoutRect(borderWidths.left(), borderWidths.top(), width() - borderWidths.left() - borderWidths.right(), height() - borderWidths.top() - borderWidths.bottom());
+}
+
+inline LayoutRect RenderBox::contentBoxRect() const
+{
+    auto verticalScrollbarWidth = 0_lu;
+    auto horizontalScrollbarHeight = 0_lu;
+    auto leftScrollbarSpace = 0_lu;
+    auto topScrollbarSpace = 0_lu;
+
+    if (hasNonVisibleOverflow()) {
+        verticalScrollbarWidth = this->verticalScrollbarWidth();
+        horizontalScrollbarHeight = this->horizontalScrollbarHeight();
+
+        bool bothEdgeScrollbarGutters = style().scrollbarGutter().bothEdges;
+
+        if ((shouldPlaceVerticalScrollbarOnLeft() || bothEdgeScrollbarGutters))
+            leftScrollbarSpace = verticalScrollbarWidth;
+        // FIXME: It's wrong that scrollbar-gutter: both-edges affects height: webkit.org/b/266938
+        if (bothEdgeScrollbarGutters)
+            topScrollbarSpace = horizontalScrollbarHeight;
+    }
+
+    auto padding = this->padding();
+    auto borderWidths = this->borderWidths();
+    auto location = LayoutPoint { borderWidths.left() + padding.left() + leftScrollbarSpace, borderWidths.top() + padding.top() + topScrollbarSpace };
+
+    auto paddingBoxWidth = std::max(0_lu, width() - borderWidths.left() - borderWidths.right() - verticalScrollbarWidth);
+    auto paddingBoxHeight = std::max(0_lu, height() - borderWidths.top() - borderWidths.bottom() - horizontalScrollbarHeight);
+
+    auto width = std::max(0_lu, paddingBoxWidth - padding.left() - padding.right() - leftScrollbarSpace);
+    auto height = std::max(0_lu, paddingBoxHeight - padding.top() - padding.bottom() - topScrollbarSpace);
+
+    auto size = LayoutSize { width, height };
+
+    return { location, size };
+}
+
 inline LayoutRect RenderBox::marginBoxRect() const
 {
-    auto left = computedCSSPadding(style().marginLeft());
-    auto right = computedCSSPadding(style().marginRight());
-    auto top = computedCSSPadding(style().marginTop());
-    auto bottom = computedCSSPadding(style().marginBottom());
+    auto left = resolveLengthPercentageUsingContainerLogicalWidth(style().marginLeft());
+    auto right = resolveLengthPercentageUsingContainerLogicalWidth(style().marginRight());
+    auto top = resolveLengthPercentageUsingContainerLogicalWidth(style().marginTop());
+    auto bottom = resolveLengthPercentageUsingContainerLogicalWidth(style().marginBottom());
     return { -left, -top, size().width() + left + right, size().height() + top + bottom };
 }
 
@@ -113,4 +152,10 @@ inline void RenderBox::setLogicalWidth(LayoutUnit size)
         setHeight(size);
 }
 
+inline LayoutUnit resolveHeightForRatio(LayoutUnit borderAndPaddingLogicalWidth, LayoutUnit borderAndPaddingLogicalHeight, LayoutUnit logicalWidth, double aspectRatio, BoxSizing boxSizing)
+{
+    if (boxSizing == BoxSizing::BorderBox)
+        return LayoutUnit((logicalWidth + borderAndPaddingLogicalWidth) * aspectRatio) - borderAndPaddingLogicalHeight;
+    return LayoutUnit(logicalWidth * aspectRatio);
+}
 } // namespace WebCore

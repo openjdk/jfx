@@ -77,6 +77,7 @@
 #include "VisibleUnits.h"
 #include "WrapContentsInDummySpanCommand.h"
 #include "markup.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -223,7 +224,7 @@ bool EditCommandComposition::areRootEditabledElementsConnected()
     return true;
 }
 
-void EditCommandComposition::unapply()
+void EditCommandComposition::unapply(AddToUndoStack addToUndoStack)
 {
     RefPtr document = protectedDocument();
     ASSERT(document);
@@ -250,12 +251,15 @@ void EditCommandComposition::unapply()
 #endif
 
     auto prohibitScrollingForScope = document->view() ? document->view()->prohibitScrollingWhenChangingContentSizeForScope() : nullptr;
-    if (!document->editor().willUnapplyEditing(*this))
+    if (addToUndoStack == AddToUndoStack::Yes && !document->editor().willUnapplyEditing(*this))
         return;
 
     size_t size = m_commands.size();
     for (size_t i = size; i; --i)
         m_commands[i - 1]->doUnapply();
+
+    if (addToUndoStack == AddToUndoStack::No)
+        return;
 
     document->editor().unappliedEditing(*this);
 
@@ -263,6 +267,11 @@ void EditCommandComposition::unapply()
         m_replacedText.postTextStateChangeNotificationForUnapply(document->existingAXObjectCache());
 
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(document->selection().isNone() || document->selection().isConnectedToDocument());
+}
+
+void EditCommandComposition::unapply()
+{
+    this->unapply(AddToUndoStack::Yes);
 }
 
 void EditCommandComposition::reapply()
@@ -457,11 +466,6 @@ EditCommandComposition& CompositeEditCommand::ensureComposition()
     if (!command->m_composition)
         command->m_composition = EditCommandComposition::create(protectedDocument(), startingSelection(), endingSelection(), editingAction());
     return *command->m_composition;
-}
-
-bool CompositeEditCommand::isCreateLinkCommand() const
-{
-    return false;
 }
 
 bool CompositeEditCommand::preservesTypingStyle() const
@@ -996,7 +1000,7 @@ void CompositeEditCommand::prepareWhitespaceAtPositionForSplit(Position& positio
 
     // Delete collapsed whitespace so that inserting nbsps doesn't uncollapse it.
     Position upstreamPos = position.upstream();
-    deleteInsignificantText(position.upstream(), position.downstream());
+    deleteInsignificantText(upstreamPos, position.downstream());
     position = upstreamPos.downstream();
 
     VisiblePosition visiblePos(position);

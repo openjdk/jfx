@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -31,11 +31,11 @@
 #include "HTMLParserIdioms.h"
 #include "MutableStyleProperties.h"
 #include "NodeName.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLHRElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLHRElement);
 
 using namespace HTMLNames;
 
@@ -85,9 +85,6 @@ void HTMLHRElement::collectPresentationalHintsForAttribute(const QualifiedName& 
         }
         break;
     case AttributeNames::widthAttr:
-        if (auto valueInteger = parseHTMLInteger(value); valueInteger && !*valueInteger)
-            addPropertyToPresentationalHintStyle(style, CSSPropertyWidth, 0, CSSUnitType::CSS_PX);
-        else
             addHTMLLengthToStyle(style, CSSPropertyWidth, value);
         break;
     case AttributeNames::colorAttr:

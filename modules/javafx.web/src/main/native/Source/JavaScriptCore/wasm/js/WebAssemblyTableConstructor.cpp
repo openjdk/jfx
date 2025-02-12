@@ -36,19 +36,12 @@
 #include "StructureInlines.h"
 #include "WebAssemblyTablePrototype.h"
 
-#include "WebAssemblyTableConstructor.lut.h"
-
 namespace JSC {
 
-const ClassInfo WebAssemblyTableConstructor::s_info = { "Function"_s, &Base::s_info, &constructorTableWebAssemblyTable, nullptr, CREATE_METHOD_TABLE(WebAssemblyTableConstructor) };
+const ClassInfo WebAssemblyTableConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyTableConstructor) };
 
 static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyTable);
 static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyTable);
-
-/* Source for WebAssemblyTableConstructor.lut.h
- @begin constructorTableWebAssemblyTable
- @end
- */
 
 JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTable, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
@@ -140,7 +133,7 @@ JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyTable, (JSGlobalObject* globalObject, 
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WebAssembly.Table"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WebAssembly.Table"_s));
 }
 
 WebAssemblyTableConstructor* WebAssemblyTableConstructor::create(VM& vm, Structure* structure, WebAssemblyTablePrototype* thisPrototype)

@@ -32,6 +32,8 @@
 #import <wtf/RangeSet.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/TZoneMalloc.h>
+#import <wtf/WeakHashSet.h>
 #import <wtf/WeakPtr.h>
 
 struct WGPUBufferImpl {
@@ -44,7 +46,7 @@ class Device;
 
 // https://gpuweb.github.io/gpuweb/#gpubuffer
 class Buffer : public WGPUBufferImpl, public RefCounted<Buffer>, public CanMakeWeakPtr<Buffer> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Buffer);
 public:
     enum class State : uint8_t;
     struct MappingRange {
@@ -52,9 +54,9 @@ public:
         size_t endOffset; // Exclusive
     };
 
-    static Ref<Buffer> create(id<MTLBuffer> buffer, uint64_t size, WGPUBufferUsageFlags usage, State initialState, MappingRange initialMappingRange, Device& device)
+    static Ref<Buffer> create(id<MTLBuffer> buffer, uint64_t initialSize, WGPUBufferUsageFlags usage, State initialState, MappingRange initialMappingRange, Device& device)
     {
-        return adoptRef(*new Buffer(buffer, size, usage, initialState, initialMappingRange, device));
+        return adoptRef(*new Buffer(buffer, initialSize, usage, initialState, initialMappingRange, device));
     }
     static Ref<Buffer> createInvalid(Device& device)
     {
@@ -82,29 +84,44 @@ public:
     };
 
     id<MTLBuffer> buffer() const { return m_buffer; }
-    uint64_t size() const;
+    id<MTLBuffer> indirectBuffer() const;
+    id<MTLBuffer> indirectIndexedBuffer() const;
+    uint64_t initialSize() const;
+    uint64_t currentSize() const;
     WGPUBufferUsageFlags usage() const { return m_usage; }
     State state() const { return m_state; }
 
     Device& device() const { return m_device; }
     bool isDestroyed() const;
     void setCommandEncoder(CommandEncoder&, bool mayModifyBuffer = false) const;
-    uint32_t maxIndex(MTLIndexType) const;
+    uint8_t* getBufferContents();
+    bool indirectBufferRequiresRecomputation(uint32_t baseIndex, uint32_t indexCount, uint32_t minVertexCount, uint32_t minInstanceCount, MTLIndexType, uint32_t firstInstance) const;
+    bool indirectIndexedBufferRequiresRecomputation(MTLIndexType, NSUInteger indexBufferOffsetInBytes, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount) const;
+    bool indirectBufferRequiresRecomputation(uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount) const;
+
+    void indirectBufferRecomputed(uint32_t baseIndex, uint32_t indexCount, uint32_t minVertexCount, uint32_t minInstanceCount, MTLIndexType, uint32_t firstInstance);
+    void indirectBufferRecomputed(uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
+    void indirectIndexedBufferRecomputed(MTLIndexType, NSUInteger indexBufferOffsetInBytes, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
+    void indirectBufferInvalidated();
 
 private:
-    Buffer(id<MTLBuffer>, uint64_t size, WGPUBufferUsageFlags, State initialState, MappingRange initialMappingRange, Device&);
+    Buffer(id<MTLBuffer>, uint64_t initialSize, WGPUBufferUsageFlags, State initialState, MappingRange initialMappingRange, Device&);
     Buffer(Device&);
-    void recomputeMaxIndexValues() const;
 
     bool validateGetMappedRange(size_t offset, size_t rangeSize) const;
     NSString* errorValidatingMapAsync(WGPUMapModeFlags, size_t offset, size_t rangeSize) const;
     bool validateUnmap() const;
+    void setState(State);
+    void incrementBufferMapCount();
+    void decrementBufferMapCount();
 
     id<MTLBuffer> m_buffer { nil };
+    id<MTLBuffer> m_indirectBuffer { nil };
+    id<MTLBuffer> m_indirectIndexedBuffer { nil };
 
     // https://gpuweb.github.io/gpuweb/#buffer-interface
 
-    const uint64_t m_size { 0 };
+    const uint64_t m_initialSize { 0 };
     const WGPUBufferUsageFlags m_usage { 0 };
     State m_state { State::Unmapped };
     // [[mapping]] is unnecessary; we can just use m_device.contents.
@@ -112,12 +129,19 @@ private:
     using MappedRanges = RangeSet<Range<size_t>>;
     MappedRanges m_mappedRanges;
     WGPUMapModeFlags m_mapMode { WGPUMapMode_None };
-    Vector<uint8_t> m_emptyBuffer;
+    struct IndirectArgsCache {
+        uint64_t indirectOffset { UINT64_MAX };
+        uint64_t indexBufferOffsetInBytes { UINT64_MAX };
+        uint32_t lastBaseIndex { 0 };
+        uint32_t indexCount { 0 };
+        uint32_t minVertexCount { 0 };
+        uint32_t minInstanceCount { 0 };
+        uint32_t firstInstance { 0 };
+        MTLIndexType indexType { MTLIndexTypeUInt16 };
+    } m_indirectCache;
 
     const Ref<Device> m_device;
-    mutable WeakPtr<CommandEncoder> m_commandEncoder;
-    mutable uint16_t m_max16BitIndex { 0 };
-    mutable uint32_t m_max32BitIndex { 0 };
+    mutable WeakHashSet<CommandEncoder> m_commandEncoders;
 };
 
 } // namespace WebGPU

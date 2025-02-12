@@ -165,7 +165,7 @@ JSValue toJS(JSGlobalObject& lexicalGlobalObject, JSGlobalObject& globalObject, 
             return jsNull();
         }
 
-        auto arrayBuffer = ArrayBuffer::create(data->data(), data->size());
+        auto arrayBuffer = ArrayBuffer::create(*data);
         Structure* structure = globalObject.arrayBufferStructure(arrayBuffer->sharingMode());
         if (!structure)
             return jsNull();
@@ -406,7 +406,7 @@ static JSValue deserializeIDBValueToJSValue(JSGlobalObject& lexicalGlobalObject,
     auto serializedValue = SerializedScriptValue::createFromWireBytes(Vector<uint8_t>(data));
 
     lexicalGlobalObject.vm().apiLock().lock();
-    Vector<RefPtr<MessagePort>> messagePorts;
+    Vector<Ref<MessagePort>> messagePorts;
     JSValue result = serializedValue->deserialize(lexicalGlobalObject, &globalObject, messagePorts, value.blobURLs(), value.blobFilePaths(), SerializationErrorMode::NonThrowing);
     lexicalGlobalObject.vm().apiLock().unlock();
 
@@ -578,7 +578,7 @@ void callOnIDBSerializationThreadAndWait(Function<void(JSC::JSGlobalObject&)>&& 
     static std::once_flag createThread;
 
     std::call_once(createThread, [] {
-        Thread::create("IndexedDB Serialization", [] {
+        Thread::create("IndexedDB Serialization"_s, [] {
             IDBSerializationContext serializationContext;
             while (auto function = queue->waitForMessage()) {
                 AutodrainedPool pool;

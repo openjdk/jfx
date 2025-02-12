@@ -29,6 +29,13 @@
 
 namespace WebCore {
 
+struct WeakSimpleRange {
+    WeakBoundaryPoint start;
+    WeakBoundaryPoint end;
+    WeakSimpleRange(const WeakBoundaryPoint&, const WeakBoundaryPoint&);
+    WeakSimpleRange(WeakBoundaryPoint&&, WeakBoundaryPoint&&);
+    WeakSimpleRange(const BoundaryPoint&&, const BoundaryPoint&&);
+};
 struct SimpleRange {
     BoundaryPoint start;
     BoundaryPoint end;
@@ -39,6 +46,7 @@ struct SimpleRange {
     Node& endContainer() const { return end.container.get(); }
     Ref<Node> protectedEndContainer() const { return end.container.copyRef(); }
     unsigned endOffset() const { return end.offset; }
+    WeakSimpleRange makeWeakSimpleRange() const { return { WeakBoundaryPoint(start.container.get(), start.offset), WeakBoundaryPoint(end.container.get(), end.offset) }; }
 
     bool collapsed() const { return start == end; }
 
@@ -74,9 +82,9 @@ template<TreeType = Tree> bool contains(const SimpleRange&, const Node&);
 
 template<> WEBCORE_EXPORT bool contains<ComposedTree>(const SimpleRange&, const std::optional<BoundaryPoint>&);
 
-WEBCORE_EXPORT bool containsForTesting(TreeType, const SimpleRange& outerRange, const SimpleRange& innerRange);
-WEBCORE_EXPORT bool containsForTesting(TreeType, const SimpleRange&, const Node&);
-WEBCORE_EXPORT bool containsForTesting(TreeType, const SimpleRange&, const BoundaryPoint&);
+WEBCORE_EXPORT bool contains(TreeType, const SimpleRange& outerRange, const SimpleRange& innerRange);
+WEBCORE_EXPORT bool contains(TreeType, const SimpleRange&, const Node&);
+WEBCORE_EXPORT bool contains(TreeType, const SimpleRange&, const BoundaryPoint&);
 
 template<TreeType = Tree> bool intersects(const SimpleRange&, const SimpleRange&);
 template<TreeType = Tree> bool intersects(const SimpleRange&, const Node&);
@@ -117,7 +125,7 @@ public:
     using pointer = value_type*;
     using reference = value_type&;
 
-    IntersectingNodeIterator(const SimpleRange&);
+    WEBCORE_EXPORT IntersectingNodeIterator(const SimpleRange&);
 
     enum QuirkFlag { DeprecatedZeroOffsetStartQuirk };
     IntersectingNodeIterator(const SimpleRange&, QuirkFlag);
@@ -130,7 +138,7 @@ public:
     bool operator==(const std::nullptr_t) const { return !m_node; }
 
     IntersectingNodeIterator& operator++() { advance(); return *this; }
-    void advance();
+    WEBCORE_EXPORT void advance();
     void advanceSkippingChildren();
 
 private:

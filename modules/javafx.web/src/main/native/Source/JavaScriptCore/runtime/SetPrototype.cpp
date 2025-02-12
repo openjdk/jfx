@@ -28,7 +28,6 @@
 
 #include "BuiltinNames.h"
 #include "GetterSetter.h"
-#include "HashMapImplInlines.h"
 #include "JSCInlines.h"
 #include "JSSet.h"
 #include "JSSetIterator.h"
@@ -67,7 +66,7 @@ void SetPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().entriesPublicName(), entriesFunc, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().entriesPrivateName(), entriesFunc, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
-    JSFunction* forEachFunc = JSFunction::create(vm, setPrototypeForEachCodeGenerator(vm), globalObject);
+    JSFunction* forEachFunc = JSFunction::create(vm, globalObject, setPrototypeForEachCodeGenerator(vm), globalObject);
     putDirectWithoutTransition(vm, vm.propertyNames->forEach, forEachFunc, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().forEachPrivateName(), forEachFunc, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
@@ -90,7 +89,6 @@ void SetPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     putDirectWithoutTransition(vm, vm.propertyNames->iteratorSymbol, values, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 
-    if (Options::useSetMethods()) {
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().unionPublicName(), setPrototypeUnionCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().intersectionPublicName(), setPrototypeIntersectionCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().differencePublicName(), setPrototypeDifferenceCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
@@ -98,7 +96,6 @@ void SetPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().isSubsetOfPublicName(), setPrototypeIsSubsetOfCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().isSupersetOfPublicName(), setPrototypeIsSupersetOfCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().isDisjointFromPublicName(), setPrototypeIsDisjointFromCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    }
 
     globalObject->installSetPrototypeWatchpoint(this);
 }
@@ -121,55 +118,74 @@ ALWAYS_INLINE static JSSet* getSet(JSGlobalObject* globalObject, JSValue thisVal
 
 JSC_DEFINE_HOST_FUNCTION(setProtoFuncAdd, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     JSValue thisValue = callFrame->thisValue();
     JSSet* set = getSet(globalObject, thisValue);
-    if (!set)
-        return JSValue::encode(jsUndefined());
+    RETURN_IF_EXCEPTION(scope, JSValue::encode(jsUndefined()));
+
     set->add(globalObject, callFrame->argument(0));
+    RETURN_IF_EXCEPTION(scope, JSValue::encode(jsUndefined()));
     return JSValue::encode(thisValue);
 }
 
 JSC_DEFINE_HOST_FUNCTION(setProtoFuncClear, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     JSSet* set = getSet(globalObject, callFrame->thisValue());
-    if (!set)
-        return JSValue::encode(jsUndefined());
-    set->clear(globalObject->vm());
+    RETURN_IF_EXCEPTION(scope, JSValue::encode(jsUndefined()));
+
+    scope.release();
+    set->clear(globalObject);
     return JSValue::encode(jsUndefined());
 }
 
 JSC_DEFINE_HOST_FUNCTION(setProtoFuncDelete, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     JSSet* set = getSet(globalObject, callFrame->thisValue());
-    if (!set)
-        return JSValue::encode(jsUndefined());
-    return JSValue::encode(jsBoolean(set->remove(globalObject, callFrame->argument(0))));
+    RETURN_IF_EXCEPTION(scope, JSValue::encode(jsUndefined()));
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(set->remove(globalObject, callFrame->argument(0)))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(setProtoFuncHas, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     JSSet* set = getSet(globalObject, callFrame->thisValue());
-    if (!set)
-        return JSValue::encode(jsUndefined());
-    return JSValue::encode(jsBoolean(set->has(globalObject, callFrame->argument(0))));
+    RETURN_IF_EXCEPTION(scope, JSValue::encode(jsUndefined()));
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(set->has(globalObject, callFrame->argument(0)))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(setProtoFuncSize, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     JSSet* set = getSet(globalObject, callFrame->thisValue());
-    if (!set)
-        return JSValue::encode(jsUndefined());
+    RETURN_IF_EXCEPTION(scope, JSValue::encode(jsUndefined()));
+
     return JSValue::encode(jsNumber(set->size()));
 }
 
 inline JSValue createSetIteratorObject(JSGlobalObject* globalObject, CallFrame* callFrame, IterationKind kind)
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     JSValue thisValue = callFrame->thisValue();
     JSSet* set = getSet(globalObject, thisValue);
-    if (!set)
-        return jsUndefined();
-    return JSSetIterator::create(vm, globalObject->setIteratorStructure(), set, kind);
+    RETURN_IF_EXCEPTION(scope, jsUndefined());
+
+    RELEASE_AND_RETURN(scope, JSSetIterator::create(globalObject, globalObject->setIteratorStructure(), set, kind));
 }
 
 JSC_DEFINE_HOST_FUNCTION(setProtoFuncValues, (JSGlobalObject* globalObject, CallFrame* callFrame))

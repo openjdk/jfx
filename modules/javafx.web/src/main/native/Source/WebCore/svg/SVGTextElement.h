@@ -25,7 +25,8 @@
 namespace WebCore {
 
 class SVGTextElement final : public SVGTextPositioningElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGTextElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGTextElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGTextElement);
 public:
     static Ref<SVGTextElement> create(const QualifiedName&, Document&);
 
@@ -34,6 +35,8 @@ private:
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     bool childShouldCreateRenderer(const Node&) const override;
+
+    void childrenChanged(const ChildChange&) final;
 };
 
 } // namespace WebCore

@@ -50,6 +50,7 @@ namespace WebCore {
 
 class CSSFontSelector;
 class CSSValuePool;
+class CacheStorageConnection;
 class ContentSecurityPolicyResponseHeaders;
 class Crypto;
 class FileSystemStorageConnection;
@@ -60,6 +61,7 @@ class ReportingScope;
 class ScheduledAction;
 class ScriptBuffer;
 class ScriptBufferSourceProvider;
+class TrustedScriptURL;
 class WorkerCacheStorageConnection;
 class WorkerClient;
 class WorkerFileSystemStorageConnection;
@@ -79,7 +81,7 @@ class IDBConnectionProxy;
 }
 
 class WorkerGlobalScope : public Supplementable<WorkerGlobalScope>, public Base64Utilities, public WindowOrWorkerGlobalScope, public WorkerOrWorkletGlobalScope, public ReportingClient {
-    WTF_MAKE_ISO_ALLOCATED(WorkerGlobalScope);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WorkerGlobalScope);
 public:
     virtual ~WorkerGlobalScope();
 
@@ -104,7 +106,7 @@ public:
     static void postFileSystemStorageTask(Function<void()>&&);
     WorkerFileSystemStorageConnection& getFileSystemStorageConnection(Ref<FileSystemStorageConnection>&&);
     WEBCORE_EXPORT WorkerFileSystemStorageConnection* fileSystemStorageConnection();
-    WorkerCacheStorageConnection& cacheStorageConnection();
+    CacheStorageConnection& cacheStorageConnection();
     MessagePortChannelProvider& messagePortChannelProvider();
 
     WorkerSWClientConnection& swClientConnection();
@@ -118,7 +120,7 @@ public:
     WorkerLocation& location() const;
     void close();
 
-    virtual ExceptionOr<void> importScripts(const FixedVector<String>& urls);
+    virtual ExceptionOr<void> importScripts(const FixedVector<std::variant<RefPtr<TrustedScriptURL>, String>>& urls);
     WorkerNavigator& navigator();
 
     void setIsOnline(bool);
@@ -140,6 +142,7 @@ public:
     SecurityOrigin& topOrigin() const final { return m_topOrigin.get(); }
 
     Crypto& crypto();
+
     Performance& performance() const;
     Ref<Performance> protectedPerformance() const;
     ReportingScope& reportingScope() const { return m_reportingScope.get(); }
@@ -163,6 +166,7 @@ public:
 
     void releaseMemory(Synchronous);
     static void releaseMemoryInWorkers(Synchronous);
+    static void dumpGCHeapForWorkers();
 
     void setMainScriptSourceProvider(ScriptBufferSourceProvider&);
     void addImportedScriptSourceProvider(const URL&, ScriptBufferSourceProvider&);
@@ -203,17 +207,13 @@ private:
 
     bool shouldBypassMainWorldContentSecurityPolicy() const final { return m_shouldBypassMainWorldContentSecurityPolicy; }
 
-#if ENABLE(WEB_CRYPTO)
-    bool wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey) final;
-    bool unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key) final;
-#endif
-
-    void stopIndexedDatabase();
+    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key); //revisit
+    std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey);
 
     // ReportingClient.
-    void notifyReportObservers(Ref<Report>&&) final;
-    String endpointURIForToken(const String&) const final;
-    void sendReportToEndpoints(const URL& baseURL, const Vector<String>& endpointURIs, const Vector<String>& endpointTokens, Ref<FormData>&& report, ViolationReportType) final;
+    void notifyReportObservers(Ref<Report>&&) override;
+    String endpointURIForToken(const String&) const override;
+    void sendReportToEndpoints(const URL& baseURL, const Vector<String>& endpointURIs, const Vector<String>& endpointTokens, Ref<FormData>&& report, ViolationReportType) override;
     String httpUserAgent() const final { return m_userAgent; }
 
     URL m_url;
@@ -240,7 +240,7 @@ private:
     WeakPtr<ScriptBufferSourceProvider> m_mainScriptSourceProvider;
     MemoryCompactRobinHoodHashMap<URL, WeakHashSet<ScriptBufferSourceProvider>> m_importedScriptsSourceProviders;
 
-    RefPtr<WorkerCacheStorageConnection> m_cacheStorageConnection;
+    RefPtr<CacheStorageConnection> m_cacheStorageConnection;
     std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
     RefPtr<WorkerSWClientConnection> m_swClientConnection;
     std::unique_ptr<CSSValuePool> m_cssValuePool;

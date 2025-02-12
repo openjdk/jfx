@@ -28,6 +28,7 @@
 #include "CopyImageOptions.h"
 #include "DestinationColorSpace.h"
 #include "FloatRect.h"
+#include "GraphicsLayerContentsDisplayDelegate.h"
 #include "GraphicsTypesGL.h"
 #include "ImageBufferAllocator.h"
 #include "ImageBufferBackendParameters.h"
@@ -44,6 +45,10 @@
 #include <cairo.h>
 #endif
 
+#if HAVE(IOSURFACE)
+#include "IOSurface.h"
+#endif
+
 namespace WTF {
 class TextStream;
 }
@@ -54,7 +59,6 @@ struct ImageBufferCreationContext;
 class GraphicsContext;
 class GraphicsContextGL;
 #if HAVE(IOSURFACE)
-class IOSurface;
 class IOSurfacePool;
 #endif
 class Image;
@@ -98,17 +102,14 @@ public:
 
     struct Info {
         RenderingMode renderingMode;
-        bool canMapBackingStore;
         AffineTransform baseTransform;
         size_t memoryCost;
-        size_t externalMemoryCost;
     };
 
     WEBCORE_EXPORT virtual ~ImageBufferBackend();
 
     WEBCORE_EXPORT static size_t calculateMemoryCost(const IntSize& backendSize, unsigned bytesPerRow);
-    static size_t calculateExternalMemoryCost(const Parameters&) { return 0; }
-    WEBCORE_EXPORT static AffineTransform calculateBaseTransform(const Parameters&, bool originAtBottomLeftCorner);
+    WEBCORE_EXPORT static AffineTransform calculateBaseTransform(const Parameters&);
 
     virtual GraphicsContext& context() = 0;
     virtual void flushContext() { }
@@ -152,15 +153,14 @@ public:
 
     virtual std::unique_ptr<ThreadSafeImageBufferFlusher> createFlusher() { return nullptr; }
 
-    static constexpr bool isOriginAtBottomLeftCorner = false;
-    virtual bool originAtBottomLeftCorner() const { return isOriginAtBottomLeftCorner; }
-
-    static constexpr bool canMapBackingStore = true;
     static constexpr RenderingMode renderingMode = RenderingMode::Unaccelerated;
 
+    virtual bool canMapBackingStore() const = 0;
     virtual void ensureNativeImagesHaveCopiedBackingStore() { }
 
     virtual ImageBufferBackendSharing* toBackendSharing() { return nullptr; }
+
+    virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() const { return nullptr; }
 
     const Parameters& parameters() { return m_parameters; }
 
@@ -174,10 +174,10 @@ protected:
     IntSize size() const { return m_parameters.backendSize; };
     float resolutionScale() const { return m_parameters.resolutionScale; }
     const DestinationColorSpace& colorSpace() const { return m_parameters.colorSpace; }
-    PixelFormat pixelFormat() const { return m_parameters.pixelFormat; }
+    ImageBufferPixelFormat pixelFormat() const { return m_parameters.pixelFormat; }
 
-    WEBCORE_EXPORT void getPixelBuffer(const IntRect& srcRect, void* data, PixelBuffer& destination);
-    WEBCORE_EXPORT void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* destination);
+    WEBCORE_EXPORT void getPixelBuffer(const IntRect& srcRect, const uint8_t* data, PixelBuffer& destination);
+    WEBCORE_EXPORT void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, uint8_t* destination);
 
     Parameters m_parameters;
 };

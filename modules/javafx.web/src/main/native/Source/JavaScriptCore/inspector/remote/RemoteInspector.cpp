@@ -42,6 +42,10 @@ bool RemoteInspector::startEnabled = true;
 std::atomic<bool> RemoteInspector::needMachSandboxExtension = false;
 #endif
 
+#if !PLATFORM(COCOA)
+RemoteInspector::~RemoteInspector() = default;
+#endif
+
 void RemoteInspector::startDisabled()
 {
     RemoteInspector::startEnabled = false;
@@ -216,10 +220,10 @@ void RemoteInspector::stop()
 
 TargetListing RemoteInspector::listingForTarget(const RemoteControllableTarget& target) const
 {
-    if (is<RemoteInspectionTarget>(target))
-        return listingForInspectionTarget(downcast<RemoteInspectionTarget>(target));
-    if (is<RemoteAutomationTarget>(target))
-        return listingForAutomationTarget(downcast<RemoteAutomationTarget>(target));
+    if (auto* inspectionTarget = dynamicDowncast<RemoteInspectionTarget>(target))
+        return listingForInspectionTarget(*inspectionTarget);
+    if (auto* automationTarget = dynamicDowncast<RemoteAutomationTarget>(target))
+        return listingForAutomationTarget(*automationTarget);
 
     ASSERT_NOT_REACHED();
     return nullptr;

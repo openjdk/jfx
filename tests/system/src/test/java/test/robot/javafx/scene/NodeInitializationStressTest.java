@@ -37,7 +37,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
@@ -87,6 +89,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
@@ -116,11 +119,14 @@ import javafx.scene.control.skin.ToggleButtonSkin;
 import javafx.scene.control.skin.ToolBarSkin;
 import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.control.skin.TreeViewSkin;
+import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -668,11 +674,46 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8348100") // FIX
     @Test
     public void tooltip() {
         assumeFalse(SKIP_TEST);
-        // TODO will have a better test in JDK-8348100
+        AtomicBoolean phase = new AtomicBoolean();
+        test(() -> {
+            Tooltip t = new Tooltip("tooltip");
+            t.setStyle("-fx-background-color:red; -fx-min-width:100px; -fx-min-height:100px; -fx-wrap-text:true; -fx-show-delay:0ms; -fx-hide-delay:0ms;");
+            t.setShowDelay(Duration.ZERO);
+            t.setHideDelay(Duration.ZERO);
+            Label c = new Label("Tooltip");
+            c.setSkin(new LabelSkin(c));
+            c.setTooltip(t);
+            c.setBorder(Border.stroke(Color.BLACK));
+            c.setPrefHeight(500);
+            c.setPrefWidth(500);
+            VBox b = new VBox();
+            b.getChildren().add(c);
+            b.setId("Tooltip");
+            return b;
+        }, (c) -> {
+            Tooltip t = new Tooltip();
+            if (Platform.isFxApplicationThread()) {
+                Label label = (Label)c.getChildren().get(0);
+                Point2D p;
+                if (phase.get()) {
+                    p = c.localToScreen(c.getWidth() / 2.0, c.getHeight() / 2.0);
+                } else {
+                    p = c.localToScreen(c.getWidth() + 2, c.getHeight() + 2);
+                }
+                robot.mouseMove(p);
+                double h = STAGE_HEIGHT;
+                if (phase.get()) {
+                    h += 10;
+                }
+                label.setMinHeight(h);
+                label.setMaxHeight(h);
+                stage.setHeight(h);
+                phase.set(!phase.get());
+            }
+        });
     }
 
     @Test

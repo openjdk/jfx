@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "InitializeThreading.h"
 
 #include "AssemblyComments.h"
+#include "AssertInvariants.h"
 #include "ExecutableAllocator.h"
 #include "InPlaceInterpreter.h"
 #include "JITOperationList.h"
@@ -126,22 +127,17 @@ void initialize()
             WTF::fastEnableMiniMode();
 
         if (Wasm::isSupported() || !Options::usePollingTraps()) {
-        // JSLock::lock() can call registerThreadForMachExceptionHandling() which crashes if this has not been called first.
-            initializeSignalHandling();
-
             if (!Options::usePollingTraps())
         VMTraps::initializeSignals();
             if (Wasm::isSupported())
         Wasm::prepareSignalingMemory();
-        } else
-            disableSignalHandling();
+        }
+
+        assertInvariants();
 
         WTF::compilerFence();
         RELEASE_ASSERT(!g_jscConfig.initializeHasBeenCalled);
         g_jscConfig.initializeHasBeenCalled = true;
-#if OS(WINDOWS) && ENABLE(WEBASSEMBLY)
-        g_wtfConfigForLLInt = g_wtfConfig;
-#endif
     });
 }
 

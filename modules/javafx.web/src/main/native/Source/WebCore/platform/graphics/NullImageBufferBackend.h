@@ -39,13 +39,13 @@ public:
     WEBCORE_EXPORT static std::unique_ptr<NullImageBufferBackend> create(const Parameters&, const ImageBufferCreationContext&);
     WEBCORE_EXPORT ~NullImageBufferBackend();
     static size_t calculateMemoryCost(const Parameters&) { return 0; }
-    static size_t calculateExternalMemoryCost(const Parameters&) { return 0; }
 
     NullGraphicsContext& context() final;
     RefPtr<NativeImage> copyNativeImage() final;
     RefPtr<NativeImage> createNativeImageReference() final;
     void getPixelBuffer(const IntRect&, PixelBuffer&) final;
     void putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication) final;
+    bool canMapBackingStore() const final;
     String debugDescription() const final;
 
 protected:

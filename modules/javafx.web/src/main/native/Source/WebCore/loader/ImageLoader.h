@@ -31,12 +31,22 @@
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
+class ImageLoader;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ImageLoader> : std::true_type { };
+}
+
+namespace WebCore {
 
 class DeferredPromise;
 class Document;
 class ImageLoader;
 class Page;
 class RenderImageResource;
+struct ImageCandidate;
 
 template<typename T, typename Counter> class EventSender;
 using ImageEventSender = EventSender<ImageLoader, SingleThreadWeakPtrImpl>;
@@ -65,6 +75,8 @@ public:
     const Element& element() const { return m_element.get(); }
     Ref<Element> protectedElement() const { return m_element.get(); }
 
+    bool shouldIgnoreCandidateWhenLoadingFromArchive(const ImageCandidate&) const;
+
     bool imageComplete() const { return m_imageComplete; }
 
     CachedImage* image() const { return m_image.get(); }
@@ -89,10 +101,11 @@ public:
     bool isDeferred() const { return m_lazyImageLoadState == LazyImageLoadState::Deferred || m_lazyImageLoadState == LazyImageLoadState::LoadImmediately; }
 
     Document& document() { return m_element->document(); }
+    Ref<Document> protectedDocument() { return m_element->document(); }
 
 protected:
     explicit ImageLoader(Element&);
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No) override;
 
 private:
     void resetLazyImageLoading(Document&);
