@@ -30,9 +30,11 @@ namespace WebCore {
 struct FrameEdgeInfo;
 
 class RenderFrame final : public RenderFrameBase {
-    WTF_MAKE_ISO_ALLOCATED(RenderFrame);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderFrame);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderFrame);
 public:
     RenderFrame(HTMLFrameElement&, RenderStyle&&);
+    virtual ~RenderFrame();
 
     HTMLFrameElement& frameElement() const;
     FrameEdgeInfo edgeInfo() const;

@@ -21,7 +21,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGContainer.h"
 
 namespace WebCore {
@@ -29,15 +28,18 @@ namespace WebCore {
 class SVGGraphicsElement;
 
 class RenderSVGTransformableContainer final : public RenderSVGContainer {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGTransformableContainer);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGTransformableContainer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGTransformableContainer);
 public:
     RenderSVGTransformableContainer(SVGGraphicsElement&, RenderStyle&&);
+    virtual ~RenderSVGTransformableContainer();
 
 private:
     ASCIILiteral renderName() const final { return "RenderSVGTransformableContainer"_s; }
 
     void element() const = delete;
     SVGGraphicsElement& graphicsElement() const;
+    Ref<SVGGraphicsElement> protectedGraphicsElement() const;
 
     FloatSize additionalContainerTranslation() const;
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const final;
@@ -50,5 +52,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTransformableContainer, isRenderSVGTransformableContainer())
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

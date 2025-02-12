@@ -100,7 +100,7 @@ public:
 
     bool prepareToDecode();
     bool outputRow();
-    bool doLZW(const unsigned char* block, size_t bytesInBlock);
+    bool doLZW(std::span<const uint8_t> block);
     bool hasRemainingRows() { return rowsRemaining; }
 
 private:
@@ -156,7 +156,7 @@ public:
     int tpixel; // Index of transparent pixel.
     WebCore::ScalableImageDecoderFrame::DisposalMethod disposalMethod; // Restore to background, leave in place, etc.
     size_t localColormapPosition; // Per-image colormap.
-    int localColormapSize; // Size of local colormap array.
+    int localColormapSize; // Size of local colormap array (in 3-byte units)
     int datasize;
 
     bool isLocalColormapDefined : 1;
@@ -194,7 +194,7 @@ public:
         m_lzwBlocks.append(GIFLZWBlock(position, size));
     }
 
-    bool decode(const unsigned char* data, size_t length, WebCore::GIFImageDecoder* client, bool* frameDecoded);
+    bool decode(std::span<const uint8_t> data, WebCore::GIFImageDecoder* client, bool& frameDecoded);
 
     bool isComplete() const { return m_isComplete; }
     void setComplete() { m_isComplete = true; }
@@ -219,7 +219,7 @@ private:
 class GIFImageReader {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    GIFImageReader(WebCore::GIFImageDecoder* client = 0)
+    GIFImageReader(WebCore::GIFImageDecoder* client = nullptr)
         : m_client(client)
         , m_state(GIFType)
         , m_bytesToConsume(6) // Number of bytes for GIF type, either "GIF87a" or "GIF89a".
@@ -237,7 +237,7 @@ public:
     {
     }
 
-    void setData(const WebCore::SharedBuffer& data) { m_data = &data; }
+    void setData(Ref<const WebCore::SharedBuffer>&& data) { m_data = WTFMove(data); }
     // FIXME: haltAtFrame should be size_t.
     bool decode(WebCore::GIFImageDecoder::GIFQuery, unsigned haltAtFrame);
 
@@ -253,22 +253,14 @@ public:
     }
     int loopCount() const { return m_loopCount; }
 
-    const unsigned char* globalColormap() const
+    std::span<const uint8_t> globalColormap() const
     {
-        return m_isGlobalColormapDefined ? data(m_globalColormapPosition) : 0;
-    }
-    int globalColormapSize() const
-    {
-        return m_isGlobalColormapDefined ? m_globalColormapSize : 0;
+        return m_isGlobalColormapDefined ? data(m_globalColormapPosition, m_globalColormapSize * 3) : std::span<const uint8_t> { };
     }
 
-    const unsigned char* localColormap(const GIFFrameContext* frame) const
+    std::span<const uint8_t> localColormap(const GIFFrameContext* frame) const
     {
-        return frame->isLocalColormapDefined ? data(frame->localColormapPosition) : 0;
-    }
-    int localColormapSize(const GIFFrameContext* frame) const
-    {
-        return frame->isLocalColormapDefined ? frame->localColormapSize : 0;
+        return frame->isLocalColormapDefined ? data(frame->localColormapPosition, frame->localColormapSize * 3) : std::span<const uint8_t> { };
     }
 
     const GIFFrameContext* frameContext() const
@@ -285,9 +277,9 @@ private:
     bool parse(size_t dataPosition, size_t len, bool parseSizeOnly);
     void setRemainingBytes(size_t);
 
-    const uint8_t* data(size_t dataPosition) const
+    std::span<const uint8_t> data(size_t offset, size_t length) const
     {
-        return m_data->data() + dataPosition;
+        return m_data->span().subspan(offset, length);
     }
 
     void addFrameIfNecessary();
@@ -310,7 +302,7 @@ private:
     unsigned m_screenHeight;
     bool m_isGlobalColormapDefined;
     size_t m_globalColormapPosition; // (3* MAX_COLORS in size) Default colormap if local not supplied, 3 bytes for each color.
-    int m_globalColormapSize; // Size of global colormap array.
+    int m_globalColormapSize; // Size of global colormap array (in 3-byte units)
     int m_loopCount; // Netscape specific extension block to control the number of animation loops a GIF renders.
 
     Vector<std::unique_ptr<GIFFrameContext> > m_frames;

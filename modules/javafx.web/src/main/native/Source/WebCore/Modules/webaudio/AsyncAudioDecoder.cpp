@@ -36,14 +36,14 @@
 namespace WebCore {
 
 AsyncAudioDecoder::AsyncAudioDecoder()
-    : m_runLoop(RunLoop::create("Audio Decoder", ThreadType::Audio))
+    : m_runLoop(RunLoop::create("Audio Decoder"_s, ThreadType::Audio))
 {
 }
 
 Ref<DecodingTaskPromise> AsyncAudioDecoder::decodeAsync(Ref<ArrayBuffer>&& audioData, float sampleRate)
 {
     return WTF::invokeAsync(m_runLoop, [audioData = WTFMove(audioData), sampleRate] () mutable {
-        auto audioBuffer = AudioBuffer::createFromAudioFileData(audioData->data(), audioData->byteLength(), false, sampleRate);
+        auto audioBuffer = AudioBuffer::createFromAudioFileData(audioData->span(), false, sampleRate);
         // The ArrayBuffer must be deleted on the main thread, send it back there to be derefed.
         callOnMainThread([audioData = WTFMove(audioData)] { });
         if (!audioBuffer)

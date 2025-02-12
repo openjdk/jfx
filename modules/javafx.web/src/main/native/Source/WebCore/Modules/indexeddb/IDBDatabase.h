@@ -28,6 +28,7 @@
 #include "EventTarget.h"
 #include "IDBActiveDOMObject.h"
 #include "IDBConnectionProxy.h"
+#include "IDBDatabaseConnectionIdentifier.h"
 #include "IDBDatabaseInfo.h"
 #include "IDBKeyPath.h"
 #include "IDBTransactionMode.h"
@@ -44,7 +45,7 @@ class IDBTransactionInfo;
 struct EventNames;
 
 class IDBDatabase final : public ThreadSafeRefCounted<IDBDatabase>, public EventTarget, public IDBActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(IDBDatabase);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBDatabase);
 public:
     static Ref<IDBDatabase> create(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&, const IDBResultData&);
 
@@ -74,16 +75,17 @@ public:
     void renameIndex(IDBIndex&, const String& newName);
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return IDBDatabaseEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::IDBDatabase; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ThreadSafeRefCounted<IDBDatabase>::ref(); }
     void derefEventTarget() final { ThreadSafeRefCounted<IDBDatabase>::deref(); }
 
-    using ThreadSafeRefCounted<IDBDatabase>::ref;
-    using ThreadSafeRefCounted<IDBDatabase>::deref;
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
     IDBDatabaseInfo& info() { return m_info; }
-    uint64_t databaseConnectionIdentifier() const { return m_databaseConnectionIdentifier; }
+    IDBDatabaseConnectionIdentifier databaseConnectionIdentifier() const { return m_databaseConnectionIdentifier; }
 
     Ref<IDBTransaction> startVersionChangeTransaction(const IDBTransactionInfo&, IDBOpenDBRequest&);
     void didStartTransaction(IDBTransaction&);
@@ -116,14 +118,13 @@ private:
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
-    const char* activeDOMObjectName() const final;
     void stop() final;
 
     void maybeCloseInServer();
 
     Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
     IDBDatabaseInfo m_info;
-    uint64_t m_databaseConnectionIdentifier { 0 };
+    IDBDatabaseConnectionIdentifier m_databaseConnectionIdentifier;
 
     bool m_closePending { false };
     bool m_closedInServer { false };

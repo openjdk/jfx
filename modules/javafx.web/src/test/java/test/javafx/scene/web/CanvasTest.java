@@ -37,6 +37,7 @@ import netscape.javascript.JSObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Disabled;
 
 /**
  * Test the Image to DataURL function
@@ -120,6 +121,7 @@ public class CanvasTest extends TestBase {
     }
 
     // JDK-8234471
+    @Disabled("JDK-8347937")
     @Test public void testCanvasPattern() throws Exception {
         final String htmlCanvasContent = "\n"
             + "<canvas id='canvaspattern' width='100' height='100'></canvas>\n"

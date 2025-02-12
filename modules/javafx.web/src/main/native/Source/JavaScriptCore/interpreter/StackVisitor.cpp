@@ -36,7 +36,7 @@
 #include "WasmCallee.h"
 #include "WasmIndexOrName.h"
 #include "WebAssemblyFunction.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -431,7 +431,7 @@ String StackVisitor::Frame::toString() const
 {
     String functionName = this->functionName();
     String sourceURL = this->sourceURL();
-    const char* separator = !sourceURL.isEmpty() && !functionName.isEmpty() ? "@" : "";
+    auto separator = !sourceURL.isEmpty() && !functionName.isEmpty() ? "@"_s : ""_s;
 
     if (sourceURL.isEmpty() || !hasLineAndColumnInfo())
         return makeString(functionName, separator, sourceURL);

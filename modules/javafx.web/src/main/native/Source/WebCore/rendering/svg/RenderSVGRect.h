@@ -28,7 +28,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGShape.h"
 
 namespace WebCore {
@@ -36,7 +35,8 @@ namespace WebCore {
 class SVGRectElement;
 
 class RenderSVGRect final : public RenderSVGShape {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGRect);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGRect);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGRect);
 public:
     RenderSVGRect(SVGRectElement&, RenderStyle&&);
     virtual ~RenderSVGRect();
@@ -62,5 +62,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

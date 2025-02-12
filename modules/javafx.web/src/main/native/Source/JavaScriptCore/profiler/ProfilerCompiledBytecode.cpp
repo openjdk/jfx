@@ -38,16 +38,14 @@ CompiledBytecode::CompiledBytecode(const OriginStack& origin, const CString& des
 {
 }
 
-CompiledBytecode::~CompiledBytecode()
-{
-}
+CompiledBytecode::~CompiledBytecode() = default;
 
 Ref<JSON::Value> CompiledBytecode::toJSON(Dumper& dumper) const
 {
     auto result = JSON::Object::create();
 
     result->setValue(dumper.keys().m_origin, m_origin.toJSON(dumper));
-    result->setString(dumper.keys().m_description, String::fromUTF8(m_description));
+    result->setString(dumper.keys().m_description, String::fromUTF8(m_description.span()));
 
     return result;
 }

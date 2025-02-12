@@ -98,9 +98,9 @@ public:
                                 const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize&, ImagePaintingOptions);
                                 // > Seems like renamed to drawPattern
 
-    void fillRect(const FloatRect& rect) override;
+    void fillRect(const FloatRect&, RequiresClipToRect = RequiresClipToRect::Yes) override;
     void fillRect(const FloatRect& rect, const Color& color) override;
-    void fillRect(const FloatRect&, Gradient&, const AffineTransform&) override;
+    void fillRect(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect = RequiresClipToRect::Yes) override;
     void fillPath(const Path& path) override;
     void fillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode) override;
     void fillRectWithRoundedHole(const FloatRect& frect, const FloatRoundedRect& roundedHoleRect, const Color& color) override;

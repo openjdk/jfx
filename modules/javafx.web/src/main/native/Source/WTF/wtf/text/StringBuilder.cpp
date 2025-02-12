@@ -93,9 +93,9 @@ void StringBuilder::shrink(unsigned newLength)
         }
         // Allocate a fresh buffer, with a copy of the characters we are keeping.
         if (m_buffer->is8Bit())
-            allocateBuffer<LChar>(m_buffer->characters<LChar>(), newLength);
+            allocateBuffer<LChar>(m_buffer->span8().data(), newLength);
         else
-            allocateBuffer<UChar>(m_buffer->characters<UChar>(), newLength);
+            allocateBuffer<UChar>(m_buffer->span16().data(), newLength);
         return;
     }
 
@@ -124,9 +124,9 @@ void StringBuilder::reserveCapacity(unsigned newCapacity)
             if (!m_length)
                 allocateBuffer<LChar>(static_cast<LChar*>(nullptr), newCapacity);
             else if (m_string.is8Bit())
-                allocateBuffer<LChar>(m_string.characters8(), newCapacity);
+                allocateBuffer<LChar>(m_string.span8().data(), newCapacity);
             else
-                allocateBuffer<UChar>(m_string.characters16(), newCapacity);
+                allocateBuffer<UChar>(m_string.span16().data(), newCapacity);
         }
     }
     ASSERT(hasOverflowed() || !newCapacity || m_buffer->length() >= newCapacity);
@@ -144,33 +144,35 @@ UChar* StringBuilder::extendBufferForAppendingWithUpconvert(unsigned requiredLen
         allocateBuffer<UChar>(characters<LChar>(), expandedCapacity(capacity(), requiredLength));
         if (UNLIKELY(hasOverflowed()))
             return nullptr;
-        return const_cast<UChar*>(m_buffer->characters<UChar>()) + std::exchange(m_length, requiredLength);
+        return const_cast<UChar*>(m_buffer->span16().data()) + std::exchange(m_length, requiredLength);
     }
     return extendBufferForAppending<UChar>(requiredLength);
 }
 
-void StringBuilder::appendCharacters(const UChar* characters, unsigned length)
+void StringBuilder::append(std::span<const UChar> characters)
 {
-    if (!length || hasOverflowed())
+    if (characters.empty() || hasOverflowed())
         return;
-    if (length == 1 && isLatin1(characters[0]) && is8Bit()) {
+    if (characters.size() == 1 && isLatin1(characters[0]) && is8Bit()) {
         append(static_cast<LChar>(characters[0]));
         return;
     }
-    if (auto destination = extendBufferForAppendingWithUpconvert(saturatedSum<uint32_t>(m_length, length)))
-        StringImpl::copyCharacters(destination, characters, length);
+    RELEASE_ASSERT(characters.size() < std::numeric_limits<uint32_t>::max());
+    if (auto destination = extendBufferForAppendingWithUpconvert(saturatedSum<uint32_t>(m_length, static_cast<uint32_t>(characters.size()))))
+        StringImpl::copyCharacters(destination, characters);
 }
 
-void StringBuilder::appendCharacters(const LChar* characters, unsigned length)
+void StringBuilder::append(std::span<const LChar> characters)
 {
-    if (!length || hasOverflowed())
+    if (characters.empty() || hasOverflowed())
         return;
+    RELEASE_ASSERT(characters.size() < std::numeric_limits<uint32_t>::max());
     if (is8Bit()) {
-        if (auto destination = extendBufferForAppending<LChar>(saturatedSum<uint32_t>(m_length, length)))
-            StringImpl::copyCharacters(destination, characters, length);
+        if (auto destination = extendBufferForAppending<LChar>(saturatedSum<uint32_t>(m_length, static_cast<uint32_t>(characters.size()))))
+            StringImpl::copyCharacters(destination, characters);
     } else {
-        if (auto destination = extendBufferForAppending<UChar>(saturatedSum<uint32_t>(m_length, length)))
-            StringImpl::copyCharacters(destination, characters, length);
+        if (auto destination = extendBufferForAppending<UChar>(saturatedSum<uint32_t>(m_length, static_cast<uint32_t>(characters.size()))))
+            StringImpl::copyCharacters(destination, characters);
     }
 }
 

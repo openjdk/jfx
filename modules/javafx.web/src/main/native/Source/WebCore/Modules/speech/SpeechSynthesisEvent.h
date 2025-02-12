@@ -34,7 +34,7 @@
 namespace WebCore {
 
 class SpeechSynthesisEvent : public Event {
-    WTF_MAKE_ISO_ALLOCATED(SpeechSynthesisEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SpeechSynthesisEvent);
 public:
 
     static Ref<SpeechSynthesisEvent> create(const AtomString& type, const SpeechSynthesisEventInit&);
@@ -45,10 +45,8 @@ public:
     float elapsedTime() const { return m_elapsedTime; }
     const String& name() const { return m_name; }
 
-    virtual EventInterface eventInterface() const { return SpeechSynthesisEventInterfaceType; }
-
 protected:
-    SpeechSynthesisEvent(const AtomString& type, const SpeechSynthesisEventInit&);
+    SpeechSynthesisEvent(enum EventInterfaceType, const AtomString& type, const SpeechSynthesisEventInit&);
 
 private:
     RefPtr<SpeechSynthesisUtterance> m_utterance;

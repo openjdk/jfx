@@ -65,7 +65,7 @@ void StringConstructor::finishCreation(VM& vm, StringPrototype* stringPrototype)
     putDirectWithoutTransition(vm, vm.propertyNames->name, jsString(vm, vm.propertyNames->String.string()), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
-StringConstructor* StringConstructor::create(VM& vm, Structure* structure, StringPrototype* stringPrototype, GetterSetter*)
+StringConstructor* StringConstructor::create(VM& vm, Structure* structure, StringPrototype* stringPrototype)
 {
     JSGlobalObject* globalObject = structure->globalObject();
     NativeExecutable* executable = vm.getHostFunction(callStringConstructor, ImplementationVisibility::Public, StringConstructorIntrinsic, constructWithStringConstructor, nullptr, vm.propertyNames->String.string());
@@ -97,7 +97,7 @@ JSC_DEFINE_HOST_FUNCTION(stringFromCharCode, (JSGlobalObject* globalObject, Call
         if (UNLIKELY(!isLatin1(character))) {
             UChar* buf16Bit;
             auto impl16Bit = StringImpl::createUninitialized(length, buf16Bit);
-            StringImpl::copyCharacters(buf16Bit, buf8Bit, i);
+            StringImpl::copyCharacters(buf16Bit, { buf8Bit, i });
             buf16Bit[i] = character;
             ++i;
             for (; i < length; ++i) {

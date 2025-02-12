@@ -38,11 +38,14 @@ namespace JSC { namespace DFG {
 
 // This phase is run at the end of BytecodeParsing, so the graph isn't in a fully formed state.
 // For example, we can't access the predecessor list of any basic blocks yet.
-
-class BackwardsPropagationPhase {
+//
+// Note that, so far, this phase should only be used in the byte code parsing phase
+// or after the fix up phases. We don't want to validate graph since
+// unreachable blocks won't be removed until the end of the parsing phase.
+class BackwardsPropagationPhase : public Phase {
 public:
     BackwardsPropagationPhase(Graph& graph)
-        : m_graph(graph)
+        : Phase(graph, "backwards propagation"_s, !graph.afterFixup())
         , m_flagsAtHead(graph)
     {
     }
@@ -523,7 +526,9 @@ private:
 
         case ToString:
         case CallStringConstructor: {
-            node->child1()->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeUsesAsOther | NodeBytecodeNeedsNaNOrInfinity);
+            if (typeFilterFor(node->child1().useKind()) & SpecOther)
+                node->child1()->mergeFlags(NodeBytecodeUsesAsOther);
+            node->child1()->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNaNOrInfinity);
             break;
         }
 
@@ -591,8 +596,49 @@ private:
         }
 
         case Identity:
-            // This would be trivial to handle but we just assert that we cannot see these yet.
-            RELEASE_ASSERT_NOT_REACHED();
+            ASSERT(m_graph.afterFixup());
+            node->child1()->mergeFlags(flags);
+            break;
+
+        case ValueRep:
+            ASSERT(m_graph.afterFixup());
+            // ValueRep is used to box a double or int52 to a JSValue. So, we shouldn't propagate any node flags to its child.
+            break;
+
+        case Int52Rep:
+        case ValueToInt32:
+        case DoubleAsInt32:
+            ASSERT(m_graph.afterFixup());
+            // The results of these nodes are pure unboxed integers. Then, we
+            // should definitely tell their children that you will be used as an integer.
+            node->child1()->mergeFlags(NodeBytecodeUsesAsInt);
+            break;
+
+        case DoubleRep:
+            ASSERT(m_graph.afterFixup());
+            // The result of the node is pure unboxed floating point values.
+            node->child1()->mergeFlags(NodeBytecodeUsesAsNumber);
+            break;
+
+        case BooleanToNumber:
+            ASSERT(m_graph.afterFixup());
+            // The result of BooleanToNumber can be either an unboxed integer or a JSValue.
+            if (node->child1().useKind() == BooleanUse)
+                node->child1()->mergeFlags(NodeBytecodeUsesAsInt);
+            break;
+
+        case CheckStructureOrEmpty:
+        case CheckArrayOrEmpty:
+        case Arrayify:
+        case ArrayifyToStructure:
+        case GetIndexedPropertyStorage:
+        case ResolveRope:
+        case MakeRope:
+        case GetRegExpObjectLastIndex:
+        case HasIndexedProperty:
+        case CallDOM:
+            // Not interested so far.
+            ASSERT(m_graph.afterFixup());
             break;
 
         // Note: ArithSqrt, ArithUnary and other math intrinsics don't have special
@@ -607,16 +653,15 @@ private:
         }
     }
 
-    Graph& m_graph;
     bool m_allowNestedOverflowingAdditions;
 
     BlockMap<Operands<NodeFlags>> m_flagsAtHead;
     Operands<NodeFlags> m_currentFlags;
 };
 
-void performBackwardsPropagation(Graph& graph)
+bool performBackwardsPropagation(Graph& graph)
 {
-    BackwardsPropagationPhase(graph).run();
+    return runPhase<BackwardsPropagationPhase>(graph);
 }
 
 } } // namespace JSC::DFG

@@ -52,21 +52,21 @@ bool CSSStyleSheetObservableArray::setValueAt(JSC::JSGlobalObject* lexicalGlobal
 
     RELEASE_ASSERT(index <= m_sheets.size());
 
-    RefPtr sheet = convert<IDLInterface<CSSStyleSheet>>(*lexicalGlobalObject, value);
-    if (!sheet)
+    auto sheetConversionResult = convert<IDLInterface<CSSStyleSheet>>(*lexicalGlobalObject, value);
+    if (UNLIKELY(sheetConversionResult.hasException(scope)))
         return false;
 
-    if (auto exception = shouldThrowWhenAddingSheet(*sheet)) {
+    if (auto exception = shouldThrowWhenAddingSheet(*sheetConversionResult.returnValue())) {
         throwException(lexicalGlobalObject, scope, createDOMException(*lexicalGlobalObject, WTFMove(*exception)));
         return false;
     }
 
     if (index == m_sheets.size())
-        m_sheets.append(sheet.copyRef());
+        m_sheets.append(*sheetConversionResult.returnValue());
     else
-        m_sheets[index] = sheet.copyRef();
+        m_sheets[index] = *sheetConversionResult.returnValue();
 
-    didAddSheet(*sheet);
+    didAddSheet(*sheetConversionResult.releaseReturnValue());
     return true;
 }
 
@@ -74,7 +74,7 @@ void CSSStyleSheetObservableArray::removeLast()
 {
     RELEASE_ASSERT(!m_sheets.isEmpty());
     auto sheet = m_sheets.takeLast();
-    willRemoveSheet(*sheet);
+    willRemoveSheet(sheet);
 }
 
 void CSSStyleSheetObservableArray::shrinkTo(unsigned length)
@@ -87,21 +87,21 @@ JSC::JSValue CSSStyleSheetObservableArray::valueAt(JSC::JSGlobalObject* lexicalG
 {
     if (index >= m_sheets.size())
         return JSC::jsUndefined();
-    return toJS(lexicalGlobalObject, JSC::jsCast<JSDOMGlobalObject*>(lexicalGlobalObject), m_sheets[index].get());
+    return toJS(lexicalGlobalObject, JSC::jsCast<JSDOMGlobalObject*>(lexicalGlobalObject), m_sheets[index]);
 }
 
-ExceptionOr<void> CSSStyleSheetObservableArray::setSheets(Vector<RefPtr<CSSStyleSheet>>&& sheets)
+ExceptionOr<void> CSSStyleSheetObservableArray::setSheets(Vector<Ref<CSSStyleSheet>>&& sheets)
 {
     for (auto& sheet : sheets) {
-        if (auto exception = shouldThrowWhenAddingSheet(*sheet))
+        if (auto exception = shouldThrowWhenAddingSheet(sheet))
             return WTFMove(*exception);
     }
 
     for (auto& sheet : m_sheets)
-        willRemoveSheet(*sheet);
+        willRemoveSheet(sheet);
     m_sheets = WTFMove(sheets);
     for (auto& sheet : m_sheets)
-        didAddSheet(*sheet);
+        didAddSheet(sheet);
 
     return { };
 }

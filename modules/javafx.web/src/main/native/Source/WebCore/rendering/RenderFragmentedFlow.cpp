@@ -32,7 +32,6 @@
 
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
-#include "LegacyInlineElementBox.h"
 #include "Node.h"
 #include "RenderBoxFragmentInfo.h"
 #include "RenderBoxInlines.h"
@@ -48,12 +47,12 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "TransformState.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFragmentedFlow);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderFragmentedFlow);
 
 RenderFragmentedFlow::RenderFragmentedFlow(Type type, Document& document, RenderStyle&& style)
     : RenderBlockFlow(type, document, WTFMove(style), BlockFlowFlag::IsFragmentedFlow)
@@ -65,6 +64,8 @@ RenderFragmentedFlow::RenderFragmentedFlow(Type type, Document& document, Render
 {
     ASSERT(isRenderFragmentedFlow());
 }
+
+RenderFragmentedFlow::~RenderFragmentedFlow() = default;
 
 void RenderFragmentedFlow::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
@@ -408,8 +409,8 @@ void RenderFragmentedFlow::removeLineFragmentInfo(const RenderBlockFlow& blockFl
     if (!m_lineToFragmentMap)
         return;
 
-    for (auto* curr = blockFlow.firstRootBox(); curr; curr = curr->nextRootBox())
-        m_lineToFragmentMap->remove(curr);
+    if (auto* rootBox = blockFlow.legacyRootBox())
+        m_lineToFragmentMap->remove(rootBox);
 
     ASSERT_WITH_SECURITY_IMPLICATION(checkLinesConsistency(blockFlow));
 }
@@ -597,13 +598,6 @@ bool RenderFragmentedFlow::computedFragmentRangeForBox(const RenderBox& box, Ren
     // Search the fragment range using the information provided by the containing block chain.
     auto* containingBlock = const_cast<RenderBox*>(&box);
     while (!containingBlock->isRenderFragmentedFlow()) {
-        LegacyInlineElementBox* boxWrapper = containingBlock->inlineBoxWrapper();
-        if (boxWrapper && boxWrapper->root().containingFragment()) {
-            startFragment = endFragment = boxWrapper->root().containingFragment();
-            ASSERT(m_fragmentList.contains(*startFragment));
-            return true;
-        }
-
         // FIXME: Use the containingBlock() value once we patch all the layout systems to be fragment range aware
         // (e.g. if we use containingBlock() the shadow controls of a video element won't get the range from the
         // video box because it's not a block; they need to be patched separately).

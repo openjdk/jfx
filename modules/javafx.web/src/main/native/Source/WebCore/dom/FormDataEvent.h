@@ -33,7 +33,7 @@ namespace WebCore {
 class DOMFormData;
 
 class FormDataEvent : public Event {
-    WTF_MAKE_ISO_ALLOCATED(FormDataEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FormDataEvent);
 public:
     struct Init : EventInit {
         RefPtr<DOMFormData> formData;
@@ -47,7 +47,6 @@ public:
 private:
     FormDataEvent(const AtomString&, Init&&);
     FormDataEvent(const AtomString&, CanBubble, IsCancelable, IsComposed, Ref<DOMFormData>&&);
-    EventInterface eventInterface() const final;
 
     Ref<DOMFormData> m_formData;
 };

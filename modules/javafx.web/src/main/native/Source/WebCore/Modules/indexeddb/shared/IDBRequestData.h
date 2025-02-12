@@ -26,9 +26,12 @@
 #pragma once
 
 #include "IDBDatabaseIdentifier.h"
+#include "IDBObjectStoreIdentifier.h"
 #include "IDBResourceIdentifier.h"
 #include "IndexedDB.h"
+#include <optional>
 #include <wtf/ArgumentCoder.h>
+#include <wtf/Markable.h>
 
 namespace WebCore {
 
@@ -46,7 +49,6 @@ class TransactionOperation;
 
 class IDBRequestData {
 public:
-    IDBRequestData(const IDBClient::IDBConnectionProxy&, const IDBOpenDBRequest&);
     explicit IDBRequestData(IDBClient::TransactionOperation&);
     WEBCORE_EXPORT IDBRequestData(const IDBRequestData&);
     IDBRequestData(IDBRequestData&&) = default;
@@ -59,32 +61,25 @@ public:
     IDBConnectionIdentifier serverConnectionIdentifier() const;
     WEBCORE_EXPORT IDBResourceIdentifier requestIdentifier() const;
     WEBCORE_EXPORT IDBResourceIdentifier transactionIdentifier() const;
-    uint64_t objectStoreIdentifier() const;
+    IDBObjectStoreIdentifier objectStoreIdentifier() const;
     uint64_t indexIdentifier() const;
     IndexedDB::IndexRecordType indexRecordType() const;
     IDBResourceIdentifier cursorIdentifier() const;
-
-    WEBCORE_EXPORT IDBDatabaseIdentifier databaseIdentifier() const;
     uint64_t requestedVersion() const;
-
-    bool isOpenRequest() const { return m_requestType == IndexedDB::RequestType::Open; }
-    bool isDeleteRequest() const { return m_requestType == IndexedDB::RequestType::Delete; }
-
     IDBRequestData isolatedCopy();
 
 private:
     friend struct IPC::ArgumentCoder<IDBRequestData, void>;
-    WEBCORE_EXPORT IDBRequestData(IDBConnectionIdentifier serverConnectionIdentifier, IDBResourceIdentifier requestIdentifier, std::optional<IDBResourceIdentifier>&& transactionIdentifier, std::optional<IDBResourceIdentifier>&& cursorIdentifier, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, IndexedDB::IndexRecordType, std::optional<IDBDatabaseIdentifier>&&, uint64_t requestedVersion, IndexedDB::RequestType);
+    WEBCORE_EXPORT IDBRequestData(IDBConnectionIdentifier serverConnectionIdentifier, IDBResourceIdentifier requestIdentifier, IDBResourceIdentifier transactionIdentifier, std::optional<IDBResourceIdentifier>&& cursorIdentifier, std::optional<IDBObjectStoreIdentifier>, uint64_t indexIdentifier, IndexedDB::IndexRecordType, uint64_t requestedVersion, IndexedDB::RequestType);
     static void isolatedCopy(const IDBRequestData& source, IDBRequestData& destination);
 
     IDBConnectionIdentifier m_serverConnectionIdentifier;
     IDBResourceIdentifier m_requestIdentifier;
-    std::optional<IDBResourceIdentifier> m_transactionIdentifier;
+    IDBResourceIdentifier m_transactionIdentifier;
     std::optional<IDBResourceIdentifier> m_cursorIdentifier;
-    uint64_t m_objectStoreIdentifier { 0 };
+    Markable<IDBObjectStoreIdentifier> m_objectStoreIdentifier;
     uint64_t m_indexIdentifier { 0 };
     IndexedDB::IndexRecordType m_indexRecordType { IndexedDB::IndexRecordType::Key };
-    std::optional<IDBDatabaseIdentifier> m_databaseIdentifier;
     uint64_t m_requestedVersion { 0 };
 
     IndexedDB::RequestType m_requestType { IndexedDB::RequestType::Other };

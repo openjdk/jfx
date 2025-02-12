@@ -1622,11 +1622,6 @@ static JSValueRef getElementTextLengthCallback(JSContextRef context, JSObjectRef
     return JSValueMakeNumber(context, toAXElement(thisObject)->elementTextLength());
 }
 
-static JSValueRef hasContainedByFieldsetTraitCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
-{
-    return JSValueMakeBoolean(context, toAXElement(thisObject)->hasContainedByFieldsetTrait());
-}
-
 static JSValueRef hasTextEntryTraitCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
 {
     return JSValueMakeBoolean(context, toAXElement(thisObject)->hasTextEntryTrait());
@@ -1672,11 +1667,6 @@ static JSValueRef getIsLastItemInSuggestionCallback(JSContextRef context, JSObje
 static JSValueRef getIsMarkAnnotationCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
     return JSValueMakeBoolean(context, toAXElement(thisObject)->isMarkAnnotation());
-}
-
-static JSValueRef getIsInNonNativeTextControlCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
-{
-    return JSValueMakeBoolean(context, toAXElement(thisObject)->isInNonNativeTextControl());
 }
 
 #endif // PLATFORM(IOS_FAMILY)
@@ -2045,7 +2035,6 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "elementTextPosition", getElementTextPositionCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "elementTextLength", getElementTextLengthCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "stringForSelection", stringForSelectionCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "hasContainedByFieldsetTrait", hasContainedByFieldsetTraitCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "hasTextEntryTrait", hasTextEntryTraitCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isSearchField", getIsSearchFieldCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isTextArea", getIsTextAreaCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2054,7 +2043,6 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "isFirstItemInSuggesiton", getIsFirstItemInSuggestionCallback, 0 , kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isLastItemInSuggesiton", getIsLastItemInSuggestionCallback, 0 , kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isMarkAnnotation", getIsMarkAnnotationCallback, 0 , kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "isInNonNativeTextControl", getIsInNonNativeTextControlCallback, 0 , kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
 #endif // PLATFORM(IOS_FAMILY)
 #if PLATFORM(MAC) && !PLATFORM(IOS_FAMILY)
         { "supportedActions", supportedActionsCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

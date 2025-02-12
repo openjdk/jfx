@@ -606,18 +606,27 @@ full-size-kana
 visible
 //hidden
 collapse
-//
-// Unordered rest
-//
+
+// @page size
 a3
 a4
 a5
+b4
+b5
+jis-b4
+jis-b5
+landscape
+ledger
+legal
+letter
+
+//
+// Unordered rest
+//
 above
 absolute
 always
 avoid
-b4
-b5
 below
 bidi-override
 blink
@@ -637,10 +646,6 @@ plaintext
 -webkit-isolate
 -webkit-isolate-override
 -webkit-plaintext
-landscape
-ledger
-legal
-letter
 level
 line-through
 local
@@ -937,6 +942,7 @@ round
 // border-box/content-box/padding-box should be used instead.
 //
 border
+border-area
 border-box
 content
 content-box
@@ -1324,7 +1330,7 @@ repeating-conic-gradient
 -webkit-named-image
 filter
 -webkit-filter
-paint enable-if=ENABLE_CSS_PAINTING_API
+paint
 
 // image-set's MIME type
 type
@@ -1345,6 +1351,24 @@ rect
 
 // shapes
 polygon
+shape
+
+// shape function
+line
+// move
+hline
+vline
+curve
+// smooth
+arc
+cw
+ccw
+// large
+// small
+by
+close
+using
+of
 
 // @font-face src
 format
@@ -1589,6 +1613,9 @@ AA-large
 AAA
 AAA-large
 
+// color-layers()
+color-layers
+
 // color-mix()
 color-mix
 
@@ -1625,6 +1652,7 @@ no-preference
 // prefers-contrast
 more
 less
+custom
 // no-preference
 
 // prefers-color-scheme, font-palette
@@ -1668,6 +1696,8 @@ numeric
 symbolic
 additive
 // fixed
+-internal-disclosure-closed
+-internal-disclosure-open
 -internal-simplified-chinese-informal
 -internal-simplified-chinese-formal
 -internal-traditional-chinese-informal
@@ -1711,7 +1741,6 @@ z
 // content
 size
 layout
-paint enable-if=!ENABLE_CSS_PAINTING_API
 
 // container-type
 // normal
@@ -1745,7 +1774,10 @@ false
 // text-spacing-trim
 space-all
 // text-autospace
+// normal
 no-autospace
+ideograph-alpha
+ideograph-numeric
 
 // scrollbar-gutter
 // auto
@@ -1764,3 +1796,6 @@ allow-discrete
 // block
 // inline
 -internal-textarea-auto
+
+// anchor()
+anchor

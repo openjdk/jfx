@@ -106,9 +106,6 @@ const TestFeatures& TestOptions::defaults()
             { "UsesBackForwardCache", false },
             { "VisualViewportAPIEnabled", true },
             { "WebAudioEnabled", true },
-#if ENABLE(WEBGL)
-            { "WebGLUsingMetal", true },
-#endif
             { "WebSQLEnabled", true },
             { "XSSAuditorEnabled", false },
 
@@ -119,8 +116,9 @@ const TestFeatures& TestOptions::defaults()
             { "CSSOMViewSmoothScrollingEnabled", false },
             { "ContactPickerAPIEnabled", false },
             { "CoreMathMLEnabled", false },
+            { "DigitalCredentialsEnabled", false },
             { "GenericCueAPIEnabled", false },
-            { "IsLoggedInAPIEnabled", false },
+            { "LoginStatusAPIEnabled", false },
             { "LazyIframeLoadingEnabled", false },
             { "LazyImageLoadingEnabled", false },
             { "RequestIdleCallbackEnabled", false },
@@ -135,7 +133,6 @@ const TestFeatures& TestOptions::defaults()
             { "AsyncClipboardAPIEnabled", false },
             { "AttachmentElementEnabled", false },
             { "AttachmentWideLayoutEnabled", false },
-            { "CSSContainmentEnabled", false },
             { "CSSCounterStyleAtRuleImageSymbolsEnabled", false },
             { "CSSGradientInterpolationColorSpacesEnabled", true },
             { "CSSGradientPremultipliedAlphaInterpolationEnabled", true },
@@ -160,7 +157,6 @@ const TestFeatures& TestOptions::defaults()
             { "NeedsStorageAccessFromFileURLsQuirk", false },
             { "OverscrollBehaviorEnabled", true },
             { "PerformanceNavigationTimingAPIEnabled", true },
-            { "PluginsEnabled", true },
             { "PrivateClickMeasurementEnabled", false },
             { "RequestIdleCallbackEnabled", false },
             { "SelectionAcrossShadowBoundariesEnabled", true },

@@ -41,18 +41,18 @@
 #include "ResolvedStyle.h"
 #include "StyleResolver.h"
 #include "Text.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DateTimeFieldElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DateTimeFieldElement);
 
-DateTimeFieldElement::FieldOwner::~FieldOwner() = default;
+DateTimeFieldElementFieldOwner::~DateTimeFieldElementFieldOwner() = default;
 
-DateTimeFieldElement::DateTimeFieldElement(Document& document, FieldOwner& fieldOwner)
+DateTimeFieldElement::DateTimeFieldElement(Document& document, DateTimeFieldElementFieldOwner& fieldOwner)
     : HTMLDivElement(divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
     , m_fieldOwner(fieldOwner)
 {
@@ -194,7 +194,7 @@ void DateTimeFieldElement::updateVisibleValue(EventBehavior eventBehavior)
     if (!firstChild())
         appendChild(Text::create(document(), String { emptyString() }));
 
-    Ref textNode = checkedDowncast<Text>(*firstChild());
+    Ref textNode = downcast<Text>(*firstChild());
     String newVisibleValue = visibleValue();
     if (textNode->wholeText() != newVisibleValue)
         textNode->replaceWholeText(newVisibleValue);

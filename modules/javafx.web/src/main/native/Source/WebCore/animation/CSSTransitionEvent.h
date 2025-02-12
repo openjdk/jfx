@@ -31,11 +31,11 @@
 namespace WebCore {
 
 class CSSTransitionEvent final : public StyleOriginatedAnimationEvent {
-    WTF_MAKE_ISO_ALLOCATED(CSSTransitionEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSTransitionEvent);
 public:
-    static Ref<CSSTransitionEvent> create(const AtomString& type, WebAnimation* animation, std::optional<Seconds> scheduledTime,  double elapsedTime, PseudoId pseudoId, const String propertyName)
+    static Ref<CSSTransitionEvent> create(const AtomString& type, WebAnimation* animation, std::optional<Seconds> scheduledTime,  double elapsedTime, const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier, const String propertyName)
     {
-        return adoptRef(*new CSSTransitionEvent(type, animation, scheduledTime, elapsedTime, pseudoId, propertyName));
+        return adoptRef(*new CSSTransitionEvent(type, animation, scheduledTime, elapsedTime, pseudoElementIdentifier, propertyName));
     }
 
     struct Init : EventInit {
@@ -55,10 +55,8 @@ public:
 
     const String& propertyName() const { return m_propertyName; }
 
-    EventInterface eventInterface() const override { return CSSTransitionEventInterfaceType; }
-
 private:
-    CSSTransitionEvent(const AtomString& type, WebAnimation*, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId, const String propertyName);
+    CSSTransitionEvent(const AtomString& type, WebAnimation*, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>&, const String propertyName);
     CSSTransitionEvent(const AtomString& type, const Init& initializer, IsTrusted);
 
     String m_propertyName;

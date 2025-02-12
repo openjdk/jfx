@@ -101,7 +101,7 @@ RefPtr<Image> Image::create(ImageObserver& observer)
         return SVGImage::create(observer);
 
     auto url = observer.sourceUrl();
-    if (isPDFResource(mimeType, url) || isPostScriptResource(mimeType, url)) {
+    if (isPDFResource(mimeType, url)) {
 #if USE(CG) && !USE(WEBKIT_IMAGE_DECODERS)
         if (!DeprecatedGlobalSettings::arePDFImagesEnabled())
             return nullptr;
@@ -136,14 +136,6 @@ bool Image::isPDFResource(const String& mimeType, const URL& url)
         return url.path().endsWithIgnoringASCIICase(".pdf"_s);
     return MIMETypeRegistry::isPDFMIMEType(mimeType);
 }
-
-bool Image::isPostScriptResource(const String& mimeType, const URL& url)
-{
-    if (mimeType.isEmpty())
-        return url.path().endsWithIgnoringASCIICase(".ps"_s);
-    return MIMETypeRegistry::isPostScriptMIMEType(mimeType);
-}
-
 
 EncodedDataStatus Image::setData(RefPtr<FragmentedSharedBuffer>&& data, bool allDataReceived)
 {
@@ -184,7 +176,7 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
 
 void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
-    auto tileImage = preTransformedNativeImageForCurrentFrame(options.orientation() == ImageOrientation::Orientation::FromImage);
+    RefPtr tileImage = currentPreTransformedNativeImage(options.orientation());
     if (!tileImage)
         return;
 
@@ -196,15 +188,12 @@ void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const 
 
 ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, const FloatSize& spacing, ImagePaintingOptions options)
 {
-    Color color = singlePixelSolidColor();
-    if (color.isValid()) {
-        fillWithSolidColor(ctxt, destRect, color, options.compositeOperator());
+    if (auto color = singlePixelSolidColor()) {
+        fillWithSolidColor(ctxt, destRect, *color, options.compositeOperator());
         return ImageDrawResult::DidDraw;
     }
 
-#if !PLATFORM(JAVA)
-    ASSERT(!isBitmapImage() || notSolidColor());
-#endif
+    ASSERT_IMPLIES(isBitmapImage(), !hasSolidColor());
 
     FloatSize intrinsicTileSize = size();
     if (hasRelativeWidth())
@@ -302,9 +291,8 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
 // FIXME: Merge with the other drawTiled eventually, since we need a combination of both for some things.
 ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, ImagePaintingOptions options)
 {
-    Color color = singlePixelSolidColor();
-    if (color.isValid()) {
-        fillWithSolidColor(ctxt, dstRect, color, options.compositeOperator());
+    if (auto color = singlePixelSolidColor()) {
+        fillWithSolidColor(ctxt, dstRect, *color, options.compositeOperator());
         return ImageDrawResult::DidDraw;
     }
 
@@ -448,6 +436,13 @@ TextStream& operator<<(TextStream& ts, const Image& image)
 
     image.dump(ts);
     return ts;
+}
+
+bool Image::gSystemAllowsAnimationControls = false;
+
+void Image::setSystemAllowsAnimationControls(bool allowsControls)
+{
+    gSystemAllowsAnimationControls = allowsControls;
 }
 
 } // namespace WebCore

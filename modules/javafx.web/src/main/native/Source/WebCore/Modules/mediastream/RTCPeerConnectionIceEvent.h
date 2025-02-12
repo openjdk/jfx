@@ -33,7 +33,7 @@ namespace WebCore {
 class RTCIceCandidate;
 
 class RTCPeerConnectionIceEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(RTCPeerConnectionIceEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCPeerConnectionIceEvent);
 public:
     virtual ~RTCPeerConnectionIceEvent();
 
@@ -47,8 +47,6 @@ public:
 
     RTCIceCandidate* candidate() const;
     const String& url() const { return m_url; }
-
-    virtual EventInterface eventInterface() const;
 
 private:
     RTCPeerConnectionIceEvent(const AtomString& type, CanBubble, IsCancelable, RefPtr<RTCIceCandidate>&&, String&& serverURL);

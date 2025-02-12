@@ -36,30 +36,31 @@
 
 namespace WebCore {
 
-void SocketStreamHandleImpl::platformSend(const uint8_t* data, size_t length, Function<void(bool)>&& completionHandler)
+void SocketStreamHandleImpl::platformSend(std::span<const uint8_t> data, Function<void(bool)>&& completionHandler)
 {
     if (!m_buffer.isEmpty()) {
-        if (m_buffer.size() + length > maxBufferSize) {
+        if (m_buffer.size() + data.size() > maxBufferSize) {
             // FIXME: report error to indicate that buffer has no more space.
             return completionHandler(false);
         }
-        m_buffer.append(data, length);
+        m_buffer.append(data);
         m_client.didUpdateBufferedAmount(*this, bufferedAmount());
         return completionHandler(true);
     }
     size_t bytesWritten = 0;
     if (m_state == Open) {
-        if (auto result = platformSendInternal(data, length))
+        if (auto result = platformSendInternal(data.data(), data.size()))
             bytesWritten = result.value();
         else
             return completionHandler(false);
     }
-    if (m_buffer.size() + length - bytesWritten > maxBufferSize) {
+    if (m_buffer.size() + data.size() - bytesWritten > maxBufferSize) {
         // FIXME: report error to indicate that buffer has no more space.
         return completionHandler(false);
     }
-    if (bytesWritten < length) {
-        m_buffer.append(data + bytesWritten, length - bytesWritten);
+    if (bytesWritten < data.size()) {
+        std::span<const uint8_t> createSpan(data.data() + bytesWritten, data.size() - bytesWritten);
+        m_buffer.append(createSpan);
         m_client.didUpdateBufferedAmount(static_cast<SocketStreamHandle&>(*this), bufferedAmount());
     }
     return completionHandler(true);
@@ -91,17 +92,16 @@ static std::optional<std::pair<Vector<uint8_t>, bool>> cookieDataForHandshake(co
     CString cookieData = cookieDataString.utf8();
 
     Vector<uint8_t> data = { 'C', 'o', 'o', 'k', 'i', 'e', ':', ' ' };
-    data.append(cookieData.data(), cookieData.length());
+    data.append(cookieData.span());
     data.appendVector(Vector<uint8_t>({ '\r', '\n', '\r', '\n' }));
 
     return std::pair<Vector<uint8_t>, bool> { data, secureCookiesAccessed };
 }
 
-void SocketStreamHandleImpl::platformSendHandshake(const uint8_t* data, size_t length, const std::optional<CookieRequestHeaderFieldProxy>& headerFieldProxy, Function<void(bool, bool)>&& completionHandler)
+void SocketStreamHandleImpl::platformSendHandshake(std::span<const uint8_t> data, const std::optional<CookieRequestHeaderFieldProxy>& headerFieldProxy, Function<void(bool, bool)>&& completionHandler)
 {
     Vector<uint8_t> cookieData;
     bool secureCookiesAccessed = false;
-
     if (headerFieldProxy) {
         auto cookieDataFromNetworkSession = cookieDataForHandshake(m_storageSessionProvider ? m_storageSessionProvider->storageSession() : nullptr, *headerFieldProxy);
         if (!cookieDataFromNetworkSession) {
@@ -110,16 +110,16 @@ void SocketStreamHandleImpl::platformSendHandshake(const uint8_t* data, size_t l
         }
 
         std::tie(cookieData, secureCookiesAccessed) = *cookieDataFromNetworkSession;
-        if (cookieData.size())
-            length = removeTerminationCharacters(data, length);
+        //if (cookieData.size())         //revisit
+           // tmpLength = removeTerminationCharacters(data.data(), data.size());
     }
 
     if (!m_buffer.isEmpty()) {
-        if (m_buffer.size() + length + cookieData.size() > maxBufferSize) {
+        if (m_buffer.size() + data.size() + cookieData.size() > maxBufferSize) {
             // FIXME: report error to indicate that buffer has no more space.
             return completionHandler(false, secureCookiesAccessed);
         }
-        m_buffer.append(data, length);
+        m_buffer.append(data);
         m_buffer.append(cookieData.data(), cookieData.size());
         m_client.didUpdateBufferedAmount(*this, bufferedAmount());
         return completionHandler(true, secureCookiesAccessed);
@@ -128,25 +128,26 @@ void SocketStreamHandleImpl::platformSendHandshake(const uint8_t* data, size_t l
     if (m_state == Open) {
         // Unfortunately, we need to send the data in one buffer or else the handshake fails.
         Vector<uint8_t> sendData;
-        sendData.reserveInitialCapacity(length + cookieData.size());
-        sendData.append(data, length);
-        sendData.append(cookieData.data(), cookieData.size());
+        sendData.reserveInitialCapacity(data.size() + cookieData.size());
+        sendData.append(data);
+        std::span<uint8_t> span(cookieData.data(), cookieData.size());
+        sendData.append(span);
 
         if (auto result = platformSendInternal(sendData.data(), sendData.size()))
             bytesWritten = result.value();
         else
             return completionHandler(false, secureCookiesAccessed);
     }
-    if (m_buffer.size() + length + cookieData.size() - bytesWritten > maxBufferSize) {
+    if (m_buffer.size() + data.size() + cookieData.size() - bytesWritten > maxBufferSize) {
         // FIXME: report error to indicate that buffer has no more space.
         return completionHandler(false, secureCookiesAccessed);
     }
-    if (bytesWritten < length + cookieData.size()) {
+    if (bytesWritten < data.size() + cookieData.size()) {
         size_t cookieBytesWritten = 0;
-        if (bytesWritten < length)
-            m_buffer.append(data + bytesWritten, length - bytesWritten);
+        if (bytesWritten < data.size())
+            m_buffer.append(data.data() + bytesWritten, data.size() - bytesWritten);
         else
-            cookieBytesWritten = bytesWritten - length;
+            cookieBytesWritten = bytesWritten - data.size();
         m_buffer.append(cookieData.data() + cookieBytesWritten, cookieData.size() - cookieBytesWritten);
         m_client.didUpdateBufferedAmount(static_cast<SocketStreamHandle&>(*this), bufferedAmount());
     }

@@ -26,10 +26,12 @@
 #include <wtf/DataLog.h>
 #include <wtf/HexNumber.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/dtoa.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/IntegerToStringConversion.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -37,22 +39,20 @@
 
 namespace WTF {
 
-using namespace Unicode;
-
 // Construct a string with UTF-16 data.
-String::String(const UChar* characters, unsigned length)
-    : m_impl(characters ? RefPtr { StringImpl::create(characters, length) } : nullptr)
+String::String(std::span<const UChar> characters)
+    : m_impl(characters.data() ? RefPtr { StringImpl::create(characters) } : nullptr)
 {
 }
 
 // Construct a string with latin1 data.
-String::String(const LChar* characters, unsigned length)
-    : m_impl(characters ? RefPtr { StringImpl::create(characters, length) } : nullptr)
+String::String(std::span<const LChar> characters)
+    : m_impl(characters.data() ? RefPtr { StringImpl::create(characters) } : nullptr)
 {
 }
 
-String::String(const char* characters, unsigned length)
-    : m_impl(characters ? RefPtr { StringImpl::create(reinterpret_cast<const LChar*>(characters), length) } : nullptr)
+String::String(std::span<const char> characters)
+    : m_impl(characters.data() ? RefPtr { StringImpl::create(byteCast<uint8_t>(characters)) } : nullptr)
 {
 }
 
@@ -174,19 +174,16 @@ String String::foldCase() const
 Expected<Vector<UChar>, UTF8ConversionError> String::charactersWithoutNullTermination() const
 {
     Vector<UChar> result;
+    if (!m_impl)
+        return result;
 
-    if (m_impl) {
         if (!result.tryReserveInitialCapacity(length() + 1))
             return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
-        if (is8Bit()) {
-            const LChar* characters8 = m_impl->characters8();
-            result.append(characters8, m_impl->length());
-        } else {
-            const UChar* characters16 = m_impl->characters16();
-            result.append(characters16, m_impl->length());
-        }
-    }
+    if (is8Bit())
+        result.append(span8());
+    else
+        result.append(span16());
 
     return result;
 }
@@ -383,35 +380,29 @@ CString String::ascii() const
     // Printable ASCII characters 32..127 and the null character are
     // preserved, characters outside of this range are converted to '?'.
 
-    unsigned length = this->length();
-    if (!length) {
+    if (isEmpty()) {
         char* characterBuffer;
-        return CString::newUninitialized(length, characterBuffer);
+        return CString::newUninitialized(0, characterBuffer);
     }
 
     if (this->is8Bit()) {
-        const LChar* characters = this->characters8();
+        auto characters = this->span8();
 
         char* characterBuffer;
-        CString result = CString::newUninitialized(length, characterBuffer);
+        CString result = CString::newUninitialized(characters.size(), characterBuffer);
 
-        for (unsigned i = 0; i < length; ++i) {
-            LChar ch = characters[i];
-            characterBuffer[i] = ch && (ch < 0x20 || ch > 0x7f) ? '?' : ch;
-        }
+        for (auto character : characters)
+            *characterBuffer++ = character && (character < 0x20 || character > 0x7f) ? '?' : character;
 
         return result;
     }
 
-    const UChar* characters = this->characters16();
-
+    auto characters = span16();
     char* characterBuffer;
-    CString result = CString::newUninitialized(length, characterBuffer);
+    CString result = CString::newUninitialized(characters.size(), characterBuffer);
 
-    for (unsigned i = 0; i < length; ++i) {
-        UChar ch = characters[i];
-        characterBuffer[i] = ch && (ch < 0x20 || ch > 0x7f) ? '?' : ch;
-    }
+    for (auto character : characters)
+        *characterBuffer++ = character && (character < 0x20 || character > 0x7f) ? '?' : character;
 
     return result;
 }
@@ -421,30 +412,25 @@ CString String::latin1() const
     // Basic Latin1 (ISO) encoding - Unicode characters 0..255 are
     // preserved, characters outside of this range are converted to '?'.
 
-    unsigned length = this->length();
-
-    if (!length)
-        return CString("", 0);
+    if (isEmpty())
+        return ""_span;
 
     if (is8Bit())
-        return CString(this->characters8(), length);
+        return CString(this->span8());
 
-    const UChar* characters = this->characters16();
-
+    auto characters = this->span16();
     char* characterBuffer;
-    CString result = CString::newUninitialized(length, characterBuffer);
+    CString result = CString::newUninitialized(characters.size(), characterBuffer);
 
-    for (unsigned i = 0; i < length; ++i) {
-        UChar ch = characters[i];
-        characterBuffer[i] = !isLatin1(ch) ? '?' : ch;
-    }
+    for (auto character : characters)
+        *characterBuffer++ = !isLatin1(character) ? '?' : character;
 
     return result;
 }
 
 Expected<CString, UTF8ConversionError> String::tryGetUTF8(ConversionMode mode) const
 {
-    return m_impl ? m_impl->tryGetUTF8(mode) : CString { "", 0 };
+    return m_impl ? m_impl->tryGetUTF8(mode) : CString { ""_span };
 }
 
 Expected<CString, UTF8ConversionError> String::tryGetUTF8() const
@@ -459,11 +445,11 @@ CString String::utf8(ConversionMode mode) const
     return expectedString.value();
 }
 
-String String::make8Bit(const UChar* source, unsigned length)
+String String::make8Bit(std::span<const UChar> source)
 {
     LChar* destination;
-    String result = String::createUninitialized(length, destination);
-    StringImpl::copyCharacters(destination, source, length);
+    String result = String::createUninitialized(source.size(), destination);
+    StringImpl::copyCharacters(destination, source);
     return result;
 }
 
@@ -471,71 +457,56 @@ void String::convertTo16Bit()
 {
     if (isNull() || !is8Bit())
         return;
-    auto length = this->length();
     UChar* destination;
-    auto convertedString = String::createUninitialized(length, destination);
-    StringImpl::copyCharacters(destination, characters8(), length);
+    auto convertedString = String::createUninitialized(length(), destination);
+    StringImpl::copyCharacters(destination, span8());
     *this = WTFMove(convertedString);
 }
 
 template<bool replaceInvalidSequences>
-String fromUTF8Impl(const LChar* stringStart, size_t length)
+String fromUTF8Impl(std::span<const char8_t> string)
 {
-    // Do this assertion before chopping the size_t down to unsigned.
-    RELEASE_ASSERT(length <= String::MaxLength);
+    RELEASE_ASSERT(string.size() <= String::MaxLength);
 
-    if (!stringStart)
-        return String();
-
-    if (!length)
+    if (string.empty())
         return emptyString();
 
-    if (charactersAreAllASCII(stringStart, length))
-        return StringImpl::create(stringStart, length);
+    if (charactersAreAllASCII(string))
+        return StringImpl::create(spanReinterpretCast<const LChar>(string));
 
-    Vector<UChar, 1024> buffer(length);
-    UChar* bufferStart = buffer.data();
+    Vector<UChar, 1024> buffer(string.size());
 
-    UChar* bufferCurrent = bufferStart;
-    const char* stringCurrent = reinterpret_cast<const char*>(stringStart);
-    constexpr auto function = replaceInvalidSequences ? convertUTF8ToUTF16ReplacingInvalidSequences : convertUTF8ToUTF16;
-    if (!function(stringCurrent, reinterpret_cast<const char*>(stringStart + length), &bufferCurrent, bufferCurrent + buffer.size(), nullptr))
-        return String();
+    auto result = replaceInvalidSequences
+        ? Unicode::convertReplacingInvalidSequences(string, buffer.mutableSpan())
+        : Unicode::convert(string, buffer.mutableSpan());
+    if (result.code != Unicode::ConversionResultCode::Success)
+        return { };
 
-    unsigned utf16Length = bufferCurrent - bufferStart;
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(utf16Length <= length);
-    return StringImpl::create(bufferStart, utf16Length);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(result.buffer.size() <= string.size());
+    return StringImpl::create(result.buffer);
 }
 
-String String::fromUTF8(const LChar* stringStart, size_t length)
+String String::fromUTF8(std::span<const char8_t> string)
 {
-    return fromUTF8Impl<false>(stringStart, length);
+    if (!string.data())
+        return { };
+    return fromUTF8Impl<false>(string);
 }
 
-String String::fromUTF8ReplacingInvalidSequences(const LChar* characters, size_t length)
+String String::fromUTF8ReplacingInvalidSequences(std::span<const char8_t> characters)
 {
-    return fromUTF8Impl<true>(characters, length);
+    if (!characters.data())
+        return { };
+    return fromUTF8Impl<true>(characters);
 }
 
-String String::fromUTF8(const LChar* string)
+String String::fromUTF8WithLatin1Fallback(std::span<const char8_t> string)
 {
-    if (!string)
-        return String();
-    return fromUTF8(string, strlen(reinterpret_cast<const char*>(string)));
-}
-
-String String::fromUTF8(const CString& s)
-{
-    return fromUTF8(s.data());
-}
-
-String String::fromUTF8WithLatin1Fallback(const LChar* string, size_t size)
-{
-    String utf8 = fromUTF8(string, size);
+    String utf8 = fromUTF8(string);
     if (!utf8) {
         // Do this assertion before chopping the size_t down to unsigned.
-        RELEASE_ASSERT(size <= String::MaxLength);
-        return String(string, size);
+        RELEASE_ASSERT(string.size() <= String::MaxLength);
+        return spanReinterpretCast<const LChar>(string);
     }
     return utf8;
 }
@@ -546,19 +517,19 @@ String String::fromCodePoint(char32_t codePoint)
     uint8_t length = 0;
     UBool error = false;
     U16_APPEND(buffer, length, 2, codePoint, error);
-    return error ? String() : String(buffer, length);
+    return error ? String() : String({ buffer, length });
 }
 
 // String Operations
 
 template<typename CharacterType, TrailingJunkPolicy policy>
-static inline double toDoubleType(const CharacterType* data, size_t length, bool* ok, size_t& parsedLength)
+static inline double toDoubleType(std::span<const CharacterType> data, bool* ok, size_t& parsedLength)
 {
     size_t leadingSpacesLength = 0;
-    while (leadingSpacesLength < length && isUnicodeCompatibleASCIIWhitespace(data[leadingSpacesLength]))
+    while (leadingSpacesLength < data.size() && isUnicodeCompatibleASCIIWhitespace(data[leadingSpacesLength]))
         ++leadingSpacesLength;
 
-    double number = parseDouble(data + leadingSpacesLength, length - leadingSpacesLength, parsedLength);
+    double number = parseDouble(data.subspan(leadingSpacesLength), parsedLength);
     if (!parsedLength) {
         if (ok)
             *ok = false;
@@ -567,46 +538,46 @@ static inline double toDoubleType(const CharacterType* data, size_t length, bool
 
     parsedLength += leadingSpacesLength;
     if (ok)
-        *ok = policy == TrailingJunkPolicy::Allow || parsedLength == length;
+        *ok = policy == TrailingJunkPolicy::Allow || parsedLength == data.size();
     return number;
 }
 
-double charactersToDouble(const LChar* data, size_t length, bool* ok)
+double charactersToDouble(std::span<const LChar> data, bool* ok)
 {
     size_t parsedLength;
-    return toDoubleType<LChar, TrailingJunkPolicy::Disallow>(data, length, ok, parsedLength);
+    return toDoubleType<LChar, TrailingJunkPolicy::Disallow>(data, ok, parsedLength);
 }
 
-double charactersToDouble(const UChar* data, size_t length, bool* ok)
+double charactersToDouble(std::span<const UChar> data, bool* ok)
 {
     size_t parsedLength;
-    return toDoubleType<UChar, TrailingJunkPolicy::Disallow>(data, length, ok, parsedLength);
+    return toDoubleType<UChar, TrailingJunkPolicy::Disallow>(data, ok, parsedLength);
 }
 
-float charactersToFloat(const LChar* data, size_t length, bool* ok)
+float charactersToFloat(std::span<const LChar> data, bool* ok)
 {
     // FIXME: This will return ok even when the string fits into a double but not a float.
     size_t parsedLength;
-    return static_cast<float>(toDoubleType<LChar, TrailingJunkPolicy::Disallow>(data, length, ok, parsedLength));
+    return static_cast<float>(toDoubleType<LChar, TrailingJunkPolicy::Disallow>(data, ok, parsedLength));
 }
 
-float charactersToFloat(const UChar* data, size_t length, bool* ok)
+float charactersToFloat(std::span<const UChar> data, bool* ok)
 {
     // FIXME: This will return ok even when the string fits into a double but not a float.
     size_t parsedLength;
-    return static_cast<float>(toDoubleType<UChar, TrailingJunkPolicy::Disallow>(data, length, ok, parsedLength));
+    return static_cast<float>(toDoubleType<UChar, TrailingJunkPolicy::Disallow>(data, ok, parsedLength));
 }
 
-float charactersToFloat(const LChar* data, size_t length, size_t& parsedLength)
+float charactersToFloat(std::span<const LChar> data, size_t& parsedLength)
 {
     // FIXME: This will return ok even when the string fits into a double but not a float.
-    return static_cast<float>(toDoubleType<LChar, TrailingJunkPolicy::Allow>(data, length, nullptr, parsedLength));
+    return static_cast<float>(toDoubleType<LChar, TrailingJunkPolicy::Allow>(data, nullptr, parsedLength));
 }
 
-float charactersToFloat(const UChar* data, size_t length, size_t& parsedLength)
+float charactersToFloat(std::span<const UChar> data, size_t& parsedLength)
 {
     // FIXME: This will return ok even when the string fits into a double but not a float.
-    return static_cast<float>(toDoubleType<UChar, TrailingJunkPolicy::Allow>(data, length, nullptr, parsedLength));
+    return static_cast<float>(toDoubleType<UChar, TrailingJunkPolicy::Allow>(data, nullptr, parsedLength));
 }
 
 const StaticString nullStringData { nullptr };
@@ -645,13 +616,11 @@ Vector<char> asciiDebug(StringImpl* impl)
                 buffer.append(ch);
             buffer.append(ch);
         } else {
-            buffer.append('\\');
-            buffer.append('u');
-            buffer.append(hex(ch, 4));
+            buffer.append('\\', 'u', hex(ch, 4));
         }
     }
     CString narrowString = buffer.toString().ascii();
-    return { reinterpret_cast<const char*>(narrowString.data()), narrowString.length() + 1 };
+    return { narrowString.spanIncludingNullTerminator() };
 }
 
 Vector<char> asciiDebug(String& string)

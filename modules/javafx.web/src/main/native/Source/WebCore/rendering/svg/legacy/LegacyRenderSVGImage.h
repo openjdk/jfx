@@ -33,7 +33,8 @@ class RenderImageResource;
 class SVGImageElement;
 
 class LegacyRenderSVGImage final : public LegacyRenderSVGModelObject {
-    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGImage);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGImage);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGImage);
 public:
     LegacyRenderSVGImage(SVGImageElement&, RenderStyle&&);
     virtual ~LegacyRenderSVGImage();
@@ -42,11 +43,11 @@ public:
 
     bool updateImageViewport();
     void setNeedsBoundariesUpdate() override { m_needsBoundariesUpdate = true; }
-    bool needsBoundariesUpdate() override { return m_needsBoundariesUpdate; }
     void setNeedsTransformUpdate() override { m_needsTransformUpdate = true; }
 
     RenderImageResource& imageResource() { return *m_imageResource; }
     const RenderImageResource& imageResource() const { return *m_imageResource; }
+    CheckedRef<RenderImageResource> checkedImageResource() const;
 
     // Note: Assumes the PaintInfo context has had all local transforms applied.
     void paintForeground(PaintInfo&);

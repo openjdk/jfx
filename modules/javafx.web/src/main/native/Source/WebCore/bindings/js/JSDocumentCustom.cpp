@@ -24,8 +24,8 @@
 #include "JSCSSStyleSheet.h"
 #include "JSDOMConvert.h"
 #include "JSDOMGlobalObjectInlines.h"
+#include "JSDOMWindowCustom.h"
 #include "JSHTMLDocument.h"
-#include "JSLocalDOMWindowCustom.h"
 #include "JSXMLDocument.h"
 #include "LocalFrame.h"
 #include "NodeTraversal.h"
@@ -60,7 +60,7 @@ JSObject* cachedDocumentWrapper(JSGlobalObject& lexicalGlobalObject, JSDOMGlobal
     if (!window)
         return nullptr;
 
-    auto* documentGlobalObject = toJSDOMGlobalObject<JSLocalDOMWindow>(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
+    auto* documentGlobalObject = toJSDOMGlobalObject<JSDOMWindow>(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
     if (!documentGlobalObject)
         return nullptr;
 
@@ -100,11 +100,14 @@ void setAdoptedStyleSheetsOnTreeScope(TreeScope& treeScope, JSC::JSGlobalObject&
 {
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
+
     auto nativeValue = convert<IDLFrozenArray<IDLInterface<CSSStyleSheet>>>(lexicalGlobalObject, value);
-    RETURN_IF_EXCEPTION(throwScope, void());
-    invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
-        return treeScope.setAdoptedStyleSheets(WTFMove(nativeValue));
-    });
+    if (UNLIKELY(nativeValue.hasException(throwScope)))
+        return;
+
+    auto result = treeScope.setAdoptedStyleSheets(nativeValue.releaseReturnValue());
+    if (UNLIKELY(result.hasException()))
+        propagateException(lexicalGlobalObject, throwScope, result.releaseException());
 }
 
 void JSDocument::setAdoptedStyleSheets(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)

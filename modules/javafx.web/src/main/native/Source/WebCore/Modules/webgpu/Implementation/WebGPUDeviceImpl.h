@@ -30,6 +30,7 @@
 #include "WebGPUDevice.h"
 #include "WebGPUPtr.h"
 #include "WebGPUQueueImpl.h"
+#include <WebCore/MediaPlayerIdentifier.h>
 #include <WebGPU/WebGPU.h>
 #include <wtf/Deque.h>
 
@@ -65,25 +66,27 @@ private:
 
     void destroy() final;
 
-    Ref<Buffer> createBuffer(const BufferDescriptor&) final;
-    Ref<Texture> createTexture(const TextureDescriptor&) final;
-    Ref<Sampler> createSampler(const SamplerDescriptor&) final;
-    Ref<ExternalTexture> importExternalTexture(const ExternalTextureDescriptor&) final;
+    RefPtr<XRBinding> createXRBinding() final;
+    RefPtr<Buffer> createBuffer(const BufferDescriptor&) final;
+    RefPtr<Texture> createTexture(const TextureDescriptor&) final;
+    RefPtr<Sampler> createSampler(const SamplerDescriptor&) final;
+    RefPtr<ExternalTexture> importExternalTexture(const ExternalTextureDescriptor&) final;
+    void updateExternalTexture(const WebCore::WebGPU::ExternalTexture&, const WebCore::MediaPlayerIdentifier&) final;
 
-    Ref<BindGroupLayout> createBindGroupLayout(const BindGroupLayoutDescriptor&) final;
-    Ref<PipelineLayout> createPipelineLayout(const PipelineLayoutDescriptor&) final;
-    Ref<BindGroup> createBindGroup(const BindGroupDescriptor&) final;
+    RefPtr<BindGroupLayout> createBindGroupLayout(const BindGroupLayoutDescriptor&) final;
+    RefPtr<PipelineLayout> createPipelineLayout(const PipelineLayoutDescriptor&) final;
+    RefPtr<BindGroup> createBindGroup(const BindGroupDescriptor&) final;
 
-    Ref<ShaderModule> createShaderModule(const ShaderModuleDescriptor&) final;
-    Ref<ComputePipeline> createComputePipeline(const ComputePipelineDescriptor&) final;
-    Ref<RenderPipeline> createRenderPipeline(const RenderPipelineDescriptor&) final;
-    void createComputePipelineAsync(const ComputePipelineDescriptor&, CompletionHandler<void(RefPtr<ComputePipeline>&&)>&&) final;
-    void createRenderPipelineAsync(const RenderPipelineDescriptor&, CompletionHandler<void(RefPtr<RenderPipeline>&&)>&&) final;
+    RefPtr<ShaderModule> createShaderModule(const ShaderModuleDescriptor&) final;
+    RefPtr<ComputePipeline> createComputePipeline(const ComputePipelineDescriptor&) final;
+    RefPtr<RenderPipeline> createRenderPipeline(const RenderPipelineDescriptor&) final;
+    void createComputePipelineAsync(const ComputePipelineDescriptor&, CompletionHandler<void(RefPtr<ComputePipeline>&&, String&&)>&&) final;
+    void createRenderPipelineAsync(const RenderPipelineDescriptor&, CompletionHandler<void(RefPtr<RenderPipeline>&&, String&&)>&&) final;
 
-    Ref<CommandEncoder> createCommandEncoder(const std::optional<CommandEncoderDescriptor>&) final;
-    Ref<RenderBundleEncoder> createRenderBundleEncoder(const RenderBundleEncoderDescriptor&) final;
+    RefPtr<CommandEncoder> createCommandEncoder(const std::optional<CommandEncoderDescriptor>&) final;
+    RefPtr<RenderBundleEncoder> createRenderBundleEncoder(const RenderBundleEncoderDescriptor&) final;
 
-    Ref<QuerySet> createQuerySet(const QuerySetDescriptor&) final;
+    RefPtr<QuerySet> createQuerySet(const QuerySetDescriptor&) final;
 
     void pushErrorScope(ErrorFilter) final;
     void popErrorScope(CompletionHandler<void(bool, std::optional<Error>&&)>&&) final;

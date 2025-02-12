@@ -66,6 +66,10 @@ private:
 #if USE(AVFOUNDATION) || USE(GSTREAMER)
     size_t m_numberOfFrames { 0 };
 #endif
+#if USE(GSTREAMER)
+    GstAudioInfo m_info;
+    GRefPtr<GstCaps> m_caps;
+#endif
 };
 
 } // namespace WebCore

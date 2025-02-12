@@ -28,11 +28,11 @@
 #include "SVGGElement.h"
 #include "SVGGraphicsElement.h"
 #include "SVGUseElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGTransformableContainer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGTransformableContainer);
 
 LegacyRenderSVGTransformableContainer::LegacyRenderSVGTransformableContainer(SVGGraphicsElement& element, RenderStyle&& style)
     : LegacyRenderSVGContainer(Type::LegacySVGTransformableContainer, element, WTFMove(style))
@@ -42,21 +42,23 @@ LegacyRenderSVGTransformableContainer::LegacyRenderSVGTransformableContainer(SVG
     ASSERT(isLegacyRenderSVGTransformableContainer());
 }
 
+LegacyRenderSVGTransformableContainer::~LegacyRenderSVGTransformableContainer() = default;
+
 bool LegacyRenderSVGTransformableContainer::calculateLocalTransform()
 {
-    SVGGraphicsElement& element = graphicsElement();
+    Ref element = graphicsElement();
 
     // If we're either the renderer for a <use> element, or for any <g> element inside the shadow
     // tree, that was created during the use/symbol/svg expansion in SVGUseElement. These containers
     // need to respect the translations induced by their corresponding use elements x/y attributes.
-    auto* useElement = dynamicDowncast<SVGUseElement>(element);
-    if (!useElement && element.isInShadowTree() && is<SVGGElement>(element)) {
-        if (auto* correspondingElement = dynamicDowncast<SVGUseElement>(element.correspondingElement()))
+    RefPtr useElement = dynamicDowncast<SVGUseElement>(element.get());
+    if (!useElement && element->isInShadowTree() && is<SVGGElement>(element)) {
+        if (auto* correspondingElement = dynamicDowncast<SVGUseElement>(element->correspondingElement()))
             useElement = correspondingElement;
     }
 
     if (useElement) {
-        SVGLengthContext lengthContext(&element);
+        SVGLengthContext lengthContext(element.ptr());
         FloatSize translation(useElement->x().value(lengthContext), useElement->y().value(lengthContext));
         if (translation != m_lastTranslation)
             m_needsTransformUpdate = true;
@@ -73,7 +75,7 @@ bool LegacyRenderSVGTransformableContainer::calculateLocalTransform()
     if (!m_needsTransformUpdate)
         return false;
 
-    m_localTransform = element.animatedLocalTransform();
+    m_localTransform = element->animatedLocalTransform();
     m_localTransform.translate(m_lastTranslation);
     m_needsTransformUpdate = false;
     return true;

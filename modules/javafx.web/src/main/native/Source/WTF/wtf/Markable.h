@@ -131,15 +131,19 @@ public:
 
     void reset() { m_value = Traits::emptyValue(); }
 
-    constexpr const T& value() const& { return m_value; }
-    constexpr T& value() & { return m_value; }
-    constexpr T&& value() && { return WTFMove(m_value); }
+    constexpr const T& value() const& { RELEASE_ASSERT(bool(*this)); return m_value; }
+    constexpr T& value() & { RELEASE_ASSERT(bool(*this)); return m_value; }
+    constexpr T&& value() && { RELEASE_ASSERT(bool(*this)); return WTFMove(m_value); }
 
-    constexpr const T* operator->() const { return std::addressof(m_value); }
-    constexpr T* operator->() { return std::addressof(m_value); }
+    constexpr const T& unsafeValue() const& { return m_value; }
+    constexpr T& unsafeValue() & { return m_value; }
+    constexpr T&& unsafeValue() && { return WTFMove(m_value); }
 
-    constexpr const T& operator*() const& { return m_value; }
-    constexpr T& operator*() & { return m_value; }
+    constexpr const T* operator->() const { RELEASE_ASSERT(bool(*this)); return std::addressof(m_value); }
+    constexpr T* operator->() { RELEASE_ASSERT(bool(*this)); return std::addressof(m_value); }
+
+    constexpr const T& operator*() const& { RELEASE_ASSERT(bool(*this)); return m_value; }
+    constexpr T& operator*() & { RELEASE_ASSERT(bool(*this)); return m_value; }
 
     template <class U> constexpr T value_or(U&& fallback) const
     {
@@ -167,9 +171,6 @@ public:
         return std::optional<T>(*this);
     }
 
-    template<typename Encoder> void encode(Encoder&) const;
-    template<typename Decoder> static std::optional<Markable> decode(Decoder&);
-
 private:
     T m_value;
 };
@@ -190,35 +191,6 @@ template <typename T, typename Traits> constexpr bool operator==(const Markable<
 template <typename T, typename Traits> constexpr bool operator==(const Markable<T, Traits>& x, const T& v) { return bool(x) && x.value() == v; }
 template <typename T, typename Traits> constexpr bool operator==(const T& v, const Markable<T, Traits>& x) { return bool(x) && v == x.value(); }
 
-template <typename T, typename Traits>
-template<typename Encoder>
-void Markable<T, Traits>::encode(Encoder& encoder) const
-{
-    bool isEmpty = Traits::isEmptyValue(m_value);
-    encoder << isEmpty;
-    if (!isEmpty)
-        encoder << m_value;
-}
-
-template <typename T, typename Traits>
-template<typename Decoder>
-std::optional<Markable<T, Traits>> Markable<T, Traits>::decode(Decoder& decoder)
-{
-    std::optional<bool> isEmpty;
-    decoder >> isEmpty;
-    if (!isEmpty)
-        return std::nullopt;
-
-    if (*isEmpty)
-        return Markable { };
-
-    std::optional<T> value;
-    decoder >> value;
-    if (!value)
-        return std::nullopt;
-
-    return Markable { WTFMove(*value) };
-}
 
 } // namespace WTF
 

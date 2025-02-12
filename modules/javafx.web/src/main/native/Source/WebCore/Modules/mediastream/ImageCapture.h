@@ -42,11 +42,15 @@ class Logger;
 namespace WebCore {
 
 class ImageCapture : public RefCounted<ImageCapture>, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(ImageCapture);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ImageCapture);
 public:
     static ExceptionOr<Ref<ImageCapture>> create(Document&, Ref<MediaStreamTrack>);
 
     ~ImageCapture();
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void takePhoto(PhotoSettings&&, DOMPromiseDeferred<IDLInterface<Blob>>&&);
     void getPhotoCapabilities(DOMPromiseDeferred<IDLDictionary<PhotoCapabilities>>&&);
@@ -60,12 +64,9 @@ private:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return m_logger.get(); }
     const void* logIdentifier() const { return m_logIdentifier; }
-    const char* logClassName() const { return "ImageCapture"; }
+    ASCIILiteral logClassName() const { return "ImageCapture"_s; }
     WTFLogChannel& logChannel() const;
 #endif
-
-    // ActiveDOMObject API.
-    const char* activeDOMObjectName() const final;
 
     Ref<MediaStreamTrack> m_track;
 #if !RELEASE_LOG_DISABLED
