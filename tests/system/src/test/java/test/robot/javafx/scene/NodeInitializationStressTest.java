@@ -314,7 +314,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349004") // FIX
     @Test
     public void datePicker() {
         assumeFalse(SKIP_TEST);
@@ -323,12 +322,12 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new DatePickerSkin(c));
             return c;
         }, (c) -> {
-            c.show(); // fails here
+            accessControl(c);
             c.setValue(LocalDate.now());
             c.prefHeight(-1);
             c.setValue(LocalDate.EPOCH);
             c.prefWidth(-1);
-            accessControl(c);
+            c.show();
         });
     }
 
