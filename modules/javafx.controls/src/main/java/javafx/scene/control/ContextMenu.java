@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.IDProperty;
-import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.util.Utils;
-
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -44,6 +41,9 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.skin.ContextMenuSkin;
 import javafx.stage.Window;
+import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.util.Utils;
 
 /**
  * <p>
@@ -242,8 +242,9 @@ public class ContextMenu extends PopupControl {
      * @param dy the dy value for the y-axis
      */
      public void show(Node anchor, Side side, double dx, double dy) {
-        if (anchor == null) return;
-        if (getItems().size() == 0) return;
+        if ((anchor == null) || (getItems().size() == 0) || !Platform.isFxApplicationThread()) {
+            return;
+        }
 
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
         if (getScene().getStylesheets().isEmpty()) {

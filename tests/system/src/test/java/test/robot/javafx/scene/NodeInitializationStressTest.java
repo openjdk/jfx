@@ -386,7 +386,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349096") // FIX
     @Test
     public void menuButton() {
         assumeFalse(SKIP_TEST);
@@ -502,7 +501,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349096") // FIX
     @Test
     public void splitMenuButton() {
         assumeFalse(SKIP_TEST);
