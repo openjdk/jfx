@@ -29,6 +29,9 @@ CMFGSTBuffer::CMFGSTBuffer(DWORD cbMaxLength)
 {
     m_ulRefCount = 0;
 
+    m_ulLockCount = 0;
+    InitializeCriticalSection(&m_csBufferLock);
+
     m_cbMaxLength = cbMaxLength;
     m_cbCurrentLength = 0;
     m_pbBuffer = NULL;
@@ -60,6 +63,8 @@ CMFGSTBuffer::~CMFGSTBuffer()
         gst_buffer_unref(m_pGstBuffer);
         m_pGstBuffer = NULL;
     }
+
+    DeleteCriticalSection(&m_csBufferLock);
 }
 
  // IMFMediaBuffer
@@ -98,34 +103,59 @@ HRESULT CMFGSTBuffer::SetCurrentLength(DWORD cbCurrentLength)
 
 HRESULT CMFGSTBuffer::Lock(BYTE **ppbBuffer, DWORD *pcbMaxLength, DWORD *pcbCurrentLength)
 {
+    HRESULT hr = E_FAIL;
+
     if (ppbBuffer == NULL)
         return E_INVALIDARG;
 
     if (m_cbMaxLength == 0)
         return E_INVALIDARG;
 
-    HRESULT hr = AllocateOrGetBuffer(ppbBuffer);
-    if (FAILED(hr))
-        return hr;
+    EnterCriticalSection(&m_csBufferLock);
+    // Unlikely Lock() will be called in infinite loop.
+    if (m_ulLockCount != ULONG_MAX)
+    {
+        hr = AllocateOrGetBuffer(ppbBuffer);
+        if (SUCCEEDED(hr))
+        {
+           if (pcbMaxLength != NULL)
+                (*pcbMaxLength) = m_cbMaxLength;
 
-    if (pcbMaxLength != NULL)
-        (*pcbMaxLength) = m_cbMaxLength;
+            if (pcbCurrentLength != NULL)
+                (*pcbCurrentLength) = m_cbCurrentLength;
 
-    if (pcbCurrentLength != NULL)
-        (*pcbCurrentLength) = m_cbCurrentLength;
+            // Increment lock count when we provided buffer. Lock() can be called
+            // multiple times and memory pointer should stay valid until last
+            // Unlock() called. The caller MUST match Lock() / Unlock() calls
+            // based on documentation.
+            m_ulLockCount++;
+        }
+    }
 
-    return S_OK;
+    LeaveCriticalSection(&m_csBufferLock);
+
+    return hr;
 }
 
 HRESULT CMFGSTBuffer::Unlock()
 {
-    if (m_bUnmapGstBuffer)
-    {
-        gst_buffer_unmap(m_pGstBuffer, &m_GstMapInfo);
-        m_bUnmapGstBuffer = FALSE;
-    }
+    HRESULT hr = E_FAIL;
 
-    return S_OK;
+    EnterCriticalSection(&m_csBufferLock);
+    // If Unlock() called without Lock() we should fail.
+    if (m_ulLockCount > 0)
+    {
+        m_ulLockCount--;
+        if (m_ulLockCount == 0 && m_bUnmapGstBuffer)
+        {
+            gst_buffer_unmap(m_pGstBuffer, &m_GstMapInfo);
+            m_bUnmapGstBuffer = FALSE;
+        }
+        hr = S_OK;
+    }
+    LeaveCriticalSection(&m_csBufferLock);
+
+    return hr;
 }
 
 // IUnknown
@@ -173,7 +203,7 @@ HRESULT CMFGSTBuffer::GetGstBuffer(GstBuffer **ppBuffer)
     if (ppBuffer == NULL)
         return E_INVALIDARG;
 
-    // If we do not have GStreamer buffer or it is still locked
+    // If we do not have GStreamer buffer or if it is still locked
     // return E_UNEXPECTED. Such condition should not happen, but
     // just in case we need to check for it.
     if (m_pGstBuffer == NULL || m_bUnmapGstBuffer)
@@ -212,50 +242,61 @@ HRESULT CMFGSTBuffer::AllocateOrGetBuffer(BYTE **ppbBuffer)
     if (ppbBuffer == NULL)
         return E_INVALIDARG;
 
-    // If we have GStreamer get buffer cllback set, then call it to get
-    // buffer. Otherwsie allocate memory internally.
-    if (GetGstBufferCallback != NULL && m_pGstBuffer == NULL)
+    // If we have GStreamer get buffer callback set, then call it to get
+    // buffer. Otherwise allocate memory internally.
+    if (GetGstBufferCallback != NULL)
     {
-        GetGstBufferCallback(&m_pGstBuffer, (long)m_cbMaxLength, &m_CallbackData);
+        // Get buffer if needed
         if (m_pGstBuffer == NULL)
-            return E_OUTOFMEMORY;
-
-        if (!gst_buffer_map(m_pGstBuffer, &m_GstMapInfo, GST_MAP_READWRITE))
-            return E_FAIL;
-
-        // Just in case check that we got right buffer size.
-        // GStreamer buffer can be bigger due to alligment.
-        if (m_GstMapInfo.maxsize < m_cbMaxLength)
         {
-            gst_buffer_unmap(m_pGstBuffer, &m_GstMapInfo);
-            // INLINE - gst_buffer_unref()
-            gst_buffer_unref(m_pGstBuffer);
-            m_pGstBuffer = NULL;
-            return E_FAIL;
+            GetGstBufferCallback(&m_pGstBuffer, (long)m_cbMaxLength, &m_CallbackData);
+            if (m_pGstBuffer == NULL)
+                return E_OUTOFMEMORY;
         }
 
-        m_bUnmapGstBuffer = TRUE;
+        // Lock can be called multiple times, so if we have GStreamer buffer
+        // allocated and mapped just return it.
+        if (m_bUnmapGstBuffer)
+        {
+            (*ppbBuffer) = m_GstMapInfo.data;
+        }
+        else
+        {
+            // Map buffer and return it.
+            if (!gst_buffer_map(m_pGstBuffer, &m_GstMapInfo, GST_MAP_READWRITE))
+                return E_FAIL;
 
-        (*ppbBuffer) = m_GstMapInfo.data;
+            // Just in case check that we got right buffer size.
+            // GStreamer buffer can be bigger due to alligment.
+            if (m_GstMapInfo.maxsize < m_cbMaxLength)
+            {
+                gst_buffer_unmap(m_pGstBuffer, &m_GstMapInfo);
+                // INLINE - gst_buffer_unref()
+                gst_buffer_unref(m_pGstBuffer);
+                m_pGstBuffer = NULL;
+                return E_FAIL;
+            }
+
+            m_bUnmapGstBuffer = TRUE;
+
+            (*ppbBuffer) = m_GstMapInfo.data;
+        }
     }
-    // Lock can be called multiple times, so if we have GStreamer buffer
-    // allocated just return it.
-    else if (GetGstBufferCallback != NULL && m_pGstBuffer != NULL && m_bUnmapGstBuffer)
+    else
     {
-        (*ppbBuffer) = m_GstMapInfo.data;
-    }
-    // Allocate new buffer if needed
-    else if (m_pbBuffer == NULL)
-    {
-        m_pbBuffer = new (nothrow) BYTE[m_cbMaxLength];
+        // Allocate new buffer if needed
         if (m_pbBuffer == NULL)
-            return E_OUTOFMEMORY;
+        {
+            m_pbBuffer = new (nothrow) BYTE[m_cbMaxLength];
+            if (m_pbBuffer == NULL)
+                return E_OUTOFMEMORY;
 
-        (*ppbBuffer) = m_pbBuffer;
-    }
-    else if (m_pbBuffer != NULL)
-    {
-        (*ppbBuffer) = m_pbBuffer;
+            (*ppbBuffer) = m_pbBuffer;
+        }
+        else if (m_pbBuffer != NULL)
+        {
+            (*ppbBuffer) = m_pbBuffer;
+        }
     }
 
     return S_OK;

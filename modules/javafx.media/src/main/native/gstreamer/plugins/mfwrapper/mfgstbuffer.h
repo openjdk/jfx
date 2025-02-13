@@ -66,8 +66,15 @@ public:
 private:
     HRESULT AllocateOrGetBuffer(BYTE **ppbBuffer);
 
-private:
     ULONG m_ulRefCount;
+
+    // Used to unlock buffer with last Unlock() call. Lock() / Unlock() can be
+    // called multiple times, but the caller should match calls for
+    // Lock() / Unlock().
+    ULONG m_ulLockCount;
+    // Used to protect Lock() / Unlock() which can be called by
+    // multiple threads.
+    CRITICAL_SECTION m_csBufferLock;
 
     DWORD m_cbMaxLength;
     DWORD m_cbCurrentLength;

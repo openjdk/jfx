@@ -908,7 +908,7 @@ static void mfwrapper_get_gst_buffer_src(GstBuffer **ppBuffer, long lSize,
 }
 
 // Gets max length of configured media buffer we using for final rendering from
-// decoder ot color convert.
+// decoder or color convert.
 static HRESULT mfwrapper_get_media_buffer_max_length(GstMFWrapper *decoder, DWORD *pdwMaxLength)
 {
     HRESULT hr = S_OK;
