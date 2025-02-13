@@ -383,7 +383,6 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         bool isPopup = (jStyleMask & com_sun_glass_ui_Window_POPUP) != 0;
         bool isUnified = (jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0;
         bool isExtended = (jStyleMask & com_sun_glass_ui_Window_EXTENDED) != 0;
-        bool isNonClientOverlay = (jStyleMask & com_sun_glass_ui_Window_NON_CLIENT_OVERLAY) != 0;
 
         NSUInteger styleMask = NSWindowStyleMaskBorderless;
         // only titled windows get title
@@ -449,14 +448,6 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setTitleVisibility:NSWindowTitleHidden];
             [window->nsWindow setTitlebarAppearsTransparent:YES];
             [window->nsWindow setToolbar:[NSToolbar new]];
-
-            // An extended window without non-client controls has no visible standard window buttons.
-            if (!isNonClientOverlay) {
-                [[window->nsWindow standardWindowButton:NSWindowCloseButton] setHidden:YES];
-                [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
-                [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:YES];
-                window->isStandardButtonsVisible = NO;
-            }
         }
 
         if (isUnified) {
@@ -1527,21 +1518,28 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1performTitleBarDoub
 
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _setToolbarStyle
- * Signature: (JI)V
+ * Method:    _setWindowButtonStyle
+ * Signature: (JIZ)V
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setToolbarStyle
-(JNIEnv *env, jobject jWindow, jlong jPtr, jint style)
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setWindowButtonStyle
+(JNIEnv *env, jobject jWindow, jlong jPtr, jint toolbarStyle, jboolean buttonsVisible)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setToolbarStyle");
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setWindowButtonStyle");
     if (!jPtr) return;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        if (window && window->nsWindow) {
-            [window->nsWindow setToolbarStyle:style];
+        if (window) {
+            window->isStandardButtonsVisible = buttonsVisible;
+
+            if (window->nsWindow) {
+                [window->nsWindow setToolbarStyle:toolbarStyle];
+                [[window->nsWindow standardWindowButton:NSWindowCloseButton] setHidden:!buttonsVisible];
+                [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:!buttonsVisible];
+                [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:!buttonsVisible];
+            }
         }
     }
     GLASS_POOL_EXIT;

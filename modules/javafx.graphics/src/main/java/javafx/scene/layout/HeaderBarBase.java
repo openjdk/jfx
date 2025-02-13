@@ -25,14 +25,14 @@
 
 package javafx.scene.layout;
 
-import com.sun.glass.ui.WindowControlsMetrics;
+import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.javafx.scene.layout.HeaderButtonBehavior;
 import com.sun.javafx.stage.StageHelper;
-import com.sun.javafx.tk.quantum.WindowStage;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Dimension2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -40,7 +40,6 @@ import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.Window;
 import javafx.util.Subscription;
 
 /**
@@ -102,7 +101,7 @@ public abstract class HeaderBarBase extends Region {
      * @param child the child node
      * @param value the {@code HeaderButtonType}, or {@code null}
      */
-    public static void setHeaderButtonType(Node child, HeaderButtonType value) {
+    public static void setButtonType(Node child, HeaderButtonType value) {
         Pane.setConstraint(child, HEADER_BUTTON_TYPE, value);
 
         if (child.getProperties().get(HeaderButtonBehavior.class) instanceof HeaderButtonBehavior behavior) {
@@ -122,51 +121,75 @@ public abstract class HeaderBarBase extends Region {
      * @param child the child node
      * @return the {@code HeaderButtonType}, or {@code null}
      */
-    public static HeaderButtonType getHeaderButtonType(Node child) {
+    public static HeaderButtonType getButtonType(Node child) {
         return (HeaderButtonType)Pane.getConstraint(child, HEADER_BUTTON_TYPE);
     }
 
-    private Subscription subscription;
-    private WindowControlsMetrics currentMetrics;
+    /**
+     * Sentinel value that can be used for {@link #setPrefButtonHeight(Stage, double)} to indicate that
+     * the platform should choose the platform-specific default button height.
+     */
+    public static final double USE_DEFAULT_SIZE = -1;
+
+    /**
+     * Specifies the preferred height of the system-provided header buttons of the specified stage.
+     * <p>
+     * Any value except zero and {@link #USE_DEFAULT_SIZE} is only a hint for the platform window toolkit.
+     * The platform might accommodate the preferred height in various ways, such as by stretching the header
+     * buttons (fully or partially) to fill the preferred height, or centering the header buttons (fully or
+     * partially) within the preferred height. Some platforms might only accommodate the preferred height
+     * within platform-specific constraints, or ignore it entirely.
+     * <p>
+     * Setting the preferred height to zero hides the system-provided header buttons, allowing applications to
+     * use custom header buttons instead (see {@link #setButtonType(Node, HeaderButtonType)}).
+     * <p>
+     * The default value {@code #USE_DEFAULT_SIZE} indicates that the platform should choose the button height.
+     *
+     * @param stage the {@code Stage}
+     * @param height the preferred height, or 0 to hide the system-provided header buttons
+     */
+    public static void setPrefButtonHeight(Stage stage, double height) {
+        StageHelper.setPrefHeaderButtonHeight(stage, height);
+    }
+
+    /**
+     * Returns the preferred height of the system-provided header buttons of the specified stage.
+     *
+     * @param stage the {@code Stage}
+     * @return the preferred height of the system-provided header buttons
+     */
+    public static double getPrefButtonHeight(Stage stage) {
+        return StageHelper.getPrefHeaderButtonHeight(stage);
+    }
+
+    private Subscription subscription = Subscription.EMPTY;
+    private HeaderButtonMetrics currentMetrics;
     private boolean currentFullScreen;
 
     /**
      * Constructor called by subclasses.
      */
     protected HeaderBarBase() {
-        var stage = sceneProperty()
+        ObservableValue<Stage> stage = sceneProperty()
             .flatMap(Scene::windowProperty)
             .map(w -> w instanceof Stage s ? s : null);
-
-        stage.flatMap(Window::showingProperty)
-            .orElse(false)
-            .subscribe(this::onShowingChanged);
 
         stage.flatMap(Stage::fullScreenProperty)
             .orElse(false)
             .subscribe(this::onFullScreenChanged);
+
+        stage.subscribe(this::onStageChanged);
     }
 
-    private void onShowingChanged(boolean showing) {
-        if (!showing) {
-            if (subscription != null) {
-                subscription.unsubscribe();
-                subscription = null;
-            }
-        } else if (getScene().getWindow() instanceof Stage stage
-                   && StageHelper.getPeer(stage) instanceof WindowStage windowStage) {
-            subscription = Subscription.combine(
-                windowStage
-                    .getPlatformWindow()
-                    .windowControlsMetricsProperty()
-                    .subscribe(this::onMetricsChanged),
-                windowStage
-                    .getPlatformWindow()
-                    .registerHeaderBar(this));
+    private void onStageChanged(Stage stage) {
+        subscription.unsubscribe();
+
+        if (stage != null) {
+            subscription = StageHelper.getHeaderButtonMetrics(stage).subscribe(this::onMetricsChanged);
         }
     }
 
-    private void onMetricsChanged(WindowControlsMetrics metrics) {
+    private void onMetricsChanged(HeaderButtonMetrics metrics) {
         currentMetrics = metrics;
         updateInsets();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,15 +30,17 @@ import javafx.stage.StageStyle;
 import java.util.Objects;
 
 /**
- * Provides metrics about the window buttons of {@link StageStyle#EXTENDED} windows.
+ * Provides metrics about the header buttons of {@link StageStyle#EXTENDED} windows.
  *
  * @param leftInset the size of the left inset
  * @param rightInset the size of the right inset
  * @param minHeight the minimum height of the window buttons
  */
-public record WindowControlsMetrics(Dimension2D leftInset, Dimension2D rightInset, double minHeight) {
+public record HeaderButtonMetrics(Dimension2D leftInset, Dimension2D rightInset, double minHeight) {
 
-    public WindowControlsMetrics {
+    public static HeaderButtonMetrics EMPTY = new HeaderButtonMetrics(new Dimension2D(0, 0), new Dimension2D(0, 0), 0);
+
+    public HeaderButtonMetrics {
         Objects.requireNonNull(leftInset);
         Objects.requireNonNull(rightInset);
 

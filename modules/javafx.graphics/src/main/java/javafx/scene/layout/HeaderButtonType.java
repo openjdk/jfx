@@ -34,7 +34,7 @@ import javafx.stage.Stage;
  * will summon snap layouts.
  *
  * @since 25
- * @see HeaderBarBase#setHeaderButtonType(Node, HeaderButtonType)
+ * @see HeaderBarBase#setButtonType(Node, HeaderButtonType)
  */
 public enum HeaderButtonType {
 

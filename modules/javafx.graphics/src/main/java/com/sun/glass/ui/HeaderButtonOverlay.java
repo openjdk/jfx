@@ -28,18 +28,22 @@ package com.sun.glass.ui;
 import com.sun.glass.events.MouseEvent;
 import com.sun.javafx.binding.ObjectConstant;
 import com.sun.javafx.util.Utils;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.SimpleStyleableBooleanProperty;
+import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableIntegerProperty;
 import javafx.css.SimpleStyleableObjectProperty;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
@@ -49,6 +53,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.layout.HeaderBarBase;
+import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
@@ -66,16 +72,16 @@ import java.util.stream.Stream;
  *
  * <h2>Substructure</h2>
  * <ul>
- *     <li>{@link Region} — {@code window-button-container}
+ *     <li>{@link Region} — {@code header-button-container}
  *     <ul>
- *         <li>{@link Region} — {@code window-button}, {@code minimize-button}
- *         <li>{@link Region} — {@code window-button}, {@code maximize-button}
- *         <li>{@link Region} — {@code window-button}, {@code close-button}
+ *         <li>{@link Region} — {@code header-button}, {@code iconify-button}
+ *         <li>{@link Region} — {@code header-button}, {@code maximize-button}
+ *         <li>{@link Region} — {@code header-button}, {@code close-button}
  *     </ul>
  * </ul>
  *
  * <table style="white-space: nowrap">
- *     <caption>CSS properties of {@code window-button-container}</caption>
+ *     <caption>CSS properties of {@code header-button-container}</caption>
  *     <thead>
  *         <tr><th>CSS property</th><th>Values</th><th>Default</th><th>Comment</th></tr>
  *     </thead>
@@ -83,20 +89,34 @@ import java.util.stream.Stream;
  *         <tr>
  *             <th>-fx-button-placement</th><td>[ left | right ]</td><td>right</td>
  *             <td style="white-space: break-line">
- *                 Specifies the placement of the window buttons on the left or the right side of the window.
+ *                 Specifies the placement of the header buttons on the left or the right side of the window.
+ *             </td>
+ *         </tr>
+ *         <tr>
+ *             <th>-fx-button-vertical-alignment</th><td>[ center | stretch ]</td><td>center</td>
+ *             <td style="white-space: break-line">
+ *                 Specifies the vertical alignment of the header buttons, either centering the buttons
+ *                 within the preferred height or stretching the buttons to fill the preferred height.
+ *             </td>
+ *         </tr>
+ *         <tr>
+ *             <th>-fx-button-default-height</th><td>&lt;double&gt;</td><td>0</td>
+ *             <td style="white-space: break-line">
+ *                 Specifies the default height of the header buttons, which is used when the application
+ *                 does not specify a preferred button height.
  *             </td>
  *         </tr>
  *         <tr>
  *             <th>-fx-allow-rtl</th><td>&lt;boolean&gt;</td><td>true</td>
  *             <td style="white-space: break-line">
- *                 Specifies whether the minimize/maximize/close buttons support right-to-left orientations.
+ *                 Specifies whether the iconify/maximize/close buttons support right-to-left orientations.
  *             </td>
  *         </tr>
  *     </tbody>
  * </table>
  *
  * <table style="white-space: nowrap">
- *     <caption>CSS properties of {@code minimize-button}, {@code maximize-button}, {@code close-button}</caption>
+ *     <caption>CSS properties of {@code iconify-button}, {@code maximize-button}, {@code close-button}</caption>
  *     <thead>
  *         <tr><th>CSS property</th><th>Values</th><th>Default</th><th>Comment</th></tr>
  *     </thead>
@@ -127,39 +147,70 @@ import java.util.stream.Stream;
  *     </tbody>
  * </table>
  */
-public final class WindowControlsOverlay extends Region {
+public final class HeaderButtonOverlay extends Region {
 
-    private static final CssMetaData<WindowControlsOverlay, ButtonPlacement> BUTTON_PLACEMENT_METADATA =
+    private static final CssMetaData<HeaderButtonOverlay, Number> BUTTON_DEFAULT_HEIGHT_METADATA =
+        new CssMetaData<>("-fx-button-default-height", StyleConverter.getSizeConverter()) {
+            @Override
+            public boolean isSettable(HeaderButtonOverlay overlay) {
+                return true;
+            }
+
+            @Override
+            public StyleableProperty<Number> getStyleableProperty(HeaderButtonOverlay overlay) {
+                return overlay.buttonDefaultHeight;
+            }
+        };
+
+    private static final CssMetaData<HeaderButtonOverlay, ButtonPlacement> BUTTON_PLACEMENT_METADATA =
         new CssMetaData<>("-fx-button-placement",
                 StyleConverter.getEnumConverter(ButtonPlacement.class),
                 ButtonPlacement.RIGHT) {
             @Override
-            public boolean isSettable(WindowControlsOverlay overlay) {
+            public boolean isSettable(HeaderButtonOverlay overlay) {
                 return true;
             }
 
             @Override
-            public StyleableProperty<ButtonPlacement> getStyleableProperty(WindowControlsOverlay overlay) {
+            public StyleableProperty<ButtonPlacement> getStyleableProperty(HeaderButtonOverlay overlay) {
                 return overlay.buttonPlacement;
             }
         };
 
-    private static final CssMetaData<WindowControlsOverlay, Boolean> ALLOW_RTL_METADATA =
-        new CssMetaData<>("-fx-allow-rtl", StyleConverter.getBooleanConverter(), true) {
+    private static final CssMetaData<HeaderButtonOverlay, ButtonVerticalAlignment> BUTTON_VERTICAL_ALIGNMENT_METADATA =
+        new CssMetaData<>("-fx-button-vertical-alignment",
+                StyleConverter.getEnumConverter(ButtonVerticalAlignment.class),
+                ButtonVerticalAlignment.CENTER) {
             @Override
-            public boolean isSettable(WindowControlsOverlay overlay) {
+            public boolean isSettable(HeaderButtonOverlay overlay) {
                 return true;
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(WindowControlsOverlay overlay) {
+            public StyleableProperty<ButtonVerticalAlignment> getStyleableProperty(HeaderButtonOverlay overlay) {
+                return overlay.buttonVerticalAlignment;
+            }
+        };
+
+    private static final CssMetaData<HeaderButtonOverlay, Boolean> ALLOW_RTL_METADATA =
+        new CssMetaData<>("-fx-allow-rtl", StyleConverter.getBooleanConverter(), true) {
+            @Override
+            public boolean isSettable(HeaderButtonOverlay overlay) {
+                return true;
+            }
+
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(HeaderButtonOverlay overlay) {
                 return overlay.allowRtl;
             }
         };
 
     private static final List<CssMetaData<?, ?>> METADATA =
         Stream.concat(getClassCssMetaData().stream(),
-        Stream.of(BUTTON_PLACEMENT_METADATA, ALLOW_RTL_METADATA)).toList();
+        Stream.of(BUTTON_DEFAULT_HEIGHT_METADATA,
+                  BUTTON_PLACEMENT_METADATA,
+                  BUTTON_VERTICAL_ALIGNMENT_METADATA,
+                  ALLOW_RTL_METADATA)).toList();
 
     private static final PseudoClass HOVER_PSEUDOCLASS = PseudoClass.getPseudoClass("hover");
     private static final PseudoClass PRESSED_PSEUDOCLASS = PseudoClass.getPseudoClass("pressed");
@@ -169,13 +220,30 @@ public final class WindowControlsOverlay extends Region {
     private static final String UTILITY_STYLE_CLASS = "utility";
 
     /**
-     * The metrics (placement and size) of the window buttons.
+     * The metrics (placement and size) of header buttons.
      */
-    private final ObjectProperty<WindowControlsMetrics> metrics = new SimpleObjectProperty<>(
-        this, "metrics", new WindowControlsMetrics(new Dimension2D(0, 0), new Dimension2D(0, 0), 0));
+    private final ObjectProperty<HeaderButtonMetrics> metrics = new SimpleObjectProperty<>(
+        this, "metrics", new HeaderButtonMetrics(new Dimension2D(0, 0), new Dimension2D(0, 0), 0));
 
     /**
-     * Specifies the placement of the window buttons on the left or the right side of the window.
+     * Specifies the preferred height of header buttons.
+     * <p>
+     * Negative values are interpreted as "no preference", which causes the buttons to be laid out
+     * with their preferred height set to the value of {@link #buttonDefaultHeight}.
+     */
+    private final DoubleProperty prefButtonHeight = new SimpleDoubleProperty(
+        this, "prefButtonHeight", HeaderBarBase.USE_DEFAULT_SIZE);
+
+    /**
+     * Specifies the default height of header buttons.
+     * <p>
+     * This property corresponds to the {@code -fx-button-default-height} CSS property.
+     */
+    private final StyleableDoubleProperty buttonDefaultHeight = new SimpleStyleableDoubleProperty(
+        BUTTON_DEFAULT_HEIGHT_METADATA, this, "buttonDefaultHeight");
+
+    /**
+     * Specifies the placement of the header buttons on the left or the right side of the window.
      * <p>
      * This property corresponds to the {@code -fx-button-placement} CSS property.
      */
@@ -189,10 +257,25 @@ public final class WindowControlsOverlay extends Region {
         };
 
     /**
-     * Specifies whether the minimize/maximize/close buttons support right-to-left orientations.
+     * Specifies the vertical alignment of the header buttons.
+     * <p>
+     * This property corresponds to the {@code -fx-button-vertical-alignment} CSS property.
+     */
+    private final StyleableObjectProperty<ButtonVerticalAlignment> buttonVerticalAlignment =
+        new SimpleStyleableObjectProperty<>(
+                BUTTON_VERTICAL_ALIGNMENT_METADATA, this, "buttonVerticalAlignment",
+                ButtonVerticalAlignment.CENTER) {
+            @Override
+            protected void invalidated() {
+                requestLayout();
+            }
+        };
+
+    /**
+     * Specifies whether the iconify/maximize/close buttons support right-to-left orientations.
      * <p>
      * If this property is {@code true} and the effective node orientation is right-to-left, the
-     * window buttons are mirrored to the other side of the window.
+     * header buttons are mirrored to the other side of the window.
      * <p>
      * This property corresponds to the {@code -fx-allow-rtl} CSS property.
      */
@@ -209,16 +292,16 @@ public final class WindowControlsOverlay extends Region {
      * This list is automatically updated by the implementation of {@link ButtonRegion#buttonOrder}.
      */
     private final List<ButtonRegion> orderedButtons = new ArrayList<>(3);
-    private final ButtonRegion minimizeButton = new ButtonRegion(ButtonType.MINIMIZE, "minimize-button", 0);
-    private final ButtonRegion maximizeButton = new ButtonRegion(ButtonType.MAXIMIZE, "maximize-button", 1);
-    private final ButtonRegion closeButton = new ButtonRegion(ButtonType.CLOSE, "close-button", 2);
+    private final ButtonRegion iconifyButton = new ButtonRegion(HeaderButtonType.ICONIFY, "iconify-button", 0);
+    private final ButtonRegion maximizeButton = new ButtonRegion(HeaderButtonType.MAXIMIZE, "maximize-button", 1);
+    private final ButtonRegion closeButton = new ButtonRegion(HeaderButtonType.CLOSE, "close-button", 2);
     private final Subscription subscriptions;
     private final boolean utility;
     private final boolean rightToLeft;
 
     private Node buttonAtMouseDown;
 
-    public WindowControlsOverlay(ObservableValue<String> stylesheet, boolean utility, boolean rightToLeft) {
+    public HeaderButtonOverlay(ObservableValue<String> stylesheet, boolean utility, boolean rightToLeft) {
         this.utility = utility;
         this.rightToLeft = rightToLeft;
 
@@ -252,17 +335,19 @@ public final class WindowControlsOverlay extends Region {
             resizableSubscription,
             maximizedSubscription,
             updateStylesheetSubscription,
-            stylesheet.subscribe(this::updateStylesheet));
+            stylesheet.subscribe(this::updateStylesheet),
+            prefButtonHeight.subscribe(this::requestLayout),
+            buttonDefaultHeight.subscribe(this::requestLayout));
 
-        getStyleClass().setAll("window-button-container");
+        getStyleClass().setAll("header-button-container");
 
         if (utility) {
-            minimizeButton.managedProperty().bind(ObjectConstant.valueOf(false));
+            iconifyButton.managedProperty().bind(ObjectConstant.valueOf(false));
             maximizeButton.managedProperty().bind(ObjectConstant.valueOf(false));
             getChildren().add(closeButton);
             getStyleClass().add(UTILITY_STYLE_CLASS);
         } else {
-            getChildren().addAll(minimizeButton, maximizeButton, closeButton);
+            getChildren().addAll(iconifyButton, maximizeButton, closeButton);
         }
     }
 
@@ -270,8 +355,12 @@ public final class WindowControlsOverlay extends Region {
         subscriptions.unsubscribe();
     }
 
-    public ReadOnlyObjectProperty<WindowControlsMetrics> metricsProperty() {
+    public ReadOnlyObjectProperty<HeaderButtonMetrics> metricsProperty() {
         return metrics;
+    }
+
+    public DoubleProperty prefButtonHeightProperty() {
+        return prefButtonHeight;
     }
 
     /**
@@ -282,7 +371,7 @@ public final class WindowControlsOverlay extends Region {
      * @param y the Y coordinate, in pixels relative to the window
      * @return the {@code ButtonType} or {@code null}
      */
-    public ButtonType buttonAt(double x, double y) {
+    public HeaderButtonType buttonAt(double x, double y) {
         if (!utility) {
             for (var button : orderedButtons) {
                 if (button.isVisible() && button.getBoundsInParent().contains(x, y)) {
@@ -290,7 +379,7 @@ public final class WindowControlsOverlay extends Region {
                 }
             }
         } else if (closeButton.isVisible() && closeButton.getBoundsInParent().contains(x, y)) {
-            return ButtonType.CLOSE;
+            return HeaderButtonType.CLOSE;
         }
 
         return null;
@@ -306,9 +395,9 @@ public final class WindowControlsOverlay extends Region {
      * @return {@code true} if the event was handled, {@code false} otherwise
      */
     public boolean handleMouseEvent(int type, int button, double x, double y) {
-        ButtonType buttonType = buttonAt(x, y);
+        HeaderButtonType buttonType = buttonAt(x, y);
         Node node = buttonType != null ? switch (buttonType) {
-            case MINIMIZE -> minimizeButton;
+            case ICONIFY -> iconifyButton;
             case MAXIMIZE -> maximizeButton;
             case CLOSE -> closeButton;
         } : null;
@@ -331,7 +420,7 @@ public final class WindowControlsOverlay extends Region {
     }
 
     private void handleMouseOver(Node button) {
-        minimizeButton.pseudoClassStateChanged(HOVER_PSEUDOCLASS, button == minimizeButton);
+        iconifyButton.pseudoClassStateChanged(HOVER_PSEUDOCLASS, button == iconifyButton);
         maximizeButton.pseudoClassStateChanged(HOVER_PSEUDOCLASS, button == maximizeButton);
         closeButton.pseudoClassStateChanged(HOVER_PSEUDOCLASS, button == closeButton);
 
@@ -343,7 +432,7 @@ public final class WindowControlsOverlay extends Region {
     private void handleMouseExit() {
         buttonAtMouseDown = null;
 
-        for (var node : new Node[] {minimizeButton, maximizeButton, closeButton}) {
+        for (var node : new Node[] {iconifyButton, maximizeButton, closeButton}) {
             node.pseudoClassStateChanged(HOVER_PSEUDOCLASS, false);
             node.pseudoClassStateChanged(PRESSED_PSEUDOCLASS, false);
         }
@@ -357,7 +446,7 @@ public final class WindowControlsOverlay extends Region {
         }
     }
 
-    private void handleMouseUp(Node node, ButtonType buttonType) {
+    private void handleMouseUp(Node node, HeaderButtonType buttonType) {
         boolean releasedOnButton = (buttonAtMouseDown == node);
         buttonAtMouseDown = null;
         Scene scene = getScene();
@@ -371,7 +460,7 @@ public final class WindowControlsOverlay extends Region {
 
         if (releasedOnButton) {
             switch (buttonType) {
-                case MINIMIZE -> stage.setIconified(true);
+                case ICONIFY -> stage.setIconified(true);
                 case MAXIMIZE -> stage.setMaximized(!stage.isMaximized());
                 case CLOSE -> stage.close();
             }
@@ -379,7 +468,7 @@ public final class WindowControlsOverlay extends Region {
     }
 
     private void onFocusedChanged(boolean focused) {
-        minimizeButton.pseudoClassStateChanged(ACTIVE_PSEUDOCLASS, focused);
+        iconifyButton.pseudoClassStateChanged(ACTIVE_PSEUDOCLASS, focused);
         maximizeButton.pseudoClassStateChanged(ACTIVE_PSEUDOCLASS, focused);
         closeButton.pseudoClassStateChanged(ACTIVE_PSEUDOCLASS, focused);
     }
@@ -394,7 +483,7 @@ public final class WindowControlsOverlay extends Region {
 
     private void updateStyleClass() {
         boolean darkScene = isDarkBackground(getScene() != null ? getScene().getFill() : null);
-        toggleStyleClass(minimizeButton, DARK_STYLE_CLASS, darkScene);
+        toggleStyleClass(iconifyButton, DARK_STYLE_CLASS, darkScene);
         toggleStyleClass(maximizeButton, DARK_STYLE_CLASS, darkScene);
         toggleStyleClass(closeButton, DARK_STYLE_CLASS, darkScene);
     }
@@ -415,10 +504,28 @@ public final class WindowControlsOverlay extends Region {
         return paint != null && Utils.calculateAverageBrightness(paint) < 0.5;
     }
 
+    private double getEffectiveButtonHeight() {
+        double prefHeight = prefButtonHeight.get();
+        return prefHeight >= 0 ? prefHeight : buttonDefaultHeight.get();
+    }
+
+    private double getButtonOffsetY(double buttonHeight) {
+        return switch (buttonVerticalAlignment.get()) {
+            case STRETCH -> 0;
+            case CENTER -> (getEffectiveButtonHeight() - buttonHeight) / 2;
+        };
+    }
+
+    private void ensureRegionPrefHeight(Region region, double prefHeight) {
+        if (region.getPrefHeight() != prefHeight) {
+            region.setPrefHeight(prefHeight);
+        }
+    }
+
     @Override
     protected void layoutChildren() {
         boolean left;
-        Node button1, button2, button3;
+        Region button1, button2, button3;
 
         if (allowRtl.get() && rightToLeft) {
             button1 = orderedButtons.get(2);
@@ -432,6 +539,15 @@ public final class WindowControlsOverlay extends Region {
             left = buttonPlacement.get() == ButtonPlacement.LEFT;
         }
 
+        double buttonHeight = switch (buttonVerticalAlignment.get()) {
+            case STRETCH -> getEffectiveButtonHeight();
+            case CENTER -> buttonDefaultHeight.get();
+        };
+
+        ensureRegionPrefHeight(button1, buttonHeight);
+        ensureRegionPrefHeight(button2, buttonHeight);
+        ensureRegionPrefHeight(button3, buttonHeight);
+
         double width = getWidth();
         double button1Width = snapSizeX(boundedWidth(button1));
         double button2Width = snapSizeX(boundedWidth(button2));
@@ -443,25 +559,54 @@ public final class WindowControlsOverlay extends Region {
         double button2X = snapPositionX(left ? button1Width : width - button3Width - button2Width);
         double button3X = snapPositionX(left ? button1Width + button2Width : width - button3Width);
         double totalWidth = snapSizeX(button1Width + button2Width + button3Width);
-        double totalHeight = snapSizeY(Math.max(button1Height, Math.max(button2Height, button3Height)));
+        double totalHeight;
+
+        // A centered button doesn't stretch to fill the preferred height. Instead, we center the button
+        // vertically within the preferred height, and also add a horizontal offset so that the buttons
+        // have the same distance from the top and the left/right side of the window.
+        if (buttonVerticalAlignment.get() == ButtonVerticalAlignment.CENTER) {
+            if (left) {
+                double offset = getButtonOffsetY(button1Height);
+                button1X = snapPositionX(button1X + offset);
+                button2X = snapPositionX(button2X + offset);
+                button3X = snapPositionX(button3X + offset);
+                totalWidth = snapSizeX(totalWidth + offset * 2);
+            } else {
+                double offset = getButtonOffsetY(button3Height);
+                button1X = snapPositionX(button1X - offset);
+                button2X = snapPositionX(button2X - offset);
+                button3X = snapPositionX(button3X - offset);
+                totalWidth = snapSizeX(totalWidth + offset * 2);
+            }
+
+            totalHeight = snapSizeY(getEffectiveButtonHeight());
+        } else {
+            totalHeight = snapSizeY(Math.max(button1Height, Math.max(button2Height, button3Height)));
+        }
+
         Dimension2D currentSize = left ? metrics.get().leftInset() : metrics.get().rightInset();
 
         // Update the overlay metrics if they have changed.
         if (currentSize.getWidth() != totalWidth || currentSize.getHeight() != totalHeight) {
-            WindowControlsMetrics newMetrics = left
-                ? new WindowControlsMetrics(new Dimension2D(totalWidth, totalHeight), new Dimension2D(0, 0), totalHeight)
-                : new WindowControlsMetrics(new Dimension2D(0, 0), new Dimension2D(totalWidth, totalHeight), totalHeight);
+            var empty = new Dimension2D(0, 0);
+            var size = new Dimension2D(totalWidth, totalHeight);
+            HeaderButtonMetrics newMetrics = left
+                ? new HeaderButtonMetrics(size, empty, buttonDefaultHeight.get())
+                : new HeaderButtonMetrics(empty, size, buttonDefaultHeight.get());
             metrics.set(newMetrics);
         }
 
-        layoutInArea(button1, button1X, 0, button1Width, button1Height, BASELINE_OFFSET_SAME_AS_HEIGHT,
-                     Insets.EMPTY, true, true, HPos.LEFT, VPos.TOP, false);
+        layoutInArea(button1, button1X, getButtonOffsetY(button1Height), button1Width, button1Height,
+                     BASELINE_OFFSET_SAME_AS_HEIGHT, Insets.EMPTY, true, true,
+                     HPos.LEFT, VPos.TOP, false);
 
-        layoutInArea(button2, button2X, 0, button2Width, button2Height, BASELINE_OFFSET_SAME_AS_HEIGHT,
-                     Insets.EMPTY, true, true, HPos.LEFT, VPos.TOP, false);
+        layoutInArea(button2, button2X, getButtonOffsetY(button2Height), button2Width, button2Height,
+                     BASELINE_OFFSET_SAME_AS_HEIGHT, Insets.EMPTY, true, true,
+                     HPos.LEFT, VPos.TOP, false);
 
-        layoutInArea(button3, button3X, 0, button3Width, button3Height, BASELINE_OFFSET_SAME_AS_HEIGHT,
-                     Insets.EMPTY, true, true, HPos.LEFT, VPos.TOP, false);
+        layoutInArea(button3, button3X, getButtonOffsetY(button3Height), button3Width, button3Height,
+                     BASELINE_OFFSET_SAME_AS_HEIGHT, Insets.EMPTY, true, true,
+                     HPos.LEFT, VPos.TOP, false);
     }
 
     @Override
@@ -484,12 +629,6 @@ public final class WindowControlsOverlay extends Region {
 
     private static double boundedSize(double min, double pref, double max) {
         return Math.min(Math.max(pref, min), Math.max(min, max));
-    }
-
-    public enum ButtonType {
-        MINIMIZE,
-        MAXIMIZE,
-        CLOSE
     }
 
     private class ButtonRegion extends Region {
@@ -522,24 +661,24 @@ public final class WindowControlsOverlay extends Region {
                 protected void invalidated() {
                     requestParentLayout();
 
-                    WindowControlsOverlay.this.orderedButtons.sort(
+                    HeaderButtonOverlay.this.orderedButtons.sort(
                         Comparator.comparing(ButtonRegion::getButtonOrder));
                 }
             };
 
         private final Region glyph = new Region();
-        private final ButtonType type;
+        private final HeaderButtonType type;
 
-        ButtonRegion(ButtonType type, String styleClass, int order) {
+        ButtonRegion(HeaderButtonType type, String styleClass, int order) {
             this.type = type;
             orderedButtons.add(this);
             buttonOrder.set(order);
             glyph.getStyleClass().setAll("glyph");
             getChildren().add(glyph);
-            getStyleClass().setAll("window-button", styleClass);
+            getStyleClass().setAll("header-button", styleClass);
         }
 
-        public ButtonType getButtonType() {
+        public HeaderButtonType getButtonType() {
             return type;
         }
 
@@ -560,5 +699,9 @@ public final class WindowControlsOverlay extends Region {
 
     private enum ButtonPlacement {
         LEFT, RIGHT
+    }
+
+    private enum ButtonVerticalAlignment {
+        STRETCH, CENTER
     }
 }

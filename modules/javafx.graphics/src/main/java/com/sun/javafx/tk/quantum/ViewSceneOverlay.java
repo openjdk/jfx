@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.SceneHelper;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.SubScene;
@@ -39,6 +40,7 @@ final class ViewSceneOverlay {
     private final javafx.scene.Scene fxScene;
     private final ViewPainter painter;
     private Parent root;
+    private boolean rootDirty;
     private double width, height;
 
     ViewSceneOverlay(javafx.scene.Scene fxScene, ViewPainter painter) {
@@ -85,21 +87,25 @@ final class ViewSceneOverlay {
         if (root != null) {
             NodeHelper.setScenes(root, fxScene, null);
         }
+
+        rootDirty = true;
     }
 
     public void synchronize() {
-        if (root != null && !NodeHelper.isDirtyEmpty(root)) {
-            syncPeer(root);
+        if (rootDirty || (root != null && !NodeHelper.isDirtyEmpty(root))) {
+            rootDirty = false;
+
+            if (root != null) {
+                syncPeer(root);
+                painter.setOverlayRoot(NodeHelper.getPeer(root));
+            } else {
+                painter.setOverlayRoot(null);
+                SceneHelper.getPeer(fxScene).entireSceneNeedsRepaint();
+            }
         }
     }
 
     private void syncPeer(Node node) {
-        if (root != null) {
-            painter.setOverlayRoot(NodeHelper.getPeer(root));
-        } else {
-            painter.setOverlayRoot(null);
-        }
-
         NodeHelper.syncPeer(node);
 
         if (node instanceof Parent parent) {

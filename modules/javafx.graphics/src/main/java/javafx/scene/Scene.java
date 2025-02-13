@@ -3076,7 +3076,7 @@ public class Scene implements EventTarget {
                     return draggable == Boolean.TRUE ? HeaderAreaType.DRAGBAR : null;
                 }
 
-                if (HeaderBarBase.getHeaderButtonType(intersectedNode) instanceof HeaderButtonType type) {
+                if (HeaderBarBase.getButtonType(intersectedNode) instanceof HeaderButtonType type) {
                     return switch (type) {
                         case ICONIFY -> HeaderAreaType.MINIMIZE;
                         case MAXIMIZE -> HeaderAreaType.MAXIMIZE;

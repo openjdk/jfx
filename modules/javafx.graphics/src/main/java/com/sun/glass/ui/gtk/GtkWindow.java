@@ -26,17 +26,22 @@ package com.sun.glass.ui.gtk;
 
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.events.WindowEvent;
+import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.WindowControlsOverlay;
+import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.javafx.tk.HeaderAreaType;
 
 class GtkWindow extends Window {
 
     public GtkWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
+
+        if (isExtendedWindow()) {
+            prefHeaderButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
+        }
     }
 
     @Override
@@ -205,30 +210,6 @@ class GtkWindow extends Window {
         return ptr == 0L ? 0L : _getNativeWindowImpl(ptr);
     }
 
-    private WindowControlsOverlay windowControlsOverlay;
-
-    @Override
-    public WindowControlsOverlay getNonClientOverlay() {
-        if (windowControlsOverlay == null && isUsingNonClientOverlay()) {
-            windowControlsOverlay = new WindowControlsOverlay(
-                PlatformThemeObserver.getInstance().stylesheetProperty(),
-                isUtilityWindow(),
-                (getStyleMask() & RIGHT_TO_LEFT) != 0);
-
-            // Set the system-defined absolute minimum size to the size of the window buttons area,
-            // regardless of whether the application has specified a smaller minimum size.
-            windowControlsOverlay.metricsProperty().subscribe(metrics -> {
-                int width = (int)(metrics.totalInsetWidth() * platformScaleX);
-                int height = (int)(metrics.maxInsetHeight() * platformScaleY);
-                _setSystemMinimumSize(super.getRawHandle(), width, height);
-            });
-
-            windowControlsMetrics.bind(windowControlsOverlay.metricsProperty());
-        }
-
-        return windowControlsOverlay;
-    }
-
     /**
      * Opens a system menu at the specified coordinates.
      *
@@ -237,6 +218,56 @@ class GtkWindow extends Window {
      */
     public void showSystemMenu(int x, int y) {
         _showSystemMenu(super.getRawHandle(), x, y);
+    }
+
+    /**
+     * Creates or disposes the {@link HeaderButtonOverlay} when the preferred header button height has changed.
+     * <p>
+     * If the preferred height is zero, the overlay is disposed; if the preferred height is non-zero, the
+     * {@link #headerButtonOverlay} and {@link #headerButtonMetrics} properties will hold the overlay and
+     * its metrics.
+     *
+     * @param height the preferred header button height
+     */
+    private void onPrefHeaderButtonHeightChanged(Number height) {
+        // Return early if we can keep the existing overlay instance.
+        if (height.doubleValue() != 0 && headerButtonOverlay.get() != null) {
+            return;
+        }
+
+        if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay) {
+            overlay.dispose();
+        }
+
+        if (height.doubleValue() == 0) {
+            headerButtonOverlay.set(null);
+            headerButtonMetrics.set(HeaderButtonMetrics.EMPTY);
+        } else {
+            HeaderButtonOverlay overlay = createHeaderButtonOverlay();
+            overlay.metricsProperty().subscribe(headerButtonMetrics::set);
+            headerButtonOverlay.set(overlay);
+        }
+    }
+
+    /**
+     * Creates a new {@code HeaderButtonOverlay} instance.
+     */
+    private HeaderButtonOverlay createHeaderButtonOverlay() {
+        var overlay = new HeaderButtonOverlay(
+            PlatformThemeObserver.getInstance().stylesheetProperty(),
+            isUtilityWindow(),
+            (getStyleMask() & RIGHT_TO_LEFT) != 0);
+
+        // Set the system-defined absolute minimum size to the size of the window buttons area,
+        // regardless of whether the application has specified a smaller minimum size.
+        overlay.metricsProperty().subscribe(metrics -> {
+            int w = (int)(metrics.totalInsetWidth() * platformScaleX);
+            int h = (int)(metrics.maxInsetHeight() * platformScaleY);
+            _setSystemMinimumSize(super.getRawHandle(), w, h);
+        });
+
+        overlay.prefButtonHeightProperty().bind(prefHeaderButtonHeightProperty());
+        return overlay;
     }
 
     /**
@@ -257,7 +288,7 @@ class GtkWindow extends Window {
         double wx = x / platformScaleX;
         double wy = y / platformScaleY;
 
-        if (windowControlsOverlay != null && windowControlsOverlay.buttonAt(wx, wy) != null) {
+        if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay && overlay.buttonAt(wx, wy) != null) {
             return false;
         }
 

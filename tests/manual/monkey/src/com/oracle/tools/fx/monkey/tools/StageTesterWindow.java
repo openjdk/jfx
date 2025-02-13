@@ -86,46 +86,41 @@ public final class StageTesterWindow extends Stage {
         pane.add(nodeOrientationComboBox, 1, 3);
 
         pane.add(new Label("HeaderBar"), 0, 4);
-        var headerBarComboBox = new ComboBox<>(FXCollections.observableArrayList("None", "Simple", "Split"));
+        var headerBarComboBox = new ComboBox<>(FXCollections.observableArrayList(
+            "None", "Simple", "Simple / custom buttons", "Split", "Split / custom buttons"));
         headerBarComboBox.getSelectionModel().select(0);
         pane.add(headerBarComboBox, 1, 4);
 
-        pane.add(new Label("DefaultHeaderButtons"), 0, 5);
-        var defaultHeaderButtonsCheckBox = new CheckBox();
-        defaultHeaderButtonsCheckBox.setSelected(true);
-        pane.add(defaultHeaderButtonsCheckBox, 1, 5);
-
-        pane.add(new Label("AlwaysOnTop"), 0, 6);
+        pane.add(new Label("AlwaysOnTop"), 0, 5);
         var alwaysOnTopCheckBox = new CheckBox();
-        pane.add(alwaysOnTopCheckBox, 1, 6);
+        pane.add(alwaysOnTopCheckBox, 1, 5);
 
-        pane.add(new Label("Resizable"), 0, 7);
+        pane.add(new Label("Resizable"), 0, 6);
         var resizableCheckBox = new CheckBox();
         resizableCheckBox.setSelected(true);
-        pane.add(resizableCheckBox, 1, 7);
+        pane.add(resizableCheckBox, 1, 6);
 
-        pane.add(new Label("Iconified"), 0, 8);
+        pane.add(new Label("Iconified"), 0, 7);
         var iconifiedCheckBox = new CheckBox();
-        pane.add(iconifiedCheckBox, 1, 8);
+        pane.add(iconifiedCheckBox, 1, 7);
 
-        pane.add(new Label("Maximized"), 0, 9);
+        pane.add(new Label("Maximized"), 0, 8);
         var maximizedCheckBox = new CheckBox();
-        pane.add(maximizedCheckBox, 1, 9);
+        pane.add(maximizedCheckBox, 1, 8);
 
-        pane.add(new Label("FullScreen"), 0, 10);
+        pane.add(new Label("FullScreen"), 0, 9);
         var fullScreenCheckBox = new CheckBox();
-        pane.add(fullScreenCheckBox, 1, 10);
+        pane.add(fullScreenCheckBox, 1, 9);
 
-        pane.add(new Label("FullScreenExitHint"), 0, 11);
+        pane.add(new Label("FullScreenExitHint"), 0, 10);
         var fullScreenExitHintTextField = new TextField();
-        pane.add(fullScreenExitHintTextField, 1, 11);
+        pane.add(fullScreenExitHintTextField, 1, 10);
 
         var showStageButton = new Button("Show Stage");
         showStageButton.setOnAction(event -> {
             var newStage = new Stage();
             newStage.initStyle(StageStyle.valueOf(stageStyleComboBox.getValue()));
             newStage.initModality(Modality.valueOf(modalityComboBox.getValue()));
-            newStage.initDefaultHeaderButtons(defaultHeaderButtonsCheckBox.isSelected());
             newStage.setTitle(titleTextField.getText());
             newStage.setAlwaysOnTop(alwaysOnTopCheckBox.isSelected());
             newStage.setResizable(resizableCheckBox.isSelected());
@@ -140,8 +135,10 @@ public final class StageTesterWindow extends Stage {
             }
 
             Parent root = switch (headerBarComboBox.getValue().toLowerCase(Locale.ROOT)) {
-                case "simple" -> createSimpleHeaderBarRoot(newStage, !defaultHeaderButtonsCheckBox.isSelected());
-                case "split" -> createSplitHeaderBarRoot(newStage, !defaultHeaderButtonsCheckBox.isSelected());
+                case "simple" -> createSimpleHeaderBarRoot(newStage, false);
+                case "simple / custom buttons" -> createSimpleHeaderBarRoot(newStage, true);
+                case "split" -> createSplitHeaderBarRoot(newStage, false);
+                case "split / custom buttons" -> createSplitHeaderBarRoot(newStage, true);
                 default -> new BorderPane(createWindowActions(newStage));
             };
 
@@ -177,13 +174,34 @@ public final class StageTesterWindow extends Stage {
         Runnable updateMinHeight = () -> headerBar.setMinHeight(
             switch (sizeComboBox.getValue().toLowerCase(Locale.ROOT)) {
                 case "large" -> 80;
-                case "medium" -> 40;
+                case "medium" -> 50;
                 default -> headerBar.getMinSystemHeight();
             });
 
         sizeComboBox.valueProperty().subscribe(event -> updateMinHeight.run());
         headerBar.minSystemHeightProperty().subscribe(event -> updateMinHeight.run());
-        headerBar.setLeading(new Button("✨"));
+
+        if (customWindowButtons) {
+            HeaderBar.setPrefButtonHeight(stage, 0);
+        } else {
+            var headerButtonHeight = new CheckBox("Set button height to bar height");
+
+            headerBar.heightProperty().subscribe(h -> {
+                if (headerButtonHeight.isSelected()) {
+                    HeaderBar.setPrefButtonHeight(stage, h.doubleValue());
+                }
+            });
+
+            headerButtonHeight.selectedProperty().subscribe(value -> {
+                if (value) {
+                    HeaderBar.setPrefButtonHeight(stage, headerBar.getHeight());
+                } else {
+                    HeaderBar.setPrefButtonHeight(stage, HeaderBar.USE_DEFAULT_SIZE);
+                }
+            });
+
+            headerBar.setLeading(headerButtonHeight);
+        }
 
         var trailingNodes = new HBox(sizeComboBox);
         trailingNodes.setAlignment(Pos.CENTER);
@@ -204,7 +222,7 @@ public final class StageTesterWindow extends Stage {
     private Parent createSplitHeaderBarRoot(Stage stage, boolean customWindowButtons) {
         var leftHeaderBar = new HeaderBar();
         leftHeaderBar.setBackground(Background.fill(Color.VIOLET));
-        leftHeaderBar.setLeading(new Button("✨"));
+        leftHeaderBar.setLeading(new Button("\u2728"));
         leftHeaderBar.setCenter(new TextField() {{ setPromptText("Search..."); }});
         leftHeaderBar.setTrailingSystemPadding(false);
 
@@ -218,7 +236,7 @@ public final class StageTesterWindow extends Stage {
         Runnable updateMinHeight = () -> rightHeaderBar.setMinHeight(
             switch (sizeComboBox.getValue().toLowerCase(Locale.ROOT)) {
                 case "large" -> 80;
-                case "medium" -> 40;
+                case "medium" -> 50;
                 default -> rightHeaderBar.getMinSystemHeight();
             });
 
@@ -232,6 +250,7 @@ public final class StageTesterWindow extends Stage {
 
         if (customWindowButtons) {
             trailingNodes.getChildren().addAll(createCustomWindowButtons());
+            HeaderBar.setPrefButtonHeight(stage, 0);
         }
 
         rightHeaderBar.setTrailing(trailingNodes);
@@ -259,9 +278,9 @@ public final class StageTesterWindow extends Stage {
             }
         });
 
-        HeaderBarBase.setHeaderButtonType(iconifyButton, HeaderButtonType.ICONIFY);
-        HeaderBarBase.setHeaderButtonType(maximizeButton, HeaderButtonType.MAXIMIZE);
-        HeaderBarBase.setHeaderButtonType(closeButton, HeaderButtonType.CLOSE);
+        HeaderBarBase.setButtonType(iconifyButton, HeaderButtonType.ICONIFY);
+        HeaderBarBase.setButtonType(maximizeButton, HeaderButtonType.MAXIMIZE);
+        HeaderBarBase.setButtonType(closeButton, HeaderButtonType.CLOSE);
         return List.of(iconifyButton, maximizeButton, closeButton);
     }
 

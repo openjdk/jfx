@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.gtk;
 
+import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.javafx.tk.HeaderAreaType;
@@ -163,12 +164,8 @@ final class GtkView extends View {
     @Override
     protected boolean handleNonClientMouseEvent(long time, int type, int button, int x, int y, int xAbs, int yAbs,
                                                 int modifiers, int clickCount) {
-        var window = (GtkWindow)getWindow();
-        var overlay = window.getNonClientOverlay();
-        if (overlay == null) {
-            return false;
-        }
-
-        return overlay.handleMouseEvent(type, button, x / window.getPlatformScaleX(), y / window.getPlatformScaleY());
+        return getWindow() instanceof GtkWindow window
+            && window.headerButtonOverlayProperty().get() instanceof HeaderButtonOverlay overlay
+            && overlay.handleMouseEvent(type, button, x / window.getPlatformScaleX(), y / window.getPlatformScaleY());
     }
 }

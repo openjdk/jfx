@@ -26,19 +26,21 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.prism.impl.PrismSettings;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.scene.Parent;
+import javafx.scene.layout.HeaderBarBase;
 import javafx.scene.layout.Region;
-import javafx.util.Subscription;
 import java.lang.annotation.Native;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 
 public abstract class Window {
 
@@ -171,11 +173,6 @@ public abstract class Window {
      */
     @Native public static final int MODAL = 1 << 10;
 
-    /**
-     * Indicates that the window has non-client overlay controls.
-     */
-    public static final int NON_CLIENT_OVERLAY = 1 << 11;
-
     final static public class State {
         @Native public static final int NORMAL = 1;
         @Native public static final int MINIMIZED = 2;
@@ -244,11 +241,6 @@ public abstract class Window {
 
     private EventHandler eventHandler;
 
-    private final List<Region> headerBars = new ArrayList<>();
-
-    protected final ObjectProperty<WindowControlsMetrics> windowControlsMetrics =
-            new SimpleObjectProperty<>(this, "windowControlsMetrics");
-
     protected abstract long _createWindow(long ownerPtr, long screenPtr, int mask);
     protected Window(Window owner, Screen screen, int styleMask) {
         Application.checkEventThread();
@@ -302,6 +294,54 @@ public abstract class Window {
         if (this.ptr == 0L) {
             throw new RuntimeException("could not create platform window");
         }
+    }
+
+    /**
+     * Specifies the preferred header button height. Sub-classes can use this value in their header button
+     * visualization, but they are not required to accommodate the preferred height.
+     * <p>
+     * Implementations should choose a sensible default height for their header button visualization if
+     * {@link HeaderBarBase#USE_DEFAULT_SIZE} is specified.
+     */
+    private final DoubleProperty prefHeaderButtonHeight =
+        new SimpleDoubleProperty(this, "prefHeaderButtonHeight", HeaderBarBase.USE_DEFAULT_SIZE);
+
+    public final ReadOnlyDoubleProperty prefHeaderButtonHeightProperty() {
+        return prefHeaderButtonHeight;
+    }
+
+    /**
+     * Sets the preferred header button height.
+     * <p>
+     * Note: Sub-classes must not use this method to change the preferred header button height.
+     *       It is only invoked by the toolkit's {@link com.sun.javafx.tk.TKStage} implementation.
+     */
+    public final void setPrefHeaderButtonHeight(double height) {
+        prefHeaderButtonHeight.set(height);
+    }
+
+    /**
+     * Specifies the header button overlay. This property is managed by sub-classes that provide an overlay
+     * for header buttons. It is not required to use an overlay for header buttons; implementations can also
+     * use other ways of visualizing header buttons.
+     */
+    protected final ObjectProperty<Region> headerButtonOverlay =
+        new SimpleObjectProperty<>(this, "headerButtonOverlay");
+
+    public final ReadOnlyObjectProperty<Region> headerButtonOverlayProperty() {
+        return headerButtonOverlay;
+    }
+
+    /**
+     * Specifies the metrics for header buttons, which applications can use for layout purposes. This property
+     * is managed by sub-classes that support header buttons. Implementations are required to provide metrics
+     * for header buttons even if they don't use a header button overlay.
+     */
+    protected final ObjectProperty<HeaderButtonMetrics> headerButtonMetrics =
+        new SimpleObjectProperty<>(this, "headerButtonMetrics", HeaderButtonMetrics.EMPTY);
+
+    public final ReadOnlyObjectProperty<HeaderButtonMetrics> headerButtonMetricsProperty() {
+        return headerButtonMetrics;
     }
 
     public boolean isClosed() {
@@ -437,65 +477,6 @@ public abstract class Window {
             this.menubar = menubar;
         }
     }
-
-    /**
-     * Returns metrics of the window-provided overlay controls.
-     *
-     * @return the overlay metrics
-     */
-    public final ReadOnlyObjectProperty<WindowControlsMetrics> windowControlsMetricsProperty() {
-        return windowControlsMetrics;
-    }
-
-    /**
-     * Returns the window-provided non-client overlay, which is rendered above all application content.
-     *
-     * @return the overlay, or {@code null} if the window does not provide an overlay
-     */
-    public Parent getNonClientOverlay() {
-        return null;
-    }
-
-    /**
-     * Registers a user-provided header bar with this window.
-     *
-     * @param headerBar the header bar
-     * @return a {@code Subscription} to unregister, or an empty subscription if this window
-     *         is not an {@link #isExtendedWindow()}
-     */
-    public final Subscription registerHeaderBar(Region headerBar) {
-        Objects.requireNonNull(headerBar);
-
-        if (!isExtendedWindow()) {
-            return Subscription.EMPTY;
-        }
-
-        headerBars.add(headerBar);
-
-        Subscription subscription = headerBar.heightProperty().subscribe(this::updateHeaderBarHeight);
-
-        return () -> {
-            headerBars.remove(headerBar);
-            subscription.unsubscribe();
-            updateHeaderBarHeight();
-        };
-    }
-
-    private void updateHeaderBarHeight() {
-        double maxHeight = headerBars.stream()
-            .max(Comparator.comparingDouble(Region::getHeight))
-            .map(Region::getHeight)
-            .orElse(0.0);
-
-        onHeaderBarHeightChanged(maxHeight);
-    }
-
-    /**
-     * Called when the height of a registered user-provided header bar has changed.
-     *
-     * @param height the maximum height of all registered header bars
-     */
-    protected void onHeaderBarHeightChanged(double height) {}
 
     public boolean isDecorated() {
         Application.checkEventThread();
@@ -756,10 +737,6 @@ public abstract class Window {
     public boolean isTransparentWindow() {
         //The TRANSPARENT flag is set only if it is supported
         return (this.styleMask & Window.TRANSPARENT) != 0;
-    }
-
-    public boolean isUsingNonClientOverlay() {
-        return isExtendedWindow() && (styleMask & Window.NON_CLIENT_OVERLAY) != 0;
     }
 
     public boolean isFocused() {

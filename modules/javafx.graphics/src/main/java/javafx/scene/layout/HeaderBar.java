@@ -39,6 +39,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 /**
@@ -73,6 +74,12 @@ import javafx.stage.StageStyle;
  * two header bars. In this case, the {@link #leadingSystemPaddingProperty() leadingSystemPadding} and
  * {@link #trailingSystemPaddingProperty() trailingSystemPadding} properties can be used to remove the padding
  * that is not needed.
+ *
+ * <h2>Custom header buttons</h2>
+ * If more control over the header buttons is desired, applications can opt out of the default header buttons
+ * by setting {@link #setPrefButtonHeight(Stage, double)} to zero and provide custom header buttons instead.
+ * Any JavaFX control can be used as a custom header button by setting its semantic type with the
+ * {@link #setButtonType(Node, HeaderButtonType)} method.
  *
  * <h2>System menu</h2>
  * Some platforms support a system menu that can be summoned by right-clicking the draggable area.
@@ -269,11 +276,11 @@ public class HeaderBar extends HeaderBarBase {
     /**
      * Specifies whether additional padding should be added to the leading side of the {@code HeaderBar}.
      * The size of the additional padding corresponds to the size of the system-reserved area that contains
-     * the default window buttons (minimize, maximize, and close). If the system-reserved area contains no
-     * window buttons, no additional padding is added to the leading side of the {@code HeaderBar}.
+     * the default header buttons (iconify, maximize, and close). If the system-reserved area contains no
+     * header buttons, no additional padding is added to the leading side of the {@code HeaderBar}.
      * <p>
      * Applications that use a single {@code HeaderBar} extending the entire width of the window should
-     * set this property to {@code true} to prevent the window buttons from overlapping the content of the
+     * set this property to {@code true} to prevent the header buttons from overlapping the content of the
      * {@code HeaderBar}.
      *
      * @defaultValue {@code true}
@@ -300,7 +307,7 @@ public class HeaderBar extends HeaderBarBase {
         return leadingSystemPadding;
     }
 
-    public final boolean getLeadingSystemPadding() {
+    public final boolean isLeadingSystemPadding() {
         return leadingSystemPadding.get();
     }
 
@@ -311,11 +318,11 @@ public class HeaderBar extends HeaderBarBase {
     /**
      * Specifies whether additional padding should be added to the trailing side of the {@code HeaderBar}.
      * The size of the additional padding corresponds to the size of the system-reserved area that contains
-     * the default window buttons (minimize, maximize, and close). If the system-reserved area contains no
-     * window buttons, no additional padding is added to the trailing side of the {@code HeaderBar}.
+     * the default header buttons (iconify, maximize, and close). If the system-reserved area contains no
+     * header buttons, no additional padding is added to the trailing side of the {@code HeaderBar}.
      * <p>
      * Applications that use a single {@code HeaderBar} extending the entire width of the window should
-     * set this property to {@code true} to prevent the window buttons from overlapping the content of the
+     * set this property to {@code true} to prevent the header buttons from overlapping the content of the
      * {@code HeaderBar}.
      *
      * @defaultValue {@code true}
@@ -342,7 +349,7 @@ public class HeaderBar extends HeaderBarBase {
         return trailingSystemPadding;
     }
 
-    public final boolean getTrailingSystemPadding() {
+    public final boolean isTrailingSystemPadding() {
         return trailingSystemPadding.get();
     }
 
@@ -351,13 +358,13 @@ public class HeaderBar extends HeaderBarBase {
     }
 
     private boolean isLeftSystemPadding(NodeOrientation nodeOrientation) {
-        return nodeOrientation == NodeOrientation.LEFT_TO_RIGHT && getLeadingSystemPadding()
-            || nodeOrientation == NodeOrientation.RIGHT_TO_LEFT && getTrailingSystemPadding();
+        return nodeOrientation == NodeOrientation.LEFT_TO_RIGHT && isLeadingSystemPadding()
+            || nodeOrientation == NodeOrientation.RIGHT_TO_LEFT && isTrailingSystemPadding();
     }
 
     private boolean isRightSystemPadding(NodeOrientation nodeOrientation) {
-        return nodeOrientation == NodeOrientation.LEFT_TO_RIGHT && getTrailingSystemPadding()
-            || nodeOrientation == NodeOrientation.RIGHT_TO_LEFT && getLeadingSystemPadding();
+        return nodeOrientation == NodeOrientation.LEFT_TO_RIGHT && isTrailingSystemPadding()
+            || nodeOrientation == NodeOrientation.RIGHT_TO_LEFT && isLeadingSystemPadding();
     }
 
     @Override

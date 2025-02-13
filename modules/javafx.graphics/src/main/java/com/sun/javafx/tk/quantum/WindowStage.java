@@ -42,9 +42,11 @@ import com.sun.glass.ui.Window.Level;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.iio.common.PushbroomScaler;
 import com.sun.javafx.iio.common.ScalerFactory;
+import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
+import com.sun.javafx.tk.TKStageListener;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import java.util.Locale;
@@ -59,7 +61,6 @@ public class WindowStage extends GlassStage {
     private StageStyle style;
     private GlassStage owner = null;
     private Modality modality = Modality.NONE;
-    private boolean nonClientOverlay;
 
     private OverlayWarning warning = null;
     private boolean rtl = false;
@@ -84,12 +85,10 @@ public class WindowStage extends GlassStage {
                                  ".QuantumMessagesBundle", LOCALE);
 
 
-    public WindowStage(javafx.stage.Window peerWindow, StageStyle stageStyle, boolean nonClientOverlay,
-                       Modality modality, TKStage owner) {
+    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
-        this.nonClientOverlay = nonClientOverlay;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
@@ -182,13 +181,20 @@ public class WindowStage extends GlassStage {
                 windowMask |= Window.MODAL;
             }
 
-            if (nonClientOverlay) {
-                windowMask |= Window.NON_CLIENT_OVERLAY;
-            }
-
             platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
             platformWindow.setResizable(resizable);
             platformWindow.setFocusable(focusable);
+
+            if (platformWindow.isExtendedWindow()) {
+                platformWindow.headerButtonOverlayProperty().subscribe(overlay -> {
+                    ViewScene scene = getViewScene();
+                    if (scene != null) {
+                        scene.setOverlay(isInFullScreen ? null : overlay);
+                    }
+                });
+
+                platformWindow.headerButtonMetricsProperty().subscribe(this::notifyHeaderButtonMetricsChanged);
+            }
 
             if (fxStage != null && fxStage.getScene() != null) {
                 javafx.scene.paint.Paint paint = fxStage.getScene().getFill();
@@ -224,6 +230,12 @@ public class WindowStage extends GlassStage {
         }
     }
 
+    private void notifyHeaderButtonMetricsChanged() {
+        if (stageListener instanceof StagePeerListener listener && platformWindow != null) {
+            listener.changedHeaderButtonMetrics(platformWindow.headerButtonMetricsProperty().get());
+        }
+    }
+
     public final Window getPlatformWindow() {
         return platformWindow;
     }
@@ -244,12 +256,18 @@ public class WindowStage extends GlassStage {
         return style;
     }
 
+    @Override
+    public void setTKStageListener(TKStageListener listener) {
+        super.setTKStageListener(listener);
+        notifyHeaderButtonMetricsChanged();
+    }
+
     @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa) {
         ViewScene scene = new ViewScene(fxStage != null ? fxStage.getScene() : null, depthBuffer, msaa);
 
         // The window-provided overlay is not visible in full-screen mode.
         if (!isInFullScreen) {
-            scene.setOverlay(platformWindow.getNonClientOverlay());
+            scene.setOverlay(platformWindow.headerButtonOverlayProperty().get());
         }
 
         return scene;
@@ -677,7 +695,7 @@ public class WindowStage extends GlassStage {
         if (newWarning != null) {
             getViewScene().setOverlay(newWarning);
         } else if (!isInFullScreen) {
-            getViewScene().setOverlay(platformWindow.getNonClientOverlay());
+            getViewScene().setOverlay(platformWindow.headerButtonOverlayProperty().get());
         }
     }
 
@@ -882,4 +900,10 @@ public class WindowStage extends GlassStage {
         rtl = b;
     }
 
+    @Override
+    public void setPrefHeaderButtonHeight(double height) {
+        if (platformWindow != null) {
+            platformWindow.setPrefHeaderButtonHeight(height);
+        }
+    }
 }

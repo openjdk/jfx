@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.win;
 
+import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.javafx.tk.HeaderAreaType;
@@ -127,13 +128,12 @@ final class WinView extends View {
             return false;
         }
 
-        var window = (WinWindow)getWindow();
-        var overlay = window.getNonClientOverlay();
-        if (overlay != null) {
+        if (getWindow() instanceof WinWindow window &&
+                window.headerButtonOverlayProperty().get() instanceof HeaderButtonOverlay overlay) {
             double wx = x / window.getPlatformScaleX();
             double wy = y / window.getPlatformScaleY();
 
-            // Give the window button overlay the first chance to handle the event.
+            // Give the header button overlay the first chance to handle the event.
             if (overlay.handleMouseEvent(type, button, wx, wy)) {
                 return true;
             }

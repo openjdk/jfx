@@ -25,7 +25,8 @@
 package com.sun.glass.ui.win;
 
 import com.sun.glass.ui.Cursor;
-import com.sun.glass.ui.WindowControlsOverlay;
+import com.sun.glass.ui.HeaderButtonMetrics;
+import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
@@ -42,7 +43,7 @@ class WinWindow extends Window {
 
     public static final long ANCHOR_NO_CAPTURE = (1L << 63);
 
-    private static final String WINDOW_DECORATION_STYLESHEET = "WindowDecoration.css";
+    private static final String HEADER_BUTTONS_STYLESHEET = "WindowDecoration.css";
 
     private float fxReqWidth;
     private float fxReqHeight;
@@ -56,6 +57,10 @@ class WinWindow extends Window {
 
     protected WinWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
+
+        if (isExtendedWindow()) {
+            prefHeaderButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
+        }
     }
 
     @Override
@@ -324,8 +329,8 @@ class WinWindow extends Window {
 
     @Override public void close() {
         if (!deferredClosing) {
-            if (windowControlsOverlay != null) {
-                windowControlsOverlay.dispose();
+            if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay) {
+                overlay.dispose();
             }
 
             super.close();
@@ -333,27 +338,6 @@ class WinWindow extends Window {
             closingRequested = true;
             setVisible(false);
         }
-    }
-
-    private WindowControlsOverlay windowControlsOverlay;
-
-    @Override
-    public WindowControlsOverlay getNonClientOverlay() {
-        if (windowControlsOverlay == null && isUsingNonClientOverlay()) {
-            var url = getClass().getResource(WINDOW_DECORATION_STYLESHEET);
-            if (url == null) {
-                throw new RuntimeException("Resource not found: " + WINDOW_DECORATION_STYLESHEET);
-            }
-
-            windowControlsOverlay = new WindowControlsOverlay(
-                StringConstant.valueOf(url.toExternalForm()),
-                isUtilityWindow(),
-                (getStyleMask() & RIGHT_TO_LEFT) != 0);
-
-            windowControlsMetrics.bind(windowControlsOverlay.metricsProperty());
-        }
-
-        return windowControlsOverlay;
     }
 
     /**
@@ -364,6 +348,53 @@ class WinWindow extends Window {
      */
     public void showSystemMenu(int x, int y) {
         _showSystemMenu(getRawHandle(), x, y);
+    }
+
+    /**
+     * Creates or disposes the {@link HeaderButtonOverlay} when the preferred header button height has changed.
+     * <p>
+     * If the preferred height is zero, the overlay is disposed; if the preferred height is non-zero, the
+     * {@link #headerButtonOverlay} and {@link #headerButtonMetrics} properties will hold the overlay and
+     * its metrics.
+     *
+     * @param height the preferred header button height
+     */
+    private void onPrefHeaderButtonHeightChanged(Number height) {
+        // Return early if we can keep the existing overlay instance.
+        if (height.doubleValue() != 0 && headerButtonOverlay.get() != null) {
+            return;
+        }
+
+        if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay) {
+            overlay.dispose();
+        }
+
+        if (height.doubleValue() == 0) {
+            headerButtonOverlay.set(null);
+            headerButtonMetrics.set(HeaderButtonMetrics.EMPTY);
+        } else {
+            HeaderButtonOverlay overlay = createHeaderButtonOverlay();
+            overlay.metricsProperty().subscribe(headerButtonMetrics::set);
+            headerButtonOverlay.set(overlay);
+        }
+    }
+
+    /**
+     * Creates a new {@code HeaderButtonOverlay} instance.
+     */
+    private HeaderButtonOverlay createHeaderButtonOverlay() {
+        var url = getClass().getResource(HEADER_BUTTONS_STYLESHEET);
+        if (url == null) {
+            throw new RuntimeException("Resource not found: " + HEADER_BUTTONS_STYLESHEET);
+        }
+
+        var overlay = new HeaderButtonOverlay(
+            StringConstant.valueOf(url.toExternalForm()),
+            isUtilityWindow(),
+            (getStyleMask() & RIGHT_TO_LEFT) != 0);
+
+        overlay.prefButtonHeightProperty().bind(prefHeaderButtonHeightProperty());
+        return overlay;
     }
 
     /**
@@ -393,8 +424,8 @@ class WinWindow extends Window {
 
         // If the cursor is over one of the window buttons (minimize, maximize, close), we need to
         // report the value of HTMINBUTTON, HTMAXBUTTON, or HTCLOSE back to the native layer.
-        switch (windowControlsOverlay != null ? windowControlsOverlay.buttonAt(wx, wy) : null) {
-            case MINIMIZE: return HT.MINBUTTON.value;
+        switch (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay ? overlay.buttonAt(wx, wy) : null) {
+            case ICONIFY: return HT.MINBUTTON.value;
             case MAXIMIZE: return HT.MAXBUTTON.value;
             case CLOSE: return HT.CLOSE.value;
             case null: break;

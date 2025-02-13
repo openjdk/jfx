@@ -36,13 +36,11 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.layout.HeaderBarBase;
-import javafx.scene.layout.HeaderButtonType;
 
+import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.SceneHelper;
@@ -58,6 +56,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.layout.HeaderBarBase;
 
 /**
  * The JavaFX {@code Stage} class is the top level JavaFX container.
@@ -201,6 +200,21 @@ public class Stage extends Window {
             public void setImportant(Stage stage, boolean important) {
                 stage.setImportant(important);
             }
+
+            @Override
+            public void setPrefHeaderButtonHeight(Stage stage, double height) {
+                stage.setPrefHeaderButtonHeight(height);
+            }
+
+            @Override
+            public double getPrefHeaderButtonHeight(Stage stage) {
+                return stage.getPrefHeaderButtonHeight();
+            }
+
+            @Override
+            public ObservableValue<HeaderButtonMetrics> getHeaderButtonMetrics(Stage stage) {
+                return stage.headerButtonMetricsProperty();
+            }
         });
     }
 
@@ -229,6 +243,11 @@ public class Stage extends Window {
         @Override
         public void setAlwaysOnTop(Stage stage, boolean aot) {
             stage.alwaysOnTopPropertyImpl().set(aot);
+        }
+
+        @Override
+        public void setHeaderButtonMetrics(Stage stage, HeaderButtonMetrics metrics) {
+            stage.headerButtonMetricsProperty().set(metrics);
         }
     };
 
@@ -497,39 +516,6 @@ public class Stage extends Window {
      */
     public final Modality getModality() {
         return modality;
-    }
-
-    private boolean defaultHeaderButtons = true;
-
-    /**
-     * Specifies whether a stage with a client-side header bar uses the default platform-provided header buttons.
-     * <p>
-     * If {@code false} is specified, an application must provide its own header buttons and mark them with
-     * {@link HeaderBarBase#setHeaderButtonType(Node, HeaderButtonType)} to enable integration with the platform
-     * window manager.
-     * <p>
-     * This property is only relevant for {@link StageStyle#EXTENDED} or {@link StageStyle#EXTENDED_UTILITY}
-     * stages, and is ignored otherwise.
-     *
-     * @param enabled {@code true} if the stage uses default header buttons, {@code false} otherwise
-     * @since 25
-     */
-    public final void initDefaultHeaderButtons(boolean enabled) {
-        if (hasBeenVisible) {
-            throw new IllegalStateException("Cannot set default header buttons once stage has been set visible");
-        }
-
-        this.defaultHeaderButtons = enabled;
-    }
-
-    /**
-     * Returns whether a stage with a client-side header bar uses the default platform-provided header buttons.
-     *
-     * @return {@code true} if the stage uses default header buttons, {@code false} otherwise
-     * @since 25
-     */
-    public final boolean isDefaultHeaderButtons() {
-        return defaultHeaderButtons;
     }
 
     private Window owner = null;
@@ -1122,12 +1108,13 @@ public class Stage extends Window {
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
             StageStyle stageStyle = getStyle();
-            setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(), isDefaultHeaderButtons(),
+            setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
                     getModality(), tkStage, rtl));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
+            getPeer().setPrefHeaderButtonHeight(getPrefHeaderButtonHeight());
             setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }
     }
@@ -1289,5 +1276,30 @@ public class Stage extends Window {
 
     public final ObjectProperty<String> fullScreenExitHintProperty() {
         return fullScreenExitHint;
+    }
+
+    private ObjectProperty<HeaderButtonMetrics> headerButtonMetrics;
+
+    private ObjectProperty<HeaderButtonMetrics> headerButtonMetricsProperty() {
+        if (headerButtonMetrics == null) {
+            headerButtonMetrics = new SimpleObjectProperty<>(this, "headerButtonMetrics");
+        }
+
+        return headerButtonMetrics;
+    }
+
+    private double prefHeaderButtonHeight = HeaderBarBase.USE_DEFAULT_SIZE;
+
+    private double getPrefHeaderButtonHeight() {
+        return prefHeaderButtonHeight;
+    }
+
+    private void setPrefHeaderButtonHeight(double height) {
+        prefHeaderButtonHeight = height;
+
+        TKStage peer = getPeer();
+        if (peer != null) {
+            peer.setPrefHeaderButtonHeight(height);
+        }
     }
 }

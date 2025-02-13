@@ -27,6 +27,7 @@ package javafx.stage;
 
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HeaderBar;
@@ -84,7 +85,7 @@ public enum StageStyle {
      * If the feature is not supported by the platform, this style downgrades to {@link StageStyle#DECORATED}.
      *
      * <h4>Usage</h4>
-     * An extended window has the default header buttons (minimize, maximize, close), but no system-provided
+     * An extended window has the default header buttons (iconify, maximize, close), but no system-provided
      * draggable header bar. Applications need to provide their own header bar by placing a {@link HeaderBar}
      * control in the scene graph. The {@code HeaderBar} control should be positioned at the top of the window
      * and its width should extend the entire width of the window, as otherwise the layout of the default window
@@ -113,9 +114,9 @@ public enum StageStyle {
      *
      * <h4>Custom header buttons</h4>
      * If more control over the header buttons is desired, applications can opt out of the default header buttons
-     * by setting the {@link Stage#initDefaultHeaderButtons(boolean)} property to {@code false} and provide custom
-     * header buttons instead. Any JavaFX control can be used as a custom header button by setting its appropriate
-     * {@link HeaderButtonType}.
+     * by setting {@link HeaderBar#setPrefButtonHeight(Stage, double)} to zero and providing custom header buttons
+     * instead. Any JavaFX control can be used as a custom header button by setting its semantic type with the
+     * {@link HeaderBar#setButtonType(Node, HeaderButtonType)} method.
      *
      * <h4>Title text</h4>
      * An extended stage has no title text. Applications that require title text need to provide their own

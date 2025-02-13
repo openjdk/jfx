@@ -26,12 +26,13 @@ package com.sun.glass.ui.mac;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Cursor;
+import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.WindowControlsMetrics;
 import javafx.geometry.Dimension2D;
+import javafx.scene.layout.HeaderBarBase;
 import java.nio.ByteBuffer;
 
 /**
@@ -48,8 +49,7 @@ final class MacWindow extends Window {
         super(owner, screen, styleMask);
 
         if (isExtendedWindow()) {
-            // The default window metrics correspond to a small toolbar style.
-            updateWindowOverlayMetrics(NSWindowToolbarStyle.SMALL);
+            prefHeaderButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
         }
     }
 
@@ -172,27 +172,27 @@ final class MacWindow extends Window {
 
     private native boolean _isRightToLeftLayoutDirection();
 
-    private native void _setToolbarStyle(long ptr, int style);
+    private native void _setWindowButtonStyle(long ptr, int toolbarStyle, boolean buttonsVisible);
 
-    @Override
-    protected void onHeaderBarHeightChanged(double height) {
-        var toolbarStyle = NSWindowToolbarStyle.ofHeight(height);
-        _setToolbarStyle(getRawHandle(), toolbarStyle.style);
-        updateWindowOverlayMetrics(toolbarStyle);
+    private void onPrefHeaderButtonHeightChanged(Number height) {
+        double h = height != null ? height.doubleValue() : HeaderBarBase.USE_DEFAULT_SIZE;
+        var toolbarStyle = NSWindowToolbarStyle.ofHeight(h);
+        _setWindowButtonStyle(getRawHandle(), toolbarStyle.style, h != 0);
+        updateHeaderButtonMetrics(toolbarStyle, h);
     }
 
-    private void updateWindowOverlayMetrics(NSWindowToolbarStyle toolbarStyle) {
+    private void updateHeaderButtonMetrics(NSWindowToolbarStyle toolbarStyle, double prefButtonHeight) {
         double minHeight = NSWindowToolbarStyle.SMALL.size.getHeight();
         var empty = new Dimension2D(0, 0);
         var size = isUtilityWindow() ? toolbarStyle.utilitySize : toolbarStyle.size;
 
-        WindowControlsMetrics metrics = isUsingNonClientOverlay()
+        HeaderButtonMetrics metrics = prefButtonHeight != 0
             ? _isRightToLeftLayoutDirection()
-                ? new WindowControlsMetrics(empty, size, minHeight)
-                : new WindowControlsMetrics(size, empty, minHeight)
-            : new WindowControlsMetrics(empty, empty, minHeight);
+                ? new HeaderButtonMetrics(empty, size, minHeight)
+                : new HeaderButtonMetrics(size, empty, minHeight)
+            : new HeaderButtonMetrics(empty, empty, minHeight);
 
-        windowControlsMetrics.set(metrics);
+        headerButtonMetrics.set(metrics);
     }
 
     private enum NSWindowToolbarStyle {

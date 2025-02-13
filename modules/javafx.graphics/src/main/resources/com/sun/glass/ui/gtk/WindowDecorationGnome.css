@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,64 +23,65 @@
  * questions.
  */
 
-.window-button-container {
+.header-button-container {
     -fx-button-placement: right;
+    -fx-button-vertical-alignment: center;
+    -fx-button-default-height: 36;
     -fx-allow-rtl: true;
 }
 
-.minimize-button,
+.iconify-button,
 .maximize-button,
 .close-button {
     -fx-background-color: #00000009;
     -fx-background-radius: 15;
     -fx-background-insets: 6;
     -fx-pref-width: 36;
-    -fx-pref-height: 36;
 }
 
-.minimize-button.dark,
+.iconify-button.dark,
 .maximize-button.dark,
 .close-button.dark {
     -fx-background-color: #ffffff09;
 }
 
-.minimize-button:active,
+.iconify-button:active,
 .maximize-button:active,
 .close-button:active {
     -fx-background-color: #00000015;
 }
 
-.minimize-button.dark:active,
+.iconify-button.dark:active,
 .maximize-button.dark:active,
 .close-button.dark:active {
     -fx-background-color: #ffffff15
 }
 
-.minimize-button:active:hover,
+.iconify-button:active:hover,
 .maximize-button:active:hover,
 .close-button:active:hover {
     -fx-background-color: #00000025;
 }
 
-.minimize-button.dark:active:hover,
+.iconify-button.dark:active:hover,
 .maximize-button.dark:active:hover,
 .close-button.dark:active:hover {
     -fx-background-color: #ffffff25;
 }
 
-.minimize-button:pressed,
+.iconify-button:pressed,
 .maximize-button:pressed,
 .close-button:pressed {
     -fx-background-color: #00000035 !important;
 }
 
-.minimize-button.dark:pressed,
+.iconify-button.dark:pressed,
 .maximize-button.dark:pressed,
 .close-button.dark:pressed {
     -fx-background-color: #ffffff35 !important;
 }
 
-.minimize-button > .glyph,
+.iconify-button > .glyph,
 .maximize-button > .glyph,
 .close-button > .glyph {
     -fx-background-color: #777;
@@ -89,13 +90,13 @@
     -fx-position-shape: false;
 }
 
-.minimize-button:active > .glyph,
+.iconify-button:active > .glyph,
 .maximize-button:active > .glyph,
 .close-button:active > .glyph {
     -fx-background-color: #333;
 }
 
-.minimize-button.dark:active > .glyph,
+.iconify-button.dark:active > .glyph,
 .maximize-button.dark:active > .glyph,
 .close-button.dark:active > .glyph {
     -fx-background-color: white;
@@ -109,7 +110,7 @@
     -fx-background-color: #777;
 }
 
-.minimize-button > .glyph {
+.iconify-button > .glyph {
     -fx-shape: "m 8,13 v 1 h 8 v -1 z";
 }
 

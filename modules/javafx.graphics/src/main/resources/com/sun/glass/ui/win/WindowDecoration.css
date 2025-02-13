@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,30 @@
  * questions.
  */
 
-.window-button-container {
+.header-button-container {
     -fx-button-placement: right;
+    -fx-button-vertical-alignment: stretch;
+    -fx-button-default-height: 29;
     -fx-allow-rtl: true;
 }
 
-.minimize-button,
+.iconify-button,
 .maximize-button,
 .close-button {
     -fx-background-color: transparent;
     -fx-pref-width: 46;
-    -fx-pref-height: 29;
 }
 
-.window-button-container.utility > .close-button {
+.header-button-container.utility > .close-button {
     -fx-pref-width: 29;
 }
 
-.minimize-button:hover,
+.iconify-button:hover,
 .maximize-button:hover {
     -fx-background-color: #00000015;
 }
 
-.minimize-button.dark:hover,
+.iconify-button.dark:hover,
 .maximize-button.dark:hover {
     -fx-background-color: #ffffff15;
 }
@@ -54,26 +55,26 @@
     -fx-background-color: #c42b1c;
 }
 
-.minimize-button:pressed,
+.iconify-button:pressed,
 .maximize-button:pressed,
 .close-button:pressed {
     -fx-opacity: 0.8;
 }
 
-.minimize-button > .glyph,
+.iconify-button > .glyph,
 .maximize-button > .glyph,
 .close-button > .glyph {
     -fx-background-color: #777;
     -fx-scale-shape: false;
 }
 
-.minimize-button:active > .glyph,
+.iconify-button:active > .glyph,
 .maximize-button:active > .glyph,
 .close-button:active > .glyph {
     -fx-background-color: black;
 }
 
-.minimize-button.dark:active > .glyph,
+.iconify-button.dark:active > .glyph,
 .maximize-button.dark:active > .glyph,
 .close-button.dark:active > .glyph {
     -fx-background-color: white;
@@ -83,7 +84,7 @@
     -fx-background-color: white;
 }
 
-.minimize-button.dark:pressed > .glyph {
+.iconify-button.dark:pressed > .glyph {
     -fx-background-color: white;
 }
 
@@ -99,7 +100,7 @@
     -fx-background-color: #ffffff20 !important;
 }
 
-.minimize-button > .glyph {
+.iconify-button > .glyph {
     -fx-shape: "m 0.42342443,4.6755 q -0.0871756,0 -0.16397319,-0.0332 Q 0.18265374,4.6091 0.1245366,4.551 0.06641952,4.4929 0.03320975,4.41608 0,4.33925 0,4.25208 0,4.16488 0.03320975,4.0881 0.06641952,4.0113 0.1245366,3.95112 0.1826537,3.89092 0.25945124,3.85772 0.33624881,3.8245 0.42342443,3.8245 H 8.078274 q 0.087175,0 0.1639731,0.0332 0.076797,0.0332 0.1349147,0.0934 0.058117,0.0602 0.091327,0.13698 0.033209,0.0768 0.033209,0.16397 0,0.0872 -0.03321,0.16397 -0.03321,0.0768 -0.091327,0.13492 -0.058117,0.0581 -0.1349147,0.0913 -0.076797,0.0332 -0.1639731,0.0332 z";
 }
 
