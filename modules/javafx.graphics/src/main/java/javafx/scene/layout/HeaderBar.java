@@ -376,7 +376,7 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Describes the size of the left system-reserved inset, which is an area reserved for the minimize, maximize,
+     * Describes the size of the left system-reserved inset, which is an area reserved for the iconify, maximize,
      * and close window buttons. If there are no window buttons on the left side of the window, the returned area
      * is an empty {@code Dimension2D}.
      * <p>
@@ -399,7 +399,7 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Describes the size of the right system-reserved inset, which is an area reserved for the minimize, maximize,
+     * Describes the size of the right system-reserved inset, which is an area reserved for the iconify, maximize,
      * and close window buttons. If there are no window buttons on the right side of the window, the returned area
      * is an empty {@code Dimension2D}.
      * <p>
