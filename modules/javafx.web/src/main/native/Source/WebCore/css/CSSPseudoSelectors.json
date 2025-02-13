@@ -35,9 +35,6 @@
     },
     "pseudo-classes": {
         "-apple-has-attachment": {
-            "aliases": [
-                "has-attachment"
-            ],
             "comment": "For use in Apple internal apps.",
             "conditional": "ENABLE(ATTACHMENT_ELEMENT)",
             "settings-flag": "DeprecatedGlobalSettings::attachmentElementEnabled"
@@ -49,8 +46,8 @@
             "conditional": "ENABLE(FULLSCREEN_API)"
         },
         "-internal-html-document": {},
-        "-internal-in-window-full-screen": {
-            "conditional": "ENABLE(FULLSCREEN_API)"
+        "-internal-in-window-fullscreen": {
+            "conditional": "ENABLE(FULLSCREEN_API) && ENABLE(VIDEO)"
         },
         "-internal-media-document": {},
         "-webkit-any": {
@@ -75,6 +72,13 @@
             "status": "non-standard"
         },
         "active": {},
+        "active-view-transition": {
+            "settings-flag": "viewTransitionsEnabled"
+        },
+        "active-view-transition-type": {
+            "argument": "required",
+            "settings-flag": "viewTransitionTypesEnabled"
+        },
         "any-link": {
             "aliases": [
                 "-webkit-any-link"
@@ -116,9 +120,7 @@
         "first-child": {},
         "first-of-type": {},
         "focus": {},
-        "focus-visible": {
-            "settings-flag": "focusVisibleEnabled"
-        },
+        "focus-visible": {},
         "focus-within": {},
         "fullscreen": {
             "aliases": [
@@ -130,8 +132,7 @@
             "conditional": "ENABLE(VIDEO)"
         },
         "has": {
-            "argument": "required",
-            "settings-flag": "hasPseudoClassEnabled"
+            "argument": "required"
         },
         "horizontal": {
             "comment": "For scrollbar styling.",
@@ -256,6 +257,7 @@
         "-internal-loading-auto-fill-button": {
             "user-agent-part": true
         },
+        "-internal-writing-suggestions": {},
         "-webkit-caps-lock-indicator": {
             "status": "non-standard",
             "user-agent-part": true
@@ -516,6 +518,11 @@
             "conditional": "ENABLE(VIDEO)",
             "user-agent-part-string": true
         },
+        "-internal-cue-background": {
+            "conditional": "ENABLE(VIDEO)",
+            "status": "non-standard",
+            "user-agent-part": true
+        },
         "file-selector-button": {
             "aliases": [
                 "-webkit-file-upload-button"
@@ -551,6 +558,9 @@
         },
         "spelling-error": {
             "settings-flag": "grammarAndSpellingPseudoElementsEnabled"
+        },
+        "target-text": {
+            "settings-flag": "targetTextPseudoElementEnabled"
         },
         "thumb": {
             "settings-flag": "thumbAndTrackPseudoElementsEnabled",

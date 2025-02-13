@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Canon Inc.
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -51,6 +51,7 @@ public:
     bool bodyUsed() const { return isDisturbed(); }
     void arrayBuffer(Ref<DeferredPromise>&&);
     void blob(Ref<DeferredPromise>&&);
+    void bytes(Ref<DeferredPromise>&&);
     void formData(Ref<DeferredPromise>&&);
     void json(Ref<DeferredPromise>&&);
     void text(Ref<DeferredPromise>&&);
@@ -77,6 +78,10 @@ public:
 
     String contentType() const { return m_headers->fastGet(HTTPHeaderName::ContentType); }
 
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
 protected:
     FetchBodyOwner(ScriptExecutionContext*, std::optional<FetchBody>&&, Ref<FetchHeaders>&&);
 
@@ -92,7 +97,7 @@ protected:
     void setBody(FetchBody&& body) { m_body = WTFMove(body); }
     ExceptionOr<void> createReadableStream(JSC::JSGlobalObject&);
 
-    // ActiveDOMObject API
+    // ActiveDOMObject.
     void stop() override;
 
     void setDisturbed() { m_isDisturbed = true; }

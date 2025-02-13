@@ -40,7 +40,7 @@ bool writeAllToFile(FileSystem::PlatformFileHandle file, const T& container)
     size_t bytesLength = container.size() * sizeof(container[0]);
     auto end = bytes + bytesLength;
     while (bytes < end) {
-        auto written = FileSystem::writeToFile(file, bytes, bytesLength);
+        auto written = FileSystem::writeToFile(file, { bytes, bytesLength });
         if (written == -1)
             return false;
         bytes += written;
@@ -51,8 +51,7 @@ bool writeAllToFile(FileSystem::PlatformFileHandle file, const T& container)
 
 std::optional<SerializedNFA> SerializedNFA::serialize(NFA&& nfa)
 {
-    auto file = FileSystem::invalidPlatformFileHandle;
-    auto filename = FileSystem::openTemporaryFile("SerializedNFA"_s, file);
+    auto [filename, file] = FileSystem::openTemporaryFile("SerializedNFA"_s);
     if (!FileSystem::isHandleValid(file))
         return std::nullopt;
 
@@ -107,7 +106,7 @@ SerializedNFA::SerializedNFA(FileSystem::MappedFileData&& file, Metadata&& metad
 template<typename T>
 const T* SerializedNFA::pointerAtOffsetInFile(size_t offset) const
 {
-    return reinterpret_cast<const T*>(static_cast<const uint8_t*>(m_file.data()) + offset);
+    return reinterpret_cast<const T*>(m_file.span().subspan(offset).data());
 }
 
 auto SerializedNFA::nodes() const -> const Range<ImmutableNFANode>

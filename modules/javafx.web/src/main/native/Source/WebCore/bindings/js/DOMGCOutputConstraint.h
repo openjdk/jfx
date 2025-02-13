@@ -31,9 +31,6 @@ namespace JSC {
 class VM;
 }
 
-namespace JSC {
-class VM;
-} // namespace JSC
 
 namespace WebCore {
 

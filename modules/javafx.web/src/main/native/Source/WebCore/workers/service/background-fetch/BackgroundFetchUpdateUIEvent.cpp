@@ -27,11 +27,11 @@
 #include "BackgroundFetchUpdateUIEvent.h"
 
 #include "NotImplemented.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(BackgroundFetchUpdateUIEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BackgroundFetchUpdateUIEvent);
 
 Ref<BackgroundFetchUpdateUIEvent> BackgroundFetchUpdateUIEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
@@ -40,7 +40,7 @@ Ref<BackgroundFetchUpdateUIEvent> BackgroundFetchUpdateUIEvent::create(const Ato
 }
 
 BackgroundFetchUpdateUIEvent::BackgroundFetchUpdateUIEvent(const AtomString& type, ExtendableEventInit&& eventInit, RefPtr<BackgroundFetchRegistration>&& registration, IsTrusted isTrusted)
-    : BackgroundFetchEvent(type, WTFMove(eventInit), WTFMove(registration), isTrusted)
+    : BackgroundFetchEvent(EventInterfaceType::BackgroundFetchUpdateUIEvent, type, WTFMove(eventInit), WTFMove(registration), isTrusted)
 {
 }
 

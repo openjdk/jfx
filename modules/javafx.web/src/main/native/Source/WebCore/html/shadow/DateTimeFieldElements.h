@@ -34,129 +34,142 @@
 namespace WebCore {
 
 class DateTimeDayFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeDayFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeDayFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeDayFieldElement);
 
 public:
-    static Ref<DateTimeDayFieldElement> create(Document&, FieldOwner&);
+    static Ref<DateTimeDayFieldElement> create(Document&, DateTimeFieldElementFieldOwner&);
 
 private:
-    DateTimeDayFieldElement(Document&, FieldOwner&);
+    DateTimeDayFieldElement(Document&, DateTimeFieldElementFieldOwner&);
 
     // DateTimeFieldElement functions:
     void setValueAsDate(const DateComponents&) final;
-    void populateDateTimeFieldsState(DateTimeFieldsState&) final;
+    void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue) final;
 };
 
 class DateTimeHourFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeHourFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeHourFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeHourFieldElement);
 
 public:
-    static Ref<DateTimeHourFieldElement> create(Document&, FieldOwner&, int minimum, int maximum);
+    static Ref<DateTimeHourFieldElement> create(Document&, DateTimeFieldElementFieldOwner&, int minimum, int maximum);
 
 private:
-    DateTimeHourFieldElement(Document&, FieldOwner&, int minimum, int maximum);
+    DateTimeHourFieldElement(Document&, DateTimeFieldElementFieldOwner&, int minimum, int maximum);
 
     // DateTimeFieldElement functions:
     void setValueAsDate(const DateComponents&) final;
-    void populateDateTimeFieldsState(DateTimeFieldsState&) final;
+    void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue) final;
 };
 
 class DateTimeMeridiemFieldElement final : public DateTimeSymbolicFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeMeridiemFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeMeridiemFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeMeridiemFieldElement);
 
 public:
-    static Ref<DateTimeMeridiemFieldElement> create(Document&, FieldOwner&, const Vector<String>&);
+    static Ref<DateTimeMeridiemFieldElement> create(Document&, DateTimeFieldElementFieldOwner&, const Vector<String>&);
 
 private:
-    DateTimeMeridiemFieldElement(Document&, FieldOwner&, const Vector<String>&);
+    DateTimeMeridiemFieldElement(Document&, DateTimeFieldElementFieldOwner&, const Vector<String>&);
 
+    void updateAriaValueAttributes();
     // DateTimeFieldElement functions:
+    void setEmptyValue(EventBehavior = DispatchNoEvent) final;
     void setValueAsDate(const DateComponents&) final;
-    void populateDateTimeFieldsState(DateTimeFieldsState&) final;
+    void setValueAsInteger(int, EventBehavior = DispatchNoEvent) final;
+
+    void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue) final;
 };
 
 class DateTimeMillisecondFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeMillisecondFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeMillisecondFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeMillisecondFieldElement);
 
 public:
-    static Ref<DateTimeMillisecondFieldElement> create(Document&, FieldOwner&);
+    static Ref<DateTimeMillisecondFieldElement> create(Document&, DateTimeFieldElementFieldOwner&);
 
 private:
-    DateTimeMillisecondFieldElement(Document&, FieldOwner&);
+    DateTimeMillisecondFieldElement(Document&, DateTimeFieldElementFieldOwner&);
 
     // DateTimeFieldElement functions:
     void setValueAsDate(const DateComponents&) final;
-    void populateDateTimeFieldsState(DateTimeFieldsState&) final;
+    void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue) final;
 };
 
 class DateTimeMinuteFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeMinuteFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeMinuteFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeMinuteFieldElement);
 
 public:
-    static Ref<DateTimeMinuteFieldElement> create(Document&, FieldOwner&);
+    static Ref<DateTimeMinuteFieldElement> create(Document&, DateTimeFieldElementFieldOwner&);
 
 private:
-    DateTimeMinuteFieldElement(Document&, FieldOwner&);
+    DateTimeMinuteFieldElement(Document&, DateTimeFieldElementFieldOwner&);
 
     // DateTimeFieldElement functions:
     void setValueAsDate(const DateComponents&) final;
-    void populateDateTimeFieldsState(DateTimeFieldsState&) final;
+    void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue) final;
 };
 
 class DateTimeMonthFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeMonthFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeMonthFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeMonthFieldElement);
 
 public:
-    static Ref<DateTimeMonthFieldElement> create(Document&, FieldOwner&);
+    static Ref<DateTimeMonthFieldElement> create(Document&, DateTimeFieldElementFieldOwner&);
 
 private:
-    DateTimeMonthFieldElement(Document&, FieldOwner&);
+    DateTimeMonthFieldElement(Document&, DateTimeFieldElementFieldOwner&);
 
     // DateTimeFieldElement functions:
     void setValueAsDate(const DateComponents&) final;
-    void populateDateTimeFieldsState(DateTimeFieldsState&) final;
+    void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue) final;
 };
 
 class DateTimeSecondFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeSecondFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeSecondFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeSecondFieldElement);
 
 public:
-    static Ref<DateTimeSecondFieldElement> create(Document&, FieldOwner&);
+    static Ref<DateTimeSecondFieldElement> create(Document&, DateTimeFieldElementFieldOwner&);
 
 private:
-    DateTimeSecondFieldElement(Document&, FieldOwner&);
+    DateTimeSecondFieldElement(Document&, DateTimeFieldElementFieldOwner&);
 
     // DateTimeFieldElement functions:
     void setValueAsDate(const DateComponents&) final;
-    void populateDateTimeFieldsState(DateTimeFieldsState&) final;
+    void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue) final;
 };
 
 class DateTimeSymbolicMonthFieldElement final : public DateTimeSymbolicFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeSymbolicMonthFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeSymbolicMonthFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeSymbolicMonthFieldElement);
 
 public:
-    static Ref<DateTimeSymbolicMonthFieldElement> create(Document&, FieldOwner&, const Vector<String>&);
+    static Ref<DateTimeSymbolicMonthFieldElement> create(Document&, DateTimeFieldElementFieldOwner&, const Vector<String>&);
 
 private:
-    DateTimeSymbolicMonthFieldElement(Document&, FieldOwner&, const Vector<String>&);
+    DateTimeSymbolicMonthFieldElement(Document&, DateTimeFieldElementFieldOwner&, const Vector<String>&);
 
     // DateTimeFieldElement functions:
     void setValueAsDate(const DateComponents&) final;
-    void populateDateTimeFieldsState(DateTimeFieldsState&) final;
+    void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue) final;
 };
 
 class DateTimeYearFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeYearFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeYearFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeYearFieldElement);
 
 public:
-    static Ref<DateTimeYearFieldElement> create(Document&, FieldOwner&);
+    static Ref<DateTimeYearFieldElement> create(Document&, DateTimeFieldElementFieldOwner&);
 
 private:
-    DateTimeYearFieldElement(Document&, FieldOwner&);
+    DateTimeYearFieldElement(Document&, DateTimeFieldElementFieldOwner&);
 
     // DateTimeFieldElement functions:
     void setValueAsDate(const DateComponents&) final;
-    void populateDateTimeFieldsState(DateTimeFieldsState&) final;
+    void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue) final;
 };
 
 } // namespace WebCore

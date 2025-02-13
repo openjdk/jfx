@@ -27,11 +27,11 @@
 
 #include "ContainerNode.h"
 #include "NodeTraversal.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(TreeWalker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TreeWalker);
 
 TreeWalker::TreeWalker(Node& rootNode, unsigned long whatToShow, RefPtr<NodeFilter>&& filter)
     : NodeIteratorBase(rootNode, whatToShow, WTFMove(filter))
@@ -183,6 +183,17 @@ ExceptionOr<Node*> TreeWalker::nextSibling()
 
 ExceptionOr<Node*> TreeWalker::previousNode()
 {
+    if (!filter()) {
+        if (m_current.ptr() == &root())
+            return nullptr;
+        for (RefPtr node = NodeTraversal::previous(m_current); node; node = NodeTraversal::previous(*node)) {
+            if (matchesWhatToShow(*node))
+                return setCurrent(node.releaseNonNull());
+            if (node == &root())
+                break;
+        }
+        return nullptr;
+    }
     RefPtr node = m_current.ptr();
     while (node != &root()) {
         while (RefPtr previousSibling = node->previousSibling()) {
@@ -230,6 +241,13 @@ ExceptionOr<Node*> TreeWalker::previousNode()
 
 ExceptionOr<Node*> TreeWalker::nextNode()
 {
+    if (!filter()) {
+        for (RefPtr node = NodeTraversal::next(m_current, &root()); node; node = NodeTraversal::next(*node, &root())) {
+            if (matchesWhatToShow(*node))
+                return setCurrent(node.releaseNonNull());
+        }
+        return nullptr;
+    }
     RefPtr node = m_current.ptr();
 Children:
     while (RefPtr firstChild = node->firstChild()) {

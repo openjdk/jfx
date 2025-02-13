@@ -39,7 +39,7 @@ void FontCache::platformInit()
 {
 }
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&){
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&, OptionSet<FontLookupOptions> options){
     return FontPlatformData::create(fontDescription, family);
 }
 

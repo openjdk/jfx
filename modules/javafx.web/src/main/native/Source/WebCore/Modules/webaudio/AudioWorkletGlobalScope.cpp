@@ -43,11 +43,12 @@
 #include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/CrossThreadCopier.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioWorkletGlobalScope);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioWorkletGlobalScope);
 
 RefPtr<AudioWorkletGlobalScope> AudioWorkletGlobalScope::tryCreate(AudioWorkletThread& thread, const WorkletParameters& parameters)
 {
@@ -69,7 +70,7 @@ AudioWorkletGlobalScope::AudioWorkletGlobalScope(AudioWorkletThread& thread, Ref
 AudioWorkletGlobalScope::~AudioWorkletGlobalScope() = default;
 
 // https://www.w3.org/TR/webaudio/#dom-audioworkletglobalscope-registerprocessor
-ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<JSAudioWorkletProcessorConstructor>&& processorContructor)
+ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<JSAudioWorkletProcessorConstructor>&& processorConstructor)
 {
     ASSERT(!isMainThread());
 
@@ -79,7 +80,7 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     if (m_processorConstructorMap.contains(name))
         return Exception { ExceptionCode::NotSupportedError, "A processor was already registered with this name"_s };
 
-    JSC::JSObject* jsConstructor = processorContructor->callbackData()->callback();
+    JSC::JSObject* jsConstructor = processorConstructor->callbackData()->callback();
     auto* globalObject = jsConstructor->globalObject();
     auto& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -98,22 +99,25 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
 
     Vector<AudioParamDescriptor> parameterDescriptors;
     if (!parameterDescriptorsValue.isUndefined()) {
-        parameterDescriptors = convert<IDLSequence<IDLDictionary<AudioParamDescriptor>>>(*globalObject, parameterDescriptorsValue);
-        RETURN_IF_EXCEPTION(scope, Exception { ExceptionCode::ExistingExceptionError });
-        UNUSED_PARAM(parameterDescriptors);
+        auto parameterDescriptorsConversionResult = convert<IDLSequence<IDLDictionary<AudioParamDescriptor>>>(*globalObject, parameterDescriptorsValue);
+        if (UNLIKELY(parameterDescriptorsConversionResult.hasException(scope)))
+            return Exception { ExceptionCode::ExistingExceptionError };
+
+        parameterDescriptors = parameterDescriptorsConversionResult.releaseReturnValue();
+
         HashSet<String> paramNames;
         for (auto& descriptor : parameterDescriptors) {
             auto addResult = paramNames.add(descriptor.name);
             if (!addResult.isNewEntry)
-                return Exception { ExceptionCode::NotSupportedError, makeString("parameterDescriptors contain duplicate AudioParam name: ", name) };
+                return Exception { ExceptionCode::NotSupportedError, makeString("parameterDescriptors contain duplicate AudioParam name: "_s, name) };
             if (descriptor.defaultValue < descriptor.minValue)
-                return Exception { ExceptionCode::InvalidStateError, makeString("AudioParamDescriptor with name '", name, "' has a defaultValue that is less than the minValue") };
+                return Exception { ExceptionCode::InvalidStateError, makeString("AudioParamDescriptor with name '"_s, name, "' has a defaultValue that is less than the minValue"_s) };
             if (descriptor.defaultValue > descriptor.maxValue)
-                return Exception { ExceptionCode::InvalidStateError, makeString("AudioParamDescriptor with name '", name, "' has a defaultValue that is greater than the maxValue") };
+                return Exception { ExceptionCode::InvalidStateError, makeString("AudioParamDescriptor with name '"_s, name, "' has a defaultValue that is greater than the maxValue"_s) };
         }
     }
 
-    auto addResult = m_processorConstructorMap.add(name, WTFMove(processorContructor));
+    auto addResult = m_processorConstructorMap.add(name, WTFMove(processorConstructor));
 
     // We've already checked at the beginning of this function but then we ran some JS so we need to check again.
     if (!addResult.isNewEntry)
@@ -140,6 +144,9 @@ RefPtr<AudioWorkletProcessor> AudioWorkletGlobalScope::createProcessor(const Str
         return nullptr;
 
     JSC::JSObject* jsConstructor = constructor->callbackData()->callback();
+    ASSERT(jsConstructor);
+    if (!jsConstructor)
+        return nullptr;
     auto* globalObject = constructor->callbackData()->globalObject();
     JSC::VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

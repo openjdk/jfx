@@ -33,6 +33,15 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+class RTCDataChannelHandlerClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RTCDataChannelHandlerClient> : std::true_type { };
+}
+
+namespace WebCore {
 
 class RTCError;
 
@@ -42,7 +51,7 @@ public:
 
     virtual void didChangeReadyState(RTCDataChannelState) = 0;
     virtual void didReceiveStringData(const String&) = 0;
-    virtual void didReceiveRawData(const uint8_t*, size_t) = 0;
+    virtual void didReceiveRawData(std::span<const uint8_t>) = 0;
     virtual void didDetectError(Ref<RTCError>&&) = 0;
     virtual void bufferedAmountIsDecreasing(size_t) = 0;
     virtual size_t bufferedAmount() const { return 0; }

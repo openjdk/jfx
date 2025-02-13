@@ -276,7 +276,7 @@ NO_RETURN_DUE_TO_ASSERT void DrawFilteredImageBuffer::apply(GraphicsContext&) co
     ASSERT_NOT_REACHED();
 }
 
-void DrawFilteredImageBuffer::apply(GraphicsContext& context, ImageBuffer* sourceImage, FilterResults& results)
+void DrawFilteredImageBuffer::apply(GraphicsContext& context, ImageBuffer* sourceImage, FilterResults& results) const
 {
     context.drawFilteredImageBuffer(sourceImage, m_sourceImageRect, m_filter, results);
 }
@@ -296,7 +296,7 @@ DrawGlyphs::DrawGlyphs(RenderingResourceIdentifier fontIdentifier, PositionedGly
 
 DrawGlyphs::DrawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
     : m_fontIdentifier(font.renderingResourceIdentifier())
-    , m_positionedGlyphs { { glyphs, count }, { advances, count }, localAnchor, smoothingMode }
+    , m_positionedGlyphs { Vector(std::span { glyphs, count }), Vector(std::span { advances, count }), localAnchor, smoothingMode }
 {
 }
 
@@ -536,12 +536,13 @@ void DrawFocusRingRects::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 
 void FillRect::apply(GraphicsContext& context) const
 {
-    context.fillRect(m_rect);
+    context.fillRect(m_rect, m_requiresClipToRect);
 }
 
 void FillRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     ts.dumpProperty("rect", rect());
+    ts.dumpProperty("requiresClipToRect", m_requiresClipToRect == GraphicsContext::RequiresClipToRect::Yes);
 }
 
 void FillRectWithColor::apply(GraphicsContext& context) const
@@ -578,17 +579,19 @@ void FillRectWithGradient::dump(TextStream& ts, OptionSet<AsTextFlag>) const
     ts.dumpProperty("rect", rect());
 }
 
-FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
+FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform, GraphicsContext::RequiresClipToRect requiresClipToRect)
     : m_rect(rect)
     , m_gradient(gradient)
     , m_gradientSpaceTransform(gradientSpaceTransform)
+    , m_requiresClipToRect(requiresClipToRect)
 {
 }
 
-FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(FloatRect&& rect, Ref<Gradient>&& gradient, AffineTransform&& gradientSpaceTransform)
+FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(FloatRect&& rect, Ref<Gradient>&& gradient, AffineTransform&& gradientSpaceTransform, GraphicsContext::RequiresClipToRect requiresClipToRect)
     : m_rect(WTFMove(rect))
     , m_gradient(WTFMove(gradient))
     , m_gradientSpaceTransform(WTFMove(gradientSpaceTransform))
+    , m_requiresClipToRect(requiresClipToRect)
 {
 }
 
@@ -602,6 +605,7 @@ void FillRectWithGradientAndSpaceTransform::dump(TextStream& ts, OptionSet<AsTex
     // FIXME: log gradient.
     ts.dumpProperty("rect", rect());
     ts.dumpProperty("gradient-space-transform", gradientSpaceTransform());
+    ts.dumpProperty("requiresClipToRect", m_requiresClipToRect == GraphicsContext::RequiresClipToRect::Yes);
 }
 
 void FillCompositedRect::apply(GraphicsContext& context) const
@@ -882,9 +886,20 @@ void BeginTransparencyLayer::apply(GraphicsContext& context) const
     context.beginTransparencyLayer(m_opacity);
 }
 
+void BeginTransparencyLayerWithCompositeMode::apply(GraphicsContext& context) const
+{
+    context.beginTransparencyLayer(m_compositeMode.operation, m_compositeMode.blendMode);
+}
+
 void BeginTransparencyLayer::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     ts.dumpProperty("opacity", opacity());
+}
+
+void BeginTransparencyLayerWithCompositeMode::dump(TextStream& ts, OptionSet<AsTextFlag>) const
+{
+    ts.dumpProperty("composite-operator", compositeMode().operation);
+    ts.dumpProperty("blend-mode", compositeMode().blendMode);
 }
 
 void EndTransparencyLayer::apply(GraphicsContext& context) const

@@ -37,11 +37,11 @@
 #include "FloatConversion.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioBufferSourceNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioBufferSourceNode);
 
 constexpr double DefaultGrainDuration = 0.020; // 20ms
 
@@ -299,6 +299,10 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
     } else if (pitchRate == -1 && !needsInterpolation) {
         int readIndex = static_cast<int>(virtualReadIndex);
         int deltaFrames = static_cast<int>(virtualDeltaFrames);
+        int maxFrame = static_cast<int>(virtualMaxFrame);
+        if (readIndex > maxFrame)
+            readIndex = maxFrame;
+
         int minFrame = static_cast<int>(virtualMinFrame) - 1;
         while (framesToProcess > 0) {
             int framesToEnd = readIndex - minFrame;
@@ -436,11 +440,13 @@ ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer
     ASSERT(isMainThread());
     DEBUG_LOG(LOGIDENTIFIER);
 
+    // This synchronizes with process(), it is important to acquire the processLock before the
+    // graphLock to avoid a deadlock given that this is the order process() acquires the locks
+    // in.
+    Locker locker { m_processLock };
+
     // The context must be locked since changing the buffer can re-configure the number of channels that are output.
     Locker contextLocker { context().graphLock() };
-
-    // This synchronizes with process().
-    Locker locker { m_processLock };
 
     if (buffer && m_wasBufferSet)
         return Exception { ExceptionCode::InvalidStateError, "The buffer was already set"_s };

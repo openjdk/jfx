@@ -33,9 +33,11 @@
 namespace WebCore {
 
 class RenderAttachment final : public RenderReplaced {
-    WTF_MAKE_ISO_ALLOCATED(RenderAttachment);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderAttachment);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderAttachment);
 public:
     RenderAttachment(HTMLAttachmentElement&, RenderStyle&&);
+    virtual ~RenderAttachment();
 
     HTMLAttachmentElement& attachmentElement() const;
 

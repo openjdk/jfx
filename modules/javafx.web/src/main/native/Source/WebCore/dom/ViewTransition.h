@@ -25,10 +25,15 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "Document.h"
 #include "Element.h"
 #include "ExceptionOr.h"
+#include "ImageBuffer.h"
 #include "JSValueInWrappedObject.h"
+#include "MutableStyleProperties.h"
+#include "Styleable.h"
+#include "ViewTransitionTypeSet.h"
 #include "ViewTransitionUpdateCallback.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Ref.h>
@@ -38,6 +43,9 @@ namespace WebCore {
 
 class DOMPromise;
 class DeferredPromise;
+class RenderLayerModelObject;
+class RenderViewTransitionCapture;
+class RenderLayerModelObject;
 
 enum class ViewTransitionPhase : uint8_t {
     PendingCapture,
@@ -50,22 +58,17 @@ enum class ViewTransitionPhase : uint8_t {
 struct CapturedElement {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    // FIXME: Add the following:
-    // old image (2d bitmap)
-    // old width / height
-    // old transform
-    // old writing mode
-    // old direction
-    // old text-orientation
-    // old mix-blend-mode
-    WeakPtr<Element, WeakPtrImplWithEventTargetData> newElement;
+    // std::nullopt represents an non-capturable element.
+    // nullptr represents an absent snapshot on an capturable element.
+    std::optional<RefPtr<ImageBuffer>> oldImage;
+    LayoutRect oldOverflowRect;
+    LayoutPoint oldLayerToLayoutOffset;
+    LayoutSize oldSize;
+    RefPtr<MutableStyleProperties> oldProperties;
+    WeakStyleable newElement;
+    Vector<AtomString> classList;
 
-    // FIXME: Also handle these:
-    // group keyframes
-    // group animation name rule
-    // group styles rule
-    // image pair isolation rule
-    // image animation name rule
+    RefPtr<MutableStyleProperties> groupStyleProperties;
 };
 
 struct OrderedNamedElementsMap {
@@ -92,9 +95,24 @@ public:
         return m_keys;
     }
 
+    auto& map() const
+    {
+        return m_map;
+    }
+
+    auto& map()
+    {
+        return m_map;
+    }
+
     bool isEmpty() const
     {
         return m_keys.isEmpty();
+    }
+
+    size_t size() const
+    {
+        return m_keys.size();
     }
 
     CapturedElement* find(const AtomString& key)
@@ -104,27 +122,53 @@ public:
         return nullptr;
     }
 
+    const CapturedElement* find(const AtomString& key) const
+    {
+        if (auto it = m_map.find(key); it != m_map.end())
+            return &it->value;
+        return nullptr;
+    }
+
+    void swap(OrderedNamedElementsMap& other)
+    {
+        m_keys.swap(other.m_keys);
+        m_map.swap(other.m_map);
+    }
+
 private:
     ListHashSet<AtomString> m_keys;
     HashMap<AtomString, UniqueRef<CapturedElement>> m_map;
 };
 
-class ViewTransition : public RefCounted<ViewTransition>, public CanMakeWeakPtr<ViewTransition> {
+struct ViewTransitionParams {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<ViewTransition> create(Document&, RefPtr<ViewTransitionUpdateCallback>&&);
+
+    OrderedNamedElementsMap namedElements;
+    FloatSize initialLargeViewportSize;
+    float initialPageZoom;
+};
+
+class ViewTransition : public RefCounted<ViewTransition>, public CanMakeWeakPtr<ViewTransition>, public ActiveDOMObject {
+public:
+    static Ref<ViewTransition> createSamePage(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
+    static RefPtr<ViewTransition> resolveInboundCrossDocumentViewTransition(Document&, std::unique_ptr<ViewTransitionParams>);
+    static Ref<ViewTransition> setupCrossDocumentViewTransition(Document&);
     ~ViewTransition();
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void skipTransition();
     void skipViewTransition(ExceptionOr<JSC::JSValue>&&);
-    void callUpdateCallback();
 
     void setupViewTransition();
-    ExceptionOr<void> captureOldState();
-    ExceptionOr<void> captureNewState();
-    void setupTransitionPseudoElements();
-    void activateViewTransition();
     void handleTransitionFrame();
-    void clearViewTransition();
+
+    void activateViewTransition();
+
+    UniqueRef<ViewTransitionParams> takeViewTransitionParams();
 
     DOMPromise& ready();
     DOMPromise& updateCallbackDone();
@@ -133,24 +177,53 @@ public:
     ViewTransitionPhase phase() const { return m_phase; }
     const OrderedNamedElementsMap& namedElements() const { return m_namedElements; };
 
-    RefPtr<Document> protectedDocument() const { return m_document.get(); }
+    Document* document() const { return downcast<Document>(scriptExecutionContext()); }
+    RefPtr<Document> protectedDocument() const { return document(); }
+
+    bool documentElementIsCaptured() const;
+
+    const ViewTransitionTypeSet& types() const { return m_types; }
+    void setTypes(Ref<ViewTransitionTypeSet>&& newTypes) { m_types = WTFMove(newTypes); }
+
+    RenderViewTransitionCapture* viewTransitionNewPseudoForCapturedElement(RenderLayerModelObject&);
 
 private:
-    ViewTransition(Document&, RefPtr<ViewTransitionUpdateCallback>&&);
+    ViewTransition(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
+    ViewTransition(Document&, Vector<AtomString>&&);
 
-    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
+    Ref<MutableStyleProperties> copyElementBaseProperties(RenderLayerModelObject&, LayoutSize&);
+
+    // Setup view transition sub-algorithms.
+    ExceptionOr<void> captureOldState();
+    ExceptionOr<void> captureNewState();
+    void setupTransitionPseudoElements();
+    void setupDynamicStyleSheet(const AtomString&, const CapturedElement&);
+
+    void callUpdateCallback();
+
+    ExceptionOr<void> updatePseudoElementStyles();
+    ExceptionOr<void> checkForViewportSizeChange();
+
+    void clearViewTransition();
+
+    // ActiveDOMObject.
+    void stop() final;
 
     OrderedNamedElementsMap m_namedElements;
     ViewTransitionPhase m_phase { ViewTransitionPhase::PendingCapture };
+    FloatSize m_initialLargeViewportSize;
+    float m_initialPageZoom;
 
     RefPtr<ViewTransitionUpdateCallback> m_updateCallback;
+    bool m_shouldCallUpdateCallback { false };
 
     using PromiseAndWrapper = std::pair<Ref<DOMPromise>, Ref<DeferredPromise>>;
     PromiseAndWrapper m_ready;
     PromiseAndWrapper m_updateCallbackDone;
     PromiseAndWrapper m_finished;
+    EventLoopTimerHandle m_updateCallbackTimeout;
 
-    FloatSize m_initialSnapshotContainingBlockSize;
+    Ref<ViewTransitionTypeSet> m_types;
 };
 
 }

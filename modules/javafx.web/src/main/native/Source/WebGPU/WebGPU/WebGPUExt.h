@@ -26,6 +26,7 @@
 #ifndef WEBGPUEXT_H_
 #define WEBGPUEXT_H_
 
+#include <CoreGraphics/CGImage.h>
 #include <CoreVideo/CoreVideo.h>
 #include <IOSurface/IOSurfaceRef.h>
 
@@ -37,9 +38,9 @@
 
 #ifdef __cplusplus
 #include <optional>
+#include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 
-extern "C" {
 #endif
 
 typedef struct WGPUExternalTextureImpl* WGPUExternalTexture;
@@ -48,16 +49,17 @@ typedef void (^WGPUWorkItem)(void);
 typedef void (^WGPUScheduleWorkBlock)(WGPUWorkItem workItem);
 typedef void (^WGPUDeviceLostBlockCallback)(WGPUDeviceLostReason reason, char const * message);
 
+typedef enum WGPUXREye {
+    WGPUXREye_None,
+    WGPUXREye_Left,
+    WGPUXREye_Right
+} WGPUXREye;
+
 typedef enum WGPUBufferBindingTypeExtended {
     WGPUBufferBindingType_Float3x2 = WGPUBufferBindingType_Force32 - 1,
     WGPUBufferBindingType_Float4x3 = WGPUBufferBindingType_Force32 - 2,
     WGPUBufferBindingType_ArrayLength = WGPUBufferBindingType_Force32 - 3,
 } WGPUBufferBindingTypeExtended;
-
-typedef enum WGPUColorSpace {
-    SRGB,
-    DisplayP3,
-} WGPUColorSpace;
 
 typedef enum WGPUSTypeExtended {
     WGPUSTypeExtended_InstanceCocoaDescriptor = 0x151BBC00, // Random
@@ -77,6 +79,7 @@ typedef struct WGPUInstanceCocoaDescriptor {
     // It's fine to pass NULL here, but if you do, you must periodically call
     // wgpuInstanceProcessEvents() to synchronously run the queued callbacks.
     __unsafe_unretained WGPUScheduleWorkBlock scheduleWorkBlock;
+    const void* webProcessResourceOwner;
 } WGPUInstanceCocoaDescriptor;
 
 const int WGPUTextureSampleType_ExternalTexture = WGPUTextureSampleType_Force32 - 1;
@@ -134,11 +137,22 @@ WGPU_EXPORT void wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(WGPURende
 #endif
 WGPU_EXPORT void wgpuExternalTextureDestroy(WGPUExternalTexture texture) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuExternalTextureUndestroy(WGPUExternalTexture texture) WGPU_FUNCTION_ATTRIBUTE;
+WGPU_EXPORT void wgpuExternalTextureUpdate(WGPUExternalTexture texture, CVPixelBufferRef) WGPU_FUNCTION_ATTRIBUTE;
+WGPU_EXPORT WGPULimits wgpuDefaultLimits() WGPU_FUNCTION_ATTRIBUTE;
+WGPU_EXPORT void wgpuBindGroupUpdateExternalTextures(WGPUBindGroup bindGroup, WGPUExternalTexture externalTexture) WGPU_FUNCTION_ATTRIBUTE;
 
-#endif  // !defined(WGPU_SKIP_DECLARATIONS)
+WGPU_EXPORT WGPUXRBinding wgpuDeviceCreateXRBinding(WGPUDevice device) WGPU_FUNCTION_ATTRIBUTE;
+
+WGPU_EXPORT WGPUXRProjectionLayer wgpuBindingCreateXRProjectionLayer(WGPUXRBinding binding, WGPUTextureFormat colorFormat, WGPUTextureFormat* optionalDepthStencilFormat, WGPUTextureUsageFlags flags, double scale) WGPU_FUNCTION_ATTRIBUTE;
+WGPU_EXPORT WGPUXRSubImage wgpuBindingGetViewSubImage(WGPUXRBinding binding, WGPUXREye eye) WGPU_FUNCTION_ATTRIBUTE;
+
+WGPU_EXPORT WGPUBool wgpuAdapterXRCompatible(WGPUAdapter adapter) WGPU_FUNCTION_ATTRIBUTE;
 
 #ifdef __cplusplus
-} // extern "C"
+WGPU_EXPORT RetainPtr<CGImageRef> wgpuSwapChainGetTextureAsNativeImage(WGPUSwapChain swapChain, uint32_t bufferIndex);
 #endif
+WGPU_EXPORT WGPUBool wgpuExternalTextureIsValid(WGPUExternalTexture externalTexture) WGPU_FUNCTION_ATTRIBUTE;
+
+#endif  // !defined(WGPU_SKIP_DECLARATIONS)
 
 #endif // WEBGPUEXT_H_

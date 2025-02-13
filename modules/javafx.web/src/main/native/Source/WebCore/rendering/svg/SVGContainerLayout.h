@@ -19,7 +19,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderLayerModelObject.h"
 
 #include <functional>
@@ -46,10 +45,9 @@ public:
 private:
     bool layoutSizeOfNearestViewportChanged() const;
 
-    RenderLayerModelObject& m_container;
+    SingleThreadWeakRef<RenderLayerModelObject> m_container;
     Vector<std::reference_wrapper<RenderLayerModelObject>> m_positionedChildren;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

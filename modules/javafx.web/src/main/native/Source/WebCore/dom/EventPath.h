@@ -29,6 +29,15 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class EventPath;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::EventPath> : std::true_type { };
+}
+
+namespace WebCore {
 
 class Touch;
 
@@ -59,7 +68,7 @@ private:
     void retargetTouchLists(const TouchEvent&);
 #endif
 
-    Vector<EventContext, 16> m_path;
+    Vector<EventContext, 32> m_path;
 };
 
 inline Node* EventPath::eventTargetRespectingTargetRules(Node& referenceNode)

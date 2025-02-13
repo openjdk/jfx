@@ -36,7 +36,7 @@ class MediaQueryEvaluator;
 // will be called whenever the value of the query changes.
 
 class MediaQueryList final : public RefCounted<MediaQueryList>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(MediaQueryList);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaQueryList);
 public:
     static Ref<MediaQueryList> create(Document&, MediaQueryMatcher&, MQ::MediaQueryList&&, bool matches);
     ~MediaQueryList();
@@ -51,22 +51,22 @@ public:
 
     void detachFromMatcher();
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     MediaQueryList(Document&, MediaQueryMatcher&, MQ::MediaQueryList&&, bool matches);
 
     void setMatches(bool);
 
-    EventTargetInterface eventTargetInterface() const final { return MediaQueryListEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaQueryList; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     void eventListenersDidChange() final;
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     RefPtr<MediaQueryMatcher> m_matcher;

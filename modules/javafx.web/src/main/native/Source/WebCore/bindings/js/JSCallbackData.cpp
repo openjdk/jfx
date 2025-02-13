@@ -34,6 +34,7 @@
 #include "JSExecState.h"
 #include "JSExecStateInstrumentation.h"
 #include <JavaScriptCore/Exception.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -71,7 +72,7 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
 
         callData = JSC::getCallData(function);
         if (callData.type == CallData::Type::None) {
-            returnedException = JSC::Exception::create(vm, createTypeError(lexicalGlobalObject, makeString("'", String(functionName.uid()), "' property of callback interface should be callable")));
+            returnedException = JSC::Exception::create(vm, createTypeError(lexicalGlobalObject, makeString('\'', String(functionName.uid()), "' property of callback interface should be callable"_s)));
             return JSValue();
         }
 
@@ -97,19 +98,12 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
 }
 
 template<typename Visitor>
-void JSCallbackDataWeak::visitJSFunction(Visitor& visitor)
+void JSCallbackData::visitJSFunction(Visitor& visitor)
 {
     visitor.append(m_callback);
 }
 
-template void JSCallbackDataWeak::visitJSFunction(JSC::AbstractSlotVisitor&);
-template void JSCallbackDataWeak::visitJSFunction(JSC::SlotVisitor&);
-
-bool JSCallbackDataWeak::WeakOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, AbstractSlotVisitor& visitor, const char** reason)
-{
-    if (UNLIKELY(reason))
-        *reason = "Context is opaque root"; // FIXME: what is the context.
-    return visitor.containsOpaqueRoot(context);
-}
+template void JSCallbackData::visitJSFunction(JSC::AbstractSlotVisitor&);
+template void JSCallbackData::visitJSFunction(JSC::SlotVisitor&);
 
 } // namespace WebCore

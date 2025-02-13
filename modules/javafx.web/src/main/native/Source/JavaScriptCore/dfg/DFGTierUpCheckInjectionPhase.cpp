@@ -55,7 +55,7 @@ using NaturalLoop = CPSNaturalLoop;
 class TierUpCheckInjectionPhase : public Phase {
 public:
     TierUpCheckInjectionPhase(Graph& graph)
-        : Phase(graph, "tier-up check injection")
+        : Phase(graph, "tier-up check injection"_s)
     {
     }
 
@@ -147,7 +147,7 @@ public:
             }
 
             if (!tierUpCandidates.isEmpty())
-                m_graph.m_plan.tierUpInLoopHierarchy().add(entry.key, tierUpCandidates);
+                m_graph.m_plan.tierUpInLoopHierarchy().ensure(entry.key, [&] { return FixedVector<BytecodeIndex>(WTFMove(tierUpCandidates)); });
         }
         m_graph.m_plan.setWillTryToTierUp(true);
         return true;

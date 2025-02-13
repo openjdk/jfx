@@ -84,7 +84,7 @@ private:
     void unregisterBlobURLHandle(const URL& url, const std::optional<SecurityOriginData>& topOrigin) override { m_blobRegistry.unregisterBlobURLHandle(url, topOrigin); };
     unsigned long long blobSize(const URL& url) override { return m_blobRegistry.blobSize(url); }
     void writeBlobsToTemporaryFilesForIndexedDB(const Vector<String>& blobURLs, CompletionHandler<void(Vector<String>&& filePaths)>&& completionHandler) override { m_blobRegistry.writeBlobsToTemporaryFilesForIndexedDB(blobURLs, WTFMove(completionHandler)); }
-
+    String blobType(const URL& url) { return emptyString(); }
     BlobRegistryImpl* blobRegistryImpl() final { return &m_blobRegistry; }
 
     BlobRegistryImpl m_blobRegistry;

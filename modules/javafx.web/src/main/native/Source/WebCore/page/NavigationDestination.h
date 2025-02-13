@@ -27,6 +27,7 @@
 
 #include "EventHandler.h"
 #include "LocalDOMWindowProperty.h"
+#include "NavigationHistoryEntry.h"
 #include "ScriptWrappable.h"
 
 namespace JSC {
@@ -36,22 +37,25 @@ class JSValue;
 namespace WebCore {
 
 class NavigationDestination final : public RefCounted<NavigationDestination>, public ScriptWrappable {
-    WTF_MAKE_ISO_ALLOCATED(NavigationDestination);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigationDestination);
 public:
-    const String& url() const { return m_url; };
-    const String& key() const { return m_key; };
-    const String& id() const { return m_id; };
-    uint64_t index() const { return m_index; };
-    bool sameDocument() const { return m_sameDocument; };
-    const JSC::JSValue& getState() const { return m_state; };
+    static Ref<NavigationDestination> create(const URL& url, RefPtr<NavigationHistoryEntry>&& entry, bool isSameDocument) { return adoptRef(*new NavigationDestination(url, WTFMove(entry), isSameDocument)); };
+
+    const URL& url() const { return m_url; };
+    String key() const { return m_entry ? m_entry->key() : String(); };
+    String id() const { return m_entry ? m_entry->id() : String(); };
+    int64_t index() const { return m_entry ? m_entry->index() : -1; };
+    bool sameDocument() const { return m_isSameDocument; };
+    JSC::JSValue getState(JSDOMGlobalObject&) const;
+    void setStateObject(SerializedScriptValue* stateObject) { m_stateObject = stateObject; }
 
 private:
-    String m_url;
-    String m_key;
-    String m_id;
-    uint64_t m_index;
-    JSC::JSValue m_state;
-    bool m_sameDocument;
+    explicit NavigationDestination(const URL&, RefPtr<NavigationHistoryEntry>&&, bool isSameDocument);
+
+    RefPtr<NavigationHistoryEntry> m_entry;
+    URL m_url;
+    bool m_isSameDocument;
+    RefPtr<SerializedScriptValue> m_stateObject;
 };
 
 } // namespace WebCore

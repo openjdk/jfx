@@ -27,7 +27,7 @@
 #include "ParsedContentRange.h"
 
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
@@ -134,8 +134,8 @@ String ParsedContentRange::headerValue() const
     if (!isValid())
         return String();
     if (m_instanceLength == unknownLength)
-        return makeString("bytes ", m_firstBytePosition, '-', m_lastBytePosition, "/*");
-    return makeString("bytes ", m_firstBytePosition, '-', m_lastBytePosition, '/', m_instanceLength);
+        return makeString("bytes "_s, m_firstBytePosition, '-', m_lastBytePosition, "/*"_s);
+    return makeString("bytes "_s, m_firstBytePosition, '-', m_lastBytePosition, '/', m_instanceLength);
 }
 
 }

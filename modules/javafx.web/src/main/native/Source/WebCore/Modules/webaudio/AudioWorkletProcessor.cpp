@@ -41,11 +41,11 @@
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/JSTypedArrays.h>
 #include <wtf/GetPtr.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioWorkletProcessor);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioWorkletProcessor);
 
 using namespace JSC;
 
@@ -54,6 +54,12 @@ static unsigned busChannelCount(const AudioBus& bus)
     return bus.numberOfChannels();
 }
 
+template<typename ArrayType>
+static ArrayType* getArrayAtIndex(JSArray& jsArray, JSGlobalObject& globalObject, unsigned index)
+{
+    auto item = jsArray.getDirectIndex(&globalObject, index);
+    return item ? jsDynamicCast<ArrayType*>(item) : nullptr;
+}
 static unsigned busChannelCount(const AudioBus* bus)
 {
     return bus ? busChannelCount(*bus) : 0;
@@ -122,20 +128,20 @@ static JSArray* constructFrozenJSArray(VM& vm, JSGlobalObject& globalObject, con
     return array;
 }
 
-static void copyDataFromJSArrayToBuses(JSGlobalObject& globalObject, const JSArray& jsArray, Vector<Ref<AudioBus>>& buses)
+static void copyDataFromJSArrayToBuses(JSGlobalObject& globalObject, JSArray& jsArray, Vector<Ref<AudioBus>>& buses)
 {
     // We can safely make assumptions about the structure of the JSArray since we use frozen arrays.
     for (unsigned i = 0; i < buses.size(); ++i) {
         auto& bus = buses[i];
-        auto* channelsArray = jsDynamicCast<JSArray*>(jsArray.getIndex(&globalObject, i));
+        auto* channelsArray = getArrayAtIndex<JSArray>(jsArray, globalObject, i);
         if (UNLIKELY(!channelsArray)) {
             bus->zero();
             continue;
         }
         for (unsigned j = 0; j < bus->numberOfChannels(); ++j) {
             auto* channel = bus->channel(j);
-            auto* jsChannelData = jsDynamicCast<JSFloat32Array*>(channelsArray->getIndex(&globalObject, j));
-            if (LIKELY(jsChannelData && jsChannelData->length() == channel->length()))
+            auto* jsChannelData = getArrayAtIndex<JSFloat32Array>(*channelsArray, globalObject, j);
+            if (LIKELY(jsChannelData && !jsChannelData->isShared() && jsChannelData->length() == channel->length()))
                 memcpy(channel->mutableData(), jsChannelData->typedVector(), sizeof(float) * channel->length());
             else
                 channel->zero();
@@ -150,14 +156,14 @@ static bool copyDataFromBusesToJSArray(JSGlobalObject& globalObject, const Vecto
 
     for (size_t busIndex = 0; busIndex < buses.size(); ++busIndex) {
         auto& bus = buses[busIndex];
-        auto* jsChannelsArray = jsDynamicCast<JSArray*>(jsArray->getIndex(&globalObject, busIndex));
+        auto* jsChannelsArray = getArrayAtIndex<JSArray>(*jsArray, globalObject, busIndex);
         unsigned numberOfChannels = busChannelCount(bus.get());
         if (!jsChannelsArray || jsChannelsArray->length() != numberOfChannels)
             return false;
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
             auto* channel = bus->channel(channelIndex);
-            auto* jsChannelArray = jsDynamicCast<JSFloat32Array*>(jsChannelsArray->getIndex(&globalObject, channelIndex));
-            if (!jsChannelArray || jsChannelArray->length() != channel->length())
+            auto* jsChannelArray = getArrayAtIndex<JSFloat32Array>(*jsChannelsArray, globalObject, channelIndex);
+            if (!jsChannelArray || jsChannelArray->isShared() || jsChannelArray->length() != channel->length())
                 return false;
             memcpy(jsChannelArray->typedVector(), channel->mutableData(), sizeof(float) * jsChannelArray->length());
         }
@@ -189,14 +195,14 @@ static bool zeroJSArray(JSGlobalObject& globalObject, const Vector<Ref<AudioBus>
 
     for (size_t busIndex = 0; busIndex < outputs.size(); ++busIndex) {
         auto& bus = outputs[busIndex];
-        auto* jsChannelsArray = jsDynamicCast<JSArray*>(jsArray->getIndex(&globalObject, busIndex));
+        auto* jsChannelsArray = getArrayAtIndex<JSArray>(*jsArray, globalObject, busIndex);
         unsigned numberOfChannels = busChannelCount(bus.get());
         if (!jsChannelsArray || jsChannelsArray->length() != numberOfChannels)
             return false;
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
             auto* channel = bus->channel(channelIndex);
-            auto* jsChannelArray = jsDynamicCast<JSFloat32Array*>(jsChannelsArray->getIndex(&globalObject, channelIndex));
-            if (!jsChannelArray || jsChannelArray->length() != channel->length())
+            auto* jsChannelArray = getArrayAtIndex<JSFloat32Array>(*jsChannelsArray, globalObject, channelIndex);
+            if (!jsChannelArray || jsChannelArray->isShared() || jsChannelArray->length() != channel->length())
                 return false;
             memset(jsChannelArray->typedVector(), 0, sizeof(float) * jsChannelArray->length());
         }

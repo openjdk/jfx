@@ -202,7 +202,7 @@ class TimeControl extends LayoutItem
         if (this._loading)
             this._durationOrRemainingTimeLabel().setValueWithNumberOfDigits(NaN, 4);
         else {
-            const shouldShowZeroDurations = isNaN(this._duration) || this._duration === Number.POSITIVE_INFINITY;
+            const shouldShowZeroDurations = isNaN(this._duration) || this._duration > maxNonLiveDuration;
 
             let numberOfDigitsForTimeLabels;
             if (this._duration < TenMinutes)
@@ -242,11 +242,17 @@ class TimeControl extends LayoutItem
             return this.width;
         })();
 
+        if (this._timeLabelsAttachment == TimeControl.TimeLabelsAttachment.Below)
+            this.elapsedTimeLabel.y = this.scrubber.height;
+
         durationOrRemainingTimeLabel.x = (() => {
             if (this._timeLabelsDisplayOnScrubberSide)
                 return this.scrubber.x + this.scrubber.width + scrubberMargin;
             return this.width - durationOrRemainingTimeLabel.width;
         })();
+
+        if (this._timeLabelsAttachment == TimeControl.TimeLabelsAttachment.Below)
+            durationOrRemainingTimeLabel.y = this.scrubber.height;
 
         this.children = [this._loading ? this.activityIndicator : this.elapsedTimeLabel, this.scrubber, durationOrRemainingTimeLabel];
     }
@@ -260,5 +266,6 @@ class TimeControl extends LayoutItem
 
 TimeControl.TimeLabelsAttachment = {
     Above: 1 << 0,
-    Side:  1 << 1
+    Side:  1 << 1,
+    Below: 1 << 2
 };

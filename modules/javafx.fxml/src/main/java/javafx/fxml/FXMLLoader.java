@@ -2112,7 +2112,7 @@ public class FXMLLoader {
     public static final String JAVAFX_VERSION = System.getProperty("javafx.version");
 
     /**
-     * Contains the current fx namepsace version.
+     * Contains the current fx namespace version.
      * @since JavaFX 8.0
      */
     public static final String FX_NAMESPACE_VERSION = "1";

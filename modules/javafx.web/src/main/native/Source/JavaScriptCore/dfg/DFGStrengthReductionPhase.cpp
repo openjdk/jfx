@@ -44,6 +44,7 @@
 #include "WasmCallingConvention.h"
 #include "WebAssemblyFunction.h"
 #include <cstdlib>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC { namespace DFG {
@@ -53,7 +54,7 @@ class StrengthReductionPhase : public Phase {
 
 public:
     StrengthReductionPhase(Graph& graph)
-        : Phase(graph, "strength reduction")
+        : Phase(graph, "strength reduction"_s)
         , m_insertionSet(graph)
     {
     }
@@ -110,6 +111,11 @@ private:
                 && m_node->child1()->child2()->isInt32Constant()
                 && (m_node->child1()->child2()->asInt32() & 0x1f)
                 && m_node->arithMode() != Arith::DoOverflow) {
+                m_node->convertToIdentity();
+                m_changed = true;
+                break;
+            }
+            if (bytecodeCanTruncateInteger(m_node->arithNodeFlags())) {
                 m_node->convertToIdentity();
                 m_changed = true;
                 break;
@@ -443,6 +449,23 @@ private:
                         if (!result.isNull()) {
                             convertToLazyJSValue(m_node, LazyJSValue::newString(m_graph, result));
                             m_changed = true;
+                        }
+                    }
+                }
+                break;
+            }
+            case StringOrOtherUse: {
+                if (child1->hasConstant()) {
+                    if (JSValue value = child1->constant()->value()) {
+                        if (value.isUndefinedOrNull()) {
+                            m_graph.convertToConstant(m_node, value.isUndefined() ? vm().smallStrings.undefinedString() : vm().smallStrings.nullString());
+                            m_changed = true;
+                            break;
+                        }
+                        if (value.isString()) {
+                            m_graph.convertToConstant(m_node, value);
+                            m_changed = true;
+                            break;
                         }
                     }
                 }
@@ -886,7 +909,7 @@ private:
                 if (codeSize > Options::maximumRegExpTestInlineCodesize())
                     return false;
 
-                unsigned alignedFrameSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), inlineCodeStats8Bit.stackSize());
+                unsigned alignedFrameSize = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(inlineCodeStats8Bit.stackSize());
 
                 if (alignedFrameSize)
                     m_graph.m_parameterSlots = std::max(m_graph.m_parameterSlots, argumentCountForStackSize(alignedFrameSize));
@@ -1174,7 +1197,8 @@ private:
             break;
         }
 
-        case InByVal: {
+        case InByVal:
+        case InByValMegamorphic: {
             Edge& baseEdge = m_graph.child(m_node, 0);
             Edge& keyEdge = m_graph.child(m_node, 1);
             if (baseEdge.useKind() == CellUse) {
@@ -1226,7 +1250,7 @@ private:
             // FIXME: Support wasm IC.
             // DirectCall to wasm function has suboptimal implementation. We avoid using DirectCall if we know that function is a wasm function.
             // https://bugs.webkit.org/show_bug.cgi?id=220339
-            if (executable->intrinsic() == WasmFunctionIntrinsic) {
+            if (executable->intrinsic() == WasmFunctionIntrinsic && !Options::forceICFailure()) {
                 if (m_node->op() != Call) // FIXME: We should support tail-call.
                     break;
                 if (!function)
@@ -1234,10 +1258,9 @@ private:
                 auto* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(function);
                 if (!wasmFunction)
                     break;
-                const auto& typeDefinition = Wasm::TypeInformation::get(wasmFunction->typeIndex()).expand();
-                const auto& signature = *typeDefinition.as<Wasm::FunctionSignature>();
+                const auto& signature = Wasm::TypeInformation::getFunctionSignature(wasmFunction->typeIndex());
                 const Wasm::WasmCallingConvention& wasmCC = Wasm::wasmCallingConvention();
-                Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(typeDefinition);
+                Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(signature);
                 if (wasmCallInfo.argumentsOrResultsIncludeV128)
                 break;
 

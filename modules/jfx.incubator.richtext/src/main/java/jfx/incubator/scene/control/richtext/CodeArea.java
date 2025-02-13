@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 package jfx.incubator.scene.control.richtext;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -45,6 +47,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Labeled;
 import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
+import com.sun.jfx.incubator.scene.control.richtext.StringBuilderStyledOutput;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
@@ -413,20 +416,23 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * Returns plain text.
+     * Returns plain text.  This method returns an empty string when the model is {@code null}.
      * @return plain text
      */
     public final String getText() {
-        // TODO or use save(DataFormat, Writer) ?
         StyledTextModel m = getModel();
-        StringBuilder sb = new StringBuilder(4096);
-        int sz = m.size();
-        for(int i=0; i<sz; i++) {
-            String s = m.getPlainText(i);
-            sb.append(s);
-            sb.append('\n');
+        if (m == null) {
+            return "";
         }
-        return sb.toString();
+        TextPos end = m.getDocumentEnd();
+        try (StringBuilderStyledOutput out = new StringBuilderStyledOutput()) {
+            out.setLineSeparator("\n");
+            m.export(TextPos.ZERO, end, out);
+            return out.toString();
+        } catch (IOException e) {
+            // should not happen
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**

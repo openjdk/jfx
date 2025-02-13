@@ -32,11 +32,11 @@
 #include "EventNames.h"
 #include "MediaSourcePrivate.h"
 #include "SourceBufferList.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ManagedMediaSource);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ManagedMediaSource);
 
 Ref<ManagedMediaSource> ManagedMediaSource::create(ScriptExecutionContext& context)
 {
@@ -66,12 +66,19 @@ bool ManagedMediaSource::isTypeSupported(ScriptExecutionContext& context, const 
     return MediaSource::isTypeSupported(context, type);
 }
 
+void ManagedMediaSource::elementDetached()
+{
+    setStreaming(false);
+}
+
 void ManagedMediaSource::setStreaming(bool streaming)
 {
     if (m_streaming == streaming)
         return;
     ALWAYS_LOG(LOGIDENTIFIER, streaming);
     m_streaming = streaming;
+    if (m_private)
+        m_private->setStreaming(streaming);
     if (streaming) {
         scheduleEvent(eventNames().startstreamingEvent);
         if (m_streamingAllowed) {
@@ -87,65 +94,28 @@ void ManagedMediaSource::setStreaming(bool streaming)
     notifyElementUpdateMediaState();
 }
 
-bool ManagedMediaSource::isBuffered(const PlatformTimeRanges& ranges) const
-{
-    if (ranges.length() < 1 || isClosed())
-        return true;
-
-    ASSERT(ranges.length() == 1);
-
-    auto bufferedRanges = m_private->buffered();
-    if (!bufferedRanges.length())
-        return false;
-    bufferedRanges.intersectWith(ranges);
-
-    if (!bufferedRanges.length())
-        return false;
-
-    auto hasBufferedTime = [&] (const MediaTime& time) {
-        return abs(bufferedRanges.nearest(time) - time) <= m_private->timeFudgeFactor();
-    };
-
-    if (!hasBufferedTime(ranges.minimumBufferedTime()) || !hasBufferedTime(ranges.maximumBufferedTime()))
-        return false;
-
-    if (bufferedRanges.length() == 1)
-        return true;
-
-    // Ensure that if we have a gap in the buffered range, it is smaller than the fudge factor;
-    for (unsigned i = 1; i < bufferedRanges.length(); i++) {
-        if (bufferedRanges.end(i) - bufferedRanges.start(i-1) > m_private->timeFudgeFactor())
-            return false;
-    }
-
-    return true;
-}
-
 void ManagedMediaSource::ensurePrefsRead()
 {
+    ASSERT(scriptExecutionContext());
+
     if (m_lowThreshold && m_highThreshold)
         return;
-    ASSERT(mediaElement());
-    m_lowThreshold = mediaElement()->document().settings().managedMediaSourceLowThreshold();
-    m_highThreshold = mediaElement()->document().settings().managedMediaSourceHighThreshold();
+    m_lowThreshold = scriptExecutionContext()->settingsValues().managedMediaSourceLowThreshold;
+    m_highThreshold = scriptExecutionContext()->settingsValues().managedMediaSourceHighThreshold;
 }
 
 void ManagedMediaSource::monitorSourceBuffers()
 {
-    if (isClosed()) {
-        setStreaming(false);
-        return;
-    }
-
     MediaSource::monitorSourceBuffers();
 
     if (!activeSourceBuffers() || !activeSourceBuffers()->length()) {
         setStreaming(true);
         return;
     }
-    auto currentTime = this->currentTime();
 
     ensurePrefsRead();
+    auto currentTime = this->currentTime();
+    ASSERT(currentTime.isValid());
 
     auto limitAhead = [&] (double upper) {
         MediaTime aheadTime = currentTime + MediaTime::createWithDouble(upper);
@@ -158,8 +128,10 @@ void ManagedMediaSource::monitorSourceBuffers()
         return;
     }
 
-    PlatformTimeRanges neededBufferedRange { currentTime, limitAhead(*m_highThreshold) };
-    if (isBuffered(neededBufferedRange))
+    if (auto ahead = limitAhead(*m_highThreshold); currentTime < ahead) {
+        if (isBuffered({ currentTime,  ahead }))
+            setStreaming(false);
+    } else
         setStreaming(false);
 }
 
@@ -167,19 +139,9 @@ void ManagedMediaSource::streamingTimerFired()
 {
     ALWAYS_LOG(LOGIDENTIFIER, "Disabling streaming due to policy ", *m_highThreshold);
     m_streamingAllowed = false;
+    if (m_private)
+        m_private->setStreamingAllowed(false);
     notifyElementUpdateMediaState();
-}
-
-bool ManagedMediaSource::isOpen() const
-{
-#if !ENABLE(WIRELESS_PLAYBACK_TARGET)
-    return MediaSource::isOpen();
-#else
-    return MediaSource::isOpen()
-        && (mediaElement() && (!mediaElement()->document().settings().managedMediaSourceNeedsAirPlay()
-            || mediaElement()->isWirelessPlaybackTargetDisabled()
-            || mediaElement()->hasWirelessPlaybackTargetAlternative()));
-#endif
 }
 
 } // namespace WebCore

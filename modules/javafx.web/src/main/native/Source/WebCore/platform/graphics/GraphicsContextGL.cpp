@@ -37,6 +37,7 @@
 #include "HostWindow.h"
 #include "Image.h"
 #include "ImageObserver.h"
+#include "NotImplemented.h"
 #include "PixelBuffer.h"
 #include "VideoFrame.h"
 
@@ -503,7 +504,7 @@ bool GraphicsContextGL::extractPixelBuffer(const PixelBuffer& pixelBuffer, DataF
         return false;
     data.resize(packSizes->imageBytes);
 
-    if (!packPixels(pixelBuffer.bytes(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.data(), flipY))
+    if (!packPixels(pixelBuffer.bytes().data(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.data(), flipY))
         return false;
 
     return true;
@@ -571,6 +572,18 @@ GCGLint GraphicsContextGL::getInternalformati(GCGLenum target, GCGLenum internal
     return value[0];
 }
 
+void GraphicsContextGL::framebufferDiscard(GCGLenum, std::span<const GCGLenum>)
+{
+    notImplemented();
+}
+
+#if ENABLE(WEBXR)
+void GraphicsContextGL::framebufferResolveRenderbuffer(GCGLenum, GCGLenum, GCGLenum, PlatformGLObject)
+{
+    notImplemented();
+}
+#endif
+
 void GraphicsContextGL::setDrawingBufferColorSpace(const DestinationColorSpace&)
 {
 }
@@ -616,7 +629,7 @@ void GraphicsContextGL::forceContextLost()
 RefPtr<Image> GraphicsContextGL::videoFrameToImage(VideoFrame& frame)
 {
     IntSize size { static_cast<int>(frame.presentationSize().width()), static_cast<int>(frame.presentationSize().height()) };
-    auto imageBuffer = ImageBuffer::create(size, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    auto imageBuffer = ImageBuffer::create(size, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!imageBuffer)
         return { };
     imageBuffer->context().paintVideoFrame(frame, { { }, size }, true);

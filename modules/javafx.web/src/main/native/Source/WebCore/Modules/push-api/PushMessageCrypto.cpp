@@ -27,6 +27,7 @@
 #include "PushMessageCrypto.h"
 
 #include "PushCrypto.h"
+#include <array>
 #include <wtf/ByteOrder.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 
@@ -41,12 +42,12 @@ static constexpr size_t sharedAuthSecretLength = 16;
 
 ClientKeys ClientKeys::generate()
 {
-    uint8_t sharedAuthSecret[sharedAuthSecretLength];
-    cryptographicallyRandomValues(sharedAuthSecret, sizeof(sharedAuthSecret));
+    std::array<uint8_t, sharedAuthSecretLength> sharedAuthSecret;
+    cryptographicallyRandomValues(sharedAuthSecret);
 
     return ClientKeys {
         P256DHKeyPair::generate(),
-        Vector<uint8_t> { sharedAuthSecret, sizeof(sharedAuthSecret) }
+        Vector<uint8_t> { sharedAuthSecret }
     };
 }
 
@@ -295,7 +296,7 @@ std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys
     if (paddingLength == SIZE_MAX)
         return std::nullopt;
 
-    return Vector<uint8_t> { plainText.data() + paddingLength, plainText.size() - paddingLength };
+    return plainText.subvector(paddingLength);
 }
 
 } // namespace WebCore::PushCrypto

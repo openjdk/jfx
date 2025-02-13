@@ -61,6 +61,11 @@ CaptionUserPreferences::CaptionUserPreferences(PageGroup& group)
 
 CaptionUserPreferences::~CaptionUserPreferences() = default;
 
+UniqueRef<CaptionUserPreferencesTestingModeToken> CaptionUserPreferences::createTestingModeToken()
+{
+    return makeUniqueRef<CaptionUserPreferencesTestingModeToken>(*this);
+}
+
 void CaptionUserPreferences::timerFired()
 {
     captionPreferencesChanged();
@@ -104,7 +109,7 @@ void CaptionUserPreferences::setCaptionDisplayMode(CaptionUserPreferences::Capti
 
 Page* CaptionUserPreferences::currentPage() const
 {
-    for (auto& page : m_pageGroup.pages())
+    for (auto& page : m_pageGroup->pages())
         return &page;
     return nullptr;
 }
@@ -120,7 +125,7 @@ bool CaptionUserPreferences::userPrefersCaptions() const
 
 void CaptionUserPreferences::setUserPrefersCaptions(bool preference)
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return;
 
@@ -130,7 +135,7 @@ void CaptionUserPreferences::setUserPrefersCaptions(bool preference)
 
 bool CaptionUserPreferences::userPrefersSubtitles() const
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return false;
 
@@ -139,7 +144,7 @@ bool CaptionUserPreferences::userPrefersSubtitles() const
 
 void CaptionUserPreferences::setUserPrefersSubtitles(bool preference)
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return;
 
@@ -149,17 +154,17 @@ void CaptionUserPreferences::setUserPrefersSubtitles(bool preference)
 
 bool CaptionUserPreferences::userPrefersTextDescriptions() const
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return false;
 
-    auto& settings = page->settings();
-    return settings.shouldDisplayTextDescriptions() && (settings.audioDescriptionsEnabled() || settings.extendedAudioDescriptionsEnabled());
+    Ref settings = page->settings();
+    return settings->shouldDisplayTextDescriptions() && (settings->audioDescriptionsEnabled() || settings->extendedAudioDescriptionsEnabled());
 }
 
 void CaptionUserPreferences::setUserPrefersTextDescriptions(bool preference)
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return;
 
@@ -169,7 +174,7 @@ void CaptionUserPreferences::setUserPrefersTextDescriptions(bool preference)
 
 void CaptionUserPreferences::captionPreferencesChanged()
 {
-    m_pageGroup.captionPreferencesChanged();
+    m_pageGroup->captionPreferencesChanged();
 }
 
 Vector<String> CaptionUserPreferences::preferredLanguages() const
@@ -352,7 +357,7 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
         if (testingMode())
             audioTrackLanguage = primaryAudioTrackLanguageOverride();
         else
-            audioTrackLanguage = mediaElement->player()->languageOfPrimaryAudioTrack();
+            audioTrackLanguage = mediaElement->protectedPlayer()->languageOfPrimaryAudioTrack();
 
         if (audioTrackLanguage.isEmpty())
             return 0;
@@ -437,8 +442,8 @@ void CaptionUserPreferences::setCaptionsStyleSheetOverride(const String& overrid
 void CaptionUserPreferences::updateCaptionStyleSheetOverride()
 {
     String captionsOverrideStyleSheet = captionsStyleSheetOverride();
-    for (auto& page : m_pageGroup.pages())
-        page.setCaptionUserPreferencesStyleSheet(captionsOverrideStyleSheet);
+    for (Ref page : m_pageGroup->pages())
+        page->setCaptionUserPreferencesStyleSheet(captionsOverrideStyleSheet);
 }
 
 String CaptionUserPreferences::primaryAudioTrackLanguageOverride() const
@@ -448,6 +453,11 @@ String CaptionUserPreferences::primaryAudioTrackLanguageOverride() const
     return defaultLanguage(ShouldMinimizeLanguages::No);
 }
 
+PageGroup& CaptionUserPreferences::pageGroup() const
+{
+    return m_pageGroup.get();
 }
+
+} // namespace WebCore
 
 #endif // ENABLE(VIDEO)

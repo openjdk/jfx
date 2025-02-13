@@ -47,10 +47,6 @@ public:
     static Ref<InbandTextTrackPrivate> create(CueFormat format) { return adoptRef(*new InbandTextTrackPrivate(format)); }
     virtual ~InbandTextTrackPrivate() = default;
 
-    InbandTextTrackPrivateClient* client() const override { return m_client.get(); }
-    virtual void setClient(InbandTextTrackPrivateClient& client) { m_client = client; }
-    void clearClient() { m_client = nullptr; }
-
     using Mode = InbandTextTrackPrivateMode;
     virtual void setMode(Mode mode) { m_mode = mode; };
     virtual InbandTextTrackPrivate::Mode mode() const { return m_mode; }
@@ -94,7 +90,7 @@ public:
     }
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const override { return "InbandTextTrackPrivate"; }
+    ASCIILiteral logClassName() const override { return "InbandTextTrackPrivate"_s; }
 #endif
 
     Type type() const final { return Type::Text; };
@@ -107,7 +103,6 @@ protected:
 
 private:
     CueFormat m_format;
-    WeakPtr<InbandTextTrackPrivateClient> m_client { nullptr };
     Mode m_mode { Mode::Disabled };
 };
 

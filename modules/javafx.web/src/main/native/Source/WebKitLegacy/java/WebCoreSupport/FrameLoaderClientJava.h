@@ -94,7 +94,7 @@ public:
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, const String& downloadAttribute, FramePolicyFunction&&) override;
     void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, std::optional<HitTestResult>&&, FramePolicyFunction&&) override;
-    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, const String& clientRedirectSourceForHistory, uint64_t navigationID, std::optional<HitTestResult>&&, bool hasOpener, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&) override;
+    virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, const String& clientRedirectSourceForHistory, std::optional<NavigationIdentifier>, std::optional<HitTestResult>&&, bool hasOpener, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&) override;
     void cancelPolicyCheck() override;
 
     void dispatchUnableToImplementPolicy(const ResourceError&) override;
@@ -115,7 +115,7 @@ public:
 
     void setMainFrameDocumentReady(bool) override;
 
-    void startDownload(const ResourceRequest&, const String& suggestedName = String()) override;
+    void startDownload(const ResourceRequest&, const String& suggestedName = String(), FromDownloadAttribute = FromDownloadAttribute::No) override;
 
     void willChangeTitle(DocumentLoader*) override;
     void didChangeTitle(DocumentLoader*) override;
@@ -178,7 +178,7 @@ public:
 
     void savePlatformDataToCachedFrame(CachedFrame*) override;
     void transitionToCommittedFromCachedFrame(CachedFrame*) override;
-    void transitionToCommittedForNewPage() override;
+    void transitionToCommittedForNewPage(InitializingIframe initializingIframe) override;
 
     void didRestoreFromBackForwardCache() override;
     bool canCachePage() const override;
@@ -193,7 +193,7 @@ public:
     bool isJavaFrameLoaderClient() override { return true; }
     void prefetchDNS(const String&) override;
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
-    void broadcastFrameRemovalToOtherProcesses() override;
+    void broadcastFrameRemovalToOtherProcesses();
         ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
         void broadcastMainFrameURLChangeToOtherProcesses(const URL&) override;
         void dispatchLoadEventToOwnerElementInAnotherProcess() override;

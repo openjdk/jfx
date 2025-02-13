@@ -322,6 +322,7 @@ public class TableRowSkinTest {
      */
     @Test
     public void cellsShouldBeAddedInRowFixedCellSize() {
+        tableView.setPrefWidth(800);
         tableView.setFixedCellSize(24);
 
         TableColumn<Person, String> otherColumn = new TableColumn<>("other");

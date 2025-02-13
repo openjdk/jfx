@@ -27,15 +27,17 @@
 
 #include "CPU.h"
 #include "JITOperationValidation.h"
+#include "OperationResult.h"
+#include <climits>
 #include <cmath>
 #include <optional>
 
 namespace JSC {
 
 const int32_t maxExponentForIntegerMathPow = 1000;
-JSC_DECLARE_JIT_OPERATION(operationMathPow, double, (double x, double y));
-JSC_DECLARE_JIT_OPERATION(operationToInt32, UCPUStrictInt32, (double));
-JSC_DECLARE_JIT_OPERATION(operationToInt32SensibleSlow, UCPUStrictInt32, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationMathPow, double, (double x, double y));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationToInt32, UCPUStrictInt32, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationToInt32SensibleSlow, UCPUStrictInt32, (double));
 
 constexpr double maxSafeInteger()
 {
@@ -80,51 +82,60 @@ inline bool isNegativeZero(double value)
 // of the resulting bit-pattern (as such this method is also called to implement
 // ToUInt32).
 //
-// The operation can be described as round towards zero, then select the 32 least
+// The operation can be described as round towards zero, then select the 32 or 64 least
 // bits of the resulting value in 2s-complement representation.
-enum ToInt32Mode {
+enum ToIntMode {
     Generic,
-    AfterSensibleConversionAttempt,
+    Int32AfterSensibleConversionAttempt,
 };
-template<ToInt32Mode Mode>
-ALWAYS_INLINE int32_t toInt32Internal(double number)
+template<class Int, ToIntMode Mode = Generic>
+ALWAYS_INLINE Int toIntImpl(double number)
 {
+    static_assert(std::is_same_v<Int, int32_t> || std::is_same_v<Int, int64_t>);
+    constexpr unsigned intBytes = sizeof(Int);
+    constexpr unsigned intBits = intBytes * CHAR_BIT;
+    constexpr unsigned intBitsMinusOne = intBits - 1;
+    static_assert(intBitsMinusOne == 63 || intBitsMinusOne == 31);
+    using UInt = std::make_unsigned_t<Int>;
+
     uint64_t bits = WTF::bitwise_cast<uint64_t>(number);
     int32_t exp = (static_cast<int32_t>(bits >> 52) & 0x7ff) - 0x3ff;
 
     // If exponent < 0 there will be no bits to the left of the decimal point
-    // after rounding; if the exponent is > 83 then no bits of precision can be
-    // left in the low 32-bit range of the result (IEEE-754 doubles have 52 bits
+    // after rounding; if the exponent is > maxExpForLeftShift then no bits of precision can be
+    // left in the low intBits range of the result (IEEE-754 doubles have 52 bits
     // of fractional precision).
     // Note this case handles 0, -0, and all infinite, NaN, & denormal value.
+    constexpr uint32_t maxExpForLeftShift = intBitsMinusOne + 52;
 
-    // We need to check exp > 83 because:
+    // We need to check exp > maxExpForLeftShift because:
     // 1. exp may be used as a left shift value below in (exp - 52), and
-    // 2. Left shift amounts that exceed 31 results in undefined behavior. See:
+    // 2. Left shift amounts that exceed intBitsMinusOne results in undefined behavior. See:
     //    http://en.cppreference.com/w/cpp/language/operator_arithmetic#Bitwise_shift_operators
     //
     // Using an unsigned comparison here also gives us a exp < 0 check for free.
-    if (static_cast<uint32_t>(exp) > 83u)
+    if (static_cast<uint32_t>(exp) > maxExpForLeftShift)
         return 0;
 
-    // Select the appropriate 32-bits from the floating point mantissa. If the
+    // Select the appropriate intBits from the floating point mantissa. If the
     // exponent is 52 then the bits we need to select are already aligned to the
     // lowest bits of the 64-bit integer representation of the number, no need
     // to shift. If the exponent is greater than 52 we need to shift the value
     // left by (exp - 52), if the value is less than 52 we need to shift right
     // accordingly.
-    uint32_t result = (exp > 52)
-        ? static_cast<uint32_t>(bits << (exp - 52))
-        : static_cast<uint32_t>(bits >> (52 - exp));
+    UInt result = (exp > 52)
+        ? static_cast<UInt>(bits << (exp - 52))
+        : static_cast<UInt>(bits >> (52 - exp));
 
     // IEEE-754 double precision values are stored omitting an implicit 1 before
     // the decimal point; we need to reinsert this now. We may also the shifted
     // invalid bits into the result that are not a part of the mantissa (the sign
     // and exponent bits from the floatingpoint representation); mask these out.
-    // Note that missingOne should be held as uint32_t since ((1 << 31) - 1) causes
-    // int32_t overflow.
-    if (Mode == ToInt32Mode::AfterSensibleConversionAttempt) {
-        if (exp == 31) {
+    // Note that missingOne should be held as UInt since ((1 << intBitsMinusOne) - 1) causes
+    // Int overflow.
+    if constexpr (Mode == ToIntMode::Int32AfterSensibleConversionAttempt) {
+        static_assert(intBitsMinusOne == 31);
+        if (exp == intBitsMinusOne) {
             // This is an optimization for when toInt32() is called in the slow path
             // of a JIT operation. Currently, this optimization is only applicable for
             // x86 ports. This optimization offers 5% performance improvement in
@@ -148,13 +159,13 @@ ALWAYS_INLINE int32_t toInt32Internal(double number)
             // As a result, the exp of the double is always >= 31. We can take advantage
             // of this by specifically checking for (exp == 31) and give the compiler a
             // chance to constant fold the operations below.
-            const constexpr uint32_t missingOne = 1U << 31;
+            const constexpr UInt missingOne = static_cast<UInt>(1U) << intBitsMinusOne;
             result &= missingOne - 1;
             result += missingOne;
         }
     } else {
-        if (exp < 32) {
-            const uint32_t missingOne = 1U << exp;
+        if (exp < static_cast<int32_t>(intBits)) {
+            const UInt missingOne = static_cast<UInt>(1U) << exp;
             result &= missingOne - 1;
             result += missingOne;
         }
@@ -162,7 +173,7 @@ ALWAYS_INLINE int32_t toInt32Internal(double number)
 
     // If the input value was negative (we could test either 'number' or 'bits',
     // but testing 'bits' is likely faster) invert the result appropriately.
-    return static_cast<int64_t>(bits) < 0 ? -static_cast<int32_t>(result) : static_cast<int32_t>(result);
+    return static_cast<int64_t>(bits) < 0 ? -static_cast<Int>(result) : static_cast<Int>(result);
 }
 
 ALWAYS_INLINE int32_t toInt32(double number)
@@ -172,7 +183,7 @@ ALWAYS_INLINE int32_t toInt32(double number)
     __asm__ ("fjcvtzs %w0, %d1" : "=r" (result) : "w" (number) : "cc");
     return result;
 #else
-    return toInt32Internal<ToInt32Mode::Generic>(number);
+    return toIntImpl<int32_t>(number);
 #endif
 }
 
@@ -188,6 +199,17 @@ ALWAYS_INLINE constexpr UCPUStrictInt32 toUCPUStrictInt32(int32_t value)
 {
     // StrictInt32 format requires that higher bits are all zeros even if value is negative.
     return static_cast<UCPUStrictInt32>(static_cast<uint32_t>(value));
+}
+
+// This implementation follows https://tc39.es/ecma262/#sec-touint32 but use int64 instead.
+ALWAYS_INLINE int64_t toInt64(double number)
+{
+    return toIntImpl<int64_t>(number);
+}
+
+ALWAYS_INLINE uint64_t toUInt64(double number)
+{
+    return static_cast<uint64_t>(toInt64(number));
 }
 
 inline std::optional<double> safeReciprocalForDivByConst(double constant)
@@ -234,7 +256,7 @@ ALWAYS_INLINE bool canBeInt32(double value)
 }
 
 extern "C" {
-JSC_DECLARE_JIT_OPERATION(jsRound, double, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(jsRound, double, (double));
 }
 
 namespace Math {
@@ -269,56 +291,116 @@ namespace Math {
 
 #define JSC_DEFINE_VIA_STD(capitalizedName, lowerName) \
     using std::lowerName; \
-    JSC_DECLARE_JIT_OPERATION(lowerName##Double, double, (double)); \
-    JSC_DECLARE_JIT_OPERATION(lowerName##Float, float, (float));
+    JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Double, double, (double)); \
+    JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Float, float, (float));
 FOR_EACH_ARITH_UNARY_OP_STD(JSC_DEFINE_VIA_STD)
 #undef JSC_DEFINE_VIA_STD
 
 #define JSC_DEFINE_VIA_CUSTOM(capitalizedName, lowerName) \
     JS_EXPORT_PRIVATE double lowerName(double); \
-    JSC_DECLARE_JIT_OPERATION(lowerName##Double, double, (double)); \
-    JSC_DECLARE_JIT_OPERATION(lowerName##Float, float, (float));
+    JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Double, double, (double)); \
+    JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Float, float, (float));
 FOR_EACH_ARITH_UNARY_OP_CUSTOM(JSC_DEFINE_VIA_CUSTOM)
 #undef JSC_DEFINE_VIA_CUSTOM
 
-JSC_DECLARE_JIT_OPERATION(truncDouble, double, (double));
-JSC_DECLARE_JIT_OPERATION(truncFloat, float, (float));
-JSC_DECLARE_JIT_OPERATION(ceilDouble, double, (double));
-JSC_DECLARE_JIT_OPERATION(ceilFloat, float, (float));
-JSC_DECLARE_JIT_OPERATION(floorDouble, double, (double));
-JSC_DECLARE_JIT_OPERATION(floorFloat, float, (float));
-JSC_DECLARE_JIT_OPERATION(sqrtDouble, double, (double));
-JSC_DECLARE_JIT_OPERATION(sqrtFloat, float, (float));
+template<typename FloatType>
+ALWAYS_INLINE FloatType fMax(FloatType a, FloatType b)
+{
+    if (std::isnan(a) || std::isnan(b))
+        return a + b;
+    if (a == static_cast<FloatType>(0.0) && b == static_cast<FloatType>(0.0) && std::signbit(a) != std::signbit(b))
+        return static_cast<FloatType>(0.0);
+    return std::max(a, b);
+}
 
-JSC_DECLARE_JIT_OPERATION(stdPowDouble, double, (double, double));
-JSC_DECLARE_JIT_OPERATION(stdPowFloat, float, (float, float));
+template<typename FloatType>
+ALWAYS_INLINE FloatType fMin(FloatType a, FloatType b)
+{
+    if (std::isnan(a) || std::isnan(b))
+        return a + b;
+    if (a == static_cast<FloatType>(0.0) && b == static_cast<FloatType>(0.0) && std::signbit(a) != std::signbit(b))
+        return static_cast<FloatType>(-0.0);
+    return std::min(a, b);
+}
 
-JSC_DECLARE_JIT_OPERATION(fmodDouble, double, (double, double));
-JSC_DECLARE_JIT_OPERATION(roundDouble, double, (double));
-JSC_DECLARE_JIT_OPERATION(jsRoundDouble, double, (double));
-JSC_DECLARE_JIT_OPERATION(roundFloat, float, (float));
+ALWAYS_INLINE double jsMaxDouble(double lhs, double rhs)
+{
+#if CPU(ARM64)
+    // Intentionally using fmax, not fmaxnm since fmax is aligned to JS Math.max semantics.
+    // fmaxnm returns non-NaN number when either lhs or rhs is NaN. But Math.max returns NaN.
+    double result;
+    asm (
+        "fmax %d[result], %d[lhs], %d[rhs]"
+        : [result] "=w"(result)
+        : [lhs] "w"(lhs), [rhs] "w"(rhs)
+        :
+        );
+    return result;
+#else
+    return fMax(lhs, rhs);
+#endif
+}
 
-JSC_DECLARE_JIT_OPERATION(f32_nearest, float, (float));
-JSC_DECLARE_JIT_OPERATION(f64_nearest, double, (double));
+ALWAYS_INLINE double jsMinDouble(double lhs, double rhs)
+{
+#if CPU(ARM64)
+    // Intentionally using fmin, not fminnm since fmin is aligned to JS Math.min semantics.
+    // fminnm returns non-NaN number when either lhs or rhs is NaN. But Math.min returns NaN.
+    double result;
+    asm (
+        "fmin %d[result], %d[lhs], %d[rhs]"
+        : [result] "=w"(result)
+        : [lhs] "w"(lhs), [rhs] "w"(rhs)
+        :
+        );
+    return result;
+#else
+    return fMin(lhs, rhs);
+#endif
+}
 
-JSC_DECLARE_JIT_OPERATION(i32_div_s, int32_t, (int32_t, int32_t));
-JSC_DECLARE_JIT_OPERATION(i32_div_u, uint32_t, (uint32_t, uint32_t));
-JSC_DECLARE_JIT_OPERATION(i32_rem_s, int32_t, (int32_t, int32_t));
-JSC_DECLARE_JIT_OPERATION(i32_rem_u, uint32_t, (uint32_t, uint32_t));
-JSC_DECLARE_JIT_OPERATION(i64_div_s, int64_t, (int64_t, int64_t));
-JSC_DECLARE_JIT_OPERATION(i64_div_u, uint64_t, (uint64_t, uint64_t));
-JSC_DECLARE_JIT_OPERATION(i64_rem_s, int64_t, (int64_t, int64_t));
-JSC_DECLARE_JIT_OPERATION(i64_rem_u, uint64_t, (uint64_t, uint64_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(truncDouble, double, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(truncFloat, float, (float));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(ceilDouble, double, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(ceilFloat, float, (float));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(floorDouble, double, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(floorFloat, float, (float));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(sqrtDouble, double, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(sqrtFloat, float, (float));
 
-JSC_DECLARE_JIT_OPERATION(i64_trunc_u_f32, uint64_t, (float));
-JSC_DECLARE_JIT_OPERATION(i64_trunc_s_f32, int64_t, (float));
-JSC_DECLARE_JIT_OPERATION(i64_trunc_u_f64, uint64_t, (double));
-JSC_DECLARE_JIT_OPERATION(i64_trunc_s_f64, int64_t, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(stdPowDouble, double, (double, double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(stdPowFloat, float, (float, float));
 
-JSC_DECLARE_JIT_OPERATION(f32_convert_u_i64, float, (uint64_t));
-JSC_DECLARE_JIT_OPERATION(f32_convert_s_i64, float, (int64_t));
-JSC_DECLARE_JIT_OPERATION(f64_convert_u_i64, double, (uint64_t));
-JSC_DECLARE_JIT_OPERATION(f64_convert_s_i64, double, (int64_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(fmodDouble, double, (double, double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(roundDouble, double, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(jsRoundDouble, double, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(roundFloat, float, (float));
+
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f32_nearest, float, (float));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f64_nearest, double, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f32_roundeven, float, (float));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f64_roundeven, double, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f32_trunc, float, (float));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f64_trunc, double, (double));
+
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i32_div_s, int32_t, (int32_t, int32_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i32_div_u, uint32_t, (uint32_t, uint32_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i32_rem_s, int32_t, (int32_t, int32_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i32_rem_u, uint32_t, (uint32_t, uint32_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i64_div_s, int64_t, (int64_t, int64_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i64_div_u, uint64_t, (uint64_t, uint64_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i64_rem_s, int64_t, (int64_t, int64_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i64_rem_u, uint64_t, (uint64_t, uint64_t));
+
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i64_trunc_u_f32, uint64_t, (float));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i64_trunc_s_f32, int64_t, (float));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i64_trunc_u_f64, uint64_t, (double));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(i64_trunc_s_f64, int64_t, (double));
+
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f32_convert_u_i64, float, (uint64_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f32_convert_s_i64, float, (int64_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f64_convert_u_i64, double, (uint64_t));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f64_convert_s_i64, double, (int64_t));
 
 } // namespace Math
 } // namespace JSC

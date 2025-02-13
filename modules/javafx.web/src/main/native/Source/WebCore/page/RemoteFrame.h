@@ -33,25 +33,24 @@
 
 namespace WebCore {
 
+class IntPoint;
 class RemoteDOMWindow;
 class RemoteFrameClient;
 class RemoteFrameView;
 class WeakPtrImplWithEventTargetData;
 
+enum class AdvancedPrivacyProtections : uint16_t;
 enum class RenderAsTextFlag : uint16_t;
 
 class RemoteFrame final : public Frame {
 public:
-    WEBCORE_EXPORT static Ref<RemoteFrame> createMainFrame(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, Frame* opener = nullptr);
-    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframe(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, Frame& parent);
-    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframeWithContentsInAnotherProcess(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, HTMLFrameOwnerElement&, std::optional<LayerHostingContextIdentifier>);
+    using ClientCreator = CompletionHandler<UniqueRef<RemoteFrameClient>(RemoteFrame&)>;
+    WEBCORE_EXPORT static Ref<RemoteFrame> createMainFrame(Page&, ClientCreator&&, FrameIdentifier, Frame* opener);
+    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframe(Page&, ClientCreator&&, FrameIdentifier, Frame& parent);
+    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframeWithContentsInAnotherProcess(Page&, ClientCreator&&, FrameIdentifier, HTMLFrameOwnerElement&, std::optional<LayerHostingContextIdentifier>);
     ~RemoteFrame();
 
     RemoteDOMWindow& window() const;
-
-    void setOpener(Frame* opener) final { m_opener = opener; }
-    Frame* opener() final { return m_opener.get(); }
-    const Frame* opener() const final { return m_opener.get(); }
 
     const RemoteFrameClient& client() const { return m_client.get(); }
     RemoteFrameClient& client() { return m_client.get(); }
@@ -62,27 +61,45 @@ public:
     Markable<LayerHostingContextIdentifier> layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
 
     String renderTreeAsText(size_t baseIndent, OptionSet<RenderAsTextFlag>);
+    void bindRemoteAccessibilityFrames(int processIdentifier, Vector<uint8_t>&&, CompletionHandler<void(Vector<uint8_t>, int)>&&);
+    void updateRemoteFrameAccessibilityOffset(IntPoint);
+    void unbindRemoteAccessibilityFrames(int);
+
+    void setCustomUserAgent(const String& customUserAgent) { m_customUserAgent = customUserAgent; }
+    String customUserAgent() const final;
+    void setCustomUserAgentAsSiteSpecificQuirks(const String& customUserAgentAsSiteSpecificQuirks) { m_customUserAgentAsSiteSpecificQuirks = customUserAgentAsSiteSpecificQuirks; }
+    String customUserAgentAsSiteSpecificQuirks() const final;
+
+    void setCustomNavigatorPlatform(const String& customNavigatorPlatform) { m_customNavigatorPlatform = customNavigatorPlatform; }
+    String customNavigatorPlatform() const final;
+
+    void setAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections) { m_advancedPrivacyProtections = advancedPrivacyProtections; }
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final;
 
 private:
-    WEBCORE_EXPORT explicit RemoteFrame(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, HTMLFrameOwnerElement*, Frame* parent, Markable<LayerHostingContextIdentifier>, Frame* opener = nullptr);
+    WEBCORE_EXPORT explicit RemoteFrame(Page&, ClientCreator&&, FrameIdentifier, HTMLFrameOwnerElement*, Frame* parent, Markable<LayerHostingContextIdentifier>, Frame* opener);
 
     void frameDetached() final;
     bool preventsParentFromBeingComplete() const final;
     void changeLocation(FrameLoadRequest&&) final;
-    void broadcastFrameRemovalToOtherProcesses() final;
     void didFinishLoadInAnotherProcess() final;
     bool isRootFrame() const final { return false; }
+    void documentURLForConsoleLog(CompletionHandler<void(const URL&)>&&) final;
 
     FrameView* virtualView() const final;
     void disconnectView() final;
     DOMWindow* virtualWindow() const final;
     FrameLoaderClient& loaderClient() final;
+    void reinitializeDocumentSecurityContext() final { }
 
     Ref<RemoteDOMWindow> m_window;
-    RefPtr<Frame> m_opener;
     RefPtr<RemoteFrameView> m_view;
     UniqueRef<RemoteFrameClient> m_client;
     Markable<LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
+    String m_customUserAgent;
+    String m_customUserAgentAsSiteSpecificQuirks;
+    String m_customNavigatorPlatform;
+    OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
     bool m_preventsParentFromBeingComplete { true };
 };
 

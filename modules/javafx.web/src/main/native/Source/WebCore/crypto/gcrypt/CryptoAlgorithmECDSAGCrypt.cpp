@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-static bool extractECDSASignatureInteger(Vector<uint8_t>& signature, gcry_sexp_t signatureSexp, const char* integerName, size_t keySizeInBytes)
+static bool extractECDSASignatureInteger(Vector<uint8_t>& signature, gcry_sexp_t signatureSexp, ASCIILiteral integerName, size_t keySizeInBytes)
 {
     // Retrieve byte data of the specified integer.
     PAL::GCrypt::Handle<gcry_sexp_t> integerSexp(gcry_sexp_find_token(signatureSexp, integerName, 0));
@@ -51,7 +51,7 @@ static bool extractECDSASignatureInteger(Vector<uint8_t>& signature, gcry_sexp_t
     size_t dataSize = integerData->size();
     if (dataSize >= keySizeInBytes) {
         // Append the last `keySizeInBytes` bytes of the data Vector, if available.
-        signature.append(&integerData->at(dataSize - keySizeInBytes), keySizeInBytes);
+        signature.append(integerData->subspan(dataSize - keySizeInBytes, keySizeInBytes));
     } else {
         // If not, prefix the binary data with zero bytes.
         for (size_t paddingSize = keySizeInBytes - dataSize; paddingSize > 0; --paddingSize)
@@ -75,7 +75,7 @@ static std::optional<Vector<uint8_t>> gcryptSign(gcry_sexp_t keySexp, const Vect
         if (!digest)
             return std::nullopt;
 
-        digest->addBytes(data.data(), data.size());
+        digest->addBytes(data);
         dataHash = digest->computeHash();
     }
 
@@ -111,8 +111,8 @@ static std::optional<Vector<uint8_t>> gcryptSign(gcry_sexp_t keySexp, const Vect
     Vector<uint8_t> signature;
     signature.reserveInitialCapacity(keySizeInBytes * 2);
 
-    if (!extractECDSASignatureInteger(signature, signatureSexp, "r", keySizeInBytes)
-        || !extractECDSASignatureInteger(signature, signatureSexp, "s", keySizeInBytes))
+    if (!extractECDSASignatureInteger(signature, signatureSexp, "r"_s, keySizeInBytes)
+        || !extractECDSASignatureInteger(signature, signatureSexp, "s"_s, keySizeInBytes))
         return std::nullopt;
 
     return signature;
@@ -135,7 +135,7 @@ static std::optional<bool> gcryptVerify(gcry_sexp_t keySexp, const Vector<uint8_
         if (!digest)
             return std::nullopt;
 
-        digest->addBytes(data.data(), data.size());
+        digest->addBytes(data);
         dataHash = digest->computeHash();
     }
 
@@ -170,17 +170,17 @@ static std::optional<bool> gcryptVerify(gcry_sexp_t keySexp, const Vector<uint8_
     return { error == GPG_ERR_NO_ERROR };
 }
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmECDSA::platformSign(const CryptoAlgorithmEcdsaParams& parameters, const CryptoKeyEC& key, const Vector<uint8_t>& data)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmECDSA::platformSign(const CryptoAlgorithmEcdsaParams& parameters, const CryptoKeyEC& key, const Vector<uint8_t>& data, UseCryptoKit)
 {
-    auto output = gcryptSign(key.platformKey(), data, parameters.hashIdentifier, (key.keySizeInBits() + 7) / 8);
+    auto output = gcryptSign(key.platformKey().get(), data, parameters.hashIdentifier, (key.keySizeInBits() + 7) / 8);
     if (!output)
         return Exception { ExceptionCode::OperationError };
     return WTFMove(*output);
 }
 
-ExceptionOr<bool> CryptoAlgorithmECDSA::platformVerify(const CryptoAlgorithmEcdsaParams& parameters, const CryptoKeyEC& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data)
+ExceptionOr<bool> CryptoAlgorithmECDSA::platformVerify(const CryptoAlgorithmEcdsaParams& parameters, const CryptoKeyEC& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data, UseCryptoKit)
 {
-    auto output = gcryptVerify(key.platformKey(), signature, data, parameters.hashIdentifier, (key.keySizeInBits() + 7)/ 8);
+    auto output = gcryptVerify(key.platformKey().get(), signature, data, parameters.hashIdentifier, (key.keySizeInBits() + 7)/ 8);
     if (!output)
         return Exception { ExceptionCode::OperationError };
     return WTFMove(*output);
