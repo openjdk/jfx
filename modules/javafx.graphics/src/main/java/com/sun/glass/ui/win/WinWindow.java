@@ -435,7 +435,7 @@ class WinWindow extends Window {
         View.EventHandler eventHandler = view.getEventHandler();
         return switch (eventHandler != null ? eventHandler.pickHeaderArea(wx, wy) : null) {
             case DRAGBAR -> HT.CAPTION.value;
-            case MINIMIZE -> HT.MINBUTTON.value;
+            case ICONIFY -> HT.MINBUTTON.value;
             case MAXIMIZE -> HT.MAXBUTTON.value;
             case CLOSE -> HT.CLOSE.value;
             case null -> HT.CLIENT.value;

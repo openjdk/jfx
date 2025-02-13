@@ -42,6 +42,7 @@ import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SuppressWarnings("unused")
 public class HeaderButtonOverlayTest {
 
     private static final Dimension2D EMPTY = new Dimension2D(0, 0);
@@ -50,10 +51,12 @@ public class HeaderButtonOverlayTest {
      * Asserts that the buttons are laid out on the right side of the control (left-to-right orientation).
      */
     @Test
-    void rightPlacement() {
+    void rightPlacement_stretchAlignment() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .header-button-container { -fx-button-placement: right;
+                                           -fx-button-default-height: 20;
+                                           -fx-button-vertical-alignment: stretch; }
+                .header-button { -fx-pref-width: 20; }
             """), false, false);
 
         var unused = new Scene(overlay);
@@ -63,68 +66,77 @@ public class HeaderButtonOverlayTest {
         overlay.layout();
 
         assertSize(overlay, 200, 100);
-        assertLayoutBounds(children.get(0), 140, 0, 20, 10);
-        assertLayoutBounds(children.get(1), 160, 0, 20, 10);
-        assertLayoutBounds(children.get(2), 180, 0, 20, 10);
+        assertLayoutBounds(children.get(0), 140, 0, 20, 20);
+        assertLayoutBounds(children.get(1), 160, 0, 20, 20);
+        assertLayoutBounds(children.get(2), 180, 0, 20, 20);
         assertEquals(EMPTY, overlay.metricsProperty().get().leftInset());
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().rightInset());
-    }
-
-    /**
-     * Asserts that the buttons are laid out on the left side of the control (right-to-left orientation).
-     */
-    @Test
-    void rightPlacement_rightToLeft() {
-        var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, true);
-
-        var unused = new Scene(overlay);
-        var children = overlay.getChildrenUnmodifiable();
-        overlay.resize(200, 100);
-        overlay.applyCss();
-        overlay.layout();
-
-        assertSize(overlay, 200, 100);
-        assertLayoutBounds(children.get(0), 40, 0, 20, 10);
-        assertLayoutBounds(children.get(1), 20, 0, 20, 10);
-        assertLayoutBounds(children.get(2), 0, 0, 20, 10);
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().leftInset());
-        assertEquals(EMPTY, overlay.metricsProperty().get().rightInset());
-    }
-
-    /**
-     * Asserts that the buttons are laid out on the left side of the control (left-to-right orientation).
-     */
-    @Test
-    void leftPlacement() {
-        var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: left; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, false);
-
-        var unused = new Scene(overlay);
-        var children = overlay.getChildrenUnmodifiable();
-        overlay.resize(200, 100);
-        overlay.applyCss();
-        overlay.layout();
-
-        assertSize(overlay, 200, 100);
-        assertLayoutBounds(children.get(0), 0, 0, 20, 10);
-        assertLayoutBounds(children.get(1), 20, 0, 20, 10);
-        assertLayoutBounds(children.get(2), 40, 0, 20, 10);
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().leftInset());
-        assertEquals(EMPTY, overlay.metricsProperty().get().rightInset());
+        assertEquals(new Dimension2D(60, 20), overlay.metricsProperty().get().rightInset());
     }
 
     /**
      * Asserts that the buttons are laid out on the right side of the control (right-to-left orientation).
      */
     @Test
-    void leftPlacement_rightToLeft() {
+    void rightPlacement_stretchAlignment_rightToLeft() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: left; }
+                .header-button-container { -fx-button-placement: right;
+                                           -fx-button-default-height: 20;
+                                           -fx-button-vertical-alignment: stretch; }
+                .header-button { -fx-pref-width: 20; }
+            """), false, true);
+
+        var unused = new Scene(overlay);
+        var children = overlay.getChildrenUnmodifiable();
+        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        overlay.resize(200, 100);
+        overlay.applyCss();
+        overlay.layout();
+
+        assertSize(overlay, 200, 100);
+        assertLayoutBounds(children.get(0), 40, 0, 20, 20);
+        assertLayoutBounds(children.get(1), 20, 0, 20, 20);
+        assertLayoutBounds(children.get(2), 0, 0, 20, 20);
+        assertEquals(new Dimension2D(60, 20), overlay.metricsProperty().get().leftInset());
+        assertEquals(EMPTY, overlay.metricsProperty().get().rightInset());
+    }
+
+    /**
+     * Asserts that the buttons are laid out on the right side of the control (left-to-right orientation)
+     * with center alignment (including offsets caused by center alignment).
+     */
+    @Test
+    void rightPlacement_centerAlignment() {
+        var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .header-button-container { -fx-button-placement: right;
+                                           -fx-button-default-height: 20;
+                                           -fx-button-vertical-alignment: center; }
+                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+            """), false, false);
+
+        var unused = new Scene(overlay);
+        var children = overlay.getChildrenUnmodifiable();
+        overlay.resize(200, 100);
+        overlay.applyCss();
+        overlay.layout();
+
+        assertSize(overlay, 200, 100);
+        assertLayoutBounds(children.get(0), 135, 5, 20, 10);
+        assertLayoutBounds(children.get(1), 155, 5, 20, 10);
+        assertLayoutBounds(children.get(2), 175, 5, 20, 10);
+        assertEquals(EMPTY, overlay.metricsProperty().get().leftInset());
+        assertEquals(new Dimension2D(70, 20), overlay.metricsProperty().get().rightInset());
+    }
+
+    /**
+     * Asserts that the buttons are laid out on the left side of the control (right-to-left orientation)
+     * with center alignment (including offsets caused by center alignment).
+     */
+    @Test
+    void rightPlacement_centerAlignment_rightToLeft() {
+        var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .header-button-container { -fx-button-placement: right;
+                                           -fx-button-default-height: 20;
+                                           -fx-button-vertical-alignment: center; }
                 .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, true);
 
@@ -136,11 +148,119 @@ public class HeaderButtonOverlayTest {
         overlay.layout();
 
         assertSize(overlay, 200, 100);
-        assertLayoutBounds(children.get(0), 180, 0, 20, 10);
-        assertLayoutBounds(children.get(1), 160, 0, 20, 10);
-        assertLayoutBounds(children.get(2), 140, 0, 20, 10);
+        assertLayoutBounds(children.get(0), 45, 5, 20, 10);
+        assertLayoutBounds(children.get(1), 25, 5, 20, 10);
+        assertLayoutBounds(children.get(2), 5, 5, 20, 10);
+        assertEquals(new Dimension2D(70, 20), overlay.metricsProperty().get().leftInset());
+        assertEquals(EMPTY, overlay.metricsProperty().get().rightInset());
+    }
+
+    /**
+     * Asserts that the buttons are laid out on the left side of the control (left-to-right orientation).
+     */
+    @Test
+    void leftPlacement_stretchAlignment() {
+        var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .header-button-container { -fx-button-placement: left;
+                                           -fx-button-default-height: 20;
+                                           -fx-button-vertical-alignment: stretch; }
+                .header-button { -fx-pref-width: 20; }
+            """), false, false);
+
+        var unused = new Scene(overlay);
+        var children = overlay.getChildrenUnmodifiable();
+        overlay.resize(200, 100);
+        overlay.applyCss();
+        overlay.layout();
+
+        assertSize(overlay, 200, 100);
+        assertLayoutBounds(children.get(0), 0, 0, 20, 20);
+        assertLayoutBounds(children.get(1), 20, 0, 20, 20);
+        assertLayoutBounds(children.get(2), 40, 0, 20, 20);
+        assertEquals(new Dimension2D(60, 20), overlay.metricsProperty().get().leftInset());
+        assertEquals(EMPTY, overlay.metricsProperty().get().rightInset());
+    }
+
+    /**
+     * Asserts that the buttons are laid out on the left side of the control (right-to-left orientation).
+     */
+    @Test
+    void leftPlacement_stretchAlignment_rightToLeft() {
+        var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .header-button-container { -fx-button-placement: left;
+                                           -fx-button-default-height: 20;
+                                           -fx-button-vertical-alignment: stretch; }
+                .header-button { -fx-pref-width: 20; }
+            """), false, true);
+
+        var unused = new Scene(overlay);
+        var children = overlay.getChildrenUnmodifiable();
+        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        overlay.resize(200, 100);
+        overlay.applyCss();
+        overlay.layout();
+
+        assertSize(overlay, 200, 100);
+        assertLayoutBounds(children.get(0), 180, 0, 20, 20);
+        assertLayoutBounds(children.get(1), 160, 0, 20, 20);
+        assertLayoutBounds(children.get(2), 140, 0, 20, 20);
         assertEquals(EMPTY, overlay.metricsProperty().get().leftInset());
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().rightInset());
+        assertEquals(new Dimension2D(60, 20), overlay.metricsProperty().get().rightInset());
+    }
+
+    /**
+     * Asserts that the buttons are laid out on the left side of the control (left-to-right orientation)
+     * with center alignment (including offsets caused by center alignment).
+     */
+    @Test
+    void leftPlacement_centerAlignment() {
+        var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .header-button-container { -fx-button-placement: left;
+                                           -fx-button-default-height: 20;
+                                           -fx-button-vertical-alignment: center; }
+                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+            """), false, false);
+
+        var unused = new Scene(overlay);
+        var children = overlay.getChildrenUnmodifiable();
+        overlay.resize(200, 100);
+        overlay.applyCss();
+        overlay.layout();
+
+        assertSize(overlay, 200, 100);
+        assertLayoutBounds(children.get(0), 5, 5, 20, 10);
+        assertLayoutBounds(children.get(1), 25, 5, 20, 10);
+        assertLayoutBounds(children.get(2), 45, 5, 20, 10);
+        assertEquals(new Dimension2D(70, 20), overlay.metricsProperty().get().leftInset());
+        assertEquals(EMPTY, overlay.metricsProperty().get().rightInset());
+    }
+
+    /**
+     * Asserts that the buttons are laid out on the left side of the control (right-to-left orientation)
+     * with center alignment (including offsets caused by center alignment).
+     */
+    @Test
+    void leftPlacement_centerAlignment_rightToLeft() {
+        var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .header-button-container { -fx-button-placement: left;
+                                           -fx-button-default-height: 20;
+                                           -fx-button-vertical-alignment: center; }
+                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+            """), false, true);
+
+        var unused = new Scene(overlay);
+        var children = overlay.getChildrenUnmodifiable();
+        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        overlay.resize(200, 100);
+        overlay.applyCss();
+        overlay.layout();
+
+        assertSize(overlay, 200, 100);
+        assertLayoutBounds(children.get(0), 175, 5, 20, 10);
+        assertLayoutBounds(children.get(1), 155, 5, 20, 10);
+        assertLayoutBounds(children.get(2), 135, 5, 20, 10);
+        assertEquals(EMPTY, overlay.metricsProperty().get().leftInset());
+        assertEquals(new Dimension2D(70, 20), overlay.metricsProperty().get().rightInset());
     }
 
     /**
@@ -149,6 +269,7 @@ public class HeaderButtonOverlayTest {
     @Test
     void customButtonOrder() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .header-button-container { -fx-button-vertical-alignment: stretch; }
                 .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
                 .iconify-button { -fx-button-order: 5; }
                 .maximize-button { -fx-button-order: 1; }
@@ -175,6 +296,7 @@ public class HeaderButtonOverlayTest {
     @Test
     void customButtonOrder_rightToLeft() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .header-button-container { -fx-button-vertical-alignment: stretch; }
                 .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
                 .iconify-button { -fx-button-order: 5; }
                 .maximize-button { -fx-button-order: 1; }
@@ -213,7 +335,9 @@ public class HeaderButtonOverlayTest {
     @Test
     void disallowRightToLeft() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right; -fx-allow-rtl: false; }
+                .header-button-container { -fx-button-placement: right;
+                                           -fx-button-vertical-alignment: stretch;
+                                           -fx-allow-rtl: false; }
                 .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, true);
 
@@ -243,13 +367,13 @@ public class HeaderButtonOverlayTest {
         stage.show();
 
         assertTrue(stage.isFocused());
-        assertTrue(overlay.getChildrenUnmodifiable().get(0).getPseudoClassStates().stream().anyMatch(
+        assertTrue(overlay.getChildrenUnmodifiable().getFirst().getPseudoClassStates().stream().anyMatch(
                 pc -> pc.getPseudoClassName().equals("active")));
 
         ReflectionUtils.invokeMethod(stage, "setFocused", new Class[] { boolean.class }, false);
 
         assertFalse(stage.isFocused());
-        assertTrue(overlay.getChildrenUnmodifiable().get(0).getPseudoClassStates().stream().noneMatch(
+        assertTrue(overlay.getChildrenUnmodifiable().getFirst().getPseudoClassStates().stream().noneMatch(
                 pc -> pc.getPseudoClassName().equals("active")));
     }
 
@@ -325,7 +449,7 @@ public class HeaderButtonOverlayTest {
     @Test
     void pickButtonAtCoordinates() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right; }
+                .header-button-container { -fx-button-placement: right; -fx-button-vertical-alignment: stretch; }
                 .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false);
 

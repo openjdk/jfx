@@ -78,7 +78,7 @@ import javafx.event.*;
 import javafx.geometry.*;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
-import javafx.scene.layout.HeaderBarBase;
+import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -3069,22 +3069,22 @@ public class Scene implements EventTarget {
             var pickResultChooser = new PickResultChooser();
             root.pickNode(pickRay, pickResultChooser);
             Node intersectedNode = pickResultChooser.getIntersectedNode();
-            Boolean draggable = intersectedNode instanceof HeaderBarBase ? true : null;
+            Boolean draggable = intersectedNode instanceof HeaderBar ? true : null;
 
             while (intersectedNode != null) {
-                if (intersectedNode instanceof HeaderBarBase) {
+                if (intersectedNode instanceof HeaderBar) {
                     return draggable == Boolean.TRUE ? HeaderAreaType.DRAGBAR : null;
                 }
 
-                if (HeaderBarBase.getButtonType(intersectedNode) instanceof HeaderButtonType type) {
+                if (HeaderBar.getButtonType(intersectedNode) instanceof HeaderButtonType type) {
                     return switch (type) {
-                        case ICONIFY -> HeaderAreaType.MINIMIZE;
+                        case ICONIFY -> HeaderAreaType.ICONIFY;
                         case MAXIMIZE -> HeaderAreaType.MAXIMIZE;
                         case CLOSE -> HeaderAreaType.CLOSE;
                     };
                 }
 
-                if (draggable == null && HeaderBarBase.isDraggable(intersectedNode) instanceof Boolean value) {
+                if (draggable == null && HeaderBar.isDraggable(intersectedNode) instanceof Boolean value) {
                     draggable = value;
                 }
 

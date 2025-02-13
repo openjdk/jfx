@@ -25,12 +25,21 @@
 
 package javafx.scene.layout;
 
+import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.javafx.geom.Vec2d;
+import com.sun.javafx.scene.layout.HeaderButtonBehavior;
+import com.sun.javafx.stage.StageHelper;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.value.ObservableValue;
 import javafx.css.StyleableDoubleProperty;
+import javafx.geometry.Dimension2D;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
@@ -38,9 +47,12 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.Subscription;
 
 /**
  * A client-area header bar that is used as a replacement for the system-provided header bar in stages
@@ -51,14 +63,8 @@ import javafx.stage.StageStyle;
  * <p>
  * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes in three areas:
  * {@link #leadingProperty() leading}, {@link #centerProperty() center}, and {@link #trailingProperty() trailing}.
- * All areas can be {@code null}.
- * If a child is configured to be centered in the {@code center} area, it is laid out with respect to the
- * entire header bar, and not with respect to the {@code center} area. This ensures that the child will appear
- * centered in the header bar regardless of leading or trailing children or the platform-specific placement of
- * default window buttons.
- * <p>
- * The default {@link #minHeightProperty() minHeight} of the {@code HeaderBar} is set to match the height of the
- * platform-specific default window buttons.
+ * All areas can be {@code null}. The default {@link #minHeightProperty() minHeight} of the {@code HeaderBar} is
+ * set to match the height of the platform-specific default header buttons.
  *
  * <h2>Single header bar</h2>
  * Most applications should only add a single {@code HeaderBar} to the scene graph, placed at the top of the
@@ -75,10 +81,16 @@ import javafx.stage.StageStyle;
  * {@link #trailingSystemPaddingProperty() trailingSystemPadding} properties can be used to remove the padding
  * that is not needed.
  *
+ * <h2>Header button height</h2>
+ * Applications can specify the preferred height for system-provided header buttons by setting the static
+ * {@link #setPrefButtonHeight(Stage, double)} property on the {@code Stage} associated with the header bar.
+ * This can be used to achieve a more cohesive visual appearance by having the system-provided header buttons
+ * match the height of the header bar.
+ *
  * <h2>Custom header buttons</h2>
- * If more control over the header buttons is desired, applications can opt out of the default header buttons
- * by setting {@link #setPrefButtonHeight(Stage, double)} to zero and provide custom header buttons instead.
- * Any JavaFX control can be used as a custom header button by setting its semantic type with the
+ * If more control over the header buttons is desired, applications can opt out of the system-provided header
+ * buttons by setting {@link #setPrefButtonHeight(Stage, double)} to zero and provide custom header buttons
+ * instead. Any JavaFX control can be used as a custom header button by setting its semantic type with the
  * {@link #setButtonType(Node, HeaderButtonType)} method.
  *
  * <h2>System menu</h2>
@@ -87,11 +99,11 @@ import javafx.stage.StageStyle;
  * event that is targeted at the header bar is not consumed by the application.
  *
  * <h2>Layout constraints</h2>
- * All children will be resized to their preferred widths and extend the height of the {@code HeaderBar}.
- * {@code HeaderBar} honors the minimum, preferred, and maximum sizes of its children. As a consequence, its
- * computed minimum size is sufficient to accommodate all of its children. If a child's resizable range prevents
- * it from be resized to fit within its position, it will be vertically centered relative to the available space;
- * this alignment can be customized with a layout constraint.
+ * The {@code leading} and {@code trailing} children will be resized to their preferred widths and extend the
+ * height of the {@code HeaderBar}. The {@code center} child will be resized to fill the available space.
+ * {@code HeaderBar} honors the minimum, preferred, and maximum sizes of its children. If a child's resizable
+ * range prevents it from be resized to fit within its position, it will be vertically centered relative to the
+ * available space; this alignment can be customized with a layout constraint.
  * <p>
  * An application may set constraints on individual children to customize their layout.
  * For each constraint, {@code HeaderBar} provides static getter and setter methods.
@@ -109,6 +121,17 @@ import javafx.stage.StageStyle;
  *         </tr>
  *     </tbody>
  * </table>
+ *
+ * <h2>Special layout of centered child</h2>
+ * If a child is configured to be centered in the {@link #centerProperty() center} area (i.e. its {@code alignment}
+ * constraint is either {@code null}, {@link Pos#CENTER}, {@link Pos#TOP_CENTER}, or {@link Pos#BOTTOM_CENTER}),
+ * it will be centered with respect to the entire header bar, and not with respect to the {@code center} area only.
+ * This means that, for a header bar that extends the entire width of the {@code Stage}, the child will appear to
+ * be horizontally centered within the {@code Stage}.
+ * <p>
+ * If a child should instead be centered with respect to the {@code center} area only, a possible solution is to
+ * place another layout container like {@link BorderPane} in the {@code center} area, and then center the child
+ * within the other layout container.
  *
  * <h2>Example</h2>
  * Usually, {@code HeaderBar} is placed in a root container like {@code BorderPane} to align it
@@ -134,13 +157,112 @@ import javafx.stage.StageStyle;
  * }
  * }</pre>
  *
- * @see HeaderBarBase
  * @since 25
  */
-public class HeaderBar extends HeaderBarBase {
+public class HeaderBar extends Region {
 
+    private static final Dimension2D EMPTY = new Dimension2D(0, 0);
+    private static final String DRAGGABLE = "headerbar-draggable";
+    private static final String BUTTON_TYPE = "headerbar-button-type";
     private static final String ALIGNMENT = "headerbar-alignment";
     private static final String MARGIN = "headerbar-margin";
+
+    /**
+     * Specifies whether the child and its subtree is a draggable part of the {@code HeaderBar}.
+     * <p>
+     * If set to a non-null value, the value will apply for the entire subtree of the child unless
+     * another node in the subtree specifies a different value. Setting the value to {@code null}
+     * will remove the flag.
+     *
+     * @param child the child node
+     * @param value a {@code Boolean} value indicating whether the child and its subtree is draggable,
+     *              or {@code null} to remove the flag
+     */
+    public static void setDraggable(Node child, Boolean value) {
+        Pane.setConstraint(child, DRAGGABLE, value);
+    }
+
+    /**
+     * Returns whether the child and its subtree is a draggable part of the {@code HeaderBar}.
+     *
+     * @param child the child node
+     * @return a {@code Boolean} value indicating whether the child and its subtree is draggable,
+     *         or {@code null} if not set
+     */
+    public static Boolean isDraggable(Node child) {
+        return (Boolean)Pane.getConstraint(child, DRAGGABLE);
+    }
+
+    /**
+     * Specifies the {@code HeaderButtonType} of the child, indicating its semantic use in the header bar.
+     * <p>
+     * This property can be set on any {@link Node}. Specifying a header button type also provides the behavior
+     * associated with the button type. If the default behavior is not desired, applications can register an
+     * event filter on the child node that consumes the {@link MouseEvent#MOUSE_RELEASED} event.
+     *
+     * @param child the child node
+     * @param value the {@code HeaderButtonType}, or {@code null}
+     */
+    public static void setButtonType(Node child, HeaderButtonType value) {
+        Pane.setConstraint(child, BUTTON_TYPE, value);
+
+        if (child.getProperties().get(HeaderButtonBehavior.class) instanceof HeaderButtonBehavior behavior) {
+            behavior.dispose();
+        }
+
+        if (value != null) {
+            child.getProperties().put(HeaderButtonBehavior.class, new HeaderButtonBehavior(child, value));
+        } else {
+            child.getProperties().remove(HeaderButtonBehavior.class);
+        }
+    }
+
+    /**
+     * Returns the {@code HeaderButtonType} of the specified child.
+     *
+     * @param child the child node
+     * @return the {@code HeaderButtonType}, or {@code null}
+     */
+    public static HeaderButtonType getButtonType(Node child) {
+        return (HeaderButtonType)Pane.getConstraint(child, BUTTON_TYPE);
+    }
+
+    /**
+     * Sentinel value that can be used for {@link #setPrefButtonHeight(Stage, double)} to indicate that
+     * the platform should choose the platform-specific default button height.
+     */
+    public static final double USE_DEFAULT_SIZE = -1;
+
+    /**
+     * Specifies the preferred height of the system-provided header buttons of the specified stage.
+     * <p>
+     * Any value except zero and {@link #USE_DEFAULT_SIZE} is only a hint for the platform window toolkit.
+     * The platform might accommodate the preferred height in various ways, such as by stretching the header
+     * buttons (fully or partially) to fill the preferred height, or centering the header buttons (fully or
+     * partially) within the preferred height. Some platforms might only accommodate the preferred height
+     * within platform-specific constraints, or ignore it entirely.
+     * <p>
+     * Setting the preferred height to zero hides the system-provided header buttons, allowing applications to
+     * use custom header buttons instead (see {@link #setButtonType(Node, HeaderButtonType)}).
+     * <p>
+     * The default value {@code #USE_DEFAULT_SIZE} indicates that the platform should choose the button height.
+     *
+     * @param stage the {@code Stage}
+     * @param height the preferred height, or 0 to hide the system-provided header buttons
+     */
+    public static void setPrefButtonHeight(Stage stage, double height) {
+        StageHelper.setPrefHeaderButtonHeight(stage, height);
+    }
+
+    /**
+     * Returns the preferred height of the system-provided header buttons of the specified stage.
+     *
+     * @param stage the {@code Stage}
+     * @return the preferred height of the system-provided header buttons
+     */
+    public static double getPrefButtonHeight(Stage stage) {
+        return StageHelper.getPrefHeaderButtonHeight(stage);
+    }
 
     /**
      * Sets the alignment for the child when contained in a {@code HeaderBar}.
@@ -186,6 +308,10 @@ public class HeaderBar extends HeaderBarBase {
         return (Insets)Pane.getConstraint(child, MARGIN);
     }
 
+    private Subscription subscription = Subscription.EMPTY;
+    private HeaderButtonMetrics currentMetrics;
+    private boolean currentFullScreen;
+
     /**
      * Creates a new {@code HeaderBar}.
      */
@@ -193,7 +319,16 @@ public class HeaderBar extends HeaderBarBase {
         // Inflate the minHeight property. This is important so that we can track whether a stylesheet or
         // user code changes the property value before we set it to the height of the native title bar.
         minHeightProperty();
-        minSystemHeightProperty().subscribe(this::updateMinHeight);
+
+        ObservableValue<Stage> stage = sceneProperty()
+            .flatMap(Scene::windowProperty)
+            .map(w -> w instanceof Stage s ? s : null);
+
+        stage.flatMap(Stage::fullScreenProperty)
+            .orElse(false)
+            .subscribe(this::onFullScreenChanged);
+
+        stage.subscribe(this::onStageChanged);
     }
 
     /**
@@ -208,6 +343,112 @@ public class HeaderBar extends HeaderBarBase {
         setLeading(leading);
         setCenter(center);
         setTrailing(trailing);
+    }
+
+    private void onStageChanged(Stage stage) {
+        subscription.unsubscribe();
+
+        if (stage != null) {
+            subscription = StageHelper.getHeaderButtonMetrics(stage).subscribe(this::onMetricsChanged);
+        }
+    }
+
+    private void onMetricsChanged(HeaderButtonMetrics metrics) {
+        currentMetrics = metrics;
+        updateInsets();
+    }
+
+    private void onFullScreenChanged(boolean fullScreen) {
+        currentFullScreen = fullScreen;
+        updateInsets();
+    }
+
+    private void updateInsets() {
+        if (currentFullScreen || currentMetrics == null) {
+            leftSystemInset.set(EMPTY);
+            rightSystemInset.set(EMPTY);
+            minSystemHeight.set(0);
+        } else {
+            leftSystemInset.set(currentMetrics.leftInset());
+            rightSystemInset.set(currentMetrics.rightInset());
+            minSystemHeight.set(currentMetrics.minHeight());
+        }
+    }
+
+    /**
+     * Describes the size of the left system-reserved inset, which is an area reserved for the minimize, maximize,
+     * and close window buttons. If there are no window buttons on the left side of the window, the returned area
+     * is an empty {@code Dimension2D}.
+     * <p>
+     * Note that the left system inset refers to the left side of the window, independent of layout orientation.
+     */
+    private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset =
+        new ReadOnlyObjectWrapper<>(this, "leftSystemInset", EMPTY) {
+            @Override
+            protected void invalidated() {
+                requestLayout();
+            }
+        };
+
+    public final ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty() {
+        return leftSystemInset.getReadOnlyProperty();
+    }
+
+    public final Dimension2D getLeftSystemInset() {
+        return leftSystemInset.get();
+    }
+
+    /**
+     * Describes the size of the right system-reserved inset, which is an area reserved for the minimize, maximize,
+     * and close window buttons. If there are no window buttons on the right side of the window, the returned area
+     * is an empty {@code Dimension2D}.
+     * <p>
+     * Note that the right system inset refers to the right side of the window, independent of layout orientation.
+     */
+    private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset =
+        new ReadOnlyObjectWrapper<>(this, "rightSystemInset", EMPTY) {
+            @Override
+            protected void invalidated() {
+                requestLayout();
+            }
+        };
+
+    public final ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty() {
+        return rightSystemInset.getReadOnlyProperty();
+    }
+
+    public final Dimension2D getRightSystemInset() {
+        return rightSystemInset.get();
+    }
+
+    /**
+     * The system-provided minimum recommended height for the {@code HeaderBar}, which usually corresponds
+     * to the height of the default header buttons. Applications can use this value as a sensible lower limit
+     * for the height of the {@code HeaderBar}.
+     * <p>
+     * By default, {@link #minHeightProperty() minHeight} is set to the value of {@code minSystemHeight},
+     * unless {@code minHeight} is explicitly set by a stylesheet or application code.
+     */
+    private final ReadOnlyDoubleWrapper minSystemHeight =
+        new ReadOnlyDoubleWrapper(this, "minSystemHeight") {
+            @Override
+            protected void invalidated() {
+                double height = get();
+                var minHeight = (StyleableDoubleProperty)minHeightProperty();
+
+                // Only change minHeight if it was not set by a stylesheet or application code.
+                if (minHeight.getStyleOrigin() == null) {
+                    minHeight.applyStyle(null, height);
+                }
+            }
+        };
+
+    public final ReadOnlyDoubleProperty minSystemHeightProperty() {
+        return minSystemHeight.getReadOnlyProperty();
+    }
+
+    public final double getMinSystemHeight() {
+        return minSystemHeight.get();
     }
 
     /**
@@ -493,8 +734,8 @@ public class HeaderBar extends HeaderBarBase {
         if (left != null && left.isManaged()) {
             Insets leftMargin = adjustMarginForRTL(getNodeMargin(left), rtl);
             double adjustedWidth = adjustWidthByMargin(insideWidth, leftMargin);
-            Vec2d childSize = resizeChild(left, adjustedWidth, insideHeight, leftMargin);
-            leftWidth = snapSpaceX(leftMargin.getLeft()) + childSize.x + snapSpaceX(leftMargin.getRight());
+            double childWidth = resizeChild(left, adjustedWidth, false, insideHeight, leftMargin);
+            leftWidth = snapSpaceX(leftMargin.getLeft()) + childWidth + snapSpaceX(leftMargin.getRight());
             Pos alignment = getAlignment(left);
 
             positionInArea(
@@ -509,8 +750,8 @@ public class HeaderBar extends HeaderBarBase {
         if (right != null && right.isManaged()) {
             Insets rightMargin = adjustMarginForRTL(getNodeMargin(right), rtl);
             double adjustedWidth = adjustWidthByMargin(insideWidth - leftWidth, rightMargin);
-            Vec2d childSize = resizeChild(right, adjustedWidth, insideHeight, rightMargin);
-            rightWidth = snapSpaceX(rightMargin.getLeft()) + childSize.x + snapSpaceX(rightMargin.getRight());
+            double childWidth = resizeChild(right, adjustedWidth, false, insideHeight, rightMargin);
+            rightWidth = snapSpaceX(rightMargin.getLeft()) + childWidth + snapSpaceX(rightMargin.getRight());
             Pos alignment = getAlignment(right);
 
             positionInArea(
@@ -524,21 +765,20 @@ public class HeaderBar extends HeaderBarBase {
 
         if (center != null && center.isManaged()) {
             Insets centerMargin = adjustMarginForRTL(getNodeMargin(center), rtl);
-            double adjustedWidth = adjustWidthByMargin(insideWidth - leftWidth - rightWidth, centerMargin);
-            Vec2d childSize = resizeChild(center, adjustedWidth, insideHeight, centerMargin);
-            double centerWidth = childSize.x;
             Pos alignment = getAlignment(center);
 
             if (alignment == null || alignment.getHpos() == HPos.CENTER) {
-                double idealX = width / 2 - centerWidth / 2;
+                double adjustedWidth = adjustWidthByMargin(insideWidth - leftWidth - rightWidth, centerMargin);
+                double childWidth = resizeChild(center, adjustedWidth, true, insideHeight, centerMargin);
+                double idealX = width / 2 - childWidth / 2;
                 double minX = insideX + leftWidth + centerMargin.getLeft();
                 double maxX = insideX + insideWidth - rightWidth - centerMargin.getRight();
                 double adjustedX;
 
                 if (idealX < minX) {
                     adjustedX = minX;
-                } else if (idealX + centerWidth > maxX) {
-                    adjustedX = maxX - centerWidth;
+                } else if (idealX + childWidth > maxX) {
+                    adjustedX = maxX - childWidth;
                 } else {
                     adjustedX = idealX;
                 }
@@ -546,18 +786,17 @@ public class HeaderBar extends HeaderBarBase {
                 positionInArea(
                     center,
                     adjustedX, insideY,
-                    centerWidth, insideHeight, 0,
+                    childWidth, insideHeight, 0,
                     new Insets(centerMargin.getTop(), 0, centerMargin.getBottom(), 0),
                     HPos.LEFT, alignment != null ? alignment.getVpos() : VPos.CENTER,
                     isSnapToPixel());
             } else {
-                positionInArea(
+                layoutInArea(
                     center,
                     insideX + leftWidth, insideY,
                     insideWidth - leftWidth - rightWidth, insideHeight, 0,
                     centerMargin,
-                    alignment.getHpos(), alignment.getVpos(),
-                    isSnapToPixel());
+                    alignment.getHpos(), alignment.getVpos());
             }
         }
     }
@@ -580,14 +819,14 @@ public class HeaderBar extends HeaderBarBase {
         return false;
     }
 
-    private Vec2d resizeChild(Node child, double adjustedWidth, double insideHeight, Insets margin) {
+    private double resizeChild(Node child, double adjustedWidth, boolean fillWidth, double insideHeight, Insets margin) {
         double adjustedHeight = adjustHeightByMargin(insideHeight, margin);
-        double childWidth = Math.min(snapSizeX(child.prefWidth(adjustedHeight)), adjustedWidth);
-        Vec2d size = boundedNodeSizeWithBias(child, childWidth, adjustedHeight, false, true, TEMP_VEC2D);
+        double childWidth = fillWidth ? adjustedWidth : Math.min(snapSizeX(child.prefWidth(adjustedHeight)), adjustedWidth);
+        Vec2d size = boundedNodeSizeWithBias(child, childWidth, adjustedHeight, true, true, TEMP_VEC2D);
         size.x = snapSizeX(size.x);
         size.y = snapSizeX(size.y);
         child.resize(size.x, size.y);
-        return size;
+        return size.x;
     }
 
     private double getAreaWidth(Node child, double height, boolean minimum) {
@@ -615,15 +854,6 @@ public class HeaderBar extends HeaderBarBase {
     private Insets getNodeMargin(Node child) {
         Insets margin = getMargin(child);
         return margin != null ? margin : Insets.EMPTY;
-    }
-
-    private void updateMinHeight() {
-        var minHeight = (StyleableDoubleProperty)minHeightProperty();
-
-        // Only change minHeight if it was not set by a stylesheet or application code.
-        if (minHeight.getStyleOrigin() == null) {
-            ((StyleableDoubleProperty)minHeightProperty()).applyStyle(null, getMinSystemHeight());
-        }
     }
 
     private final class NodeProperty extends ObjectPropertyBase<Node> {

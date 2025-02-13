@@ -30,7 +30,7 @@ package com.sun.javafx.tk;
  */
 public enum HeaderAreaType {
     DRAGBAR,
-    MINIMIZE,
+    ICONIFY,
     MAXIMIZE,
     CLOSE
 }

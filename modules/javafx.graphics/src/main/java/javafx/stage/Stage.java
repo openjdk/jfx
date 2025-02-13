@@ -39,6 +39,7 @@ import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.HeaderBar;
 
 import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.javafx.collections.VetoableListDecorator;
@@ -56,7 +57,6 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.layout.HeaderBarBase;
 
 /**
  * The JavaFX {@code Stage} class is the top level JavaFX container.
@@ -1288,7 +1288,7 @@ public class Stage extends Window {
         return headerButtonMetrics;
     }
 
-    private double prefHeaderButtonHeight = HeaderBarBase.USE_DEFAULT_SIZE;
+    private double prefHeaderButtonHeight = HeaderBar.USE_DEFAULT_SIZE;
 
     private double getPrefHeaderButtonHeight() {
         return prefHeaderButtonHeight;

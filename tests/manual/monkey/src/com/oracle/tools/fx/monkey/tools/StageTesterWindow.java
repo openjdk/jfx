@@ -43,7 +43,6 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HeaderBar;
-import javafx.scene.layout.HeaderBarBase;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -166,7 +165,7 @@ public final class StageTesterWindow extends Stage {
     private Parent createSimpleHeaderBarRoot(Stage stage, boolean customWindowButtons) {
         var headerBar = new HeaderBar();
         headerBar.setBackground(Background.fill(Color.LIGHTSKYBLUE));
-        headerBar.setCenter(new TextField() {{ setPromptText("Search..."); }});
+        headerBar.setCenter(new TextField() {{ setPromptText("Search..."); setMaxWidth(300); }});
 
         var sizeComboBox = new ComboBox<>(FXCollections.observableArrayList("Small", "Medium", "Large"));
         sizeComboBox.getSelectionModel().select(0);
@@ -184,15 +183,15 @@ public final class StageTesterWindow extends Stage {
         if (customWindowButtons) {
             HeaderBar.setPrefButtonHeight(stage, 0);
         } else {
-            var headerButtonHeight = new CheckBox("Set button height to bar height");
+            var adaptiveButtonHeight = new CheckBox("Adaptive button height");
 
             headerBar.heightProperty().subscribe(h -> {
-                if (headerButtonHeight.isSelected()) {
+                if (adaptiveButtonHeight.isSelected()) {
                     HeaderBar.setPrefButtonHeight(stage, h.doubleValue());
                 }
             });
 
-            headerButtonHeight.selectedProperty().subscribe(value -> {
+            adaptiveButtonHeight.selectedProperty().subscribe(value -> {
                 if (value) {
                     HeaderBar.setPrefButtonHeight(stage, headerBar.getHeight());
                 } else {
@@ -200,7 +199,7 @@ public final class StageTesterWindow extends Stage {
                 }
             });
 
-            headerBar.setLeading(headerButtonHeight);
+            headerBar.setLeading(adaptiveButtonHeight);
         }
 
         var trailingNodes = new HBox(sizeComboBox);
@@ -223,7 +222,7 @@ public final class StageTesterWindow extends Stage {
         var leftHeaderBar = new HeaderBar();
         leftHeaderBar.setBackground(Background.fill(Color.VIOLET));
         leftHeaderBar.setLeading(new Button("\u2728"));
-        leftHeaderBar.setCenter(new TextField() {{ setPromptText("Search..."); }});
+        leftHeaderBar.setCenter(new TextField() {{ setPromptText("Search..."); setMaxWidth(200); }});
         leftHeaderBar.setTrailingSystemPadding(false);
 
         var rightHeaderBar = new HeaderBar();
@@ -278,9 +277,9 @@ public final class StageTesterWindow extends Stage {
             }
         });
 
-        HeaderBarBase.setButtonType(iconifyButton, HeaderButtonType.ICONIFY);
-        HeaderBarBase.setButtonType(maximizeButton, HeaderButtonType.MAXIMIZE);
-        HeaderBarBase.setButtonType(closeButton, HeaderButtonType.CLOSE);
+        HeaderBar.setButtonType(iconifyButton, HeaderButtonType.ICONIFY);
+        HeaderBar.setButtonType(maximizeButton, HeaderButtonType.MAXIMIZE);
+        HeaderBar.setButtonType(closeButton, HeaderButtonType.CLOSE);
         return List.of(iconifyButton, maximizeButton, closeButton);
     }
 

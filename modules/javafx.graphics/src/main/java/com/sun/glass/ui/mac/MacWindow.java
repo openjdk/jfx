@@ -32,7 +32,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import javafx.geometry.Dimension2D;
-import javafx.scene.layout.HeaderBarBase;
+import javafx.scene.layout.HeaderBar;
 import java.nio.ByteBuffer;
 
 /**
@@ -175,7 +175,7 @@ final class MacWindow extends Window {
     private native void _setWindowButtonStyle(long ptr, int toolbarStyle, boolean buttonsVisible);
 
     private void onPrefHeaderButtonHeightChanged(Number height) {
-        double h = height != null ? height.doubleValue() : HeaderBarBase.USE_DEFAULT_SIZE;
+        double h = height != null ? height.doubleValue() : HeaderBar.USE_DEFAULT_SIZE;
         var toolbarStyle = NSWindowToolbarStyle.ofHeight(h);
         _setWindowButtonStyle(getRawHandle(), toolbarStyle.style, h != 0);
         updateHeaderButtonMetrics(toolbarStyle, h);

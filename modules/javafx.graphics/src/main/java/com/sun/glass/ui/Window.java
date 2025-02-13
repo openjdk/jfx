@@ -35,7 +35,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.scene.layout.HeaderBarBase;
+import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.Region;
 import java.lang.annotation.Native;
 import java.util.Collections;
@@ -301,10 +301,10 @@ public abstract class Window {
      * visualization, but they are not required to accommodate the preferred height.
      * <p>
      * Implementations should choose a sensible default height for their header button visualization if
-     * {@link HeaderBarBase#USE_DEFAULT_SIZE} is specified.
+     * {@link HeaderBar#USE_DEFAULT_SIZE} is specified.
      */
     private final DoubleProperty prefHeaderButtonHeight =
-        new SimpleDoubleProperty(this, "prefHeaderButtonHeight", HeaderBarBase.USE_DEFAULT_SIZE);
+        new SimpleDoubleProperty(this, "prefHeaderButtonHeight", HeaderBar.USE_DEFAULT_SIZE);
 
     public final ReadOnlyDoubleProperty prefHeaderButtonHeightProperty() {
         return prefHeaderButtonHeight;

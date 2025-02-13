@@ -53,7 +53,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.layout.HeaderBarBase;
+import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Paint;
@@ -232,7 +232,7 @@ public final class HeaderButtonOverlay extends Region {
      * with their preferred height set to the value of {@link #buttonDefaultHeight}.
      */
     private final DoubleProperty prefButtonHeight = new SimpleDoubleProperty(
-        this, "prefButtonHeight", HeaderBarBase.USE_DEFAULT_SIZE);
+        this, "prefButtonHeight", HeaderBar.USE_DEFAULT_SIZE);
 
     /**
      * Specifies the default height of header buttons.
@@ -516,9 +516,11 @@ public final class HeaderButtonOverlay extends Region {
         };
     }
 
-    private void ensureRegionPrefHeight(Region region, double prefHeight) {
-        if (region.getPrefHeight() != prefHeight) {
-            region.setPrefHeight(prefHeight);
+    private void ensureRegionPrefHeight(Region region, double height) {
+        var prefHeight = (StyleableDoubleProperty)region.prefHeightProperty();
+
+        if (prefHeight.getStyleOrigin() == null) {
+            prefHeight.applyStyle(null, height);
         }
     }
 
