@@ -52,7 +52,7 @@ class ServiceWorkerContainer;
 class WebCoreOpaqueRoot;
 
 class ServiceWorkerRegistration final : public RefCounted<ServiceWorkerRegistration>, public Supplementable<ServiceWorkerRegistration>, public EventTarget, public ActiveDOMObject, public PushSubscriptionOwner {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(ServiceWorkerRegistration, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(ServiceWorkerRegistration, WEBCORE_EXPORT);
 public:
     static Ref<ServiceWorkerRegistration> getOrCreate(ScriptExecutionContext&, Ref<ServiceWorkerContainer>&&, ServiceWorkerRegistrationData&&);
 
@@ -86,8 +86,8 @@ public:
     void getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&&);
     void getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&&);
 
-    void ref() const final { RefCounted::ref(); };
-    void deref() const final { RefCounted::deref(); };
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     const ServiceWorkerRegistrationData& data() const { return m_registrationData; }
 
@@ -111,13 +111,12 @@ public:
 private:
     ServiceWorkerRegistration(ScriptExecutionContext&, Ref<ServiceWorkerContainer>&&, ServiceWorkerRegistrationData&&);
 
-    EventTargetInterface eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 

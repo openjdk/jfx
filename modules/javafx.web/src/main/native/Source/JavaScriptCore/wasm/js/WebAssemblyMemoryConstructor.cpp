@@ -38,19 +38,12 @@
 #include "WasmMemory.h"
 #include "WebAssemblyMemoryPrototype.h"
 
-#include "WebAssemblyMemoryConstructor.lut.h"
-
 namespace JSC {
 
-const ClassInfo WebAssemblyMemoryConstructor::s_info = { "Function"_s, &Base::s_info, &constructorTableWebAssemblyMemory, nullptr, CREATE_METHOD_TABLE(WebAssemblyMemoryConstructor) };
+const ClassInfo WebAssemblyMemoryConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyMemoryConstructor) };
 
 static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyMemory);
 static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyMemory);
-
-/* Source for WebAssemblyMemoryConstructor.lut.h
- @begin constructorTableWebAssemblyMemory
- @end
- */
 
 JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyMemory, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
@@ -146,7 +139,7 @@ JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyMemory, (JSGlobalObject* globalObject,
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, throwScope, "WebAssembly.Memory"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, throwScope, "WebAssembly.Memory"_s));
 }
 
 WebAssemblyMemoryConstructor* WebAssemblyMemoryConstructor::create(VM& vm, Structure* structure, WebAssemblyMemoryPrototype* thisPrototype)

@@ -66,6 +66,17 @@ enum class ExtSIMDOpType : uint32_t {
 };
 #undef CREATE_ENUM_VALUE
 
+#define CREATE_CASE(name, ...) case ExtSIMDOpType::name: return #name ## _s;
+inline ASCIILiteral makeString(ExtSIMDOpType op)
+{
+    switch (op) {
+        FOR_EACH_WASM_EXT_SIMD_OP(CREATE_CASE)
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return { };
+}
+#undef CREATE_CASE
+
 constexpr std::pair<size_t, size_t> countNumberOfWasmExtendedSIMDOpcodes()
 {
     uint8_t numberOfOpcodes = 0;
@@ -481,7 +492,7 @@ private:
 
 };
 
-inline const char* makeString(const StorageType& storageType)
+inline ASCIILiteral makeString(const StorageType& storageType)
 {
     return(storageType.is<Type>() ? makeString(storageType.as<Type>().kind) :
         makeString(storageType.as<PackedType>()));
@@ -708,8 +719,9 @@ public:
     bool isSubRTT(const RTT& other) const;
     static size_t allocatedRTTSize(Checked<DisplayCount> count) { return sizeof(RTT) + count * sizeof(TypeIndex); }
 
-    static ptrdiff_t offsetOfKind() { return OBJECT_OFFSETOF(RTT, m_kind); }
-    static ptrdiff_t offsetOfDisplaySize() { return OBJECT_OFFSETOF(RTT, m_displaySize); }
+    static constexpr ptrdiff_t offsetOfKind() { return OBJECT_OFFSETOF(RTT, m_kind); }
+    static constexpr ptrdiff_t offsetOfDisplaySize() { return OBJECT_OFFSETOF(RTT, m_displaySize); }
+    static constexpr ptrdiff_t offsetOfPayload() { return sizeof(RTT); }
 
 private:
     // Payload starts past end of this object.
@@ -798,6 +810,7 @@ public:
     const TypeDefinition& unroll() const;
     const TypeDefinition& expand() const;
     bool hasRecursiveReference() const;
+    bool isFinalType() const;
 
     // Type definitions that are compound and contain references to other definitions
     // via a type index should ref() the other definition when new unique instances are

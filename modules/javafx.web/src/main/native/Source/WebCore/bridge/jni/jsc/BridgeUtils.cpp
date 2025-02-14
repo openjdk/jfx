@@ -446,7 +446,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_JSObject_toStringImpl
     JSC::JSLockHolder lock(JSGlobalObject);
 
     return toJS(object)->toString(JSGlobalObject)->value(JSGlobalObject)
-        .toJavaString(env).releaseLocal();
+        ->toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT jobject JNICALL Java_com_sun_webkit_dom_JSObject_callImpl

@@ -63,6 +63,7 @@
 #include "Text.h"
 #include <pal/text/TextEncoding.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
@@ -119,7 +120,7 @@ PageSerializer::SerializerMarkupAccumulator::SerializerMarkupAccumulator(PageSer
 {
     // MarkupAccumulator does not serialize the <?xml ... line, so we add it explicitly to ensure the right encoding is specified.
     if (m_document.isXMLDocument() || m_document.xmlStandalone())
-        append("<?xml version=\"", m_document.xmlVersion(), "\" encoding=\"", m_document.charset(), "\"?>");
+        append("<?xml version=\""_s, m_document.xmlVersion(), "\" encoding=\""_s, m_document.charset(), "\"?>"_s);
 }
 
 void PageSerializer::SerializerMarkupAccumulator::appendText(StringBuilder& out, const Text& text)
@@ -135,7 +136,7 @@ void PageSerializer::SerializerMarkupAccumulator::appendStartTag(StringBuilder& 
         MarkupAccumulator::appendStartTag(out, element, namespaces);
 
     if (element.hasTagName(HTMLNames::headTag))
-        out.append("<meta charset=\"", m_document.charset(), "\">");
+        out.append("<meta charset=\""_s, m_document.charset(), "\">"_s);
 
     // FIXME: For object (plugins) tags and video tag we could replace them by an image of their current contents.
 }
@@ -200,7 +201,7 @@ void PageSerializer::serializeFrame(LocalFrame* frame)
 
     Vector<Ref<Node>> serializedNodes;
     SerializerMarkupAccumulator accumulator(*this, *document, &serializedNodes);
-    String text = accumulator.serializeNodes(*document->documentElement(), SerializedNodes::SubtreeIncludingNode);
+    String text = accumulator.serializeNodes(*document->protectedDocumentElement(), SerializedNodes::SubtreeIncludingNode);
     m_resources.append({ url, document->suggestedMIMEType(), SharedBuffer::create(textEncoding.encode(text, PAL::UnencodableHandling::Entities)) });
     m_resourceURLs.add(url);
 
@@ -210,7 +211,7 @@ void PageSerializer::serializeFrame(LocalFrame* frame)
             continue;
         // We have to process in-line style as it might contain some resources (typically background images).
         if (RefPtr styledElement = dynamicDowncast<StyledElement>(*element))
-            retrieveResourcesForProperties(styledElement->inlineStyle(), document);
+            retrieveResourcesForProperties(styledElement->protectedInlineStyle().get(), document);
 
         if (RefPtr imageElement = dynamicDowncast<HTMLImageElement>(*element)) {
             auto url = document->completeURL(imageElement->attributeWithoutSynchronization(HTMLNames::srcAttr));
@@ -245,7 +246,7 @@ void PageSerializer::serializeCSSStyleSheet(CSSStyleSheet* styleSheet, const URL
         if (!itemText.isEmpty()) {
             cssText.append(itemText);
             if (i < styleSheet->length() - 1)
-                cssText.append("\n\n");
+                cssText.append("\n\n"_s);
         }
         Document* document = styleSheet->ownerDocument();
         // Some rules have resources associated with them that we need to retrieve.
@@ -253,7 +254,7 @@ void PageSerializer::serializeCSSStyleSheet(CSSStyleSheet* styleSheet, const URL
             auto importURL = document->completeURL(importRule->href());
             if (m_resourceURLs.contains(importURL))
                 continue;
-            serializeCSSStyleSheet(importRule->styleSheet(), importURL);
+            serializeCSSStyleSheet(importRule->protectedStyleSheet().get(), importURL);
         } else if (is<CSSFontFaceRule>(*rule)) {
             // FIXME: Add support for font face rule. It is not clear to me at this point if the actual otf/eot file can
             // be retrieved from the CSSFontFaceRule object.
@@ -293,7 +294,7 @@ void PageSerializer::addImageToResources(CachedImage* image, RenderElement* imag
 
 void PageSerializer::retrieveResourcesForRule(StyleRule& rule, Document* document)
 {
-    retrieveResourcesForProperties(&rule.properties(), document);
+    retrieveResourcesForProperties(rule.protectedProperties().ptr(), document);
 }
 
 void PageSerializer::retrieveResourcesForProperties(const StyleProperties* styleDeclaration, Document* document)
@@ -322,7 +323,7 @@ URL PageSerializer::urlForBlankFrame(LocalFrame* frame)
     auto iterator = m_blankFrameURLs.find(frame);
     if (iterator != m_blankFrameURLs.end())
         return iterator->value;
-    URL fakeURL { makeString("wyciwyg://frame/", m_blankFrameCounter++) };
+    URL fakeURL { makeString("wyciwyg://frame/"_s, m_blankFrameCounter++) };
     m_blankFrameURLs.add(frame, fakeURL);
     return fakeURL;
 }

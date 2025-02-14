@@ -72,6 +72,7 @@ private:
     void recordDrawSystemImage(SystemImage&, const FloatRect&) final;
     void recordDrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
     void recordBeginTransparencyLayer(float) final;
+    void recordBeginTransparencyLayer(CompositeOperator, BlendMode) final;
     void recordEndTransparencyLayer() final;
     void recordDrawRect(const FloatRect&, float) final;
     void recordDrawLine(const FloatPoint& point1, const FloatPoint& point2) final;
@@ -81,10 +82,10 @@ private:
     void recordDrawPath(const Path&) final;
     void recordDrawFocusRingPath(const Path&, float outlineWidth, const Color&) final;
     void recordDrawFocusRingRects(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;
-    void recordFillRect(const FloatRect&) final;
+    void recordFillRect(const FloatRect&, RequiresClipToRect) final;
     void recordFillRectWithColor(const FloatRect&, const Color&) final;
     void recordFillRectWithGradient(const FloatRect&, Gradient&) final;
-    void recordFillRectWithGradientAndSpaceTransform(const FloatRect&, Gradient&, const AffineTransform&) final;
+    void recordFillRectWithGradientAndSpaceTransform(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect) final;
     void recordFillCompositedRect(const FloatRect&, const Color&, CompositeOperator, BlendMode) final;
     void recordFillRoundedRect(const FloatRoundedRect&, const Color&, BlendMode) final;
     void recordFillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect&, const Color&) final;

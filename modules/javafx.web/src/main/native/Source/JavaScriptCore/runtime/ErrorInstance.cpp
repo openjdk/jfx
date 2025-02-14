@@ -28,6 +28,7 @@
 #include "JSCInlines.h"
 #include "ParseInt.h"
 #include "StackFrame.h"
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -236,6 +237,21 @@ String ErrorInstance::sanitizedToString(JSGlobalObject* globalObject)
     RETURN_IF_EXCEPTION(scope, String());
 
     return makeString(nameString, nameString.isEmpty() || messageString.isEmpty() ? ""_s : ": "_s, messageString);
+}
+
+String ErrorInstance::tryGetMessageForDebugging()
+{
+    VM& vm = this->vm();
+
+    JSValue messageValue;
+    auto messagePropertName = vm.propertyNames->message;
+    PropertySlot messageSlot(this, PropertySlot::InternalMethodType::VMInquiry, &vm);
+    if (JSObject::getOwnNonIndexPropertySlot(vm, structure(), messagePropertName, messageSlot))
+        messageValue = messageSlot.getPureResult();
+
+    if (JSString* string = jsDynamicCast<JSString*>(messageValue))
+        return string->tryGetValue();
+    return emptyString();
 }
 
 void ErrorInstance::finalizeUnconditionally(VM& vm, CollectionScope)

@@ -37,22 +37,20 @@ list(APPEND WebCore_SOURCES
 list(APPEND WebCore_LIBRARIES
     JPEG::JPEG
     PNG::PNG
+        WebP::demux
 )
 
-if (WebP_FOUND)
-    list(APPEND WebCore_LIBRARIES
-        WebP::demux
-        WebP::libwebp
-    )
-endif ()
-
-if (JPEGXL_FOUND)
+if (USE_JPEGXL)
     list(APPEND WebCore_LIBRARIES JPEGXL::jxl)
 endif ()
 
 if (USE_CAIRO)
     list(APPEND WebCore_SOURCES
         platform/image-decoders/cairo/ImageBackingStoreCairo.cpp
+    )
+elseif (USE_SKIA)
+    list(APPEND WebCore_SOURCES
+        platform/image-decoders/skia/ImageBackingStoreSkia.cpp
     )
 endif ()
 

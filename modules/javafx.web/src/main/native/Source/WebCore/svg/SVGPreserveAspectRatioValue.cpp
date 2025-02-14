@@ -27,7 +27,7 @@
 #include "AffineTransform.h"
 #include "FloatRect.h"
 #include "SVGParserUtilities.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>
 
@@ -361,9 +361,9 @@ String SVGPreserveAspectRatioValue::valueAsString() const
     case SVG_MEETORSLICE_UNKNOWN:
         return alignType();
     case SVG_MEETORSLICE_MEET:
-        return makeString(alignType(), " meet");
+        return makeString(alignType(), " meet"_s);
     case SVG_MEETORSLICE_SLICE:
-        return makeString(alignType(), " slice");
+        return makeString(alignType(), " slice"_s);
     }
 }
 

@@ -27,9 +27,11 @@ namespace WebCore {
 class SVGGraphicsElement;
 
 class RenderSVGInline : public RenderInline {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGInline);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGInline);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGInline);
 public:
     RenderSVGInline(Type, SVGGraphicsElement&, RenderStyle&&);
+    virtual ~RenderSVGInline();
 
     inline SVGGraphicsElement& graphicsElement() const;
 
@@ -50,12 +52,10 @@ private:
     FloatRect strokeBoundingBox() const final;
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final;
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     LayoutPoint currentSVGLayoutLocation() const final { return { }; }
     void setCurrentSVGLayoutLocation(const LayoutPoint&) final { ASSERT_NOT_REACHED(); }
 
     bool needsHasSVGTransformFlags() const final;
-#endif
 
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
     RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const final;

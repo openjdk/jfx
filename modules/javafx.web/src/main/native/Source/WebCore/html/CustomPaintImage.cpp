@@ -26,8 +26,6 @@
 #include "config.h"
 #include "CustomPaintImage.h"
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSImageValue.h"
 #include "CSSPrimitiveValue.h"
@@ -50,7 +48,7 @@
 
 namespace WebCore {
 
-CustomPaintImage::CustomPaintImage(PaintWorkletGlobalScope::PaintDefinition& definition, const FloatSize& size, const RenderElement& element, const Vector<String>& arguments)
+CustomPaintImage::CustomPaintImage(PaintDefinition& definition, const FloatSize& size, const RenderElement& element, const Vector<String>& arguments)
     : m_paintDefinition(definition)
     , m_inputProperties(definition.inputProperties)
     , m_element(element)
@@ -88,12 +86,12 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
     ASSERT(!m_element->needsLayout());
     ASSERT(!m_element->element()->document().needsStyleRecalc());
 
-    JSCSSPaintCallback& callback = static_cast<JSCSSPaintCallback&>(m_paintDefinition->paintCallback.get());
-    auto* scriptExecutionContext = callback.scriptExecutionContext();
+    Ref callback = static_cast<JSCSSPaintCallback&>(m_paintDefinition->paintCallback.get());
+    RefPtr scriptExecutionContext = callback->scriptExecutionContext();
     if (!scriptExecutionContext)
         return ImageDrawResult::DidNothing;
 
-    auto canvas = CustomPaintCanvas::create(*scriptExecutionContext, destSize.width(), destSize.height());
+    Ref canvas = CustomPaintCanvas::create(*scriptExecutionContext, destSize.width(), destSize.height());
     RefPtr context = canvas->getContext();
 
     HashMap<AtomString, RefPtr<CSSValue>> propertyValues;
@@ -120,7 +118,7 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
         return ImageDrawResult::DidNothing;
     }
 
-    auto result = callback.handleEvent(WTFMove(thisObject), *context, size, propertyMap, m_arguments);
+    auto result = callback->handleEvent(WTFMove(thisObject), *context, size, propertyMap, m_arguments);
     if (result.type() != CallbackResultType::Success)
         return ImageDrawResult::DidNothing;
 
@@ -168,5 +166,4 @@ void CustomPaintImage::drawPattern(GraphicsContext& destContext, const FloatRect
     destContext.setDrawLuminanceMask(false);
 }
 
-}
-#endif
+} // namespace WebCore

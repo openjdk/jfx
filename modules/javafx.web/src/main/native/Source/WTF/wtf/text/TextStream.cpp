@@ -26,6 +26,7 @@
 #include "config.h"
 #include <wtf/text/TextStream.h>
 
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -107,7 +108,7 @@ TextStream& TextStream::operator<<(double d)
 
 TextStream& TextStream::operator<<(const char* string)
 {
-    m_text.append(string);
+    m_text.append(span(string));
     return *this;
 }
 
@@ -124,6 +125,11 @@ TextStream& TextStream::operator<<(const AtomString& string)
     return *this;
 }
 
+TextStream& TextStream::operator<<(const CString& string)
+{
+    m_text.append(string);
+    return *this;
+}
 TextStream& TextStream::operator<<(const String& string)
 {
     m_text.append(string);

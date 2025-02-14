@@ -34,17 +34,19 @@
 #include "SVGPathElement.h"
 #include "SVGRootInlineBox.h"
 #include "SVGTextPathElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGTextPath);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGTextPath);
 
 RenderSVGTextPath::RenderSVGTextPath(SVGTextPathElement& element, RenderStyle&& style)
     : RenderSVGInline(Type::SVGTextPath, element, WTFMove(style))
 {
     ASSERT(isRenderSVGTextPath());
 }
+
+RenderSVGTextPath::~RenderSVGTextPath() = default;
 
 SVGTextPathElement& RenderSVGTextPath::textPathElement() const
 {
@@ -70,7 +72,6 @@ Path RenderSVGTextPath::layoutPath() const
     // the current 'text' element, including any adjustments to the current user coordinate
     // system due to a possible transform attribute on the current 'text' element.
     // http://www.w3.org/TR/SVG/text.html#TextPathElement
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (element->renderer() && document().settings().layerBasedSVGEngineEnabled()) {
         auto& renderer = downcast<RenderSVGShape>(*element->renderer());
         if (auto* layer = renderer.layer()) {
@@ -80,7 +81,6 @@ Path RenderSVGTextPath::layoutPath() const
             return path;
         }
     }
-#endif
 
     path.transform(element->animatedLocalTransform());
     return path;

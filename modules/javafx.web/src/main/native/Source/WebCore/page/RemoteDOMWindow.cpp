@@ -38,14 +38,14 @@
 #include "SerializedScriptValue.h"
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RemoteDOMWindow);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RemoteDOMWindow);
 
 RemoteDOMWindow::RemoteDOMWindow(RemoteFrame& frame, GlobalWindowIdentifier&& identifier)
-    : DOMWindow(WTFMove(identifier))
+    : DOMWindow(WTFMove(identifier), DOMWindowType::Remote)
     , m_frame(frame)
 {
 }
@@ -96,7 +96,7 @@ unsigned RemoteDOMWindow::length() const
 void RemoteDOMWindow::setOpener(WindowProxy*)
 {
     // FIXME: <rdar://118263373> Implement.
-    // JSLocalDOMWindow::setOpener has some security checks. Are they needed here?
+    // JSDOMWindow::setOpener has some security checks. Are they needed here?
 }
 
 ExceptionOr<void> RemoteDOMWindow::postMessage(JSC::JSGlobalObject& lexicalGlobalObject, LocalDOMWindow& incumbentWindow, JSC::JSValue message, WindowPostMessageOptions&& options)
@@ -117,7 +117,7 @@ ExceptionOr<void> RemoteDOMWindow::postMessage(JSC::JSGlobalObject& lexicalGloba
     if (auto origin = targetSecurityOrigin.releaseReturnValue())
         target = origin->data();
 
-    Vector<RefPtr<MessagePort>> ports;
+    Vector<Ref<MessagePort>> ports;
     auto messageData = SerializedScriptValue::create(lexicalGlobalObject, message, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WindowPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
@@ -136,7 +136,7 @@ ExceptionOr<void> RemoteDOMWindow::postMessage(JSC::JSGlobalObject& lexicalGloba
     return { };
 }
 
-void RemoteDOMWindow::setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, SetLocationLocking locking)
+void RemoteDOMWindow::setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior historyHandling, SetLocationLocking locking)
 {
     // FIXME: Add some or all of the security checks in LocalDOMWindow::setLocation. <rdar://116500603>
     // FIXME: Refactor this duplicate code to share with LocalDOMWindow::setLocation. <rdar://116500603>
@@ -152,10 +152,11 @@ void RemoteDOMWindow::setLocation(LocalDOMWindow& activeWindow, const URL& compl
     // We want a new history item if we are processing a user gesture.
     LockHistory lockHistory = (locking != SetLocationLocking::LockHistoryBasedOnGestureState || !UserGestureIndicator::processingUserGesture()) ? LockHistory::Yes : LockHistory::No;
     LockBackForwardList lockBackForwardList = (locking != SetLocationLocking::LockHistoryBasedOnGestureState) ? LockBackForwardList::Yes : LockBackForwardList::No;
-    frame->navigationScheduler().scheduleLocationChange(*activeDocument, activeDocument->securityOrigin(),
+    frame->checkedNavigationScheduler()->scheduleLocationChange(*activeDocument, activeDocument->securityOrigin(),
         // FIXME: What if activeDocument()->frame() is 0?
         completedURL, activeDocument->frame()->loader().outgoingReferrer(),
-        lockHistory, lockBackForwardList);
+        lockHistory, lockBackForwardList,
+        historyHandling);
 }
 
 } // namespace WebCore

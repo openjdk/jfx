@@ -88,7 +88,7 @@ void MultiChannelResampler::provideInputForChannel(std::span<float> buffer, size
         m_provideInput(m_multiChannelBus.get(), framesToProcess);
 
     // Copy the channel data from what we received from m_multiChannelProvider.
-    memcpySpan(buffer.subspan(0, framesToProcess), m_multiChannelBus->channel(channelIndex)->span().subspan(0, framesToProcess));
+    memcpySpan(buffer, m_multiChannelBus->channel(channelIndex)->span().first(framesToProcess));
 }
 
 } // namespace WebCore

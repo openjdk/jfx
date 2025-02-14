@@ -28,6 +28,7 @@
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
 #include "AXCoreObject.h"
+#include "AXIsolatedTree.h"
 #include "AXObjectCache.h"
 #include "IntPoint.h"
 #include "LayoutRect.h"
@@ -55,8 +56,9 @@ public:
     ~AXIsolatedObject();
 
     AXID treeID() const final { return tree()->treeID(); }
-    ProcessID processID() const final { return tree()->processID(); }
     String dbg() const final;
+
+    AccessibilityRole roleValue() const final { return static_cast<AccessibilityRole>(intAttributeValue(AXPropertyName::RoleValue)); }
 
     void attachPlatformWrapper(AccessibilityObjectWrapper*);
     bool isDetached() const final;
@@ -65,6 +67,7 @@ public:
 
     const AccessibilityChildrenVector& children(bool updateChildrenIfNeeded = true) final;
     AXCoreObject* sibling(AXDirection) const;
+    AXCoreObject* siblingOrParent(AXDirection) const;
     AXIsolatedObject* parentObject() const final { return parentObjectUnignored(); }
     AXIsolatedObject* parentObjectUnignored() const final;
     AXIsolatedObject* editableAncestor() final { return Accessibility::editableAncestor(*this); };
@@ -77,9 +80,11 @@ public:
         const auto* runs = textRuns();
         return runs && runs->size();
     }
+    bool shouldEmitNewlinesBeforeAndAfterNode() const final { return boolAttributeValue(AXPropertyName::ShouldEmitNewlinesBeforeAndAfterNode); }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 
 private:
+    constexpr ProcessID processID() const final { return tree()->processID(); }
     void detachRemoteParts(AccessibilityDetachmentType) final;
     void detachPlatformWrapper(AccessibilityDetachmentType) final;
 
@@ -100,11 +105,15 @@ private:
     void setObjectProperty(AXPropertyName, AXCoreObject*);
     void setObjectVectorProperty(AXPropertyName, const AccessibilityChildrenVector&);
 
+    void setPropertyFlag(AXPropertyFlag, bool);
+    bool hasPropertyFlag(AXPropertyFlag) const;
+
     static bool canBeMultilineTextField(AccessibilityObject&, bool isNonNativeTextControl);
 
     // FIXME: consolidate all AttributeValue retrieval in a single template method.
     bool boolAttributeValue(AXPropertyName) const;
     String stringAttributeValue(AXPropertyName) const;
+    String stringAttributeValueNullIfMissing(AXPropertyName) const;
     int intAttributeValue(AXPropertyName) const;
     unsigned unsignedAttributeValue(AXPropertyName) const;
     double doubleAttributeValue(AXPropertyName) const;
@@ -214,12 +223,16 @@ private:
     bool isFileUploadButton() const final { return boolAttributeValue(AXPropertyName::IsFileUploadButton); }
     bool isMeter() const final { return boolAttributeValue(AXPropertyName::IsMeter); };
     FloatPoint screenRelativePosition() const final;
+    IntPoint remoteFrameOffset() const final;
     FloatRect relativeFrame() const final;
+    bool hasCachedRelativeFrame() const { return optionalAttributeValue<IntRect>(AXPropertyName::RelativeFrame).has_value(); }
 #if PLATFORM(MAC)
     FloatRect primaryScreenRect() const final;
 #endif
     IntSize size() const final { return snappedIntRect(LayoutRect(relativeFrame())).size(); }
     FloatRect relativeFrameFromChildren() const;
+    WallTime dateTimeValue() const final { return propertyValue<WallTime>(AXPropertyName::DateTimeValue); }
+    DateComponentsType dateTimeComponentsType() const final { return propertyValue<DateComponentsType>(AXPropertyName::DateTimeComponentsType); }
     bool supportsDatetimeAttribute() const final { return boolAttributeValue(AXPropertyName::SupportsDatetimeAttribute); }
     String datetimeAttributeValue() const final { return stringAttributeValue(AXPropertyName::DatetimeAttributeValue); }
     bool canSetValueAttribute() const final { return boolAttributeValue(AXPropertyName::CanSetValueAttribute); }
@@ -261,13 +274,12 @@ private:
     AXIsolatedObject* accessibilityHitTest(const IntPoint&) const final;
     AXIsolatedObject* focusedUIElement() const final;
     AXCoreObject* internalLinkElement() const final { return objectAttributeValue(AXPropertyName::InternalLinkElement); }
-    AccessibilityChildrenVector radioButtonGroup() const { return tree()->objectsForIDs(vectorAttributeValue<AXID>(AXPropertyName::RadioButtonGroup)); }
+    AccessibilityChildrenVector radioButtonGroup() const final { return tree()->objectsForIDs(vectorAttributeValue<AXID>(AXPropertyName::RadioButtonGroup)); }
     AXIsolatedObject* scrollBar(AccessibilityOrientation) final;
     const String placeholderValue() const final { return stringAttributeValue(AXPropertyName::PlaceholderValue); }
     String expandedTextValue() const final { return stringAttributeValue(AXPropertyName::ExpandedTextValue); }
     bool supportsExpandedTextValue() const final { return boolAttributeValue(AXPropertyName::SupportsExpandedTextValue); }
     SRGBA<uint8_t> colorValue() const final;
-    AccessibilityRole roleValue() const final { return static_cast<AccessibilityRole>(intAttributeValue(AXPropertyName::RoleValue)); }
     String rolePlatformString() const final { return stringAttributeValue(AXPropertyName::RolePlatformString); }
     String roleDescription() const final { return stringAttributeValue(AXPropertyName::RoleDescription); }
     String subrolePlatformString() const final { return stringAttributeValue(AXPropertyName::SubrolePlatformString); }
@@ -282,9 +294,9 @@ private:
     String computedRoleString() const final;
     bool isValueAutofillAvailable() const final { return boolAttributeValue(AXPropertyName::IsValueAutofillAvailable); }
     AutoFillButtonType valueAutofillButtonType() const final { return static_cast<AutoFillButtonType>(intAttributeValue(AXPropertyName::ValueAutofillButtonType)); }
-    void ariaTreeRows(AccessibilityChildrenVector& children) final { fillChildrenVectorForProperty(AXPropertyName::ARIATreeRows, children); }
+    AccessibilityChildrenVector ariaTreeRows() final { return tree()->objectsForIDs(vectorAttributeValue<AXID>(AXPropertyName::ARIATreeRows)); }
     URL url() const final { return urlAttributeValue(AXPropertyName::URL); }
-    String accessKey() const final { return stringAttributeValue(AXPropertyName::AccessKey); }
+    String accessKey() const final { return stringAttributeValueNullIfMissing(AXPropertyName::AccessKey); }
     String localizedActionVerb() const final { return stringAttributeValue(AXPropertyName::LocalizedActionVerb); }
     String actionVerb() const final { return stringAttributeValue(AXPropertyName::ActionVerb); }
     String autoCompleteValue() const final { return stringAttributeValue(AXPropertyName::AutoCompleteValue); }
@@ -327,10 +339,9 @@ private:
     AccessibilityOrientation orientation() const final { return static_cast<AccessibilityOrientation>(intAttributeValue(AXPropertyName::Orientation)); }
     unsigned hierarchicalLevel() const final { return unsignedAttributeValue(AXPropertyName::HierarchicalLevel); }
     String language() const final { return stringAttributeValue(AXPropertyName::Language); }
-    AccessibilityChildrenVector selectedChildren() final { return tree()->objectsForIDs(vectorAttributeValue<AXID>(AXPropertyName::SelectedChildren)); }
+    std::optional<AccessibilityChildrenVector> selectedChildren() final;
     void setSelectedChildren(const AccessibilityChildrenVector&) final;
     AccessibilityChildrenVector visibleChildren() final { return tree()->objectsForIDs(vectorAttributeValue<AXID>(AXPropertyName::VisibleChildren)); }
-    AtomString tagName() const final;
     void setChildrenIDs(Vector<AXID>&&);
     void updateChildrenIfNecessary() final;
     bool isDetachedFromParent() final;
@@ -352,7 +363,7 @@ private:
     // Parameterized attribute retrieval.
     Vector<SimpleRange> findTextRanges(const AccessibilitySearchTextCriteria&) const final;
     Vector<String> performTextOperation(const AccessibilityTextOperation&) final;
-    void findMatchingObjects(AccessibilitySearchCriteria*, AccessibilityChildrenVector&) final;
+    AccessibilityChildrenVector findMatchingObjects(AccessibilitySearchCriteria&&) final;
 
 #if PLATFORM(COCOA)
     bool preventKeyboardDOMEventDispatch() const final { return boolAttributeValue(AXPropertyName::PreventKeyboardDOMEventDispatch); }
@@ -377,18 +388,12 @@ private:
     VisiblePositionRange visiblePositionRange() const final;
     AXTextMarkerRange textMarkerRange() const final;
 
-    // TODO: Text ranges and selection.
     String selectedText() const final;
     VisiblePositionRange visiblePositionRangeForLine(unsigned) const final;
     VisiblePositionRange visiblePositionRangeForUnorderedPositions(const VisiblePosition&, const VisiblePosition&) const final;
-    VisiblePositionRange positionOfLeftWord(const VisiblePosition&) const final;
-    VisiblePositionRange positionOfRightWord(const VisiblePosition&) const final;
     VisiblePositionRange leftLineVisiblePositionRange(const VisiblePosition&) const final;
     VisiblePositionRange rightLineVisiblePositionRange(const VisiblePosition&) const final;
-    VisiblePositionRange sentenceForPosition(const VisiblePosition&) const final;
-    VisiblePositionRange paragraphForPosition(const VisiblePosition&) const final;
     VisiblePositionRange styleRangeForPosition(const VisiblePosition&) const final;
-    VisiblePositionRange visiblePositionRangeForRange(const CharacterRange&) const final;
     VisiblePositionRange lineRangeForPosition(const VisiblePosition&) const final;
     std::optional<SimpleRange> rangeForCharacterRange(const CharacterRange&) const final;
 #if PLATFORM(COCOA)
@@ -402,10 +407,6 @@ private:
     VisiblePosition visiblePositionForPoint(const IntPoint&) const final;
     VisiblePosition nextLineEndPosition(const VisiblePosition&) const final;
     VisiblePosition previousLineStartPosition(const VisiblePosition&) const final;
-    VisiblePosition nextSentenceEndPosition(const VisiblePosition&) const final;
-    VisiblePosition previousSentenceStartPosition(const VisiblePosition&) const final;
-    VisiblePosition nextParagraphEndPosition(const VisiblePosition&) const final;
-    VisiblePosition previousParagraphStartPosition(const VisiblePosition&) const final;
     VisiblePosition visiblePositionForIndex(unsigned, bool lastIndexOK) const final;
     VisiblePosition visiblePositionForIndex(int) const final;
     int indexForVisiblePosition(const VisiblePosition&) const final;
@@ -432,7 +433,7 @@ private:
     void setPreventKeyboardDOMEventDispatch(bool) final;
 #endif
 
-    String textUnderElement(AccessibilityTextUnderElementMode = AccessibilityTextUnderElementMode()) const final;
+    String textUnderElement(TextUnderElementMode = { }) const final;
     std::optional<SimpleRange> misspellingRange(const SimpleRange&, AccessibilitySearchDirection) const final;
     FloatRect convertFrameToSpace(const FloatRect&, AccessibilityConversionSpace) const final;
     void increment() final;
@@ -451,25 +452,24 @@ private:
     // Functions that should never be called on an isolated tree object. ASSERT that these are not reached;
     bool isAccessibilityRenderObject() const final;
     bool isAccessibilityTableInstance() const final;
-    bool isAccessibilityARIAGridInstance() const final { return false; }
     bool isAccessibilityARIAGridRowInstance() const final { return false; }
     bool isAccessibilityARIAGridCellInstance() const final { return false; }
-
+    bool isAXRemoteFrame() const final { return false; }
     bool isNativeTextControl() const final;
-    bool isListBoxOption() const final;
     bool isMockObject() const final;
-    bool isNonNativeTextControl() const final { return boolAttributeValue(AXPropertyName::IsNonNativeTextControl); }
+    bool isNonNativeTextControl() const final;
     bool isIndeterminate() const final { return boolAttributeValue(AXPropertyName::IsIndeterminate); }
     bool isLoaded() const final { return loadingProgress() >= 1; }
     bool isOnScreen() const final;
     bool isOffScreen() const final;
     bool isPressed() const final;
+    bool isNonLayerSVGObject() const { return boolAttributeValue(AXPropertyName::IsNonLayerSVGObject); }
     // FIXME: isVisible should be accurate for all objects, not just widgets, on COCOA.
     bool isVisible() const final { return boolAttributeValue(AXPropertyName::IsVisible); }
     bool isSelectedOptionActive() const final;
     bool hasBoldFont() const final { return boolAttributeValue(AXPropertyName::HasBoldFont); }
     bool hasItalicFont() const final { return boolAttributeValue(AXPropertyName::HasItalicFont); }
-    bool hasMisspelling() const final;
+    Vector<CharacterRange> spellCheckerResultRanges() const final;
     bool hasPlainText() const final { return boolAttributeValue(AXPropertyName::HasPlainText); }
     bool hasSameFont(const AXCoreObject&) const final;
     bool hasSameFontColor(const AXCoreObject&) const final;
@@ -491,6 +491,7 @@ private:
     bool inheritsPresentationalRole() const final;
     void setAccessibleName(const AtomString&) final;
 
+    String titleAttributeValue() const final;
     String title() const final { return stringAttributeValue(AXPropertyName::Title); }
     String description() const final { return stringAttributeValue(AXPropertyName::Description); }
 
@@ -534,7 +535,9 @@ private:
     String nameAttribute() const final { return stringAttributeValue(AXPropertyName::NameAttribute); }
 #if PLATFORM(COCOA)
     bool hasApplePDFAnnotationAttribute() const final { return boolAttributeValue(AXPropertyName::HasApplePDFAnnotationAttribute); }
+    RetainPtr<id> remoteFramePlatformElement() const final;
 #endif
+    bool hasRemoteFrameChild() const final { return boolAttributeValue(AXPropertyName::HasRemoteFrameChild); }
 
 #if PLATFORM(COCOA) && ENABLE(MODEL_ELEMENT)
     Vector<RetainPtr<id>> modelElementChildren() final;
@@ -552,6 +555,7 @@ private:
     Vector<AXID> m_childrenIDs;
     Vector<RefPtr<AXCoreObject>> m_children;
     AXPropertyMap m_propertyMap;
+    OptionSet<AXPropertyFlag> m_propertyFlags;
     // Some objects (e.g. display:contents) form their geometry through their children.
     bool m_getsGeometryFromChildren { false };
 
@@ -576,6 +580,19 @@ inline T AXIsolatedObject::propertyValue(AXPropertyName propertyName) const
         [] (auto&) { ASSERT_NOT_REACHED();
             return T(); }
     );
+}
+
+inline void AXIsolatedObject::setPropertyFlag(AXPropertyFlag flag, bool set)
+{
+    if (set)
+        m_propertyFlags.add(flag);
+    else
+        m_propertyFlags.remove(flag);
+}
+
+inline bool AXIsolatedObject::hasPropertyFlag(AXPropertyFlag flag) const
+{
+    return m_propertyFlags.contains(flag);
 }
 
 } // namespace WebCore

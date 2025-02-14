@@ -26,14 +26,26 @@
 #pragma once
 
 #include "TextExtractionTypes.h"
+#include <wtf/Expected.h>
 
 namespace WebCore {
 
+class Element;
+class LocalFrame;
 class Page;
+enum class ExceptionCode : uint8_t;
 
 namespace TextExtraction {
 
 WEBCORE_EXPORT Item extractItem(std::optional<WebCore::FloatRect>&& collectionRectInRootView, Page&);
+
+struct RenderedText {
+    String textWithReplacedContent;
+    String textWithoutReplacedContent;
+    bool hasLargeReplacedDescendant { false };
+};
+
+RenderedText extractRenderedText(Element&);
 
 } // namespace TextExtraction
 } // namespace WebCore

@@ -41,8 +41,6 @@ class JSWebAssemblyGlobal;
 
 namespace Wasm {
 
-class Instance;
-
 class Global final : public ThreadSafeRefCounted<Global> {
     WTF_MAKE_NONCOPYABLE(Global);
     WTF_MAKE_TZONE_ALLOCATED(Global);
@@ -81,8 +79,8 @@ public:
         m_owner = owner;
     }
 
-    static ptrdiff_t offsetOfValue() { ASSERT(!OBJECT_OFFSETOF(Value, m_primitive)); ASSERT(!OBJECT_OFFSETOF(Value, m_externref)); return OBJECT_OFFSETOF(Global, m_value); }
-    static ptrdiff_t offsetOfOwner() { return OBJECT_OFFSETOF(Global, m_owner); }
+    static constexpr ptrdiff_t offsetOfValue() { ASSERT(!OBJECT_OFFSETOF(Value, m_primitive)); ASSERT(!OBJECT_OFFSETOF(Value, m_externref)); return OBJECT_OFFSETOF(Global, m_value); }
+    static constexpr ptrdiff_t offsetOfOwner() { return OBJECT_OFFSETOF(Global, m_owner); }
 
     static Global& fromBinding(Value& value)
     {

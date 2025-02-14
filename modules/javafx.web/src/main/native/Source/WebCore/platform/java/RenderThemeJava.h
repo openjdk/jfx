@@ -48,7 +48,7 @@ public:
     RenderThemeJava();
 
     // A method asking if the theme's controls actually care about redrawing when hovered.
-    bool supportsHover(const RenderStyle&) const override { return true; }
+    bool supportsHover() const override { return true; }
 
 protected:
     bool paintCheckbox(const RenderObject& o, const PaintInfo& i, const FloatRect& r) override;

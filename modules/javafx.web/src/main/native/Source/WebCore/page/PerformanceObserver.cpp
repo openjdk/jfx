@@ -47,6 +47,11 @@ PerformanceObserver::PerformanceObserver(ScriptExecutionContext& scriptExecution
         ASSERT_NOT_REACHED();
 }
 
+RefPtr<Performance> PerformanceObserver::protectedPerformance() const
+{
+    return m_performance;
+}
+
 void PerformanceObserver::disassociate()
 {
     m_performance = nullptr;
@@ -85,7 +90,7 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
         if (init.buffered) {
             isBuffered = true;
             auto oldSize = m_entriesToDeliver.size();
-            m_performance->appendBufferedEntriesByType(*init.type, m_entriesToDeliver, *this);
+            protectedPerformance()->appendBufferedEntriesByType(*init.type, m_entriesToDeliver, *this);
             auto begin = m_entriesToDeliver.begin();
             auto oldEnd = begin + oldSize;
             auto end = m_entriesToDeliver.end();
@@ -96,7 +101,7 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
     }
 
     if (!m_registered) {
-        m_performance->registerPerformanceObserver(*this);
+        protectedPerformance()->registerPerformanceObserver(*this);
         m_registered = true;
     }
     if (isBuffered)
@@ -105,15 +110,15 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
     return { };
 }
 
-Vector<RefPtr<PerformanceEntry>> PerformanceObserver::takeRecords()
+Vector<Ref<PerformanceEntry>> PerformanceObserver::takeRecords()
 {
     return std::exchange(m_entriesToDeliver, { });
 }
 
 void PerformanceObserver::disconnect()
 {
-    if (m_performance)
-        m_performance->unregisterPerformanceObserver(*this);
+    if (RefPtr performance = m_performance)
+        performance->unregisterPerformanceObserver(*this);
 
     m_registered = false;
     m_entriesToDeliver.clear();
@@ -122,7 +127,7 @@ void PerformanceObserver::disconnect()
 
 void PerformanceObserver::queueEntry(PerformanceEntry& entry)
 {
-    m_entriesToDeliver.append(&entry);
+    m_entriesToDeliver.append(entry);
 }
 
 void PerformanceObserver::deliver()
@@ -134,7 +139,7 @@ void PerformanceObserver::deliver()
     if (!context)
         return;
 
-    Vector<RefPtr<PerformanceEntry>> entries = std::exchange(m_entriesToDeliver, { });
+    Vector<Ref<PerformanceEntry>> entries = std::exchange(m_entriesToDeliver, { });
     auto list = PerformanceObserverEntryList::create(WTFMove(entries));
 
     InspectorInstrumentation::willFireObserverCallback(*context, "PerformanceObserver"_s);

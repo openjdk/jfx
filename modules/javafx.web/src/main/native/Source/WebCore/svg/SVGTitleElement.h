@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2004, 2005 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,7 +27,8 @@
 namespace WebCore {
 
 class SVGTitleElement final : public SVGElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGTitleElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGTitleElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGTitleElement);
 public:
     static Ref<SVGTitleElement> create(const QualifiedName&, Document&);
 
@@ -38,6 +40,7 @@ private:
     void childrenChanged(const ChildChange&) final;
 
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
+    bool supportsFocus() const final { return false; }
 };
 
 } // namespace WebCore

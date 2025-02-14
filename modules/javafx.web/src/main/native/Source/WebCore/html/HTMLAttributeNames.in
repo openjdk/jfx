@@ -83,6 +83,7 @@ axis
 background
 behavior
 bgcolor
+blocking
 border
 bordercolor
 capture
@@ -104,6 +105,8 @@ codetype
 color
 cols
 colspan
+command
+commandfor
 compact
 composite
 content
@@ -163,8 +166,6 @@ inert
 inputmode
 integrity
 interactive
-invokeaction
-invoketarget
 is
 ismap
 keytype
@@ -182,7 +183,6 @@ loopend
 loopstart
 low
 lowsrc
-manifest
 marginheight
 marginwidth
 max
@@ -212,6 +212,7 @@ onanimationiteration
 onanimationstart
 onautocomplete
 onautocompleteerror
+onauxclick
 onbeforecopy
 onbeforecut
 onbeforeinput
@@ -283,7 +284,9 @@ onoffline
 ononline
 onorientationchange
 onpagehide
+onpagereveal
 onpageshow
+onpageswap
 onpaste
 onpause
 onplay
@@ -299,6 +302,7 @@ onpointerup
 onpopstate
 onprogress
 onratechange
+onredraw
 onrejectionhandled
 onreset
 onresize
@@ -385,8 +389,10 @@ scrolldelay
 scrolling
 select
 selected
-shadowrootmode
+shadowrootclonable
 shadowrootdelegatesfocus
+shadowrootmode
+shadowrootserializable
 shape
 size
 sizes
@@ -430,6 +436,7 @@ webkitdirectory
 webkitdropzone
 width
 wrap
+writingsuggestions
 x-apple-data-detectors
 x-apple-data-detectors-result
 x-apple-data-detectors-type

@@ -27,7 +27,6 @@
 
 #if ENABLE(WEBGL)
 #include <optional>
-#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
@@ -44,7 +43,7 @@ enum class GraphicsContextGLSimulatedCreationFailure : uint8_t {
     FailPlatformContextCreation
 };
 
-#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+#if PLATFORM(MAC)
 using PlatformGPUID = uint64_t;
 #endif
 
@@ -57,11 +56,8 @@ struct GraphicsContextGLAttributes {
     bool preserveDrawingBuffer { false };
     GraphicsContextGLPowerPreference powerPreference { GraphicsContextGLPowerPreference::Default };
     bool isWebGL2 { false };
-#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+#if PLATFORM(MAC)
     PlatformGPUID windowGPUID { 0 };
-#endif
-#if PLATFORM(COCOA)
-    bool useMetal { true };
 #endif
 #if ENABLE(WEBXR)
     bool xrCompatible { false };

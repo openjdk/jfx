@@ -19,7 +19,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "AffineTransform.h"
 #include "PatternAttributes.h"
 #include "RenderSVGResourcePaintServer.h"
@@ -29,20 +28,26 @@ class Pattern;
 
 namespace WebCore {
 
-class RenderSVGResourcePattern : public RenderSVGResourcePaintServer {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGResourcePattern);
+class RenderSVGResourcePattern final : public RenderSVGResourcePaintServer {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourcePattern);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGResourcePattern);
 public:
     RenderSVGResourcePattern(SVGElement&, RenderStyle&&);
     virtual ~RenderSVGResourcePattern();
 
     inline SVGPatternElement& patternElement() const;
+    inline Ref<SVGPatternElement> protectedPatternElement() const;
 
     bool prepareFillOperation(GraphicsContext&, const RenderLayerModelObject&, const RenderStyle&) final;
     bool prepareStrokeOperation(GraphicsContext&, const RenderLayerModelObject&, const RenderStyle&) final;
 
-    void invalidatePattern()
+    enum class SuppressRepaint { Yes, No };
+    void invalidatePattern(SuppressRepaint suppressRepaint = SuppressRepaint::No)
     {
         m_attributes = std::nullopt;
+        m_imageMap.clear();
+        m_transformMap.clear();
+        if (suppressRepaint == SuppressRepaint::No)
         repaintAllClients();
     }
 
@@ -53,13 +58,16 @@ protected:
 
     bool buildTileImageTransform(const RenderElement&, const PatternAttributes&, const SVGPatternElement&, FloatRect& patternBoundaries, AffineTransform& tileImageTransform) const;
 
-    RefPtr<ImageBuffer> createTileImage(const PatternAttributes&, const FloatRect&, const FloatRect& scale, const AffineTransform& tileImageTransform) const;
+    RefPtr<ImageBuffer> createTileImage(GraphicsContext&, const PatternAttributes&, const FloatSize&, const FloatSize& scale, const AffineTransform& tileImageTransform) const;
+
+    void removeReferencingCSSClient(const RenderElement&) override;
 
     std::optional<PatternAttributes> m_attributes;
+
+    HashMap<SingleThreadWeakRef<const RenderLayerModelObject>, RefPtr<ImageBuffer>> m_imageMap;
+    HashMap<SingleThreadWeakRef<const RenderLayerModelObject>, AffineTransform> m_transformMap;
 };
 
 }
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourcePattern, isRenderSVGResourcePattern())
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

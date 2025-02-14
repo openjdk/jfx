@@ -48,7 +48,7 @@ CommandEncoderImpl::CommandEncoderImpl(WebGPUPtr<WGPUCommandEncoder>&& commandEn
 
 CommandEncoderImpl::~CommandEncoderImpl() = default;
 
-Ref<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDescriptor& descriptor)
+RefPtr<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 
@@ -117,12 +117,12 @@ Ref<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDescr
     return RenderPassEncoderImpl::create(adoptWebGPU(wgpuCommandEncoderBeginRenderPass(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
 }
 
-Ref<ComputePassEncoder> CommandEncoderImpl::beginComputePass(const std::optional<ComputePassDescriptor>& descriptor)
+RefPtr<ComputePassEncoder> CommandEncoderImpl::beginComputePass(const std::optional<ComputePassDescriptor>& descriptor)
 {
     CString label = descriptor ? descriptor->label.utf8() : CString("");
 
     WGPUComputePassTimestampWrites timestampWrites {
-        .querySet = (descriptor && descriptor->timestampWrites) ? m_convertToBackingContext->convertToBacking(*descriptor->timestampWrites->querySet) : nullptr,
+        .querySet = (descriptor && descriptor->timestampWrites && descriptor->timestampWrites->querySet) ? m_convertToBackingContext->convertToBacking(*descriptor->timestampWrites->querySet) : nullptr,
         .beginningOfPassWriteIndex = (descriptor && descriptor->timestampWrites) ? descriptor->timestampWrites->beginningOfPassWriteIndex : 0,
         .endOfPassWriteIndex = (descriptor && descriptor->timestampWrites) ? descriptor->timestampWrites->endOfPassWriteIndex : 0
     };
@@ -266,7 +266,7 @@ void CommandEncoderImpl::resolveQuerySet(
     wgpuCommandEncoderResolveQuerySet(m_backing.get(), m_convertToBackingContext->convertToBacking(querySet), firstQuery, queryCount, m_convertToBackingContext->convertToBacking(destination), destinationOffset);
 }
 
-Ref<CommandBuffer> CommandEncoderImpl::finish(const CommandBufferDescriptor& descriptor)
+RefPtr<CommandBuffer> CommandEncoderImpl::finish(const CommandBufferDescriptor& descriptor)
 {
     auto label = descriptor.label.utf8();
 

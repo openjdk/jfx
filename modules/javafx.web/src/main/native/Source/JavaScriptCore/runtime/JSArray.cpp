@@ -56,7 +56,7 @@ JSArray* JSArray::tryCreateUninitializedRestricted(ObjectInitializationScope& sc
             || hasContiguous(indexingType));
 
         unsigned vectorLength = Butterfly::optimalContiguousVectorLength(structure, initialLength);
-        void* temp = vm.jsValueGigacageAuxiliarySpace().allocate(
+        void* temp = vm.auxiliarySpace().allocate(
             vm,
             Butterfly::totalSize(0, outOfLineStorage, true, vectorLength * sizeof(EncodedJSValue)),
             deferralContext, AllocationFailureMode::ReturnNull);
@@ -78,7 +78,7 @@ JSArray* JSArray::tryCreateUninitializedRestricted(ObjectInitializationScope& sc
             || indexingType == ArrayWithArrayStorage);
         static constexpr unsigned indexBias = 0;
         unsigned vectorLength = ArrayStorage::optimalVectorLength(indexBias, structure, initialLength);
-        void* temp = vm.jsValueGigacageAuxiliarySpace().allocate(
+        void* temp = vm.auxiliarySpace().allocate(
             vm,
             Butterfly::totalSize(indexBias, outOfLineStorage, true, ArrayStorage::sizeFor(vectorLength)),
             deferralContext, AllocationFailureMode::ReturnNull);
@@ -479,6 +479,73 @@ bool JSArray::setLengthWithArrayStorage(JSGlobalObject* globalObject, unsigned n
     return true;
 }
 
+bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startIndex, IndexingType otherType, std::span<const EncodedJSValue> values)
+{
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (isCopyOnWrite(indexingMode()))
+        convertFromCopyOnWrite(vm);
+
+    IndexingType type = indexingType();
+    bool allowPromotion = false;
+    IndexingType copyType = mergeIndexingTypeForCopying(otherType, allowPromotion);
+    if (type == ArrayWithUndecided && copyType != NonArray) {
+        if (copyType == ArrayWithInt32)
+            convertUndecidedToInt32(vm);
+        else if (copyType == ArrayWithDouble)
+            convertUndecidedToDouble(vm);
+        else if (copyType == ArrayWithContiguous)
+            convertUndecidedToContiguous(vm);
+        else {
+            ASSERT(copyType == ArrayWithUndecided);
+            return true;
+        }
+    } else if (type != copyType)
+        return false;
+
+    if (values.size() >= MIN_SPARSE_ARRAY_INDEX)
+        return false;
+
+    CheckedUint32 checkedNewLength = startIndex;
+    checkedNewLength += values.size();
+
+    if (checkedNewLength.hasOverflowed()) {
+        throwException(globalObject, scope, createRangeError(globalObject, LengthExceededTheMaximumArrayLengthError));
+        return false;
+    }
+    unsigned newLength = checkedNewLength;
+
+    if (newLength >= MIN_SPARSE_ARRAY_INDEX)
+        return false;
+
+    if (!ensureLength(vm, newLength)) {
+        throwOutOfMemoryError(globalObject, scope);
+        return false;
+    }
+    ASSERT(copyType == indexingType());
+
+    if (UNLIKELY(otherType == ArrayWithUndecided)) {
+        auto* butterfly = this->butterfly();
+        if (type == ArrayWithDouble) {
+            for (unsigned i = startIndex; i < newLength; ++i)
+                butterfly->contiguousDouble().at(this, i) = PNaN;
+        } else {
+            for (unsigned i = startIndex; i < newLength; ++i)
+                butterfly->contiguousInt32().at(this, i).setWithoutWriteBarrier(JSValue());
+        }
+    } else if (type == ArrayWithDouble) {
+        auto data = butterfly()->contiguousDouble().data();
+        unsigned index = startIndex;
+        for (EncodedJSValue encodedDouble : values)
+            data[index++] = JSValue::decode(encodedDouble).asNumber();
+    } else {
+        gcSafeMemcpy(butterfly()->contiguous().data() + startIndex, bitwise_cast<const WriteBarrier<Unknown>*>(values.data()), sizeof(JSValue) * values.size());
+        vm.writeBarrier(this);
+    }
+
+    return true;
+}
+
 bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startIndex, JSC::JSArray* otherArray)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -532,9 +599,10 @@ bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startI
             for (unsigned i = startIndex; i < newLength; ++i)
                 butterfly->contiguousInt32().at(this, i).setWithoutWriteBarrier(JSValue());
         }
-    } else if (type == ArrayWithDouble)
-        gcSafeMemcpy(butterfly()->contiguousDouble().data() + startIndex, otherArray->butterfly()->contiguousDouble().data(), sizeof(JSValue) * otherLength);
-    else {
+    } else if (type == ArrayWithDouble) {
+        // Double array storage do not need to be safe against GC since they are not scanned.
+        memcpy(butterfly()->contiguousDouble().data() + startIndex, otherArray->butterfly()->contiguousDouble().data(), sizeof(JSValue) * otherLength);
+    } else {
         gcSafeMemcpy(butterfly()->contiguous().data() + startIndex, otherArray->butterfly()->contiguous().data(), sizeof(JSValue) * otherLength);
         vm.writeBarrier(this);
     }
@@ -765,9 +833,10 @@ JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, JSObject* source, uint
             return nullptr;
 
         auto& resultButterfly = *resultArray->butterfly();
-        if (arrayType == ArrayWithDouble)
-            gcSafeMemcpy(resultButterfly.contiguousDouble().data(), source->butterfly()->contiguousDouble().data() + startIndex, sizeof(JSValue) * static_cast<uint32_t>(count));
-        else
+        if (arrayType == ArrayWithDouble) {
+            // Double array storage do not need to be safe against GC since they are not scanned.
+            memcpy(resultButterfly.contiguousDouble().data(), source->butterfly()->contiguousDouble().data() + startIndex, sizeof(JSValue) * static_cast<uint32_t>(count));
+        } else
             gcSafeMemcpy(resultButterfly.contiguous().data(), source->butterfly()->contiguous().data() + startIndex, sizeof(JSValue) * static_cast<uint32_t>(count));
 
         ASSERT(resultButterfly.publicLength() == count);

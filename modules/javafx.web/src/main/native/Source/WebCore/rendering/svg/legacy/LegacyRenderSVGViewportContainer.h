@@ -29,9 +29,11 @@ namespace WebCore {
 // This is used for non-root <svg> elements and <marker> elements, neither of which are SVGTransformable
 // thus we inherit from LegacyRenderSVGContainer instead of LegacyRenderSVGTransformableContainer
 class LegacyRenderSVGViewportContainer final : public LegacyRenderSVGContainer {
-    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGViewportContainer);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGViewportContainer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGViewportContainer);
 public:
     LegacyRenderSVGViewportContainer(SVGSVGElement&, RenderStyle&&);
+    virtual ~LegacyRenderSVGViewportContainer();
 
     SVGSVGElement& svgSVGElement() const;
 

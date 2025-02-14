@@ -62,10 +62,6 @@ public:
     virtual void handleTranslation(const TranslationContextMenuInfo&) = 0;
 #endif
 
-#if PLATFORM(COCOA)
-    virtual void searchWithSpotlight() = 0;
-#endif
-
 #if PLATFORM(GTK)
     virtual void insertEmoji(LocalFrame&) = 0;
 #endif

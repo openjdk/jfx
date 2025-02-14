@@ -30,11 +30,11 @@
 
 #include "LegacyRenderSVGShapeInlines.h"
 #include "SVGElementTypeHelpers.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGRect);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGRect);
 
 LegacyRenderSVGRect::LegacyRenderSVGRect(SVGRectElement& element, RenderStyle&& style)
     : LegacyRenderSVGShape(Type::LegacySVGRect, element, WTFMove(style))
@@ -58,7 +58,8 @@ void LegacyRenderSVGRect::updateShapeFromElement()
     m_strokeBoundingBox = std::nullopt;
     m_approximateStrokeBoundingBox = std::nullopt;
 
-    SVGLengthContext lengthContext(&rectElement());
+    Ref rectElement = this->rectElement();
+    SVGLengthContext lengthContext(rectElement.ptr());
     FloatSize boundingBoxSize(lengthContext.valueForLength(style().width(), SVGLengthMode::Width), lengthContext.valueForLength(style().height(), SVGLengthMode::Height));
 
     // Spec: "A negative value is illegal. A value of zero disables rendering of the element."
@@ -115,7 +116,7 @@ void LegacyRenderSVGRect::fillShape(GraphicsContext& context) const
     }
 #endif
 
-    context.fillRect(m_fillBoundingBox);
+    context.fillRect(m_fillBoundingBox, fillRequiresClip() ? GraphicsContext::RequiresClipToRect::Yes : GraphicsContext::RequiresClipToRect::No);
 }
 
 void LegacyRenderSVGRect::strokeShape(GraphicsContext& context) const

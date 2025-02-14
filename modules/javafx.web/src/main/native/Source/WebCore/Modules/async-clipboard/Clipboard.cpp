@@ -44,11 +44,11 @@
 #include "UserGestureIndicator.h"
 #include "WebContentReader.h"
 #include <wtf/CompletionHandler.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Clipboard);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Clipboard);
 
 static bool shouldProceedWithClipboardWrite(const LocalFrame& frame)
 {
@@ -90,9 +90,9 @@ Navigator* Clipboard::navigator()
     return m_navigator.get();
 }
 
-EventTargetInterface Clipboard::eventTargetInterface() const
+enum EventTargetInterfaceType Clipboard::eventTargetInterface() const
 {
-    return ClipboardEventTargetInterfaceType;
+    return EventTargetInterfaceType::Clipboard;
 }
 
 ScriptExecutionContext* Clipboard::scriptExecutionContext() const
@@ -273,7 +273,7 @@ Clipboard::SessionIsValid Clipboard::updateSessionValidity()
     return SessionIsValid::Yes;
 }
 
-void Clipboard::write(const Vector<RefPtr<ClipboardItem>>& items, Ref<DeferredPromise>&& promise)
+void Clipboard::write(const Vector<Ref<ClipboardItem>>& items, Ref<DeferredPromise>&& promise)
 {
     RefPtr frame = this->frame();
     if (!frame || !shouldProceedWithClipboardWrite(*frame)) {
@@ -314,7 +314,7 @@ Clipboard::ItemWriter::ItemWriter(Clipboard& clipboard, Ref<DeferredPromise>&& p
 
 Clipboard::ItemWriter::~ItemWriter() = default;
 
-void Clipboard::ItemWriter::write(const Vector<RefPtr<ClipboardItem>>& items)
+void Clipboard::ItemWriter::write(const Vector<Ref<ClipboardItem>>& items)
 {
     ASSERT(m_promise);
     ASSERT(m_clipboard);

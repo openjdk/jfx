@@ -27,8 +27,7 @@
 #include "JSDOMWrapper.h"
 
 #include "DOMWrapperWorld.h"
-#include "JSLocalDOMWindow.h"
-#include "JSRemoteDOMWindow.h"
+#include "JSDOMWindow.h"
 #include "LocalDOMWindow.h"
 #include "SerializedScriptValue.h"
 #include "WebCoreJSClientData.h"
@@ -36,14 +35,13 @@
 
 namespace WebCore {
 
-using namespace JSC;
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSDOMObject);
 
 JSDOMObject::JSDOMObject(JSC::Structure* structure, JSC::JSGlobalObject& globalObject)
     : Base(globalObject.vm(), structure)
 {
-    ASSERT(scriptExecutionContext() || globalObject.classInfo() == JSRemoteDOMWindow::info());
+    ASSERT(scriptExecutionContext() || globalObject.classInfo() == JSDOMWindow::info());
 }
 
 JSC::JSValue cloneAcrossWorlds(JSC::JSGlobalObject& lexicalGlobalObject, const JSDOMObject& owner, JSC::JSValue value)

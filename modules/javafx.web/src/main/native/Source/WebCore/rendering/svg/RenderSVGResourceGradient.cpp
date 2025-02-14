@@ -20,16 +20,15 @@
 #include "config.h"
 #include "RenderSVGResourceGradient.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGResourceGradientInlines.h"
 #include "RenderSVGShape.h"
 #include "SVGRenderStyle.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourceGradient);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourceGradient);
 
 RenderSVGResourceGradient::RenderSVGResourceGradient(Type type, SVGElement& element, RenderStyle&& style)
     : RenderSVGResourcePaintServer(type, element, WTFMove(style))
@@ -96,9 +95,9 @@ bool RenderSVGResourceGradient::prepareFillOperation(GraphicsContext& context, c
     if (!buildGradientIfNeeded(targetRenderer, style, userspaceTransform))
             return false;
 
-    const auto& svgStyle = style.svgStyle();
-    context.setAlpha(svgStyle.fillOpacity());
-    context.setFillRule(svgStyle.fillRule());
+    Ref svgStyle = style.svgStyle();
+    context.setAlpha(svgStyle->fillOpacity());
+    context.setFillRule(svgStyle->fillRule());
     context.setFillGradient(m_gradient.copyRef().releaseNonNull(), userspaceTransform);
     return true;
 }
@@ -109,18 +108,16 @@ bool RenderSVGResourceGradient::prepareStrokeOperation(GraphicsContext& context,
     if (!buildGradientIfNeeded(targetRenderer, style, userspaceTransform))
         return false;
 
-    const auto& svgStyle = style.svgStyle();
-    if (svgStyle.vectorEffect() == VectorEffect::NonScalingStroke) {
-        if (auto* shape = dynamicDowncast<RenderSVGShape>(targetRenderer))
+    Ref svgStyle = style.svgStyle();
+    if (svgStyle->vectorEffect() == VectorEffect::NonScalingStroke) {
+        if (CheckedPtr shape = dynamicDowncast<RenderSVGShape>(targetRenderer))
             userspaceTransform = shape->nonScalingStrokeTransform() * userspaceTransform;
             }
 
-    context.setAlpha(svgStyle.strokeOpacity());
+    context.setAlpha(svgStyle->strokeOpacity());
     SVGRenderSupport::applyStrokeStyleToContext(context, style, targetRenderer);
     context.setStrokeGradient(m_gradient.copyRef().releaseNonNull(), userspaceTransform);
     return true;
 }
 
 }
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

@@ -41,7 +41,7 @@ class Element;
 class RenderStyle;
 
 class StyleOriginatedAnimation : public WebAnimation {
-    WTF_MAKE_ISO_ALLOCATED(StyleOriginatedAnimation);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StyleOriginatedAnimation);
 public:
     ~StyleOriginatedAnimation();
 
@@ -50,7 +50,7 @@ public:
     const std::optional<const Styleable> owningElement() const;
     const Animation& backingAnimation() const { return m_backingAnimation; }
     void setBackingAnimation(const Animation&);
-    void cancelFromStyle();
+    void cancelFromStyle(WebAnimation::Silently = WebAnimation::Silently::No);
 
     std::optional<double> bindingsStartTime() const final;
     std::optional<double> bindingsCurrentTime() const final;
@@ -63,7 +63,7 @@ public:
     ExceptionOr<void> bindingsPause() override;
 
     void setTimeline(RefPtr<AnimationTimeline>&&) final;
-    void cancel() final;
+    void cancel(WebAnimation::Silently = WebAnimation::Silently::No) final;
 
     void tick() override;
 
@@ -76,7 +76,7 @@ protected:
 
     void initialize(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     virtual void syncPropertiesWithBackingAnimation();
-    virtual Ref<StyleOriginatedAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId) = 0;
+    virtual Ref<StyleOriginatedAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>&) = 0;
 
     enum class ShouldFireEvents : uint8_t { No, YesForCSSAnimation, YesForCSSTransition };
     ShouldFireEvents shouldFireDOMEvents() const;
@@ -95,7 +95,7 @@ private:
     AnimationEffectPhase m_previousPhase { AnimationEffectPhase::Idle };
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_owningElement;
-    PseudoId m_owningPseudoId;
+    std::optional<Style::PseudoElementIdentifier> m_owningPseudoElementIdentifier;
     Ref<Animation> m_backingAnimation;
     double m_previousIteration;
 };

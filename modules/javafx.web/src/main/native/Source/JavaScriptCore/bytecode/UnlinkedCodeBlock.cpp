@@ -105,7 +105,7 @@ void UnlinkedCodeBlock::visitChildrenImpl(JSCell* cell, Visitor& visitor)
         visitor.append(barrier);
     for (auto& barrier : thisObject->m_functionExprs)
         visitor.append(barrier);
-    visitor.appendValues(thisObject->m_constantRegisters.data(), thisObject->m_constantRegisters.size());
+    visitor.appendValues(thisObject->m_constantRegisters.span());
     size_t extraMemory = thisObject->metadataSizeInBytes();
     if (thisObject->m_instructions)
         extraMemory += thisObject->m_instructions->sizeInBytes();
@@ -338,7 +338,6 @@ void UnlinkedCodeBlock::allocateSharedProfiles(unsigned numBinaryArithProfiles, 
         FOR_EACH_OPCODE_WITH_SIMPLE_ARRAY_PROFILE(COUNT)
 #undef COUNT
         numberOfArrayProfiles += m_metadata->numEntries<OpIteratorNext>();
-        numberOfArrayProfiles += m_metadata->numEntries<OpGetById>();
         m_arrayProfiles = FixedVector<UnlinkedArrayProfile>(numberOfArrayProfiles);
     }
 

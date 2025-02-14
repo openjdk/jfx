@@ -29,10 +29,12 @@
 
 #if ENABLE(WEB_CODECS)
 
+#include <wtf/StdLibExtras.h>
+
 namespace WebCore {
 
 WebCodecsEncodedAudioChunk::WebCodecsEncodedAudioChunk(Init&& init)
-    : m_storage { WebCodecsEncodedAudioChunkStorage::create(init.type, init.timestamp, init.duration, std::span<const uint8_t> { init.data.data(), init.data.length() }) }
+    : m_storage { WebCodecsEncodedAudioChunkStorage::create(init.type, init.timestamp, init.duration, init.data.span()) }
 {
 }
 
@@ -41,7 +43,7 @@ ExceptionOr<void> WebCodecsEncodedAudioChunk::copyTo(BufferSource&& source)
     if (source.length() < byteLength())
         return Exception { ExceptionCode::TypeError, "buffer is too small"_s };
 
-    std::memcpy(source.mutableData(), data(), byteLength());
+    memcpySpan(source.mutableSpan(), span());
     return { };
 }
 

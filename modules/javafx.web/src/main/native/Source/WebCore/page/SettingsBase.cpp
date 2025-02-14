@@ -331,18 +331,18 @@ void SettingsBase::setNeedsRelayoutAllFrames()
 
 void SettingsBase::mediaTypeOverrideChanged()
 {
-    if (!m_page)
+    RefPtr page = m_page.get();
+    if (!page)
         return;
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
     if (!localMainFrame)
         return;
 
-    auto* view = localMainFrame->view();
-    if (view)
-        view->setMediaType(AtomString(m_page->settings().mediaTypeOverride()));
+    if (RefPtr view = localMainFrame->view())
+        view->setMediaType(AtomString(page->settings().mediaTypeOverride()));
 
-    m_page->setNeedsRecalcStyleInAllFrames();
+    page->setNeedsRecalcStyleInAllFrames();
 }
 
 void SettingsBase::imagesEnabledChanged()
@@ -368,14 +368,9 @@ void SettingsBase::imageLoadingSettingsTimerFired()
             continue;
         if (!localFrame->document())
             continue;
-        localFrame->document()->cachedResourceLoader().setImagesEnabled(m_page->settings().areImagesEnabled());
-        localFrame->document()->cachedResourceLoader().setAutoLoadImages(m_page->settings().loadsImagesAutomatically());
+        localFrame->document()->protectedCachedResourceLoader()->setImagesEnabled(m_page->settings().areImagesEnabled());
+        localFrame->document()->protectedCachedResourceLoader()->setAutoLoadImages(m_page->settings().loadsImagesAutomatically());
     }
-}
-
-void SettingsBase::pluginsEnabledChanged()
-{
-    Page::refreshPlugins(false);
 }
 
 void SettingsBase::iceCandidateFilteringEnabledChanged()
@@ -426,8 +421,6 @@ void SettingsBase::mockCaptureDevicesEnabledChanged()
 
 #endif
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-
 void SettingsBase::layerBasedSVGEngineEnabledChanged()
 {
     if (!m_page)
@@ -449,8 +442,6 @@ void SettingsBase::layerBasedSVGEngineEnabledChanged()
         document->scheduleFullStyleRebuild();
     }
 }
-
-#endif
 
 void SettingsBase::userStyleSheetLocationChanged()
 {
