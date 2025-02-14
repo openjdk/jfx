@@ -973,15 +973,18 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
                 ? event->height : wh;
     }
 
-    int x, y;
-    gdk_window_get_origin(gdk_window, &x, &y);
-    if (frame_type == TITLED && !is_fullscreen) {
-        x -= geometry.extents.left;
-        y -= geometry.extents.top;
-    }
+    gint root_x, root_y, origin_x, origin_y;
+    gdk_window_get_root_origin(gdk_window, &root_x, &root_y);
+    gdk_window_get_origin(gdk_window, &origin_x, &origin_y);
 
-    geometry.x = x;
-    geometry.y = y;
+    // x and y represent the position of the top-left corner of the window relative to the desktop area
+    geometry.x = root_x;
+    geometry.y = root_y;
+
+    // view_x and view_y represent the position of the content relative to the top-left corner of the window,
+    // taking into account window decorations (such as title bars and borders) applied by the window manager.
+    geometry.view_x = origin_x - root_x;
+    geometry.view_y = origin_y - root_y;
     notify_window_move();
 
     glong to_screen = getScreenPtrForLocation(geometry.x, geometry.y);
@@ -1231,8 +1234,8 @@ GtkWindow *WindowContextTop::get_gtk_window() {
     return GTK_WINDOW(gtk_widget);
 }
 
-WindowFrameExtents WindowContextTop::get_frame_extents() {
-    return geometry.extents;
+WindowGeometry WindowContextTop::get_geometry() {
+    return geometry;
 }
 
 void WindowContextTop::update_ontop_tree(bool on_top) {
