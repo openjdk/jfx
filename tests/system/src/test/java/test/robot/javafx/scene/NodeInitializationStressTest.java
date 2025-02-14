@@ -631,7 +631,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349255") // FIX
     @Test
     public void titledPane() {
         assumeFalse(SKIP_TEST);
@@ -640,10 +639,11 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new TitledPaneSkin(c));
             return c;
         }, (c) -> {
+            accessControl(c);
             c.setAnimated(nextBoolean());
             c.setExpanded(nextBoolean());
+            c.setCollapsible(nextBoolean(0.9));
             c.setContent(new Label(nextString()));
-            accessControl(c);
         });
     }
 
