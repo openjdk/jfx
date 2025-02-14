@@ -1015,7 +1015,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
 //        });
     }
 
-    @Disabled("JDK-8349098") // FIX
     @Test
     public void tabPane() {
         assumeFalse(SKIP_TEST);
