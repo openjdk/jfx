@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1434,12 +1434,11 @@ public abstract sealed class Node
                         NodeHelper.markDirty(Node.this, DirtyBits.NODE_VISIBLE);
                         NodeHelper.geomChanged(Node.this);
                         updateTreeVisible(false);
-                        Parent p = getParent();
-                        if (p != null) {
+                        if (getParent() != null) {
                             // notify the parent of the potential change in visibility
                             // of this node, since visibility affects bounds of the
                             // parent node
-                            p.childVisibilityChanged(Node.this);
+                            getParent().childVisibilityChanged(Node.this);
                         }
                         oldValue = get();
                     }
