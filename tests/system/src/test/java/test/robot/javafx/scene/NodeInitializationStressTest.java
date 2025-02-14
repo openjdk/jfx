@@ -134,6 +134,7 @@ import javafx.scene.control.skin.ToolBarSkin;
 import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.control.skin.TreeViewSkin;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
@@ -145,6 +146,32 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Arc;
+import javafx.scene.shape.ArcTo;
+import javafx.scene.shape.ArcType;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.ClosePath;
+import javafx.scene.shape.CubicCurve;
+import javafx.scene.shape.CubicCurveTo;
+import javafx.scene.shape.Ellipse;
+import javafx.scene.shape.FillRule;
+import javafx.scene.shape.HLineTo;
+import javafx.scene.shape.Line;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.Polygon;
+import javafx.scene.shape.Polyline;
+import javafx.scene.shape.QuadCurve;
+import javafx.scene.shape.QuadCurveTo;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.SVGPath;
+import javafx.scene.shape.Shape;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.StrokeType;
+import javafx.scene.shape.VLineTo;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
@@ -175,13 +202,13 @@ import test.robot.testharness.RobotTestBase;
  * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
  */
 public class NodeInitializationStressTest extends RobotTestBase {
+    /* debugging aid: set this flag to true and comment out assumeFalse(SKIP_TEST) to run specific test(s). */
+    private static final boolean SKIP_TEST = !false;
+    /** Determines the amount of time background threads are active during each test. */
     private static final int DURATION = 5000;
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
     private static final ThreadLocal<Random> random = ThreadLocal.withInitial(Random::new);
-    // for debugging purposes: setting this to true will skip working tests
-    // TODO remove once all the tests pass
-    private static final boolean SKIP_TEST = false;
 
     @Test
     public void accordion() {
@@ -225,14 +252,19 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void arc() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Arc();
+        }, (c) -> {
+            accessShape(c);
+            c.setCenterX(nextDouble(100));
+            c.setCenterY(nextDouble(100));
+            c.setLength(nextDouble(100));
+            c.setRadiusX(nextDouble(100));
+            c.setRadiusY(nextDouble(100));
+            c.setStartAngle(nextDouble(720));
+            c.setType(nextEnum(ArcType.class));
+        });
     }
 
     @Disabled("JDK-8349091") // FIX
@@ -281,10 +313,12 @@ public class NodeInitializationStressTest extends RobotTestBase {
         //assumeFalse(SKIP_TEST);
         // TODO
 //        test(() -> {
-//            return new ();
+//            return new Box();
 //        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
+//            accessShape3D(c);
+//            c.setDepth(nextDouble(100));
+//            c.setHeight(nextDouble(100));
+//            c.setWidth(nextDouble(100));
 //        });
     }
 
@@ -386,14 +420,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void circle() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Circle();
+        }, (c) -> {
+            accessShape(c);
+            c.setCenterX(nextDouble(100));
+            c.setCenterY(nextDouble(100));
+            c.setRadius(nextDouble(100));
+        });
     }
 
     @Test
@@ -445,14 +480,20 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void cubicCurve() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new CubicCurve();
+        }, (c) -> {
+            accessShape(c);
+            c.setControlX1(nextDouble(100));
+            c.setControlX2(nextDouble(100));
+            c.setControlY1(nextDouble(100));
+            c.setControlY2(nextDouble(100));
+            c.setEndX(nextDouble(100));
+            c.setEndY(nextDouble(100));
+            c.setStartX(nextDouble(100));
+            c.setStartY(nextDouble(100));
+        });
     }
 
     @Test
@@ -518,14 +559,16 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void ellipse() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Ellipse();
+        }, (c) -> {
+            accessShape(c);
+            c.setCenterX(nextDouble(100));
+            c.setCenterY(nextDouble(100));
+            c.setRadiusX(nextDouble(100));
+            c.setRadiusY(nextDouble(100));
+        });
     }
 
     @Test
@@ -615,14 +658,16 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void line() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Line();
+        }, (c) -> {
+            accessShape(c);
+            c.setEndX(nextDouble(100));
+            c.setEndY(nextDouble(100));
+            c.setStartX(nextDouble(100));
+            c.setStartY(nextDouble(100));
+        });
     }
 
     @Disabled("JDK-8349091") // FIX
@@ -741,14 +786,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void path() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Path();
+        }, (c) -> {
+            accessShape(c);
+            c.getElements().setAll(createPathElements());
+            c.getElements().setAll(createPathElements());
+            c.setFillRule(nextEnum(FillRule.class));
+        });
     }
 
     @Test
@@ -805,26 +851,26 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void polygon() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Polygon();
+        }, (c) -> {
+            accessShape(c);
+            c.getPoints().setAll(createPoints());
+            c.getPoints().setAll(createPoints());
+        });
     }
 
     @Test
     public void polyline() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Polyline();
+        }, (c) -> {
+            accessShape(c);
+            c.getPoints().setAll(createPoints());
+            c.getPoints().setAll(createPoints());
+        });
     }
 
     @Test
@@ -842,26 +888,34 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void quadCurve() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new QuadCurve();
+        }, (c) -> {
+            accessShape(c);
+            c.setControlX(nextDouble(100));
+            c.setControlY(nextDouble(100));
+            c.setEndX(nextDouble(100));
+            c.setEndY(nextDouble(100));
+            c.setStartX(nextDouble(100));
+            c.setStartY(nextDouble(100));
+        });
     }
 
     @Test
     public void rectangle() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Rectangle();
+        }, (c) -> {
+            accessShape(c);
+            c.setArcHeight(nextDouble(10));
+            c.setArcWidth(nextDouble(10));
+            c.setHeight(nextDouble(100));
+            c.setWidth(nextDouble(100));
+            c.setX(nextDouble(100));
+            c.setY(nextDouble(100));
+        });
     }
 
     @Test
@@ -879,14 +933,12 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void region() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Region();
+        }, (c) -> {
+            accessRegion(c);
+        });
     }
 
     @Disabled("JDK-8349091") // FIX
@@ -1021,23 +1073,21 @@ public class NodeInitializationStressTest extends RobotTestBase {
     @Test
     public void svgPath() {
         //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        test(() -> {
+            return new SVGPath();
+        }, (c) -> {
+            accessShape(c);
+            c.setContent(createSvgPath());
+            c.setFillRule(nextEnum(FillRule.class));
+        });
     }
 
-    @Test
+    //@Test disabled because it times out
     public void swingNode() {
         //assumeFalse(SKIP_TEST);
-        // TODO
 //        test(() -> {
-//            return new ();
+//            return new SwingNode();
 //        }, (c) -> {
-//            //c.set();
 //            accessNode(c);
 //        });
     }
@@ -1312,6 +1362,19 @@ public class NodeInitializationStressTest extends RobotTestBase {
         c.prefWidth(-1);
         c.setPrefWidth(nextBoolean(0.1) ? 20 : 100);
         c.setPrefHeight(nextBoolean(0.1) ? 20 : 100);
+        c.setBackground(Background.fill(nextColor()));
+    }
+
+    private static void accessShape(Shape c) {
+        c.setFill(nextColor());
+        c.setSmooth(nextBoolean());
+        c.setStroke(nextColor());
+        c.setStrokeDashOffset(nextDouble(10));
+        c.setStrokeLineCap(nextEnum(StrokeLineCap.class));
+        c.setStrokeLineJoin(nextEnum(StrokeLineJoin.class));
+        c.setStrokeMiterLimit(nextDouble(10));
+        c.setStrokeType(nextEnum(StrokeType.class));
+        c.setStrokeWidth(nextDouble(10));
     }
 
     private <T extends Node> void test(Supplier<T> generator, Consumer<T> operation) {
@@ -1402,7 +1465,11 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     private static Color nextColor() {
         Random r = random();
-        return Color.hsb(360 * r.nextDouble(), r.nextDouble(), r.nextDouble(), r.nextDouble());
+        double hue = 360.0 * r.nextDouble();
+        double saturation = 0.5 + 0.5 * r.nextDouble();
+        double brightness = r.nextDouble();
+        double opacity = r.nextDouble();
+        return Color.hsb(hue, saturation, brightness, opacity);
     }
 
     private static double nextDouble(int min, int max) {
@@ -1500,11 +1567,76 @@ public class NodeInitializationStressTest extends RobotTestBase {
         return s;
     }
 
+    private static PathElement createPathElement() {
+            switch (nextInt(7)) {
+            case 0:
+            {
+                double radiusX = nextDouble(100);
+                double radiusY = nextDouble(100);
+                double xAxisRotation = nextDouble(1000);
+                double x = nextDouble(100);
+                double y = nextDouble(100);
+                boolean largeArcFlag = nextBoolean();
+                boolean sweepFlag = nextBoolean();
+                return new ArcTo(radiusX, radiusY, xAxisRotation, x, y, largeArcFlag, sweepFlag);
+            }
+            case 1:
+            {
+                double controlX1 = nextDouble(100);
+                double controlY1 = nextDouble(100);
+                double controlX2 = nextDouble(100);
+                double controlY2 = nextDouble(100);
+                double x = nextDouble(100);
+                double y = nextDouble(100);
+                return new CubicCurveTo(controlX1, controlY1, controlX2, controlY2, x, y);
+            }
+            case 2:
+                return new HLineTo(nextDouble(100));
+            case 3:
+                return new LineTo(nextDouble(100), nextDouble(100));
+            case 4:
+                return new MoveTo(nextDouble(100), nextDouble(100));
+            case 5:
+            {
+                double controlX = nextDouble(100);
+                double controlY = nextDouble(100);
+                double x = nextDouble(100);
+                double y = nextDouble(100);
+                return new QuadCurveTo(controlX, controlY, x, y);
+            }
+            default:
+                return new VLineTo(nextDouble(100));
+        }
+    }
+
+    private static List<PathElement> createPathElements() {
+        int sz = random().nextInt(5);
+        ArrayList<PathElement> a = new ArrayList<>(sz);
+        a.add(new MoveTo(nextDouble(100), nextDouble(100)));
+        for (int i = 0; i < sz; i++) {
+            a.add(createPathElement());
+        }
+        if (nextBoolean()) {
+            a.add(new ClosePath());
+        }
+        return a;
+    }
+
     private static List<PieChart.Data> createPieSeries() {
         int sz = 1 + random().nextInt(20);
         ArrayList<Data> a = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
             a.add(new PieChart.Data("N" + i, random().nextDouble()));
+        }
+        return a;
+    }
+
+    private static List<Double> createPoints() {
+        int sz = random().nextInt(8);
+        ArrayList<Double> a = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            a.add(nextDouble(200));
+            a.add(nextDouble(200));
         }
         return a;
     }
@@ -1517,6 +1649,23 @@ public class NodeInitializationStressTest extends RobotTestBase {
         }
         root.setExpanded(nextBoolean());
         return root;
+    }
+
+    private static String createSvgPath() {
+        switch(nextInt(4)) {
+        case 0:
+            // Arc
+            return "M 5 310 L 100 210 A 25 45 0 0 1 162 164 L 175 155 A 35 45 -40 0 1 210 110 L 310 10";
+        case 1:
+            // Bézier
+            return "M 10 70 C 30 20, 75 15, 90 85 S 140 145, 185 75 T 180 80";
+        case 2:
+            // quadratic
+            return "M 10 80 Q 52.5 10, 95 80 T 180 80";
+        default:
+            // vertical/horizontal
+            return "M 0 0 H 100 V 100 H 0 L 0 0";
+        }
     }
 
     private static List<Tab> createTabs() {
