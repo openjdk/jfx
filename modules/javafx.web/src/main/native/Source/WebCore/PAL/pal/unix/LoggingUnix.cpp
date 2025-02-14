@@ -26,9 +26,10 @@
 #include "config.h"
 #include "Logging.h"
 
-#include <wtf/text/WTFString.h>
-
 #if !LOG_DISABLED || !RELEASE_LOG_DISABLED
+
+#include <span>
+#include <wtf/text/MakeString.h>
 
 namespace PAL {
 
@@ -42,7 +43,7 @@ String logLevelString()
 #endif
 
         // To disable logging notImplemented set the DISABLE_NI_WARNING environment variable to 1.
-        return makeString("NotYetImplemented,"_s, logEnv);
+        return makeString("NotYetImplemented,"_s, span(logEnv));
     }
 #endif
     return String();

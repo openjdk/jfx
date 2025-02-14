@@ -89,7 +89,7 @@ void PropertyCascade::buildCascade()
         addImportantMatches(cascadeLevel);
     }
 
-    sortDeferredPropertyIDs();
+    sortLogicalGroupPropertyIDs();
 }
 
 void PropertyCascade::setPropertyInternal(Property& property, CSSPropertyID id, CSSValue& cssValue, const MatchedProperties& matchedProperties, CascadeLevel cascadeLevel)
@@ -112,7 +112,7 @@ void PropertyCascade::setPropertyInternal(Property& property, CSSPropertyID id, 
 void PropertyCascade::set(CSSPropertyID id, CSSValue& cssValue, const MatchedProperties& matchedProperties, CascadeLevel cascadeLevel)
 {
     ASSERT(!CSSProperty::isInLogicalPropertyGroup(id));
-    ASSERT(id < firstDeferredProperty);
+    ASSERT(id < firstLogicalGroupProperty);
 
     ASSERT(id < m_propertyIsPresent.size());
     if (id == CSSPropertyCustom) {
@@ -130,24 +130,23 @@ void PropertyCascade::set(CSSPropertyID id, CSSValue& cssValue, const MatchedPro
     }
 
     auto& property = m_properties[id];
-    if (!m_propertyIsPresent[id])
+    if (!m_propertyIsPresent.testAndSet(id))
         property.cssValue = { };
-    m_propertyIsPresent.set(id);
     setPropertyInternal(property, id, cssValue, matchedProperties, cascadeLevel);
 }
 
-void PropertyCascade::setDeferred(CSSPropertyID id, CSSValue& cssValue, const MatchedProperties& matchedProperties, CascadeLevel cascadeLevel)
+void PropertyCascade::setLogicalGroupProperty(CSSPropertyID id, CSSValue& cssValue, const MatchedProperties& matchedProperties, CascadeLevel cascadeLevel)
 {
-    ASSERT(id >= firstDeferredProperty);
-    ASSERT(id <= lastDeferredProperty);
+    ASSERT(id >= firstLogicalGroupProperty);
+    ASSERT(id <= lastLogicalGroupProperty);
 
     auto& property = m_properties[id];
-    if (!hasDeferredProperty(id)) {
+    if (!hasLogicalGroupProperty(id)) {
         property.cssValue = { };
-        m_lowestSeenDeferredProperty = std::min(m_lowestSeenDeferredProperty, id);
-        m_highestSeenDeferredProperty = std::max(m_highestSeenDeferredProperty, id);
+        m_lowestSeenLogicalGroupProperty = std::min(m_lowestSeenLogicalGroupProperty, id);
+        m_highestSeenLogicalGroupProperty = std::max(m_highestSeenLogicalGroupProperty, id);
     }
-    setDeferredPropertyIndex(id, ++m_lastIndexForDeferred);
+    setLogicalGroupPropertyIndex(id, ++m_lastIndexForLogicalGroup);
     setPropertyInternal(property, id, cssValue, matchedProperties, cascadeLevel);
 }
 
@@ -155,34 +154,32 @@ bool PropertyCascade::hasProperty(CSSPropertyID propertyID, const CSSValue& valu
 {
     if (propertyID == CSSPropertyCustom)
         return hasCustomProperty(downcast<CSSCustomPropertyValue>(value).name());
-    return propertyID < firstDeferredProperty ? hasNormalProperty(propertyID) : hasDeferredProperty(propertyID);
+    return propertyID < firstLogicalGroupProperty ? hasNormalProperty(propertyID) : hasLogicalGroupProperty(propertyID);
 }
 
-const PropertyCascade::Property* PropertyCascade::lastDeferredPropertyResolvingRelated(CSSPropertyID propertyID, TextDirection direction, WritingMode writingMode) const
+const PropertyCascade::Property* PropertyCascade::lastPropertyResolvingLogicalPropertyPair(CSSPropertyID propertyID, TextDirection direction, WritingMode writingMode) const
 {
-    auto relatedID = [&] {
-        if (!CSSProperty::isInLogicalPropertyGroup(propertyID))
-            return relatedProperty(propertyID);
+    ASSERT(CSSProperty::isInLogicalPropertyGroup(propertyID));
+
+    auto pairID = [&] {
         if (CSSProperty::isDirectionAwareProperty(propertyID))
             return CSSProperty::resolveDirectionAwareProperty(propertyID, direction, writingMode);
         return CSSProperty::unresolvePhysicalProperty(propertyID, direction, writingMode);
     }();
-    if (relatedID == CSSPropertyInvalid) {
-        ASSERT_NOT_REACHED();
-        return hasDeferredProperty(propertyID) ? &deferredProperty(propertyID) : nullptr;
-    }
-    auto indexForPropertyID = deferredPropertyIndex(propertyID);
-    auto indexForRelatedID = deferredPropertyIndex(relatedID);
-    if (indexForPropertyID > indexForRelatedID)
-        return &deferredProperty(propertyID);
-    if (indexForPropertyID < indexForRelatedID)
-        return &deferredProperty(relatedID);
-    ASSERT(!hasDeferredProperty(propertyID));
-    ASSERT(!hasDeferredProperty(relatedID));
+    ASSERT(pairID != CSSPropertyInvalid);
+
+    auto indexForPropertyID = logicalGroupPropertyIndex(propertyID);
+    auto indexForPairID = logicalGroupPropertyIndex(pairID);
+    if (indexForPropertyID > indexForPairID)
+        return &logicalGroupProperty(propertyID);
+    if (indexForPropertyID < indexForPairID)
+        return &logicalGroupProperty(pairID);
+    ASSERT(!hasLogicalGroupProperty(propertyID));
+    ASSERT(!hasLogicalGroupProperty(pairID));
     return nullptr;
 }
 
-bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, CascadeLevel cascadeLevel, bool important)
+bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, CascadeLevel cascadeLevel, IsImportant important)
 {
     auto includePropertiesForRollback = [&] {
         if (m_rollbackScope && matchedProperties.styleScopeOrdinal > *m_rollbackScope)
@@ -205,20 +202,27 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
     for (auto current : matchedProperties.properties.get()) {
         if (current.isImportant())
             hasImportantProperties = true;
-        if (important != current.isImportant())
+        if ((important == IsImportant::No && current.isImportant()) || (important == IsImportant::Yes && !current.isImportant()))
             continue;
 
-        auto propertyID = current.id();
+        auto propertyID = cascadeAliasProperty(current.id());
 
         auto shouldIncludeProperty = [&] {
 #if ENABLE(VIDEO)
         if (propertyAllowlist == PropertyAllowlist::Cue && !isValidCueStyleProperty(propertyID))
+                return false;
+            if (propertyAllowlist == PropertyAllowlist::CueSelector && !isValidCueSelectorStyleProperty(propertyID))
+                return false;
+            if (propertyAllowlist == PropertyAllowlist::CueBackground && !isValidCueBackgroundStyleProperty(propertyID))
                 return false;
 #endif
         if (propertyAllowlist == PropertyAllowlist::Marker && !isValidMarkerStyleProperty(propertyID))
                 return false;
 
             if (m_includedProperties.containsAll(normalProperties()))
+                return true;
+
+            if (matchedProperties.isCacheable == IsCacheable::Partially && m_includedProperties.contains(PropertyType::NonCacheable))
                 return true;
 
             // If we have applied this property for some reason already we must apply anything that overrides it.
@@ -240,8 +244,8 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
             if (m_includedProperties.contains(PropertyType::NonInherited) && !current.isInherited())
                 return true;
 
-            // Apply all deferred properties if we have applied any. They may override the ones we already applied.
-            if (propertyID >= firstDeferredProperty && m_lastIndexForDeferred)
+            // Apply all logical group properties if we have applied any. They may override the ones we already applied.
+            if (propertyID >= firstLogicalGroupProperty && m_lastIndexForLogicalGroup)
                 return true;
 
             return false;
@@ -250,10 +254,10 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
         if (!shouldIncludeProperty)
             continue;
 
-        if (propertyID < firstDeferredProperty)
+        if (propertyID < firstLogicalGroupProperty)
             set(propertyID, *current.value(), matchedProperties, cascadeLevel);
         else
-            setDeferred(propertyID, *current.value(), matchedProperties, cascadeLevel);
+            setLogicalGroupProperty(propertyID, *current.value(), matchedProperties, cascadeLevel);
     }
 
     return hasImportantProperties;
@@ -314,7 +318,7 @@ bool PropertyCascade::addNormalMatches(CascadeLevel cascadeLevel)
 {
     bool hasImportant = false;
     for (auto& matchedDeclarations : declarationsForCascadeLevel(m_matchResult, cascadeLevel))
-        hasImportant |= addMatch(matchedDeclarations, cascadeLevel, false);
+        hasImportant |= addMatch(matchedDeclarations, cascadeLevel, IsImportant::No);
 
     return hasImportant;
 }
@@ -370,21 +374,21 @@ void PropertyCascade::addImportantMatches(CascadeLevel cascadeLevel)
     }
 
     for (auto& match : importantMatches)
-        addMatch(matchedDeclarations[match.index], cascadeLevel, true);
+        addMatch(matchedDeclarations[match.index], cascadeLevel, IsImportant::Yes);
 }
 
-void PropertyCascade::sortDeferredPropertyIDs()
+void PropertyCascade::sortLogicalGroupPropertyIDs()
 {
-    auto begin = m_deferredPropertyIDs.begin();
+    auto begin = m_logicalGroupPropertyIDs.begin();
     auto end = begin;
-    for (uint16_t id = m_lowestSeenDeferredProperty; id <= m_highestSeenDeferredProperty; ++id) {
+    for (uint16_t id = m_lowestSeenLogicalGroupProperty; id <= m_highestSeenLogicalGroupProperty; ++id) {
         auto propertyID = static_cast<CSSPropertyID>(id);
-        if (hasDeferredProperty(propertyID))
+        if (hasLogicalGroupProperty(propertyID))
             *end++ = propertyID;
     }
-    m_seenDeferredPropertyCount = end - begin;
+    m_seenLogicalGroupPropertyCount = end - begin;
     std::sort(begin, end, [&](auto id1, auto id2) {
-        return deferredPropertyIndex(id1) < deferredPropertyIndex(id2);
+        return logicalGroupPropertyIndex(id1) < logicalGroupPropertyIndex(id2);
     });
 }
 

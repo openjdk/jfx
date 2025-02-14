@@ -28,19 +28,15 @@
 
 #include "Document.h"
 #include "InstrumentingAgents.h"
-#include "Page.h"
-#include <wtf/Ref.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
-InspectorWorkerAgent::InspectorWorkerAgent(PageAgentContext& context)
+InspectorWorkerAgent::InspectorWorkerAgent(WebAgentContext& context)
     : InspectorAgentBase("Worker"_s, context)
     , m_frontendDispatcher(makeUnique<Inspector::WorkerFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::WorkerBackendDispatcher::create(context.backendDispatcher, this))
-    , m_page(context.inspectedPage)
 {
 }
 
@@ -58,19 +54,19 @@ void InspectorWorkerAgent::willDestroyFrontendAndBackend(DisconnectReason)
     disable();
 }
 
-Protocol::ErrorStringOr<void> InspectorWorkerAgent::enable()
+Inspector::Protocol::ErrorStringOr<void> InspectorWorkerAgent::enable()
 {
     if (m_enabled)
         return { };
 
     m_enabled = true;
 
-    connectToAllWorkerInspectorProxiesForPage();
+    connectToAllWorkerInspectorProxies();
 
     return { };
 }
 
-Protocol::ErrorStringOr<void> InspectorWorkerAgent::disable()
+Inspector::Protocol::ErrorStringOr<void> InspectorWorkerAgent::disable()
 {
     if (!m_enabled)
         return { };
@@ -82,7 +78,7 @@ Protocol::ErrorStringOr<void> InspectorWorkerAgent::disable()
     return { };
 }
 
-Protocol::ErrorStringOr<void> InspectorWorkerAgent::initialized(const String& workerId)
+Inspector::Protocol::ErrorStringOr<void> InspectorWorkerAgent::initialized(const String& workerId)
 {
     RefPtr proxy = m_connectedProxies.get(workerId).get();
     if (!proxy)
@@ -93,7 +89,7 @@ Protocol::ErrorStringOr<void> InspectorWorkerAgent::initialized(const String& wo
     return { };
 }
 
-Protocol::ErrorStringOr<void> InspectorWorkerAgent::sendMessageToWorker(const String& workerId, const String& message)
+Inspector::Protocol::ErrorStringOr<void> InspectorWorkerAgent::sendMessageToWorker(const String& workerId, const String& message)
 {
     if (!m_enabled)
         return makeUnexpected("Worker domain must be enabled"_s);
@@ -131,22 +127,6 @@ void InspectorWorkerAgent::workerTerminated(WorkerInspectorProxy& proxy)
         return;
 
     disconnectFromWorkerInspectorProxy(proxy);
-}
-
-void InspectorWorkerAgent::connectToAllWorkerInspectorProxiesForPage()
-{
-    ASSERT(m_connectedProxies.isEmpty());
-
-    for (Ref proxy : WorkerInspectorProxy::allWorkerInspectorProxiesCopy()) {
-        if (!is<Document>(proxy->scriptExecutionContext()))
-            continue;
-
-        auto& document = downcast<Document>(*proxy->scriptExecutionContext());
-        if (document.page() != &m_page)
-            continue;
-
-        connectToWorkerInspectorProxy(proxy);
-    }
 }
 
 void InspectorWorkerAgent::disconnectFromAllWorkerInspectorProxies()

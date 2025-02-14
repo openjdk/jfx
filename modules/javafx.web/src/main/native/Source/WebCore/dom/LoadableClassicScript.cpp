@@ -35,6 +35,7 @@
 #include "ScriptSourceCode.h"
 #include "SubresourceIntegrity.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringImpl.h>
 
 namespace WebCore {
@@ -85,7 +86,7 @@ bool LoadableNonModuleScriptBase::wasCanceled() const
     return m_cachedScript->wasCanceled();
 }
 
-void LoadableNonModuleScriptBase::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void LoadableNonModuleScriptBase::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     ASSERT(m_cachedScript);
     if (resource.resourceError().isAccessControl()) {
@@ -108,7 +109,7 @@ void LoadableNonModuleScriptBase::notifyFinished(CachedResource& resource, const
             ConsoleMessage {
                 MessageSource::Security,
                 MessageLevel::Error,
-                makeString("Refused to execute ", cachedScript->url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type-Options: nosniff\" was given and its Content-Type is not a script MIME type.")
+                makeString("Refused to execute "_s, cachedScript->url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type-Options: nosniff\" was given and its Content-Type is not a script MIME type."_s)
             },
             { }
         };
@@ -120,7 +121,7 @@ void LoadableNonModuleScriptBase::notifyFinished(CachedResource& resource, const
             ConsoleMessage {
                 MessageSource::Security,
                 MessageLevel::Error,
-                makeString("Refused to execute ", cachedScript->url().stringCenterEllipsizedToLength(), " as script because ", cachedScript->response().mimeType(), " is not a script MIME type.")
+                makeString("Refused to execute "_s, cachedScript->url().stringCenterEllipsizedToLength(), " as script because "_s, cachedScript->response().mimeType(), " is not a script MIME type."_s)
             },
             { }
         };
@@ -129,7 +130,7 @@ void LoadableNonModuleScriptBase::notifyFinished(CachedResource& resource, const
     if (!m_error && !resource.errorOccurred() && !matchIntegrityMetadata(resource, m_integrity)) {
         m_error = Error {
             ErrorType::FailedIntegrityCheck,
-            ConsoleMessage { MessageSource::Security, MessageLevel::Error, makeString("Cannot load script ", integrityMismatchDescription(resource, m_integrity)) },
+            ConsoleMessage { MessageSource::Security, MessageLevel::Error, makeString("Cannot load script "_s, integrityMismatchDescription(resource, m_integrity)) },
             { }
         };
     }

@@ -37,11 +37,11 @@
 #include "MediaStreamTrackEvent.h"
 #include "Page.h"
 #include "RealtimeMediaSource.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStream);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStream);
 
 Ref<MediaStream> MediaStream::create(Document& document)
 {
@@ -55,10 +55,9 @@ Ref<MediaStream> MediaStream::create(Document& document, MediaStream& stream)
     return mediaStream;
 }
 
-Ref<MediaStream> MediaStream::create(Document& document, const Vector<RefPtr<MediaStreamTrack>>& tracks)
+Ref<MediaStream> MediaStream::create(Document& document, const Vector<Ref<MediaStreamTrack>>& tracks)
 {
-    auto nonNullTracks = map(tracks, [](auto& track) { return Ref { *track }; });
-    auto mediaStream = adoptRef(*new MediaStream(document, WTFMove(nonNullTracks)));
+    auto mediaStream = adoptRef(*new MediaStream(document, tracks));
     mediaStream->suspendIfNeeded();
     return mediaStream;
 }
@@ -82,8 +81,10 @@ MediaStream::MediaStream(Document& document, const Vector<Ref<MediaStreamTrack>>
     // This constructor preserves MediaStreamTrack instances and must be used by calls originating
     // from the JavaScript MediaStream constructor.
 
-    for (auto& track : tracks)
+    for (auto& track : tracks) {
+        track->setMediaStreamId(id());
         m_trackMap.add(track->id(), track);
+    }
 
     setIsActive(m_private->active());
     m_private->addObserver(*this);
@@ -95,8 +96,11 @@ MediaStream::MediaStream(Document& document, Ref<MediaStreamPrivate>&& streamPri
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    for (auto& trackPrivate : m_private->tracks())
-        m_trackMap.add(trackPrivate->id(), MediaStreamTrack::create(document, trackPrivate.get()));
+    for (auto& trackPrivate : m_private->tracks()) {
+        auto track = MediaStreamTrack::create(document, trackPrivate.get());
+        track->setMediaStreamId(id());
+        m_trackMap.add(trackPrivate->id(), WTFMove(track));
+    }
 
     setIsActive(m_private->active());
     m_private->addObserver(*this);
@@ -118,13 +122,13 @@ RefPtr<MediaStream> MediaStream::clone()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    Vector<RefPtr<MediaStreamTrack>> clonedTracks;
+    Vector<Ref<MediaStreamTrack>> clonedTracks;
     clonedTracks.reserveInitialCapacity(m_trackMap.size());
     for (auto& track : m_trackMap.values()) {
         if (auto clone = track->clone())
-            clonedTracks.append(WTFMove(clone));
+            clonedTracks.append(clone.releaseNonNull());
     }
-    return MediaStream::create(*document(), clonedTracks);
+    return MediaStream::create(*document(), WTFMove(clonedTracks));
 }
 
 void MediaStream::addTrack(MediaStreamTrack& track)
@@ -370,14 +374,14 @@ void MediaStream::stop()
     m_isActive = false;
 }
 
-const char* MediaStream::activeDOMObjectName() const
-{
-    return "MediaStream";
-}
-
 bool MediaStream::virtualHasPendingActivity() const
 {
     return m_isActive;
+}
+
+Ref<MediaStreamPrivate> MediaStream::protectedPrivateStream()
+{
+    return m_private;
 }
 
 #if !RELEASE_LOG_DISABLED

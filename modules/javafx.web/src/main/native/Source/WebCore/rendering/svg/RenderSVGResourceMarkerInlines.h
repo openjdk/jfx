@@ -29,27 +29,33 @@ inline SVGMarkerElement& RenderSVGResourceMarker::markerElement() const
     return downcast<SVGMarkerElement>(RenderSVGResourceContainer::element());
 }
 
+inline Ref<SVGMarkerElement> RenderSVGResourceMarker::protectedMarkerElement() const
+{
+    return markerElement();
+}
+
 FloatPoint RenderSVGResourceMarker::referencePoint() const
 {
-    SVGLengthContext lengthContext(&markerElement());
-    return { markerElement().refX().value(lengthContext), markerElement().refY().value(lengthContext) };
+    Ref markerElement = this->markerElement();
+    SVGLengthContext lengthContext(markerElement.ptr());
+    return { markerElement->refX().value(lengthContext), markerElement->refY().value(lengthContext) };
 }
 
 std::optional<float> RenderSVGResourceMarker::angle() const
 {
-    if (markerElement().orientType() == SVGMarkerOrientAngle)
-        return markerElement().orientAngle().value();
+    if (Ref markerElement = this->markerElement(); markerElement->orientType() == SVGMarkerOrientAngle)
+        return markerElement->orientAngle().value();
     return std::nullopt;
 }
 
 SVGMarkerUnitsType RenderSVGResourceMarker::markerUnits() const
 {
-    return markerElement().markerUnits();
+    return protectedMarkerElement()->markerUnits();
 }
 
 bool RenderSVGResourceMarker::hasReverseStart() const
 {
-    return markerElement().orientType() == SVGMarkerOrientAutoStartReverse;
+    return protectedMarkerElement()->orientType() == SVGMarkerOrientAutoStartReverse;
 }
 
 }

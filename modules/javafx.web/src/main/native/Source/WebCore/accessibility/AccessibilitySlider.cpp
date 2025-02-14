@@ -42,12 +42,12 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilitySlider::AccessibilitySlider(RenderObject* renderer)
+AccessibilitySlider::AccessibilitySlider(RenderObject& renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
 
-Ref<AccessibilitySlider> AccessibilitySlider::create(RenderObject* renderer)
+Ref<AccessibilitySlider> AccessibilitySlider::create(RenderObject& renderer)
 {
     return adoptRef(*new AccessibilitySlider(renderer));
 }
@@ -67,7 +67,7 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
     if (!style)
         return AccessibilityOrientation::Horizontal;
 
-    auto styleAppearance = style->effectiveAppearance();
+    auto styleAppearance = style->usedAppearance();
     switch (styleAppearance) {
     case StyleAppearance::SliderThumbHorizontal:
     case StyleAppearance::SliderHorizontal:
@@ -94,22 +94,15 @@ void AccessibilitySlider::addChildren()
     if (!cache)
         return;
 
-    auto& thumb = downcast<AccessibilitySliderThumb>(*cache->create(AccessibilityRole::SliderThumb));
-    thumb.setParent(this);
+    Ref thumb = downcast<AccessibilitySliderThumb>(*cache->create(AccessibilityRole::SliderThumb));
+    thumb->setParent(this);
 
     // Before actually adding the value indicator to the hierarchy,
     // allow the platform to make a final decision about it.
-    if (thumb.accessibilityIsIgnored())
-        cache->remove(thumb.objectID());
+    if (thumb->accessibilityIsIgnored())
+        cache->remove(thumb->objectID());
     else
-        addChild(&thumb);
-}
-
-const AtomString& AccessibilitySlider::getAttribute(const QualifiedName& attribute) const
-{
-    if (auto* input = inputElement())
-        return input->getAttribute(attribute);
-    return nullAtom();
+        addChild(thumb.ptr());
 }
 
 AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const
@@ -146,12 +139,12 @@ float AccessibilitySlider::minValueForRange() const
 
 bool AccessibilitySlider::setValue(const String& value)
 {
-    HTMLInputElement* input = inputElement();
+    RefPtr input = inputElement();
+    if (!input)
+        return false;
 
-    if (input->value() == value)
-        return true;
-
-    input->setValue(value, DispatchChangeEvent);
+    if (input->value() != value)
+        input->setValue(value, DispatchInputAndChangeEvent);
     return true;
 }
 
@@ -175,10 +168,10 @@ LayoutRect AccessibilitySliderThumb::elementRect() const
     if (!m_parent)
         return LayoutRect();
 
-    RenderObject* sliderRenderer = m_parent->renderer();
-    if (!sliderRenderer || !sliderRenderer->isRenderSlider())
+    auto* sliderRenderer = dynamicDowncast<RenderSlider>(m_parent->renderer());
+    if (!sliderRenderer)
         return LayoutRect();
-    if (auto* thumbRenderer = downcast<RenderSlider>(*sliderRenderer).element().sliderThumbElement()->renderer())
+    if (auto* thumbRenderer = sliderRenderer->element().sliderThumbElement()->renderer())
         return thumbRenderer->absoluteBoundingBoxRect();
     return LayoutRect();
 }

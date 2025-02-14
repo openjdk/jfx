@@ -115,8 +115,9 @@ static JSObject* createTypedArray(JSGlobalObject* globalObject, JSTypedArrayType
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
+    constexpr JSTypedArrayType kJSTypedArrayTypeFloat16Array = static_cast<JSTypedArrayType>(kJSTypedArrayTypeBigUint64Array + 1);
     bool isResizableOrGrowableShared = buffer->isResizableOrGrowableShared();
-    switch (type) {
+    switch (static_cast<int>(type)) {
 #define JSC_TYPED_ARRAY_FACTORY(type) case kJSTypedArrayType##type##Array: { \
         return JS##type##Array::create(globalObject, globalObject->typedArrayStructure(Type##type, isResizableOrGrowableShared), WTFMove(buffer), offset, length.value()); \
     }
@@ -124,6 +125,7 @@ static JSObject* createTypedArray(JSGlobalObject* globalObject, JSTypedArrayType
 #undef JSC_TYPED_ARRAY_CHECK
     case kJSTypedArrayTypeArrayBuffer:
     case kJSTypedArrayTypeNone:
+    default:
         RELEASE_ASSERT_NOT_REACHED();
     }
     return nullptr;
@@ -180,7 +182,7 @@ JSObjectRef JSObjectMakeTypedArrayWithBytesNoCopy(JSContextRef ctx, JSTypedArray
 
     unsigned elementByteSize = elementSize(toTypedArrayType(arrayType));
 
-    auto buffer = ArrayBuffer::createFromBytes(bytes, length, createSharedTask<void(void*)>([=](void* p) {
+    auto buffer = ArrayBuffer::createFromBytes({ static_cast<const uint8_t*>(bytes), length }, createSharedTask<void(void*)>([=](void* p) {
         if (destructor)
             destructor(p, destructorContext);
     }));
@@ -313,7 +315,7 @@ JSObjectRef JSObjectMakeArrayBufferWithBytesNoCopy(JSContextRef ctx, void* bytes
     JSLockHolder locker(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    auto buffer = ArrayBuffer::createFromBytes(bytes, byteLength, createSharedTask<void(void*)>([=](void* p) {
+    auto buffer = ArrayBuffer::createFromBytes({ static_cast<const uint8_t*>(bytes), byteLength }, createSharedTask<void(void*)>([=](void* p) {
         if (bytesDeallocator)
             bytesDeallocator(p, deallocatorContext);
     }));

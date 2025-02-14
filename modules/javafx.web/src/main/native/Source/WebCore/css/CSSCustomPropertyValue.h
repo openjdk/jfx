@@ -49,8 +49,8 @@ public:
     };
 
     struct TransformSyntaxValue {
-        RefPtr<TransformOperation> transform;
-        bool operator==(const TransformSyntaxValue& other) const { return arePointingToEqualData(transform, other.transform); }
+        Ref<TransformOperation> transform;
+        bool operator==(const TransformSyntaxValue& other) const { return transform.get() == other.transform.get(); }
     };
 
     using SyntaxValue = std::variant<Length, NumericSyntaxValue, StyleColor, RefPtr<StyleImage>, URL, String, TransformSyntaxValue>;
@@ -106,6 +106,17 @@ public:
     bool equals(const CSSCustomPropertyValue&) const;
 
     Ref<const CSSVariableData> asVariableData() const;
+
+    bool customMayDependOnBaseURL() const;
+
+    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    {
+        if (auto* value = std::get_if<Ref<CSSVariableReferenceValue>>(&m_value)) {
+            if (func(*value) == IterationStatus::Done)
+                return IterationStatus::Done;
+        }
+        return IterationStatus::Continue;
+    }
 
 private:
     CSSCustomPropertyValue(const AtomString& name, VariantValue&& value)

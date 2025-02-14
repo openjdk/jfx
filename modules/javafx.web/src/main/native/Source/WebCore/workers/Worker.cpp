@@ -42,6 +42,7 @@
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
 #include "StructuredSerializeOptions.h"
+#include "TrustedType.h"
 #include "WorkerGlobalScopeProxy.h"
 #include "WorkerInitializationData.h"
 #include "WorkerScriptLoader.h"
@@ -49,26 +50,31 @@
 #include <JavaScriptCore/IdentifiersFactory.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <wtf/HashSet.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
+
+#if USE(SKIA)
+#include "JSImageBitmap.h"
+#endif
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Worker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Worker);
 
 static Lock allWorkersLock;
-static HashMap<ScriptExecutionContextIdentifier, WeakRef<Worker, WeakPtrImplWithEventTargetData>>& allWorkers() WTF_REQUIRES_LOCK(allWorkersLock)
+static HashSet<ScriptExecutionContextIdentifier>& allWorkerContexts() WTF_REQUIRES_LOCK(allWorkersLock)
 {
-    static NeverDestroyed<HashMap<ScriptExecutionContextIdentifier, WeakRef<Worker, WeakPtrImplWithEventTargetData>>> map;
+    static NeverDestroyed<HashSet<ScriptExecutionContextIdentifier>> map;
     return map;
 }
 
 void Worker::networkStateChanged(bool isOnline)
 {
     Locker locker { allWorkersLock };
-    for (auto& contextIdentifier : allWorkers().keys()) {
+    for (auto& contextIdentifier : allWorkerContexts()) {
         ScriptExecutionContext::postTaskTo(contextIdentifier, [isOnline](auto& context) {
             auto& globalScope = downcast<WorkerGlobalScope>(context);
             globalScope.setIsOnline(isOnline);
@@ -80,7 +86,7 @@ void Worker::networkStateChanged(bool isOnline)
 Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, WorkerOptions&& options)
     : ActiveDOMObject(&context)
     , m_options(WTFMove(options))
-    , m_identifier("worker:" + Inspector::IdentifiersFactory::createIdentifier())
+    , m_identifier(makeString("worker:"_s, Inspector::IdentifiersFactory::createIdentifier()))
     , m_contextProxy(WorkerGlobalScopeProxy::create(*this))
     , m_runtimeFlags(runtimeFlags)
     , m_clientIdentifier(ScriptExecutionContextIdentifier::generate())
@@ -92,17 +98,21 @@ Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, 
     }
 
     Locker locker { allWorkersLock };
-    auto addResult = allWorkers().add(m_clientIdentifier, *this);
+    auto addResult = allWorkerContexts().add(m_clientIdentifier);
     ASSERT_UNUSED(addResult, addResult.isNewEntry);
 }
 
-ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, const String& url, WorkerOptions&& options)
+ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, std::variant<RefPtr<TrustedScriptURL>, String>&& url, WorkerOptions&& options)
 {
+    auto compliantScriptURLString = trustedTypeCompliantString(context, WTFMove(url), "Worker constructor"_s);
+    if (compliantScriptURLString.hasException())
+        return compliantScriptURLString.releaseException();
+
     auto worker = adoptRef(*new Worker(context, runtimeFlags, WTFMove(options)));
 
     worker->suspendIfNeeded();
 
-    auto scriptURL = worker->resolveURL(url);
+    auto scriptURL = worker->resolveURL(compliantScriptURLString.releaseReturnValue());
     if (scriptURL.hasException())
         return scriptURL.releaseException();
 
@@ -128,14 +138,23 @@ Worker::~Worker()
 {
     {
         Locker locker { allWorkersLock };
-    allWorkers().remove(m_clientIdentifier);
+        allWorkerContexts().remove(m_clientIdentifier);
     }
     m_contextProxy.workerObjectDestroyed();
 }
 
 ExceptionOr<void> Worker::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
-    Vector<RefPtr<MessagePort>> ports;
+#if USE(SKIA)
+    // When using skia, transferring ownership of accelerated ImageBitmaps causes GrDirectContext mismatches,
+    // threfore, we need to let ImageBitmap know so that it can act accordingly.
+    for (const auto& transferItem : options.transfer) {
+        if (auto* imageBitmap = JSImageBitmap::toWrapped(state.vm(), transferItem.get()))
+            imageBitmap->prepareForCrossThreadTransfer();
+    }
+#endif
+
+    Vector<Ref<MessagePort>> ports;
     auto message = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
     if (message.hasException())
         return message.releaseException();
@@ -153,11 +172,6 @@ void Worker::terminate()
 {
     m_contextProxy.terminateWorkerGlobalScope();
     m_wasTerminated = true;
-}
-
-const char* Worker::activeDOMObjectName() const
-{
-    return "Worker";
 }
 
 void Worker::stop()
@@ -186,15 +200,20 @@ bool Worker::virtualHasPendingActivity() const
     return m_scriptLoader || (m_didStartWorkerGlobalScope && !m_contextProxy.askedToTerminate());
 }
 
-void Worker::didReceiveResponse(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
+void Worker::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIdentifier, ResourceLoaderIdentifier identifier, const ResourceResponse& response)
 {
     const URL& responseURL = response.url();
     if (!responseURL.protocolIsBlob() && !responseURL.protocolIsFile() && !SecurityOrigin::create(responseURL)->isOpaque())
         m_contentSecurityPolicyResponseHeaders = ContentSecurityPolicyResponseHeaders(response);
-    InspectorInstrumentation::didReceiveScriptResponse(scriptExecutionContext(), identifier);
+
+    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+        ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier] (auto& mainContext) {
+            InspectorInstrumentation::didReceiveScriptResponse(mainContext, identifier);
+        });
+    }
 }
 
-void Worker::notifyFinished()
+void Worker::notifyFinished(ScriptExecutionContextIdentifier mainContextIdentifier)
 {
     auto clearLoader = makeScopeExit([this] {
         m_scriptLoader = nullptr;
@@ -226,7 +245,12 @@ void Worker::notifyFinished()
         context->userAgent(m_scriptLoader->responseURL())
     };
     m_contextProxy.startWorkerGlobalScope(m_scriptLoader->responseURL(), *sessionID, m_options.name, WTFMove(initializationData), m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_scriptLoader->crossOriginEmbedderPolicy(), m_workerCreationTime, referrerPolicy, m_options.type, m_options.credentials, m_runtimeFlags);
-    InspectorInstrumentation::scriptImported(*context, m_scriptLoader->identifier(), m_scriptLoader->script().toString());
+
+    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+        ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier = m_scriptLoader->identifier(), script = m_scriptLoader->script().isolatedCopy()] (auto& mainContext) {
+            InspectorInstrumentation::scriptImported(mainContext, identifier, script.toString());
+        });
+    }
 }
 
 void Worker::dispatchEvent(Event& event)
@@ -235,10 +259,8 @@ void Worker::dispatchEvent(Event& event)
         return;
 
     AbstractWorker::dispatchEvent(event);
-    if (is<ErrorEvent>(event) && !event.defaultPrevented() && event.isTrusted() && scriptExecutionContext()) {
-        auto& errorEvent = downcast<ErrorEvent>(event);
-        scriptExecutionContext()->reportException(errorEvent.message(), errorEvent.lineno(), errorEvent.colno(), errorEvent.filename(), nullptr, nullptr);
-    }
+    if (auto* errorEvent = dynamicDowncast<ErrorEvent>(event); errorEvent && !event.defaultPrevented() && event.isTrusted() && scriptExecutionContext())
+        protectedScriptExecutionContext()->reportException(errorEvent->message(), errorEvent->lineno(), errorEvent->colno(), errorEvent->filename(), nullptr, nullptr);
 }
 
 void Worker::reportError(const String& errorMessage)
@@ -279,7 +301,7 @@ void Worker::postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>
 void Worker::forEachWorker(const Function<Function<void(ScriptExecutionContext&)>()>& callback)
 {
     Locker locker { allWorkersLock };
-    for (auto& contextIdentifier : allWorkers().keys())
+    for (auto& contextIdentifier : allWorkerContexts())
         ScriptExecutionContext::postTaskTo(contextIdentifier, callback());
 }
 

@@ -39,12 +39,12 @@
 #include "Text.h"
 #include "ToggleEvent.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLDetailsElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDetailsElement);
 
 using namespace HTMLNames;
 
@@ -94,6 +94,8 @@ HTMLDetailsElement::HTMLDetailsElement(const QualifiedName& tagName, Document& d
 {
     ASSERT(hasTagName(detailsTag));
 }
+
+HTMLDetailsElement::~HTMLDetailsElement() = default;
 
 RenderPtr<RenderElement> HTMLDetailsElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
@@ -150,6 +152,7 @@ void HTMLDetailsElement::queueDetailsToggleEventTask(DetailsState oldState, Deta
 
 void HTMLDetailsElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
+    HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
     if (name == openAttr) {
         if (oldValue != newValue) {
             RefPtr root = shadowRoot();
@@ -167,16 +170,21 @@ void HTMLDetailsElement::attributeChanged(const QualifiedName& name, const AtomS
                 queueDetailsToggleEventTask(DetailsState::Open, DetailsState::Closed);
             }
         }
-    } else {
+    } else
         ensureDetailsExclusivityAfterMutation();
-        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
-    }
 }
 
 Node::InsertedIntoAncestorResult HTMLDetailsElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
+    HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    if (!insertionType.connectedToDocument)
+        return InsertedIntoAncestorResult::Done;
+    return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
+}
+
+void HTMLDetailsElement::didFinishInsertingNode()
+{
     ensureDetailsExclusivityAfterMutation();
-    return HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 }
 
 Vector<RefPtr<HTMLDetailsElement>> HTMLDetailsElement::otherElementsInNameGroup()

@@ -96,6 +96,13 @@ std::unique_ptr<TextureMapperPlatformLayerBuffer> TextureMapperPlatformLayerBuff
 
 void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textureMapper, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity)
 {
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    if (m_fence) {
+        m_fence->serverWait();
+        m_fence = nullptr;
+    }
+#endif
+
     if (m_hasManagedTexture) {
         ASSERT(m_texture);
         textureMapper.drawTexture(m_texture->id(), m_extraFlags | m_texture->colorConvertFlags(), targetRect, modelViewMatrix, opacity);
@@ -149,6 +156,14 @@ void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textu
             ASSERT(texture.id);
             textureMapper.drawTextureExternalOES(texture.id, m_extraFlags, targetRect, modelViewMatrix, opacity);
         });
+}
+
+bool TextureMapperPlatformLayerBuffer::isHolePunchBuffer() const
+{
+    // Holepunch buffers are the only ones that have the ShouldNotBlend flag.
+    // All of the other buffers have to be blended, but holepunch ones need
+    // to overwrite the existent content to render the transparent rectangle.
+    return m_extraFlags.contains(TextureMapperFlags::ShouldNotBlend);
 }
 
 } // namespace WebCore

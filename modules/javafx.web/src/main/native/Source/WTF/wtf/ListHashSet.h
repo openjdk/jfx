@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2011, Benjamin Poulain <ikipou@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -26,6 +26,19 @@
 #if CHECK_HASHTABLE_ITERATORS
 #include <wtf/WeakPtr.h>
 #endif
+
+namespace WTF {
+template<typename Value, typename HashFunctions> class ListHashSet;
+template<typename ValueArg> struct ListHashSetNode;
+template<typename ValueArg, typename HashArg> class ListHashSetConstIterator;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<typename Value, typename HashFunctions> struct IsDeprecatedWeakRefSmartPointerException<WTF::ListHashSet<Value, HashFunctions>> : std::true_type { };
+template<typename ValueArg> struct IsDeprecatedWeakRefSmartPointerException<WTF::ListHashSetNode<ValueArg>> : std::true_type { };
+template<typename ValueArg, typename HashArg> struct IsDeprecatedWeakRefSmartPointerException<WTF::ListHashSetConstIterator<ValueArg, HashArg>> : std::true_type { };
+}
 
 namespace WTF {
 
@@ -554,7 +567,7 @@ inline bool ListHashSet<T, U>::contains(const ValueType& value) const
 template<typename T, typename U>
 auto ListHashSet<T, U>::add(const ValueType& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(value, nullptr);
+    auto result = m_impl.template add<BaseTranslator>(value, [] { return nullptr; });
     if (result.isNewEntry)
         appendNode(*result.iterator);
     return AddResult(makeIterator(*result.iterator), result.isNewEntry);
@@ -563,7 +576,7 @@ auto ListHashSet<T, U>::add(const ValueType& value) -> AddResult
 template<typename T, typename U>
 auto ListHashSet<T, U>::add(ValueType&& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(WTFMove(value), nullptr);
+    auto result = m_impl.template add<BaseTranslator>(WTFMove(value), [] { return nullptr; });
     if (result.isNewEntry)
         appendNode(*result.iterator);
     return AddResult(makeIterator(*result.iterator), result.isNewEntry);
@@ -572,7 +585,7 @@ auto ListHashSet<T, U>::add(ValueType&& value) -> AddResult
 template<typename T, typename U>
 auto ListHashSet<T, U>::appendOrMoveToLast(const ValueType& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(value, nullptr);
+    auto result = m_impl.template add<BaseTranslator>(value, [] { return nullptr; });
     Node* node = *result.iterator;
     if (!result.isNewEntry)
         unlink(node);
@@ -584,7 +597,7 @@ auto ListHashSet<T, U>::appendOrMoveToLast(const ValueType& value) -> AddResult
 template<typename T, typename U>
 auto ListHashSet<T, U>::appendOrMoveToLast(ValueType&& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(WTFMove(value), nullptr);
+    auto result = m_impl.template add<BaseTranslator>(WTFMove(value), [] { return nullptr; });
     Node* node = *result.iterator;
     if (!result.isNewEntry)
         unlink(node);
@@ -608,7 +621,7 @@ bool ListHashSet<T, U>::moveToLastIfPresent(const ValueType& value)
 template<typename T, typename U>
 auto ListHashSet<T, U>::prependOrMoveToFirst(const ValueType& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(value, nullptr);
+    auto result = m_impl.template add<BaseTranslator>(value, [] { return nullptr; });
     Node* node = *result.iterator;
     if (!result.isNewEntry)
         unlink(node);
@@ -620,7 +633,7 @@ auto ListHashSet<T, U>::prependOrMoveToFirst(const ValueType& value) -> AddResul
 template<typename T, typename U>
 auto ListHashSet<T, U>::prependOrMoveToFirst(ValueType&& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(WTFMove(value), nullptr);
+    auto result = m_impl.template add<BaseTranslator>(WTFMove(value), [] { return nullptr; });
     Node* node = *result.iterator;
     if (!result.isNewEntry)
         unlink(node);
@@ -644,7 +657,7 @@ auto ListHashSet<T, U>::insertBefore(const ValueType& beforeValue, ValueType&& n
 template<typename T, typename U>
 auto ListHashSet<T, U>::insertBefore(iterator it, const ValueType& newValue) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(newValue, nullptr);
+    auto result = m_impl.template add<BaseTranslator>(newValue, [] { return nullptr; });
     if (result.isNewEntry)
         insertNodeBefore(it.node(), *result.iterator);
     return AddResult(makeIterator(*result.iterator), result.isNewEntry);
@@ -653,7 +666,7 @@ auto ListHashSet<T, U>::insertBefore(iterator it, const ValueType& newValue) -> 
 template<typename T, typename U>
 auto ListHashSet<T, U>::insertBefore(iterator it, ValueType&& newValue) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(WTFMove(newValue), nullptr);
+    auto result = m_impl.template add<BaseTranslator>(WTFMove(newValue), [] { return nullptr; });
     if (result.isNewEntry)
         insertNodeBefore(it.node(), *result.iterator);
     return AddResult(makeIterator(*result.iterator), result.isNewEntry);

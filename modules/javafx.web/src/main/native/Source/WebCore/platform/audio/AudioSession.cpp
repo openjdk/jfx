@@ -120,12 +120,12 @@ bool AudioSession::tryToSetActive(bool active)
     return true;
 }
 
-void AudioSession::addInterruptionObserver(InterruptionObserver& observer)
+void AudioSession::addInterruptionObserver(AudioSessionInterruptionObserver& observer)
 {
     m_interruptionObservers.add(observer);
 }
 
-void AudioSession::removeInterruptionObserver(InterruptionObserver& observer)
+void AudioSession::removeInterruptionObserver(AudioSessionInterruptionObserver& observer)
 {
     m_interruptionObservers.remove(observer);
 }
@@ -251,12 +251,12 @@ void AudioSession::audioOutputDeviceChanged()
     notImplemented();
 }
 
-void AudioSession::addConfigurationChangeObserver(ConfigurationChangeObserver&)
+void AudioSession::addConfigurationChangeObserver(AudioSessionConfigurationChangeObserver&)
 {
     notImplemented();
 }
 
-void AudioSession::removeConfigurationChangeObserver(ConfigurationChangeObserver&)
+void AudioSession::removeConfigurationChangeObserver(AudioSessionConfigurationChangeObserver&)
 {
     notImplemented();
 }
@@ -355,6 +355,22 @@ String convertEnumerationToString(AudioSessionRoutingArbitrationClient::DefaultR
     static_assert(static_cast<bool>(AudioSessionRoutingArbitrationClient::DefaultRouteChanged::Yes), "AudioSessionRoutingArbitrationClient::DefaultRouteChanged::Yes is not true as expected");
     ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
+}
+
+String convertEnumerationToString(AudioSession::SoundStageSize size)
+{
+    static const NeverDestroyed<String> values[] = {
+        MAKE_STATIC_STRING_IMPL("Automatic"),
+        MAKE_STATIC_STRING_IMPL("Small"),
+        MAKE_STATIC_STRING_IMPL("Medium"),
+        MAKE_STATIC_STRING_IMPL("Large"),
+    };
+    static_assert(!static_cast<size_t>(AudioSession::SoundStageSize::Automatic), "AudioSession::SoundStageSize::Automatic is not 0 as expected");
+    static_assert(static_cast<size_t>(AudioSession::SoundStageSize::Small) == 1, "AudioSession::SoundStageSize::Small is not 1 as expected");
+    static_assert(static_cast<size_t>(AudioSession::SoundStageSize::Medium) == 2, "AudioSession::SoundStageSize::Medium is not 2 as expected");
+    static_assert(static_cast<size_t>(AudioSession::SoundStageSize::Large) == 3, "AudioSession::SoundStageSize::Large is not 3 as expected");
+    ASSERT(static_cast<size_t>(size) < std::size(values));
+    return values[static_cast<size_t>(size)];
 }
 
 }

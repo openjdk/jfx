@@ -54,6 +54,7 @@
 #include "WindowFeatures.h"
 #include <JavaScriptCore/FrameTracers.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/Deque.h>
 #include <wtf/RunLoop.h>
 #include <wtf/text/CString.h>
@@ -286,7 +287,7 @@ void InspectorFrontendClientLocal::openURLExternally(const String& url)
     if (!frame)
         return;
 
-    frame->loader().setOpener(mainFrame.ptr());
+    frame->setOpener(mainFrame.ptr());
     frame->page()->setOpenedByDOM();
 
     // FIXME: Why do we compute the absolute URL with respect to |frame| instead of |mainFrame|?

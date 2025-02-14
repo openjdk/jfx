@@ -43,6 +43,8 @@ class ScriptExecutionContext;
 class FragmentedSharedBuffer;
 
 class WEBCORE_EXPORT FetchLoader final : public ThreadableLoaderClient {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FetchLoader);
 public:
     FetchLoader(FetchLoaderClient&, FetchBodyConsumer*);
     ~FetchLoader() = default;
@@ -58,10 +60,10 @@ public:
 
 private:
     // ThreadableLoaderClient API.
-    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) final;
     void didReceiveData(const SharedBuffer&) final;
-    void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) final;
-    void didFail(const ResourceError&) final;
+    void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) final;
+    void didFail(ScriptExecutionContextIdentifier, const ResourceError&) final;
 
 private:
     FetchLoaderClient& m_client;

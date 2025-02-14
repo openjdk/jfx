@@ -36,11 +36,11 @@
 #include "CSSStyleValueFactory.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSSkewY);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSSkewY);
 
 ExceptionOr<Ref<CSSSkewY>> CSSSkewY::create(Ref<CSSNumericValue> ay)
 {
@@ -88,7 +88,7 @@ ExceptionOr<void> CSSSkewY::setAy(Ref<CSSNumericValue> ay)
 void CSSSkewY::serialize(StringBuilder& builder) const
 {
     // https://drafts.css-houdini.org/css-typed-om/#serialize-a-cssskewy
-    builder.append("skewY(");
+    builder.append("skewY("_s);
     m_ay->serialize(builder);
     builder.append(')');
 }

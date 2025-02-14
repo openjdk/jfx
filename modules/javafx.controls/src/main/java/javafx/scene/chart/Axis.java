@@ -420,7 +420,7 @@ public abstract class Axis<T> extends Region {
     // -------------- METHODS ------------------------------------------------------------------------------------------
 
     /**
-     * See if the current range is valid, if it is not then any range dependent calulcations need to redone on the next layout pass
+     * See if the current range is valid, if it is not then any range dependent calculations need to redone on the next layout pass
      *
      * @return true if current range calculations are valid
      */

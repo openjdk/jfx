@@ -33,7 +33,7 @@ void BitmapTexture::updateContents(GraphicsLayer* sourceLayer, const IntRect& ta
 {
     // Making an unconditionally unaccelerated buffer here is OK because this code
     // isn't used by any platforms that respect the accelerated bit.
-    auto imageBuffer = ImageBuffer::create(targetRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    auto imageBuffer = ImageBuffer::create(targetRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!imageBuffer)
         return;
 
@@ -116,6 +116,9 @@ BitmapTexture::BitmapTexture(const IntSize& size, OptionSet<Flags> flags, GLint 
     , m_internalFormat(internalFormat == GL_DONT_CARE ? GL_RGBA : internalFormat)
     , m_format(GL_RGBA)
 {
+    GLint boundTexture = 0;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
+
     glGenTextures(1, &m_id);
     glBindTexture(GL_TEXTURE_2D, m_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -123,6 +126,8 @@ BitmapTexture::BitmapTexture(const IntSize& size, OptionSet<Flags> flags, GLint 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, m_internalFormat, m_size.width(), m_size.height(), 0, m_format, s_pixelDataType, nullptr);
+
+    glBindTexture(GL_TEXTURE_2D, boundTexture);
 }
 
 void BitmapTexture::reset(const IntSize& size, OptionSet<Flags> flags)
@@ -202,23 +207,24 @@ void BitmapTexture::updateContents(NativeImage* frameImage, const IntRect& targe
     if (!frameImage)
         return;
 
-    int bytesPerLine;
-    const uint8_t* imageData;
-
 #if USE(CAIRO)
     cairo_surface_t* surface = frameImage->platformImage().get();
-    imageData = cairo_image_surface_get_data(surface);
-    bytesPerLine = cairo_image_surface_get_stride(surface);
-#endif
+    const uint8_t* imageData = cairo_image_surface_get_data(surface);
+    int bytesPerLine = cairo_image_surface_get_stride(surface);
 
     updateContents(imageData, targetRect, offset, bytesPerLine);
+#else
+    UNUSED_PARAM(targetRect);
+    UNUSED_PARAM(offset);
+    RELEASE_ASSERT_NOT_REACHED();
+#endif
 }
 
 void BitmapTexture::updateContents(GraphicsLayer* sourceLayer, const IntRect& targetRect, const IntPoint& offset, float scale)
 {
     // Making an unconditionally unaccelerated buffer here is OK because this code
     // isn't used by any platforms that respect the accelerated bit.
-    auto imageBuffer = ImageBuffer::create(targetRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    auto imageBuffer = ImageBuffer::create(targetRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!imageBuffer)
         return;
 
@@ -335,6 +341,14 @@ BitmapTexture::~BitmapTexture()
 
 void BitmapTexture::copyFromExternalTexture(GLuint sourceTextureID)
 {
+    copyFromExternalTexture(sourceTextureID, { 0, 0, m_size.width(), m_size.height() }, { });
+}
+
+void BitmapTexture::copyFromExternalTexture(GLuint sourceTextureID, const IntRect& targetRect, const IntSize& sourceOffset)
+{
+    RELEASE_ASSERT(sourceOffset.width() + targetRect.width() <= m_size.width());
+    RELEASE_ASSERT(sourceOffset.height() + targetRect.height() <= m_size.height());
+
     GLint boundTexture = 0;
     GLint boundFramebuffer = 0;
     GLint boundActiveTexture = 0;
@@ -352,13 +366,18 @@ void BitmapTexture::copyFromExternalTexture(GLuint sourceTextureID)
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, id());
-    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, m_size.width(), m_size.height());
+    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, targetRect.x(), targetRect.y(), sourceOffset.width(), sourceOffset.height(), targetRect.width(), targetRect.height());
 
     glBindTexture(GL_TEXTURE_2D, boundTexture);
     glBindFramebuffer(GL_FRAMEBUFFER, boundFramebuffer);
     glBindTexture(GL_TEXTURE_2D, boundTexture);
     glActiveTexture(boundActiveTexture);
     glDeleteFramebuffers(1, &copyFbo);
+}
+
+void BitmapTexture::copyFromExternalTexture(BitmapTexture& sourceTexture, const IntRect& sourceRect, const IntSize& destinationOffset)
+{
+    copyFromExternalTexture(sourceTexture.id(), sourceRect, destinationOffset);
 }
 
 } // namespace WebCore

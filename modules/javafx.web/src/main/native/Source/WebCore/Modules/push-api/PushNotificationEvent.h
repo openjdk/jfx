@@ -35,7 +35,7 @@
 namespace WebCore {
 
 class PushNotificationEvent final : public ExtendableEvent {
-    WTF_MAKE_ISO_ALLOCATED(PushNotificationEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PushNotificationEvent);
 public:
     static Ref<PushNotificationEvent> create(const AtomString&, PushNotificationEventInit&&, IsTrusted = IsTrusted::No);
     static Ref<PushNotificationEvent> create(const AtomString&, ExtendableEventInit&&, Notification&, std::optional<uint64_t> proposedAppBadge, IsTrusted);
@@ -53,8 +53,6 @@ public:
 
 private:
     PushNotificationEvent(const AtomString&, ExtendableEventInit&&, Notification*, std::optional<uint64_t> proposedAppBadge, IsTrusted);
-
-    EventInterface eventInterface() const final { return PushNotificationEventInterfaceType; }
 
     RefPtr<Notification> m_proposedNotification;
     std::optional<uint64_t> m_proposedAppBadge;

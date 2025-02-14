@@ -292,9 +292,9 @@ void TextureMapper::drawBorder(const Color& color, float width, const FloatRect&
 // FIXME: drawNumber() should save a number texture-atlas and re-use whenever possible.
 void TextureMapper::drawNumber(int number, const Color& color, const FloatPoint& targetPoint, const TransformationMatrix& modelViewMatrix)
 {
+#if USE(CAIRO)
     int pointSize = 8;
 
-#if USE(CAIRO)
     CString counterString = String::number(number).ascii();
     // cairo_text_extents() requires a cairo_t, so dimensions need to be guesstimated.
     int width = counterString.length() * pointSize * 1.2;
@@ -331,7 +331,7 @@ void TextureMapper::drawNumber(int number, const Color& color, const FloatPoint&
 
 #else
     UNUSED_PARAM(number);
-    UNUSED_PARAM(pointSize);
+    UNUSED_PARAM(color);
     UNUSED_PARAM(targetPoint);
     UNUSED_PARAM(modelViewMatrix);
 #endif
@@ -718,6 +718,7 @@ void TextureMapper::drawSolidColor(const FloatRect& rect, const TransformationMa
 
     if (clipStack().isRoundedRectClipEnabled()) {
         options.add(TextureMapperShaderProgram::RoundedRectClip);
+        if (isBlendingAllowed)
         flags.add(TextureMapperFlags::ShouldBlend);
     }
 
@@ -1138,7 +1139,7 @@ RefPtr<BitmapTexture> TextureMapper::applyDropShadowFilter(RefPtr<BitmapTexture>
     return resultTexture;
 }
 
-RefPtr<BitmapTexture> TextureMapper::applySinglePassFilter(RefPtr<BitmapTexture>& sourceTexture, const RefPtr<const FilterOperation>& filter, bool shouldDefer)
+RefPtr<BitmapTexture> TextureMapper::applySinglePassFilter(RefPtr<BitmapTexture>& sourceTexture, const Ref<const FilterOperation>& filter, bool shouldDefer)
 {
     if (shouldDefer) {
         sourceTexture->setFilterOperation(filter.copyRef());
@@ -1153,7 +1154,7 @@ RefPtr<BitmapTexture> TextureMapper::applySinglePassFilter(RefPtr<BitmapTexture>
     TextureMapperShaderProgram::Options options = optionsForFilterType(filter->type());
     Ref<TextureMapperShaderProgram> program = data().getShaderProgram(options);
 
-    prepareFilterProgram(program.get(), *filter);
+    prepareFilterProgram(program.get(), filter);
     FloatRect targetRect(FloatPoint::zero(), sourceTexture->size());
     drawTexturedQuadWithProgram(program.get(), sourceTexture->id(), { }, targetRect, TransformationMatrix(), 1);
 
@@ -1168,9 +1169,9 @@ RefPtr<BitmapTexture> TextureMapper::applyFilters(RefPtr<BitmapTexture>& sourceT
     RefPtr<BitmapTexture> previousSurface = currentSurface();
     RefPtr<BitmapTexture> surface = sourceTexture;
 
-    auto lastFilterIndex = filters.operations().size() - 1;
+    auto lastFilterIndex = filters.size() - 1;
     size_t i = 0;
-    for (const auto& filter : filters.operations()) {
+    for (const auto& filter : filters) {
         bool lastFilter = lastFilterIndex == i;
         surface = applyFilter(surface, filter, defersLastPass && lastFilter);
         ++i;
@@ -1180,7 +1181,7 @@ RefPtr<BitmapTexture> TextureMapper::applyFilters(RefPtr<BitmapTexture>& sourceT
     return surface;
 }
 
-RefPtr<BitmapTexture> TextureMapper::applyFilter(RefPtr<BitmapTexture>& sourceTexture, const RefPtr<const FilterOperation>& filter, bool defersLastPass)
+RefPtr<BitmapTexture> TextureMapper::applyFilter(RefPtr<BitmapTexture>& sourceTexture, const Ref<const FilterOperation>& filter, bool defersLastPass)
 {
     switch (filter->type()) {
     case FilterOperation::Type::Grayscale:
@@ -1193,9 +1194,9 @@ RefPtr<BitmapTexture> TextureMapper::applyFilter(RefPtr<BitmapTexture>& sourceTe
     case FilterOperation::Type::Opacity:
         return applySinglePassFilter(sourceTexture, filter, defersLastPass);
     case FilterOperation::Type::Blur:
-        return applyBlurFilter(sourceTexture, static_cast<const BlurFilterOperation&>(*filter));
+        return applyBlurFilter(sourceTexture, static_cast<const BlurFilterOperation&>(filter.get()));
     case FilterOperation::Type::DropShadow:
-        return applyDropShadowFilter(sourceTexture, static_cast<const DropShadowFilterOperation&>(*filter));
+        return applyDropShadowFilter(sourceTexture, static_cast<const DropShadowFilterOperation&>(filter.get()));
     default:
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -1369,6 +1370,10 @@ void TextureMapper::setDepthRange(double zNear, double zFar)
     updateProjectionMatrix();
 }
 
+std::pair<double, double> TextureMapper::depthRange() const
+{
+    return { data().zNear, data().zFar };
+}
 void TextureMapper::updateProjectionMatrix()
 {
     bool flipY;

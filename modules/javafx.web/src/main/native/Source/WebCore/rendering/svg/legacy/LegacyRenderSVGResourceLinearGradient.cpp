@@ -22,11 +22,11 @@
 #include "LegacyRenderSVGResourceLinearGradient.h"
 
 #include "LegacyRenderSVGResourceLinearGradientInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceLinearGradient);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceLinearGradient);
 
 LegacyRenderSVGResourceLinearGradient::LegacyRenderSVGResourceLinearGradient(SVGLinearGradientElement& element, RenderStyle&& style)
     : LegacyRenderSVGResourceGradient(Type::LegacySVGResourceLinearGradient, element, WTFMove(style))
@@ -38,17 +38,17 @@ LegacyRenderSVGResourceLinearGradient::~LegacyRenderSVGResourceLinearGradient() 
 bool LegacyRenderSVGResourceLinearGradient::collectGradientAttributes()
 {
     m_attributes = LinearGradientAttributes();
-    return linearGradientElement().collectGradientAttributes(m_attributes);
+    return protectedLinearGradientElement()->collectGradientAttributes(m_attributes);
 }
 
 FloatPoint LegacyRenderSVGResourceLinearGradient::startPoint(const LinearGradientAttributes& attributes) const
 {
-    return SVGLengthContext::resolvePoint(&linearGradientElement(), attributes.gradientUnits(), attributes.x1(), attributes.y1());
+    return SVGLengthContext::resolvePoint(protectedLinearGradientElement().ptr(), attributes.gradientUnits(), attributes.x1(), attributes.y1());
 }
 
 FloatPoint LegacyRenderSVGResourceLinearGradient::endPoint(const LinearGradientAttributes& attributes) const
 {
-    return SVGLengthContext::resolvePoint(&linearGradientElement(), attributes.gradientUnits(), attributes.x2(), attributes.y2());
+    return SVGLengthContext::resolvePoint(protectedLinearGradientElement().ptr(), attributes.gradientUnits(), attributes.x2(), attributes.y2());
 }
 
 Ref<Gradient> LegacyRenderSVGResourceLinearGradient::buildGradient(const RenderStyle& style) const

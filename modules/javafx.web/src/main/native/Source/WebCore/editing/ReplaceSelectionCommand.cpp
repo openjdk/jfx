@@ -122,16 +122,14 @@ private:
 
 static bool isInterchangeNewlineNode(const Node& node)
 {
-    static NeverDestroyed<String> interchangeNewlineClassString = AppleInterchangeNewline ""_s;
     RefPtr br = dynamicDowncast<HTMLBRElement>(node);
-    return br && br->attributeWithoutSynchronization(classAttr) == interchangeNewlineClassString;
+    return br && br->attributeWithoutSynchronization(classAttr) == AppleInterchangeNewline;
 }
 
 static bool isInterchangeConvertedSpaceSpan(const Node& node)
 {
-    static NeverDestroyed<String> convertedSpaceSpanClassString = AppleConvertedSpace ""_s;
     RefPtr element = dynamicDowncast<HTMLElement>(node);
-    return element && element->attributeWithoutSynchronization(classAttr) == convertedSpaceSpanClassString;
+    return element && element->attributeWithoutSynchronization(classAttr) == AppleConvertedSpace;
 }
 
 static Position positionAvoidingPrecedingNodes(Position position)
@@ -564,6 +562,52 @@ bool ReplaceSelectionCommand::shouldMerge(const VisiblePosition& source, const V
         && !isBlock(*sourceNode) && !isBlock(*destinationNode);
 }
 
+static bool nodeTreeHasInlineStyleWithLegibleColorForInvertLightness(const Node& node, std::optional<double> textLightness, std::optional<double> backgroundLightness)
+{
+    constexpr double lightnessDarkEnoughForText = 0.4;
+    constexpr double lightnessLightEnoughForBackground = 0.6;
+
+    constexpr auto lightnessIgnoringSemanticColors = [](const std::optional<Color>& color) -> std::optional<double> {
+        if (!color || !color->isVisible() || color->isSemantic())
+            return { };
+
+        return color->lightness();
+    };
+
+    if (is<Text>(node)) {
+        if (textLightness && *textLightness < lightnessDarkEnoughForText)
+            return true;
+
+        if (backgroundLightness && *backgroundLightness > lightnessLightEnoughForBackground)
+            return true;
+
+        return false;
+    }
+
+    std::optional<double> currentTextLightness;
+    std::optional<double> currentBackgroundLightness;
+
+    if (RefPtr element = dynamicDowncast<StyledElement>(node)) {
+        if (RefPtr inlineStyle = element->inlineStyle()) {
+            currentTextLightness = lightnessIgnoringSemanticColors(inlineStyle->propertyAsColor(CSSPropertyColor));
+            currentBackgroundLightness = lightnessIgnoringSemanticColors(inlineStyle->propertyAsColor(CSSPropertyBackgroundColor));
+        }
+    }
+
+    if (!currentTextLightness)
+        currentTextLightness = textLightness;
+
+    if (!currentBackgroundLightness)
+        currentBackgroundLightness = backgroundLightness;
+
+    for (RefPtr child = node.firstChild(); child; child = child->nextSibling()) {
+        if (nodeTreeHasInlineStyleWithLegibleColorForInvertLightness(*child, currentTextLightness, currentBackgroundLightness))
+            return true;
+    }
+
+    return false;
+}
+
 static bool fragmentNeedsColorTransformed(ReplacementFragment& fragment, const Position& insertionPos)
 {
     // Dark mode content that is inserted should have the inline styles inverse color
@@ -582,38 +626,14 @@ static bool fragmentNeedsColorTransformed(ReplacementFragment& fragment, const P
             return false;
 
         const auto& colorFilter = editableRootRenderer->style().appleColorFilter();
-        for (const auto& colorFilterOperation : colorFilter.operations()) {
+        for (const auto& colorFilterOperation : colorFilter) {
             if (colorFilterOperation->type() != FilterOperation::Type::AppleInvertLightness)
                 return false;
         }
     }
 
-    auto propertyLightness = [&](const StyleProperties& inlineStyle, CSSPropertyID propertyID) -> std::optional<double> {
-        auto color = inlineStyle.propertyAsColor(propertyID);
-        if (!color || !color.value().isVisible() || color.value().isSemantic())
-            return { };
-
-        return color.value().lightness();
-    };
-
-    const double lightnessDarkEnoughForText = 0.4;
-    const double lightnessLightEnoughForBackground = 0.6;
-
-    for (RefPtr node = fragment.firstChild(); node; node = NodeTraversal::next(*node)) {
-        RefPtr element = dynamicDowncast<StyledElement>(*node);
-        if (!element)
-            continue;
-
-        auto* inlineStyle = element->inlineStyle();
-        if (!inlineStyle)
-            continue;
-
-        auto textLightness = propertyLightness(*inlineStyle, CSSPropertyColor);
-        if (textLightness && *textLightness < lightnessDarkEnoughForText)
-            return false;
-
-        auto backgroundLightness = propertyLightness(*inlineStyle, CSSPropertyBackgroundColor);
-        if (backgroundLightness && *backgroundLightness > lightnessLightEnoughForBackground)
+    for (RefPtr node = fragment.firstChild(); node; node = node->nextSibling()) {
+        if (nodeTreeHasInlineStyleWithLegibleColorForInvertLightness(*node, std::nullopt, std::nullopt))
             return false;
     }
 
@@ -729,9 +749,9 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
 
             // Mutate using the CSSOM wrapper so we get the same event behavior as a script.
             if (isBlock(*element))
-                element->cssomStyle().setPropertyInternal(CSSPropertyDisplay, "inline"_s, false);
+                element->cssomStyle().setPropertyInternal(CSSPropertyDisplay, "inline"_s, IsImportant::No);
             if (element->renderer() && element->renderer()->style().isFloating())
-                element->cssomStyle().setPropertyInternal(CSSPropertyFloat, noneAtom(), false);
+                element->cssomStyle().setPropertyInternal(CSSPropertyFloat, noneAtom(), IsImportant::No);
         }
     }
 }
@@ -1088,7 +1108,7 @@ static bool isInlineNodeWithStyle(const Node& node)
     // one of our internal classes.
     const AtomString& classAttributeValue = element->attributeWithoutSynchronization(classAttr);
     if (classAttributeValue == AppleTabSpanClass
-        || classAttributeValue == AppleConvertedSpace ""_s
+        || classAttributeValue == AppleConvertedSpace
         || classAttributeValue == ApplePasteAsQuotation)
         return true;
 
@@ -1140,8 +1160,8 @@ void ReplaceSelectionCommand::doApply()
         return;
 
     // We can skip matching the style if the selection is plain text.
-    if ((selection.start().deprecatedNode()->renderer() && selection.start().deprecatedNode()->renderer()->style().effectiveUserModify() == UserModify::ReadWritePlaintextOnly)
-        && (selection.end().deprecatedNode()->renderer() && selection.end().deprecatedNode()->renderer()->style().effectiveUserModify() == UserModify::ReadWritePlaintextOnly))
+    if ((selection.start().deprecatedNode()->renderer() && selection.start().deprecatedNode()->renderer()->style().usedUserModify() == UserModify::ReadWritePlaintextOnly)
+        && (selection.end().deprecatedNode()->renderer() && selection.end().deprecatedNode()->renderer()->style().usedUserModify() == UserModify::ReadWritePlaintextOnly))
         m_matchStyle = false;
 
     if (m_matchStyle) {

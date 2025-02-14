@@ -30,11 +30,11 @@
 
 #include "WebGLShader.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLDebugShaders);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLDebugShaders);
 
 WebGLDebugShaders::WebGLDebugShaders(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::WebGLDebugShaders)
@@ -54,7 +54,7 @@ String WebGLDebugShaders::getTranslatedShaderSource(WebGLShader& shader)
     if (isContextLost())
         return String();
     auto& context = this->context();
-    if (!context.validateWebGLObject("getTranslatedShaderSource", shader))
+    if (!context.validateWebGLObject("getTranslatedShaderSource"_s, shader))
         return emptyString();
     return context.protectedGraphicsContextGL()->getTranslatedShaderSourceANGLE(shader.object());
 }

@@ -29,21 +29,21 @@
 #include "ScriptExecutionContext.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AnimationEventBase);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AnimationEventBase);
 
-AnimationEventBase::AnimationEventBase(const AtomString& type, WebAnimation* animation, std::optional<Seconds> scheduledTime)
-    : Event(type, CanBubble::Yes, IsCancelable::No)
+AnimationEventBase::AnimationEventBase(enum EventInterfaceType eventInterface, const AtomString& type, WebAnimation* animation, std::optional<Seconds> scheduledTime)
+    : Event(eventInterface, type, CanBubble::Yes, IsCancelable::No)
     , m_animation(animation)
     , m_scheduledTime(scheduledTime)
 {
 }
 
-AnimationEventBase::AnimationEventBase(const AtomString& type, const EventInit& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
+AnimationEventBase::AnimationEventBase(enum EventInterfaceType eventInterface, const AtomString& type, const EventInit& initializer, IsTrusted isTrusted)
+    : Event(eventInterface, type, initializer, isTrusted)
 {
 }
 

@@ -52,10 +52,14 @@ template<typename> class AudioArray;
 typedef AudioArray<float> AudioFloatArray;
 
 class AudioWorkletNode : public AudioNode, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(AudioWorkletNode);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioWorkletNode);
 public:
     static ExceptionOr<Ref<AudioWorkletNode>> create(JSC::JSGlobalObject&, BaseAudioContext&, String&& name, AudioWorkletNodeOptions&&);
     ~AudioWorkletNode();
+
+    // ActiveDOMObject.
+    void ref() const final { AudioNode::ref(); }
+    void deref() const final { AudioNode::deref(); }
 
     AudioParamMap& parameters() { return m_parameters.get(); }
     MessagePort& port() { return m_port.get(); }
@@ -79,7 +83,6 @@ private:
     void updatePullStatus() final;
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     String m_name;

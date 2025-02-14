@@ -137,11 +137,10 @@ enum class SourceCodeRepresentation : uint8_t {
 };
 
 extern JS_EXPORT_PRIVATE const ASCIILiteral SymbolCoercionError;
-#if HAVE(OS_SIGNPOST)
 extern JS_EXPORT_PRIVATE std::atomic<unsigned> activeJSGlobalObjectSignpostIntervalCount;
-#endif
 
 class JSValue {
+    friend struct OrderedHashTableTraits;
     friend struct EncodedJSValueHashTraits;
     friend struct EncodedJSValueWithRepresentationHashTraits;
     friend class AssemblyHelpers;
@@ -182,7 +181,11 @@ public:
     /* read a JSValue from storage not owned by this thread
      * on 64-bit ports, or when JIT is not enabled, equivalent to
      * JSValue::decode(*ptr) */
-    static JSValue decodeConcurrent(const volatile EncodedJSValue *);
+#if USE(JSVALUE64) || !ENABLE(CONCURRENT_JS)
+    static JSValue decodeConcurrent(const EncodedJSValue*);
+#else
+    static JSValue decodeConcurrent(const volatile EncodedJSValue*);
+#endif
 
     enum JSNullTag { JSNull };
     enum JSUndefinedTag { JSUndefined };
@@ -268,6 +271,8 @@ public:
     bool isBigInt() const;
     bool isHeapBigInt() const;
     bool isBigInt32() const;
+    bool isZeroBigInt() const;
+    bool isNegativeBigInt() const;
     bool isSymbol() const;
     bool isPrimitive() const;
     bool isGetterSetter() const;
@@ -315,7 +320,7 @@ public:
     double toIntegerOrInfinity(JSGlobalObject*) const;
     int32_t toInt32(JSGlobalObject*) const;
     uint32_t toUInt32(JSGlobalObject*) const;
-    uint32_t toIndex(JSGlobalObject*, const char* errorName) const;
+    uint32_t toIndex(JSGlobalObject*, ASCIILiteral errorName) const;
     size_t toTypedArrayIndex(JSGlobalObject*, ASCIILiteral) const;
     uint64_t toLength(JSGlobalObject*) const;
 
@@ -380,8 +385,8 @@ public:
     static constexpr const int64_t notInt52 = static_cast<int64_t>(1) << numberOfInt52Bits;
     static constexpr const unsigned int52ShiftAmount = 12;
 
-    static ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSValue, u.asBits.payload); }
-    static ptrdiff_t offsetOfTag() { return OBJECT_OFFSETOF(JSValue, u.asBits.tag); }
+    static constexpr ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSValue, u.asBits.payload); }
+    static constexpr ptrdiff_t offsetOfTag() { return OBJECT_OFFSETOF(JSValue, u.asBits.tag); }
 
 #if USE(JSVALUE32_64)
     /*
@@ -423,7 +428,7 @@ public:
      * ranges to encode other values (however there are also other ranges of NaN space that
      * could have been selected).
      *
-     * This range of NaN space is represented by 64-bit numbers begining with the 15-bit
+     * This range of NaN space is represented by 64-bit numbers beginning with the 15-bit
      * hex patterns 0xFFFC and 0xFFFE - we rely on the fact that no valid double-precision
      * numbers will fall in these ranges.
      *
@@ -452,9 +457,9 @@ public:
      *     Null:      0x02
      *
      * These values have the following properties:
-     * - Bit 1 (OtherTag) is set for all four values, allowing real pointers to be
+     * - Bit 1 (0-indexed) is set (OtherTag) for all four values, allowing real pointers to be
      *   quickly distinguished from all immediate values, including these invalid pointers.
-     * - With bit 3 masked out (UndefinedTag), Undefined and Null share the
+     * - With bit 3 (0-indexed) masked out (UndefinedTag), Undefined and Null share the
      *   same value, allowing null & undefined to be quickly detected.
      *
      * No valid JSValue will have the bit pattern 0x0, this is used to represent array
@@ -482,7 +487,7 @@ public:
     static_assert(LowestOfHighBits & NumberTag);
     static_assert(!((LowestOfHighBits>>1) & NumberTag));
 
-    // All non-numeric (bool, null, undefined) immediates have bit 2 set.
+    // All non-numeric (bool, null, undefined) immediates have bit 1 (0-indexed) set.
     static constexpr int32_t OtherTag       = 0x2;
     static constexpr int32_t BoolTag        = 0x4;
     static constexpr int32_t UndefinedTag   = 0x8;
@@ -545,6 +550,43 @@ private:
 
     EncodedValueDescriptor u;
 };
+
+#if USE(JSVALUE32_64)
+struct OrderedHashTableTraits {
+    ALWAYS_INLINE static void set(JSValue* value, uint32_t number)
+    {
+        value->u.asBits.tag = JSValue::Int32Tag;
+        value->u.asBits.payload = number;
+    }
+    ALWAYS_INLINE static void increment(JSValue* value)
+    {
+        ASSERT(value->isInt32());
+        value->u.asBits.payload++;
+    }
+    ALWAYS_INLINE static void decrement(JSValue* value)
+    {
+        ASSERT(value->isInt32());
+        value->u.asBits.payload--;
+    }
+};
+#else
+struct OrderedHashTableTraits {
+    ALWAYS_INLINE static void set(JSValue* value, uint32_t number)
+    {
+        value->u.asInt64 = JSValue::NumberTag | number;
+    }
+    ALWAYS_INLINE static void increment(JSValue* value)
+    {
+        ASSERT(value->isInt32());
+        value->u.asInt64++;
+    }
+    ALWAYS_INLINE static void decrement(JSValue* value)
+    {
+        ASSERT(value->isInt32());
+        value->u.asInt64--;
+    }
+};
+#endif
 
 typedef IntHash<EncodedJSValue> EncodedJSValueHash;
 
@@ -704,7 +746,6 @@ bool isThisValueAltered(const PutPropertySlot&, JSObject* baseObject);
 // See section 7.2.9: https://tc39.github.io/ecma262/#sec-samevalue
 bool sameValue(JSGlobalObject*, JSValue a, JSValue b);
 
-#if COMPILER(GCC_COMPATIBLE)
 ALWAYS_INLINE void ensureStillAliveHere(JSValue value)
 {
 #if USE(JSVALUE64)
@@ -713,9 +754,6 @@ ALWAYS_INLINE void ensureStillAliveHere(JSValue value)
     asm volatile ("" : : "g"(value.payload()) : "memory");
 #endif
 }
-#else
-JS_EXPORT_PRIVATE void ensureStillAliveHere(JSValue);
-#endif
 
 // Use EnsureStillAliveScope when you have a data structure that includes GC pointers, and you need
 // to remove it from the DOM and then use it in the same scope. For example, a 'once' event listener
@@ -743,17 +781,17 @@ private:
 
 #if USE(JSVALUE64) || !ENABLE(CONCURRENT_JS)
 
-inline JSValue JSValue::decodeConcurrent(const volatile EncodedJSValue* encodedJSValue)
+ALWAYS_INLINE JSValue JSValue::decodeConcurrent(const EncodedJSValue* encodedJSValue)
 {
     return JSValue::decode(*encodedJSValue);
 }
 
-inline void updateEncodedJSValueConcurrent(EncodedJSValue& dest, EncodedJSValue value)
+ALWAYS_INLINE void updateEncodedJSValueConcurrent(EncodedJSValue& dest, EncodedJSValue value)
 {
     dest = value;
 }
 
-inline void clearEncodedJSValueConcurrent(EncodedJSValue& dest)
+ALWAYS_INLINE void clearEncodedJSValueConcurrent(EncodedJSValue& dest)
 {
     dest = JSValue::encode(JSValue());
 }

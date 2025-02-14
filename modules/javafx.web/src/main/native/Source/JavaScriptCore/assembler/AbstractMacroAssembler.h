@@ -38,6 +38,7 @@
 #include "MacroAssemblerHelpers.h"
 #include "Options.h"
 #include <wtf/Noncopyable.h>
+#include <wtf/SetForScope.h>
 #include <wtf/SharedTask.h>
 #include <wtf/StringPrintStream.h>
 #include <wtf/TZoneMalloc.h>
@@ -99,6 +100,7 @@ class AbstractMacroAssembler : public AbstractMacroAssemblerBase {
 public:
     typedef AbstractMacroAssembler<AssemblerType> AbstractMacroAssemblerType;
     typedef AssemblerType AssemblerType_T;
+    friend class SuppressRegisetrAllocationValidation;
 
     template<PtrTag tag> using CodeRef = MacroAssemblerCodeRef<tag>;
 
@@ -117,17 +119,17 @@ public:
     static constexpr RegisterID firstRegister() { return AssemblerType::firstRegister(); }
     static constexpr RegisterID lastRegister() { return AssemblerType::lastRegister(); }
     static constexpr unsigned numberOfRegisters() { return AssemblerType::numberOfRegisters(); }
-    static const char* gprName(RegisterID id) { return AssemblerType::gprName(id); }
+    static ASCIILiteral gprName(RegisterID id) { return AssemblerType::gprName(id); }
 
     static constexpr SPRegisterID firstSPRegister() { return AssemblerType::firstSPRegister(); }
     static constexpr SPRegisterID lastSPRegister() { return AssemblerType::lastSPRegister(); }
     static constexpr unsigned numberOfSPRegisters() { return AssemblerType::numberOfSPRegisters(); }
-    static const char* sprName(SPRegisterID id) { return AssemblerType::sprName(id); }
+    static ASCIILiteral sprName(SPRegisterID id) { return AssemblerType::sprName(id); }
 
     static constexpr FPRegisterID firstFPRegister() { return AssemblerType::firstFPRegister(); }
     static constexpr FPRegisterID lastFPRegister() { return AssemblerType::lastFPRegister(); }
     static constexpr unsigned numberOfFPRegisters() { return AssemblerType::numberOfFPRegisters(); }
-    static const char* fprName(FPRegisterID id) { return AssemblerType::fprName(id); }
+    static ASCIILiteral fprName(FPRegisterID id) { return AssemblerType::fprName(id); }
 
     // Section 1: MacroAssembler operand types
     //
@@ -182,6 +184,8 @@ public:
 
         BaseIndex indexedBy(RegisterID index, Scale) const;
 
+        friend bool operator==(const Address&, const Address&) = default;
+
         RegisterID base;
         int32_t offset;
     };
@@ -192,6 +196,8 @@ public:
             , offset(offset)
         {
         }
+
+        friend bool operator==(const ExtendedAddress&, const ExtendedAddress&) = default;
 
         RegisterID base;
         intptr_t offset;
@@ -213,12 +219,6 @@ public:
 #endif
         }
 
-        RegisterID base;
-        RegisterID index;
-        Scale scale;
-        int32_t offset;
-        Extend extend;
-
         BaseIndex withOffset(int32_t additionalOffset)
         {
             return BaseIndex(base, index, scale, offset + additionalOffset);
@@ -228,6 +228,14 @@ public:
         {
             return BaseIndex(AbstractMacroAssembler::withSwappedRegister(base, left, right), AbstractMacroAssembler::withSwappedRegister(index, left, right), scale, offset);
         }
+
+        friend bool operator==(const BaseIndex&, const BaseIndex&) = default;
+
+        RegisterID base;
+        RegisterID index;
+        Scale scale;
+        int32_t offset;
+        Extend extend;
     };
 
     // PreIndexAddress:
@@ -295,6 +303,14 @@ public:
             : m_value(reinterpret_cast<void*>(value))
         {
         }
+
+#if OS(WINDOWS)
+        template<typename ReturnType, typename... Arguments>
+        explicit TrustedImmPtr(ReturnType(SYSV_ABI *value)(Arguments...))
+            : m_value(reinterpret_cast<void*>(value))
+        {
+        }
+#endif
 
         explicit constexpr TrustedImmPtr(std::nullptr_t)
         {
@@ -775,9 +791,9 @@ public:
     // All jumps in the set will be linked to the same destination.
     class JumpList {
     public:
-        typedef Vector<Jump, 2> JumpVector;
+        using JumpVector = Vector<Jump, 2>;
 
-        JumpList() { }
+        JumpList() = default;
 
         JumpList(Jump jump)
         {
@@ -813,7 +829,7 @@ public:
 
         void append(const JumpList& other)
         {
-            m_jumps.append(other.m_jumps.begin(), other.m_jumps.size());
+            m_jumps.appendVector(other.m_jumps);
         }
 
         bool empty() const
@@ -824,6 +840,11 @@ public:
         void clear()
         {
             m_jumps.clear();
+        }
+
+        void shrink(size_t size)
+        {
+            m_jumps.shrink(size);
         }
 
         const JumpVector& jumps() const { return m_jumps; }
@@ -872,6 +893,22 @@ public:
         return Label(this);
     }
 
+    // DFG register allocation validation is broken in various cases. We need suppression mechanism otherwise, it introduces a new bug rather to bypass the issue.
+    class SuppressRegisetrAllocationValidation {
+    public:
+#if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
+        SuppressRegisetrAllocationValidation(AbstractMacroAssemblerType& assembler)
+            : m_suppressRegisterValidation(assembler.m_suppressRegisterValidation, true)
+        {
+        }
+
+    private:
+        SetForScope<bool> m_suppressRegisterValidation;
+#else
+        SuppressRegisetrAllocationValidation(AbstractMacroAssemblerType&) { }
+#endif
+    };
+
 #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
     class RegisterAllocationOffset {
     public:
@@ -901,12 +938,14 @@ public:
 
     void checkRegisterAllocationAgainstBranchRange(unsigned offset1, unsigned offset2)
     {
+        if (m_suppressRegisterValidation)
+            return;
+
         if (offset1 > offset2)
             std::swap(offset1, offset2);
 
-        size_t size = m_registerAllocationForOffsets.size();
-        for (size_t i = 0; i < size; ++i)
-            m_registerAllocationForOffsets[i].checkOffsets(offset1, offset2);
+        for (auto& offset : m_registerAllocationForOffsets)
+            offset.checkOffsets(offset1, offset2);
     }
 #endif
 
@@ -1074,6 +1113,7 @@ public:
 protected:
 
 #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
+    bool m_suppressRegisterValidation { false };
     Vector<RegisterAllocationOffset, 10> m_registerAllocationForOffsets;
 #endif
 
