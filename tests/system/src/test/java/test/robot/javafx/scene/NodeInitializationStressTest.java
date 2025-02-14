@@ -39,12 +39,15 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.ObservableList;
 import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -72,6 +75,7 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -129,9 +133,16 @@ import javafx.scene.control.skin.ToggleButtonSkin;
 import javafx.scene.control.skin.ToolBarSkin;
 import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.control.skin.TreeViewSkin;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -162,16 +173,15 @@ import test.robot.testharness.RobotTestBase;
  * Also, the visible node gets accessed periodically in the FX application thread just to shake things up.
  *
  * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
- *
- * TODO add remaining Nodes to the test.
  */
 public class NodeInitializationStressTest extends RobotTestBase {
     private static final int DURATION = 5000;
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
+    private static final ThreadLocal<Random> random = ThreadLocal.withInitial(Random::new);
     // for debugging purposes: setting this to true will skip working tests
     // TODO remove once all the tests pass
-    private static final boolean SKIP_TEST = false;
+    private static final boolean SKIP_TEST = !false;
 
     @Test
     public void accordion() {
@@ -187,6 +197,42 @@ public class NodeInitializationStressTest extends RobotTestBase {
             TitledPane t = (TitledPane)c.getPanes().get(0);
             t.setExpanded(nextBoolean());
         });
+    }
+
+    @Test
+    public void anchorPane() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new AnchorPane();
+        }, (c) -> {
+            accessPane(c, (n) -> {
+                AnchorPane.setLeftAnchor(n, nextDouble(100));
+            });
+        });
+    }
+
+    @Test
+    public void ambientLight() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
+    public void arc() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
     }
 
     @Disabled("JDK-8349091") // FIX
@@ -215,6 +261,31 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createCategorySeries());
             accessChart(c);
         });
+    }
+
+    @Test
+    public void borderPane() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new BorderPane();
+        }, (c) -> {
+            Node n = createNode();
+            c.setCenter(n);
+            BorderPane.setAlignment(n, nextEnum(Pos.class));
+            accessNode(c);
+        });
+    }
+
+    @Test
+    public void box() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
     }
 
     @Disabled("JDK-8349091") // FIX
@@ -314,6 +385,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     @Test
+    public void circle() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
     public void colorPicker() {
         assumeFalse(SKIP_TEST);
         test(() -> {
@@ -348,6 +431,30 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
+    @Test
+    public void cubicCurve() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
+    public void cylinder() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
     @Disabled("JDK-8349004") // FIX
     @Test
     public void datePicker() {
@@ -367,6 +474,91 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     @Test
+    public void dialogPane() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new DialogPane();
+        }, (c) -> {
+            c.setContent(createNode());
+            c.setGraphic(createNode());
+            c.setExpandableContent(createNode());
+            c.setExpanded(nextBoolean());
+            accessNode(c);
+        });
+    }
+
+    @Test
+    public void directionalLight() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
+    public void ellipse() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
+    public void flowPane() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new FlowPane();
+        }, (c) -> {
+            accessPane(c, (n) -> {
+                FlowPane.setMargin(n, new Insets(nextDouble(30)));
+            });
+        });
+    }
+
+    @Test
+    public void gridPane() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new GridPane();
+        }, (c) -> {
+            accessPane(c, (n) -> {
+                GridPane.setMargin(n, new Insets(nextDouble(30)));
+            });
+        });
+    }
+
+    @Test
+    public void group() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Group();
+        }, (c) -> {
+            accessNode(c);
+            c.getChildren().setAll(createNodes());
+        });
+    }
+
+    @Test
+    public void hbox() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new HBox();
+        }, (c) -> {
+            accessPane(c, (n) -> {
+                HBox.setMargin(n, new Insets(nextDouble(30)));
+            });
+        });
+    }
+
+    @Test
     public void hyperlink() {
         assumeFalse(SKIP_TEST);
         test(() -> {
@@ -380,6 +572,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     @Test
+    public void imageView() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
     public void label() {
         assumeFalse(SKIP_TEST);
         test(() -> {
@@ -390,6 +594,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setLabelFor(c);
             accessControl(c);
         });
+    }
+
+    @Test
+    public void line() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
     }
 
     @Disabled("JDK-8349091") // FIX
@@ -420,6 +636,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
+    @Test
+    public void mediaView() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
     @Disabled("JDK-8349096") // FIX
     @Test
     public void menuButton() {
@@ -434,6 +662,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
             accessControl(c);
             c.show();
         });
+    }
+
+    @Test
+    public void meshView() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
     }
 
     @Disabled("JDK-8349105") // FIX
@@ -455,6 +695,41 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     @Test
+    public void pane() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Pane();
+        }, (c) -> {
+            c.getChildren().setAll(createNodes());
+            accessRegion(c);
+        });
+    }
+
+    @Test
+    public void parallelCamera() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
+    public void path() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
     public void passwordField() {
         assumeFalse(SKIP_TEST);
         test(() -> {
@@ -466,6 +741,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setAlignment(Pos.CENTER);
             c.getCharacters();
         });
+    }
+
+    @Test
+    public void perspectiveCamera() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
     }
 
     @Disabled("JDK-8349090") // FIX
@@ -483,6 +770,42 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     @Test
+    public void pointLight() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
+    public void polygon() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
+    public void polyline() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
     public void progressIndicator() {
         assumeFalse(SKIP_TEST);
         test(() -> {
@@ -496,6 +819,30 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     @Test
+    public void quadCurve() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
+    public void rectangle() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
     public void radioButton() {
         assumeFalse(SKIP_TEST);
         test(() -> {
@@ -506,6 +853,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
             accessControl(c);
             c.setSelected(nextBoolean());
         });
+    }
+
+    @Test
+    public void region() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
     }
 
     @Disabled("JDK-8349091") // FIX
@@ -548,6 +907,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setHalignment(nextEnum(HPos.class));
             c.setValignment(nextEnum(VPos.class));
         });
+    }
+
+    @Test
+    public void sphere() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
     }
 
     @Test
@@ -606,6 +977,42 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createCategorySeries());
             accessChart(c);
         });
+    }
+
+    @Test
+    public void stackPane() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new StackPane();
+        }, (c) -> {
+            accessPane(c, (n) -> {
+                StackPane.setMargin(n, new Insets(nextDouble(30)));
+            });
+        });
+    }
+
+    @Test
+    public void svgPath() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
+    }
+
+    @Test
+    public void swingNode() {
+        //assumeFalse(SKIP_TEST);
+        // TODO
+//        test(() -> {
+//            return new ();
+//        }, (c) -> {
+//            //c.set();
+//            accessNode(c);
+//        });
     }
 
     @Disabled("JDK-8349098") // FIX
@@ -691,6 +1098,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
         }, (c) -> {
             c.getChildren().setAll(createTextItems());
             accessRegion(c);
+        });
+    }
+
+    @Test
+    public void tilePane() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new TilePane();
+        }, (c) -> {
+            accessPane(c, (n) -> {
+                TilePane.setMargin(n, new Insets(nextDouble(30)));
+            });
         });
     }
 
@@ -813,32 +1232,55 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    private void accessTextInputControl(TextInputControl c) {
+    @Test
+    public void vbox() {
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new VBox();
+        }, (c) -> {
+            accessPane(c, (n) -> {
+                VBox.setMargin(n, new Insets(nextDouble(30)));
+            });
+        });
+    }
+
+    private static void accessTextInputControl(TextInputControl c) {
         accessControl(c);
         c.setPromptText("yo");
         c.setText(nextString());
         c.prefHeight(-1);
     }
 
-    private void accessChart(Chart c) {
+    private static void accessChart(Chart c) {
         String title = c.getClass().getSimpleName();
         c.setTitle(title);
         c.setAnimated(true);
         accessRegion(c);
     }
 
-    private void accessControl(Control c) {
+    private static void accessControl(Control c) {
         accessRegion(c);
         c.getCssMetaData();
     }
 
-    private void accessNode(Node c) {
+    private static void accessNode(Node c) {
         c.setFocusTraversable(true);
         c.requestFocus();
         c.toFront();
     }
 
-    private void accessRegion(Region c) {
+    private static void accessPane(Pane p, Consumer<Node> onChild) {
+        ObservableList<Node> children = p.getChildren();
+        children.setAll(createNodes());
+        children.setAll(createNodes());
+        if (children.size() > 0) {
+            int ix = random().nextInt(children.size());
+            Node n = children.get(ix);
+            onChild.accept(n);
+        }
+    }
+
+    private static void accessRegion(Region c) {
         accessNode(c);
         c.prefHeight(-1);
         c.prefWidth(-1);
@@ -881,9 +1323,8 @@ public class NodeInitializationStressTest extends RobotTestBase {
             // periodically "jiggle" the visible node in the fx thread
             new Thread(() -> {
                 try {
-                    Random r = new Random();
                     while (running.get()) {
-                        sleep(1 + r.nextInt(20));
+                        sleep(1 + random().nextInt(20));
                         runAndWait(() -> {
                             operation.accept(visibleNode);
                         });
@@ -921,8 +1362,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static boolean nextBoolean() {
-        // creating new Random instances each time to avoid additional synchronization
-        return new Random().nextBoolean();
+        return random().nextBoolean();
     }
 
     /**
@@ -931,20 +1371,20 @@ public class NodeInitializationStressTest extends RobotTestBase {
      * @return the boolean value
      */
     private static boolean nextBoolean(double probability) {
-        return new Random().nextDouble() < probability;
+        return random().nextDouble() < probability;
     }
 
     private static Color nextColor() {
-        Random r = new Random();
+        Random r = random();
         return Color.hsb(360 * r.nextDouble(), r.nextDouble(), r.nextDouble(), r.nextDouble());
     }
 
     private static double nextDouble(int min, int max) {
-        return min + new Random().nextDouble() * (max - min);
+        return min + random().nextDouble() * (max - min);
     }
 
     private static double nextDouble(int max) {
-        return max * new Random().nextDouble();
+        return max * random().nextDouble();
     }
 
     private static <T extends Enum> T nextEnum(Class<T> type) {
@@ -953,7 +1393,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static int nextInt(int max) {
-        return new Random().nextInt(max);
+        return random().nextInt(max);
     }
 
     private static <T> T nextItem(T[] items) {
@@ -966,8 +1406,12 @@ public class NodeInitializationStressTest extends RobotTestBase {
         return "_a" + ix + "\nyo!";
     }
 
+    private static Random random() {
+        return random.get();
+    }
+
     private static List<Node> createButtons() {
-        int sz = new Random().nextInt(5);
+        int sz = random().nextInt(5);
         ArrayList<Node> a = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
             a.add(new Button(nextString()));
@@ -979,6 +1423,26 @@ public class NodeInitializationStressTest extends RobotTestBase {
         CategoryAxis a = new CategoryAxis();
         a.setLabel(text);
         return a;
+    }
+
+    private static Node createNode() {
+        switch (random().nextInt(3)) {
+        case 0:
+            return new Text("Text");
+        case 1:
+            return new Button("Button");
+        default:
+            return new Label("Label");
+        }
+    }
+
+    private static List<Node> createNodes() {
+        int sz = random().nextInt(5);
+        ArrayList<Node> nodes = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            nodes.add(createNode());
+        }
+        return nodes;
     }
 
     private static NumberAxis createNumberAxis(String text) {
@@ -1011,18 +1475,17 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static List<PieChart.Data> createPieSeries() {
-        Random rnd = new Random();
-        int sz = 1 + rnd.nextInt(20);
+        int sz = 1 + random().nextInt(20);
         ArrayList<Data> a = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
-            a.add(new PieChart.Data("N" + i, rnd.nextDouble()));
+            a.add(new PieChart.Data("N" + i, random().nextDouble()));
         }
         return a;
     }
 
     private static TreeItem<String> createRoot() {
         TreeItem<String> root = new TreeItem<>(null);
-        int sz = new Random().nextInt(20);
+        int sz = random().nextInt(20);
         for (int i = 0; i < sz; i++) {
             root.getChildren().add(new TreeItem<>(nextString()));
         }
@@ -1039,7 +1502,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static List<String> createTableItems() {
-        int sz = new Random().nextInt(20);
+        int sz = random().nextInt(20);
         ArrayList<String> a = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
             a.add(nextString());
@@ -1048,7 +1511,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static List<Text> createTextItems() {
-        int sz = new Random().nextInt(20);
+        int sz = random().nextInt(20);
         ArrayList<Text> a = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
             a.add(new Text(nextString()));
