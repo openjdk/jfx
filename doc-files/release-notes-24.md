@@ -137,6 +137,7 @@ Issue Key | Summary | Subcomponent
 [JDK-8336031](https://bugs.openjdk.org/browse/JDK-8336031) | Create implementation of NSAccessibilityStaticText protocol | accessibility
 [JDK-8226911](https://bugs.openjdk.org/browse/JDK-8226911) | Interpolatable's contract should be reexamined | animation
 [JDK-8344443](https://bugs.openjdk.org/browse/JDK-8344443) | Deprecate FXPermission for removal | base
+[JDK-8340003](https://bugs.openjdk.org/browse/JDK-8340003) | Bump minimum JDK version for JavaFX to JDK 22 | build
 [JDK-8334874](https://bugs.openjdk.org/browse/JDK-8334874) | Horizontal scroll events from touch pads should scroll the TabPane tabs | controls
 [JDK-8338016](https://bugs.openjdk.org/browse/JDK-8338016) | SplitMenuButton constructors should match MenuButton | controls
 [JDK-8323706](https://bugs.openjdk.org/browse/JDK-8323706) | Remove SimpleSelector and CompoundSelector classes | graphics
