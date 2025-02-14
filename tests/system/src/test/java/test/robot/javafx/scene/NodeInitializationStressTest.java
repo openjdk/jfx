@@ -44,11 +44,17 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.AmbientLight;
+import javafx.scene.DirectionalLight;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.ParallelCamera;
+import javafx.scene.PerspectiveCamera;
+import javafx.scene.PointLight;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.chart.AreaChart;
@@ -146,18 +152,25 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcTo;
 import javafx.scene.shape.ArcType;
+import javafx.scene.shape.Box;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.ClosePath;
 import javafx.scene.shape.CubicCurve;
 import javafx.scene.shape.CubicCurveTo;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.Cylinder;
+import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.FillRule;
 import javafx.scene.shape.HLineTo;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.LineTo;
+import javafx.scene.shape.Mesh;
+import javafx.scene.shape.MeshView;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
@@ -168,9 +181,12 @@ import javafx.scene.shape.QuadCurveTo;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.shape.Shape;
+import javafx.scene.shape.Shape3D;
+import javafx.scene.shape.Sphere;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
+import javafx.scene.shape.TriangleMesh;
 import javafx.scene.shape.VLineTo;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -240,14 +256,14 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void ambientLight() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new AmbientLight();
+        }, (c) -> {
+            accessNode(c);
+            c.setColor(nextColor());
+            c.setLightOn(nextBoolean());
+        });
     }
 
     @Test
@@ -310,16 +326,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void box() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new Box();
-//        }, (c) -> {
-//            accessShape3D(c);
-//            c.setDepth(nextDouble(100));
-//            c.setHeight(nextDouble(100));
-//            c.setWidth(nextDouble(100));
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Box();
+        }, (c) -> {
+            accessShape3D(c);
+            c.setDepth(nextDouble(100));
+            c.setHeight(nextDouble(100));
+            c.setWidth(nextDouble(100));
+        });
     }
 
     @Disabled("JDK-8349091") // FIX
@@ -498,14 +513,14 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void cylinder() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Cylinder();
+        }, (c) -> {
+            accessShape3D(c);
+            c.setHeight(nextDouble(100));
+            c.setRadius(nextDouble(100));
+        });
     }
 
     @Test
@@ -547,14 +562,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void directionalLight() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new DirectionalLight();
+        }, (c) -> {
+            c.setColor(nextColor());
+            c.setLightOn(nextBoolean());
+            Point3D p = new Point3D(nextDouble(100), nextDouble(100), nextDouble(100));
+            c.setDirection(p);
+        });
     }
 
     @Test
@@ -733,14 +749,13 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void meshView() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new MeshView();
+        }, (c) -> {
+            accessShape3D(c);
+            c.setMesh(createMesh());
+        });
     }
 
     @Disabled("JDK-8349105") // FIX
@@ -774,14 +789,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void parallelCamera() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new ParallelCamera();
+        }, (c) -> {
+            accessNode(c);
+            double near = nextDouble(100);
+            c.setFarClip(near + nextDouble(100));
+            c.setNearClip(near);
+        });
     }
 
     @Test
@@ -813,14 +829,17 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void perspectiveCamera() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new PerspectiveCamera();
+        }, (c) -> {
+            accessNode(c);
+            double near = nextDouble(100);
+            c.setFarClip(near + nextDouble(100));
+            c.setNearClip(near);
+            c.setFieldOfView(nextDouble(360));
+            c.setVerticalFieldOfView(nextBoolean());
+        });
     }
 
     @Disabled("JDK-8349090") // FIX
@@ -839,14 +858,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void pointLight() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new PointLight();
+        }, (c) -> {
+            accessNode(c);
+            c.setColor(nextColor());
+            c.setLightOn(nextBoolean());
+            c.setConstantAttenuation(nextDouble(10));
+            c.setLinearAttenuation(nextDouble(32));
+            c.setMaxRange(nextDouble(1000));
+            c.setQuadraticAttenuation(nextDouble(1000));
+        });
     }
 
     @Test
@@ -985,14 +1008,13 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void sphere() {
-        //assumeFalse(SKIP_TEST);
-        // TODO
-//        test(() -> {
-//            return new ();
-//        }, (c) -> {
-//            //c.set();
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new Sphere();
+        }, (c) -> {
+            accessShape3D(c);
+            c.setRadius(nextDouble(100));
+        });
     }
 
     @Test
@@ -1072,7 +1094,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void svgPath() {
-        //assumeFalse(SKIP_TEST);
+        assumeFalse(SKIP_TEST);
         test(() -> {
             return new SVGPath();
         }, (c) -> {
@@ -1377,6 +1399,17 @@ public class NodeInitializationStressTest extends RobotTestBase {
         c.setStrokeWidth(nextDouble(10));
     }
 
+    private static void accessShape3D(Shape3D c) {
+        c.setCullFace(nextEnum(CullFace.class));
+        c.setDrawMode(nextEnum(DrawMode.class));
+        PhongMaterial m = new PhongMaterial();
+        //m.setSelfIlluminationMap(Image); // what is expected?
+        m.setSpecularColor(nextColor());
+        //m.setSpecularMap(Image); // what is expected?
+        m.setSpecularPower(nextDouble(100)); // what is the acceptable range?
+        c.setMaterial(m);
+    }
+
     private <T extends Node> void test(Supplier<T> generator, Consumer<T> operation) {
         AtomicReference<T> ref = new AtomicReference();
         runAndWait(() -> {
@@ -1516,6 +1549,44 @@ public class NodeInitializationStressTest extends RobotTestBase {
         CategoryAxis a = new CategoryAxis();
         a.setLabel(text);
         return a;
+    }
+
+    private static Mesh createMesh() {
+        // see Mouse3DTest
+        switch (nextInt(4)) {
+        case 0:
+            // meshesXY2
+            return createMesh(
+                new float[] { 0f, 0f, 0f, 100f, 0f, 0f, 100f, 100f, 0f, 0f, 0f, -7f, 100f, 0f, -7f, 100f, 100f, -7f },
+                new float[] { 0f, 0f, 1f, 0f, 1f, 1f },
+                new int[] { 3, 0, 5, 2, 4, 1, 0, 0, 2, 2, 1, 1 });
+        case 1:
+            // meshesXYFacingEachOther
+            return createMesh(
+                new float[] { 0f, 0f, 0f, 100f, 0f, 0f, 100f, 100f, 0f, 0f, 0f, -7f, 100f, 0f, -7f, 100f, 100f, -7f },
+                new float[] { 0f, 0f, 1f, 0f, 1f, 1f },
+                new int[] { 0, 0, 2, 2, 1, 1, 3, 0, 4, 1, 5, 2, });
+        case 2:
+            // meshXYBack
+            return createMesh(
+                new float[] { 0f, 0f, 7f, 100f, 0f, 7f, 100f, 100f, 7f },
+                new float[] { 0f, 0f, 1f, 0f, 1f, 1f },
+                new int[] { 0, 0, 1, 1, 2, 2 });
+        default:
+            // meshXYFlippedTexture
+            return createMesh(
+                new float[] { 0f, 0f, 7f, 100f, 0f, 7f, 100f, 100f, 7f },
+                new float[] { 0f, 0f, 0f, 1f, 1f, 1f },
+                new int[] { 0, 0, 2, 1, 1, 2 });
+        }
+    }
+
+    private static Mesh createMesh(float[] points, float[] tex, int[] faces) {
+        TriangleMesh m = new TriangleMesh();
+        m.getPoints().setAll(points);
+        m.getTexCoords().setAll(tex);
+        m.getFaces().setAll(faces);
+        return m;
     }
 
     private static Node createNode() {
