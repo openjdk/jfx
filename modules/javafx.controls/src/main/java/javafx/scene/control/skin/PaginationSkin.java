@@ -127,14 +127,10 @@ public class PaginationSkin extends SkinBase<Pagination> {
     private boolean nextPageReached = false;
     private boolean setInitialDirection = false;
     private int direction;
-
     private int currentAnimatedIndex;
-    private boolean hasPendingAnimation = false;
-
+    private volatile boolean hasPendingAnimation;
     private boolean animate = true;
-
     private final PaginationBehavior behavior;
-
 
 
     /* *************************************************************************
@@ -712,6 +708,10 @@ public class PaginationSkin extends SkinBase<Pagination> {
     }
 
     private void animateSwitchPage() {
+        if (!Platform.isFxApplicationThread()) {
+            hasPendingAnimation = true;
+            return;
+        }
         if (timeline != null) {
             timeline.setRate(8);
             hasPendingAnimation = true;
