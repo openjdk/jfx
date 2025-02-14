@@ -181,7 +181,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private static final ThreadLocal<Random> random = ThreadLocal.withInitial(Random::new);
     // for debugging purposes: setting this to true will skip working tests
     // TODO remove once all the tests pass
-    private static final boolean SKIP_TEST = !false;
+    private static final boolean SKIP_TEST = false;
 
     @Test
     public void accordion() {
@@ -405,12 +405,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setValue(Color.GREEN);
             return c;
         }, (c) -> {
-            c.show(); // does not fail here, unlike DatePicker?
             c.setValue(Color.RED);
             c.prefHeight(-1);
             c.setValue(Color.BLACK);
             c.prefWidth(-1);
             accessControl(c);
+            if (Platform.isFxApplicationThread()) {
+                if (nextBoolean()) {
+                    c.show();
+                } else {
+                    c.hide();
+                }
+            }
         });
     }
 
@@ -427,7 +433,13 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getItems().setAll("ComboBox", nextString(), "2");
             c.getSelectionModel().select(0);
             accessControl(c);
-            c.show(); // does not fail here
+            if (Platform.isFxApplicationThread()) {
+                if (nextBoolean()) {
+                    c.show();
+                } else {
+                    c.hide();
+                }
+            }
         });
     }
 
@@ -455,7 +467,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
 //        });
     }
 
-    @Disabled("JDK-8349004") // FIX
     @Test
     public void datePicker() {
         assumeFalse(SKIP_TEST);
@@ -464,12 +475,18 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new DatePickerSkin(c));
             return c;
         }, (c) -> {
-            c.show(); // fails here
             c.setValue(LocalDate.now());
             c.prefHeight(-1);
             c.setValue(LocalDate.EPOCH);
             c.prefWidth(-1);
             accessControl(c);
+            if (Platform.isFxApplicationThread()) {
+                if (nextBoolean()) {
+                    c.show();
+                } else {
+                    c.hide();
+                }
+            }
         });
     }
 
@@ -648,7 +665,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
 //        });
     }
 
-    @Disabled("JDK-8349096") // FIX
     @Test
     public void menuButton() {
         assumeFalse(SKIP_TEST);
@@ -658,9 +674,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
             return c;
         }, (c) -> {
             c.getItems().setAll(new MenuItem("MenuButton"));
-            c.setPopupSide(Side.RIGHT);
+            c.setPopupSide(nextEnum(Side.class));
             accessControl(c);
-            c.show();
+            if (Platform.isFxApplicationThread()) {
+                if (nextBoolean()) {
+                    c.show();
+                } else {
+                    c.hide();
+                }
+            }
         });
     }
 
@@ -935,7 +957,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349096") // FIX
     @Test
     public void splitMenuButton() {
         assumeFalse(SKIP_TEST);
@@ -945,9 +966,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
             return c;
         }, (c) -> {
             c.getItems().setAll(new MenuItem("SplitMenuButton"));
-            c.setPopupSide(Side.RIGHT);
+            c.setPopupSide(nextEnum(Side.class));
             accessControl(c);
-            c.show();
+            if (Platform.isFxApplicationThread()) {
+                if (nextBoolean()) {
+                    c.show();
+                } else {
+                    c.hide();
+                }
+            }
         });
     }
 
