@@ -106,10 +106,18 @@ public class ListenerList<T> extends ListenerListBase {
 
         T newValue = null;
 
+        progress = -1;  // reset progress to ensure latest value is queried at least once
+
         for (int i = 0; i < maxChanges; i++) {
-            // only get the latest value if this is the first loop or a nested notification occurred;
-            // do this before skipping listeners as this will fail if the first listener was skipped otherwise
-            if (progress < 0 || i == 0) {
+            ChangeListener<T> listener = getChangeListener(i);
+
+            // skip if this listener was removed during a notification:
+            if (listener == null) {
+                continue;
+            }
+
+            // only get the latest value if this is the first loop or a nested notification occurred
+            if (progress < 0) {
                 newValue = observableValue.getValue();
 
                 valueObtained(newValue);
@@ -117,13 +125,6 @@ public class ListenerList<T> extends ListenerListBase {
                 if (Objects.equals(newValue, oldValue)) {
                     break;
                 }
-            }
-
-            ChangeListener<T> listener = getChangeListener(i);
-
-            // skip if this listener was removed during a notification:
-            if (listener == null) {
-                continue;
             }
 
             // communicate to a lower level loop (if triggered) how many listeners were notified so far:
