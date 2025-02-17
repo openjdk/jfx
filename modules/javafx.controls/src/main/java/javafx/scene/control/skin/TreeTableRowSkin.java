@@ -120,16 +120,18 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
             VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
             if (virtualFlow != null) {
-                registerChangeListener(virtualFlow.widthProperty(), e -> requestLayoutWhenFixedCellSizeSet());
+                registerChangeListener(virtualFlow.widthProperty(), _ -> requestLayoutWhenFixedCellSizeSet());
             }
         }
     }
 
+    /**
+     * When we have a fixed cell size set, we must request layout when the width of the virtual flow changed,
+     * because we might need to add or remove cells that are now visible or not anymore.
+     * <br>
+     * See also: JDK-8144500 and JDK-8185887.
+     */
     private void requestLayoutWhenFixedCellSizeSet() {
-        // JDK-8144500:
-        // When in fixed cell size mode, we must listen to the width of the virtual flow, so
-        // that when it changes, we can appropriately add / remove cells that may or may not
-        // be required (because we remove all cells that are not visible).
         if (getFixedCellSize() > 0) {
             getSkinnable().requestLayout();
         }
