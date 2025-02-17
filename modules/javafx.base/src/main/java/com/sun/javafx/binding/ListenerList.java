@@ -32,9 +32,8 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 /**
- * Extension of {@link ListenerListBase} which given an {@link ObservableValue}
- * and its old value provides the means to notify all contained listeners
- * with a depth first approach.
+ * Extension of {@link ListenerListBase}, which allows an {@link ObservableValue}
+ * and its old value to notify all contained listeners with a depth first approach.
  *
  * @param <T> the type of the values the observable provides
  */

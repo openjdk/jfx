@@ -28,9 +28,8 @@ package com.sun.javafx.binding;
 import javafx.beans.value.ObservableValue;
 
 /**
- * Extension of {@link ListenerList} which given an {@link ObservableValue}
- * provides the means to notify all contained listeners with a depth first
- * approach.<p>
+ * Extension of {@link ListenerList} which allows an {@link ObservableValue}
+ * to notify all contained listeners with a depth first approach.<p>
  *
  * Note: this listener list stores the latest value for use as the old value when
  * notifying change listeners. It is recommended to use {@link ListenerList} if
