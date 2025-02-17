@@ -243,7 +243,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
             }
         }
         else if (!list.hasChangeListeners()) {
-            list.putLatestValue(null);  // clear to avoid references
+            list.putLatestValue(null);  // clear old value cache to avoid references
         }
     }
 }
