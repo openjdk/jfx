@@ -25,27 +25,19 @@
 
 package test.javafx.beans;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -60,6 +52,16 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ObservableValueTest {
     private static final int[] PATTERN = new int[] {1, 2, 0, 50, 3, 7};
@@ -251,7 +253,7 @@ public class ObservableValueTest {
 
         valueSetter.accept(value2);
 
-        assertConsistentChangeSequence(records, value1, value1);
+        assertConsistentChangeSequence(records, value1, value1, Set.of(value1, value2));
     }
 
     /*
@@ -280,7 +282,43 @@ public class ObservableValueTest {
 
         valueSetter.accept(value2);
 
-        assertConsistentChangeSequence(records, value1, value2);
+        assertConsistentChangeSequence(records, value1, value2, Set.of(value1, value2));
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible change events when a nested change occurs
+     * and the first listener was removed.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedEventsWhenFirstListenerRemoved(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        List<Record> records = new ArrayList<>();
+
+        /*
+         * Create three listeners, with the "middle" one removing the first listener and modifying the
+         * value back to value1.
+         */
+
+        ChangeListener<? super T> firstListener = (obs, old, current) -> records.add(new Record.Change("A", old, current));
+
+        action.addListener(firstListener);
+        action.addListener((obs, old, current) -> {
+            records.add(new Record.Change("B", old, current));
+
+            if (Objects.equals(current, value2)) {
+                action.removeListener(firstListener);
+                valueSetter.accept(value1);
+            }
+        });
+        action.addListener((obs, old, current) -> records.add(new Record.Change("C", old, current)));
+
+        /*
+         * Start test:
+         */
+
+        valueSetter.accept(value2);
+
+        assertConsistentChangeSequence(records, value1, value1, Set.of(value1, value2));
     }
 
     @ParameterizedTest
@@ -693,13 +731,15 @@ public class ObservableValueTest {
         }
     }
 
-    private static void assertConsistentChangeSequence(List<Record> records, Object expectedFirstValue, Object expectedLastValue) {
-        for(String identifier : records.stream().map(Record::identifier).distinct().toList()) {
+    private static void assertConsistentChangeSequence(List<Record> records, Object expectedFirstValue, Object expectedLastValue, Set<Object> inputValidValues) {
+        Set<Object> validValues = new HashSet<>(inputValidValues);  // convert to regular set as Set#of is being obnoxious about calling contains(null)
+
+        for (String identifier : records.stream().map(Record::identifier).distinct().toList()) {
             List<Record> filtered = records.stream().filter(c -> c.identifier().equals(identifier)).toList();
 
             // ensure they are actual changes, not same values:
-            for (Record record : filtered) {
-                if (record instanceof Record.Change c) {
+            for (Record r : filtered) {
+                if (r instanceof Record.Change c) {
                     assertNotEquals(c.old, c.current, c + " was not a change!");
                 }
             }
@@ -707,16 +747,20 @@ public class ObservableValueTest {
             Record previous = null;
 
             // ensure previous new value is next old value:
-            for (Record record : filtered) {
-                if (previous != null) {
-                    if (record instanceof Record.Change c) {
-                        if(previous instanceof Record.Change pc) {
+            for (Record r : filtered) {
+                if (r instanceof Record.Change c) {
+                    // Checks if values make sense at all:
+                    assertTrue(validValues.contains(c.old), c + " has an unexpected old value; valid values are " + validValues);
+                    assertTrue(validValues.contains(c.current), c + " has an unexpected current value; valid values are " + validValues);
+
+                    if (previous != null) {
+                        if (previous instanceof Record.Change pc) {
                             assertEquals(c.old, pc.current, pc + " was followed by " + c + " with incorrect old value");
                         }
                     }
                 }
 
-                previous = record;
+                previous = r;
             }
 
             List<Record.Change> changesOnly = filtered.stream()
@@ -732,7 +776,7 @@ public class ObservableValueTest {
                 .reduce((first, second) -> second)
                 .ifPresent(c -> c.current.equals(expectedLastValue));
 
-            if(!Objects.equals(expectedFirstValue, expectedLastValue) && changesOnly.isEmpty()) {
+            if (!Objects.equals(expectedFirstValue, expectedLastValue) && changesOnly.isEmpty()) {
                 fail("Records for " + identifier + " did not contain any changes, but did expect a change from " + expectedFirstValue + " to " + expectedLastValue);
             }
         }

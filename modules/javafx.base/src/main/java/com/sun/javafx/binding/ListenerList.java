@@ -90,6 +90,7 @@ public class ListenerList<T> extends ListenerListBase {
         for (int i = 0; i < maxInvalidations; i++) {
             InvalidationListener listener = getInvalidationListener(i);
 
+            // skip if this listener was removed during a notification:
             if (listener == null) {
                 continue;
             }
@@ -107,13 +108,8 @@ public class ListenerList<T> extends ListenerListBase {
         T newValue = null;
 
         for (int i = 0; i < maxChanges; i++) {
-            ChangeListener<T> listener = getChangeListener(i);
-
-            if (listener == null) {
-                continue;
-            }
-
-            // only get the latest value if this is the first loop or a nested notification occurred:
+            // only get the latest value if this is the first loop or a nested notification occurred;
+            // do this before skipping listeners as this will fail if the first listener was skipped otherwise
             if (progress < 0 || i == 0) {
                 newValue = observableValue.getValue();
 
@@ -124,6 +120,13 @@ public class ListenerList<T> extends ListenerListBase {
                 }
             }
 
+            ChangeListener<T> listener = getChangeListener(i);
+
+            // skip if this listener was removed during a notification:
+            if (listener == null) {
+                continue;
+            }
+
             // communicate to a lower level loop (if triggered) how many listeners were notified so far:
             progress = i + invalidationListenersSize;
 
@@ -131,7 +134,8 @@ public class ListenerList<T> extends ListenerListBase {
             callChangeListener(observableValue, listener, oldValue, newValue);
         }
 
-        // communicate to a higher level loop that a nested notification occurred:
+        // communicate to a higher level loop that a nested notification completed (if
+        // there is a higher loop):
         progress = -1;
 
         return wasLocked ? false : unlock();
