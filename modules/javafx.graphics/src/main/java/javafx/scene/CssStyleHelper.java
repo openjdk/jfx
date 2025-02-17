@@ -147,12 +147,12 @@ final class CssStyleHelper {
 
             boolean mightInherit = false;
 
-            final List<CssMetaData<? extends Styleable, ?>> props = node.getCssMetaData();
+            // Contextual properties are not checked here as they don't support inheritance
+            List<CssMetaData<Styleable, ?>> props = getCssMetaData(node);
 
-            final int pMax = props != null ? props.size() : 0;
-            for (int p=0; p<pMax; p++) {
+            for (int p = 0, max = props.size(); p < max; p++) {
+                CssMetaData<Styleable, ?> prop = props.get(p);
 
-                final CssMetaData<? extends Styleable, ?> prop = props.get(p);
                 if (prop.isInherits()) {
                     mightInherit = true;
                     break;
@@ -406,10 +406,11 @@ final class CssStyleHelper {
 
             CssMetaData<Styleable,Font> styleableFontProperty = null;
 
-            final List<CssMetaData<? extends Styleable, ?>> props = node.getCssMetaData();
-            final int pMax = props != null ? props.size() : 0;
-            for (int p=0; p<pMax; p++) {
-                final CssMetaData<? extends Styleable, ?> prop = props.get(p);
+            // Contextual properties are not checked here as -fx-font is not allowed to be one
+            List<CssMetaData<Styleable, ?>> props = getCssMetaData(node);
+
+            for (int p = 0, max = props.size(); p < max; p++) {
+                final CssMetaData<Styleable, ?> prop = props.get(p);
 
                 if ("-fx-font".equals(prop.getProperty())) {
                     // unchecked!
@@ -460,6 +461,8 @@ final class CssStyleHelper {
 
         private boolean forceSlowpath = false;
     }
+
+    private record StylingContext(Node node, CalculatedValue font, StyleMap styleMap, Set<PseudoClass> pseudoClasses) {}
 
     private boolean resetInProgress = false;
 
@@ -634,8 +637,10 @@ final class CssStyleHelper {
 
         final Set<PseudoClass>[] transitionStates = getTransitionStates(node);
         CalculatedValue cachedFont = new CalculatedValue(fontForRelativeSizes, null, false);
+        StylingContext context = new StylingContext(node, cachedFont, styleMap, transitionStates[0]);
 
-        final List<CssMetaData<? extends Styleable,  ?>> styleables = node.getCssMetaData();
+        // Contextual properties are not checked here as they don't support relative values (for now)
+        final List<CssMetaData<Styleable, ?>> styleables = getCssMetaData(node);
         final int numStyleables = styleables.size();
 
         for (int n = -1; n < numStyleables; n++) {
@@ -690,8 +695,7 @@ final class CssStyleHelper {
             // We should not use the cached value as relative
             // sized properties must be recalculated when font size changes.
 
-            CalculatedValue calculatedValue = lookup(node, cssMetaData, styleMap, transitionStates[0],
-                        node, cachedFont);
+            CalculatedValue calculatedValue = lookup(context, node, cssMetaData, node);
 
             // lookup is not supposed to return null.
             if (calculatedValue == null || calculatedValue == SKIP) {
@@ -809,218 +813,282 @@ final class CssStyleHelper {
         final StyleCacheEntry.Key cacheEntryKey = new StyleCacheEntry.Key(transitionStates, fontForRelativeSizes);
         StyleCacheEntry cacheEntry = sharedCache.getStyleCacheEntry(cacheEntryKey);
 
-        // if the cacheEntry already exists, take the fastpath
-        final boolean fastpath = cacheEntry != null;
+        final boolean cachePresent = cacheEntry != null;
 
         if (cacheEntry == null) {
             cacheEntry = new StyleCacheEntry();
             sharedCache.addStyleCacheEntry(cacheEntryKey, cacheEntry);
         }
 
-        final List<CssMetaData<? extends Styleable,  ?>> styleables = node.getCssMetaData();
+        final List<CssMetaData<Styleable, ?>> styleables = getCssMetaData(node);
+        final List<CssMetaData<Styleable, ?>> contextualStyleables = getParentContextualCssMetaData(node);
 
-        // Used in the for loop below, and a convenient place to stop when debugging.
-        final int max = styleables.size();
+        StylingContext context = new StylingContext(node, cachedFont, styleMap, transitionStates[0]);
+        boolean forceSlowPath = cacheContainer.forceSlowpath;
 
-        final boolean isForceSlowpath = cacheContainer.forceSlowpath;
         cacheContainer.forceSlowpath = false;
 
         // For each property that is settable, we need to do a lookup and
         // transition to that value.
         transitionStateInProgress = true;
 
-        for (int n = -1; n < max; n++) {
-            // The 'transition' property is a special pseudo-property that is always processed
-            // before other CSS properties, as its value might affect the transitions that are
-            // applied to other properties.
-            final CssMetaData<Styleable, ?> cssMetaData = n < 0 ?
-                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
-                    (CssMetaData<Styleable, ?>)styleables.get(n);
+        // The StyleCacheEntry (cache), when filled, holds previously calculated values 
+        // for each property. Missing values in this cache indicate no style affected 
+        // the value and should lead to a reset of the property to its previous value.
+        //
+        // If there was no cache present, then a new cache is created which will have
+        // all values missing (null). In that case the missing values cannot be assumed
+        // to indicate that no style affected the property; they must still be calculated
+        // first.
+        //
+        // The variable forceSlowPath (JDK-8116341) indicates that the style helper was
+        // reused. If true any missing (null) values in the cache should be re-evaluated,
+        // but any present values or SKIP values should be handled normally.
+        //
+        // This culminates into a single flag, which controls whether missing values
+        // should be either recalculated and added, or lead to the property being reset
+        // to its previous value.
+        //
+        // | cachePresent | forceSlowPath | calculateMissingValues |
+        // |--------------|---------------|------------------------|
+        // |     false    |     false     |          true          |
+        // |     true     |     false     |          false         |
+        // |     false    |     true      |          true          |
+        // |     true     |     true      |          true          |
+        //
+        final boolean calculateMissingValues = forceSlowPath || !cachePresent;
 
-            // Don't bother looking up styles that don't inherit.
-            if (inheritOnly && cssMetaData.isInherits() == false) {
-                continue;
-            }
+        // The 'transition' property is a special pseudo-property that is always processed
+        // before other CSS properties, as its value might affect the transitions that are
+        // applied to other properties.
+        applyStyle(
+            context,
+            (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance(),
+            cacheEntry, calculateMissingValues, inheritOnly
+        );
 
-            // Skip the lookup if we know there isn't a chance for this property
-            // to be set (usually due to a "bind").
-            if (!cssMetaData.isSettable(node)) continue;
+        for (int n = 0, max = styleables.size(); n < max; n++) {
+            applyStyle(context, styleables.get(n), cacheEntry, calculateMissingValues, inheritOnly);
+        }
 
-            final String property = cssMetaData.getProperty();
+        for (int n = 0, max = contextualStyleables.size(); n < max; n++) {
+            applyStyle(context, contextualStyleables.get(n), cacheEntry, calculateMissingValues, inheritOnly);
+        }
 
-            CalculatedValue calculatedValue = cacheEntry.get(property);
+        transitionStateInProgress = false;
+    }
 
-            // If there is no calculatedValue and we're on the fast path,
-            // take the slow path if cssFlags is REAPPLY (JDK-8116341)
-            final boolean forceSlowpath =
-                    fastpath && calculatedValue == null && isForceSlowpath;
+    /**
+     * This method will update a single property according to the looked up calculated value
+     * based on its styles. If there is no value to apply, its previous value and style origin
+     * will be restored. If the style origin of the calculated value has lower precedence
+     * than its current value, then the property will be left untouched.
+     * <p>
+     * This method has two primary code paths. A path where it will recalculate the
+     * value and update the cache if the cache returned a {@code null} ({@code calculateMissingValues} is
+     * {@code true}), and a path where the cache is known to be correct, in which case
+     * a returned {@code null} from the cache results in the property to be restored
+     * to its previous value.
+     * <p>
+     * Note: the supplied {@code cacheEntry} is shared among all nodes at the same
+     * level in the hierarchy (often siblings) that have the same styles and pseudo class
+     * state for themselves and all its ancestors. A calculated value, even if not applicable
+     * to the current node (due to a binding or user-set value) must still be cached for
+     * other compatible nodes. Likewise, setting a cache value to SKIP will affect
+     * all compatible nodes -- this may be a bug in the current implementation.
+     *
+     * @param context a styling context, cannot be {@code null}
+     * @param cssMetaData a CSS meta data holder identifying the property, cannot be {@code null}
+     * @param cacheEntry a shared style cache entry, cannot be {@code null}
+     * @param calculateMissingValues {@code true} to indicate missing values should be calculated and
+     *     added to the cache, or {@code false} to indicate values should only be applied (or
+     *     restored if they were missing from the cache)
+     * @param processInheritedStylesOnly {@code true} to only process inherited styles, otherwise
+     *     {@code false}; this is useful when no styles are applied to this node and so only
+     *     inherited styles could possibly affect it
+     * @throws NullPointerException when any argument is {@code null}
+     */
+    private void applyStyle(
+        final StylingContext context,
+        final CssMetaData<Styleable, ?> cssMetaData,
+        final StyleCacheEntry cacheEntry,
+        final boolean calculateMissingValues,
+        final boolean processInheritedStylesOnly
+    ) {
+        // Don't bother looking up styles that don't inherit IF processInheritedStylesOnly was set.
+        if (processInheritedStylesOnly && cssMetaData.isInherits() == false) {
+            return;
+        }
 
-            final boolean addToCache =
-                    (!fastpath && calculatedValue == null) || forceSlowpath;
+        Node node = context.node;
 
-            if (fastpath && !forceSlowpath) {
+        // Skip the lookup if we know there isn't a change for this property
+        // to be set (usually due to a "bind").
+        if (!cssMetaData.isSettable(node)) return;
 
-                // If the cache contains SKIP, then there was an
-                // exception thrown from applyStyle
-                if (calculatedValue == SKIP) {
-                    continue;
+        final String property = cssMetaData.getProperty();
+
+        // This can return either:
+        // - CalculatedValue -- previously calculated by this method via lookup()
+        // - SKIP -- indicates applying the value was attempted before, but failed due to an exception
+        // - null -- indicates it was not cached yet OR there was no value found previously
+        // How the last case is to be interpreted depends on the calculateMissingValues parameter.
+        CalculatedValue calculatedValue = cacheEntry.get(property);
+
+        // This is correct in all cases. In the case where styles need to be calculated
+        // because there was no cache, the provided cache will contain only nulls. In the case
+        // there already was a cache, then SKIP should always skip updating the property.
+        if (calculatedValue == SKIP) {
+            return;
+        }
+
+        final boolean fillCache = calculatedValue == null && calculateMissingValues;
+
+        if (fillCache) {  // This would be the "slow" path
+            calculatedValue = lookup(context, node, cssMetaData, node);
+        }
+
+        // StyleableProperty#applyStyle might throw an exception and it is called
+        // from two places in this try block.
+        try {
+
+            //
+            // JDK-8127435
+            // If the current value of the property was set by CSS
+            // and there is no style for the property, then reset this
+            // property to its initial value. If it was not set by CSS
+            // then leave the property alone.
+            //
+            if (calculatedValue == null || calculatedValue == SKIP) {
+
+                // cssSetProperties keeps track of the StyleableProperty's that were set by CSS in the previous state.
+                // If this property is not in cssSetProperties map, then the property was not set in the previous state.
+                // This accomplishes two things. First, it lets us know if the property was set in the previous state
+                // so it can be reset in this state if there is no value for it. Second, it avoids calling
+                // CssMetaData#getStyleableProperty which is rather expensive as it may cause expansion of lazy
+                // properties.
+                CalculatedValue initialValue = cacheContainer.cssSetProperties.get(cssMetaData);
+
+                // if the current value was set by CSS and there
+                // is no calculated value for the property, then
+                // there was no style for the property in the current
+                // state, so reset the property to its initial value.
+                if (initialValue != null) {
+
+                    StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+                    if (styleableProperty.getStyleOrigin() != StyleOrigin.USER) {
+                        styleableProperty.applyStyle(initialValue.getOrigin(), initialValue.getValue());
+                    }
                 }
 
-            } else if (calculatedValue == null) {
+                return;
 
-                // slowpath!
-                calculatedValue = lookup(node, cssMetaData, styleMap, transitionStates[0],
-                        node, cachedFont);
+            }
 
-                // lookup is not supposed to return null.
-                if (calculatedValue == null) {
-                    assert false : "lookup returned null for " + property;
-                    continue;
+            if (fillCache) {
+
+                // If we're not on the fastpath, then add the calculated
+                // value to cache.
+                cacheEntry.put(property, calculatedValue);
+            }
+
+            StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+
+            // need to know who set the current value - CSS, the user, or init
+            final StyleOrigin originOfCurrentValue = styleableProperty.getStyleOrigin();
+
+
+            // JDK-8110994:
+            // If the user set the property and there is a style and
+            // the style came from the user agent stylesheet, then
+            // skip the value. A style from a user agent stylesheet should
+            // not override the user set style.
+            //
+            // Note: this check should be after the value was added to the cache
+            // as the cache is shared between all properties with the same pseudo states,
+            // and not all of the nodes will have the property set manually.
+            //
+            final StyleOrigin originOfCalculatedValue = calculatedValue.getOrigin();
+
+            // A calculated value should never have a null style origin since that would
+            // imply the style didn't come from a stylesheet or in-line style.
+            if (originOfCalculatedValue == null) {
+                assert false : styleableProperty.toString();
+                return;
+            }
+
+            if (originOfCurrentValue == StyleOrigin.USER) {
+                if (originOfCalculatedValue == StyleOrigin.USER_AGENT) {
+                    return;
+                }
+            }
+
+            final Object value = calculatedValue.getValue();
+            final Object currentValue = styleableProperty.getValue();
+
+            // JDK-8102176: Only apply the style if something has changed.
+            if ((originOfCurrentValue != originOfCalculatedValue)
+                    || (currentValue != null
+                    ? currentValue.equals(value) == false
+                    : value != null)) {
+
+                if (LOGGER.isLoggable(Level.FINER)) {
+                    LOGGER.finer(property + ", call applyStyle: " + styleableProperty + ", value =" +
+                            String.valueOf(value) + ", originOfCalculatedValue=" + originOfCalculatedValue);
+                }
+
+                styleableProperty.applyStyle(originOfCalculatedValue, value);
+
+                if (cacheContainer.cssSetProperties.containsKey(cssMetaData) == false) {
+                    // track this property
+                    CalculatedValue initialValue = new CalculatedValue(currentValue, originOfCurrentValue, false);
+                    cacheContainer.cssSetProperties.put(cssMetaData, initialValue);
                 }
 
             }
 
-            // StyleableProperty#applyStyle might throw an exception and it is called
-            // from two places in this try block.
+        } catch (Exception e) {
+
+            StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+
+            final String msg = String.format("Failed to set css [%s] on [%s] due to '%s'\n",
+                    cssMetaData.getProperty(), styleableProperty, e.getMessage());
+
+            List<CssParser.ParseError> errors = null;
+            if ((errors = StyleManager.getErrors()) != null) {
+                final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, node, msg);
+                errors.add(error);
+            }
+
+            PlatformLogger logger = Logging.getCSSLogger();
+            if (logger.isLoggable(Level.WARNING)) {
+                logger.warning(msg);
+            }
+
+            // (!!!) Cache entries are shared, setting it to skip means other nodes sharing
+            // the same entry will also skip setting this property...
+
+            // JDK-8125956: if setting value raises exception, reset value
+            // the value to initial and thereafter skip setting the property
+            cacheEntry.put(property, SKIP);
+
+            CalculatedValue cachedValue = null;
+            if (cacheContainer != null && cacheContainer.cssSetProperties != null) {
+                cachedValue = cacheContainer.cssSetProperties.get(cssMetaData);
+            }
+            Object value = (cachedValue != null) ? cachedValue.getValue() : cssMetaData.getInitialValue(node);
+            StyleOrigin origin = (cachedValue != null) ? cachedValue.getOrigin() : null;
             try {
-
-                //
-                // JDK-8127435
-                // If the current value of the property was set by CSS
-                // and there is no style for the property, then reset this
-                // property to its initial value. If it was not set by CSS
-                // then leave the property alone.
-                //
-                if (calculatedValue == null || calculatedValue == SKIP) {
-
-                    // cssSetProperties keeps track of the StyleableProperty's that were set by CSS in the previous state.
-                    // If this property is not in cssSetProperties map, then the property was not set in the previous state.
-                    // This accomplishes two things. First, it lets us know if the property was set in the previous state
-                    // so it can be reset in this state if there is no value for it. Second, it calling
-                    // CssMetaData#getStyleableProperty which is rather expensive as it may cause expansion of lazy
-                    // properties.
-                    CalculatedValue initialValue = cacheContainer.cssSetProperties.get(cssMetaData);
-
-                    // if the current value was set by CSS and there
-                    // is no calculated value for the property, then
-                    // there was no style for the property in the current
-                    // state, so reset the property to its initial value.
-                    if (initialValue != null) {
-
-                        StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-                        if (styleableProperty.getStyleOrigin() != StyleOrigin.USER) {
-                            styleableProperty.applyStyle(initialValue.getOrigin(), initialValue.getValue());
-                        }
-                    }
-
-                    continue;
-
+                styleableProperty.applyStyle(origin, value);
+            } catch (Exception ebad) {
+                // This would be bad.
+                if (logger.isLoggable(Level.SEVERE)) {
+                    logger.severe(String.format("Could not reset [%s] on [%s] due to %s\n" ,
+                            cssMetaData.getProperty(), styleableProperty, e.getMessage()));
                 }
-
-                if (addToCache) {
-
-                    // If we're not on the fastpath, then add the calculated
-                    // value to cache.
-                    cacheEntry.put(property, calculatedValue);
-                }
-
-                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-
-                // need to know who set the current value - CSS, the user, or init
-                final StyleOrigin originOfCurrentValue = styleableProperty.getStyleOrigin();
-
-
-                // JDK-8110994:
-                // If the user set the property and there is a style and
-                // the style came from the user agent stylesheet, then
-                // skip the value. A style from a user agent stylesheet should
-                // not override the user set style.
-                //
-                // Note: this check should be after the value was added to the cache
-                // as the cache is shared between all properties with the same pseudo states,
-                // and not all of the nodes will have the property set manually.
-                //
-                final StyleOrigin originOfCalculatedValue = calculatedValue.getOrigin();
-
-                // A calculated value should never have a null style origin since that would
-                // imply the style didn't come from a stylesheet or in-line style.
-                if (originOfCalculatedValue == null) {
-                    assert false : styleableProperty.toString();
-                    continue;
-                }
-
-                if (originOfCurrentValue == StyleOrigin.USER) {
-                    if (originOfCalculatedValue == StyleOrigin.USER_AGENT) {
-                        continue;
-                    }
-                }
-
-                final Object value = calculatedValue.getValue();
-                final Object currentValue = styleableProperty.getValue();
-
-                // JDK-8102176: Only apply the style if something has changed.
-                if ((originOfCurrentValue != originOfCalculatedValue)
-                        || (currentValue != null
-                        ? currentValue.equals(value) == false
-                        : value != null)) {
-
-                    if (LOGGER.isLoggable(Level.FINER)) {
-                        LOGGER.finer(property + ", call applyStyle: " + styleableProperty + ", value =" +
-                                String.valueOf(value) + ", originOfCalculatedValue=" + originOfCalculatedValue);
-                    }
-
-                    styleableProperty.applyStyle(originOfCalculatedValue, value);
-
-                    if (cacheContainer.cssSetProperties.containsKey(cssMetaData) == false) {
-                        // track this property
-                        CalculatedValue initialValue = new CalculatedValue(currentValue, originOfCurrentValue, false);
-                        cacheContainer.cssSetProperties.put(cssMetaData, initialValue);
-                    }
-
-                }
-
-            } catch (Exception e) {
-
-                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-
-                final String msg = String.format("Failed to set css [%s] on [%s] due to '%s'\n",
-                        cssMetaData.getProperty(), styleableProperty, e.getMessage());
-
-                List<CssParser.ParseError> errors = null;
-                if ((errors = StyleManager.getErrors()) != null) {
-                    final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, node, msg);
-                    errors.add(error);
-                }
-
-                PlatformLogger logger = Logging.getCSSLogger();
-                if (logger.isLoggable(Level.WARNING)) {
-                    logger.warning(msg);
-                }
-
-                // JDK-8125956: if setting value raises exception, reset value
-                // the value to initial and thereafter skip setting the property
-                cacheEntry.put(property, SKIP);
-
-                CalculatedValue cachedValue = null;
-                if (cacheContainer != null && cacheContainer.cssSetProperties != null) {
-                    cachedValue = cacheContainer.cssSetProperties.get(cssMetaData);
-                }
-                Object value = (cachedValue != null) ? cachedValue.getValue() : cssMetaData.getInitialValue(node);
-                StyleOrigin origin = (cachedValue != null) ? cachedValue.getOrigin() : null;
-                try {
-                    styleableProperty.applyStyle(origin, value);
-                } catch (Exception ebad) {
-                    // This would be bad.
-                    if (logger.isLoggable(Level.SEVERE)) {
-                        logger.severe(String.format("Could not reset [%s] on [%s] due to %s\n" ,
-                                cssMetaData.getProperty(), styleableProperty, e.getMessage()));
-                    }
-                }
-
             }
 
         }
-        transitionStateInProgress = false;
     }
 
     /**
@@ -1072,29 +1140,25 @@ final class CssStyleHelper {
      * style tree looking for the style information for the Node, the
      * property associated with the given styleable, in these states for this font.
      *
-     *
-     *
-     *
+     * @param context a {@link StylingContext}, cannot be {@code null}
      * @param styleable
-     * @param states
+     * @param cssMetaData
      * @param originatingStyleable
-     * @return
+     * @return a CalculatedValue, never {@code null}, but can be the placeholder SKIP
      */
-    private CalculatedValue lookup(final Styleable styleable,
+    private CalculatedValue lookup(final StylingContext context,
+                                   final Styleable styleable,
                                    final CssMetaData cssMetaData,
-                                   final StyleMap styleMap,
-                                   final Set<PseudoClass> states,
-                                   final Styleable originatingStyleable,
-                                   final CalculatedValue cachedFont) {
+                                   final Styleable originatingStyleable) {
 
         if (cssMetaData.getConverter() == FontConverter.getInstance()) {
-            return lookupFont(styleable, cssMetaData.getProperty(), styleMap, cachedFont);
+            return lookupFont(styleable, cssMetaData.getProperty(), context.styleMap, context.font);  // Verified not null
         }
 
         final String property = cssMetaData.getProperty();
 
         // Get the CascadingStyle which may apply to this particular property
-        CascadingStyle style = getStyle(styleable, property, styleMap, states);
+        CascadingStyle style = getStyle(styleable, property, context.styleMap, context.pseudoClasses);
 
         // If no style was found and there are no sub styleables, then there
         // are no matching styles for this property. We will then either SKIP
@@ -1106,8 +1170,7 @@ final class CssStyleHelper {
 
             if (numSubProperties == 0) {
 
-                return handleNoStyleFound(styleable, cssMetaData,
-                        styleMap, states, originatingStyleable, cachedFont);
+                return handleNoStyleFound(context, styleable, cssMetaData, originatingStyleable);  // Verified not null
 
             } else {
 
@@ -1129,8 +1192,7 @@ final class CssStyleHelper {
                 for (int i=0; i<numSubProperties; i++) {
                     CssMetaData subkey = subProperties.get(i);
                     CalculatedValue constituent =
-                        lookup(styleable, subkey, styleMap, states,
-                                originatingStyleable, cachedFont);
+                        lookup(context, styleable, subkey, originatingStyleable);
                     if (constituent != SKIP) {
                         if (subs == null) {
                             subs = new HashMap<>();
@@ -1153,8 +1215,7 @@ final class CssStyleHelper {
 
                 // If there are no subkeys which apply...
                 if (subs == null || subs.isEmpty()) {
-                    return handleNoStyleFound(styleable, cssMetaData,
-                            styleMap, states, originatingStyleable, cachedFont);
+                    return handleNoStyleFound(context, styleable, cssMetaData, originatingStyleable);
                 }
 
                 try {
@@ -1199,17 +1260,17 @@ final class CssStyleHelper {
             if (style == null) return SKIP;
         }
 
-        return calculateValue(style, styleable, cssMetaData, styleMap, states,
-                originatingStyleable, cachedFont);
+        return calculateValue(style, styleable, cssMetaData, context.styleMap, context.pseudoClasses,
+                originatingStyleable, context.font);  // Verified not null
     }
 
     /**
      * Called when there is no style found.
      */
-    private CalculatedValue handleNoStyleFound(final Styleable styleable,
+    private CalculatedValue handleNoStyleFound(final StylingContext context,
+                                               final Styleable styleable,
                                                final CssMetaData cssMetaData,
-                                               final StyleMap styleMap, Set<PseudoClass> pseudoClassStates, Styleable originatingStyleable,
-                                               final CalculatedValue cachedFont) {
+                                               final Styleable originatingStyleable) {
 
         if (cssMetaData.isInherits()) {
 
@@ -1230,8 +1291,8 @@ final class CssStyleHelper {
 
             CalculatedValue cv =
                     calculateValue(style, styleable, cssMetaData,
-                            styleMap, pseudoClassStates, originatingStyleable,
-                                   cachedFont);
+                            context.styleMap, context.pseudoClasses, originatingStyleable,
+                                   context.font);  // Verified not null
 
             return cv;
 
@@ -2176,10 +2237,21 @@ final class CssStyleHelper {
         final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node);
         if (helper != null) {
             if (map == null) map = new HashMap<>();
-            for (CssMetaData metaData : node.getCssMetaData()) {
+
+            for (CssMetaData<Styleable, ?> metaData : getCssMetaData(node)) {
                 List<Style> styleList = helper.getMatchingStyles(node, metaData, true);
+
                 if (styleList != null && !styleList.isEmpty()) {
-                    StyleableProperty prop = metaData.getStyleableProperty(node);
+                    StyleableProperty<?> prop = metaData.getStyleableProperty(node);
+                    map.put(prop, styleList);
+                }
+            }
+
+            for (CssMetaData<Styleable, ?> metaData : getParentContextualCssMetaData(node)) {
+                List<Style> styleList = helper.getMatchingStyles(node, metaData, true);
+
+                if (styleList != null && !styleList.isEmpty()) {
+                    StyleableProperty<?> prop = metaData.getStyleableProperty(node);
                     map.put(prop, styleList);
                 }
             }
@@ -2349,4 +2421,16 @@ final class CssStyleHelper {
 
     }
 
+    static List<CssMetaData<Styleable, ?>> getCssMetaData(Node node) {
+        @SuppressWarnings("unchecked")  // Safe because first type parameter of CssMetaData is not used for modifications
+        List<CssMetaData<Styleable, ?>> cssMetaData = (List<CssMetaData<Styleable, ?>>)(List<?>)node.getCssMetaData();
+
+        // Styleable interface doesn't specify that getCssMetaData should not be null, fix that here:
+        return cssMetaData == null ? List.of() : cssMetaData;
+    }
+
+    // Returns CSS properties that a node may have when in the context of a specific parent
+    static List<CssMetaData<Styleable, ?>> getParentContextualCssMetaData(Node node) {
+        return node.getParent() instanceof Node parent ? parent.getChildCssMetaData() : List.of();
+    }
 }

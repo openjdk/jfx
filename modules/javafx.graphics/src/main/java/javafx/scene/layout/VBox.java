@@ -32,6 +32,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.css.CssMetaData;
+import javafx.css.StyleConverter;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
@@ -150,8 +151,6 @@ public class VBox extends Pane {
 /* ******************************************************************
      *  BEGIN static methods
      ********************************************************************/
-    private static final String MARGIN_CONSTRAINT = "vbox-margin";
-    private static final String VGROW_CONSTRAINT = "vbox-vgrow";
 
     /**
      * Sets the vertical grow priority for the child when contained by a vbox.
@@ -167,7 +166,7 @@ public class VBox extends Pane {
      * @param value the vertical grow priority for the child
      */
     public static void setVgrow(Node child, Priority value) {
-        setConstraint(child, VGROW_CONSTRAINT, value);
+        setChildConstraint(child, StyleableProperties.CHILD_VGROW, value);
     }
 
     /**
@@ -176,7 +175,7 @@ public class VBox extends Pane {
      * @return the vertical grow priority for the child or null if no priority was set
      */
     public static Priority getVgrow(Node child) {
-        return (Priority)getConstraint(child, VGROW_CONSTRAINT);
+        return getChildConstraint(child, StyleableProperties.CHILD_VGROW);
     }
 
     /**
@@ -187,7 +186,7 @@ public class VBox extends Pane {
      * @param value the margin of space around the child
      */
     public static void setMargin(Node child, Insets value) {
-        setConstraint(child, MARGIN_CONSTRAINT, value);
+        setChildConstraint(child, StyleableProperties.CHILD_MARGIN, value);
     }
 
     /**
@@ -196,7 +195,7 @@ public class VBox extends Pane {
      * @return the margin for the child or null if no margin was set
      */
     public static Insets getMargin(Node child) {
-        return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
+        return getChildConstraint(child, StyleableProperties.CHILD_MARGIN);
     }
 
     private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
@@ -660,6 +659,34 @@ public class VBox extends Pane {
             styleables.add(SPACING);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
+
+         private static final CssMetaData<Styleable, Priority> CHILD_VGROW = new CssMetaData<>("-fx-vbox-vgrow", StyleConverter.getEnumConverter(Priority.class)) {
+             @Override
+             public boolean isSettable(Styleable styleable) {
+                 return true;
+             }
+
+             @Override
+             public StyleableProperty<Priority> getStyleableProperty(Styleable styleable) {
+                 return childConstraintProperty((Node)styleable, this);
+             }
+         };
+
+         private static final CssMetaData<Styleable, Insets> CHILD_MARGIN = new CssMetaData<>("-fx-vbox-margin", StyleConverter.getInsetsConverter()) {
+             @Override
+             public boolean isSettable(Styleable styleable) {
+                 return true;
+             }
+
+             @Override
+             public StyleableProperty<Insets> getStyleableProperty(Styleable styleable) {
+                 return childConstraintProperty((Node)styleable, this);
+             }
+         };
+
+         private static final List<CssMetaData<Styleable, ?>> CHILD_STYLEABLES = List.of(
+             CHILD_VGROW, CHILD_MARGIN
+         );
     }
 
     /**
@@ -684,4 +711,8 @@ public class VBox extends Pane {
         return getClassCssMetaData();
     }
 
+    @Override
+    public List<CssMetaData<Styleable, ?>> getChildCssMetaData() {
+        return StyleableProperties.CHILD_STYLEABLES;
+    }
 }

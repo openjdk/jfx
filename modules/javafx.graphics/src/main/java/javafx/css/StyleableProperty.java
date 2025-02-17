@@ -64,16 +64,25 @@ import javafx.beans.value.WritableValue;
 public interface StyleableProperty<T> extends WritableValue<T> {
 
     /**
-     * This method is called from CSS code to set the value of the property.
-     * @param origin the origin
-     * @param value the value
+     * Applies a value to this property and track its origin. This allows for
+     * selectively overriding properties depending on origin priority.
+     * <p>
+     * Note: the provided origin can be {@code null}, indicating that the value is
+     * being reset to its default, and was not specifically set for any origin.
+     *
+     * @param origin the origin, can be {@code null}
+     * @param value the value, can be {@code null}
      */
     void applyStyle(StyleOrigin origin, T value);
 
     /**
-     * Tells the origin of the value of the property. This is needed to
-     * determine whether or not CSS can override the value.
-     * @return the style origin
+     * Returns the origin of the value of the property. This is used by the
+     * CSS engine to determine when values can be overridden.
+     * <p>
+     * Note: the returned origin can be {@code null}, indicating that this value
+     * was never set for any origin, or was reset to this state.
+     *
+     * @return the style origin, can be {@code null}
      */
     StyleOrigin getStyleOrigin();
 
