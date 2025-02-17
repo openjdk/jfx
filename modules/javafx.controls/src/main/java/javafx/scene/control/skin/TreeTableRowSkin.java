@@ -120,7 +120,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
             VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
             if (virtualFlow != null) {
-                registerChangeListener(getVirtualFlow().widthProperty(), e -> requestLayoutWhenFixedCellSizeSet());
+                registerChangeListener(virtualFlow.widthProperty(), e -> requestLayoutWhenFixedCellSizeSet());
             }
         }
     }
