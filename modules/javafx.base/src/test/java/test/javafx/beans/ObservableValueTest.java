@@ -116,7 +116,7 @@ public class ObservableValueTest {
     @ParameterizedTest
     @MethodSource("inputs")
     <T> void shouldIgnoreRemovingNonExistingListener(Action<T> action) {
-        for(int[] counts : new Combinations(PATTERN)) {
+        for (int[] counts : new Combinations(PATTERN)) {
             int invalidationListenerCount = counts[0];
             int changeListenerCount = counts[1];
 
@@ -135,7 +135,7 @@ public class ObservableValueTest {
     @ParameterizedTest
     @MethodSource("inputs")
     <T> void shouldSendCorrectEventsWithSeveralInvalidationAndChangeListeners(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
-        for(int[] counts : new Combinations(PATTERN)) {
+        for (int[] counts : new Combinations(PATTERN)) {
             int invalidationListenerCount = counts[0];
             int changeListenerCount = counts[1];
 
@@ -147,7 +147,7 @@ public class ObservableValueTest {
                 invalidationListenerCount == 0 ? null : "Invalidation of %i"
             );
 
-            if(changeListenerCount == 0) {
+            if (changeListenerCount == 0) {
                 valueSetter.accept(value1);
                 action.assertEvents();  // when there are no change listeners, setting a different value (while invalid) should not trigger any events
             }
@@ -178,7 +178,7 @@ public class ObservableValueTest {
         try {
             Thread.currentThread().setUncaughtExceptionHandler((t, e) -> exceptions.addAndGet(1));
 
-            for(int[] counts : new Combinations(PATTERN)) {
+            for (int[] counts : new Combinations(PATTERN)) {
                 int invalidationListenerCount = counts[0];
                 int changeListenerCount = counts[1];
 
@@ -195,7 +195,7 @@ public class ObservableValueTest {
                 );
                 assertEquals(changeListenerCount + invalidationListenerCount, exceptions.getAndSet(0));
 
-                if(changeListenerCount == 0) {
+                if (changeListenerCount == 0) {
                     valueSetter.accept(value1);
                     action.assertEvents();  // when there are no change listeners, setting a different value (while invalid) should not trigger any events
                     assertEquals(0, exceptions.getAndSet(0));
@@ -241,7 +241,8 @@ public class ObservableValueTest {
         action.addListener((obs, old, current) -> records.add(new Record.Change("A", old, current)));
         action.addListener((obs, old, current) -> {
             records.add(new Record.Change("B", old, current));
-            if(current.equals(value2)) {
+
+            if (current.equals(value2)) {
                 valueSetter.accept(value1);
             }
         });
@@ -271,7 +272,8 @@ public class ObservableValueTest {
 
         action.addListener((obs, old, current) -> {
             records.add(new Record.Change("B", old, current));
-            if(current.equals(value2)) {
+
+            if (current.equals(value2)) {
                 valueSetter.accept(value1);
             }
         });
@@ -337,7 +339,7 @@ public class ObservableValueTest {
             }
         };
 
-        for(int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             action.addListener(changeListener);
         }
 
@@ -362,7 +364,7 @@ public class ObservableValueTest {
             }
         };
 
-        for(int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             action.addListener(changeListener);
         }
 
@@ -389,7 +391,7 @@ public class ObservableValueTest {
             }
         };
 
-        for(int i = 0; i < 12; i++) {
+        for (int i = 0; i < 12; i++) {
             action.addListener(changeListener);
         }
 
@@ -416,7 +418,7 @@ public class ObservableValueTest {
             }
         };
 
-        for(int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             action.addListener(invalidationListener);
         }
 
@@ -441,7 +443,7 @@ public class ObservableValueTest {
             }
         };
 
-        for(int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             action.addListener(invalidationListener);
         }
 
@@ -467,7 +469,7 @@ public class ObservableValueTest {
             }
         };
 
-        for(int i = 0; i < 12; i++) {
+        for (int i = 0; i < 12; i++) {
             action.addListener(listener);
         }
 
@@ -478,7 +480,7 @@ public class ObservableValueTest {
         );
     }
 
-    private void assertCalls(Consumer<Integer> step, AtomicInteger calls, int... expectedCalls) {
+    private static void assertCalls(Consumer<Integer> step, AtomicInteger calls, int... expectedCalls) {
         for(int i = 0; i < expectedCalls.length; i++) {
             step.accept(i);
             assertEquals(expectedCalls[i], calls.getAndSet(0));
