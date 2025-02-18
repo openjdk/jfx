@@ -142,8 +142,6 @@ import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.control.skin.TreeViewSkin;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.image.WritableImage;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Border;
@@ -201,7 +199,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import test.robot.testharness.RobotTestBase;
 
 /**
@@ -223,6 +223,7 @@ import test.robot.testharness.RobotTestBase;
  *
  * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
  */
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class NodeInitializationStressTest extends RobotTestBase {
     /* debugging aid: set this flag to true and comment out assumeFalse(SKIP_TEST) to run specific test(s). */
     private static final boolean SKIP_TEST = false;
@@ -231,9 +232,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private static final AtomicLong seq = new AtomicLong();
     private static final AtomicBoolean failed = new AtomicBoolean();
     private static final ThreadLocal<Random> random = ThreadLocal.withInitial(Random::new);
-    private static Image IMAGE_RED = createImage(Color.RED, 0);
-    private static Image IMAGE_GREEN = createImage(Color.GREEN, 1);
-    private static Image IMAGE_BLUE = createImage(Color.BLUE, 2);
 
     @Test
     public void accordion() {
@@ -665,10 +663,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
             accessNode(c);
             c.setFitHeight(nextDouble(200));
             c.setFitWidth(nextDouble(200));
-            // TODO
-            // ImageView:254 non thread safe when the image is "animated" (WritableImage is animated)
-            // Toolkit.getImageAccessor().getImageProperty(_image).addListener(platformImageChangeListener.getWeakListener());
-            //c.setImage(nextImage());
+            c.setImage(nextImage());
             c.setPreserveRatio(nextBoolean());
             c.setSmooth(nextBoolean());
             c.setViewport(new Rectangle2D(nextDouble(100), nextDouble(100), nextDouble(100), nextDouble(100)));
@@ -1543,13 +1538,14 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static Image nextImage() {
-        switch(nextInt(3)) {
+        // cannot generate WriteableImage because it's considered "animated" and will
+        // throw an exception in ImageView:254
+        // Toolkit.getImageAccessor().getImageProperty(_image).addListener(platformImageChangeListener.getWeakListener());
+        switch(nextInt(2)) {
         case 0:
-            return IMAGE_RED;
-        case 1:
-            return IMAGE_GREEN;
+            return new Image("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAATklEQVR4XsXIIQEAMAwEsfdvuhNwPAMh2Xb3V0JLaAktoSW0hJbQElpCS2gJLaEltISW0BJaQktoCS2hJbSEltASWkJLaAktoSW0hJawHluV+GpNRXH/AAAAAElFTkSuQmCC");
         default:
-            return IMAGE_BLUE;
+            return new Image("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAWUlEQVR4XsXIoQEAAAyDMP5/uvMcwERM2NgnHDUcNRw1HDUcNRw1HDUcNRw1HDUcNRw1HDUcNRw1HDUcNRw1HDUcNRw1HDUcNRw1HDUcNRw1HDUcNRw1HLUD9Br0ptaWcFoAAAAASUVORK5CYII=");
         }
     }
 
@@ -1584,21 +1580,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         CategoryAxis a = new CategoryAxis();
         a.setLabel(text);
         return a;
-    }
-
-    private static Image createImage(Color color, int phase) {
-        int w = nextInt(200);
-        int h = nextInt(200);
-        Color[] colors = { Color.BLACK, color, Color.WHITE };
-        WritableImage im = new WritableImage(w, h);
-        PixelWriter wr = im.getPixelWriter();
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                Color c = colors[(phase + y + x) % 3];
-                wr.setColor(x, y, c);
-            }
-        }
-        return im;
     }
 
     private static Mesh createMesh() {
