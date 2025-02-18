@@ -220,8 +220,6 @@ import test.robot.testharness.RobotTestBase;
  * of test.
  *
  * Also, the visible node gets accessed periodically in the FX application thread just to shake things up.
- *
- * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.
  */
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class NodeInitializationStressTest extends RobotTestBase {
