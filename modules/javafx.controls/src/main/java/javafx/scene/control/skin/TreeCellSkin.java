@@ -207,7 +207,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         boolean disclosureVisible = disclosureNode != null && treeItem != null && ! treeItem.isLeaf();
 
         final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(tree) ?
-                maxDisclosureWidthMap.get(tree) : 18;   // JDK-8119169: default width of default disclosure node
+                maxDisclosureWidthMap.get(tree) : 20;   // JDK-8119169: default width of default disclosure node
         double disclosureWidth = defaultDisclosureWidth;
 
         if (disclosureVisible) {
