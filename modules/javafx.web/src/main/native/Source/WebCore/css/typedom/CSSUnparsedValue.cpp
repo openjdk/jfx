@@ -37,14 +37,15 @@
 #include "CSSVariableReferenceValue.h"
 #include "ExceptionOr.h"
 #include <variant>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSUnparsedValue);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSUnparsedValue);
 
 Ref<CSSUnparsedValue> CSSUnparsedValue::create(Vector<CSSUnparsedSegment>&& segments)
 {
@@ -142,7 +143,7 @@ std::optional<CSSUnparsedSegment> CSSUnparsedValue::item(size_t index)
 ExceptionOr<CSSUnparsedSegment> CSSUnparsedValue::setItem(size_t index, CSSUnparsedSegment&& val)
 {
     if (index > m_segments.size())
-        return Exception { ExceptionCode::RangeError, makeString("Index ", index, " exceeds index range for unparsed segments.") };
+        return Exception { ExceptionCode::RangeError, makeString("Index "_s, index, " exceeds index range for unparsed segments."_s) };
     if (index == m_segments.size())
         m_segments.append(WTFMove(val));
     else

@@ -133,7 +133,8 @@ void SocketStreamHandleImpl::didOpen()
 
 void SocketStreamHandleImpl::didReceiveData(const uint8_t* data, int length)
 {
-    m_client.didReceiveSocketStreamData(*this, data, length);
+    std::span<const uint8_t> span(data, length);
+    m_client.didReceiveSocketStreamData(*this, span);
 }
 
 void SocketStreamHandleImpl::didFail(int errorCode, const String& errorDescription)

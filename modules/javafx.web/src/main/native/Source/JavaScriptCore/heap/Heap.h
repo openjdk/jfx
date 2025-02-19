@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -210,6 +210,7 @@ class Heap;
     v(debuggerScopeSpace, cellHeapCellType, DebuggerScope) \
     v(errorInstanceSpace, errorInstanceHeapCellType, ErrorInstance) \
     v(finalizationRegistrySpace, finalizationRegistryCellType, JSFinalizationRegistry) \
+    v(float16ArraySpace, cellHeapCellType, JSFloat16Array) \
     v(float32ArraySpace, cellHeapCellType, JSFloat32Array) \
     v(float64ArraySpace, cellHeapCellType, JSFloat64Array) \
     v(functionRareDataSpace, destructibleCellHeapCellType, FunctionRareData) \
@@ -234,7 +235,6 @@ class Heap;
     v(javaScriptCallFrameSpace, javaScriptCallFrameHeapCellType, Inspector::JSJavaScriptCallFrame) \
     v(jsModuleRecordSpace, jsModuleRecordHeapCellType, JSModuleRecord) \
     v(syntheticModuleRecordSpace, syntheticModuleRecordHeapCellType, SyntheticModuleRecord) \
-    v(mapBucketSpace, cellHeapCellType, JSMap::BucketType) \
     v(mapIteratorSpace, cellHeapCellType, JSMapIterator) \
     v(mapSpace, cellHeapCellType, JSMap) \
     v(moduleNamespaceObjectSpace, moduleNamespaceObjectHeapCellType, JSModuleNamespaceObject) \
@@ -245,7 +245,6 @@ class Heap;
     v(scopedArgumentsTableSpace, destructibleCellHeapCellType, ScopedArgumentsTable) \
     v(scriptFetchParametersSpace, destructibleCellHeapCellType, JSScriptFetchParameters) \
     v(scriptFetcherSpace, destructibleCellHeapCellType, JSScriptFetcher) \
-    v(setBucketSpace, cellHeapCellType, JSSet::BucketType) \
     v(setIteratorSpace, cellHeapCellType, JSSetIterator) \
     v(setSpace, cellHeapCellType, JSSet) \
     v(shadowRealmSpace, cellHeapCellType, ShadowRealmObject) \
@@ -330,6 +329,7 @@ public:
 
     JS_EXPORT_PRIVATE void setFullActivityCallback(RefPtr<GCActivityCallback>&&);
     JS_EXPORT_PRIVATE void setEdenActivityCallback(RefPtr<GCActivityCallback>&&);
+    JS_EXPORT_PRIVATE void disableStopIfNecessaryTimer();
 
     JS_EXPORT_PRIVATE void setGarbageCollectionTimerEnabled(bool);
     JS_EXPORT_PRIVATE void scheduleOpportunisticFullCollection();
@@ -628,6 +628,8 @@ private:
     JS_EXPORT_PRIVATE void reportExtraMemoryAllocatedSlowCase(GCDeferralContext*, const JSCell*, size_t);
     JS_EXPORT_PRIVATE void deprecatedReportExtraMemorySlowCase(size_t);
 
+    size_t totalBytesAllocatedThisCycle() { return m_nonOversizedBytesAllocatedThisCycle + m_oversizedBytesAllocatedThisCycle; }
+
     bool shouldCollectInCollectorThread(const AbstractLocker&);
     void collectInCollectorThread();
 
@@ -777,7 +779,10 @@ private:
     size_t m_sizeAfterLastEdenCollect { 0 };
     size_t m_sizeBeforeLastEdenCollect { 0 };
 
-    size_t m_bytesAllocatedThisCycle { 0 };
+    size_t m_oversizedBytesAllocatedThisCycle { 0 };
+    size_t m_lastOversidedAllocationThisCycle { 0 };
+
+    size_t m_nonOversizedBytesAllocatedThisCycle { 0 };
     size_t m_bytesAbandonedSinceLastFullCollect { 0 };
     size_t m_maxEdenSize;
     size_t m_maxEdenSizeWhenCritical;
@@ -1004,12 +1009,11 @@ public:
     // AlignedMemoryAllocators
     std::unique_ptr<FastMallocAlignedMemoryAllocator> fastMallocAllocator;
     std::unique_ptr<GigacageAlignedMemoryAllocator> primitiveGigacageAllocator;
-    std::unique_ptr<GigacageAlignedMemoryAllocator> jsValueGigacageAllocator;
 
     // Subspaces
     CompleteSubspace primitiveGigacageAuxiliarySpace; // Typed arrays, strings, bitvectors, etc go here.
-    CompleteSubspace jsValueGigacageAuxiliarySpace; // Butterflies, arrays of JSValues, etc go here.
-    CompleteSubspace immutableButterflyJSValueGigacageAuxiliarySpace; // JSImmutableButterfly goes here.
+    CompleteSubspace auxiliarySpace; // Butterflies, arrays of JSValues, etc go here.
+    CompleteSubspace immutableButterflyAuxiliarySpace; // JSImmutableButterfly goes here.
 
     // We make cross-cutting assumptions about typed arrays being in the primitive Gigacage and butterflies
     // being in the JSValue gigacage. For some types, it's super obvious where they should go, and so we
@@ -1022,8 +1026,6 @@ public:
         switch (kind) {
         case Gigacage::Primitive:
             return primitiveGigacageAuxiliarySpace;
-        case Gigacage::JSValue:
-            return jsValueGigacageAuxiliarySpace;
         case Gigacage::NumberOfKinds:
             break;
         }

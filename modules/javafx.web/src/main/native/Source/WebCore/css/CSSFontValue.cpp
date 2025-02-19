@@ -34,17 +34,17 @@ String CSSFontValue::customCSSText() const
     if (style)
         result.append(style->cssText());
     if (variant)
-        result.append(result.isEmpty() ? "" : " ", variant->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, variant->cssText());
     if (weight)
-        result.append(result.isEmpty() ? "" : " ", weight->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, weight->cssText());
     if (stretch)
-        result.append(result.isEmpty() ? "" : " ", stretch->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, stretch->cssText());
     if (size)
-        result.append(result.isEmpty() ? "" : " ", size->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, size->cssText());
     if (lineHeight)
-        result.append(size ? " / " : result.isEmpty() ? "" : " ", lineHeight->cssText());
+        result.append(size ? " / "_s : result.isEmpty() ? ""_s : " "_s, lineHeight->cssText());
     if (family)
-        result.append(result.isEmpty() ? "" : " ", family->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, family->cssText());
     return result.toString();
 }
 
@@ -57,6 +57,39 @@ bool CSSFontValue::equals(const CSSFontValue& other) const
         && compareCSSValuePtr(size, other.size)
         && compareCSSValuePtr(lineHeight, other.lineHeight)
         && compareCSSValuePtr(family, other.family);
+}
+
+IterationStatus CSSFontValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+{
+    if (style) {
+        if (func(*style) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (variant) {
+        if (func(*variant) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (weight) {
+        if (func(*weight) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (stretch) {
+        if (func(*stretch) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (size) {
+        if (func(*size) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (lineHeight) {
+        if (func(*lineHeight) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (family) {
+        if (func(*family) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    return IterationStatus::Continue;
 }
 
 }

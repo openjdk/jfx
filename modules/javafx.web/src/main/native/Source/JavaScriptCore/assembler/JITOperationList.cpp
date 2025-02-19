@@ -54,7 +54,7 @@ void JITOperationList::initialize()
 
 #if ENABLE(JIT_OPERATION_VALIDATION)
 
-#if JIT_OPERATION_VALIDATION_ASSERT_ENABLED
+#if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
 void JITOperationList::addInverseMap(void* validationEntry, void* pointer)
 {
     m_validatedOperationsInverseMap.add(validationEntry, pointer);
@@ -64,7 +64,7 @@ void JITOperationList::addInverseMap(void* validationEntry, void* pointer)
     addInverseMap(validationEntry, pointer)
 #else
 #define JSC_REGISTER_INVERSE_JIT_CAGED_POINTER_FOR_DEBUG(validationEntry, pointer)
-#endif // JIT_OPERATION_VALIDATION_ASSERT_ENABLED
+#endif // ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
 
 SUPPRESS_ASAN ALWAYS_INLINE void JITOperationList::addPointers(const JITOperationAnnotation* begin, const JITOperationAnnotation* end)
 {
@@ -75,7 +75,7 @@ SUPPRESS_ASAN ALWAYS_INLINE void JITOperationList::addPointers(const JITOperatio
         return;
     }
 #endif
-    if constexpr (JIT_OPERATION_VALIDATION_ASSERT_ENABLED) {
+#if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
         for (const auto* current = begin; current != end; ++current) {
             void* operation = removeCodePtrTag(current->operation);
             if (operation) {
@@ -85,7 +85,7 @@ SUPPRESS_ASAN ALWAYS_INLINE void JITOperationList::addPointers(const JITOperatio
                 JSC_REGISTER_INVERSE_JIT_CAGED_POINTER_FOR_DEBUG(validator, operation);
             }
         }
-    }
+#endif
 }
 
 void JITOperationList::populatePointersInJavaScriptCore()
@@ -110,7 +110,9 @@ LLINT_DECLARE_ROUTINE_VALIDATE(llint_function_for_construct_arity_check);
 LLINT_DECLARE_ROUTINE_VALIDATE(llint_eval_prologue);
 LLINT_DECLARE_ROUTINE_VALIDATE(llint_program_prologue);
 LLINT_DECLARE_ROUTINE_VALIDATE(llint_module_program_prologue);
+LLINT_DECLARE_ROUTINE_VALIDATE(wasm_function_prologue_trampoline);
 LLINT_DECLARE_ROUTINE_VALIDATE(wasm_function_prologue);
+LLINT_DECLARE_ROUTINE_VALIDATE(wasm_function_prologue_simd_trampoline);
 LLINT_DECLARE_ROUTINE_VALIDATE(wasm_function_prologue_simd);
 LLINT_DECLARE_ROUTINE_VALIDATE(llint_throw_during_call_trampoline);
 LLINT_DECLARE_ROUTINE_VALIDATE(llint_handle_uncaught_exception);
@@ -118,6 +120,10 @@ LLINT_DECLARE_ROUTINE_VALIDATE(checkpoint_osr_exit_trampoline);
 LLINT_DECLARE_ROUTINE_VALIDATE(checkpoint_osr_exit_from_inlined_call_trampoline);
 LLINT_DECLARE_ROUTINE_VALIDATE(normal_osr_exit_trampoline);
 LLINT_DECLARE_ROUTINE_VALIDATE(fuzzer_return_early_from_loop_hint);
+LLINT_DECLARE_ROUTINE_VALIDATE(js_to_wasm_wrapper_entry_crash_for_simd_parameters);
+LLINT_DECLARE_ROUTINE_VALIDATE(js_to_wasm_wrapper_entry);
+LLINT_DECLARE_ROUTINE_VALIDATE(wasm_to_wasm_wrapper_entry);
+LLINT_DECLARE_ROUTINE_VALIDATE(wasm_to_js_wrapper_entry);
 
 #if ENABLE(JIT_OPERATION_VALIDATION)
 #define LLINT_OP_EXTRAS(validateLabel) bitwise_cast<void*>(validateLabel)
@@ -163,7 +169,9 @@ static LLIntOperations llintOperations()
             LLINT_ROUTINE(llint_eval_prologue)
             LLINT_ROUTINE(llint_program_prologue)
             LLINT_ROUTINE(llint_module_program_prologue)
+            LLINT_ROUTINE(wasm_function_prologue_trampoline)
             LLINT_ROUTINE(wasm_function_prologue)
+            LLINT_ROUTINE(wasm_function_prologue_simd_trampoline)
             LLINT_ROUTINE(wasm_function_prologue_simd)
             LLINT_ROUTINE(llint_throw_during_call_trampoline)
             LLINT_ROUTINE(llint_handle_uncaught_exception)
@@ -171,16 +179,17 @@ static LLIntOperations llintOperations()
             LLINT_ROUTINE(checkpoint_osr_exit_from_inlined_call_trampoline)
             LLINT_ROUTINE(normal_osr_exit_trampoline)
             LLINT_ROUTINE(fuzzer_return_early_from_loop_hint)
+            LLINT_ROUTINE(js_to_wasm_wrapper_entry)
+            LLINT_ROUTINE(js_to_wasm_wrapper_entry_crash_for_simd_parameters)
+            LLINT_ROUTINE(wasm_to_wasm_wrapper_entry)
+            LLINT_ROUTINE(wasm_to_js_wrapper_entry)
 
             LLINT_OP(op_catch)
             LLINT_OP(wasm_catch)
             LLINT_OP(wasm_catch_all)
             LLINT_OP(llint_generic_return_point)
 
-            LLINT_RETURN_LOCATION(op_get_by_id)
-            LLINT_RETURN_LOCATION(op_get_by_val)
-            LLINT_RETURN_LOCATION(op_put_by_id)
-            LLINT_RETURN_LOCATION(op_put_by_val)
+            FOR_EACH_LLINT_OPCODE_WITH_RETURN(LLINT_RETURN_LOCATION)
 
             JSC_JS_GATE_OPCODES(LLINT_RETURN_LOCATION)
             JSC_WASM_GATE_OPCODES(LLINT_RETURN_LOCATION)

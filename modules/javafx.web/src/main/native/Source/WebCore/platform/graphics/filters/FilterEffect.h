@@ -50,7 +50,7 @@ public:
     FilterImageVector takeImageInputs(FilterImageVector& stack) const;
 
     RefPtr<FilterImage> apply(const Filter&, const FilterImageVector& inputs, FilterResults&, const std::optional<FilterEffectGeometry>& = std::nullopt);
-    FilterStyle createFilterStyle(const Filter&, const FilterStyle& input, const std::optional<FilterEffectGeometry>& = std::nullopt) const;
+    FilterStyle createFilterStyle(GraphicsContext&, const Filter&, const FilterStyle& input, const std::optional<FilterEffectGeometry>& = std::nullopt) const;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
 
@@ -60,9 +60,8 @@ protected:
     template<typename FilterEffectType>
     static bool areEqual(const FilterEffectType& a, const FilterEffect& b)
     {
-        if (!is<FilterEffectType>(b))
-            return false;
-        return a.operator==(downcast<FilterEffectType>(b));
+        auto* bType = dynamicDowncast<FilterEffectType>(b);
+        return bType && a.operator==(*bType);
     }
 
     virtual unsigned numberOfEffectInputs() const { return 1; }
@@ -86,10 +85,10 @@ protected:
 
     virtual std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const { return nullptr; }
     virtual std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const = 0;
-    virtual std::optional<GraphicsStyle> createGraphicsStyle(const Filter&) const { return std::nullopt; }
+    virtual std::optional<GraphicsStyle> createGraphicsStyle(GraphicsContext&, const Filter&) const { return std::nullopt; }
 
     RefPtr<FilterImage> apply(const Filter&, FilterImage& input, FilterResults&) override;
-    FilterStyleVector createFilterStyles(const Filter&, const FilterStyle& input) const override;
+    FilterStyleVector createFilterStyles(GraphicsContext&, const Filter&, const FilterStyle& input) const override;
 
     DestinationColorSpace m_operatingColorSpace { DestinationColorSpace::SRGB() };
 };

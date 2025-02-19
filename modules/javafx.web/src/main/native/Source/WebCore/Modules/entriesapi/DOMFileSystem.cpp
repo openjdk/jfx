@@ -32,13 +32,14 @@
 #include "ScriptExecutionContext.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/FileSystem.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DOMFileSystem);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMFileSystem);
 
 struct ListedChild {
     String filename;
@@ -77,7 +78,7 @@ static ExceptionOr<Vector<Ref<FileSystemEntry>>> toFileSystemEntries(ScriptExecu
         return listedChildren.releaseException();
 
     return WTF::compactMap(listedChildren.returnValue(), [&](auto& child) -> RefPtr<FileSystemEntry> {
-        String virtualPath = parentVirtualPath + "/" + child.filename;
+        auto virtualPath = makeString(parentVirtualPath, '/', child.filename);
         switch (child.type) {
         case FileSystem::FileType::Regular:
             return FileSystemFileEntry::create(context, fileSystem, virtualPath);
@@ -147,7 +148,7 @@ DOMFileSystem::DOMFileSystem(Ref<File>&& file)
     : m_name(createVersion4UUIDString())
     , m_file(WTFMove(file))
     , m_rootPath(FileSystem::parentPath(m_file->path()))
-    , m_workQueue(WorkQueue::create("DOMFileSystem work queue"))
+    , m_workQueue(WorkQueue::create("DOMFileSystem work queue"_s))
 {
     ASSERT(!m_rootPath.endsWith('/'));
 }
@@ -162,8 +163,8 @@ Ref<FileSystemDirectoryEntry> DOMFileSystem::root(ScriptExecutionContext& contex
 Ref<FileSystemEntry> DOMFileSystem::fileAsEntry(ScriptExecutionContext& context)
 {
     if (m_file->isDirectory())
-        return FileSystemDirectoryEntry::create(context, *this, "/" + m_file->name());
-    return FileSystemFileEntry::create(context, *this, "/" + m_file->name());
+        return FileSystemDirectoryEntry::create(context, *this, makeString('/', m_file->name()));
+    return FileSystemFileEntry::create(context, *this, makeString('/', m_file->name()));
 }
 
 static ExceptionOr<String> validatePathIsExpectedType(const String& fullPath, String&& virtualPath, FileSystem::FileType expectedType)
@@ -207,10 +208,8 @@ static String resolveRelativeVirtualPath(StringView baseVirtualPath, StringView 
         return "/"_s;
 
     StringBuilder builder;
-    for (auto& segment : virtualPathSegments) {
-        builder.append('/');
-        builder.append(segment);
-    }
+    for (auto& segment : virtualPathSegments)
+        builder.append('/', segment);
     return builder.toString();
 }
 

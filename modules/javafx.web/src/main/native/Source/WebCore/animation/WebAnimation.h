@@ -57,7 +57,7 @@ struct ResolutionContext;
 }
 
 class WebAnimation : public RefCounted<WebAnimation>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(WebAnimation);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebAnimation);
 public:
     static Ref<WebAnimation> create(Document&, AnimationEffect*);
     static Ref<WebAnimation> create(Document&, AnimationEffect*, AnimationTimeline*);
@@ -102,7 +102,8 @@ public:
     using FinishedPromise = DOMPromiseProxyWithResolveCallback<IDLInterface<WebAnimation>>;
     FinishedPromise& finished() { return m_finishedPromise.get(); }
 
-    virtual void cancel();
+    enum class Silently : bool { No, Yes };
+    virtual void cancel(Silently = Silently::No);
     ExceptionOr<void> finish();
     ExceptionOr<void> play();
     void updatePlaybackRate(double);
@@ -134,7 +135,7 @@ public:
     bool needsTick() const;
     virtual void tick();
     WEBCORE_EXPORT Seconds timeToNextTick() const;
-    virtual void resolve(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
+    virtual OptionSet<AnimationImpact> resolve(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
     void effectTargetDidChange(const std::optional<const Styleable>& previousTarget, const std::optional<const Styleable>& newTarget);
     void acceleratedStateDidChange();
     void willChangeRenderer();
@@ -144,6 +145,7 @@ public:
     void effectTimingDidChange();
     void suspendEffectInvalidation();
     void unsuspendEffectInvalidation();
+    bool isEffectInvalidationSuspended() const { return m_suspendCount; }
     void setSuspended(bool);
     bool isSuspended() const { return m_isSuspended; }
     bool isReplaceable() const;
@@ -161,8 +163,9 @@ public:
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void contextDestroyed() final;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 protected:
     explicit WebAnimation(Document&);
@@ -174,7 +177,6 @@ protected:
 private:
     enum class DidSeek : bool { No, Yes };
     enum class SynchronouslyNotify : bool { No, Yes };
-    enum class Silently : bool { No, Yes };
     enum class RespectHoldTime : bool { No, Yes };
     enum class AutoRewind : bool { No, Yes };
     enum class TimeToRunPendingTask : uint8_t { NotScheduled, ASAP, WhenReady };
@@ -196,7 +198,6 @@ private:
     void resetPendingTasks();
     void setEffectInternal(RefPtr<AnimationEffect>&&, bool = false);
     void setTimelineInternal(RefPtr<AnimationTimeline>&&);
-    bool isEffectInvalidationSuspended() { return m_suspendCount; }
     bool computeRelevance();
     void invalidateEffect();
     double effectivePlaybackRate() const;
@@ -204,14 +205,13 @@ private:
     void setEffectiveFrameRate(std::optional<FramesPerSecond>);
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return WebAnimationEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::WebAnimation; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 

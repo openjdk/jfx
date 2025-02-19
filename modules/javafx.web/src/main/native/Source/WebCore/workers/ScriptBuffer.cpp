@@ -31,6 +31,7 @@
 #include "config.h"
 #include "ScriptBuffer.h"
 
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -42,7 +43,7 @@ static std::optional<ShareableResource::Handle> tryConvertToShareableResourceHan
         return std::nullopt;
 
     auto& segment = script.buffer()->begin()->segment;
-    auto sharedMemory = SharedMemory::wrapMap(const_cast<uint8_t*>(segment->data()), segment->size(), SharedMemory::Protection::ReadOnly);
+    auto sharedMemory = SharedMemory::wrapMap(segment->span(), SharedMemory::Protection::ReadOnly);
     if (!sharedMemory)
         return std::nullopt;
 
@@ -70,8 +71,8 @@ String ScriptBuffer::toString() const
         return String();
 
     StringBuilder builder;
-    m_buffer.get()->forEachSegment([&](auto& segment) {
-        builder.append(String::fromUTF8(segment.data(), segment.size()));
+    m_buffer.get()->forEachSegment([&](auto segment) {
+        builder.append(byteCast<char8_t>(segment));
     });
     return builder.toString();
 }
@@ -85,8 +86,8 @@ void ScriptBuffer::append(const String& string)
 {
     if (string.isEmpty())
         return;
-    auto result = string.tryGetUTF8([&](std::span<const char> span) -> bool {
-        m_buffer.append(span.data(), span.size());
+    auto result = string.tryGetUTF8([&](std::span<const char8_t> span) -> bool {
+        m_buffer.append(span);
         return true;
     });
     RELEASE_ASSERT(result);

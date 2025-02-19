@@ -550,4 +550,13 @@ int Scrollbar::minimumThumbLength() const
     return m_scrollableArea.scrollbarsController().minimumThumbLength(m_orientation);
 }
 
+void Scrollbar::updateScrollbarThickness()
+{
+    m_widthStyle = m_scrollableArea.scrollbarWidthStyle();
+    if (!isCustomScrollbar() || isMockScrollbar()) {
+        int thickness = ScrollbarTheme::theme().scrollbarThickness(widthStyle());
+        setFrameRect(IntRect(0, 0, thickness, thickness));
+    }
+}
+
 } // namespace WebCore

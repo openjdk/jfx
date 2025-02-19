@@ -98,8 +98,8 @@ public:
     const Type* matrixType(uint8_t columns, uint8_t rows, const Type*);
     const Type* textureType(Types::Texture::Kind, const Type*);
     const Type* textureStorageType(Types::TextureStorage::Kind, TexelFormat, AccessMode);
-    const Type* functionType(Vector<const Type*>&&, const Type*);
-    const Type* referenceType(AddressSpace, const Type*, AccessMode);
+    const Type* functionType(Vector<const Type*>&&, const Type*, bool mustUse);
+    const Type* referenceType(AddressSpace, const Type*, AccessMode, bool isVectorComponent = false);
     const Type* pointerType(AddressSpace, const Type*, AccessMode);
     const Type* atomicType(const Type*);
     const Type* typeConstructorType(ASCIILiteral, std::function<const Type*(AST::ElaboratedTypeExpression&)>&&);

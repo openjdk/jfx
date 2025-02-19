@@ -29,12 +29,12 @@
 #include "NodeName.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGStyleElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGStyleElement);
 
 inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -96,8 +96,8 @@ void SVGStyleElement::attributeChanged(const QualifiedName& name, const AtomStri
 {
     switch (name.nodeName()) {
     case AttributeNames::titleAttr:
-        if (sheet() && !isInShadowTree())
-            sheet()->setTitle(newValue);
+        if (RefPtr sheet = this->sheet(); sheet && !isInShadowTree())
+            sheet->setTitle(newValue);
         break;
     case AttributeNames::typeAttr:
         m_styleSheetOwner.setContentType(newValue);

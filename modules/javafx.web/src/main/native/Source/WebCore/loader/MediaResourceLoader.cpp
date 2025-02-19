@@ -38,6 +38,7 @@
 #include "FrameDestructionObserverInlines.h"
 #include "InspectorInstrumentation.h"
 #include "LocalFrameLoaderClient.h"
+#include "OriginAccessPatterns.h"
 #include "SecurityOrigin.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -181,6 +182,29 @@ Vector<ResourceResponse> MediaResourceLoader::responsesForTesting() const
     return m_responsesForTesting;
 }
 
+bool MediaResourceLoader::verifyMediaResponse(const URL& requestURL, const ResourceResponse& response, const SecurityOrigin* contextOrigin)
+{
+    assertIsMainThread();
+    if (!requestURL.protocolIsInHTTPFamily() || response.httpStatusCode() != 206 || !response.contentRange().isValid() || !contextOrigin)
+        return true;
+    auto ensureResult = m_validationLoadInformations.ensure(requestURL, [&] () -> ValidationInformation {
+        bool hasContextOrigin = response.source() == ResourceResponse::Source::ServiceWorker && response.tainting() == ResourceResponse::Tainting::Basic;
+        Ref origin = hasContextOrigin ? *contextOrigin : SecurityOrigin::create(response.url());
+        return { WTFMove(origin), response.tainting() == ResourceResponse::Tainting::Opaque, response.source() == ResourceResponse::Source::ServiceWorker };
+    });
+    if (ensureResult.isNewEntry)
+        return true;
+    auto& validationInformation = ensureResult.iterator->value;
+    if (!validationInformation.origin->isOpaque() && !validationInformation.origin->canRequest(response.url(), OriginAccessPatternsForWebProcess::singleton()))
+        validationInformation.origin = SecurityOrigin::createOpaque();
+    if (response.tainting() == ResourceResponse::Tainting::Opaque)
+        validationInformation.usedOpaqueResponse = true;
+    if (response.source() == ResourceResponse::Source::ServiceWorker)
+        validationInformation.usedServiceWorker = true;
+    if (!validationInformation.usedServiceWorker || !validationInformation.usedOpaqueResponse)
+        return true;
+    return validationInformation.origin->canRequest(response.url(), OriginAccessPatternsForWebProcess::singleton());
+}
 Ref<MediaResource> MediaResource::create(MediaResourceLoader& loader, CachedResourceHandle<CachedRawResource>&& resource)
 {
     return adoptRef(*new MediaResource(loader, WTFMove(resource)));
@@ -240,6 +264,14 @@ void MediaResource::responseReceived(CachedResource& resource, const ResourceRes
         m_didPassAccessControlCheck.store(false);
         if (RefPtr client = this->client())
             client->accessControlCheckFailed(*this, ResourceError(errorDomainWebKitInternal, 0, response.url(), consoleMessage.get()));
+        ensureShutdown();
+        return;
+    }
+    if (!m_loader->verifyMediaResponse(resource.url(), response, resource.protectedOrigin().get())) {
+        static NeverDestroyed<const String> consoleMessage("Media response origin validation failed."_s);
+        m_loader->protectedDocument()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, consoleMessage.get());
+        if (RefPtr client = this->client())
+            client->loadFailed(*this, ResourceError(errorDomainWebKitInternal, 0, response.url(), consoleMessage.get()));
         ensureShutdown();
         return;
     }
@@ -304,7 +336,7 @@ void MediaResource::dataReceived(CachedResource& resource, const SharedBuffer& b
         client->dataReceived(*this, buffer);
 }
 
-void MediaResource::notifyFinished(CachedResource& resource, const NetworkLoadMetrics& metrics)
+void MediaResource::notifyFinished(CachedResource& resource, const NetworkLoadMetrics& metrics, LoadWillContinueInAnotherProcess)
 {
     assertIsMainThread();
 

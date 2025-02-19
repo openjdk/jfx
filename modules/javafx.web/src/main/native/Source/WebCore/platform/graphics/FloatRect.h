@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2016 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc.  All rights reserved.
  * Copyright (C) 2005 Nokia.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,10 @@ typedef struct _NSRect NSRect;
 
 #if USE(CAIRO)
 typedef struct _cairo_rectangle cairo_rectangle_t;
+#endif
+
+#if USE(SKIA)
+struct SkRect;
 #endif
 
 #if PLATFORM(WIN)
@@ -222,6 +226,11 @@ public:
     WEBCORE_EXPORT operator NSRect() const;
 #endif
 
+#if USE(SKIA)
+    FloatRect(const SkRect&);
+    operator SkRect() const;
+#endif
+
 #if USE(CAIRO)
     FloatRect(const cairo_rectangle_t&);
     operator cairo_rectangle_t() const;
@@ -299,6 +308,13 @@ constexpr FloatRect operator+(const FloatRect& a, const FloatRect& b)
         a.width() + b.width(),
         a.height() + b.height(),
     };
+}
+
+inline FloatRect operator+(const FloatRect& a, const FloatBoxExtent& b)
+{
+    FloatRect c = a;
+    c.expand(b);
+    return c;
 }
 
 inline bool areEssentiallyEqual(const FloatRect& a, const FloatRect& b)

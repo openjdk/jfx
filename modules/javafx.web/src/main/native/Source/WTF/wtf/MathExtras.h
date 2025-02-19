@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -71,7 +71,7 @@ constexpr double sqrtOfTwoDouble = M_SQRT2;
 constexpr float sqrtOfTwoFloat = static_cast<float>(M_SQRT2);
 #endif
 
-#if COMPILER(MSVC)
+#if OS(WINDOWS)
 
 // Work around a bug in Win, where atan2(+-infinity, +-infinity) yields NaN instead of specific values.
 extern "C" inline double wtf_atan2(double x, double y)
@@ -98,7 +98,7 @@ extern "C" inline double wtf_atan2(double x, double y)
 
 #define atan2(x, y) wtf_atan2(x, y)
 
-#endif // COMPILER(MSVC)
+#endif // OS(WINDOWS)
 
 constexpr double radiansPerDegreeDouble = piDouble / 180.0;
 constexpr double degreesPerRadianDouble = 180.0 / piDouble;
@@ -106,13 +106,14 @@ constexpr double gradientsPerDegreeDouble = 400.0 / 360.0;
 constexpr double degreesPerGradientDouble = 360.0 / 400.0;
 constexpr double turnsPerDegreeDouble = 1.0 / 360.0;
 constexpr double degreesPerTurnDouble = 360.0;
+constexpr double radiansPerTurnDouble = 2.0f * piDouble;
 
-constexpr inline double deg2rad(double d)  { return d * radiansPerDegreeDouble; }
-constexpr inline double rad2deg(double r)  { return r * degreesPerRadianDouble; }
-constexpr inline double deg2grad(double d) { return d * gradientsPerDegreeDouble; }
-constexpr inline double grad2deg(double g) { return g * degreesPerGradientDouble; }
-constexpr inline double deg2turn(double d) { return d * turnsPerDegreeDouble; }
-constexpr inline double turn2deg(double t) { return t * degreesPerTurnDouble; }
+constexpr double deg2rad(double d)  { return d * radiansPerDegreeDouble; }
+constexpr double rad2deg(double r)  { return r * degreesPerRadianDouble; }
+constexpr double deg2grad(double d) { return d * gradientsPerDegreeDouble; }
+constexpr double grad2deg(double g) { return g * degreesPerGradientDouble; }
+constexpr double deg2turn(double d) { return d * turnsPerDegreeDouble; }
+constexpr double turn2deg(double t) { return t * degreesPerTurnDouble; }
 
 
 // Note that these differ from the casting the double values above in their rounding errors.
@@ -124,18 +125,26 @@ constexpr float turnsPerDegreeFloat = 1.0f / 360.0f;
 constexpr float degreesPerTurnFloat = 360.0f;
 constexpr float radiansPerTurnFloat = 2.0f * piFloat;
 
-constexpr inline float deg2rad(float d)  { return d * radiansPerDegreeFloat; }
-constexpr inline float rad2deg(float r)  { return r * degreesPerRadianFloat; }
-constexpr inline float deg2grad(float d) { return d * gradientsPerDegreeFloat; }
-constexpr inline float grad2deg(float g) { return g * degreesPerGradientFloat; }
-constexpr inline float deg2turn(float d) { return d * turnsPerDegreeFloat; }
-constexpr inline float turn2deg(float t) { return t * degreesPerTurnFloat; }
+constexpr float deg2rad(float d)  { return d * radiansPerDegreeFloat; }
+constexpr float rad2deg(float r)  { return r * degreesPerRadianFloat; }
+constexpr float deg2grad(float d) { return d * gradientsPerDegreeFloat; }
+constexpr float grad2deg(float g) { return g * degreesPerGradientFloat; }
+constexpr float deg2turn(float d) { return d * turnsPerDegreeFloat; }
+constexpr float turn2deg(float t) { return t * degreesPerTurnFloat; }
 
-// Treat theses as conversions through the cannonical unit for angles, which is degrees.
-constexpr inline double rad2grad(double r) { return deg2grad(rad2deg(r)); }
-constexpr inline double grad2rad(double g) { return deg2rad(grad2deg(g)); }
-constexpr inline float rad2grad(float r) { return deg2grad(rad2deg(r)); }
-constexpr inline float grad2rad(float g) { return deg2rad(grad2deg(g)); }
+// Treat these as conversions through the canonical unit for angles, which is degrees.
+constexpr double rad2grad(double r) { return deg2grad(rad2deg(r)); }
+constexpr double grad2rad(double g) { return deg2rad(grad2deg(g)); }
+constexpr double turn2grad(double t) { return deg2grad(turn2deg(t)); }
+constexpr double grad2turn(double g) { return deg2turn(grad2deg(g)); }
+constexpr double turn2rad(double t) { return deg2rad(turn2deg(t)); }
+constexpr double rad2turn(double r) { return deg2turn(rad2deg(r)); }
+constexpr float rad2grad(float r) { return deg2grad(rad2deg(r)); }
+constexpr float grad2rad(float g) { return deg2rad(grad2deg(g)); }
+constexpr float turn2grad(float t) { return deg2grad(turn2deg(t)); }
+constexpr float grad2turn(float g) { return deg2turn(grad2deg(g)); }
+constexpr float turn2rad(float t) { return deg2rad(turn2deg(t)); }
+constexpr float rad2turn(float r) { return deg2turn(rad2deg(r)); }
 
 inline double roundTowardsPositiveInfinity(double value) { return std::floor(value + 0.5); }
 inline float roundTowardsPositiveInfinity(float value) { return std::floor(value + 0.5f); }
@@ -362,37 +371,6 @@ template<typename T> constexpr bool isLessThanEqual(const T& a, const T& b) { re
 template<typename T> constexpr bool isGreaterThan(const T& a, const T& b) { return a > b; }
 template<typename T> constexpr bool isGreaterThanEqual(const T& a, const T& b) { return a >= b; }
 template<typename T> constexpr bool isInRange(const T& a, const T& min, const T& max) { return a >= min && a <= max; }
-
-#ifndef UINT64_C
-#if COMPILER(MSVC)
-#define UINT64_C(c) c ## ui64
-#else
-#define UINT64_C(c) c ## ull
-#endif
-#endif
-
-#if COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
-inline double wtf_pow(double x, double y)
-{
-    // MinGW-w64 has a custom implementation for pow.
-    // This handles certain special cases that are different.
-    if ((x == 0.0 || std::isinf(x)) && std::isfinite(y)) {
-        double f;
-        if (modf(y, &f) != 0.0)
-            return ((x == 0.0) ^ (y > 0.0)) ? std::numeric_limits<double>::infinity() : 0.0;
-    }
-
-    if (x == 2.0) {
-        int yInt = static_cast<int>(y);
-        if (y == yInt)
-            return ldexp(1.0, yInt);
-    }
-
-    return pow(x, y);
-}
-#define pow(x, y) wtf_pow(x, y)
-#endif // COMPILER(MINGW64) && (!defined(__MINGW64_VERSION_RC) || __MINGW64_VERSION_RC < 1)
-
 
 // decompose 'number' to its sign, exponent, and mantissa components.
 // The result is interpreted as:
@@ -639,24 +617,10 @@ inline unsigned clz(T value)
     using UT = typename std::make_unsigned<T>::type;
     UT uValue = value;
 
-#if COMPILER(GCC_COMPATIBLE)
     constexpr unsigned bitSize64 = sizeof(uint64_t) * CHAR_BIT;
     if (uValue)
         return __builtin_clzll(uValue) - (bitSize64 - bitSize);
     return bitSize;
-#elif COMPILER(MSVC) && !CPU(X86)
-    // Visual Studio 2008 or upper have __lzcnt, but we can't detect Intel AVX at compile time.
-    // So we use bit-scan-reverse operation to calculate clz.
-    // _BitScanReverse64 is defined in X86_64 and ARM in MSVC supported environments.
-    unsigned long ret = 0;
-    if (_BitScanReverse64(&ret, uValue))
-        return bitSize - 1 - ret;
-    return bitSize;
-#else
-    UNUSED_PARAM(bitSize);
-    UNUSED_PARAM(uValue);
-    return clzConstexpr(value);
-#endif
 }
 
 template <typename T>
@@ -686,20 +650,9 @@ inline unsigned ctz(T value)
     using UT = typename std::make_unsigned<T>::type;
     UT uValue = value;
 
-#if COMPILER(GCC_COMPATIBLE)
     if (uValue)
         return __builtin_ctzll(uValue);
     return bitSize;
-#elif COMPILER(MSVC) && !CPU(X86)
-    unsigned long ret = 0;
-    if (_BitScanForward64(&ret, uValue))
-        return ret;
-    return bitSize;
-#else
-    UNUSED_PARAM(bitSize);
-    UNUSED_PARAM(uValue);
-    return ctzConstexpr(value);
-#endif
 }
 
 template<typename T>
@@ -734,7 +687,7 @@ constexpr unsigned getMSBSetConstexpr(T t)
 
 inline uint32_t reverseBits32(uint32_t value)
 {
-#if COMPILER(GCC_COMPATIBLE) && CPU(ARM64)
+#if CPU(ARM64)
     uint32_t result;
     asm ("rbit %w0, %w1"
         : "=r"(result)
@@ -777,6 +730,79 @@ template<typename T> constexpr T fabsConstExpr(T value)
     return value;
 }
 
+// For use in places where we could negate std::numeric_limits<T>::min and would like to avoid UB.
+template<typename T>
+requires std::is_integral_v<T>
+constexpr T negate(T v)
+{
+    return static_cast<T>(~static_cast<std::make_unsigned_t<T>>(v) + 1U);
+}
+
+template<typename BitsType, typename InputType>
+inline bool isIdentical(InputType left, InputType right)
+{
+    BitsType leftBits = bitwise_cast<BitsType>(left);
+    BitsType rightBits = bitwise_cast<BitsType>(right);
+    return leftBits == rightBits;
+}
+
+inline bool isIdentical(int32_t left, int32_t right)
+{
+    return isIdentical<int32_t>(left, right);
+}
+
+inline bool isIdentical(int64_t left, int64_t right)
+{
+    return isIdentical<int64_t>(left, right);
+}
+
+inline bool isIdentical(double left, double right)
+{
+    return isIdentical<int64_t>(left, right);
+}
+
+inline bool isIdentical(float left, float right)
+{
+    return isIdentical<int32_t>(left, right);
+}
+
+template<typename ResultType, typename InputType, typename BitsType>
+inline bool isRepresentableAsImpl(InputType originalValue)
+{
+    // Convert the original value to the desired result type.
+    ResultType result = static_cast<ResultType>(originalValue);
+
+    // Convert the converted value back to the original type. The original value is representable
+    // using the new type if such round-tripping doesn't lose bits.
+    InputType newValue = static_cast<InputType>(result);
+
+    return isIdentical<BitsType>(originalValue, newValue);
+}
+
+template<typename ResultType>
+inline bool isRepresentableAs(int32_t value)
+{
+    return isRepresentableAsImpl<ResultType, int32_t, int32_t>(value);
+}
+
+template<typename ResultType>
+inline bool isRepresentableAs(int64_t value)
+{
+    return isRepresentableAsImpl<ResultType, int64_t, int64_t>(value);
+}
+
+template<typename ResultType>
+inline bool isRepresentableAs(size_t value)
+{
+    return isRepresentableAsImpl<ResultType, size_t, size_t>(value);
+}
+
+template<typename ResultType>
+inline bool isRepresentableAs(double value)
+{
+    return isRepresentableAsImpl<ResultType, double, int64_t>(value);
+}
+
 } // namespace WTF
 
 using WTF::shuffleVector;
@@ -787,3 +813,5 @@ using WTF::getMSBSet;
 using WTF::isNaNConstExpr;
 using WTF::fabsConstExpr;
 using WTF::reverseBits32;
+using WTF::isIdentical;
+using WTF::isRepresentableAs;

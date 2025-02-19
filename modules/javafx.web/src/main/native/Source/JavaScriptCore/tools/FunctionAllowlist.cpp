@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <wtf/SafeStrerror.h>
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -60,7 +61,7 @@ FunctionAllowlist::FunctionAllowlist(const char* filename)
 
         // Get rid of newlines at the ends of the strings.
         size_t length = strlen(line);
-        if (line[length - 1] == '\n') {
+        if (length && line[length - 1] == '\n') {
             line[length - 1] = '\0';
             length--;
         }
@@ -69,7 +70,7 @@ FunctionAllowlist::FunctionAllowlist(const char* filename)
         if (!length)
             continue;
 
-        m_entries.add(String(line, length));
+        m_entries.add(String({ line, length }));
     }
 
     int result = fclose(f);
@@ -85,15 +86,15 @@ bool FunctionAllowlist::contains(CodeBlock* codeBlock) const
     if (m_entries.isEmpty())
         return false;
 
-    String name = String::fromUTF8(codeBlock->inferredName());
+    String name = String::fromUTF8(codeBlock->inferredName().span());
     if (m_entries.contains(name))
         return true;
 
-    String hash = String::fromUTF8(codeBlock->hashAsStringIfPossible());
+    String hash = String::fromUTF8(codeBlock->hashAsStringIfPossible().span());
     if (m_entries.contains(hash))
         return true;
 
-    return m_entries.contains(name + '#' + hash);
+    return m_entries.contains(makeString(name, '#', hash));
 }
 
 bool FunctionAllowlist::shouldDumpWasmFunction(uint32_t index) const

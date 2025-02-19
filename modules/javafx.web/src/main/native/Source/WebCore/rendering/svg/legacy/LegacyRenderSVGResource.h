@@ -20,7 +20,6 @@
 #pragma once
 
 #include "RenderStyleConstants.h"
-#include <wtf/WeakHashSet.h>
 #include <wtf/OptionSet.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
@@ -65,7 +64,12 @@ public:
     virtual void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) = 0;
     virtual void removeClientFromCache(RenderElement&, bool markForInvalidation = true) = 0;
 
-    virtual bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) = 0;
+    enum class ApplyResult : uint8_t {
+        ResourceApplied = 1 << 0,
+        ClipContainsRendererContent = 1 << 1
+    };
+
+    virtual OptionSet<ApplyResult> applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) = 0;
     virtual void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement* /* shape */) { }
     virtual FloatRect resourceBoundingBox(const RenderObject&, RepaintRectCalculation) = 0;
 
@@ -82,6 +86,11 @@ public:
 protected:
     void fillAndStrokePathOrShape(GraphicsContext&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement* shape) const;
 };
+
+constexpr bool resourceWasApplied(OptionSet<LegacyRenderSVGResource::ApplyResult> result)
+{
+    return result.contains(LegacyRenderSVGResource::ApplyResult::ResourceApplied);
+}
 
 } // namespace WebCore
 

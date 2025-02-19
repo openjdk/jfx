@@ -24,7 +24,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderImageResource.h"
 #include "RenderSVGModelObject.h"
 #include "SVGBoundingBoxComputation.h"
@@ -34,15 +33,18 @@ namespace WebCore {
 class SVGImageElement;
 
 class RenderSVGImage final : public RenderSVGModelObject {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGImage);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGImage);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGImage);
 public:
     RenderSVGImage(SVGImageElement&, RenderStyle&&);
     virtual ~RenderSVGImage();
 
     SVGImageElement& imageElement() const;
+    Ref<SVGImageElement> protectedImageElement() const;
 
     RenderImageResource& imageResource() { return *m_imageResource; }
     const RenderImageResource& imageResource() const { return *m_imageResource; }
+    CheckedRef<RenderImageResource> checkedImageResource() const;
 
     bool updateImageViewport();
 
@@ -70,7 +72,7 @@ private:
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
     void repaintOrMarkForLayout(const IntRect* = nullptr);
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     bool bufferForeground(PaintInfo&, const LayoutPoint&);
 
     bool needsHasSVGTransformFlags() const final;
@@ -87,5 +89,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGImage, isRenderSVGImage())
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

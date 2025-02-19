@@ -47,6 +47,7 @@
 #include "HTMLNames.h"
 #include "HTMLStyleElement.h"
 #include "LocalFrame.h"
+#include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "MouseEvent.h"
 #include "NodeName.h"
@@ -56,9 +57,10 @@
 #include "UserAgentStyleSheets.h"
 #include <pal/FileSizeFormatter.h>
 #include <unicode/ubidi.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/URLParser.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if ENABLE(SERVICE_CONTROLS)
@@ -71,7 +73,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLAttachmentElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLAttachmentElement);
 
 using namespace HTMLNames;
 
@@ -82,6 +84,72 @@ constexpr float attachmentIconSize = 72;
 #else
 constexpr float attachmentIconSize = 52;
 #endif
+
+// FIXME: Remove after rdar://99228361 is fixed.
+#define ATTACHMENT_LOG_DOCUMENT_TRAFFIC !RELEASE_LOG_DISABLED
+#if ATTACHMENT_LOG_DOCUMENT_TRAFFIC
+// Given a StackTrace, output one minimally-sized function identifier per line, so that more frames can fit in a log message.
+static CString compactStackTrace(StackTrace& stackTrace)
+{
+    StringPrintStream stack;
+    stackTrace.forEachFrame([&stack](int, void*, const char* fullName) {
+        constexpr size_t maxWorkLen = 1023;
+        constexpr bool is8Bit = true;
+        StringView name { fullName ? fullName : "?", fullName ? unsigned(std::min(strlen(fullName), maxWorkLen)) : 1u, is8Bit };
+
+        for (const auto& prefix : { "auto void "_s, "auto "_s }) {
+            if (name.startsWith(prefix)) {
+                name = name.substring(prefix.length());
+                break;
+            }
+        }
+
+        if (name.startsWith("decltype("_s)) {
+            int depth = 1;
+            for (unsigned i = "decltype("_s.length(); i < name.length(); ++i) {
+                auto c = name[i];
+                if (c == ')') {
+                    if (!--depth) {
+                        name = name.substring(i + 1);
+                        if (name.startsWith(" "_s))
+                            name = name.substring(" "_s.length());
+                        break;
+                    }
+                } else if (c == '(')
+                    ++depth;
+            }
+        }
+
+        if (name.startsWith("std::"_s))
+            return;
+
+        for (const auto& prefix : { "WebCore::"_s, "WebKit::"_s, "IPC::"_s }) {
+            if (name.startsWith(prefix)) {
+                name = name.substring(prefix.length());
+                break;
+            }
+        }
+
+        for (unsigned i = 0; i < name.length(); ++i) {
+            auto c = name[i];
+            // If we find '(' first, assume it's the function parameter list, drop it and whatever follows.
+            if (c == '(') {
+                name = name.left(i);
+                break;
+            }
+            // If we find '[' first, assume it's an Objective C method call, keep everything.
+            if (c == '[')
+                break;
+        }
+
+        constexpr unsigned maxLen = 48;
+        name = name.left(maxLen);
+
+        stack.print("\n> "_s, name);
+    });
+    return stack.toCString();
+}
+#endif // ATTACHMENT_LOG_DOCUMENT_TRAFFIC
 
 HTMLAttachmentElement::HTMLAttachmentElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
@@ -252,7 +320,7 @@ void HTMLAttachmentElement::ensureWideLayoutShadowTree(ShadowRoot& root)
     if (m_titleElement)
         return;
 
-    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(attachmentElementShadowUserAgentStyleSheet, sizeof(attachmentElementShadowUserAgentStyleSheet)));
+    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(attachmentElementShadowUserAgentStyleSheet));
     auto style = HTMLStyleElement::create(HTMLNames::styleTag, document(), false);
     style->setTextContent(String { shadowStyle });
     root.appendChild(WTFMove(style));
@@ -268,7 +336,6 @@ void HTMLAttachmentElement::ensureWideLayoutShadowTree(ShadowRoot& root)
 
     m_imageElement = createContainedElement<HTMLImageElement>(previewArea, attachmentIconIdentifier());
     AttachmentImageEventsListener::addToImageForAttachment(*m_imageElement, *this);
-    setNeedsWideLayoutIconRequest();
     updateImage();
 
     m_placeholderElement = createContainedElement<HTMLDivElement>(previewArea, attachmentPlaceholderIdentifier());
@@ -298,9 +365,9 @@ public:
 
     void handleEvent(ScriptExecutionContext&, Event& event) final
     {
-        if (event.type() == eventNames().clickEvent) {
+        if (isAnyClick(event)) {
             auto& mouseEvent = downcast<MouseEvent>(event);
-            auto copiedEvent = MouseEvent::create(saveAtom(), Event::CanBubble::No, Event::IsCancelable::No, Event::IsComposed::No,
+            auto copiedEvent = MouseEvent::create(saveAtom(), Event::CanBubble::No, Event::IsCancelable::No, Event::IsComposed::No, MonotonicTime::now(),
                 mouseEvent.view(), mouseEvent.detail(), mouseEvent.screenX(), mouseEvent.screenY(), mouseEvent.clientX(), mouseEvent.clientY(),
                 mouseEvent.modifierKeys(), mouseEvent.button(), mouseEvent.buttons(), mouseEvent.syntheticClickType(), nullptr);
 
@@ -366,6 +433,7 @@ void HTMLAttachmentElement::updateSaveButton(bool show)
 
         m_saveButton = createContainedElement<HTMLButtonElement>(*m_saveArea, attachmentSaveButtonIdentifier());
         m_saveButton->addEventListener(eventNames().clickEvent, AttachmentSaveEventListener::create(*this), { });
+        m_saveButton->addEventListener(eventNames().auxclickEvent, AttachmentSaveEventListener::create(*this), { });
     }
 }
 
@@ -456,9 +524,71 @@ void HTMLAttachmentElement::setFile(RefPtr<File>&& file, UpdateDisplayAttributes
         }
     }
 
-    setNeedsWideLayoutIconRequest();
+    setNeedsIconRequest();
     invalidateRendering();
 }
+
+#if ATTACHMENT_LOG_DOCUMENT_TRAFFIC
+class AttachmentEvent {
+public:
+    uintptr_t attachment() const { return m_attachment; }
+    uintptr_t document() const { return m_document; }
+    String uniqueIdentifier() const { return m_uniqueIdentifier; }
+    WTF::MonotonicTime time() const { return m_time; }
+    StackTrace& stackTrace() const { return *m_stackTrace; }
+
+    void capture(const HTMLAttachmentElement& a, WTF::MonotonicTime t)
+    {
+        m_attachment = reinterpret_cast<uintptr_t>(&a);
+        m_document = reinterpret_cast<uintptr_t>(&a.document());
+        m_uniqueIdentifier = a.uniqueIdentifier();
+        ASSERT(!!t);
+        m_time = t;
+        m_stackTrace = StackTrace::captureStackTrace(64);
+    }
+
+    void reset()
+    {
+        m_attachment = 0;
+        m_stackTrace = 0;
+    }
+
+    explicit operator bool() const
+    {
+        ASSERT(!m_attachment == !m_stackTrace);
+        return !!m_attachment;
+    }
+
+private:
+    uintptr_t m_attachment { };
+    uintptr_t m_document { };
+    String m_uniqueIdentifier;
+    WTF::MonotonicTime m_time;
+    std::unique_ptr<StackTrace> m_stackTrace;
+};
+
+static AttachmentEvent& lastInsertionInDocument()
+{
+    IGNORE_CLANG_WARNINGS_BEGIN("exit-time-destructors")
+    static AttachmentEvent event;
+    IGNORE_CLANG_WARNINGS_END
+    return event;
+}
+
+static AttachmentEvent& lastRemovalFromDocument()
+{
+    IGNORE_CLANG_WARNINGS_BEGIN("exit-time-destructors")
+    static AttachmentEvent event;
+    IGNORE_CLANG_WARNINGS_END
+    return event;
+}
+
+static bool shouldMonitorDocumentTraffic(Document& document)
+{
+    static constexpr auto sequenceMaxTime = 1_s .seconds();
+    return document.monotonicTimestamp() < sequenceMaxTime;
+}
+#endif // ATTACHMENT_LOG_DOCUMENT_TRAFFIC
 
 Node::InsertedIntoAncestorResult HTMLAttachmentElement::insertedIntoAncestor(InsertionType type, ContainerNode& ancestor)
 {
@@ -469,6 +599,27 @@ Node::InsertedIntoAncestorResult HTMLAttachmentElement::insertedIntoAncestor(Ins
         setInlineStyleProperty(CSSPropertyMarginTop, 1, CSSUnitType::CSS_PX);
         setInlineStyleProperty(CSSPropertyMarginBottom, 1, CSSUnitType::CSS_PX);
     }
+
+#if ATTACHMENT_LOG_DOCUMENT_TRAFFIC
+    if (type.connectedToDocument && shouldMonitorDocumentTraffic(document())) {
+        auto& lastInsertion = lastInsertionInDocument();
+        auto& lastRemoval = lastRemovalFromDocument();
+        auto now = WTF::MonotonicTime::now();
+        if (lastInsertion && lastRemoval && lastRemoval.attachment() != reinterpret_cast<uintptr_t>(this) && lastRemoval.document() == reinterpret_cast<uintptr_t>(&document())) {
+            RELEASE_LOG(Editing, "HTMLAttachmentElement - quick insert(A)-remove(A)-insert(B) within %fs of the first document[%p] load, stacks below:", document().monotonicTimestamp(), reinterpret_cast<const void*>(lastRemoval.document()));
+            RELEASE_LOG(Editing, "HTMLAttachmentElement[%p uuid=%s] - 1st insertion %fms ago:%s", reinterpret_cast<const void*>(lastInsertion.attachment()), lastInsertion.uniqueIdentifier().utf8().data(), (now - lastInsertion.time()).milliseconds(), compactStackTrace(lastInsertion.stackTrace()).data());
+            lastInsertion.reset();
+            RELEASE_LOG(Editing, "HTMLAttachmentElement[%p uuid=%s] - removal %fms ago:%s", reinterpret_cast<const void*>(lastRemoval.attachment()), lastRemoval.uniqueIdentifier().utf8().data(), (now - lastRemoval.time()).milliseconds(), compactStackTrace(lastRemoval.stackTrace()).data());
+            lastRemoval.reset();
+            lastInsertion.capture(*this, now);
+            RELEASE_LOG(Editing, "HTMLAttachmentElement[%p uuid=%s] - 2nd insertion:%s", reinterpret_cast<const void*>(lastInsertion.attachment()), lastInsertion.uniqueIdentifier().utf8().data(), compactStackTrace(lastInsertion.stackTrace()).data());
+        } else {
+            lastInsertion.capture(*this, now);
+            lastRemoval.reset();
+        }
+    }
+#endif // ATTACHMENT_LOG_DOCUMENT_TRAFFIC
+
     if (type.connectedToDocument)
         document().didInsertAttachmentElement(*this);
     return result;
@@ -477,6 +628,14 @@ Node::InsertedIntoAncestorResult HTMLAttachmentElement::insertedIntoAncestor(Ins
 void HTMLAttachmentElement::removedFromAncestor(RemovalType type, ContainerNode& ancestor)
 {
     HTMLElement::removedFromAncestor(type, ancestor);
+
+#if ATTACHMENT_LOG_DOCUMENT_TRAFFIC
+    if (type.disconnectedFromDocument && shouldMonitorDocumentTraffic(document())) {
+        if (auto& lastInsertion = lastInsertionInDocument(); lastInsertion && lastInsertion.attachment() == reinterpret_cast<uintptr_t>(this))
+            lastRemovalFromDocument().capture(*this, WTF::MonotonicTime::now());
+    }
+#endif // ATTACHMENT_LOG_DOCUMENT_TRAFFIC
+
     if (type.disconnectedFromDocument)
         document().didRemoveAttachmentElement(*this);
 }
@@ -541,7 +700,7 @@ void HTMLAttachmentElement::attributeChanged(const QualifiedName& name, const At
     case AttributeNames::titleAttr:
         if (m_titleElement)
             m_titleElement->setTextContent(attachmentTitleForDisplay());
-        setNeedsWideLayoutIconRequest();
+        setNeedsIconRequest();
         break;
     case AttributeNames::subtitleAttr:
         if (m_subtitleElement)
@@ -560,7 +719,7 @@ void HTMLAttachmentElement::attributeChanged(const QualifiedName& name, const At
         ImageControlsMac::updateImageControls(*this);
     }
 #endif
-        setNeedsWideLayoutIconRequest();
+        setNeedsIconRequest();
         break;
     default:
         break;
@@ -595,7 +754,7 @@ String HTMLAttachmentElement::attachmentTitleForDisplay() const
     auto filename = StringView(title).left(indexOfLastDot);
     auto extension = StringView(title).substring(indexOfLastDot);
 
-    if (isWideLayout() && !filename.is8Bit() && ubidi_getBaseDirection(filename.characters16(), filename.length()) == UBIDI_RTL) {
+    if (isWideLayout() && !filename.is8Bit() && ubidi_getBaseDirection(filename.span16().data(), filename.length()) == UBIDI_RTL) {
         // The filename is deemed RTL, it should be exposed as RTL overall, but keeping the extension to the right.
     return makeString(
             rightToLeftMark, // Make this whole text appear as RTL, the element's `dir="auto"` will right-align and put ellipsis on the left (if needed)
@@ -661,7 +820,7 @@ void HTMLAttachmentElement::updateAttributes(std::optional<uint64_t>&& newFileSi
     else
         removeAttribute(subtitleAttr);
 
-    setNeedsWideLayoutIconRequest();
+    setNeedsIconRequest();
     invalidateRendering();
 }
 
@@ -751,20 +910,20 @@ void HTMLAttachmentElement::updateIconForWideLayout(Vector<uint8_t>&& iconSrcDat
     updateImage();
 }
 
-void HTMLAttachmentElement::setNeedsWideLayoutIconRequest()
+void HTMLAttachmentElement::setNeedsIconRequest()
 {
-    m_needsWideLayoutIconRequest = true;
+    m_needsIconRequest = true;
 }
 
 void HTMLAttachmentElement::requestWideLayoutIconIfNeeded()
 {
-    if (!m_needsWideLayoutIconRequest)
+    if (!m_needsIconRequest)
         return;
 
     if (!document().page() || !document().page()->attachmentElementClient())
         return;
 
-    m_needsWideLayoutIconRequest = false;
+    m_needsIconRequest = false;
 
     if (!m_imageElement)
         return;
@@ -773,11 +932,16 @@ void HTMLAttachmentElement::requestWideLayoutIconIfNeeded()
     document().page()->attachmentElementClient()->requestAttachmentIcon(uniqueIdentifier(), FloatSize(attachmentIconSize, attachmentIconSize));
 }
 
-void HTMLAttachmentElement::requestIconWithSize(const FloatSize& size)
+void HTMLAttachmentElement::requestIconIfNeededWithSize(const FloatSize& size)
 {
     ASSERT(!isWideLayout());
+    if (!m_needsIconRequest)
+        return;
+
     if (!document().page() || !document().page()->attachmentElementClient())
         return;
+
+    m_needsIconRequest = false;
 
     queueTaskToDispatchEvent(TaskSource::InternalAsyncTask, Event::create(eventNames().beforeloadEvent, Event::CanBubble::No, Event::IsCancelable::No));
     document().page()->attachmentElementClient()->requestAttachmentIcon(uniqueIdentifier(), size);

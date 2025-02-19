@@ -36,6 +36,8 @@ set(bmalloc_SOURCES
     bmalloc/ObjectTypeTable.cpp
     bmalloc/PerProcess.cpp
     bmalloc/Scavenger.cpp
+    bmalloc/TZoneHeap.cpp
+    bmalloc/TZoneHeapManager.cpp
     bmalloc/bmalloc.cpp
 
     libpas/src/libpas/bmalloc_heap.c
@@ -193,6 +195,7 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/AllIsoHeaps.h
     bmalloc/AllIsoHeapsInlines.h
     bmalloc/AllocationCounts.h
+    bmalloc/CompactAllocationMode.h
     bmalloc/Allocator.h
     bmalloc/AvailableMemory.h
     bmalloc/BAssert.h
@@ -284,6 +287,9 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/SmallPage.h
     bmalloc/StaticPerProcess.h
     bmalloc/StdLibExtras.h
+    bmalloc/TZoneHeap.h
+    bmalloc/TZoneHeapInlines.h
+    bmalloc/TZoneHeapManager.h
     bmalloc/VMAllocate.h
     bmalloc/Vector.h
     bmalloc/Zone.h
@@ -322,6 +328,7 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_allocation_callbacks.h
     libpas/src/libpas/pas_allocation_config.h
     libpas/src/libpas/pas_allocation_kind.h
+    libpas/src/libpas/pas_allocation_mode.h
     libpas/src/libpas/pas_allocation_result.h
     libpas/src/libpas/pas_allocator_counts.h
     libpas/src/libpas/pas_allocator_index.h
@@ -694,7 +701,7 @@ set_source_files_properties(
     libpas/src/libpas/bmalloc_heap_config.c
     libpas/src/libpas/pas_heap_config_kind.c
     libpas/src/libpas/pas_segregated_page_config_kind.c
-    PROPERTIES COMPILE_OPTIONS "${COMPILE_C_AS_CXX}"
+    PROPERTIES LANGUAGE CXX
 )
 
 WEBKIT_FRAMEWORK_DECLARE(bmalloc)

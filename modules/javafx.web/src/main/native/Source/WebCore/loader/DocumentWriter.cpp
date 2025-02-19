@@ -63,7 +63,7 @@ static inline bool canReferToParentFrameEncoding(const LocalFrame* frame, const 
 {
     if (is<XMLDocument>(frame->document()))
         return false;
-    return parentFrame && parentFrame->document()->securityOrigin().isSameOriginDomain(frame->document()->securityOrigin());
+    return parentFrame && parentFrame->document()->protectedSecurityOrigin()->isSameOriginDomain(frame->document()->securityOrigin());
 }
 
 // This is only called by ScriptController::executeIfJavaScriptURL
@@ -94,10 +94,8 @@ void DocumentWriter::replaceDocumentWithResultOfExecutingJavascriptURL(const Str
             frame->protectedDocument()->setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
         }
 
-        if (RefPtr parser = frame->document()->parser()) {
-            auto utf8Source = source.utf8();
-            parser->appendBytes(*this, reinterpret_cast<const uint8_t*>(utf8Source.data()), utf8Source.length());
-        }
+        if (RefPtr parser = frame->document()->parser())
+            parser->appendBytes(*this, source.utf8().span());
     }
 
     end();
@@ -120,8 +118,6 @@ Ref<Document> DocumentWriter::createDocument(const URL& url, ScriptExecutionCont
 {
     Ref frame = *m_frame;
     CheckedRef frameLoader = frame->loader();
-    if (!frameLoader->stateMachine().isDisplayingInitialEmptyDocument() && frameLoader->client().shouldAlwaysUsePluginDocument(m_mimeType))
-        return PluginDocument::create(frame, url);
 
     auto useSinkDocument = [&]() {
 #if ENABLE(PDF_PLUGIN)
@@ -220,7 +216,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         contentSecurityPolicy->setInsecureNavigationRequestsToUpgrade(ownerContentSecurityPolicy->takeNavigationRequestsToUpgrade());
     } else if (url.protocolIsAbout() || url.protocolIsData()) {
         // https://html.spec.whatwg.org/multipage/origin.html#determining-navigation-params-policy-container
-        RefPtr currentHistoryItem = frameLoader->history().currentItem();
+        RefPtr currentHistoryItem = frame->history().currentItem();
 
         if (currentHistoryItem && currentHistoryItem->policyContainer()) {
             const auto& policyContainerFromHistory = currentHistoryItem->policyContainer();
@@ -317,7 +313,7 @@ void DocumentWriter::addData(const SharedBuffer& data)
         return;
     }
     ASSERT(m_parser);
-    protectedParser()->appendBytes(*this, data.data(), data.size());
+    protectedParser()->appendBytes(*this, data.span());
 }
 
 void DocumentWriter::insertDataSynchronously(const String& markup)

@@ -32,11 +32,12 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
 
-class Buffer : public RefCounted<Buffer> {
+class Buffer : public RefCounted<Buffer>, public CanMakeWeakPtr<Buffer> {
 public:
     virtual ~Buffer() = default;
 
@@ -49,15 +50,12 @@ public:
     }
 
     virtual void mapAsync(MapModeFlags, Size64 offset, std::optional<Size64>, CompletionHandler<void(bool)>&&) = 0;
-    struct MappedRange {
-        void* source { nullptr };
-        size_t byteLength { 0 };
-    };
-    virtual MappedRange getMappedRange(Size64 offset, std::optional<Size64>) = 0;
+    virtual void getMappedRange(Size64 offset, std::optional<Size64>, Function<void(std::span<uint8_t>)>&&) = 0;
     virtual void unmap() = 0;
 
     virtual void destroy() = 0;
-
+    virtual std::span<uint8_t> getBufferContents() = 0;
+    virtual void copy(std::span<const uint8_t>, size_t offset) = 0;
 protected:
     Buffer() = default;
 

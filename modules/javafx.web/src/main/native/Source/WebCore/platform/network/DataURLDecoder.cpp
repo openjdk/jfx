@@ -31,10 +31,12 @@
 #include <pal/text/DecodeEscapeSequences.h>
 #include <pal/text/TextEncoding.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RunLoop.h>
 #include <wtf/URL.h>
 #include <wtf/WorkQueue.h>
 #include <wtf/text/Base64.h>
+#include <wtf/text/MakeString.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
@@ -62,14 +64,14 @@ static bool shouldRemoveFragmentIdentifier(const String& mediaType)
 
 static WorkQueue& decodeQueue()
 {
-    static auto& queue = WorkQueue::create("org.webkit.DataURLDecoder", WorkQueue::QOS::UserInitiated).leakRef();
-    return queue;
+    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("org.webkit.DataURLDecoder"_s, WorkQueue::QOS::UserInitiated));
+    return queue.get();
 }
 
 static Result parseMediaType(const String& mediaType)
 {
     if (std::optional<ParsedContentType> parsedContentType = ParsedContentType::create(mediaType))
-        return { parsedContentType->mimeType(), parsedContentType->charset(), parsedContentType->serialize(), { } };
+        return { parsedContentType->mimeType().isolatedCopy(), parsedContentType->charset().isolatedCopy(), parsedContentType->serialize().isolatedCopy(), { } };
     return { "text/plain"_s, "US-ASCII"_s, "text/plain;charset=US-ASCII"_s, { } };
 }
 
@@ -156,8 +158,10 @@ static std::optional<Result> decodeSynchronously(DecodeTask& task)
         return std::nullopt;
 
     if (task.isBase64) {
-        auto mode = task.shouldValidatePadding == ShouldValidatePadding::Yes ? Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace : Base64DecodeMode::DefaultIgnoreWhitespaceForQuirk;
-        auto decodedData = base64Decode(PAL::decodeURLEscapeSequences(task.encodedData), mode);
+        OptionSet<Base64DecodeOption> options = { Base64DecodeOption::IgnoreWhitespace };
+        if (task.shouldValidatePadding == ShouldValidatePadding::Yes)
+            options.add(Base64DecodeOption::ValidatePadding);
+        auto decodedData = base64Decode(PAL::decodeURLEscapeSequences(task.encodedData), options);
         if (!decodedData)
             return std::nullopt;
         task.result.data = WTFMove(*decodedData);

@@ -183,7 +183,7 @@ JLObject URLLoader::load(bool asynchronous,
 
     String headerString;
     for (const auto& header : request.httpHeaderFields()) {
-        headerString = makeString(headerString, header.key, ": ", header.value, "\n");
+        headerString = makeString(headerString, header.key, WTF::String::fromUTF8(": "), header.value, WTF::String::fromUTF8("\n"));
        /* headerString.append(header.key);
         headerString.append(": ");
         headerString.append(header.value);
@@ -365,7 +365,7 @@ void URLLoader::SynchronousTarget::didReceiveResponse(
 
 void URLLoader::SynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
-    m_data.append(data->data(), (size_t)length);
+    m_data.append(data->span());
 }
 
 void URLLoader::SynchronousTarget::didFinishLoading()
@@ -507,7 +507,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveDa
     ASSERT(target);
     const uint8_t* address =
             static_cast<const uint8_t*>(env->GetDirectBufferAddress(byteBuffer));
-    Ref<FragmentedSharedBuffer> tmp_buf = FragmentedSharedBuffer::create(address,remaining);
+    Ref<FragmentedSharedBuffer> tmp_buf = FragmentedSharedBuffer::create(std::span<const uint8_t>(address, remaining));
     target->didReceiveData(tmp_buf->makeContiguous().ptr() + position, remaining);
     //target->didReceiveData((SharedBuffer*)(address) + position, remaining);
 }

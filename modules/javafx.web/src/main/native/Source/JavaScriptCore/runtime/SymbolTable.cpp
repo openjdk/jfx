@@ -88,7 +88,7 @@ SymbolTable::SymbolTable(VM& vm)
 {
 }
 
-SymbolTable::~SymbolTable() { }
+SymbolTable::~SymbolTable() = default;
 
 template<typename Visitor>
 void SymbolTable::visitChildrenImpl(JSCell* thisCell, Visitor& visitor)
@@ -181,6 +181,7 @@ SymbolTable* SymbolTable::cloneScopePart(VM& vm)
 
         result->m_map.add(iter->key, WTFMove(entry));
     }
+
     result->m_maxScopeOffset = m_maxScopeOffset;
 
     if (m_rareData) {
@@ -333,10 +334,10 @@ void SymbolTable::dump(PrintStream& out) const
     Base::dump(out);
 
     CommaPrinter comma;
-    out.print(" <");
+    out.print(" <"_s);
     for (auto& iter : m_map)
-        out.print(comma, *iter.key, ": ", iter.value.varOffset());
-    out.println(">");
+        out.print(comma, *iter.key, ": "_s, iter.value.varOffset());
+    out.println(">"_s);
 }
 
 } // namespace JSC

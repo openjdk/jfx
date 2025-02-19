@@ -29,7 +29,7 @@
 #include "CodeBlock.h"
 #include "DebuggerPrimitives.h"
 #include "JSCellInlines.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -66,7 +66,7 @@ SourceID StackFrame::sourceID() const
 
 static String processSourceURL(VM& vm, const JSC::StackFrame& frame, const String& sourceURL)
 {
-    if (vm.clientData && !sourceURL.startsWithIgnoringASCIICase("http"_s)) {
+    if (vm.clientData && (!protocolIsInHTTPFamily(sourceURL) && !protocolIs(sourceURL, "blob"_s))) {
         String overrideURL = vm.clientData->overrideSourceURL(frame, sourceURL);
         if (!overrideURL.isNull())
             return overrideURL;

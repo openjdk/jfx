@@ -36,11 +36,11 @@
 #include "HTMLSummaryElement.h"
 #include "RenderDetailsMarker.h"
 #include "UserAgentParts.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DetailsMarkerControl);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DetailsMarkerControl);
 
 Ref<DetailsMarkerControl> DetailsMarkerControl::create(Document& document)
 {
@@ -61,7 +61,7 @@ RenderPtr<RenderElement> DetailsMarkerControl::createElementRenderer(RenderStyle
 
 bool DetailsMarkerControl::rendererIsNeeded(const RenderStyle& style)
 {
-    return checkedDowncast<HTMLSummaryElement>(shadowHost())->isActiveSummary() && HTMLDivElement::rendererIsNeeded(style);
+    return downcast<HTMLSummaryElement>(shadowHost())->isActiveSummary() && HTMLDivElement::rendererIsNeeded(style);
 }
 
 }

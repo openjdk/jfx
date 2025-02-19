@@ -40,12 +40,12 @@
 #include "SVGRenderSupport.h"
 #include "SVGStringList.h"
 #include "SVGTransformable.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGPatternElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGPatternElement);
 
 inline SVGPatternElement::SVGPatternElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -79,30 +79,30 @@ void SVGPatternElement::attributeChanged(const QualifiedName& name, const AtomSt
     case AttributeNames::patternUnitsAttr: {
         auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
-            m_patternUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
+            Ref { m_patternUnits }->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
         break;
     }
     case AttributeNames::patternContentUnitsAttr: {
         auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
-            m_patternContentUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
+            Ref { m_patternContentUnits }->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
         break;
     }
     case AttributeNames::patternTransformAttr: {
-        m_patternTransform->baseVal()->parse(newValue);
+        Ref { m_patternTransform }->baseVal()->parse(newValue);
         break;
     }
     case AttributeNames::xAttr:
-        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        Ref { m_x }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
         break;
     case AttributeNames::yAttr:
-        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        Ref { m_y }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
         break;
     case AttributeNames::widthAttr:
-        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
+        Ref { m_width }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
         break;
     case AttributeNames::heightAttr:
-        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
+        Ref { m_height }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
         break;
     default:
         break;
@@ -121,13 +121,11 @@ void SVGPatternElement::svgAttributeChanged(const QualifiedName& attrName)
         InstanceInvalidationGuard guard(*this);
         if (PropertyRegistry::isAnimatedLengthAttribute(attrName))
         setPresentationalHintStyleIsDirty();
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (document().settings().layerBasedSVGEngineEnabled()) {
-            if (auto* patternRenderer = dynamicDowncast<RenderSVGResourcePattern>(renderer()))
+            if (CheckedPtr patternRenderer = dynamicDowncast<RenderSVGResourcePattern>(renderer()))
                 patternRenderer->invalidatePattern();
         return;
     }
-#endif
 
         updateSVGRendererForElementChange();
         return;
@@ -143,15 +141,18 @@ void SVGPatternElement::childrenChanged(const ChildChange& change)
     if (change.source == ChildChange::Source::Parser)
         return;
 
+    if (document().settings().layerBasedSVGEngineEnabled()) {
+        if (CheckedPtr patternRenderer = dynamicDowncast<RenderSVGResourcePattern>(renderer()))
+            patternRenderer->invalidatePattern();
+    }
+
     updateSVGRendererForElementChange();
 }
 
 RenderPtr<RenderElement> SVGPatternElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
     return createRenderer<RenderSVGResourcePattern>(*this, WTFMove(style));
-#endif
     return createRenderer<LegacyRenderSVGResourcePattern>(*this, WTFMove(style));
 }
 
@@ -188,9 +189,14 @@ void SVGPatternElement::collectPatternAttributes(PatternAttributes& attributes) 
         attributes.setPatternContentElement(this);
 }
 
+Ref<const SVGTransformList> SVGPatternElement::protectedPatternTransform() const
+{
+    return m_patternTransform->currentValue();
+}
+
 AffineTransform SVGPatternElement::localCoordinateSpaceTransform(SVGLocatable::CTMScope) const
 {
-    return patternTransform().concatenate();
+    return protectedPatternTransform()->concatenate();
 }
 
 }

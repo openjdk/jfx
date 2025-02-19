@@ -35,6 +35,7 @@
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/URL.h>
 #include <wtf/URLParser.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore::ContentExtensions {
@@ -43,12 +44,12 @@ static void append(Vector<uint8_t>& vector, size_t length)
 {
     RELEASE_ASSERT(length <= std::numeric_limits<uint32_t>::max());
     uint32_t integer = length;
-    vector.append(std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(&integer), sizeof(integer) });
+    vector.append(std::span { reinterpret_cast<const uint8_t*>(&integer), sizeof(integer) });
 }
 
 static void append(Vector<uint8_t>& vector, const CString& string)
 {
-    vector.append(std::span<const uint8_t> { reinterpret_cast<const uint8_t*>(string.data()), string.length() });
+    vector.append(string.span());
 }
 
 static size_t deserializeLength(std::span<const uint8_t> span, size_t offset)
@@ -60,7 +61,7 @@ static size_t deserializeLength(std::span<const uint8_t> span, size_t offset)
 static String deserializeUTF8String(std::span<const uint8_t> span, size_t offset, size_t length)
 {
     RELEASE_ASSERT(span.size() >= offset + length);
-    return String::fromUTF8(span.data() + offset, length);
+    return String::fromUTF8(span.subspan(offset, length));
 }
 
 static void writeLengthToVectorAtOffset(Vector<uint8_t>& vector, size_t offset)
@@ -177,7 +178,7 @@ void ModifyHeadersAction::ModifyHeaderInfo::applyToRequest(ResourceRequest& requ
         if (existingValue.isEmpty())
             request.setHTTPHeaderField(operation.header, operation.value);
         else
-            request.setHTTPHeaderField(operation.header, makeString(existingValue, "; ", operation.value));
+            request.setHTTPHeaderField(operation.header, makeString(existingValue, "; "_s, operation.value));
 
         if (previouslyAppliedHeaderOperation == ModifyHeadersAction::ModifyHeadersOperationType::Unknown)
             headerNameToFirstOperationApplied.add(operation.header, ModifyHeadersAction::ModifyHeadersOperationType::Append);
@@ -413,14 +414,14 @@ auto RedirectAction::RegexSubstitutionAction::deserialize(std::span<const uint8_
     return { WTFMove(regexSubstitution), WTFMove(regexFilter) };
 }
 
-static JSRetainPtr<JSStringRef> makeJSString(const char* utf8)
+static JSRetainPtr<JSStringRef> makeJSString(ASCIILiteral literal)
 {
-    return adopt(JSStringCreateWithUTF8CString(utf8));
+    return adopt(JSStringCreateWithUTF8CString(literal));
 }
 
 static JSRetainPtr<JSStringRef> makeJSString(const String& string)
 {
-    return makeJSString(string.utf8().data());
+    return adopt(JSStringCreateWithUTF8CString(string.utf8().data()));
 }
 
 void RedirectAction::RegexSubstitutionAction::applyToURL(URL& url) const
@@ -435,7 +436,7 @@ void RedirectAction::RegexSubstitutionAction::applyToURL(URL& url) const
     auto toObject = [&] (JSValueRef value) {
         return JSValueToObject(context, value, nullptr);
     };
-    auto getProperty = [&] (JSValueRef value, const char* name) {
+    auto getProperty = [&] (JSValueRef value, ASCIILiteral name) {
         return JSObjectGetProperty(context, toObject(value), makeJSString(name).get(), nullptr);
     };
     auto getArrayValue = [&] (JSValueRef value, size_t index) {
@@ -455,13 +456,13 @@ void RedirectAction::RegexSubstitutionAction::applyToURL(URL& url) const
     JSValueRef regexFilterValue = JSValueMakeString(context, makeJSString(regexFilter).get());
     JSObjectRef regexp = JSObjectMakeRegExp(context, 1, &regexFilterValue, nullptr);
     JSValueRef urlValue = JSValueMakeString(context, makeJSString(url.string()).get());
-    JSObjectRef matchFunction = JSValueToObject(context, getProperty(urlValue, "match"), nullptr);
+    JSObjectRef matchFunction = JSValueToObject(context, getProperty(urlValue, "match"_s), nullptr);
     JSValueRef result = JSObjectCallAsFunction(context, matchFunction, toObject(urlValue), 1, &regexp, nullptr);
     if (!JSValueIsArray(context, result))
         return;
 
     String substitution = regexSubstitution;
-    size_t resultLength = JSValueToNumber(context, getProperty(result, "length"), nullptr);
+    size_t resultLength = JSValueToNumber(context, getProperty(result, "length"_s), nullptr);
     for (size_t i = 0; i < std::min<size_t>(10, resultLength); i++)
         substitution = makeStringByReplacingAll(substitution, makeString('\\', i), valueToWTFString(getArrayValue(result, i)));
 

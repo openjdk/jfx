@@ -45,6 +45,7 @@
 #include "ParserError.h"
 #include "SyntheticModuleRecord.h"
 #include "VMTrapsInlines.h"
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -248,11 +249,11 @@ JSInternalPromise* JSModuleLoader::importModule(JSGlobalObject* globalObject, JS
         RELEASE_AND_RETURN(scope, globalObject->globalObjectMethodTable()->moduleLoaderImportModule(globalObject, this, moduleName, parameters, referrer));
 
     auto* promise = JSInternalPromise::create(vm, globalObject->internalPromiseStructure());
-    String moduleNameString = moduleName->value(globalObject);
+    auto moduleNameString = moduleName->value(globalObject);
     RETURN_IF_EXCEPTION(scope, promise->rejectWithCaughtException(globalObject, scope));
 
     scope.release();
-    promise->reject(globalObject, createError(globalObject, makeString("Could not import the module '"_s, moduleNameString, "'."_s)));
+    promise->reject(globalObject, createError(globalObject, makeString("Could not import the module '"_s, moduleNameString.data, "'."_s)));
     return promise;
 }
 
@@ -361,9 +362,9 @@ JSC_DEFINE_HOST_FUNCTION(moduleLoaderParseModule, (JSGlobalObject* globalObject,
     }
 
     ParserError error;
-    std::unique_ptr<ModuleProgramNode> moduleProgramNode = parse<ModuleProgramNode>(
-        vm, sourceCode, Identifier(), ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
-        JSParserStrictMode::Strict, JSParserScriptMode::Module, SourceParseMode::ModuleAnalyzeMode, FunctionMode::None, SuperBinding::NotNeeded, error);
+    std::unique_ptr<ModuleProgramNode> moduleProgramNode = parseRootNode<ModuleProgramNode>(
+        vm, sourceCode, ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
+        StrictModeLexicallyScopedFeature, JSParserScriptMode::Module, SourceParseMode::ModuleAnalyzeMode, error);
     if (error.isValid())
         RELEASE_AND_RETURN(scope, JSValue::encode(rejectWithError(error.toErrorObject(globalObject, sourceCode))));
     ASSERT(moduleProgramNode);

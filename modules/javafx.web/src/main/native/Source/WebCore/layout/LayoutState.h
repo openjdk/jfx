@@ -26,9 +26,21 @@
 #pragma once
 
 #include "LayoutElementBox.h"
+#include "SecurityOrigin.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+namespace Layout {
+class LayoutState;
+}
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::Layout::LayoutState> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -45,10 +57,17 @@ class TableFormattingState;
 
 class LayoutState : public CanMakeWeakPtr<LayoutState> {
     WTF_MAKE_NONCOPYABLE(LayoutState);
-    WTF_MAKE_ISO_ALLOCATED(LayoutState);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LayoutState);
 public:
-    LayoutState(const Document&, const ElementBox& rootContainer);
+    // Primary layout state has a direct geometry cache in layout boxes.
+    enum class Type { Primary, Secondary };
+
+    using FormattingContextLayoutFunction = Function<void(const ElementBox&, std::optional<LayoutUnit>, LayoutState&)>;
+
+    LayoutState(const Document&, const ElementBox& rootContainer, Type, FormattingContextLayoutFunction&&);
     ~LayoutState();
+
+    Type type() const { return m_type; }
 
     void updateQuirksMode(const Document&);
 
@@ -82,12 +101,17 @@ public:
     bool inQuirksMode() const { return m_quirksMode == QuirksMode::Yes; }
     bool inLimitedQuirksMode() const { return m_quirksMode == QuirksMode::Limited; }
     bool inStandardsMode() const { return m_quirksMode == QuirksMode::No; }
+    const SecurityOrigin& securityOrigin() const { return m_securityOrigin.get(); }
 
     const ElementBox& root() const { return m_rootContainer; }
+
+    void layoutWithFormattingContextForBox(const ElementBox&, std::optional<LayoutUnit> widthConstraint);
 
 private:
     void setQuirksMode(QuirksMode quirksMode) { m_quirksMode = quirksMode; }
     BoxGeometry& ensureGeometryForBoxSlow(const Box&);
+
+    const Type m_type;
 
     HashMap<const ElementBox*, std::unique_ptr<InlineContentCache>> m_inlineContentCaches;
 
@@ -101,26 +125,38 @@ private:
     QuirksMode m_quirksMode { QuirksMode::No };
 
     CheckedRef<const ElementBox> m_rootContainer;
+    Ref<SecurityOrigin> m_securityOrigin;
+
+    FormattingContextLayoutFunction m_formattingContextLayoutFunction;
 };
 
 inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const
 {
-    if (layoutBox.cachedGeometryForLayoutState(*this))
-        return true;
+    if (LIKELY(m_type == Type::Primary))
+        return !!layoutBox.m_cachedGeometryForPrimaryLayoutState;
+
     return m_layoutBoxToBoxGeometry.contains(&layoutBox);
 }
 
 inline BoxGeometry& LayoutState::ensureGeometryForBox(const Box& layoutBox)
 {
-    if (auto* boxGeometry = layoutBox.cachedGeometryForLayoutState(*this))
+    if (LIKELY(m_type == Type::Primary)) {
+        if (auto* boxGeometry = layoutBox.m_cachedGeometryForPrimaryLayoutState.get()) {
+            ASSERT(layoutBox.m_primaryLayoutState == this);
         return *boxGeometry;
+        }
+    }
     return ensureGeometryForBoxSlow(layoutBox);
 }
 
 inline const BoxGeometry& LayoutState::geometryForBox(const Box& layoutBox) const
 {
-    if (auto* boxGeometry = layoutBox.cachedGeometryForLayoutState(*this))
-        return *boxGeometry;
+    if (LIKELY(m_type == Type::Primary)) {
+        ASSERT(layoutBox.m_primaryLayoutState == this);
+        return *layoutBox.m_cachedGeometryForPrimaryLayoutState;
+    }
+
+    ASSERT(layoutBox.m_primaryLayoutState != this);
     ASSERT(m_layoutBoxToBoxGeometry.contains(&layoutBox));
     return *m_layoutBoxToBoxGeometry.get(&layoutBox);
 }
@@ -133,19 +169,6 @@ inline void LayoutState::registerFormattingContext(const FormattingContext& form
     m_formattingContextList.add(&formattingContext);
 }
 #endif
-
-// These Layout::Box function are here to allow inlining.
-inline bool Box::canCacheForLayoutState(const LayoutState& layoutState) const
-{
-    return !m_cachedLayoutState || m_cachedLayoutState.get() == &layoutState;
-}
-
-inline BoxGeometry* Box::cachedGeometryForLayoutState(const LayoutState& layoutState) const
-{
-    if (m_cachedLayoutState.get() != &layoutState)
-        return nullptr;
-    return m_cachedGeometryForLayoutState.get();
-}
 
 }
 }

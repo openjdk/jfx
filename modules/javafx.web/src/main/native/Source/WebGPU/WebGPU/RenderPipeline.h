@@ -25,11 +25,13 @@
 
 #pragma once
 
+#import "Pipeline.h"
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
 #import <wtf/HashTraits.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/WeakPtr.h>
 
 struct WGPURenderPipelineImpl {
@@ -40,10 +42,11 @@ namespace WebGPU {
 class BindGroupLayout;
 class Device;
 class PipelineLayout;
+class TextureView;
 
 // https://gpuweb.github.io/gpuweb/#gpurenderpipeline
 class RenderPipeline : public WGPURenderPipelineImpl, public RefCounted<RenderPipeline>, public CanMakeWeakPtr<RenderPipeline> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RenderPipeline);
 public:
     struct BufferData {
         uint64_t stride { 0 };
@@ -52,9 +55,9 @@ public:
     };
     using RequiredBufferIndicesContainer = HashMap<uint32_t, BufferData, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
-    static Ref<RenderPipeline> create(id<MTLRenderPipelineState> renderPipelineState, MTLPrimitiveType primitiveType, std::optional<MTLIndexType> indexType, MTLWinding frontFace, MTLCullMode cullMode, MTLDepthClipMode depthClipMode, MTLDepthStencilDescriptor *depthStencilDescriptor, Ref<PipelineLayout>&& pipelineLayout, float depthBias, float depthBiasSlopeScale, float depthBiasClamp, uint32_t sampleMask, MTLRenderPipelineDescriptor* renderPipelineDescriptor, uint32_t colorAttachmentCount, const WGPURenderPipelineDescriptor& descriptor, RequiredBufferIndicesContainer&& requiredBufferIndices, Device& device)
+    static Ref<RenderPipeline> create(id<MTLRenderPipelineState> renderPipelineState, MTLPrimitiveType primitiveType, std::optional<MTLIndexType> indexType, MTLWinding frontFace, MTLCullMode cullMode, MTLDepthClipMode depthClipMode, MTLDepthStencilDescriptor *depthStencilDescriptor, Ref<PipelineLayout>&& pipelineLayout, float depthBias, float depthBiasSlopeScale, float depthBiasClamp, uint32_t sampleMask, MTLRenderPipelineDescriptor* renderPipelineDescriptor, uint32_t colorAttachmentCount, const WGPURenderPipelineDescriptor& descriptor, RequiredBufferIndicesContainer&& requiredBufferIndices, BufferBindingSizesForPipeline&& minimumBufferSizes, Device& device)
     {
-        return adoptRef(*new RenderPipeline(renderPipelineState, primitiveType, indexType, frontFace, cullMode, depthClipMode, depthStencilDescriptor, WTFMove(pipelineLayout), depthBias, depthBiasSlopeScale, depthBiasClamp, sampleMask, renderPipelineDescriptor, colorAttachmentCount, descriptor, WTFMove(requiredBufferIndices), device));
+        return adoptRef(*new RenderPipeline(renderPipelineState, primitiveType, indexType, frontFace, cullMode, depthClipMode, depthStencilDescriptor, WTFMove(pipelineLayout), depthBias, depthBiasSlopeScale, depthBiasClamp, sampleMask, renderPipelineDescriptor, colorAttachmentCount, descriptor, WTFMove(requiredBufferIndices), WTFMove(minimumBufferSizes), device));
     }
 
     static Ref<RenderPipeline> createInvalid(Device& device)
@@ -64,7 +67,7 @@ public:
 
     ~RenderPipeline();
 
-    RefPtr<BindGroupLayout> getBindGroupLayout(uint32_t groupIndex);
+    Ref<BindGroupLayout> getBindGroupLayout(uint32_t groupIndex);
     void setLabel(String&&);
 
     bool isValid() const { return m_renderPipelineState; }
@@ -84,7 +87,7 @@ public:
 
     Device& device() const { return m_device; }
     PipelineLayout& pipelineLayout() const;
-    bool colorDepthStencilTargetsMatch(const WGPURenderPassDescriptor&) const;
+    bool colorDepthStencilTargetsMatch(const WGPURenderPassDescriptor&, const Vector<RefPtr<TextureView>>&, const RefPtr<TextureView>&) const;
     bool validateRenderBundle(const WGPURenderBundleEncoderDescriptor&) const;
     bool writesDepth() const;
     bool writesStencil() const;
@@ -92,10 +95,10 @@ public:
     const RequiredBufferIndicesContainer& requiredBufferIndices() const { return m_requiredBufferIndices; }
     WGPUPrimitiveTopology primitiveTopology() const;
     MTLIndexType stripIndexFormat() const;
-    size_t vertexStageInBufferCount() const;
+    const BufferBindingSizesForBindGroup* minimumBufferSizes(uint32_t) const;
 
 private:
-    RenderPipeline(id<MTLRenderPipelineState>, MTLPrimitiveType, std::optional<MTLIndexType>, MTLWinding, MTLCullMode, MTLDepthClipMode, MTLDepthStencilDescriptor *, Ref<PipelineLayout>&&, float depthBias, float depthBiasSlopeScale, float depthBiasClamp, uint32_t sampleMask, MTLRenderPipelineDescriptor*, uint32_t colorAttachmentCount, const WGPURenderPipelineDescriptor&, RequiredBufferIndicesContainer&&, Device&);
+    RenderPipeline(id<MTLRenderPipelineState>, MTLPrimitiveType, std::optional<MTLIndexType>, MTLWinding, MTLCullMode, MTLDepthClipMode, MTLDepthStencilDescriptor *, Ref<PipelineLayout>&&, float depthBias, float depthBiasSlopeScale, float depthBiasClamp, uint32_t sampleMask, MTLRenderPipelineDescriptor*, uint32_t colorAttachmentCount, const WGPURenderPipelineDescriptor&, RequiredBufferIndicesContainer&&, BufferBindingSizesForPipeline&&, Device&);
     RenderPipeline(Device&);
     bool colorTargetsMatch(MTLRenderPassDescriptor*, uint32_t) const;
     bool depthAttachmentMatches(MTLRenderPassDepthAttachmentDescriptor*) const;
@@ -123,6 +126,7 @@ private:
     WGPUDepthStencilState m_descriptorDepthStencil;
     WGPUFragmentState m_descriptorFragment;
     Vector<WGPUColorTargetState> m_descriptorTargets;
+    const BufferBindingSizesForPipeline m_minimumBufferSizes;
     bool m_writesStencil { false };
 };
 
