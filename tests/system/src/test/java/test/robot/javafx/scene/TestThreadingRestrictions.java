@@ -25,9 +25,12 @@
 package test.robot.javafx.scene;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javafx.geometry.Side;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
@@ -42,7 +45,10 @@ import javafx.scene.control.skin.DatePickerSkin;
 import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.RobotTestBase;
 import test.util.Util;
 
@@ -54,28 +60,30 @@ import test.util.Util;
  *
  * This test ensures that the threading restrictions are in place where required.
  */
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class TestThreadingRestrictions extends RobotTestBase {
     @Test
     public void choiceBox() {
-        // FIX test(ChoiceBox::new, ChoiceBox::show);
-        // FIX test(ChoiceBox::new, (p) -> {
-        //            Util.runAndWait(() -> {
-        //                p.show();
-        //            });
-        //            p.hide(); // do we need to fail early here, or only when showing?
-        //        });
+        test(ChoiceBox::new, ChoiceBox::show);
+        test(ChoiceBox::new, ChoiceBox::hide);
+        test(ChoiceBox::new, (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide();
+        });
     }
 
     @Test
     public void colorPicker() {
-        // FIX
-//        test(ColorPicker::new, ColorPicker::show);
-//        test(ColorPicker::new, (p) -> {
-//            Util.runAndWait(() -> {
-//                p.show();
-//            });
-//            p.hide(); // do we need to fail early here, or only when showing?
-//        });
+        test(ColorPicker::new, ColorPicker::show);
+        test(ColorPicker::new, ColorPicker::hide);
+        test(ColorPicker::new, (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide();
+        });
     }
 
     @Test
@@ -84,26 +92,26 @@ public class TestThreadingRestrictions extends RobotTestBase {
             return new ColorPickerSkin(new ColorPicker());
         };
 
-        // FIX
-//        test(gen, ColorPickerSkin::show);
-//        test(gen, (p) -> {
-//            Util.runAndWait(() -> {
-//                p.show();
-//            });
-//            p.hide(); // do we need to fail early here, or only when showing?
-//        });
+        test(gen, ColorPickerSkin::show);
+        test(gen, ColorPickerSkin::hide);
+        test(gen, (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide();
+        });
     }
 
     @Test
     public void comboBox() {
-        // FIX
-//        test(ComboBox::new, ComboBox::show);
-//        test(ComboBox::new, (p) -> {
-//            Util.runAndWait(() -> {
-//                p.show();
-//            });
-//            p.hide(); // do we need to fail early here, or only when showing?
-//        });
+        test(ComboBox::new, ComboBox::show);
+        test(ComboBox::new, ComboBox::hide);
+        test(ComboBox::new, (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide();
+        });
     }
 
     @Test
@@ -112,14 +120,14 @@ public class TestThreadingRestrictions extends RobotTestBase {
             return new ComboBoxListViewSkin(new ComboBox());
         };
 
-        // FIX
-//        test(gen, ComboBoxListViewSkin::show);
-//        test(gen, (p) -> {
-//            Util.runAndWait(() -> {
-//                p.show();
-//            });
-//            p.hide(); // do we need to fail early here, or only when showing?
-//        });
+        test(gen, ComboBoxListViewSkin::show);
+        test(gen, ComboBoxListViewSkin::hide);
+        test(gen, (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide();
+        });
     }
 
     @Test
@@ -133,24 +141,26 @@ public class TestThreadingRestrictions extends RobotTestBase {
         test(gen, (p) -> p.show(stage));
         test(gen, (p) -> p.show(stage, 0, 0));
         test(gen, (p) -> p.show(contentPane, 0, 0));
+        test(gen, (p) -> p.show(contentPane, Side.BOTTOM, 0, 0));
+        test(gen, ContextMenu::hide);
         test(gen, (p) -> {
             Util.runAndWait(() -> {
                 p.show(stage);
             });
-            p.hide(); // do we need to fail early here, or only when showing?
+            p.hide();
         });
     }
 
     @Test
     public void datePicker() {
-        // FIX
-//        test(DatePicker::new, DatePicker::show);
-//        test(DatePicker::new, (p) -> {
-//            Util.runAndWait(() -> {
-//                p.show();
-//            });
-//            p.hide(); // do we need to fail early here, or only when showing?
-//        });
+        test(DatePicker::new, DatePicker::show);
+        test(DatePicker::new, DatePicker::hide);
+        test(DatePicker::new, (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide();
+        });
     }
 
     @Test
@@ -159,27 +169,27 @@ public class TestThreadingRestrictions extends RobotTestBase {
             return new DatePickerSkin(new DatePicker());
         };
 
-        // FIX
-//        test(gen, DatePickerSkin::show);
-//        test(gen, (p) -> {
-//            Util.runAndWait(() -> {
-//                p.show();
-//            });
-//            p.hide(); // do we need to fail early here, or only when showing?
-//        });
+        test(gen, DatePickerSkin::show);
+        test(gen, DatePickerSkin::hide);
+        test(gen, (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide();
+        });
     }
 
     @Test
     public void dialog() {
-        // FIX
-        //test(inFxThread(Dialog::new), Dialog::close);
+        test(inFxThread(Dialog::new), Dialog::close);
         test(inFxThread(Dialog::new), Dialog::show);
-//        test(inFxThread(Dialog::new), (dialog) -> {
-//            Util.runAndWait(() -> {
-//                dialog.show();
-//            });
-//            dialog.hide(); // do we need to fail early here, or only when showing?
-//        });
+        test(inFxThread(Dialog::new), Dialog::hide);
+        test(inFxThread(Dialog::new), (dialog) -> {
+            Util.runAndWait(() -> {
+                dialog.show();
+            });
+            dialog.hide();
+        });
         test(inFxThread(Dialog::new), Dialog::showAndWait);
     }
 
@@ -191,14 +201,14 @@ public class TestThreadingRestrictions extends RobotTestBase {
             return m;
         };
 
-        // FIX
-//        test(gen, (p) -> p.show());
-//        test(gen, (p) -> {
-//            Util.runAndWait(() -> {
-//                p.show();
-//            });
-//            p.hide(); // do we need to fail early here, or only when showing?
-//        });
+        test(gen, Menu::show);
+        test(gen, Menu::hide);
+        test(gen, (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide();
+        });
     }
 
     @Test
@@ -209,14 +219,14 @@ public class TestThreadingRestrictions extends RobotTestBase {
             return m;
         };
 
-        // FIX
-//        test(gen, (p) -> p.show());
-//        test(gen, (p) -> {
-//            Util.runAndWait(() -> {
-//                p.show();
-//            });
-//            p.hide(); // do we need to fail early here, or only when showing?
-//        });
+        test(gen, MenuButton::show);
+        test(gen, MenuButton::hide);
+        test(gen, (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide();
+        });
     }
 
     @Test
@@ -227,18 +237,35 @@ public class TestThreadingRestrictions extends RobotTestBase {
         test(TPopupWindow::new, (p) -> p.show(stage));
         test(TPopupWindow::new, (p) -> p.show(stage, 0, 0));
         test(TPopupWindow::new, (p) -> p.show(contentPane, 0, 0));
-        test(TPopupWindow::new, TPopupWindow::hide);
+        test(TPopupWindow::new, (p) -> {
+            Util.runAndWait(() -> {
+                p.show(stage);
+            });
+            p.hide();
+        });
     }
 
     @Test
     public void stage() {
-        test(inFxThread(Stage::new), Stage::close);
+        test(inFxThread(Stage::new), (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.close();
+        });
         test(inFxThread(Stage::new), Stage::show);
         test(inFxThread(Stage::new), Stage::hide);
+        test(inFxThread(Stage::new), (p) -> {
+            Util.runAndWait(() -> {
+                p.show();
+            });
+            p.hide(); // do we need to fail early here, or only when showing?
+        });
         test(inFxThread(Stage::new), Stage::showAndWait);
     }
 
     @Test
+    @Timeout(value = 1, unit = TimeUnit.DAYS)
     public void window() {
         class TWindow extends Window {
             public TWindow() {
