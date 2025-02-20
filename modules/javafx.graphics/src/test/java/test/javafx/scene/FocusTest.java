@@ -54,13 +54,10 @@ import javafx.stage.Stage;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class FocusTest {
 
@@ -121,6 +118,12 @@ public class FocusTest {
         assertTrue(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focused")));
     }
 
+    private void assertIsFocused(Node... ns) {
+        for (Node n : ns) {
+            assertIsFocused(n);
+        }
+    }
+
     private void assertIsFocused(Scene s, Node n) {
         assertEquals(n, s.getFocusOwner());
         assertIsFocused(n);
@@ -129,6 +132,12 @@ public class FocusTest {
     private void assertNotFocused(Node n) {
         assertFalse(n.isFocused());
         assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focused")));
+    }
+
+    private void assertNotFocused(Node... ns) {
+        for (Node n : ns) {
+            assertNotFocused(n);
+        }
     }
 
     private void assertNotFocused(Scene s, Node n) {
@@ -1161,4 +1170,284 @@ public class FocusTest {
         assertNotFocusWithin(node2);
     }
 
+    @Nested
+    class FocusDelegateTest {
+        static class N extends Group {
+            final Node delegate;
+            final String name;
+
+            N(String name, Node child, Node delegate) {
+                super(child == null ? new Node[0] : new Node[] { child });
+                this.delegate = delegate;
+                this.name = name;
+            }
+
+            N(Node child, Node delegate) {
+                this(null, child, delegate);
+            }
+
+            @Override
+            protected Node getFocusDelegate() {
+                return delegate;
+            }
+
+            @Override
+            public String toString() {
+                return name;
+            }
+        }
+
+        static class Trace extends ArrayList<String> {
+            Trace(Node... nodes) {
+                for (Node node : nodes) {
+                    node.addEventFilter(
+                        Event.ANY,
+                        e -> add(String.format("EventFilter[source=%s, target=%s]", e.getSource(), e.getTarget())));
+
+                    node.addEventHandler(
+                        Event.ANY,
+                        e -> add(String.format("EventHandler[source=%s, target=%s]", e.getSource(), e.getTarget())));
+                }
+            }
+        }
+
+        /**
+         * Focusing a node that delegates focus to a descendant will focus both the original node
+         * and its descendant. This test asserts that this also works in nested scenarios, when the
+         * delegation target delegates focus further down the scene graph.
+         */
+        @Test
+        void focusIsDelegatedToDescendants() {
+            N node1, node2, node3, node4, node5;
+
+            // node1 . . . . . . . . . focusDelegate = node3
+            // └── node2
+            //     └── node3 . . . . . focusDelegate = node5
+            //         └── node4
+            //             └── node5
+            scene.setRoot(
+                node1 = new N(
+                    node2 = new N(
+                        node3 = new N(
+                            node4 = new N(
+                                node5 = new N(null, null), null
+                            ), node5
+                        ), null
+                    ), node3
+                ));
+
+            assertNotFocused(node1, node2, node3, node4, node5);
+
+            node1.requestFocus();
+
+            assertIsFocused(node1, node3, node5);
+            assertIsFocused(scene, node1);
+        }
+
+        /**
+         * This test is similar to {@link #focusIsDelegatedToDescendants()}, except that instead of
+         * focusing the root node, the intermediate focus delegate is focused. This will result in
+         * the root node being unfocused, while the intermediate focus delegate and its delegation
+         * target are focused.
+         */
+        @Test
+        void focusIsDelegatedToSubtreeDescendants() {
+            N node1, node2, node3, node4, node5;
+
+            // node1 . . . . . . . . . focusDelegate = node3
+            // └── node2
+            //     └── node3 . . . . . focusDelegate = node5
+            //         └── node4
+            //             └── node5
+            scene.setRoot(
+                node1 = new N(
+                    node2 = new N(
+                        node3 = new N(
+                            node4 = new N(
+                                node5 = new N(null, null), null
+                            ), node5
+                        ), null
+                    ), node3
+                ));
+
+            assertNotFocused(node1, node2, node3, node4, node5);
+
+            node3.requestFocus();
+
+            assertIsFocused(node3, node5);
+            assertIsFocused(scene, node3);
+        }
+
+        /**
+         * When a scene sends a key event to the focus owner, it is delivered up to the final target
+         * of delegation. The event target changes as the event travels through the scene graph:
+         * First, the event is targeted at the focus owner. For each descendant node, the event is
+         * targeted at the next focus delegate. When the capturing phase completes and the event starts
+         * to bubble up, it is targeted back to its original targets as it crosses the boundary between
+         * focus delegates.
+         */
+        @Test
+        void keyEventIsDeliveredToFocusedDescendants() {
+            N node1, node2, node3, node4, node5;
+
+            // node1 . . . . . . . . . focusDelegate = node3, focusOwner
+            // └── node2
+            //     └── node3 . . . . . focusDelegate = node5
+            //         └── node4
+            //             └── node5
+            scene.setRoot(
+                node1 = new N("node1",
+                    node2 = new N("node2",
+                        node3 = new N("node3",
+                            node4 = new N("node4",
+                                node5 = new N("node5",null, null), null
+                            ), node5
+                        ), null
+                    ), node3
+                ));
+
+            node1.requestFocus();
+
+            var trace = new Trace(node1, node2, node3, node4, node5);
+
+            SceneShim.processKeyEvent(
+                scene, new KeyEvent(KeyEvent.KEY_PRESSED, null, null, KeyCode.A, false, false, false, false));
+
+            assertEquals(
+                List.of(
+                    "EventFilter[source=node1, target=node1]", // <-- target is node1 (focusOwner)
+                    "EventFilter[source=node2, target=node3]", // <-- change target to node3 (delegate)
+                    "EventFilter[source=node3, target=node3]",
+                    "EventFilter[source=node4, target=node5]", // <-- change target to node5 (delegate)
+                    "EventFilter[source=node5, target=node5]",
+                    "EventHandler[source=node5, target=node5]",
+                    "EventHandler[source=node4, target=node5]",
+                    "EventHandler[source=node3, target=node3]", // <-- change target back to node3
+                    "EventHandler[source=node2, target=node3]",
+                    "EventHandler[source=node1, target=node1]" // <-- change target back to node1
+                ),
+                trace
+            );
+        }
+    }
+
+    @Nested
+    class FocusScopeTest {
+        static class N extends Group {
+            final boolean focusScope;
+
+            N(boolean focusScope, boolean hoistFocus, Node child) {
+                super(child == null ? new Node[0] : new Node[] { child });
+                this.focusScope = focusScope;
+                setHoistFocus(hoistFocus);
+            }
+
+            @Override
+            protected boolean isFocusScope() {
+                return focusScope;
+            }
+        }
+
+        /**
+         * A node with the {@link Node#hoistFocusProperty()} flag will hoist a focus request to the next
+         * focus scope. The result is that the node that defines the focus scope is focused, and the node
+         * that initially received the focus request is not.
+         */
+        @Test
+        void hoistFocusRequestToNextScope() {
+            N node1, node2, node3, node4, node5;
+
+            // node1 . . . . . . . . . . [hoistFocus]
+            // └── node2 . . . . . . . . [hoistFocus]
+            //     └── node3 . . . . . . [focusScope, hoistFocus]
+            //         └── node4 . . . . [hoistFocus]
+            //             └── node5 . . [hoistFocus]
+            scene.setRoot(
+                node1 = new N(false, false,
+                    node2 = new N(false, true,
+                        node3 = new N(true, true,
+                            node4 = new N(false, true,
+                                node5 = new N(false, true, null)
+                            )
+                        )
+                    )
+                ));
+
+            node4.requestFocus();
+            assertIsFocused(node3);
+            assertNotFocused(node1, node2, node4, node5);
+
+            node5.requestFocus();
+            assertIsFocused(node3);
+            assertNotFocused(node1, node2, node4, node5);
+        }
+
+        /**
+         * A node with the {@link Node#hoistFocusProperty()} flag will hoist a focus request to the next
+         * focus scope. In this test, the result is that the node that defines the outermost focus scope
+         * is focused, and all other nodes are not focused (this includes the intermediate focus scope).
+         */
+        @Test
+        void hoistFocusRequestToOutermostScope() {
+            N node1, node2, node3, node4, node5;
+
+            // node1 . . . . . . . . . . [focusScope]
+            // └── node2 . . . . . . . . [hoistFocus]
+            //     └── node3 . . . . . . [focusScope, hoistFocus]
+            //         └── node4 . . . . [hoistFocus]
+            //             └── node5 . . [hoistFocus]
+            scene.setRoot(
+                node1 = new N(true, false,
+                    node2 = new N(false, true,
+                        node3 = new N(true, true,
+                            node4 = new N(false, true,
+                                node5 = new N(false, true, null)
+                            )
+                        )
+                    )
+                ));
+
+            node4.requestFocus();
+            assertIsFocused(node1);
+            assertNotFocused(node2, node3, node4, node5);
+
+            node5.requestFocus();
+            assertIsFocused(node1);
+            assertNotFocused(node2, node3, node4, node5);
+        }
+
+        /**
+         * A node with the {@link Node#hoistFocusProperty()} flag will hoist a focus request to the next
+         * focus scope. If the next focus scope does not have the {@link Node#hoistFocusProperty()} flag,
+         * the focus request will not be hoisted again, even when an ancestor defines another focus scope.
+         */
+        @Test
+        void hoistFocusRequestStopsWhenHoistFocusIsFalse() {
+            N node1, node2, node3, node4, node5;
+
+            // node1 . . . . . . . . . . [focusScope]
+            // └── node2 . . . . . . . . [hoistFocus]
+            //     └── node3 . . . . . . [focusScope]
+            //         └── node4 . . . . [hoistFocus]
+            //             └── node5 . . [hoistFocus]
+            scene.setRoot(
+                node1 = new N(true, false,
+                    node2 = new N(false, true,
+                        node3 = new N(true, false,
+                            node4 = new N(false, true,
+                                node5 = new N(false, true, null)
+                            )
+                        )
+                    )
+                ));
+
+            node4.requestFocus();
+            assertIsFocused(node3);
+            assertNotFocused(node1, node2, node4, node5);
+
+            node5.requestFocus();
+            assertIsFocused(node3);
+            assertNotFocused(node1, node2, node4, node5);
+        }
+    }
 }
